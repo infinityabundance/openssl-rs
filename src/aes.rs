@@ -1044,7 +1044,12 @@ mod tests {
                 hex_of(&wrapped[..n]),
                 "138bdeaa9b8fa7fc61f97742e72248ee5ae6ae5360d1ae6a5f54f373fa543b6a"
             );
-            let mut back = [0u8; 20];
+            // `out` must be sized for the *padded* plaintext (`padded_len = inlen - 8`), and for
+            // the full `inlen` the authority cleanses on every failure path
+            // (`crypto/modes/wrap128.c:291,303,317,327`); `unwrap_pad`'s own # Safety contract
+            // above says `inlen`. A 20-byte buffer held only the unpadded plaintext and ASan
+            // caught `crypto_128_unwrap_raw`'s 24-byte `memmove` (`wrap128.c:112`) overflowing it.
+            let mut back = [0u8; 32];
             let m = crate::modes::wrap::CRYPTO_128_unwrap_pad(
                 &dk as *const AesKey as *mut c_void,
                 ptr::null(),
@@ -1054,7 +1059,7 @@ mod tests {
                 aes_decrypt_block,
             );
             assert_eq!(m, 20);
-            assert_eq!(back, PT20);
+            assert_eq!(back[..20], PT20);
 
             let n = crate::modes::wrap::CRYPTO_128_wrap_pad(
                 &k as *const AesKey as *mut c_void,
@@ -1066,7 +1071,9 @@ mod tests {
             );
             assert_eq!(n, 16);
             assert_eq!(hex_of(&wrapped[..n]), "afbeb0f07dfbf5419200f2ccb50bb24f");
-            let mut back7 = [0u8; 8];
+            // As above: `unwrap_pad` needs `inlen` (16) writable, of which 8 carry the padded
+            // plaintext; a bare 8-byte buffer was only enough for the success path's write.
+            let mut back7 = [0u8; 16];
             let m = crate::modes::wrap::CRYPTO_128_unwrap_pad(
                 &dk as *const AesKey as *mut c_void,
                 ptr::null(),

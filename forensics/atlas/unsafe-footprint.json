@@ -38,7 +38,7 @@
         "classification": "core",
         "extern_c_fns": 17,
         "files": 1,
-        "lines": 1082,
+        "lines": 1089,
         "module": "aes",
         "safety_comments": 23,
         "unsafe_blocks": 23,
@@ -388,7 +388,7 @@
         "classification": "boundary",
         "extern_c_fns": 34,
         "files": 2,
-        "lines": 1599,
+        "lines": 1603,
         "module": "dso",
         "safety_comments": 109,
         "unsafe_blocks": 103,
@@ -486,7 +486,7 @@
         "classification": "core",
         "extern_c_fns": 1646,
         "files": 67,
-        "lines": 79577,
+        "lines": 79604,
         "module": "evp",
         "safety_comments": 6334,
         "unsafe_blocks": 6207,
@@ -724,7 +724,7 @@
         "classification": "core",
         "extern_c_fns": 130,
         "files": 16,
-        "lines": 7829,
+        "lines": 7830,
         "module": "pkcs12",
         "safety_comments": 517,
         "unsafe_blocks": 492,
@@ -766,7 +766,7 @@
         "classification": "core",
         "extern_c_fns": 1600,
         "files": 81,
-        "lines": 130331,
+        "lines": 130337,
         "module": "provider",
         "safety_comments": 3798,
         "unsafe_blocks": 3580,
@@ -1087,9 +1087,9 @@
     ],
     "scan": {
       "files": 855,
-      "lines": 801594,
+      "lines": 801639,
       "root": "src",
-      "sources_sha256": "408b1d92aeab4013cd3fcf41f4f0d6ee36bba4cfbfcbc336fb0c67d03e91dfeb"
+      "sources_sha256": "f9e4120cb0bd33348650b157cb2448e61368260892e2c6fafcc167e228ba71b0"
     },
     "totals": {
       "by_class": {
@@ -1106,7 +1106,7 @@
       },
       "extern_c_fns": 10866,
       "files": 855,
-      "lines": 801594,
+      "lines": 801639,
       "safety_comments": 46370,
       "unsafe_blocks": 44555,
       "unsafe_externs": 9995,
@@ -1121,7 +1121,7 @@
     {
       "name": "crate-sources",
       "note": "sha256 over the sorted (repo-relative path, file sha256) pairs of every src/**/*.rs file; the crate source tree has no single path to hash, and this pins exactly the bytes the scan read",
-      "sha256": "408b1d92aeab4013cd3fcf41f4f0d6ee36bba4cfbfcbc336fb0c67d03e91dfeb"
+      "sha256": "f9e4120cb0bd33348650b157cb2448e61368260892e2c6fafcc167e228ba71b0"
     }
   ],
   "kind": "unsafe-footprint",

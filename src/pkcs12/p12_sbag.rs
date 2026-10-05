@@ -672,23 +672,26 @@ mod tests {
         // The item layer and the object table are process-global state.
         let _guard = crate::test_support::lock_global_state();
         let value: [c_uchar; 3] = [0x01, 0x02, 0x03];
-        // A `secretBag`'s outer type is `NID_secretBag`; the inner `type` is the caller's.
+        // A `secretBag`'s outer type is `NID_secretBag`; the inner `type` is the caller's. It must
+        // not be one of the three OIDs in `PKCS12_BAGS_adbtbl` (`p12_asn.c:51-55`) unless the value
+        // really is that arm's type: those arms select an `ASN1_OCTET_STRING`/`ASN1_IA5STRING`, while
+        // `create_secret` stores an `ASN1_ANY`, so freeing such a bag type-confuses the union. The
+        // authority's own callers (`test/helpers/pkcs12.c`) pass a custom NID, which the ADB's
+        // `bag_default` arm (an `ASN1_ANY`) matches.
         // SAFETY: `value` is three readable bytes and the NIDs are known.
         let bag = unsafe {
-            PKCS12_SAFEBAG_create_secret(
-                NID_x509Certificate,
-                V_ASN1_OCTET_STRING,
-                value.as_ptr(),
-                3,
-            )
+            PKCS12_SAFEBAG_create_secret(NID_secretBag, V_ASN1_OCTET_STRING, value.as_ptr(), 3)
         };
         assert!(!bag.is_null());
         // SAFETY: `bag` is live.
         unsafe {
             assert_eq!(PKCS12_SAFEBAG_get_nid(bag), NID_secretBag);
-            assert_eq!(PKCS12_SAFEBAG_get_bag_nid(bag), NID_x509Certificate);
+            assert_eq!(PKCS12_SAFEBAG_get_bag_nid(bag), NID_secretBag);
             assert!(!PKCS12_SAFEBAG_get0_bag_type(bag).is_null());
-            assert!(PKCS12_SAFEBAG_get0_bag_obj(bag).is_null());
+            // The inner `type` is not one of the three ADB OIDs, so `get0_bag_obj` takes the
+            // default arm and answers the stored `ASN1_ANY`; the NULL answer belongs to the
+            // certificate/CRL/ sdsi arms, which a secret bag never selects.
+            assert!(!PKCS12_SAFEBAG_get0_bag_obj(bag).is_null());
             assert!(PKCS12_SAFEBAG_get0_p8inf(bag).is_null());
             assert!(PKCS12_SAFEBAG_get0_pkcs8(bag).is_null());
             assert!(PKCS12_SAFEBAG_get0_safes(bag).is_null());
@@ -729,14 +732,12 @@ mod tests {
         // The item layer and the object table are process-global state.
         let _guard = crate::test_support::lock_global_state();
         let value: [c_uchar; 2] = [0xaa, 0xbb];
+        // The inner `type` is deliberately not one of the `PKCS12_BAGS_adbtbl` OIDs, so the ADB's
+        // `bag_default` arm matches the `ASN1_ANY` `create_secret` stores and the free is
+        // well-typed; the readers reject on the bag's outer `secretBag` type regardless.
         // SAFETY: `value` is two readable bytes and the NIDs are known.
         let secret = unsafe {
-            PKCS12_SAFEBAG_create_secret(
-                NID_x509Certificate,
-                V_ASN1_OCTET_STRING,
-                value.as_ptr(),
-                2,
-            )
+            PKCS12_SAFEBAG_create_secret(NID_secretBag, V_ASN1_OCTET_STRING, value.as_ptr(), 2)
         };
         assert!(!secret.is_null());
         // SAFETY: `secret` is live; the readers inspect its outer type and answer NULL.

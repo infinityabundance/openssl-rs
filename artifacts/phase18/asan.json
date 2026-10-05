@@ -1,12 +1,12 @@
 {
   "build": {
     "archive": "/asan/target/x86_64-unknown-linux-gnu/release/libopenssl_rs.a",
-    "archive_sha256": "6c3b6bb1f9b00eb164d8c098abaa430893bc5a4cb4d8e5228c79101acf5466a2",
+    "archive_sha256": "0a9914156bb6ab729fb91e5792636b607651256668fea25ae9ce35f6ab7c0abb",
     "cc": "/asan/bin/asan-cc",
     "command": "cargo +nightly-2026-10-05 build -Zbuild-std --release --lib --target x86_64-unknown-linux-gnu",
-    "elapsed_s": 0.0,
+    "elapsed_s": 47.6,
     "log": "/asan/logs/cargo-build.log",
-    "rustflags": "-Zsanitizer=address -Cdebuginfo=1 -Clinker=clang"
+    "rustflags": "-Zsanitizer=address -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=1"
   },
   "canary": {
     "as_expected": "nonzero exit with an AddressSanitizer use-after-free report",
@@ -14,7 +14,7 @@
     "command": "clang -std=c11 -Wall -O0 -D_GNU_SOURCE -fsanitize=address -fno-omit-frame-pointer -g -o /asan/bin/asan_canary /work/forensics/tools/asan_canary.c",
     "detected": true,
     "diagnostic": [
-      "==53041==ERROR: AddressSanitizer: heap-use-after-free on address 0x602000000013 at pc 0x55d3a60a7032 bp 0x7ffec4998c10 sp 0x7ffec4998c08",
+      "==131345==ERROR: AddressSanitizer: heap-use-after-free on address 0x602000000013 at pc 0x561add0f3032 bp 0x7ffce9c8abb0 sp 0x7ffce9c8aba8",
       "SUMMARY: AddressSanitizer: heap-use-after-free /work/forensics/tools/asan_canary.c:31:27 in main"
     ],
     "exit_code": 1,
@@ -104,7 +104,7 @@
     "note": "Rust objects (crate + standard library, rebuilt with -Zbuild-std), the first-party C adapters and the probes are instrumented; libc is runtime-intercepted. The only retained member without an ASan reference is std's allocator-shim thunk member, which has no memory operations.",
     "probes": [
       {
-        "asan_symbols": 822,
+        "asan_symbols": 694,
         "binary": "/asan/bin/rt_hostile_tls_probe.asan",
         "court": "RT-HOSTILE-TLS",
         "flags": [
@@ -119,91 +119,31 @@
           "libc.so.6"
         ],
         "retained_members": [
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.00.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.01.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.02.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.03.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.04.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.05.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.06.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.07.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.08.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.09.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.10.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.11.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.12.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.13.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.14.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.15.rcgu.o",
-          "openssl_rs-163080d324136a2c.0ysazq2p17dngtj0sk7n0hjqs.rcgu.o",
+          "openssl_rs-cb3bc7197f04ef0d.openssl_rs.5f987b19b98ce832-cgu.0.rcgu.o",
+          "openssl_rs-cb3bc7197f04ef0d.0ysazq2p17dngtj0sk7n0hjqs.rcgu.o",
           "openssl_rs_err_variadic.o",
           "openssl_rs_bio_variadic.o",
           "openssl_rs_bio_va.o",
           "openssl_rs_dir_posix.o",
           "openssl_rs_async_ucontext.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.01.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.02.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.04.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.05.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.06.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.07.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.08.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.09.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.10.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.11.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.12.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.13.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.14.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.15.rcgu.o",
-          "panic_unwind-cbf2f0eedccc8d32.panic_unwind.b2a7297688a98afa-cgu.0.rcgu.o",
-          "object-024ed9499d3dabfb.object.faa2a5483c771cc2-cgu.0.rcgu.o",
-          "object-024ed9499d3dabfb.object.faa2a5483c771cc2-cgu.1.rcgu.o",
-          "object-024ed9499d3dabfb.object.faa2a5483c771cc2-cgu.2.rcgu.o",
-          "object-024ed9499d3dabfb.object.faa2a5483c771cc2-cgu.3.rcgu.o",
-          "memchr-032361f589d0e0fa.memchr.a5f5f0661078af4f-cgu.0.rcgu.o",
-          "addr2line-21644602ceadc6c8.addr2line.e8c497ba4542c42f-cgu.0.rcgu.o",
-          "gimli-c0b5cf58be23c850.gimli.328ce9cae84b046f-cgu.3.rcgu.o",
-          "rustc_demangle-009bdd05c2472c22.rustc_demangle.3773b6a43957207c-cgu.1.rcgu.o",
-          "hashbrown-c7b46d2b01cfc032.hashbrown.e36df0eaddcc2f15-cgu.0.rcgu.o",
-          "miniz_oxide-306e3647d3560e0f.miniz_oxide.69d623919cf18e22-cgu.0.rcgu.o",
-          "adler2-d8ae2b38ce78f7a2.adler2.2947f56315d5a4ef-cgu.0.rcgu.o",
-          "alloc-903b1a0e68d12cf2.alloc.483329c0ce284807-cgu.0.rcgu.o",
-          "alloc-903b1a0e68d12cf2.alloc.483329c0ce284807-cgu.1.rcgu.o",
-          "alloc-903b1a0e68d12cf2.alloc.483329c0ce284807-cgu.2.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.01.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.02.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.03.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.04.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.05.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.06.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.07.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.08.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.09.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.10.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.11.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.12.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.13.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.14.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.15.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.3.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.4.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.5.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.6.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.7.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.8.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.00.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.03.rcgu.o",
-          "gimli-c0b5cf58be23c850.gimli.328ce9cae84b046f-cgu.1.rcgu.o",
-          "rustc_demangle-009bdd05c2472c22.rustc_demangle.3773b6a43957207c-cgu.0.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.00.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.0.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.1.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.2.rcgu.o"
+          "std-f309d12f7410f38a.std.ae0349685461449e-cgu.0.rcgu.o",
+          "panic_unwind-724aac4b4e0f159e.panic_unwind.b2a7297688a98afa-cgu.0.rcgu.o",
+          "object-8baa7c599c22f5b4.object.faa2a5483c771cc2-cgu.0.rcgu.o",
+          "memchr-ec491bf79dedf3cb.memchr.a5f5f0661078af4f-cgu.0.rcgu.o",
+          "addr2line-aa43b6fc4380229b.addr2line.e8c497ba4542c42f-cgu.0.rcgu.o",
+          "gimli-01909e0ae222e573.gimli.328ce9cae84b046f-cgu.0.rcgu.o",
+          "rustc_demangle-ad6156c4ec8ba6a9.rustc_demangle.3773b6a43957207c-cgu.0.rcgu.o",
+          "hashbrown-1ee6c1e21a8541b2.hashbrown.e36df0eaddcc2f15-cgu.0.rcgu.o",
+          "miniz_oxide-38ea141800ea3310.miniz_oxide.69d623919cf18e22-cgu.0.rcgu.o",
+          "adler2-7059608820415463.adler2.2947f56315d5a4ef-cgu.0.rcgu.o",
+          "alloc-da8f16dec10fdea1.alloc.483329c0ce284807-cgu.0.rcgu.o",
+          "core-364d80e667db65e2.core.2924a1ccf85da54f-cgu.0.rcgu.o",
+          "compiler_builtins-2059f74265ee6659.compiler_builtins.ffb78b127b8b0c6c-cgu.0.rcgu.o"
         ],
         "source": "courts/phase18/rt_hostile_tls_probe.c"
       },
       {
-        "asan_symbols": 822,
+        "asan_symbols": 694,
         "binary": "/asan/bin/rt_hostile_x509_probe.asan",
         "court": "RT-HOSTILE-X509",
         "flags": [
@@ -218,430 +158,106 @@
           "libc.so.6"
         ],
         "retained_members": [
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.00.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.01.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.02.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.03.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.04.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.05.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.06.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.07.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.08.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.09.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.10.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.11.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.12.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.13.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.14.rcgu.o",
-          "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.15.rcgu.o",
-          "openssl_rs-163080d324136a2c.0ysazq2p17dngtj0sk7n0hjqs.rcgu.o",
+          "openssl_rs-cb3bc7197f04ef0d.openssl_rs.5f987b19b98ce832-cgu.0.rcgu.o",
+          "openssl_rs-cb3bc7197f04ef0d.0ysazq2p17dngtj0sk7n0hjqs.rcgu.o",
           "openssl_rs_err_variadic.o",
           "openssl_rs_bio_variadic.o",
           "openssl_rs_bio_va.o",
           "openssl_rs_dir_posix.o",
           "openssl_rs_async_ucontext.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.01.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.02.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.04.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.05.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.06.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.07.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.08.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.09.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.10.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.11.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.12.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.13.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.14.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.15.rcgu.o",
-          "panic_unwind-cbf2f0eedccc8d32.panic_unwind.b2a7297688a98afa-cgu.0.rcgu.o",
-          "object-024ed9499d3dabfb.object.faa2a5483c771cc2-cgu.0.rcgu.o",
-          "object-024ed9499d3dabfb.object.faa2a5483c771cc2-cgu.1.rcgu.o",
-          "object-024ed9499d3dabfb.object.faa2a5483c771cc2-cgu.2.rcgu.o",
-          "object-024ed9499d3dabfb.object.faa2a5483c771cc2-cgu.3.rcgu.o",
-          "memchr-032361f589d0e0fa.memchr.a5f5f0661078af4f-cgu.0.rcgu.o",
-          "addr2line-21644602ceadc6c8.addr2line.e8c497ba4542c42f-cgu.0.rcgu.o",
-          "gimli-c0b5cf58be23c850.gimli.328ce9cae84b046f-cgu.3.rcgu.o",
-          "rustc_demangle-009bdd05c2472c22.rustc_demangle.3773b6a43957207c-cgu.1.rcgu.o",
-          "hashbrown-c7b46d2b01cfc032.hashbrown.e36df0eaddcc2f15-cgu.0.rcgu.o",
-          "miniz_oxide-306e3647d3560e0f.miniz_oxide.69d623919cf18e22-cgu.0.rcgu.o",
-          "adler2-d8ae2b38ce78f7a2.adler2.2947f56315d5a4ef-cgu.0.rcgu.o",
-          "alloc-903b1a0e68d12cf2.alloc.483329c0ce284807-cgu.0.rcgu.o",
-          "alloc-903b1a0e68d12cf2.alloc.483329c0ce284807-cgu.1.rcgu.o",
-          "alloc-903b1a0e68d12cf2.alloc.483329c0ce284807-cgu.2.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.01.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.02.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.03.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.04.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.05.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.06.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.07.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.08.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.09.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.10.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.11.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.12.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.13.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.14.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.15.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.3.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.4.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.5.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.6.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.7.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.8.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.00.rcgu.o",
-          "std-a2f626310359add0.std.ae0349685461449e-cgu.03.rcgu.o",
-          "gimli-c0b5cf58be23c850.gimli.328ce9cae84b046f-cgu.1.rcgu.o",
-          "rustc_demangle-009bdd05c2472c22.rustc_demangle.3773b6a43957207c-cgu.0.rcgu.o",
-          "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.00.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.0.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.1.rcgu.o",
-          "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.2.rcgu.o"
+          "std-f309d12f7410f38a.std.ae0349685461449e-cgu.0.rcgu.o",
+          "panic_unwind-724aac4b4e0f159e.panic_unwind.b2a7297688a98afa-cgu.0.rcgu.o",
+          "object-8baa7c599c22f5b4.object.faa2a5483c771cc2-cgu.0.rcgu.o",
+          "memchr-ec491bf79dedf3cb.memchr.a5f5f0661078af4f-cgu.0.rcgu.o",
+          "addr2line-aa43b6fc4380229b.addr2line.e8c497ba4542c42f-cgu.0.rcgu.o",
+          "gimli-01909e0ae222e573.gimli.328ce9cae84b046f-cgu.0.rcgu.o",
+          "rustc_demangle-ad6156c4ec8ba6a9.rustc_demangle.3773b6a43957207c-cgu.0.rcgu.o",
+          "hashbrown-1ee6c1e21a8541b2.hashbrown.e36df0eaddcc2f15-cgu.0.rcgu.o",
+          "miniz_oxide-38ea141800ea3310.miniz_oxide.69d623919cf18e22-cgu.0.rcgu.o",
+          "adler2-7059608820415463.adler2.2947f56315d5a4ef-cgu.0.rcgu.o",
+          "alloc-da8f16dec10fdea1.alloc.483329c0ce284807-cgu.0.rcgu.o",
+          "core-364d80e667db65e2.core.2924a1ccf85da54f-cgu.0.rcgu.o",
+          "compiler_builtins-2059f74265ee6659.compiler_builtins.ffb78b127b8b0c6c-cgu.0.rcgu.o"
         ],
         "source": "courts/phase18/rt_hostile_x509_probe.c"
       }
     ],
     "retained_archive_members": {
       "all_first_party_instrumented": true,
-      "count": 80,
-      "first_party_count": 79,
-      "first_party_instrumented": 79,
+      "count": 20,
+      "first_party_count": 19,
+      "first_party_instrumented": 19,
       "members": [
         {
           "classified_as": "instrumented",
           "instrumented": true,
-          "member": "addr2line-21644602ceadc6c8.addr2line.e8c497ba4542c42f-cgu.0.rcgu.o",
+          "member": "addr2line-aa43b6fc4380229b.addr2line.e8c497ba4542c42f-cgu.0.rcgu.o",
           "origin": "rust-staticlib"
         },
         {
           "classified_as": "instrumented",
           "instrumented": true,
-          "member": "adler2-d8ae2b38ce78f7a2.adler2.2947f56315d5a4ef-cgu.0.rcgu.o",
+          "member": "adler2-7059608820415463.adler2.2947f56315d5a4ef-cgu.0.rcgu.o",
           "origin": "rust-staticlib"
         },
         {
           "classified_as": "instrumented",
           "instrumented": true,
-          "member": "alloc-903b1a0e68d12cf2.alloc.483329c0ce284807-cgu.0.rcgu.o",
+          "member": "alloc-da8f16dec10fdea1.alloc.483329c0ce284807-cgu.0.rcgu.o",
           "origin": "rust-staticlib"
         },
         {
           "classified_as": "instrumented",
           "instrumented": true,
-          "member": "alloc-903b1a0e68d12cf2.alloc.483329c0ce284807-cgu.1.rcgu.o",
+          "member": "compiler_builtins-2059f74265ee6659.compiler_builtins.ffb78b127b8b0c6c-cgu.0.rcgu.o",
           "origin": "rust-staticlib"
         },
         {
           "classified_as": "instrumented",
           "instrumented": true,
-          "member": "alloc-903b1a0e68d12cf2.alloc.483329c0ce284807-cgu.2.rcgu.o",
+          "member": "core-364d80e667db65e2.core.2924a1ccf85da54f-cgu.0.rcgu.o",
           "origin": "rust-staticlib"
         },
         {
           "classified_as": "instrumented",
           "instrumented": true,
-          "member": "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.0.rcgu.o",
+          "member": "gimli-01909e0ae222e573.gimli.328ce9cae84b046f-cgu.0.rcgu.o",
           "origin": "rust-staticlib"
         },
         {
           "classified_as": "instrumented",
           "instrumented": true,
-          "member": "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.1.rcgu.o",
+          "member": "hashbrown-1ee6c1e21a8541b2.hashbrown.e36df0eaddcc2f15-cgu.0.rcgu.o",
           "origin": "rust-staticlib"
         },
         {
           "classified_as": "instrumented",
           "instrumented": true,
-          "member": "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.2.rcgu.o",
+          "member": "memchr-ec491bf79dedf3cb.memchr.a5f5f0661078af4f-cgu.0.rcgu.o",
           "origin": "rust-staticlib"
         },
         {
           "classified_as": "instrumented",
           "instrumented": true,
-          "member": "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.3.rcgu.o",
+          "member": "miniz_oxide-38ea141800ea3310.miniz_oxide.69d623919cf18e22-cgu.0.rcgu.o",
           "origin": "rust-staticlib"
         },
         {
           "classified_as": "instrumented",
           "instrumented": true,
-          "member": "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.4.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.5.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.6.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.7.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "compiler_builtins-d14660276f4d4647.compiler_builtins.ffb78b127b8b0c6c-cgu.8.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.00.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.01.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.02.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.03.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.04.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.05.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.06.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.07.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.08.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.09.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.10.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.11.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.12.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.13.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.14.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "core-b5f684104cc58b99.core.2924a1ccf85da54f-cgu.15.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "gimli-c0b5cf58be23c850.gimli.328ce9cae84b046f-cgu.1.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "gimli-c0b5cf58be23c850.gimli.328ce9cae84b046f-cgu.3.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "hashbrown-c7b46d2b01cfc032.hashbrown.e36df0eaddcc2f15-cgu.0.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "memchr-032361f589d0e0fa.memchr.a5f5f0661078af4f-cgu.0.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "miniz_oxide-306e3647d3560e0f.miniz_oxide.69d623919cf18e22-cgu.0.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "object-024ed9499d3dabfb.object.faa2a5483c771cc2-cgu.0.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "object-024ed9499d3dabfb.object.faa2a5483c771cc2-cgu.1.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "object-024ed9499d3dabfb.object.faa2a5483c771cc2-cgu.2.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "object-024ed9499d3dabfb.object.faa2a5483c771cc2-cgu.3.rcgu.o",
+          "member": "object-8baa7c599c22f5b4.object.faa2a5483c771cc2-cgu.0.rcgu.o",
           "origin": "rust-staticlib"
         },
         {
           "classified_as": "runtime-allocator-shim",
           "instrumented": false,
-          "member": "openssl_rs-163080d324136a2c.0ysazq2p17dngtj0sk7n0hjqs.rcgu.o",
+          "member": "openssl_rs-cb3bc7197f04ef0d.0ysazq2p17dngtj0sk7n0hjqs.rcgu.o",
           "origin": "rust-staticlib"
         },
         {
           "classified_as": "instrumented",
           "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.00.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.01.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.02.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.03.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.04.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.05.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.06.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.07.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.08.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.09.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.10.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.11.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.12.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.13.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.14.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "openssl_rs-163080d324136a2c.openssl_rs.5f987b19b98ce832-cgu.15.rcgu.o",
+          "member": "openssl_rs-cb3bc7197f04ef0d.openssl_rs.5f987b19b98ce832-cgu.0.rcgu.o",
           "origin": "rust-staticlib"
         },
         {
@@ -677,115 +293,19 @@
         {
           "classified_as": "instrumented",
           "instrumented": true,
-          "member": "panic_unwind-cbf2f0eedccc8d32.panic_unwind.b2a7297688a98afa-cgu.0.rcgu.o",
+          "member": "panic_unwind-724aac4b4e0f159e.panic_unwind.b2a7297688a98afa-cgu.0.rcgu.o",
           "origin": "rust-staticlib"
         },
         {
           "classified_as": "instrumented",
           "instrumented": true,
-          "member": "rustc_demangle-009bdd05c2472c22.rustc_demangle.3773b6a43957207c-cgu.0.rcgu.o",
+          "member": "rustc_demangle-ad6156c4ec8ba6a9.rustc_demangle.3773b6a43957207c-cgu.0.rcgu.o",
           "origin": "rust-staticlib"
         },
         {
           "classified_as": "instrumented",
           "instrumented": true,
-          "member": "rustc_demangle-009bdd05c2472c22.rustc_demangle.3773b6a43957207c-cgu.1.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.00.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.01.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.02.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.03.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.04.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.05.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.06.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.07.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.08.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.09.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.10.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.11.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.12.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.13.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.14.rcgu.o",
-          "origin": "rust-staticlib"
-        },
-        {
-          "classified_as": "instrumented",
-          "instrumented": true,
-          "member": "std-a2f626310359add0.std.ae0349685461449e-cgu.15.rcgu.o",
+          "member": "std-f309d12f7410f38a.std.ae0349685461449e-cgu.0.rcgu.o",
           "origin": "rust-staticlib"
         }
       ],
@@ -793,89 +313,34 @@
     },
     "rust_staticlib": {
       "archive": "/asan/target/x86_64-unknown-linux-gnu/release/libopenssl_rs.a",
-      "archive_sha256": "6c3b6bb1f9b00eb164d8c098abaa430893bc5a4cb4d8e5228c79101acf5466a2",
-      "members_in_nm_map": 90,
-      "members_referencing_asan": 89,
-      "members_total": 90,
+      "archive_sha256": "0a9914156bb6ab729fb91e5792636b607651256668fea25ae9ce35f6ab7c0abb",
+      "members_in_nm_map": 28,
+      "members_referencing_asan": 27,
+      "members_total": 28,
       "note": "members without an __asan reference are data-only members (e.g. .rodata / compiler-builtins tables); the members the linker actually retains are enumerated below and classified individually"
     }
   },
   "layers": [
     {
-      "aborting_tests": [
-        "rfc5649_wrap_pad_vectors"
-      ],
-      "asan_reports": 2,
+      "aborting_tests": [],
+      "asan_reports": 0,
       "command": "cargo +nightly-2026-10-05 test -Zbuild-std --release --lib --target x86_64-unknown-linux-gnu",
-      "continuation": [
-        {
-          "aborting_tests": [
-            "the_small_constants_are_prime"
-          ],
-          "asan_reports": 2,
-          "diagnostics": [
-            "==53089==ERROR: AddressSanitizer: global-buffer-overflow on address 0x55828d1c8cbc at pc 0x55828c7e022c bp 0x7b1abadfd410 sp 0x7b1abadfcbd0\nREAD of size 5 at 0x55828d1c8cbc thread T43\n    #0 0x55828c7e022b in __asan_memcpy (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x51422b) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #1 0x55828c98c4e8 in openssl_rs::provider::rand::ctr_BCC_update openssl_rs.f4b68860f28f678b-cgu.03\n    #2 0x55828c98a44d in openssl_rs::provider::rand::ctr_update openssl_rs.f4b68860f28f678b-cgu.03\n    #3 0x55828c9909b1 in openssl_rs::provider::rand::drbg_ctr_instantiate openssl_rs.f4b68860f28f678b-cgu.03\n    #4 0x55828c994218 in openssl_rs::provider::rand::ossl_prov_drbg_instantiate openssl_rs.f4b68860f28f678b-cgu.03\n    #5 0x55828c995eb1 in openssl_rs::provider::rand::drbg_ctr_instantiate_wrapper openssl_rs.f4b68860f28f678b-cgu.03\n    #6 0x55828c941516 in openssl_rs::rand::rand_lib::rand_new_drbg (.llvm.8196005254074676650) (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x675516) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #7 0x55828c9420a7 in openssl_rs::rand::rand_lib::ossl_rand_get0_primary (.llvm.8196005254074676650) (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x6760a7) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #8 0x55828c942367 in openssl_rs::rand::rand_lib::ossl_rand_get0_private (.llvm.8196005254074676650) (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x676367) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #9 0x55828c94184e in openssl_rs::rand::rand_lib::rand_bytes_get0 openssl_rs.f4b68860f28f678b-cgu.03\n    #10 0x55828c93798f in RAND_priv_bytes_ex (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x66b98f) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #11 0x55828c84d9e1 in openssl_rs::bn::rand::bnrand openssl_rs.f4b68860f28f678b-cgu.00\n    #12 0x55828c84ce42 in openssl_rs::bn::rand::bnrand_range openssl_rs.f4b68860f28f678b-cgu.00\n    #13 0x55828c841fe4 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::bn::rand::BN_priv_rand_range_ex::{closure#0}>, i32> openssl_rs.f4b68860f28f678b-cgu.00\n    #14 0x55828c87cad1 in __rust_try openssl_rs.f4b68860f28f678b-cgu.00\n    #15 0x55828c81a23c in BN_priv_rand_range_ex (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x54e23c) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #16 0x55828caf347c in openssl_rs::bn::primes::ossl_bn_miller_rabin_is_prime (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x82747c) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #17 0x55828caf2e6b in openssl_rs::bn::primes::bn_is_prime_int (.llvm.10004304004427711428) (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x826e6b) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #18 0x55828cad4cab in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::bn::primes::BN_check_prime::{closure#0}>, i32> openssl_rs.f4b68860f28f678b-cgu.06\n    #19 0x55828cb249f1 in __rust_try openssl_rs.f4b68860f28f678b-cgu.06\n    #20 0x55828caaed58 in BN_check_prime (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x7e2d58) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #21 0x55828c9a0c63 in <openssl_rs::bn::dh::tests::the_small_constants_are_prime::{closure#0} as core::ops::function::FnOnce<()>>::call_once openssl_rs.f4b68860f28f678b-cgu.03\n    #22 0x55828cf61255 in test::__rust_begin_short_backtrace::<core::result::Result<(), alloc::string::String>, fn() -> core::result::Result<(), alloc::string::String>> (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xc95255) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #23 0x55828cfb6515 in <test::types::RunnableTest>::run (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xcea515) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #24 0x55828cf673d0 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> test.cd30ec5db59925b8-cgu.01\n    #25 0x55828cf6fa98 in __rust_try test.cd30ec5db59925b8-cgu.01\n    #26 0x55828cf6a029 in test::run_test_in_process (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xc9e029) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #27 0x55828cfb1bee in std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xce5bee) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #28 0x55828cf9b3b8 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> test.cd30ec5db59925b8-cgu.07\n    #29 0x55828cfa1a61 in __rust_try test.cd30ec5db59925b8-cgu.07\n    #30 0x55828cf9dbb8 in <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} test.cd30ec5db59925b8-cgu.07\n    #31 0x55828d0aa9f0 in <alloc::boxed::Box<dyn core::ops::function::FnOnce<(), Output = ()> + core::marker::Send> as core::ops::function::FnOnce<()>>::call_once (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xdde9f0) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #32 0x55828d09b9aa in <std::sys::thread::unix::Thread>::new::thread_start std.ae0349685461449e-cgu.13\n    #33 0x55828c7dfe26 in asan_thread_start(void*) asan_interceptors.cpp\n    #34 0x7f1abdc001f4  (/lib/x86_64-linux-gnu/libc.so.6+0x891f4) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n    #35 0x7f1abdc7fb4f in clone (/lib/x86_64-linux-gnu/libc.so.6+0x108b4f) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n\n0x55828d1c8cbc is located 36 bytes before global variable 'alloc_620d5f711ece0e82ced2930f9a3fa5fd' defined in 'openssl_rs.f4b68860f28f678b-cgu.03' (0x55828d1c8ce0) of size 27\n  'alloc_620d5f711ece0e82ced2930f9a3fa5fd' is ascii string 'ossl_prov_drbg_instantiate'\n0x55828d1c8cbc is located 0 bytes after global variable 'alloc_07344c0bf1cd4689c7c29e1f036f78bf' defined in 'openssl_rs.f4b68860f28f678b-cgu.03' (0x55828d1c8ca0) of size 28\nSUMMARY: AddressSanitizer: global-buffer-overflow (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x51422b) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a) in __asan_memcpy"
-          ],
-          "exit_code": 1,
-          "fault_sites": [
-            "global-buffer-overflow @ openssl_rs::provider::rand::ctr_BCC_update"
-          ],
-          "log": "/asan/logs/allocator-unit-tests-cont1.log",
-          "round": 1,
-          "skipped": [
-            "rfc5649_wrap_pad_vectors"
-          ],
-          "tests_failed": 0,
-          "tests_passed": 0
-        },
-        {
-          "aborting_tests": [
-            "the_primality_test_rejects_a_composite_of_the_same_shape"
-          ],
-          "asan_reports": 2,
-          "diagnostics": [
-            "==53155==ERROR: AddressSanitizer: global-buffer-overflow on address 0x56118bc9ecbc at pc 0x56118b2b622c bp 0x7b4fe45fd410 sp 0x7b4fe45fcbd0\nREAD of size 5 at 0x56118bc9ecbc thread T40\n    #0 0x56118b2b622b in __asan_memcpy (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x51422b) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #1 0x56118b4624e8 in openssl_rs::provider::rand::ctr_BCC_update openssl_rs.f4b68860f28f678b-cgu.03\n    #2 0x56118b46044d in openssl_rs::provider::rand::ctr_update openssl_rs.f4b68860f28f678b-cgu.03\n    #3 0x56118b4669b1 in openssl_rs::provider::rand::drbg_ctr_instantiate openssl_rs.f4b68860f28f678b-cgu.03\n    #4 0x56118b46a218 in openssl_rs::provider::rand::ossl_prov_drbg_instantiate openssl_rs.f4b68860f28f678b-cgu.03\n    #5 0x56118b46beb1 in openssl_rs::provider::rand::drbg_ctr_instantiate_wrapper openssl_rs.f4b68860f28f678b-cgu.03\n    #6 0x56118b417516 in openssl_rs::rand::rand_lib::rand_new_drbg (.llvm.8196005254074676650) (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x675516) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #7 0x56118b4180a7 in openssl_rs::rand::rand_lib::ossl_rand_get0_primary (.llvm.8196005254074676650) (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x6760a7) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #8 0x56118b418367 in openssl_rs::rand::rand_lib::ossl_rand_get0_private (.llvm.8196005254074676650) (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x676367) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #9 0x56118b41784e in openssl_rs::rand::rand_lib::rand_bytes_get0 openssl_rs.f4b68860f28f678b-cgu.03\n    #10 0x56118b40d98f in RAND_priv_bytes_ex (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x66b98f) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #11 0x56118b3239e1 in openssl_rs::bn::rand::bnrand openssl_rs.f4b68860f28f678b-cgu.00\n    #12 0x56118b322e42 in openssl_rs::bn::rand::bnrand_range openssl_rs.f4b68860f28f678b-cgu.00\n    #13 0x56118b317fe4 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::bn::rand::BN_priv_rand_range_ex::{closure#0}>, i32> openssl_rs.f4b68860f28f678b-cgu.00\n    #14 0x56118b352ad1 in __rust_try openssl_rs.f4b68860f28f678b-cgu.00\n    #15 0x56118b2f023c in BN_priv_rand_range_ex (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x54e23c) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #16 0x56118b5c947c in openssl_rs::bn::primes::ossl_bn_miller_rabin_is_prime (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x82747c) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #17 0x56118b5c8e6b in openssl_rs::bn::primes::bn_is_prime_int (.llvm.10004304004427711428) (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x826e6b) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #18 0x56118b5aacab in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::bn::primes::BN_check_prime::{closure#0}>, i32> openssl_rs.f4b68860f28f678b-cgu.06\n    #19 0x56118b5fa9f1 in __rust_try openssl_rs.f4b68860f28f678b-cgu.06\n    #20 0x56118b584d58 in BN_check_prime (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x7e2d58) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #21 0x56118b477d3e in <openssl_rs::bn::dh::tests::the_primality_test_rejects_a_composite_of_the_same_shape::{closure#0} as core::ops::function::FnOnce<()>>::call_once openssl_rs.f4b68860f28f678b-cgu.03\n    #22 0x56118ba37255 in test::__rust_begin_short_backtrace::<core::result::Result<(), alloc::string::String>, fn() -> core::result::Result<(), alloc::string::String>> (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xc95255) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #23 0x56118ba8c515 in <test::types::RunnableTest>::run (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xcea515) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #24 0x56118ba3d3d0 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> test.cd30ec5db59925b8-cgu.01\n    #25 0x56118ba45a98 in __rust_try test.cd30ec5db59925b8-cgu.01\n    #26 0x56118ba40029 in test::run_test_in_process (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xc9e029) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #27 0x56118ba87bee in std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xce5bee) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #28 0x56118ba713b8 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> test.cd30ec5db59925b8-cgu.07\n    #29 0x56118ba77a61 in __rust_try test.cd30ec5db59925b8-cgu.07\n    #30 0x56118ba73bb8 in <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} test.cd30ec5db59925b8-cgu.07\n    #31 0x56118bb809f0 in <alloc::boxed::Box<dyn core::ops::function::FnOnce<(), Output = ()> + core::marker::Send> as core::ops::function::FnOnce<()>>::call_once (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xdde9f0) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #32 0x56118bb719aa in <std::sys::thread::unix::Thread>::new::thread_start std.ae0349685461449e-cgu.13\n    #33 0x56118b2b5e26 in asan_thread_start(void*) asan_interceptors.cpp\n    #34 0x7f4fe73891f4  (/lib/x86_64-linux-gnu/libc.so.6+0x891f4) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n    #35 0x7f4fe7408b4f in clone (/lib/x86_64-linux-gnu/libc.so.6+0x108b4f) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n\n0x56118bc9ecbc is located 36 bytes before global variable 'alloc_620d5f711ece0e82ced2930f9a3fa5fd' defined in 'openssl_rs.f4b68860f28f678b-cgu.03' (0x56118bc9ece0) of size 27\n  'alloc_620d5f711ece0e82ced2930f9a3fa5fd' is ascii string 'ossl_prov_drbg_instantiate'\n0x56118bc9ecbc is located 0 bytes after global variable 'alloc_07344c0bf1cd4689c7c29e1f036f78bf' defined in 'openssl_rs.f4b68860f28f678b-cgu.03' (0x56118bc9eca0) of size 28\nSUMMARY: AddressSanitizer: global-buffer-overflow (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x51422b) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a) in __asan_memcpy"
-          ],
-          "exit_code": 1,
-          "fault_sites": [
-            "global-buffer-overflow @ openssl_rs::provider::rand::ctr_BCC_update"
-          ],
-          "log": "/asan/logs/allocator-unit-tests-cont2.log",
-          "round": 2,
-          "skipped": [
-            "rfc5649_wrap_pad_vectors",
-            "the_small_constants_are_prime"
-          ],
-          "tests_failed": 0,
-          "tests_passed": 0
-        }
-      ],
-      "covered_after_skips": false,
-      "diagnostics": [
-        "==53060==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7bb5970e0a44 at pc 0x56490935a943 bp 0x7bb5985fce10 sp 0x7bb5985fc5d0\nWRITE of size 24 at 0x7bb5970e0a44 thread T2\n    #0 0x56490935a942 in __asan_memmove (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x514942) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #1 0x56490945cbec in openssl_rs::modes::wrap::unwrap_raw openssl_rs.f4b68860f28f678b-cgu.02\n    #2 0x56490942e952 in CRYPTO_128_unwrap_pad (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x5e8952) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #3 0x5649096de2a3 in <openssl_rs::aes::tests::rfc5649_wrap_pad_vectors::{closure#0} as core::ops::function::FnOnce<()>>::call_once openssl_rs.f4b68860f28f678b-cgu.07\n    #4 0x564909adb255 in test::__rust_begin_short_backtrace::<core::result::Result<(), alloc::string::String>, fn() -> core::result::Result<(), alloc::string::String>> (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xc95255) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #5 0x564909b30515 in <test::types::RunnableTest>::run (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xcea515) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #6 0x564909ae13d0 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> test.cd30ec5db59925b8-cgu.01\n    #7 0x564909ae9a98 in __rust_try test.cd30ec5db59925b8-cgu.01\n    #8 0x564909ae4029 in test::run_test_in_process (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xc9e029) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #9 0x564909b2bbee in std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xce5bee) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #10 0x564909b153b8 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> test.cd30ec5db59925b8-cgu.07\n    #11 0x564909b1ba61 in __rust_try test.cd30ec5db59925b8-cgu.07\n    #12 0x564909b17bb8 in <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} test.cd30ec5db59925b8-cgu.07\n    #13 0x564909c249f0 in <alloc::boxed::Box<dyn core::ops::function::FnOnce<(), Output = ()> + core::marker::Send> as core::ops::function::FnOnce<()>>::call_once (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xdde9f0) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #14 0x564909c159aa in <std::sys::thread::unix::Thread>::new::thread_start std.ae0349685461449e-cgu.13\n    #15 0x564909359e26 in asan_thread_start(void*) asan_interceptors.cpp\n    #16 0x7fb59b4d51f4  (/lib/x86_64-linux-gnu/libc.so.6+0x891f4) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n    #17 0x7fb59b554b4f in clone (/lib/x86_64-linux-gnu/libc.so.6+0x108b4f) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n\nAddress 0x7bb5970e0a44 is located in stack of thread T2 at offset 580 in frame\n    #0 0x5649096dde2f in <openssl_rs::aes::tests::rfc5649_wrap_pad_vectors::{closure#0} as core::ops::function::FnOnce<()>>::call_once openssl_rs.f4b68860f28f678b-cgu.07\n\n  This frame has 14 object(s):\n    [32, 36) '_6.i.i.i'\n    [48, 292) 'k.i.i.i'\n    [368, 376) 'm2.i.i'\n    [400, 408) 'back7.i.i'\n    [432, 456) '_57.i.i'\n    [496, 504) 'n1.i.i'\n    [528, 536) 'm.i.i'\n    [560, 580) 'back.i.i' <== Memory access at offset 580 overflows this variable\n    [624, 648) '_24.i.i'\n    [688, 696) 'n.i.i'\n    [720, 752) 'wrapped.i.i'\n    [784, 788) '_6.i.i'\n    [800, 1044) 'dk.i.i'\n    [1120, 1364) 'k.i.i'\nHINT: this may be a false positive if your program uses some custom stack unwind mechanism, swapcontext or vfork\n      (longjmp and C++ exceptions *are* supported)\nThread T2 created by T0 here:\n    #0 0x56490933f871 in pthread_create (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x4f9871) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #1 0x564909c128fa in <std::sys::thread::unix::Thread>::new (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xdcc8fa) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #2 0x564909b146d2 in std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()> (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xcce6d2) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #3 0x564909b4e92e in <std::thread::builder::Builder>::spawn_unchecked::<test::run_test::{closure#1}, ()> (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xd0892e) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #4 0x564909ae6119 in test::run_test (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xca0119) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #5 0x564909add4ec in test::run_tests::<test::console::run_tests_console::{closure#2}> (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xc974ec) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #6 0x564909b0e303 in test::console::run_tests_console (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xcc8303) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #7 0x564909ae363a in test::test_main_inner test.cd30ec5db59925b8-cgu.01\n    #8 0x564909ae3b2c in test::test_main_env_args (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xc9db2c) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #9 0x5649099f14ad in openssl_rs::main (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xbab4ad) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #10 0x564909754922 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> std::process::ExitCode, std::process::ExitCode> (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x90e922) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #11 0x564909bb35f1 in __rust_try.llvm.9284114115787854464 (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0xd6d5f1) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #12 0x564909444f2d in std::rt::lang_start::<std::process::ExitCode> (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x5fef2d) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a)\n    #13 0x7fb59b473249  (/lib/x86_64-linux-gnu/libc.so.6+0x27249) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n\nSUMMARY: AddressSanitizer: stack-buffer-overflow (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x514942) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a) in __asan_memmove"
-      ],
-      "elapsed_s": 0.1,
-      "exit_code": 1,
-      "fault_sites": [
-        "stack-buffer-overflow @ openssl_rs::modes::wrap::unwrap_raw",
-        "global-buffer-overflow @ openssl_rs::provider::rand::ctr_BCC_update"
-      ],
+      "diagnostics": [],
+      "elapsed_s": 67.8,
+      "exit_code": 0,
       "filters": [],
-      "findings": [
-        "==53060==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7bb5970e0a44 at pc 0x56490935a943 bp 0x7bb5985fce10 sp 0x7bb5985fc5d0",
-        "SUMMARY: AddressSanitizer: stack-buffer-overflow (/asan/target/x86_64-unknown-linux-gnu/release/build/openssl-rs/778a8d7fe3d6a69e/out/openssl_rs-778a8d7fe3d6a69e+0x514942) (BuildId: 385be377a939679b4759083800b9bcb5cb32bc1a) in __asan_memmove"
-      ],
+      "findings": [],
       "layer": "allocator-unit-tests",
       "log": "/asan/logs/allocator-unit-tests.log",
-      "note": "ASan stopped the first full run at the first defect (halt_on_error=1); the continuation rounds skip each aborting test by name (parsed from the ASan stack) and re-run the remaining suite, so the coverage is larger than the first run alone",
       "ran": true,
-      "result_lines": [],
-      "shared_defect": "global-buffer-overflow @ openssl_rs::provider::rand::ctr_BCC_update",
+      "result_lines": [
+        "ok 1163 0 0"
+      ],
       "tests_failed": 0,
       "tests_ignored": 0,
-      "tests_passed": 0,
+      "tests_passed": 1163,
       "timed_out": false,
-      "verdict": "findings"
+      "verdict": "clean"
     },
     {
       "asan_reports": 0,
@@ -1035,62 +500,24 @@
       "verdict": "clean"
     },
     {
-      "asan_diagnostics": [
-        "==53348==ERROR: AddressSanitizer: global-buffer-overflow on address 0x561d311d97dc at pc 0x561d30628787 bp 0x7ffd6f093eb0 sp 0x7ffd6f093680",
-        "SUMMARY: AddressSanitizer: global-buffer-overflow (/asan/bin/rt_hostile_tls_probe.asan+0x3f8786) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f) in __asan_memcpy",
-        "==53350==ERROR: AddressSanitizer: global-buffer-overflow on address 0x561d311d97dc at pc 0x561d30628787 bp 0x7ffd6f093eb0 sp 0x7ffd6f093680",
-        "SUMMARY: AddressSanitizer: global-buffer-overflow (/asan/bin/rt_hostile_tls_probe.asan+0x3f8786) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f) in __asan_memcpy",
-        "==53352==ERROR: AddressSanitizer: global-buffer-overflow on address 0x561d311d97dc at pc 0x561d30628787 bp 0x7ffd6f093eb0 sp 0x7ffd6f093680",
-        "SUMMARY: AddressSanitizer: global-buffer-overflow (/asan/bin/rt_hostile_tls_probe.asan+0x3f8786) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f) in __asan_memcpy",
-        "==53354==ERROR: AddressSanitizer: global-buffer-overflow on address 0x561d311d97dc at pc 0x561d30628787 bp 0x7ffd6f093eb0 sp 0x7ffd6f093680",
-        "SUMMARY: AddressSanitizer: global-buffer-overflow (/asan/bin/rt_hostile_tls_probe.asan+0x3f8786) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f) in __asan_memcpy"
-      ],
-      "asan_reports": 50,
+      "asan_diagnostics": [],
+      "asan_reports": 0,
       "classes": {
-        "crash": 25,
-        "parse": 62
+        "parse": 87
       },
       "command": "/asan/bin/rt_hostile_tls_probe.asan courts/phase18/fixtures/hostile-tls",
       "corpus_entries": 87,
       "court": "RT-HOSTILE-TLS",
-      "diagnostics": [
-        "==53348==ERROR: AddressSanitizer: global-buffer-overflow on address 0x561d311d97dc at pc 0x561d30628787 bp 0x7ffd6f093eb0 sp 0x7ffd6f093680\nREAD of size 5 at 0x561d311d97dc thread T0\n    #0 0x561d30628786 in __asan_memcpy (/asan/bin/rt_hostile_tls_probe.asan+0x3f8786) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f)\n    #1 0x561d30b13db9 in core::ptr::copy_nonoverlapping::<u8> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/mod.rs:574:14\n    #2 0x561d30b13db9 in openssl_rs::provider::rand::ctr_BCC_update /work/src/provider/rand.rs:1827:13\n    #3 0x561d30b11a1e in openssl_rs::provider::rand::ctr_df /work/src/provider/rand.rs:1911:16\n    #4 0x561d30b11a1e in openssl_rs::provider::rand::ctr_update /work/src/provider/rand.rs:2023:20\n    #5 0x561d30b187a1 in openssl_rs::provider::rand::drbg_ctr_instantiate /work/src/provider/rand.rs:2094:12\n    #6 0x561d30b1c269 in openssl_rs::provider::rand::ossl_prov_drbg_instantiate /work/src/provider/rand.rs:835:16\n    #7 0x561d30b1df02 in openssl_rs::provider::rand::drbg_ctr_instantiate_wrapper /work/src/provider/rand.rs:2127:19\n    #8 0x561d30aff9a5 in openssl_rs::evp::rand::evp_rand_instantiate_locked /work/src/evp/rand.rs:1294:9\n    #9 0x561d30aff9a5 in EVP_RAND_instantiate /work/src/evp/rand.rs:1327:9\n    #10 0x561d30aff9a5 in openssl_rs::rand::rand_lib::rand_new_drbg (.llvm.8495490864019303957) /work/src/rand/rand_lib.rs:1198:17\n    #11 0x561d30b00560 in openssl_rs::rand::rand_lib::ossl_rand_get0_primary (.llvm.8495490864019303957) /work/src/rand/rand_lib.rs:1252:9\n    #12 0x561d30b0018e in openssl_rs::rand::rand_lib::ossl_rand_get0_public /work/src/rand/rand_lib.rs:1340:32\n    #13 0x561d30affcf1 in openssl_rs::rand::rand_lib::rand_bytes_ex_get0 /work/src/rand/rand_lib.rs:838:13\n    #14 0x561d30affcf1 in openssl_rs::rand::rand_lib::rand_bytes_get0 /work/src/rand/rand_lib.rs:866:14\n    #15 0x561d30ace6d5 in RAND_bytes_ex /work/src/rand/rand_lib.rs:955:14\n    #16 0x561d30ace6d5 in RAND_bytes /work/src/rand/rand_lib.rs:968:14\n    #17 0x561d30997629 in openssl_rs::ssl::statem::statem_clnt::tls_construct_client_hello /work/src/ssl/statem/statem_clnt.rs:891:17\n    #18 0x561d30997629 in openssl_rs::ssl::statem::statem_clnt::write_client_hello /work/src/ssl/statem/statem_clnt.rs:1023:16\n    #19 0x561d30997629 in openssl_rs::ssl::statem::statem_clnt::tls13_client_drive /work/src/ssl/statem/statem_clnt.rs:3065:24\n    #20 0x561d30b267b6 in openssl_rs::ssl::statem::statem::state_machine /work/src/ssl/statem/statem.rs:476:13\n    #21 0x561d30b26c8c in openssl_rs::ssl::statem::statem::ossl_statem_connect /work/src/ssl/statem/statem.rs:396:14\n    #22 0x561d307ed94b in openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0} /work/src/ssl/ssl_lib.rs:6090:27\n    #23 0x561d307ed94b in <core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9\n    #24 0x561d307ed94b in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43\n    #25 0x561d30820c21 in __rust_try openssl_rs.5f987b19b98ce832-cgu.02\n    #26 0x561d307b8a23 in std::panicking::catch_unwind::<i32, core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}>> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541:19\n    #27 0x561d307b8a23 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14\n    #28 0x561d307b8a23 in openssl_rs::ffi::guard_ffi::<i32, openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}> /work/src/ffi/mod.rs:78:11\n    #29 0x561d307b8a23 in SSL_do_handshake /work/src/ssl/ssl_lib.rs:6069:5\n    #30 0x561d307e77c3 in openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0} /work/src/ssl/ssl_lib.rs:6138:18\n    #31 0x561d307e77c3 in <core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9\n    #32 0x561d307e77c3 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43\n    #33 0x561d30820c21 in __rust_try openssl_rs.5f987b19b98ce832-cgu.02\n    #34 0x561d307b6b93 in std::panicking::catch_unwind::<i32, core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}>> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541:19\n    #35 0x561d307b6b93 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14\n    #36 0x561d307b6b93 in openssl_rs::ffi::guard_ffi::<i32, openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}> /work/src/ffi/mod.rs:78:11\n    #37 0x561d307b6b93 in SSL_connect /work/src/ssl/ssl_lib.rs:6126:5\n    #38 0x561d306657fb in drive /work/courts/phase18/rt_hostile_tls_probe.c:196:15\n    #39 0x561d30664da7 in main /work/courts/phase18/rt_hostile_tls_probe.c:356:13\n    #40 0x7fcea736d249  (/lib/x86_64-linux-gnu/libc.so.6+0x27249) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n    #41 0x7fcea736d304 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x27304) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n    #42 0x561d305a6610 in _start (/asan/bin/rt_hostile_tls_probe.asan+0x376610) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f)\n\n0x561d311d97dc is located 36 bytes to the left of global variable 'alloc_620d5f711ece0e82ced2930f9a3fa5fd' defined in 'openssl_rs.5f987b19b98ce832-cgu.08' (0x561d311d9800) of size 27\n  'alloc_620d5f711ece0e82ced2930f9a3fa5fd' is ascii string 'ossl_prov_drbg_instantiate'\n0x561d311d97dc is located 0 bytes to the right of global variable 'alloc_07344c0bf1cd4689c7c29e1f036f78bf' defined in 'openssl_rs.5f987b19b98ce832-cgu.08' (0x561d311d97c0) of size 28\nSUMMARY: AddressSanitizer: global-buffer-overflow (/asan/bin/rt_hostile_tls_probe.asan+0x3f8786) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f) in __asan_memcpy",
-        "==53350==ERROR: AddressSanitizer: global-buffer-overflow on address 0x561d311d97dc at pc 0x561d30628787 bp 0x7ffd6f093eb0 sp 0x7ffd6f093680\nREAD of size 5 at 0x561d311d97dc thread T0\n    #0 0x561d30628786 in __asan_memcpy (/asan/bin/rt_hostile_tls_probe.asan+0x3f8786) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f)\n    #1 0x561d30b13db9 in core::ptr::copy_nonoverlapping::<u8> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/mod.rs:574:14\n    #2 0x561d30b13db9 in openssl_rs::provider::rand::ctr_BCC_update /work/src/provider/rand.rs:1827:13\n    #3 0x561d30b11a1e in openssl_rs::provider::rand::ctr_df /work/src/provider/rand.rs:1911:16\n    #4 0x561d30b11a1e in openssl_rs::provider::rand::ctr_update /work/src/provider/rand.rs:2023:20\n    #5 0x561d30b187a1 in openssl_rs::provider::rand::drbg_ctr_instantiate /work/src/provider/rand.rs:2094:12\n    #6 0x561d30b1c269 in openssl_rs::provider::rand::ossl_prov_drbg_instantiate /work/src/provider/rand.rs:835:16\n    #7 0x561d30b1df02 in openssl_rs::provider::rand::drbg_ctr_instantiate_wrapper /work/src/provider/rand.rs:2127:19\n    #8 0x561d30aff9a5 in openssl_rs::evp::rand::evp_rand_instantiate_locked /work/src/evp/rand.rs:1294:9\n    #9 0x561d30aff9a5 in EVP_RAND_instantiate /work/src/evp/rand.rs:1327:9\n    #10 0x561d30aff9a5 in openssl_rs::rand::rand_lib::rand_new_drbg (.llvm.8495490864019303957) /work/src/rand/rand_lib.rs:1198:17\n    #11 0x561d30b00560 in openssl_rs::rand::rand_lib::ossl_rand_get0_primary (.llvm.8495490864019303957) /work/src/rand/rand_lib.rs:1252:9\n    #12 0x561d30b0018e in openssl_rs::rand::rand_lib::ossl_rand_get0_public /work/src/rand/rand_lib.rs:1340:32\n    #13 0x561d30affcf1 in openssl_rs::rand::rand_lib::rand_bytes_ex_get0 /work/src/rand/rand_lib.rs:838:13\n    #14 0x561d30affcf1 in openssl_rs::rand::rand_lib::rand_bytes_get0 /work/src/rand/rand_lib.rs:866:14\n    #15 0x561d30ace6d5 in RAND_bytes_ex /work/src/rand/rand_lib.rs:955:14\n    #16 0x561d30ace6d5 in RAND_bytes /work/src/rand/rand_lib.rs:968:14\n    #17 0x561d30997629 in openssl_rs::ssl::statem::statem_clnt::tls_construct_client_hello /work/src/ssl/statem/statem_clnt.rs:891:17\n    #18 0x561d30997629 in openssl_rs::ssl::statem::statem_clnt::write_client_hello /work/src/ssl/statem/statem_clnt.rs:1023:16\n    #19 0x561d30997629 in openssl_rs::ssl::statem::statem_clnt::tls13_client_drive /work/src/ssl/statem/statem_clnt.rs:3065:24\n    #20 0x561d30b267b6 in openssl_rs::ssl::statem::statem::state_machine /work/src/ssl/statem/statem.rs:476:13\n    #21 0x561d30b26c8c in openssl_rs::ssl::statem::statem::ossl_statem_connect /work/src/ssl/statem/statem.rs:396:14\n    #22 0x561d307ed94b in openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0} /work/src/ssl/ssl_lib.rs:6090:27\n    #23 0x561d307ed94b in <core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9\n    #24 0x561d307ed94b in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43\n    #25 0x561d30820c21 in __rust_try openssl_rs.5f987b19b98ce832-cgu.02\n    #26 0x561d307b8a23 in std::panicking::catch_unwind::<i32, core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}>> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541:19\n    #27 0x561d307b8a23 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14\n    #28 0x561d307b8a23 in openssl_rs::ffi::guard_ffi::<i32, openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}> /work/src/ffi/mod.rs:78:11\n    #29 0x561d307b8a23 in SSL_do_handshake /work/src/ssl/ssl_lib.rs:6069:5\n    #30 0x561d307e77c3 in openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0} /work/src/ssl/ssl_lib.rs:6138:18\n    #31 0x561d307e77c3 in <core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9\n    #32 0x561d307e77c3 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43\n    #33 0x561d30820c21 in __rust_try openssl_rs.5f987b19b98ce832-cgu.02\n    #34 0x561d307b6b93 in std::panicking::catch_unwind::<i32, core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}>> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541:19\n    #35 0x561d307b6b93 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14\n    #36 0x561d307b6b93 in openssl_rs::ffi::guard_ffi::<i32, openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}> /work/src/ffi/mod.rs:78:11\n    #37 0x561d307b6b93 in SSL_connect /work/src/ssl/ssl_lib.rs:6126:5\n    #38 0x561d306657fb in drive /work/courts/phase18/rt_hostile_tls_probe.c:196:15\n    #39 0x561d30664da7 in main /work/courts/phase18/rt_hostile_tls_probe.c:356:13\n    #40 0x7fcea736d249  (/lib/x86_64-linux-gnu/libc.so.6+0x27249) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n    #41 0x7fcea736d304 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x27304) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n    #42 0x561d305a6610 in _start (/asan/bin/rt_hostile_tls_probe.asan+0x376610) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f)\n\n0x561d311d97dc is located 36 bytes to the left of global variable 'alloc_620d5f711ece0e82ced2930f9a3fa5fd' defined in 'openssl_rs.5f987b19b98ce832-cgu.08' (0x561d311d9800) of size 27\n  'alloc_620d5f711ece0e82ced2930f9a3fa5fd' is ascii string 'ossl_prov_drbg_instantiate'\n0x561d311d97dc is located 0 bytes to the right of global variable 'alloc_07344c0bf1cd4689c7c29e1f036f78bf' defined in 'openssl_rs.5f987b19b98ce832-cgu.08' (0x561d311d97c0) of size 28\nSUMMARY: AddressSanitizer: global-buffer-overflow (/asan/bin/rt_hostile_tls_probe.asan+0x3f8786) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f) in __asan_memcpy",
-        "==53352==ERROR: AddressSanitizer: global-buffer-overflow on address 0x561d311d97dc at pc 0x561d30628787 bp 0x7ffd6f093eb0 sp 0x7ffd6f093680\nREAD of size 5 at 0x561d311d97dc thread T0\n    #0 0x561d30628786 in __asan_memcpy (/asan/bin/rt_hostile_tls_probe.asan+0x3f8786) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f)\n    #1 0x561d30b13db9 in core::ptr::copy_nonoverlapping::<u8> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/mod.rs:574:14\n    #2 0x561d30b13db9 in openssl_rs::provider::rand::ctr_BCC_update /work/src/provider/rand.rs:1827:13\n    #3 0x561d30b11a1e in openssl_rs::provider::rand::ctr_df /work/src/provider/rand.rs:1911:16\n    #4 0x561d30b11a1e in openssl_rs::provider::rand::ctr_update /work/src/provider/rand.rs:2023:20\n    #5 0x561d30b187a1 in openssl_rs::provider::rand::drbg_ctr_instantiate /work/src/provider/rand.rs:2094:12\n    #6 0x561d30b1c269 in openssl_rs::provider::rand::ossl_prov_drbg_instantiate /work/src/provider/rand.rs:835:16\n    #7 0x561d30b1df02 in openssl_rs::provider::rand::drbg_ctr_instantiate_wrapper /work/src/provider/rand.rs:2127:19\n    #8 0x561d30aff9a5 in openssl_rs::evp::rand::evp_rand_instantiate_locked /work/src/evp/rand.rs:1294:9\n    #9 0x561d30aff9a5 in EVP_RAND_instantiate /work/src/evp/rand.rs:1327:9\n    #10 0x561d30aff9a5 in openssl_rs::rand::rand_lib::rand_new_drbg (.llvm.8495490864019303957) /work/src/rand/rand_lib.rs:1198:17\n    #11 0x561d30b00560 in openssl_rs::rand::rand_lib::ossl_rand_get0_primary (.llvm.8495490864019303957) /work/src/rand/rand_lib.rs:1252:9\n    #12 0x561d30b0018e in openssl_rs::rand::rand_lib::ossl_rand_get0_public /work/src/rand/rand_lib.rs:1340:32\n    #13 0x561d30affcf1 in openssl_rs::rand::rand_lib::rand_bytes_ex_get0 /work/src/rand/rand_lib.rs:838:13\n    #14 0x561d30affcf1 in openssl_rs::rand::rand_lib::rand_bytes_get0 /work/src/rand/rand_lib.rs:866:14\n    #15 0x561d30ace6d5 in RAND_bytes_ex /work/src/rand/rand_lib.rs:955:14\n    #16 0x561d30ace6d5 in RAND_bytes /work/src/rand/rand_lib.rs:968:14\n    #17 0x561d30997629 in openssl_rs::ssl::statem::statem_clnt::tls_construct_client_hello /work/src/ssl/statem/statem_clnt.rs:891:17\n    #18 0x561d30997629 in openssl_rs::ssl::statem::statem_clnt::write_client_hello /work/src/ssl/statem/statem_clnt.rs:1023:16\n    #19 0x561d30997629 in openssl_rs::ssl::statem::statem_clnt::tls13_client_drive /work/src/ssl/statem/statem_clnt.rs:3065:24\n    #20 0x561d30b267b6 in openssl_rs::ssl::statem::statem::state_machine /work/src/ssl/statem/statem.rs:476:13\n    #21 0x561d30b26c8c in openssl_rs::ssl::statem::statem::ossl_statem_connect /work/src/ssl/statem/statem.rs:396:14\n    #22 0x561d307ed94b in openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0} /work/src/ssl/ssl_lib.rs:6090:27\n    #23 0x561d307ed94b in <core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9\n    #24 0x561d307ed94b in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43\n    #25 0x561d30820c21 in __rust_try openssl_rs.5f987b19b98ce832-cgu.02\n    #26 0x561d307b8a23 in std::panicking::catch_unwind::<i32, core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}>> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541:19\n    #27 0x561d307b8a23 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14\n    #28 0x561d307b8a23 in openssl_rs::ffi::guard_ffi::<i32, openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}> /work/src/ffi/mod.rs:78:11\n    #29 0x561d307b8a23 in SSL_do_handshake /work/src/ssl/ssl_lib.rs:6069:5\n    #30 0x561d307e77c3 in openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0} /work/src/ssl/ssl_lib.rs:6138:18\n    #31 0x561d307e77c3 in <core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9\n    #32 0x561d307e77c3 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43\n    #33 0x561d30820c21 in __rust_try openssl_rs.5f987b19b98ce832-cgu.02\n    #34 0x561d307b6b93 in std::panicking::catch_unwind::<i32, core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}>> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541:19\n    #35 0x561d307b6b93 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14\n    #36 0x561d307b6b93 in openssl_rs::ffi::guard_ffi::<i32, openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}> /work/src/ffi/mod.rs:78:11\n    #37 0x561d307b6b93 in SSL_connect /work/src/ssl/ssl_lib.rs:6126:5\n    #38 0x561d306657fb in drive /work/courts/phase18/rt_hostile_tls_probe.c:196:15\n    #39 0x561d30664da7 in main /work/courts/phase18/rt_hostile_tls_probe.c:356:13\n    #40 0x7fcea736d249  (/lib/x86_64-linux-gnu/libc.so.6+0x27249) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n    #41 0x7fcea736d304 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x27304) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n    #42 0x561d305a6610 in _start (/asan/bin/rt_hostile_tls_probe.asan+0x376610) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f)\n\n0x561d311d97dc is located 36 bytes to the left of global variable 'alloc_620d5f711ece0e82ced2930f9a3fa5fd' defined in 'openssl_rs.5f987b19b98ce832-cgu.08' (0x561d311d9800) of size 27\n  'alloc_620d5f711ece0e82ced2930f9a3fa5fd' is ascii string 'ossl_prov_drbg_instantiate'\n0x561d311d97dc is located 0 bytes to the right of global variable 'alloc_07344c0bf1cd4689c7c29e1f036f78bf' defined in 'openssl_rs.5f987b19b98ce832-cgu.08' (0x561d311d97c0) of size 28\nSUMMARY: AddressSanitizer: global-buffer-overflow (/asan/bin/rt_hostile_tls_probe.asan+0x3f8786) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f) in __asan_memcpy",
-        "==53354==ERROR: AddressSanitizer: global-buffer-overflow on address 0x561d311d97dc at pc 0x561d30628787 bp 0x7ffd6f093eb0 sp 0x7ffd6f093680\nREAD of size 5 at 0x561d311d97dc thread T0\n    #0 0x561d30628786 in __asan_memcpy (/asan/bin/rt_hostile_tls_probe.asan+0x3f8786) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f)\n    #1 0x561d30b13db9 in core::ptr::copy_nonoverlapping::<u8> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/mod.rs:574:14\n    #2 0x561d30b13db9 in openssl_rs::provider::rand::ctr_BCC_update /work/src/provider/rand.rs:1827:13\n    #3 0x561d30b11a1e in openssl_rs::provider::rand::ctr_df /work/src/provider/rand.rs:1911:16\n    #4 0x561d30b11a1e in openssl_rs::provider::rand::ctr_update /work/src/provider/rand.rs:2023:20\n    #5 0x561d30b187a1 in openssl_rs::provider::rand::drbg_ctr_instantiate /work/src/provider/rand.rs:2094:12\n    #6 0x561d30b1c269 in openssl_rs::provider::rand::ossl_prov_drbg_instantiate /work/src/provider/rand.rs:835:16\n    #7 0x561d30b1df02 in openssl_rs::provider::rand::drbg_ctr_instantiate_wrapper /work/src/provider/rand.rs:2127:19\n    #8 0x561d30aff9a5 in openssl_rs::evp::rand::evp_rand_instantiate_locked /work/src/evp/rand.rs:1294:9\n    #9 0x561d30aff9a5 in EVP_RAND_instantiate /work/src/evp/rand.rs:1327:9\n    #10 0x561d30aff9a5 in openssl_rs::rand::rand_lib::rand_new_drbg (.llvm.8495490864019303957) /work/src/rand/rand_lib.rs:1198:17\n    #11 0x561d30b00560 in openssl_rs::rand::rand_lib::ossl_rand_get0_primary (.llvm.8495490864019303957) /work/src/rand/rand_lib.rs:1252:9\n    #12 0x561d30b0018e in openssl_rs::rand::rand_lib::ossl_rand_get0_public /work/src/rand/rand_lib.rs:1340:32\n    #13 0x561d30affcf1 in openssl_rs::rand::rand_lib::rand_bytes_ex_get0 /work/src/rand/rand_lib.rs:838:13\n    #14 0x561d30affcf1 in openssl_rs::rand::rand_lib::rand_bytes_get0 /work/src/rand/rand_lib.rs:866:14\n    #15 0x561d30ace6d5 in RAND_bytes_ex /work/src/rand/rand_lib.rs:955:14\n    #16 0x561d30ace6d5 in RAND_bytes /work/src/rand/rand_lib.rs:968:14\n    #17 0x561d30997629 in openssl_rs::ssl::statem::statem_clnt::tls_construct_client_hello /work/src/ssl/statem/statem_clnt.rs:891:17\n    #18 0x561d30997629 in openssl_rs::ssl::statem::statem_clnt::write_client_hello /work/src/ssl/statem/statem_clnt.rs:1023:16\n    #19 0x561d30997629 in openssl_rs::ssl::statem::statem_clnt::tls13_client_drive /work/src/ssl/statem/statem_clnt.rs:3065:24\n    #20 0x561d30b267b6 in openssl_rs::ssl::statem::statem::state_machine /work/src/ssl/statem/statem.rs:476:13\n    #21 0x561d30b26c8c in openssl_rs::ssl::statem::statem::ossl_statem_connect /work/src/ssl/statem/statem.rs:396:14\n    #22 0x561d307ed94b in openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0} /work/src/ssl/ssl_lib.rs:6090:27\n    #23 0x561d307ed94b in <core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9\n    #24 0x561d307ed94b in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43\n    #25 0x561d30820c21 in __rust_try openssl_rs.5f987b19b98ce832-cgu.02\n    #26 0x561d307b8a23 in std::panicking::catch_unwind::<i32, core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}>> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541:19\n    #27 0x561d307b8a23 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14\n    #28 0x561d307b8a23 in openssl_rs::ffi::guard_ffi::<i32, openssl_rs::ssl::ssl_lib::SSL_do_handshake::{closure#0}> /work/src/ffi/mod.rs:78:11\n    #29 0x561d307b8a23 in SSL_do_handshake /work/src/ssl/ssl_lib.rs:6069:5\n    #30 0x561d307e77c3 in openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0} /work/src/ssl/ssl_lib.rs:6138:18\n    #31 0x561d307e77c3 in <core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9\n    #32 0x561d307e77c3 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43\n    #33 0x561d30820c21 in __rust_try openssl_rs.5f987b19b98ce832-cgu.02\n    #34 0x561d307b6b93 in std::panicking::catch_unwind::<i32, core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}>> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541:19\n    #35 0x561d307b6b93 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}>, i32> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14\n    #36 0x561d307b6b93 in openssl_rs::ffi::guard_ffi::<i32, openssl_rs::ssl::ssl_lib::SSL_connect::{closure#0}> /work/src/ffi/mod.rs:78:11\n    #37 0x561d307b6b93 in SSL_connect /work/src/ssl/ssl_lib.rs:6126:5\n    #38 0x561d306657fb in drive /work/courts/phase18/rt_hostile_tls_probe.c:196:15\n    #39 0x561d30664da7 in main /work/courts/phase18/rt_hostile_tls_probe.c:356:13\n    #40 0x7fcea736d249  (/lib/x86_64-linux-gnu/libc.so.6+0x27249) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n    #41 0x7fcea736d304 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x27304) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n    #42 0x561d305a6610 in _start (/asan/bin/rt_hostile_tls_probe.asan+0x376610) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f)\n\n0x561d311d97dc is located 36 bytes to the left of global variable 'alloc_620d5f711ece0e82ced2930f9a3fa5fd' defined in 'openssl_rs.5f987b19b98ce832-cgu.08' (0x561d311d9800) of size 27\n  'alloc_620d5f711ece0e82ced2930f9a3fa5fd' is ascii string 'ossl_prov_drbg_instantiate'\n0x561d311d97dc is located 0 bytes to the right of global variable 'alloc_07344c0bf1cd4689c7c29e1f036f78bf' defined in 'openssl_rs.5f987b19b98ce832-cgu.08' (0x561d311d97c0) of size 28\nSUMMARY: AddressSanitizer: global-buffer-overflow (/asan/bin/rt_hostile_tls_probe.asan+0x3f8786) (BuildId: ee98b161922691b03b169803101e9f4004aa6d3f) in __asan_memcpy"
-      ],
-      "elapsed_s": 2.4,
+      "diagnostics": [],
+      "elapsed_s": 0.8,
       "exit_code": 0,
-      "findings": [
-        "entry.sh-bad-cipher.class=crash",
-        "entry.sh-bad-legacy-version.class=crash",
-        "entry.sh-ccs-first.class=crash",
-        "entry.sh-empty.class=crash",
-        "entry.sh-ext-len-overrun.class=crash",
-        "entry.sh-hs-len-overrun.class=crash",
-        "entry.sh-ks-short.class=crash",
-        "entry.sh-trunc.class=crash",
-        "entry.sh-unknown-hs-type.class=crash",
-        "entry.sh-valid-ish.class=crash",
-        "entry.ch-comp-empty.class=crash",
-        "entry.ch-ext-dup-supported-versions.class=crash",
-        "entry.ch-ext-len-overrun.class=crash",
-        "entry.ch-legacy-0000.class=crash",
-        "entry.ch-legacy-0304.class=crash",
-        "entry.ch-min-valid-rec0301.class=crash",
-        "entry.ch-min-valid-rec0303.class=crash",
-        "entry.ch-min-valid.class=crash",
-        "entry.ch-no-extensions.class=crash",
-        "entry.ch-no-key-share.class=crash"
-      ],
-      "first_faulting_entry": "sh-bad-cipher",
-      "hostile_classes": {
-        "crash": 25
-      },
+      "findings": [],
+      "first_faulting_entry": null,
+      "hostile_classes": {},
       "layer": "hostile-tls",
       "log": "/asan/logs/hostile-tls.log",
       "ran": true,
-      "verdict": "findings"
+      "verdict": "clean"
     },
     {
       "asan_diagnostics": [],
@@ -1116,77 +543,21 @@
       "cases_driven": 16384,
       "cases_requested": 16384,
       "classes": {
-        "crash": 10,
-        "parse": 16374
+        "parse": 16384
       },
       "command": "python3 forensics/tools/fuzz_hostile_corpus.py --probe /asan/bin/rt_hostile_x509_probe.asan --cases 16384 --wall-budget 300 --seed 24 --workdir /asan/fuzz-work --out /asan/fuzz-hostile-asan.json",
-      "elapsed_s": 38.9,
-      "exit_code": 1,
-      "finding_count": 10,
-      "findings": [
-        {
-          "batch": "/asan/fuzz-work/batch000000",
-          "class": "crash",
-          "entry": "fz000205"
-        },
-        {
-          "batch": "/asan/fuzz-work/batch000001",
-          "class": "crash",
-          "entry": "fz000735"
-        },
-        {
-          "batch": "/asan/fuzz-work/batch000003",
-          "class": "crash",
-          "entry": "fz001949"
-        },
-        {
-          "batch": "/asan/fuzz-work/batch000014",
-          "class": "crash",
-          "entry": "fz007518"
-        },
-        {
-          "batch": "/asan/fuzz-work/batch000015",
-          "class": "crash",
-          "entry": "fz008183"
-        },
-        {
-          "batch": "/asan/fuzz-work/batch000016",
-          "class": "crash",
-          "entry": "fz008599"
-        },
-        {
-          "batch": "/asan/fuzz-work/batch000018",
-          "class": "crash",
-          "entry": "fz009247"
-        },
-        {
-          "batch": "/asan/fuzz-work/batch000020",
-          "class": "crash",
-          "entry": "fz010319"
-        },
-        {
-          "batch": "/asan/fuzz-work/batch000021",
-          "class": "crash",
-          "entry": "fz010843"
-        },
-        {
-          "batch": "/asan/fuzz-work/batch000031",
-          "class": "crash",
-          "entry": "fz015899"
-        }
-      ],
+      "elapsed_s": 38.4,
+      "exit_code": 0,
+      "finding_count": 0,
+      "findings": [],
       "layer": "mutation-corpus",
       "log": "/asan/logs/mutation-corpus.log",
       "note": "ASan errors are surfaced as the probe's own `crash` class because the probe runs with abort_on_error=1; the fuzz tool invokes the same ASan probe binary the RT-HOSTILE-X509 layer uses",
       "ran": true,
-      "root_cause_diagnostics": [
-        "==70344==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x611000000280 at pc 0x5574b8737756 bp 0x7ffed04c5b10 sp 0x7ffed04c52d8\nREAD of size 237 at 0x611000000280 thread T0\n    #0 0x5574b8737755 in __interceptor_strlen (/asan/bin/rt_hostile_x509_probe.asan+0x38c755) (BuildId: 9c7090b7a9c2f410b211538198c07d4c3490323b)\n    #1 0x5574b8dbdbf4 in core::ffi::c_str::strlen::runtime /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ffi/c_str.rs:781:60\n    #2 0x5574b8dbdbf4 in core::ffi::c_str::strlen /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/intrinsics/mod.rs:2731:9\n    #3 0x5574b8dbdbf4 in <core::ffi::c_str::CStr>::from_ptr /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ffi/c_str.rs:259:28\n    #4 0x5574b8dbdbf4 in openssl_rs::evp::pem_bridge::has_prefix /work/src/evp/pem_bridge.rs:235:26\n    #5 0x5574b8dbdbf4 in openssl_rs::evp::pem_bridge::get_header_and_data /work/src/evp/pem_bridge.rs:825:36\n    #6 0x5574b8dbdbf4 in PEM_read_bio_ex /work/src/evp/pem_bridge.rs:1020:21\n    #7 0x5574b8af432e in openssl_rs::pem::pem_lib::pem_bytes_read_bio_flags (.llvm.38758923677236832) /work/src/pem/pem_lib.rs:368:13\n    #8 0x5574b8dbca1f in PEM_bytes_read_bio /work/src/pem/pem_lib.rs:484:14\n    #9 0x5574b8dbca1f in PEM_ASN1_read_bio /work/src/pem/pem_oth.rs:62:17\n    #10 0x5574b87e223b in arm_pemcert /work/courts/phase18/rt_hostile_x509_probe.c:395:27\n    #11 0x5574b87e1070 in drive /work/courts/phase18/rt_hostile_x509_probe.c:476:9\n    #12 0x5574b87dfcbd in main /work/courts/phase18/rt_hostile_x509_probe.c:609:13\n    #13 0x7f851455a249  (/lib/x86_64-linux-gnu/libc.so.6+0x27249) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n    #14 0x7f851455a304 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x27304) (BuildId: 93ac61ec5a8eb1396f9fbd350e3169a558528a40)\n    #15 0x5574b8721610 in _start (/asan/bin/rt_hostile_x509_probe.asan+0x376610) (BuildId: 9c7090b7a9c2f410b211538198c07d4c3490323b)\n\n0x611000000280 is located 0 bytes to the right of 256-byte region [0x611000000180,0x611000000280)\nallocated by thread T0 here:\n    #0 0x5574b87a445e in malloc (/asan/bin/rt_hostile_x509_probe.asan+0x3f945e) (BuildId: 9c7090b7a9c2f410b211538198c07d4c3490323b)\n    #1 0x5574b8b662a1 in openssl_rs::runtime::mem::alloc /work/src/runtime/mem.rs:416:14\n    #2 0x5574b8b662a1 in openssl_rs::runtime::mem::malloc_request /work/src/runtime/mem.rs:259:13\n    #3 0x5574b8b662a1 in openssl_rs::runtime::mem::CRYPTO_malloc::{closure#0} /work/src/runtime/mem.rs:446:35\n    #4 0x5574b8b662a1 in <core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::runtime::mem::CRYPTO_malloc::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9\n    #5 0x5574b8b662a1 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<openssl_rs::runtime::mem::CRYPTO_malloc::{closure#0}>, *mut core::ffi::c_void> /usr/local/rustup/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43\n\nSUMMARY: AddressSanitizer: heap-buffer-overflow (/asan/bin/rt_hostile_x509_probe.asan+0x38c755) (BuildId: 9c7090b7a9c2f410b211538198c07d4c3490323b) in __interceptor_strlen"
-      ],
-      "root_cause_sites": [
-        "heap-buffer-overflow @ openssl_rs::evp::pem_bridge::has_prefix"
-      ],
+      "root_cause_diagnostics": [],
+      "root_cause_sites": [],
       "seed": 24,
-      "verdict": "findings"
+      "verdict": "clean"
     },
     {
       "consumers": [
@@ -1238,8 +609,11 @@
   "summary": {
     "canary_detected": true,
     "clean_layers": [
+      "allocator-unit-tests",
       "ownership-tests",
-      "hostile-x509"
+      "hostile-tls",
+      "hostile-x509",
+      "mutation-corpus"
     ],
     "instrumentation_closure_ok": true,
     "layers_not_run": [
@@ -1252,11 +626,7 @@
       "hostile-x509",
       "mutation-corpus"
     ],
-    "layers_with_findings": [
-      "allocator-unit-tests",
-      "hostile-tls",
-      "mutation-corpus"
-    ],
+    "layers_with_findings": [],
     "trust": "canary-fired"
   },
   "venue": {
