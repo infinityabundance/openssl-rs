@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-CPU-CAPABILITY` is 19.1's court: it compiles courts/phase19/rt_cpu_capability_probe.c twice (authority and candidate) and reports the CPU-capability surface deterministically -- `OPENSSL_ia32cap_P[0..3]`, the effect of `OPENSSL_cpuid_setup`, the raw vector `OPENSSL_ia32_cpuid` returns, and the capability-derived selection observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`, `OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and the four `EVP_aes_*_cbc_hmac_sha*` constructors, which answer NULL when `AESNI_CAPABLE` is clear). The probe is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade: the host set, an AES-NI-cleared set and a fully cleared set. The three capability names are declared weak because `OPENSSL_ia32cap_P` is `.hidden` and `OPENSSL_cpuid_setup`/`OPENSSL_ia32_cpuid` live only in the static archive: the authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so the surface is reached, and the candidate provides none of the three, so it answers `probe.reachable.*=0` -- the `symbols_not_reached` census the plan records -- and its CPU-dispatch string is `CPUINFO: N/A` with `OPENSSL_info(1008)` NULL. That disposition and every other candidate-vs-authority difference is *recorded* in the court's `divergences` block, not failed: the reduced engine deliberately does not model `OPENSSL_ia32cap` masking, so under a cleared facade the authority's selection moves to the non-AES-NI arm and the candidate's does not. The court is `pass` when the authority's capability surface was actually driven, the faulted facade moved the authority's selection, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded audit of the capability surface at the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6). `RT-EVP-DISPATCH` is 19.2's court: it compiles courts/phase19/rt_evp_dispatch_probe.c twice and reports, for a fixed operation set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-1/256 and the four `EVP_aes_*_cbc_hmac_sha*` constructors), which implementation each path selects -- the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context -- as the selected method's name/NID/type/flags/sizes and, for a fetch, its provider name, under the same three fixed capability sets. The authority's default provider filters its `AES-*-CBC-HMAC-*` rows through `ossl_cipher_capable_aes_cbc_hmac_sha*` (`AESNI_CBC_HMAC_SHA_CAPABLE`), so masking the AES-NI bit makes those fetch/legacy/lookup paths answer NULL and moves the authority's selection; the candidate reads CPUID directly and does not model the mask, so its selection does not move. Every candidate-vs-authority difference is recorded in the court's `divergences` block. The court is `pass` when the authority's selection surface was driven, the faulted facade moved it, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded comparison of *selection* over the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6); the engine path is not driven because no engine is configured and the reduced engine does not export the enumeration it would need. `RT-PERFORMANCE-WORK` is 19.3's, `RT-PERFORMANCE-SENSITIVITY` 19.4's and `PERFORMANCE-BOUNDARY-REGISTER` 19.5's; those three are `pending` with the subphase that lands their instrument. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is dispatch behaviour and deterministic work over a finished implementation, with no benchmark-parity claim and no assembly-versus-Rust equivalence claim. docs/PHASE-19-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "claim": "`RT-CPU-CAPABILITY` is 19.1's court: it compiles courts/phase19/rt_cpu_capability_probe.c twice (authority and candidate) and reports the CPU-capability surface deterministically -- `OPENSSL_ia32cap_P[0..3]`, the effect of `OPENSSL_cpuid_setup`, the raw vector `OPENSSL_ia32_cpuid` returns, and the capability-derived selection observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`, `OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and the four `EVP_aes_*_cbc_hmac_sha*` constructors, which answer NULL when `AESNI_CAPABLE` is clear). The probe is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade: the host set, an AES-NI-cleared set and a fully cleared set. The three capability names are declared weak because `OPENSSL_ia32cap_P` is `.hidden` and `OPENSSL_cpuid_setup`/`OPENSSL_ia32_cpuid` live only in the static archive: the authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so the surface is reached, and the candidate provides none of the three, so it answers `probe.reachable.*=0` -- the `symbols_not_reached` census the plan records -- and its CPU-dispatch string is `CPUINFO: N/A` with `OPENSSL_info(1008)` NULL. That disposition and every other candidate-vs-authority difference is *recorded* in the court's `divergences` block, not failed: the reduced engine deliberately does not model `OPENSSL_ia32cap` masking, so under a cleared facade the authority's selection moves to the non-AES-NI arm and the candidate's does not. The court is `pass` when the authority's capability surface was actually driven, the faulted facade moved the authority's selection, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded audit of the capability surface at the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6). `RT-EVP-DISPATCH` is 19.2's court: it compiles courts/phase19/rt_evp_dispatch_probe.c twice and reports, for a fixed operation set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-1/256 and the four `EVP_aes_*_cbc_hmac_sha*` constructors), which implementation each path selects -- the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context -- as the selected method's name/NID/type/flags/sizes and, for a fetch, its provider name, under the same three fixed capability sets. The authority's default provider filters its `AES-*-CBC-HMAC-*` rows through `ossl_cipher_capable_aes_cbc_hmac_sha*` (`AESNI_CBC_HMAC_SHA_CAPABLE`), so masking the AES-NI bit makes those fetch/legacy/lookup paths answer NULL and moves the authority's selection; the candidate reads CPUID directly and does not model the mask, so its selection does not move. Every candidate-vs-authority difference is recorded in the court's `divergences` block. The court is `pass` when the authority's selection surface was driven, the faulted facade moved it, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded comparison of *selection* over the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6); the engine path is not driven because no engine is configured and the reduced engine does not export the enumeration it would need. `RT-PERFORMANCE-WORK` is 19.3's court: it compiles courts/phase19/rt_performance_work_probe.c twice and reports the deterministic work a fixed operation set performs -- AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an RSA-1024 private decrypt. The library exposes no total instruction counter, so the instrument is a counting `CRYPTO` allocator the stratum introduces (the number of malloc/realloc operations and total bytes the library requests for a fixed primitive -- a deterministic instruction-path proxy for its memory work; the shims forward to the default allocator and change no behaviour) plus the method-derived input/blocks/output/tag sizes. No address, clock or duration is observed. Every path whose library-side work vector differs from the authority's is a *finding* recorded, not failed -- the reduced engine's allocations differ on the EC and RSA paths while the symmetric/digest paths agree -- and a path the probe cannot drive is `pending`. The court is `pass` when the authority installed the hook and the paths ran, both transcripts are complete, every schema key is present and every divergence was recorded -- NOT when nothing diverged. The counting allocator observes heap operations, not total CPU instructions, and the block counts are input-implied: no benchmark-parity claim and no assembly-versus-Rust equivalence claim (sections 3.1 and 3.6). `RT-PERFORMANCE-SENSITIVITY` 19.4's and `PERFORMANCE-BOUNDARY-REGISTER` 19.5's remain `pending` with the subphase that lands their instrument. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is dispatch behaviour and deterministic work over a finished implementation, with no benchmark-parity claim and no assembly-versus-Rust equivalence claim. docs/PHASE-19-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
     "courts": [
       {
         "authority_observations": 81,
@@ -1919,17 +1919,337 @@
           "candidate": "artifacts/phase19/probes/rt_evp_dispatch_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_observations": 84,
+        "candidate_observations": 84,
+        "candidate_stderr_tail": [],
+        "control": {
+          "authority_hook_installed": true,
+          "authority_paths_ran": 8,
+          "candidate_hook_installed": true,
+          "candidate_paths_ran": 8,
+          "total_paths": 8
+        },
+        "court": "RT-PERFORMANCE-WORK",
+        "divergence_count": 4,
+        "divergences": [
+          {
+            "authority": "3",
+            "candidate": "4",
+            "class": "value",
+            "observation": "work.ec-p256-mul.allocs"
+          },
+          {
+            "authority": "2121",
+            "candidate": "160",
+            "class": "value",
+            "observation": "work.ec-p256-mul.bytes"
+          },
+          {
+            "authority": "46",
+            "candidate": "31",
+            "class": "value",
+            "observation": "work.rsa-1024-private.allocs"
+          },
+          {
+            "authority": "4541",
+            "candidate": "2669",
+            "class": "value",
+            "observation": "work.rsa-1024-private.bytes"
+          }
+        ],
+        "finding_keys": [
+          "blocks",
+          "out",
+          "tag",
+          "allocs",
+          "reallocs",
+          "bytes",
+          "ret"
+        ],
+        "findings": [
+          "ec-p256-mul: deterministic work differs (allocs authority=3 candidate=4; bytes authority=2121 candidate=160)",
+          "rsa-1024-private: deterministic work differs (allocs authority=46 candidate=31; bytes authority=4541 candidate=2669)"
+        ],
+        "findings_count": 2,
+        "method": "the probe is compiled twice and its `key=value` transcript compared. It reports, for a fixed operation set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an RSA-1024 private decrypt), a deterministic work vector per path: a counting `CRYPTO` allocator's malloc/realloc/byte counts (the instruction-path proxy the stratum introduces), plus the method-derived input/blocks/output/tag sizes. No address, clock or duration is observed. A path whose library-side work vector differs is recorded as a finding, not failed.",
+        "observations_recorded": {
+          "authority": 84,
+          "candidate": 84
+        },
+        "operation_set": [
+          "aes-128-cbc",
+          "aes-256-cbc",
+          "aes-128-gcm",
+          "aes-256-gcm",
+          "chacha20-poly1305",
+          "sha256",
+          "ec-p256-mul",
+          "rsa-1024-private"
+        ],
+        "paths": [
+          {
+            "authority": {
+              "allocs": "2",
+              "blocks": "4",
+              "bytes": "640",
+              "calls": "7",
+              "in": "64",
+              "out": "80",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "candidate": {
+              "allocs": "2",
+              "blocks": "4",
+              "bytes": "640",
+              "calls": "7",
+              "in": "64",
+              "out": "80",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "divergent_work_keys": [],
+            "path": "aes-128-cbc"
+          },
+          {
+            "authority": {
+              "allocs": "2",
+              "blocks": "4",
+              "bytes": "640",
+              "calls": "7",
+              "in": "64",
+              "out": "80",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "candidate": {
+              "allocs": "2",
+              "blocks": "4",
+              "bytes": "640",
+              "calls": "7",
+              "in": "64",
+              "out": "80",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "divergent_work_keys": [],
+            "path": "aes-256-cbc"
+          },
+          {
+            "authority": {
+              "allocs": "2",
+              "blocks": "64",
+              "bytes": "1152",
+              "calls": "9",
+              "in": "64",
+              "out": "64",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "16"
+            },
+            "candidate": {
+              "allocs": "2",
+              "blocks": "64",
+              "bytes": "1152",
+              "calls": "9",
+              "in": "64",
+              "out": "64",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "16"
+            },
+            "divergent_work_keys": [],
+            "path": "aes-128-gcm"
+          },
+          {
+            "authority": {
+              "allocs": "2",
+              "blocks": "64",
+              "bytes": "1152",
+              "calls": "9",
+              "in": "64",
+              "out": "64",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "16"
+            },
+            "candidate": {
+              "allocs": "2",
+              "blocks": "64",
+              "bytes": "1152",
+              "calls": "9",
+              "in": "64",
+              "out": "64",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "16"
+            },
+            "divergent_work_keys": [],
+            "path": "aes-256-gcm"
+          },
+          {
+            "authority": {
+              "allocs": "2",
+              "blocks": "64",
+              "bytes": "1040",
+              "calls": "9",
+              "in": "64",
+              "out": "64",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "16"
+            },
+            "candidate": {
+              "allocs": "2",
+              "blocks": "64",
+              "bytes": "1040",
+              "calls": "9",
+              "in": "64",
+              "out": "64",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "16"
+            },
+            "divergent_work_keys": [],
+            "path": "chacha20-poly1305"
+          },
+          {
+            "authority": {
+              "allocs": "2",
+              "blocks": "2",
+              "bytes": "184",
+              "calls": "7",
+              "in": "64",
+              "out": "32",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "candidate": {
+              "allocs": "2",
+              "blocks": "2",
+              "bytes": "184",
+              "calls": "7",
+              "in": "64",
+              "out": "32",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "divergent_work_keys": [],
+            "path": "sha256"
+          },
+          {
+            "authority": {
+              "allocs": "3",
+              "blocks": "256",
+              "bytes": "2121",
+              "calls": "6",
+              "in": "32",
+              "out": "65",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "candidate": {
+              "allocs": "4",
+              "blocks": "256",
+              "bytes": "160",
+              "calls": "6",
+              "in": "32",
+              "out": "65",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "divergent_work_keys": [
+              "allocs",
+              "bytes"
+            ],
+            "path": "ec-p256-mul"
+          },
+          {
+            "authority": {
+              "allocs": "46",
+              "blocks": "1024",
+              "bytes": "4541",
+              "calls": "1",
+              "in": "128",
+              "out": "99",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "99",
+              "tag": "-1"
+            },
+            "candidate": {
+              "allocs": "31",
+              "blocks": "1024",
+              "bytes": "2669",
+              "calls": "1",
+              "in": "128",
+              "out": "99",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "99",
+              "tag": "-1"
+            },
+            "divergent_work_keys": [
+              "allocs",
+              "bytes"
+            ],
+            "path": "rsa-1024-private"
+          }
+        ],
+        "pending_paths": [],
+        "probe": "courts/phase19/rt_performance_work_probe.c",
+        "problems": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase19/probes/rt_performance_work_probe.authority",
+          "candidate": "artifacts/phase19/probes/rt_performance_work_probe.candidate"
+        },
+        "verdict": "pass",
+        "work_fields": [
+          "ran",
+          "in",
+          "blocks",
+          "calls",
+          "out",
+          "tag",
+          "allocs",
+          "reallocs",
+          "bytes",
+          "ret"
+        ]
       }
     ],
     "pending_courts": {
       "PERFORMANCE-BOUNDARY-REGISTER": "19.5 lands the register; it records what is measured, what is not, and the explicit non-claims (no benchmark-parity claim, no assembly-versus-Rust equivalence claim), and checks that every recorded boundary still matches the evidence that establishes it",
-      "RT-PERFORMANCE-SENSITIVITY": "19.4 lands the sensitivity control; it requires a deliberately slowed path to be caught, so the work measure is proven able to tell a slow path from a fast one",
-      "RT-PERFORMANCE-WORK": "19.3 lands the deterministic work court; it counts operations and blocks over the primitive-bearing paths (not wall-clock-only) on both sides and records every path whose work differs as a finding"
+      "RT-PERFORMANCE-SENSITIVITY": "19.4 lands the sensitivity control; it requires a deliberately slowed path to be caught, so the work measure is proven able to tell a slow path from a fast one"
     },
     "summary": {
       "fail": 0,
-      "pass": 2,
-      "total": 2
+      "pass": 3,
+      "total": 3
     }
   },
   "generator": "forensics/tools/phase19_courts.py",
@@ -1948,6 +2268,16 @@
       "name": "evp-dispatch-probe",
       "path": "courts/phase19/rt_evp_dispatch_probe.c",
       "sha256": "a7ad5f31d7ec6c6c89dc3a81d2050441df66f0189cb1a74fa8b084227c62588a"
+    },
+    {
+      "name": "performance-work-probe",
+      "path": "courts/phase19/rt_performance_work_probe.c",
+      "sha256": "06e905af25d656b915e2edc29aa1cb621e8105fa0673303505fecff4cfdd5f40"
+    },
+    {
+      "name": "performance-work-fixture",
+      "path": "courts/phase19/fixtures/rsa-work.pem",
+      "sha256": "703634a15e004ffbb8e0819369528ea8b6d8dd5b6914fe03b3d7ae68eff9baba"
     }
   ],
   "kind": "phase19-courts",

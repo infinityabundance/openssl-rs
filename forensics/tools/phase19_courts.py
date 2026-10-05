@@ -69,13 +69,39 @@ The engine path is not driven: no engine is configured and the reduced engine do
 enumeration it would need. It is a bounded comparison of *selection*, not a parity claim and not
 an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6).
 
+`RT-PERFORMANCE-WORK`, and what it drives
+----------------------------------------
+19.3's court. Its instrument is `courts/phase19/rt_performance_work_probe.c`, compiled twice
+against the same two sides, and it reports the *deterministic work* a fixed operation set performs
+-- not wall-clock, which on a shared host is not reproducible and would make the verdict a function
+of the machine (section 3.3). The library exposes no total instruction or block counter, so the
+instrument is two deterministic measures and the court says which is which:
+
+  * a **counting `CRYPTO` allocator** the stratum introduces (`CRYPTO_set_mem_functions`, called
+    before the library's first allocation). It observes the number of `malloc`/`realloc`
+    operations and the total bytes the library requests while a fixed primitive runs -- a
+    deterministic instruction-path proxy for the library's own memory work. It changes no library
+    behaviour: the shims forward to the default allocator.
+  * a **method-derived work vector**: the input bytes, the primitive blocks the fixed input implies
+    (`ceil(in / block_size)` for a cipher, `ceil((in + 9) / block_size)` for a digest, the
+    field/modulus degree for EC/RSA), the output bytes and the AEAD tag length, read from the
+    method's public geometry. `calls` is the probe's own invocation count (driver-side), recorded
+    as the denominator and never a finding.
+
+The fixed operation set is AES-128/256-CBC, AES-128/256-GCM, ChaCha20-Poly1305, SHA-256, a P-256
+scalar multiplication and an RSA-1024 private decrypt. Every path whose *library-side* work vector
+differs from the authority's is a **finding** -- a divisor-of-work difference -- recorded, never
+failed; the verdict is `pass` when the surface was driven (the authority installed the counting
+hook and the paths ran), both transcripts are complete, every schema key is present on both sides,
+and every divergence was recorded -- **not** when nothing diverged. A path the probe cannot drive
+is named `pending` rather than counted as passing. The counting allocator observes heap operations,
+not total CPU instructions, and the block counts are input-implied: the court makes **no
+benchmark-parity claim** and **no assembly-versus-Rust equivalence claim** (sections 3.1, 3.6).
+
 The pending courts
 ------------------
-The other three courts the plan names are `pending` with the subphase that lands each:
+The other two courts the plan names are `pending` with the subphase that lands each:
 
-  * `RT-PERFORMANCE-WORK` (19.3) — deterministic operation and block counts over the
-    primitive-bearing paths (not wall-clock-only), driven on the authority and the candidate over
-    the same inputs, recording every path whose work differs as a finding;
   * `RT-PERFORMANCE-SENSITIVITY` (19.4) — the instrument-sensitivity control: a deliberately slowed
     path must be caught, so a measure that cannot tell a slow path from a fast one is `fail` rather
     than `pass`; candidate-only;
@@ -128,20 +154,17 @@ RUN_TIMEOUT_S = "120"
 # committed.
 CPU_CAPABILITY = "RT-CPU-CAPABILITY"
 EVP_DISPATCH = "RT-EVP-DISPATCH"
+PERFORMANCE_WORK = "RT-PERFORMANCE-WORK"
 COURTS: list[tuple[str, str]] = [
     (CPU_CAPABILITY, "rt_cpu_capability_probe.c"),
     (EVP_DISPATCH, "rt_evp_dispatch_probe.c"),
+    (PERFORMANCE_WORK, "rt_performance_work_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
 # the instrument and what the court will drive, so "nothing registered" is a stated distance rather
 # than a court quietly dropped.
 PENDING_COURTS: dict[str, str] = {
-    "RT-PERFORMANCE-WORK": (
-        "19.3 lands the deterministic work court; it counts operations and blocks over the "
-        "primitive-bearing paths (not wall-clock-only) on both sides and records every path whose "
-        "work differs as a finding"
-    ),
     "RT-PERFORMANCE-SENSITIVITY": (
         "19.4 lands the sensitivity control; it requires a deliberately slowed path to be caught, "
         "so the work measure is proven able to tell a slow path from a fast one"
@@ -295,6 +318,53 @@ def evp_dispatch_schema() -> tuple[str, ...]:
 
 
 EVP_DISPATCH_PROBE_SCHEMA: tuple[str, ...] = evp_dispatch_schema()
+
+
+# --------------------------------------------------------------------------------------------
+# `RT-PERFORMANCE-WORK` (19.3): the deterministic work court. The path ids and per-path fields are
+# the key fragments `courts/phase19/rt_performance_work_probe.c` prints, and the schema below is
+# built from the same lists, so a path or field added to the probe without the schema is caught as a
+# missing key rather than compared unobserved.
+# --------------------------------------------------------------------------------------------
+PERFORMANCE_WORK_PATHS: tuple[str, ...] = (
+    "aes-128-cbc",
+    "aes-256-cbc",
+    "aes-128-gcm",
+    "aes-256-gcm",
+    "chacha20-poly1305",
+    "sha256",
+    "ec-p256-mul",
+    "rsa-1024-private",
+)
+# The fields every path emits, in the probe's order. `ran` says whether the path completed; the rest
+# are `n/a` when it did not.
+WORK_VECTOR_FIELDS: tuple[str, ...] = (
+    "ran", "in", "blocks", "calls", "out", "tag", "allocs", "reallocs", "bytes", "ret",
+)
+# The library-side work keys: a path on which one of these differs from the authority's is a
+# divergent-work *finding*. `in` (the probe's fixed input) and `calls` (the probe's own invocation
+# count) are driver-side, so they are recorded as the denominator but never make a finding.
+WORK_FINDING_KEYS: tuple[str, ...] = (
+    "blocks", "out", "tag", "allocs", "reallocs", "bytes", "ret",
+)
+
+
+def performance_work_schema() -> tuple[str, ...]:
+    """The fixed transcript schema for `RT-PERFORMANCE-WORK`.
+
+    Both sides emit every key (an unreached path prints `n/a` in every numeric field), so the two
+    observation counts agree and `atlas_common.court_observations` holds. The keys are built from
+    the same path and field lists the probe's emitters use, so a drift fails closed as a missing
+    key rather than passing unobserved.
+    """
+    keys: list[str] = ["probe.kind", "work.hook.install", "work.default_provider"]
+    for path in PERFORMANCE_WORK_PATHS:
+        keys += [f"work.{path}.{field}" for field in WORK_VECTOR_FIELDS]
+    keys.append("probe.done")
+    return tuple(keys)
+
+
+PERFORMANCE_WORK_PROBE_SCHEMA: tuple[str, ...] = performance_work_schema()
 
 
 def side_env(libdir: Path, modulesdir: Path, cap: str | None) -> dict[str, str]:
@@ -698,9 +768,143 @@ def evp_dispatch_court(name: str, src: Path, auth, work: Path) -> dict:
     }
 
 
+def performance_work_court(name: str, src: Path, auth, work: Path) -> dict:
+    """`RT-PERFORMANCE-WORK`: the deterministic work vector over the primitive-bearing paths.
+
+    The verdict is `pass` when the authority actually drove the instrument (it installed the
+    counting `CRYPTO` allocator the stratum introduces and at least one named path ran), both
+    transcripts are complete, every schema key is present on both sides, and every
+    candidate-vs-authority difference was recorded. A path whose library-side work vector differs
+    is a **finding** (a divisor-of-work difference) and a path the probe cannot drive is `pending`;
+    neither is a failure. It is a bounded differential measurement of deterministic work, not a
+    parity claim and not an assembly-versus-Rust equivalence claim (sections 3.1, 3.3 and 3.6), and
+    no verdict is taken from wall-clock time.
+    """
+    auth_bin = work / f"{src.stem}.authority"
+    cand_bin = work / f"{src.stem}.candidate"
+    ok, err = compile_authority(src, auth_bin, auth)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-authority",
+                "detail": err.splitlines()[:12]}
+    ok, err = compile_candidate(src, cand_bin)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-candidate",
+                "detail": err.splitlines()[:12]}
+
+    problems: list[str] = []
+    a_out, a_err, a_code = run_probe(
+        auth_bin, side_env(auth.libdir, auth.libdir / "ossl-modules", None))
+    c_out, c_err, c_code = run_probe(
+        cand_bin, side_env(PHASE2, PHASE2 / "install" / "lib" / "ossl-modules", None))
+    if not a_out.strip():
+        problems.append(f"authority produced no transcript (exit={a_code})")
+    if not c_out.strip():
+        problems.append(f"candidate produced no transcript (exit={c_code})")
+
+    a_keys = keyed(a_out)
+    c_keys = keyed(c_out)
+
+    if a_keys.get("probe.done") != "1":
+        problems.append("authority transcript did not complete")
+    if c_keys.get("probe.done") != "1":
+        problems.append("candidate transcript did not complete")
+    for key in PERFORMANCE_WORK_PROBE_SCHEMA:
+        if key not in a_keys:
+            problems.append(f"authority is missing {key}")
+        if key not in c_keys:
+            problems.append(f"candidate is missing {key}")
+
+    # The authority-linked differential control: the work counter is an instrument the stratum
+    # introduces, so the authority must have installed the counting allocator and at least one
+    # named path must have run. A court whose hook did not install has nothing to compare.
+    hook_install = a_keys.get("work.hook.install") == "1"
+    if not hook_install:
+        problems.append(
+            "authority did not install the counting hook "
+            f"(work.hook.install={a_keys.get('work.hook.install')}): the work instrument was not "
+            "driven")
+
+    paths: list[dict] = []
+    findings: list[str] = []
+    pending: list[str] = []
+    a_ran = 0
+    c_ran = 0
+    for path in PERFORMANCE_WORK_PATHS:
+        a_vals = {f: a_keys.get(f"work.{path}.{f}") for f in WORK_VECTOR_FIELDS}
+        c_vals = {f: c_keys.get(f"work.{path}.{f}") for f in WORK_VECTOR_FIELDS}
+        if a_vals["ran"] == "1":
+            a_ran += 1
+        if c_vals["ran"] == "1":
+            c_ran += 1
+        if a_vals["ran"] != "1":
+            pending.append(path)
+        diffs = {f: (a_vals[f], c_vals[f]) for f in WORK_FINDING_KEYS
+                 if a_vals[f] != c_vals[f]}
+        if a_vals["ran"] == "1" and c_vals["ran"] == "1" and diffs:
+            findings.append(
+                f"{path}: deterministic work differs ("
+                + "; ".join(f"{f} authority={av} candidate={cv}"
+                             for f, (av, cv) in diffs.items()) + ")")
+        paths.append({"path": path, "authority": a_vals, "candidate": c_vals,
+                      "divergent_work_keys": sorted(diffs)})
+
+    if hook_install and a_ran == 0:
+        problems.append("authority installed the hook but no named path ran")
+
+    divergences = residual_rows(a_keys, c_keys)
+
+    staged: dict[str, str] = {}
+    STAGED.mkdir(parents=True, exist_ok=True)
+    for side, srcbin in (("authority", auth_bin), ("candidate", cand_bin)):
+        dst = STAGED / f"{src.stem}.{side}"
+        if srcbin.is_file():
+            shutil.copyfile(srcbin, dst)
+            dst.chmod(0o755)
+            staged[side] = rel(dst)
+
+    verdict = "pass" if not problems else "fail"
+
+    return {
+        "court": name,
+        "probe": rel(src),
+        "method": (
+            "the probe is compiled twice and its `key=value` transcript compared. It reports, for "
+            "a fixed operation set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a P-256 "
+            "scalar multiplication and an RSA-1024 private decrypt), a deterministic work vector "
+            "per path: a counting `CRYPTO` allocator's malloc/realloc/byte counts (the "
+            "instruction-path proxy the stratum introduces), plus the method-derived "
+            "input/blocks/output/tag sizes. No address, clock or duration is observed. A path "
+            "whose library-side work vector differs is recorded as a finding, not failed."),
+        "operation_set": list(PERFORMANCE_WORK_PATHS),
+        "work_fields": list(WORK_VECTOR_FIELDS),
+        "finding_keys": list(WORK_FINDING_KEYS),
+        "observations_recorded": {"authority": len(a_keys), "candidate": len(c_keys)},
+        "authority_observations": len(a_keys),
+        "candidate_observations": len(c_keys),
+        "paths": paths,
+        "control": {
+            "authority_hook_installed": hook_install,
+            "candidate_hook_installed": c_keys.get("work.hook.install") == "1",
+            "authority_paths_ran": a_ran,
+            "candidate_paths_ran": c_ran,
+            "total_paths": len(PERFORMANCE_WORK_PATHS),
+        },
+        "divergences": divergences,
+        "divergence_count": len(divergences),
+        "findings": findings,
+        "findings_count": len(findings),
+        "pending_paths": pending,
+        "problems": problems,
+        "verdict": verdict,
+        "staged_binaries": staged,
+        "candidate_stderr_tail": c_err.splitlines()[-3:],
+    }
+
+
 COURT_IMPL = {
     CPU_CAPABILITY: cpu_capability_court,
     EVP_DISPATCH: evp_dispatch_court,
+    PERFORMANCE_WORK: performance_work_court,
 }
 
 
@@ -775,9 +979,26 @@ def main(argv: list[str]) -> int:
             "drives, not a parity claim and not an assembly-versus-Rust equivalence claim "
             "(sections 3.4 and 3.6); the engine path is not driven because no engine is "
             "configured and the reduced engine does not export the enumeration it would need. "
-            "`RT-PERFORMANCE-WORK` is 19.3's, `RT-PERFORMANCE-SENSITIVITY` 19.4's and "
-            "`PERFORMANCE-BOUNDARY-REGISTER` 19.5's; those three are `pending` with the subphase "
-            "that lands their instrument. This stratum owns "
+            "`RT-PERFORMANCE-WORK` is 19.3's court: it compiles "
+            "courts/phase19/rt_performance_work_probe.c twice and reports the deterministic work "
+            "a fixed operation set performs -- AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a "
+            "P-256 scalar multiplication and an RSA-1024 private decrypt. The library exposes no "
+            "total instruction counter, so the instrument is a counting `CRYPTO` allocator the "
+            "stratum introduces (the number of malloc/realloc operations and total bytes the "
+            "library requests for a fixed primitive -- a deterministic instruction-path proxy for "
+            "its memory work; the shims forward to the default allocator and change no behaviour) "
+            "plus the method-derived input/blocks/output/tag sizes. No address, clock or duration "
+            "is observed. Every path whose library-side work vector differs from the authority's "
+            "is a *finding* recorded, not failed -- the reduced engine's allocations differ on the "
+            "EC and RSA paths while the symmetric/digest paths agree -- and a path the probe "
+            "cannot drive is `pending`. The court is `pass` when the authority installed the hook "
+            "and the paths ran, both transcripts are complete, every schema key is present and "
+            "every divergence was recorded -- NOT when nothing diverged. The counting allocator "
+            "observes heap operations, not total CPU instructions, and the block counts are "
+            "input-implied: no benchmark-parity claim and no assembly-versus-Rust equivalence "
+            "claim (sections 3.1 and 3.6). `RT-PERFORMANCE-SENSITIVITY` 19.4's and "
+            "`PERFORMANCE-BOUNDARY-REGISTER` 19.5's remain `pending` with the subphase that lands "
+            "their instrument. This stratum owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence: the "
             "subject is dispatch behaviour and deterministic work over a finished implementation, "
             "with no benchmark-parity claim and no assembly-versus-Rust equivalence claim. "
@@ -789,6 +1010,9 @@ def main(argv: list[str]) -> int:
         InputRef(name="phase-19-plan", path=PLAN),
         InputRef(name="cpu-capability-probe", path=PROBE_DIR / "rt_cpu_capability_probe.c"),
         InputRef(name="evp-dispatch-probe", path=PROBE_DIR / "rt_evp_dispatch_probe.c"),
+        InputRef(name="performance-work-probe", path=PROBE_DIR / "rt_performance_work_probe.c"),
+        InputRef(name="performance-work-fixture",
+                 path=PROBE_DIR / "fixtures" / "rsa-work.pem"),
     ]
     doc = envelope(kind="phase19-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
@@ -807,6 +1031,14 @@ def main(argv: list[str]) -> int:
                   f"{len(r['capability_sets'])} sets, {r['divergence_count']} recorded "
                   f"divergence(s), authority selection driven="
                   f"{c['authority_selection_driven']}, facade moved={c['facade_moved_selection']})")
+        elif r["verdict"] == "pass" and r["court"] == PERFORMANCE_WORK:
+            c = r["control"]
+            print(f"  {r['court']:<32} pass   ({r['authority_observations']} observations, "
+                  f"{c['authority_paths_ran']}/{c['total_paths']} paths ran, "
+                  f"{r['findings_count']} divergent-work finding(s), "
+                  f"hook installed={c['authority_hook_installed']})")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
         elif r["verdict"] != "pass":
             print(f"  {r['court']:<32} FAIL   stage={r.get('stage', 'compare')}")
             for p in (r.get("detail") if isinstance(r.get("detail"), list)

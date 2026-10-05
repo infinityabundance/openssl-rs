@@ -501,6 +501,10 @@
       "observations": 102,
       "verdict": "pass"
     },
+    "RT-PERFORMANCE-WORK": {
+      "observations": 84,
+      "verdict": "pass"
+    },
     "RT-PHASE12-REF": {
       "observations": 149,
       "verdict": "pass"
@@ -800,7 +804,7 @@
     "phase16": 0,
     "phase17": 0,
     "phase18": 0,
-    "phase19": 3,
+    "phase19": 2,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,

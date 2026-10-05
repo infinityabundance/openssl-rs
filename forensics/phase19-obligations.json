@@ -28,12 +28,15 @@
       },
       {
         "closure": "the `RT-PERFORMANCE-WORK` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-PERFORMANCE-WORK is pending",
-        "property_status": "not_claimed",
-        "state": "open",
+        "findings": [
+          "ec-p256-mul: deterministic work differs (allocs authority=3 candidate=4; bytes authority=2121 candidate=160)",
+          "rsa-1024-private: deterministic work differs (allocs authority=46 candidate=31; bytes authority=4541 candidate=2669)"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "RT-PERFORMANCE-WORK is pass",
+        "property_status": "NOT_CLAIMED",
+        "state": "implemented",
         "surface": "artifacts/phase19/COURTS.json",
         "unit": "performance-work",
         "what": "deterministic operation and block counts over the primitive-bearing paths (not wall-clock-only), driven on the authority and the candidate over the same inputs, recording every path whose work differs as a finding"
@@ -68,8 +71,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 2,
-      "open_in_this_stratum": 3,
+      "implemented": 3,
+      "open_in_this_stratum": 2,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -110,7 +113,7 @@
     {
       "name": "phase-19-courts",
       "path": "artifacts/phase19/COURTS.json",
-      "sha256": "744101f8f226186d57784351f0c0e3a993ea9c933854b4eef76885559c06e667"
+      "sha256": "7d03c84b3b78da69607f427b641e61443ddcf86100f938a5414b42ce6d366b22"
     }
   ],
   "kind": "phase19-obligations",

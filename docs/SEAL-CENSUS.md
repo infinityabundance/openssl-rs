@@ -44,7 +44,7 @@ declared owner; this is that assignment.
 | 16 | CLI / config / filesystem contract | `complete` | 0 | 42 | 42 | 0 | 0 |
 | 17 | Downstream replacement court | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` | 0 | 5 | 5 | 0 | 0 |
-| 19 | Performance / CPU dispatch | `in-progress` | 0 | 5 | 2 | 0 | 3 |
+| 19 | Performance / CPU dispatch | `in-progress` | 0 | 5 | 3 | 0 | 2 |
 | 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
 | 21 | Maintenance delta machinery | `not-started` | 0 | — | — | — | — |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
@@ -609,14 +609,14 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 ## Phase 19 — Performance / CPU dispatch
 
 * state: `in-progress`
-* blocking: 3 open obligation(s) of this stratum recorded in forensics/phase19-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase19-obligations.json` publishes `unit: performance dispatch contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`cpu-capability`, `evp-dispatch`, `performance-work`, `performance-sensitivity` and `performance-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it measures the implementation the strata before it completed. Its `artifacts/phase19/COURTS.json` landed `RT-CPU-CAPABILITY` in 19.1 -- the CPU-capability surface (`OPENSSL_ia32cap_P`, `OPENSSL_cpuid_setup`, `OPENSSL_ia32_cpuid`) driven under fixed and faulted CPUID facades against the authority, with an authority-linked differential control -- and `RT-EVP-DISPATCH` in 19.2 -- the selection surface (the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context) driven over the same fixed capability sets, where masking the AES-NI bit moves the authority's `AES-*-CBC-HMAC-*` selection and the candidate's does not -- so two of the five contract units are `implemented` and `open_in_this_stratum` has moved from five to three. `RT-PERFORMANCE-WORK`, `RT-PERFORMANCE-SENSITIVITY` and `PERFORMANCE-BOUNDARY-REGISTER` remain `pending` with the subphases that land them. Nothing here is a throughput or parity claim: there is no benchmark-parity claim and no assembly-versus-Rust equivalence claim, and no verdict is ever taken from wall-clock time alone. The ledger records two axes separately -- `measurement_state` says the instrument completed and `property_status`/`findings` say what is claimed -- so a passing `RT-PERFORMANCE-WORK` is an instrument plus bounded deterministic-work comparison and must never be read as 'performance parity achieved'. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-19-SUBPHASES.md` sections 1 and 4 record the measurement
+* blocking: 2 open obligation(s) of this stratum recorded in forensics/phase19-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase19-obligations.json` publishes `unit: performance dispatch contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`cpu-capability`, `evp-dispatch`, `performance-work`, `performance-sensitivity` and `performance-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it measures the implementation the strata before it completed. Its `artifacts/phase19/COURTS.json` landed `RT-CPU-CAPABILITY` in 19.1 -- the CPU-capability surface (`OPENSSL_ia32cap_P`, `OPENSSL_cpuid_setup`, `OPENSSL_ia32_cpuid`) driven under fixed and faulted CPUID facades against the authority, with an authority-linked differential control -- and `RT-EVP-DISPATCH` in 19.2 -- the selection surface (the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context) driven over the same fixed capability sets, where masking the AES-NI bit moves the authority's `AES-*-CBC-HMAC-*` selection and the candidate's does not -- and `RT-PERFORMANCE-WORK` in 19.3 -- the deterministic work vector over a fixed primitive set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an RSA-1024 private decrypt), measured by a counting `CRYPTO` allocator the stratum introduces plus the method-derived block/output/tag sizes, with the EC and RSA paths recording a divergent-work `finding` and the symmetric/digest paths agreeing -- so three of the five contract units are `implemented` and `open_in_this_stratum` has moved from five to two. `RT-PERFORMANCE-SENSITIVITY` and `PERFORMANCE-BOUNDARY-REGISTER` remain `pending` with the subphases that land them. Nothing here is a throughput or parity claim: there is no benchmark-parity claim and no assembly-versus-Rust equivalence claim, and no verdict is ever taken from wall-clock time alone. The ledger records two axes separately -- `measurement_state` says the instrument completed and `property_status`/`findings` say what is claimed -- so a passing `RT-PERFORMANCE-WORK` is an instrument plus bounded deterministic-work comparison and must never be read as 'performance parity achieved'. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-19-SUBPHASES.md` sections 1 and 4 record the measurement
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase19-obligations.json`
 * atlas-owned: 0
 * owned working set: 5
-* implemented: 2
+* implemented: 3
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 3**
+* **open in this stratum: 2**
 
 Contract units (measurement vs property):
 
@@ -624,17 +624,18 @@ Contract units (measurement vs property):
 |---|---|---|---|
 | cpu-capability | `complete` | `not_claimed` | — |
 | evp-dispatch | `complete` | `not_claimed` | — |
-| performance-work | `not_measured` | `not_claimed` | — |
+| performance-work | `complete` | `NOT_CLAIMED` | `ec-p256-mul: deterministic work differs (allocs authority=3 candidate=4; bytes authority=2121 candidate=160)`, `rsa-1024-private: deterministic work differs (allocs authority=46 candidate=31; bytes authority=4541 candidate=2669)` |
 | performance-sensitivity | `not_measured` | `not_claimed` | — |
 | performance-boundary-register | `not_measured` | `not_claimed` | — |
 
 A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
-Courts: `all pass`, 2 court(s), **858** authority observation(s) over 2 transcript court(s).
+Courts: `all pass`, 3 court(s), **942** authority observation(s) over 3 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
 | RT-CPU-CAPABILITY | `pass` | 81 |
 | RT-EVP-DISPATCH | `pass` | 777 |
+| RT-PERFORMANCE-WORK | `pass` | 84 |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 
