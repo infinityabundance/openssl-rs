@@ -53,8 +53,8 @@ present, which cannot count as parity (`docs/PARITY_MODEL.md:22`) — exactly as
   (`receipt-run-openssl-rs-rt-{engine,engine-table,engine-ctrl,ui,txtdb,evp-legacy,legacy-remainder,handoff}-*`),
   sixteen adjudicated challenge records (both operators on every court) and the
   `sensitivity-backed` claim
-  `7779b1626c25d4576e48696b2fd321fecfe0bb2788919c533c5ff90ab071ebf5`, binding
-  `openssl-rt-3.6.4-r2` to `openssl-rs 0.0.22` with zero blockers and all eight premises carrying
+  `6fec7b512aef5d11c7665836fa11ab322a43d5700d1d4b7103b63edbbb958f12`, binding
+  `openssl-rt-3.6.4-r2` to `openssl-rs 0.0.23` with zero blockers and all eight premises carrying
   stdout and exit. §8 states what that is.
 - Gemel checkpoint: **present, and it is this stratum's.** `forensics/GEMEL_TRAJECTORY.md`'s head
   change is Phase 13's `C99` and its `current:` is
@@ -389,7 +389,7 @@ actually met are recorded in the places below.
 8. **The FRF and Gemel evidence is established, and §8 records what it is.** `docs/RELEASE_GATES.md`
    §2 items 6, 8 and 10 are met by the chain entry §8 records: eight receipts, sixteen adjudicated
    challenge records, the `sensitivity-backed` claim
-   `7779b1626c25d4576e48696b2fd321fecfe0bb2788919c533c5ff90ab071ebf5` with zero blockers, and the
+   `6fec7b512aef5d11c7665836fa11ab322a43d5700d1d4b7103b63edbbb958f12` with zero blockers, and the
    Gemel checkpoint `K53` whose summary names Phase 13 and the FRF chain. Phase 13's derived state
    is `complete`.
 
@@ -464,12 +464,12 @@ attaches to a Phase-13 FRF residual.** Items 6, 8 and 10 retired when §8's chai
   records — both declared axes (`stdout-first-line` and `exit-class`) on each of the eight courts,
   every one `saw_defect` and `specificity_clean` — which is what makes the claim
   `sensitivity-backed` rather than merely green (D13). `.frf/claims/` carries the compiled claim
-  `7779b1626c25d4576e48696b2fd321fecfe0bb2788919c533c5ff90ab071ebf5`, compiled at
+  `6fec7b512aef5d11c7665836fa11ab322a43d5700d1d4b7103b63edbbb958f12`, compiled at
   `--policy sensitivity-backed` over the eight receipts, binding authority `openssl-rt-3.6.4-r2` to
-  candidate `openssl-rs 0.0.22` with zero blockers and all eight premises asserting both `stdout`
+  candidate `openssl-rs 0.0.23` with zero blockers and all eight premises asserting both `stdout`
   and `exit`.
-  **The identity moved with the 0.0.22 release.** The store was recreated from clean at candidate
-  0.0.22 — FRF run identities are content-addressed on the declaration, which carries the candidate
+  **The identity moved with the 0.0.23 release.** The store was recreated from clean at candidate
+  0.0.23 — FRF run identities are content-addressed on the declaration, which carries the candidate
   version, so every claim identity moves with a release — and the id quoted here supersedes the
   previous generation's `3a7a20d4…`, the 0.0.19 claim.
 - **The Gemel change and checkpoint are this stratum's.** The change `C99` names Phase 13 and the
@@ -497,7 +497,7 @@ subphases deliberately do not activate the legacy provider.
 
 - **The FRF/Gemel chain entry has landed.** §8's subject is now the objects on disk: the eight
   declarations, eight receipts, sixteen adjudicated challenges, the claim
-  `7779b1626c25d4576e48696b2fd321fecfe0bb2788919c533c5ff90ab071ebf5` and the checkpoint `K53`.
+  `6fec7b512aef5d11c7665836fa11ab322a43d5700d1d4b7103b63edbbb958f12` and the checkpoint `K53`.
   This stratum registers no `CT-*` court, so the entry covers the eight behavioural differential
   courts and nothing is recorded as not declarable; `RT-PHASE13-REF` is the reference basis and is
   not declarable. Items 6, 8 and 10 of §7 retired with it, and `phase_state.py` derives `complete`.
@@ -556,7 +556,7 @@ the evidence forced rather than the ones a reviewer might have preferred.
 8. **The FRF/Gemel chain entry landed after the seal was first written, and §7 and §8 record it.**
    The seal's first revision recorded items 6, 8 and 10 as owed; the chain entry added the eight
    declarations, eight receipts, sixteen adjudicated challenges, the `sensitivity-backed` claim
-   `7779b1626c25d4576e48696b2fd321fecfe0bb2788919c533c5ff90ab071ebf5` and the Gemel change `C99` /
+   `6fec7b512aef5d11c7665836fa11ab322a43d5700d1d4b7103b63edbbb958f12` and the Gemel change `C99` /
    checkpoint `K53`, so the three items retired and `phase_state.py` derives `complete`. The
    correction is appended here for the reason item 1 gives.
 9. **The Phase-13 slices left the pipeline's generated atlases stale, and 13.9 regenerates and

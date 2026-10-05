@@ -53,8 +53,8 @@ passing bounded court is a differential result over the behaviours that court ex
 - FRF receipts and claim: **present, and the chain's objects are on disk.** `.frf` carries five
   receipts, one per declarable court; ten adjudicated challenge records (both operators on every
   court); and the `sensitivity-backed` claim
-  `1230723bec1652c40ed9f1a8aa57e91fa10902dcaa21b4403acb0e43d09519b8`, binding
-  `openssl-rt-3.6.4-r2` to `openssl-rs 0.0.22` (`identity_hash e4f60d8b`) with zero blockers. Two of
+  `768b2642e423de41b26e84ed4a0fd4a6e93621664eaa939b4efa6ce6e943ef56`, binding
+  `openssl-rt-3.6.4-r2` to `openssl-rs 0.0.23` (`identity_hash e4f60d8b`) with zero blockers. Two of
   the five premises are narrowed to the exit class, and §8 states what that is.
 - Gemel checkpoint: **present, and it is this stratum's.** `forensics/GEMEL_TRAJECTORY.md`'s
   `current:` is the checkpoint `K61`
@@ -274,7 +274,7 @@ court *records rather than diffs* (§5), so the whole-transcript digest differs 
 observation agrees. Disposing the residual would have let the claim assert the first stdout line it
 does not have; **leaving it open narrows those two premises to the exit class** and the claim
 carries both axes on the other three. The claim
-`1230723bec1652c40ed9f1a8aa57e91fa10902dcaa21b4403acb0e43d09519b8` compiles with zero blockers.
+`768b2642e423de41b26e84ed4a0fd4a6e93621664eaa939b4efa6ce6e943ef56` compiles with zero blockers.
 
 **The one instrument boundary: the cross-process matrix is measured in the court venue, not by the
 single-process FRF harness.** `RT-TLS13-INTEROP-MATRIX` is a *cross-process* court: two
@@ -378,7 +378,7 @@ derives `complete`. The boundaries this stratum actually met are recorded in the
 8. **The FRF and Gemel evidence is established, and §8 records what it is.**
    `docs/RELEASE_GATES.md` §2 items 6, 8 and 10 are met by the chain entry §8 records: five
    receipts, ten adjudicated challenge records, the `sensitivity-backed` claim
-   `1230723bec1652c40ed9f1a8aa57e91fa10902dcaa21b4403acb0e43d09519b8` with zero blockers, and the
+   `768b2642e423de41b26e84ed4a0fd4a6e93621664eaa939b4efa6ce6e943ef56` with zero blockers, and the
    Gemel checkpoint `K61` whose summary names Phase 17 and the FRF chain. Phase 17's derived state
    is `complete`. Two premises are narrowed to the exit class (§4), and that is recorded rather than
    smoothed.
@@ -462,10 +462,10 @@ prose cannot drift from the measurement.
   axes (`stdout-first-line`, `exit-class`) on all five courts, every one `saw_defect` and
   `specificity_clean` — which is what makes the claim `sensitivity-backed` rather than merely green
   (D13). `.frf/claims/` carries the compiled claim
-  `1230723bec1652c40ed9f1a8aa57e91fa10902dcaa21b4403acb0e43d09519b8`, compiled at
+  `768b2642e423de41b26e84ed4a0fd4a6e93621664eaa939b4efa6ce6e943ef56`, compiled at
   `--policy sensitivity-backed` over the five receipts, binding authority `openssl-rt-3.6.4-r2` to
-  candidate `openssl-rs 0.0.22` (`identity_hash e4f60d8b`) with zero blockers. **The identity is
-  the current 0.0.22 release**: the chain was cut into the store the 0.0.22 release regenerated from
+  candidate `openssl-rs 0.0.23` (`identity_hash e4f60d8b`) with zero blockers. **The identity is
+  the current 0.0.23 release**: the chain was cut into the store the 0.0.23 release regenerated from
   clean, and the claim records the candidate the tree is (`gen_frf_courts.CANDIDATE_VERSION`), which
   is what the fix-4 identity clause requires. Two premises — `rt-tls13-interop` and
   `rt-downstream-consumer` — are narrowed to the exit class because the reduced engine's raw
@@ -499,7 +499,7 @@ moves forward.
 
 - **The FRF/Gemel chain entry has landed.** §8's subject is now the objects on disk: the five
   declarations, five receipts, ten adjudicated challenges, the claim
-  `1230723bec1652c40ed9f1a8aa57e91fa10902dcaa21b4403acb0e43d09519b8` and the checkpoint `K61`.
+  `768b2642e423de41b26e84ed4a0fd4a6e93621664eaa939b4efa6ce6e943ef56` and the checkpoint `K61`.
   This stratum registers no `CT-*` court, so the entry covers the five behavioural differential
   courts and records `RT-DOWNSTREAM-CORPUS` as not declarable. Items 6, 8 and 10 of §7 retired with
   it, and `phase_state.py` derives `complete`.
@@ -540,7 +540,7 @@ corrections the evidence forced rather than the ones a reviewer might have prefe
    Phase 16's seal is recorded.
 5. **The FRF/Gemel chain entry landed, and §7 and §8 record it.** The seal's §8 records the five
    declarations, five receipts, ten adjudicated challenges, the `sensitivity-backed` claim
-   `1230723bec1652c40ed9f1a8aa57e91fa10902dcaa21b4403acb0e43d09519b8` and the Gemel change `C108`
+   `768b2642e423de41b26e84ed4a0fd4a6e93621664eaa939b4efa6ce6e943ef56` and the Gemel change `C108`
    / checkpoint `K61`
    (`checkpoint.8269810786499a3fd45b482760e5de1761e06b4637922ccbeb8a2174e047ecd7`), so items 6, 8
    and 10 retired and `phase_state.py` derives `complete`. `seal_sha256` is recomputed from the
