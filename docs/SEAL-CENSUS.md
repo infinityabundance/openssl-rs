@@ -43,7 +43,7 @@ declared owner; this is that assignment.
 | 15 | QUIC / ECH and modern SSL surface | `complete` | 3 | 3 | 3 | 0 | 0 |
 | 16 | CLI / config / filesystem contract | `complete` | 0 | 42 | 42 | 0 | 0 |
 | 17 | Downstream replacement court | `complete` | 0 | 5 | 5 | 0 | 0 |
-| 18 | Hostile fuzz / security / side-channel hardening | `in-progress` | 0 | 5 | 5 | 0 | 0 |
+| 18 | Hostile fuzz / security / side-channel hardening | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 19 | Performance / CPU dispatch | `not-started` | 0 | — | — | — | — |
 | 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
 | 21 | Maintenance delta machinery | `not-started` | 0 | — | — | — | — |
@@ -574,9 +574,8 @@ Courts: `all pass`, 6 court(s), **1111** authority observation(s) over 6 transcr
 
 ## Phase 18 — Hostile fuzz / security / side-channel hardening
 
-* state: `in-progress`
-* blocking: Phase 18's FRF chain entry is incomplete: no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 18 and the FRF chain
-* seal: none written yet (`docs/PHASE-18-HARDENING-SEAL.md`)
+* state: `complete`
+* seal: `docs/PHASE-18-HARDENING-SEAL.md`
 * ledger: `forensics/phase18-obligations.json`
 * atlas-owned: 0
 * owned working set: 5
