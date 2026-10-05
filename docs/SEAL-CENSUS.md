@@ -44,7 +44,7 @@ declared owner; this is that assignment.
 | 16 | CLI / config / filesystem contract | `complete` | 0 | 42 | 42 | 0 | 0 |
 | 17 | Downstream replacement court | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` | 0 | 5 | 5 | 0 | 0 |
-| 19 | Performance / CPU dispatch | `in-progress` | 0 | 5 | 4 | 0 | 1 |
+| 19 | Performance / CPU dispatch | `in-progress` | 0 | 5 | 5 | 0 | 0 |
 | 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
 | 21 | Maintenance delta machinery | `not-started` | 0 | — | — | — | — |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
@@ -609,14 +609,14 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 ## Phase 19 — Performance / CPU dispatch
 
 * state: `in-progress`
-* blocking: 1 open obligation(s) of this stratum recorded in forensics/phase19-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase19-obligations.json` publishes `unit: performance dispatch contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`cpu-capability`, `evp-dispatch`, `performance-work`, `performance-sensitivity` and `performance-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it measures the implementation the strata before it completed. Its `artifacts/phase19/COURTS.json` landed `RT-CPU-CAPABILITY` in 19.1 -- the CPU-capability surface (`OPENSSL_ia32cap_P`, `OPENSSL_cpuid_setup`, `OPENSSL_ia32_cpuid`) driven under fixed and faulted CPUID facades against the authority, with an authority-linked differential control -- and `RT-EVP-DISPATCH` in 19.2 -- the selection surface (the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context) driven over the same fixed capability sets, where masking the AES-NI bit moves the authority's `AES-*-CBC-HMAC-*` selection and the candidate's does not -- and `RT-PERFORMANCE-WORK` in 19.3 -- the deterministic work vector over a fixed primitive set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an RSA-1024 private decrypt), measured by a counting `CRYPTO` allocator the stratum introduces plus the method-derived block/output/tag sizes, with the EC and RSA paths recording a divergent-work `finding` and the symmetric/digest paths agreeing -- and `RT-PERFORMANCE-SENSITIVITY` in 19.4 -- the candidate-only instrument-sensitivity control, where a deliberately slowed `control-extra-pass` variant of `aes-128-cbc` (an injected extra full pass over the primitive in the harness, never product code) is caught on the counting allocator the stratum introduces while the reference arm matches the authority's recorded vector, so the instrument is proven able to tell a slow path from a fast one -- so four of the five contract units are `implemented` and `open_in_this_stratum` has moved from five to one. `PERFORMANCE-BOUNDARY-REGISTER` remains `pending` with the subphase that lands it. Nothing here is a throughput or parity claim: there is no benchmark-parity claim and no assembly-versus-Rust equivalence claim, and no verdict is ever taken from wall-clock time alone. The ledger records two axes separately -- `measurement_state` says the instrument completed and `property_status`/`findings` say what is claimed -- so a passing `RT-PERFORMANCE-WORK` is an instrument plus bounded deterministic-work comparison and must never be read as 'performance parity achieved'. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-19-SUBPHASES.md` sections 1 and 4 record the measurement
+* blocking: Phase 19's FRF chain entry is incomplete: 4 court(s) that artifacts/phase19/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-cpu-capability, openssl-rs-rt-evp-dispatch, openssl-rs-rt-performance-work, openssl-rs-rt-performance-sensitivity; 4 of 4 required court(s) have no FRF declaration staging their artifacts/phase19/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-cpu-capability, openssl-rs-rt-evp-dispatch, openssl-rs-rt-performance-work, openssl-rs-rt-performance-sensitivity; 4 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-cpu-capability, openssl-rs-rt-evp-dispatch, openssl-rs-rt-performance-work, openssl-rs-rt-performance-sensitivity; 4 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-cpu-capability, openssl-rs-rt-evp-dispatch, openssl-rs-rt-performance-work, openssl-rs-rt-performance-sensitivity; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 4 required court(s); no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 19 and the FRF chain
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase19-obligations.json`
 * atlas-owned: 0
 * owned working set: 5
-* implemented: 4
+* implemented: 5
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 1**
+* **open in this stratum: 0**
 
 Contract units (measurement vs property):
 
@@ -626,12 +626,12 @@ Contract units (measurement vs property):
 | evp-dispatch | `complete` | `not_claimed` | — |
 | performance-work | `complete` | `NOT_CLAIMED` | `ec-p256-mul: deterministic work differs (allocs authority=3 candidate=4; bytes authority=2121 candidate=160)`, `rsa-1024-private: deterministic work differs (allocs authority=46 candidate=31; bytes authority=4541 candidate=2669)` |
 | performance-sensitivity | `complete` | `not_claimed` | — |
-| performance-boundary-register | `not_measured` | `not_claimed` | — |
+| performance-boundary-register | `complete` | `not_claimed` | — |
 
 A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
-Courts: `all pass`, 4 court(s), **942** authority observation(s) over 3 transcript court(s).
+Courts: `all pass`, 5 court(s), **942** authority observation(s) over 3 transcript court(s).
 
-The other 1 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
+The other 2 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
@@ -639,6 +639,7 @@ The other 1 compare ELF structure rather than a transcript and observe nothing l
 | RT-EVP-DISPATCH | `pass` | 777 |
 | RT-PERFORMANCE-WORK | `pass` | 84 |
 | RT-PERFORMANCE-SENSITIVITY | `pass` | — (structural) |
+| PERFORMANCE-BOUNDARY-REGISTER | `pass` | — (structural) |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 

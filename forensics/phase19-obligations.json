@@ -57,10 +57,10 @@
         "closure": "the `PERFORMANCE-BOUNDARY-REGISTER` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "PERFORMANCE-BOUNDARY-REGISTER is pending",
+        "measurement_state": "complete",
+        "observation": "PERFORMANCE-BOUNDARY-REGISTER is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase19/COURTS.json",
         "unit": "performance-boundary-register",
         "what": "the register that records what is measured, what is not, and the explicit non-claims (no benchmark-parity claim, no assembly-versus-Rust equivalence claim), and that fails the stratum if a recorded boundary drifts from its evidence"
@@ -71,8 +71,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 4,
-      "open_in_this_stratum": 1,
+      "implemented": 5,
+      "open_in_this_stratum": 0,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -113,7 +113,7 @@
     {
       "name": "phase-19-courts",
       "path": "artifacts/phase19/COURTS.json",
-      "sha256": "ed84b921335e1200ae1329659c4501120450d729a1717b8e0401b7858eb3ae85"
+      "sha256": "5edbe6174606557d9c0aca4999d7b51f104568f67824b2f2af710540476cd77e"
     }
   ],
   "kind": "phase19-obligations",

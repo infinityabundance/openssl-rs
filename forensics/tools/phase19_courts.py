@@ -117,13 +117,19 @@ path is distinguished from a broken instrument's answer. The verdict is about th
 resolution* and makes no throughput or benchmark-parity claim (sections 3.2 and 3.6); if the
 instrument cannot be made to catch the slowed variant the court is `fail`, never a vacuous `pass`.
 
-The pending court
------------------
-The last court the plan names is `pending` with the subphase that lands it:
-
-  * `PERFORMANCE-BOUNDARY-REGISTER` (19.5) — the register that records what is measured, what is
-    not, and the explicit non-claims (no benchmark-parity claim, no assembly-versus-Rust
-    equivalence claim), and that fails the stratum if a recorded boundary drifts from its evidence.
+`PERFORMANCE-BOUNDARY-REGISTER`, and what it binds
+-------------------------------------------------
+19.5's court, and the stratum's own non-claims. It stages no probe: its subject is
+`artifacts/phase19/performance-boundary-register.json`, the authored register that records, per
+surface, whether it is *measured* (a passing court covers it), *not-measured* (a surface this
+stratum names but no court reaches, so it is named `pending` rather than counted as passing) or
+*not-claimed* (explicitly outside this stratum -- including benchmark parity and
+assembly-versus-Rust equivalence). The court re-reads the live courts registry -- the four probe
+courts above, computed ahead of it in the same run -- and fails the stratum if a `measured` row's
+court no longer covers its surface, a `not-measured`/`not-claimed` row a passing court now covers,
+or a stated count/evidence value has moved. A surface the courts do not reach is `not-measured` or
+`not-claimed`, never `measured`; the register may not claim more than the courts above measured
+(docs/PHASE-19-SUBPHASES.md sections 3.1, 3.5 and 3.6).
 
 There is no benchmark-parity claim and no assembly-versus-Rust equivalence claim anywhere in this
 stratum, and no verdict is ever taken from wall-clock time alone.
@@ -138,6 +144,7 @@ SPDX-License-Identifier: Apache-2.0"""
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -154,6 +161,7 @@ from atlas_common import (  # noqa: E402
     rel,
     resolve_authority,
     run,
+    sha256_file,
     write_json,
 )
 
@@ -165,30 +173,36 @@ STAGED = REPO_ROOT / "artifacts" / "phase19" / "probes"
 PHASE2 = REPO_ROOT / "artifacts" / "phase2"
 RUN_TIMEOUT_S = "120"
 
-# The courts, in the order they land. `(name, probe filename)`, and the probe is declared in the
-# same commit as the entry, so a runner that names a probe which does not exist cannot be
-# committed.
+REGISTER = REPO_ROOT / "artifacts" / "phase19" / "performance-boundary-register.json"
+REGISTER_SCHEMA = "openssl-rs/performance-boundary-register/v1"
+
+# The courts, in the order they land. `(name, probe filename or None)`, and the probe is declared
+# in the same commit as the entry, so a runner that names a probe which does not exist cannot be
+# committed. The register court has no probe: its subject is the authored register, and it reads
+# the four probe courts' records computed ahead of it in the same run.
 CPU_CAPABILITY = "RT-CPU-CAPABILITY"
 EVP_DISPATCH = "RT-EVP-DISPATCH"
 PERFORMANCE_WORK = "RT-PERFORMANCE-WORK"
 PERFORMANCE_SENSITIVITY = "RT-PERFORMANCE-SENSITIVITY"
-COURTS: list[tuple[str, str]] = [
+REGISTER_COURT = "PERFORMANCE-BOUNDARY-REGISTER"
+COURTS: list[tuple[str, str | None]] = [
     (CPU_CAPABILITY, "rt_cpu_capability_probe.c"),
     (EVP_DISPATCH, "rt_evp_dispatch_probe.c"),
     (PERFORMANCE_WORK, "rt_performance_work_probe.c"),
     (PERFORMANCE_SENSITIVITY, "rt_performance_sensitivity_probe.c"),
+    (REGISTER_COURT, None),
 ]
 
-# A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
-# the instrument and what the court will drive, so "nothing registered" is a stated distance rather
-# than a court quietly dropped.
-PENDING_COURTS: dict[str, str] = {
-    "PERFORMANCE-BOUNDARY-REGISTER": (
-        "19.5 lands the register; it records what is measured, what is not, and the explicit "
-        "non-claims (no benchmark-parity claim, no assembly-versus-Rust equivalence claim), and "
-        "checks that every recorded boundary still matches the evidence that establishes it"
-    ),
-}
+# The classifications the register may use. `measured` is a passing court that covers the surface;
+# `not-measured` is a surface this stratum names but no court reaches (a `pending` name);
+# `not-claimed` is explicitly outside the stratum. A surface the courts do not reach is never
+# `measured`.
+REGISTER_CLASSIFICATIONS = ("measured", "not-measured", "not-claimed")
+
+# A court the plan names and this stratum cannot run yet. Empty since 19.5 landed the register;
+# kept as the stated-distance mechanism, so a court the plan names but the runner cannot run is
+# recorded here rather than quietly dropped.
+PENDING_COURTS: dict[str, str] = {}
 
 # The fixed capability sets the capability probe is driven under. `(set name, OPENSSL_ia32cap
 # value or None)`. The first is the host's own CPU, the second clears the AES-NI bit (bit 25 of
@@ -1102,6 +1116,239 @@ def performance_sensitivity_court(name: str, src: Path, auth, work: Path,
     }
 
 
+# ---------------------------------------------------------------------------
+# `PERFORMANCE-BOUNDARY-REGISTER` -- the stratum's own non-claims, bound to the courts
+# ---------------------------------------------------------------------------
+
+# 19.3's work court drives a fixed path set; a path is the register's `work.agree.*` surface when
+# its library-side work vector equals the authority's and its `work.diverge.*` surface when it
+# differs. The split is derived from the court row, so a path moving between the two becomes a key
+# the register no longer covers rather than a silent re-labelling.
+def _work_agreeing(record: dict) -> list[str]:
+    return sorted(
+        p["path"] for p in (record.get("paths") or [])
+        if not p.get("divergent_work_keys") and (p.get("authority") or {}).get("ran") == "1"
+    )
+
+
+def _work_divergent(record: dict) -> list[str]:
+    return sorted(
+        p["path"] for p in (record.get("paths") or [])
+        if p.get("divergent_work_keys")
+    )
+
+
+def court_coverage(record: dict) -> set[str]:
+    """The surface keys a court covers, from its own record -- and only when it passed.
+
+    A non-`pass` court covers nothing: its row is still in the registry but no surface may lean on
+    it. That is what makes "a row marked measured whose court no longer covers it" detectable --
+    the coverage set for that court goes empty (or loses the key).
+    """
+    if record.get("verdict") != "pass":
+        return set()
+    court = record.get("court")
+    if court == CPU_CAPABILITY:
+        keys: set[str] = set()
+        reached = (record.get("reached") or {}).get("authority") or {}
+        for key in REACHABLE_KEYS:
+            if key in reached:
+                keys.add("cpu.reach." + key.rsplit(".", 1)[-1])
+        if (record.get("control") or {}).get("facade_moved_selection"):
+            keys.add("cpu.masking")
+        return keys
+    if court == EVP_DISPATCH:
+        keys = set()
+        sets = record.get("capability_sets") or []
+        host = next((s for s in sets if s.get("set") == "host"), None)
+        if host is not None and host.get("divergence_count") == 0:
+            keys.add("evp.host")
+        if any(s.get("divergence_count", 0) > 0 for s in sets if s.get("set") != "host"):
+            keys.add("evp.masked")
+        return keys
+    if court == PERFORMANCE_WORK:
+        keys = set()
+        for path in _work_agreeing(record):
+            keys.add("work.agree." + path)
+        for path in _work_divergent(record):
+            keys.add("work.diverge." + path)
+        return keys
+    if court == PERFORMANCE_SENSITIVITY:
+        if (record.get("control") or {}).get("honest"):
+            return {"sens.control"}
+        return set()
+    return set()
+
+
+def register_evidence(record: dict) -> dict:
+    """The court record's classification evidence, as the flat vocabulary the register cites.
+
+    The register's `evidence` block is a dict of `{key: expected}` over this view, and the court
+    compares them exactly, so a stated count or evidence value that moves is a failure rather than
+    a register that silently describes the previous generation.
+    """
+    court = record.get("court")
+    ev: dict = {"verdict": record.get("verdict")}
+    if court == CPU_CAPABILITY:
+        reached = record.get("reached") or {}
+        ev["authority_reached"] = reached.get("authority") or {}
+        ev["candidate_reached"] = reached.get("candidate") or {}
+        ev["divergence_count"] = record.get("divergence_count")
+        ctrl = record.get("control") or {}
+        ev["facade_host"] = ctrl.get("facade_host")
+        ev["facade_aesni_off"] = ctrl.get("facade_aesni_off")
+        ev["facade_moved_selection"] = ctrl.get("facade_moved_selection")
+    elif court == EVP_DISPATCH:
+        sets = record.get("capability_sets") or []
+        ev["host_divergence_count"] = next(
+            (s.get("divergence_count") for s in sets if s.get("set") == "host"), None)
+        ev["masked_sets"] = sorted(s.get("set") for s in sets if s.get("set") != "host")
+        ev["masked_divergence_count"] = {
+            s.get("set"): s.get("divergence_count")
+            for s in sets if s.get("set") != "host"
+        }
+    elif court == PERFORMANCE_WORK:
+        ev["findings"] = sorted(str(f) for f in record.get("findings") or [])
+        ev["findings_count"] = record.get("findings_count")
+        ev["divergent_paths"] = _work_divergent(record)
+        ev["agreeing_paths"] = _work_agreeing(record)
+        ev["pending_paths"] = sorted(record.get("pending_paths") or [])
+    elif court == PERFORMANCE_SENSITIVITY:
+        ctrl = record.get("control") or {}
+        ev["caught"] = ctrl.get("caught")
+        ev["counter_caught"] = ctrl.get("counter_caught")
+        ev["counter_keys_differing"] = sorted(ctrl.get("counter_keys_differing") or [])
+        ev["reference"] = ctrl.get("reference")
+    return ev
+
+
+def verify_register_surface(row: dict, registry: dict[str, dict], coverage: dict[str, set[str]],
+                            covered_any: set[str]) -> list[str]:
+    """Every way one register row drifts from the courts it cites.
+
+    The three named drift classes are checks here: a `measured` row whose court no longer covers
+    its surface (the `not_covered` clause and the `verdict` clause), a `not-measured`/`not-claimed`
+    row a passing court now covers (the `covered_any` clause), and a stated count/evidence value
+    that moved (the `evidence` equality, plus the declared-count check in `register_court`).
+    """
+    problems: list[str] = []
+    sid = row.get("id", "<unnamed>")
+    cls = row.get("classification")
+    keys = row.get("surface_keys") or []
+    court = row.get("court")
+    if cls not in REGISTER_CLASSIFICATIONS:
+        problems.append(f"{sid}: classification {cls!r} is not one of "
+                        f"{list(REGISTER_CLASSIFICATIONS)}")
+        return problems
+    if cls != "measured":
+        if court is not None:
+            problems.append(f"{sid}: a {cls} row must name no court (got {court!r})")
+        for k in keys:
+            if k in covered_any:
+                problems.append(
+                    f"{sid}: recorded {cls} but a passing court now covers {k!r}")
+        return problems
+    rec = registry.get(court)
+    if rec is None:
+        problems.append(f"{sid}: cites court {court!r} which is not registered")
+        return problems
+    if rec.get("verdict") != "pass":
+        problems.append(f"{sid}: recorded {cls} but its court {court} is {rec.get('verdict')}")
+    not_covered = sorted(k for k in keys if k not in coverage.get(court, set()))
+    if not_covered:
+        problems.append(f"{sid}: recorded {cls} but {court} does not cover {not_covered}")
+    ev = register_evidence(rec)
+    want = row.get("evidence") or {}
+    for key, expected in want.items():
+        if key not in ev:
+            problems.append(f"{sid}: evidence key {key!r} has no value in the {court} record")
+        elif ev[key] != expected:
+            problems.append(
+                f"{sid}: evidence {key} = {expected!r} but {court} shows {ev[key]!r}")
+    return problems
+
+
+def register_court(name: str, records: list[dict]) -> dict:
+    """`PERFORMANCE-BOUNDARY-REGISTER`: bind the authored register to the live courts registry.
+
+    Reads the four already-computed probe-court records and the authored register, re-derives each
+    court's coverage and each row's expected evidence, and reports every drift. A non-empty
+    `problems` is `fail`.
+    """
+    if not REGISTER.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "register-missing",
+                "frf_declarable": False,
+                "frf_exclusion": "the register court re-reads the courts registry; it stages no "
+                                  "probe pair",
+                "detail": rel(REGISTER)}
+    doc = json.loads(REGISTER.read_text(encoding="utf-8"))
+    problems: list[str] = []
+    if doc.get("schema") != REGISTER_SCHEMA:
+        problems.append(f"schema {doc.get('schema')!r} != {REGISTER_SCHEMA!r}")
+    surfaces = doc.get("surfaces") or []
+    registry = {r.get("court"): r for r in records}
+    coverage = {r.get("court"): court_coverage(r) for r in records}
+    covered_any: set[str] = set()
+    for keys in coverage.values():
+        covered_any |= keys
+    for row in surfaces:
+        problems += verify_register_surface(row, registry, coverage, covered_any)
+    # Completeness: every passing probe court that covers surfaces must be cited by at least one
+    # measured row, so a new court cannot pass unregistered.
+    cited = {r.get("court") for r in surfaces if r.get("classification") == "measured"}
+    for court, keys in coverage.items():
+        if keys and court not in cited:
+            problems.append(
+                f"court {court} passes and covers {len(keys)} surface(s) but no measured "
+                f"register row cites it")
+    counts = {cls: 0 for cls in REGISTER_CLASSIFICATIONS}
+    for row in surfaces:
+        if row.get("classification") in counts:
+            counts[row["classification"]] += 1
+    declared = doc.get("classifications") or {}
+    for cls in REGISTER_CLASSIFICATIONS:
+        if declared.get(cls) != counts[cls]:
+            problems.append(
+                f"declared {cls} count {declared.get(cls)!r} but the register has {counts[cls]} "
+                f"row(s)")
+    if declared.get("total") != len(surfaces):
+        problems.append(f"declared total {declared.get('total')!r} but the register has "
+                        f"{len(surfaces)} row(s)")
+    verdict = "pass" if not problems else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it re-reads the live courts registry (the four probe courts above) "
+            "and the authored register artifacts/phase19/performance-boundary-register.json, and "
+            "fails the stratum if any recorded measured/not-measured/not-claimed classification, "
+            "surface key or stated count/evidence value has drifted from what the courts show "
+            "(docs/PHASE-19-SUBPHASES.md sections 3.1, 3.5 and 3.6). A not-measured or "
+            "not-claimed row that a passing court now covers, a measured row whose court no "
+            "longer covers it, and a stated count that moved are all failures. It is the "
+            "stratum's own non-claims: no benchmark-parity claim and no assembly-versus-Rust "
+            "equivalence claim."),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the register re-reads the courts registry and stages no artifacts/phase19/probes/ "
+            "pair, so it takes no transcript to diff and carries no FRF declaration"),
+        "register": {
+            "path": rel(REGISTER),
+            "schema": doc.get("schema"),
+            "sha256": sha256_file(REGISTER),
+            "counts": counts,
+            "total": len(surfaces),
+        },
+        "surfaces": [
+            {"id": r.get("id"), "classification": r.get("classification"),
+             "court": r.get("court"), "surface_keys": r.get("surface_keys") or []}
+            for r in surfaces
+        ],
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1115,6 +1362,12 @@ def main(argv: list[str]) -> int:
     records: list[dict] = []
     work_row: dict = {}
     for name, filename in COURTS:
+        # 19.5's register court stages no probe: its subject is the authored register and the four
+        # probe courts' records, computed above it in this one run, so the registry is not read back
+        # from disk and no digest cycle forms.
+        if name == REGISTER_COURT:
+            records.append(register_court(name, records))
+            continue
         src = PROBE_DIR / filename
         if not src.is_file():
             records.append({"court": name, "verdict": "fail",
@@ -1212,9 +1465,16 @@ def main(argv: list[str]) -> int:
             "excludes from its findings. Section 3.2's rule is mechanical here: a control that "
             "cannot fail is not evidence, so if the instrument cannot tell the slowed path from "
             "the reference the verdict is `fail`, never a vacuous `pass`. It is evidence about the "
-            "instrument's resolution and makes no throughput or benchmark-parity claim. Only "
-            "`PERFORMANCE-BOUNDARY-REGISTER` 19.5's remains `pending` with the subphase that lands "
-            "its instrument. This stratum owns "
+            "instrument's resolution and makes no throughput or benchmark-parity claim. "
+            "`PERFORMANCE-BOUNDARY-REGISTER` is 19.5's court: it stages no probe and reads the "
+            "authored register artifacts/phase19/performance-boundary-register.json against the "
+            "four probe courts' records computed above it, failing the stratum if a measured "
+            "row's court no longer covers its surface, a not-measured or not-claimed row a "
+            "passing court now covers, or a stated count/evidence value has moved. It records "
+            "the stratum's own non-claims -- no benchmark-parity claim and no assembly-versus-"
+            "Rust equivalence claim, the ENGINE path not measured, the three capability names "
+            "not reached, and the two divergent-work findings -- and may not claim more than "
+            "the courts above measured. This stratum owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence: the "
             "subject is dispatch behaviour and deterministic work over a finished implementation, "
             "with no benchmark-parity claim and no assembly-versus-Rust equivalence claim. "
@@ -1229,6 +1489,7 @@ def main(argv: list[str]) -> int:
         InputRef(name="performance-work-probe", path=PROBE_DIR / "rt_performance_work_probe.c"),
         InputRef(name="performance-sensitivity-probe",
                  path=PROBE_DIR / "rt_performance_sensitivity_probe.c"),
+        InputRef(name="performance-boundary-register", path=REGISTER),
         InputRef(name="performance-work-fixture",
                  path=PROBE_DIR / "fixtures" / "rsa-work.pem"),
     ]
@@ -1264,6 +1525,11 @@ def main(argv: list[str]) -> int:
                   f"{c['path']} caught={c['caught']} on counter={c['counter_caught']} "
                   f"keys={c['counter_keys_differing']}, reference={c['reference']} matches "
                   f"authority)")
+        elif r["verdict"] == "pass" and r["court"] == REGISTER_COURT:
+            reg = r["register"]
+            print(f"  {r['court']:<32} pass   (no probe, {reg['total']} surfaces: "
+                  + ", ".join(f"{k}={v}" for k, v in sorted(reg['counts'].items()))
+                  + f") ")
         elif r["verdict"] != "pass":
             print(f"  {r['court']:<32} FAIL   stage={r.get('stage', 'compare')}")
             for p in (r.get("detail") if isinstance(r.get("detail"), list)
