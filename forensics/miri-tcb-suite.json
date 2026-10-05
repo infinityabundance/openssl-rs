@@ -1,0 +1,59 @@
+{
+  "schema": "openssl-rs/miri-tcb-suite/v1",
+  "phase": 18,
+  "tool": "forensics/tools/miri_tcb_suite.py",
+  "command": "cargo +nightly miri test --lib",
+  "filter": "miri_tcb",
+  "miri_flags": "-Zmiri-strict-provenance",
+  "seeds": [0, 1, 2],
+  "rule": "The Miri-admitted TCB suite is machine-owned and fail-closed. `forensics/tools/miri_tcb_suite.py --record` parses a real `cargo +nightly miri test --lib miri_tcb` log and fails unless every name in `admitted` ran and passed, no name in `unsupported` ran, and no `miri_tcb` test in the log is absent from both lists. It never treats a missing run as a pass. The `admitted` set is the subset of the crate that Miri can execute because it allocates through a Rust-backed shim instead of libc; the `unsupported` entries name the surface Miri refuses (libc FFI, DSOs, ucontext/intrinsics) with the reason, rather than being silently skipped.",
+  "admitted": [
+    "runtime::miri_tcb::miri_tcb_allocator_slot_reports_the_installed_shim",
+    "runtime::miri_tcb::miri_tcb_alloc_zalloc_calloc_own_zero_and_release",
+    "runtime::miri_tcb::miri_tcb_realloc_preserves_and_clear_realloc_shrinks_in_place",
+    "runtime::miri_tcb::miri_tcb_strdup_strndup_and_memdup_own_copies",
+    "runtime::miri_tcb::miri_tcb_buffer_gateway_grows_and_releases",
+    "runtime::miri_tcb::miri_tcb_stack_lifetimes_and_pop_free",
+    "runtime::miri_tcb::miri_tcb_lhash_registry_insert_retrieve_delete",
+    "runtime::miri_tcb::miri_tcb_object_registry_lookup_round_trips",
+    "runtime::miri_tcb::miri_tcb_x509_lifetime_and_refcount"
+  ],
+  "unsupported": [
+    {
+      "test": "runtime::mem::tests::zalloc_and_calloc_are_zeroed",
+      "reason": "reaches the default branch, whose allocator is the libc malloc FFI; Miri refuses a foreign function"
+    },
+    {
+      "test": "runtime::mem::tests::custom_allocator_is_used_and_reported",
+      "reason": "the installed shims forward to libc malloc/realloc/free, so calling them is a foreign function"
+    },
+    {
+      "test": "runtime::mem::tests::clear_realloc_shrinking_keeps_the_pointer_and_cleanses",
+      "reason": "allocates through the default branch (libc malloc) before any shim can be installed"
+    },
+    {
+      "test": "dso::dlfcn::tests",
+      "reason": "dlopen/dlsym/dlclose are foreign functions; DSO symbol addresses are the explicit provenance TCB"
+    },
+    {
+      "test": "crypto_async::arch::async_posix",
+      "reason": "the ucontext fibre path calls the C shim (openssl_rs_ucontext_*) and makecontext/swapcontext"
+    },
+    {
+      "test": "rand::sys",
+      "reason": "getrandom/getentropy and the syscall surface are foreign functions"
+    },
+    {
+      "test": "runtime::rdtsc",
+      "reason": "the timestamp path uses inline asm / the rdtsc intrinsic, which Miri does not execute"
+    },
+    {
+      "test": "runtime::bio::sys",
+      "reason": "FILE* fopen/fread/fwrite/fclose are foreign functions"
+    },
+    {
+      "test": "runtime::thread_arch",
+      "reason": "pthread and futex calls are foreign functions; Miri models only its own thread primitives"
+    }
+  ]
+}

@@ -41,6 +41,12 @@ pub mod getenv;
 pub mod init;
 pub mod lhash;
 pub mod mem;
+// Phase 18's Miri-admitted TCB suite. Test-only and Miri-only: `cargo test` does not
+// compile it, `cargo +nightly miri test --lib miri_tcb` does. It installs a
+// Rust-backed allocator shim so the `CRYPTO_*` ownership and container paths run
+// under Miri's strict-provenance model without touching libc. See the module docs.
+#[cfg(all(test, miri))]
+pub(crate) mod miri_tcb;
 pub mod obj;
 pub mod rcu;
 pub mod rdtsc;
