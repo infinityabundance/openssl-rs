@@ -51,10 +51,19 @@ PRODUCTION_AUTHORITY = "openssl-3.6.4-production"
 # three contract units, which a symbol-counting ledger would count zero. **Phase 17 owns no export
 # either**: the ownership atlas assigns `owner_phase == 17` no row, and its unit is the downstream
 # replacement contract over the 52 `apps/<name>.c` command unit deferrals and four contract units,
-# which a symbol-counting ledger would count zero. The marker is a property
+# which a symbol-counting ledger would count zero. **Phase 18 owns no export either**: the
+# ownership atlas assigns `owner_phase == 18` no row, and its unit is the hostile hardening
+# contract over five contract units and no deferral, which a symbol-counting ledger would count
+# zero. The marker is a property
 # of the document rather than a phase number those tools know (`docs/PHASE-22-SUBPHASES.md`, D485;
-# `docs/PHASE-16-SUBPHASES.md`, section 1; `docs/PHASE-17-SUBPHASES.md`, section 1).
-NON_EXPORT_UNITS = {"compatibility plane", "cli-config contract", "downstream replacement contract"}
+# `docs/PHASE-16-SUBPHASES.md`, section 1; `docs/PHASE-17-SUBPHASES.md`, section 1;
+# `docs/PHASE-18-SUBPHASES.md`, section 1).
+NON_EXPORT_UNITS = {
+    "compatibility plane",
+    "cli-config contract",
+    "downstream replacement contract",
+    "hostile hardening contract",
+}
 HISTORICAL_AUTHORITY = "openssl-3.6.3-historical"
 
 # Which seal document belongs to which stratum, where one exists. **One table, because two tools
@@ -90,6 +99,7 @@ SEAL_DOCS: dict[int, str] = {
     15: "docs/PHASE-15-QUIC-SEAL.md",
     16: "docs/PHASE-16-CLI-SEAL.md",
     17: "docs/PHASE-17-DOWNSTREAM-SEAL.md",
+    18: "docs/PHASE-18-HARDENING-SEAL.md",
     # Phase 22 is an atlas stratum rather than an export stratum, but its seal is the same kind of
     # document and `phase_state.py` records its sha256 the same way. Its `evidence_for` branch is
     # its own because its ledger's unit is a compatibility plane, not a symbol (D485).
@@ -160,6 +170,37 @@ def court_observations(row: dict) -> int:
             f"difference here is a record that cannot be true"
         )
     return a
+
+
+def contract_unit_lines(ledger_body: dict) -> list[str]:
+    """Markdown lines for a ledger's contract-unit block, or `[]` when it has none.
+
+    A contract unit has **two** axes, and a renderer that showed only one would let a passing
+    court read as a claim about the security property the unit names. `measurement_state` is the
+    instrument's state; `property_status` and `findings` are the property's. For the
+    `constant-time` unit the property is `NOT_CLAIMED` while its court records the two BN paths
+    as `separated` findings, so every surface that summarises units says so explicitly. Shared by
+    `render_seal_census.py` and `render_status.py` so the two cannot drift.
+    """
+    units = ledger_body.get("contract_units") or []
+    if not units:
+        return []
+    lines = ["Contract units (measurement vs property):", "",
+             "| unit | measurement_state | property_status | findings |",
+             "|---|---|---|---|"]
+    for u in units:
+        findings = u.get("findings") or []
+        rendered = ", ".join(f"`{f}`" for f in findings) or "—"
+        lines.append(f"| {u.get('unit')} | `{u.get('measurement_state')}` | "
+                     f"`{u.get('property_status')}` | {rendered} |")
+    lines += [
+        "",
+        "A `complete` measurement means the unit's court ran and its control was honest. It is "
+        "**not** a claim that the security property the unit names is achieved: where a property "
+        "is measured and the court recorded findings, the property reads `NOT_CLAIMED` with "
+        "`findings_present` and the findings are named above.",
+    ]
+    return lines
 
 
 # ---------------------------------------------------------------------------

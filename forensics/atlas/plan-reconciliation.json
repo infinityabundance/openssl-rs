@@ -18,6 +18,7 @@
         "docs/PHASE-15-SUBPHASES.md",
         "docs/PHASE-16-SUBPHASES.md",
         "docs/PHASE-17-SUBPHASES.md",
+        "docs/PHASE-18-SUBPHASES.md",
         "docs/PHASE-22-SUBPHASES.md",
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
@@ -25,7 +26,7 @@
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 183,
+      "rows_judged": 190,
       "symbols_named_by_a_row": 115,
       "symbols_reached": 115,
       "unit_records": 152,
@@ -8109,7 +8110,7 @@
       "transcribed_units": 599
     }
   },
-  "body_hash": "14708edc5137b29c9539abf664ec964159d7b74f6cbe33d61bcb5702c14789fd",
+  "body_hash": "b42cb9d64bebd7b1fa2adaafd85f8a3dbba5ed7da86dada9ba85c6f5206c0440",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -8120,17 +8121,17 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "47a47286aa6b3ab4e0a5c1e694f1dd32c673eece68d5c8a4ed2f9f99cb69d015"
+      "sha256": "bc26d5c9151789f84c7b4af90d2421010d04deeebeb373bb0e2c2bd66920cd47"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "9b3cf14b6af86cd83a4bf111912a46c6a21817ff25d468ecd07db67651466668"
+      "sha256": "1530833a4b595521278ea4c4f245e0b18593828e9354dcc66d66db35fb7a5f65"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "571f3b00dff7b873556feb899c7688cd493eedcf8a9a221a0b7502aaa2a4f646"
+      "sha256": "6c420f0ac849cdf9f75c0f80a23aa0a1729bb8cca6601cdf29e6a9049583a642"
     },
     {
       "name": "prerequisites",
@@ -8181,6 +8182,11 @@
       "name": "plan-PHASE-17-SUBPHASES",
       "path": "docs/PHASE-17-SUBPHASES.md",
       "sha256": "39993c520778e80fa01a4db3ca384924785003d5ddabc3537b5eb08f06554eaf"
+    },
+    {
+      "name": "plan-PHASE-18-SUBPHASES",
+      "path": "docs/PHASE-18-SUBPHASES.md",
+      "sha256": "a182ffed42f8fe6ca0b187e8b35f6ed32cc0bc95245cb08b234fff6ed001d637"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",

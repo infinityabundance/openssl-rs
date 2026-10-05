@@ -42,6 +42,8 @@ use crate::ssl::t1_lib::OSSL_TLS_GROUP_ID_x25519;
 const TLSEXT_TYPE_SUPPORTED_VERSIONS: u16 = 43;
 /// `TLSEXT_TYPE_key_share` — `tls1.h:165`.
 const TLSEXT_TYPE_KEY_SHARE: u16 = 51;
+/// `TLSEXT_TYPE_pre_shared_key` — `tls1.h:163`.
+const TLSEXT_TYPE_PSK: u16 = 41;
 
 /// `SSL_EXT_TLS1_3_SERVER_HELLO` — `ssl.h` (`SSL_EXT_TLS1_3_SERVER_HELLO = 0x80`); the context
 /// [`tls_construct_extensions`] builds.
@@ -136,6 +138,30 @@ unsafe fn tls_construct_stoc_key_share(s: *mut Ssl, pkt: *mut Wpacket) -> c_int 
     ret
 }
 
+/// `EXT_RETURN tls_construct_stoc_psk(...)` — `extensions_srvr.c:1795-1833`, reduced to the single
+/// selected identity: the ServerHello `pre_shared_key` extension is
+/// `selected_identity(2)` (`extensions_srvr.c:1815-1820`).
+///
+/// # Safety
+/// `s` must be a live connection and `pkt` a live packet.
+unsafe fn tls_construct_stoc_psk(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
+    // SAFETY: `s` is live. Only a resumed connection selects a PSK identity.
+    if unsafe { (*s).hit } == 0 {
+        return EXT_RETURN_NOT_SENT;
+    }
+    // SAFETY: `pkt` is live.
+    unsafe {
+        if WPACKET_put_bytes_u16(pkt, TLSEXT_TYPE_PSK) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_put_bytes_u16(pkt, 0) == 0
+            || WPACKET_close(pkt) == 0
+        {
+            return EXT_RETURN_FAIL;
+        }
+    }
+    EXT_RETURN_SENT
+}
+
 /// `int tls_construct_extensions(SSL_CONNECTION *s, WPACKET *pkt, unsigned int context,` —
 /// `ssl/statem/extensions.c:803-878`, for the `SSL_EXT_TLS1_3_SERVER_HELLO` context.
 ///
@@ -157,6 +183,12 @@ pub(crate) unsafe fn tls_construct_extensions(s: *mut Ssl, pkt: *mut Wpacket) ->
     }
     // SAFETY: live per the contract.
     let ret = unsafe { tls_construct_stoc_key_share(s, pkt) };
+    if ret == EXT_RETURN_FAIL {
+        return 0;
+    }
+    // `pre_shared_key` (`extensions.c:335`), sent only on a resumed connection.
+    // SAFETY: live per the contract.
+    let ret = unsafe { tls_construct_stoc_psk(s, pkt) };
     if ret == EXT_RETURN_FAIL {
         return 0;
     }

@@ -682,6 +682,29 @@ COURTS: list[tuple[str, int, str, str]] = [
      "both directions"),
     ("rt-downstream-consumer", 17, "rt_downstream_consumer_probe",
      "a real downstream consumer linked only against the shipped install prefix"),
+    #
+    # Phase 18 -- the hostile hardening contract stratum. Like Phases 16 and 17 it owns no
+    # exported symbol, so its courts are not a symbol projection: the three rows below each
+    # diff a real transcript and stage an `artifacts/phase18/probes/<probe>.{authority,
+    # candidate}` pair, so all three are declarable. The fourth probe court, `CT-PRIMITIVES`,
+    # is candidate-only -- a secret-independence screen compiled once against the candidate,
+    # with no authority transcript to diff and no `{fixture}` for a challenge to locate -- so
+    # it is not declared here (D13, D201), exactly as Phase 8's, 9's and 10's `CT-*` courts are
+    # not. The fifth court, `HOSTILE-BOUNDARY-REGISTER`, stages no probe: its
+    # `artifacts/phase18/COURTS.json` row is marked `frf_declarable: false` because it re-reads
+    # the live courts registry and the authored boundary register rather than diffing a
+    # transcript, so no row here names it.
+    #
+    ("rt-hostile-tls", 18, "rt_hostile_tls_probe",
+     "the fixed hostile TLS corpus -- malformed records, handshake messages and extension "
+     "bodies -- through the record layer and the TLS 1.3 flight, with crash/OOM/timeout "
+     "detection"),
+    ("rt-hostile-x509", 18, "rt_hostile_x509_probe",
+     "the fixed hostile X.509 / malformed-input corpus through the X.509, ASN.1 and PEM "
+     "readers, with crash/OOM/timeout detection"),
+    ("rt-mem-hardening", 18, "rt_mem_hardening_probe",
+     "the reduced engine's fixed buffers at, below and above each recorded capacity, with an "
+     "injected allocation-failure control"),
 ]
 
 

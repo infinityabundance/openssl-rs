@@ -1,0 +1,18 @@
+{
+  "cases_driven": 16384,
+  "cases_requested": 16384,
+  "classes": {
+    "parse": 16384
+  },
+  "corpus": "courts/phase18/fixtures/hostile-x509",
+  "corpus_entries": 133,
+  "elapsed_s": 34.721,
+  "finding_count": 0,
+  "findings": [],
+  "note": "a bounded, deterministic mutational screen over the committed hostile corpus, driven through the same probe the RT-HOSTILE-X509 court uses; NOT coverage-guided, NOT a fuzzing campaign, NOT a security proof",
+  "probe": "artifacts/phase18/probes/rt_hostile_x509_probe.candidate",
+  "schema": "openssl-rs/fuzz-hostile-corpus/v1",
+  "seed": 24,
+  "tool": "forensics/tools/fuzz_hostile_corpus.py",
+  "wall_budget_s": 300.0
+}

@@ -1,0 +1,79 @@
+{
+  "schema": "openssl-rs/unsafe-instruments/v1",
+  "phase": 18,
+  "subphase": "18.5",
+  "tool": "forensics/tools/fuzz_hostile_corpus.py",
+  "rule": "The instrumented checks over the parser/algorithm cores that the memory-safety benefit depends on. Each entry records honestly whether the instrument ran and what it observed; a tool that could not run records the reason rather than being silently skipped. None of these is a memory-safety proof: ASan/Miri/UBSan observe specific error classes under specific execution, and a fuzz run is a bounded screen, not a campaign or a coverage claim.",
+  "subject": "the crate's unsafe footprint (forensics/atlas/unsafe-footprint.json) and the parser/algorithm cores (asn1, x509, pem, cms, ssl, bn, rsa, ec, evp)",
+  "instruments": {
+    "asan": {
+      "status": "ran",
+      "tool": "-Zsanitizer=address (AddressSanitizer) on rustc 1.101.0-nightly (nightly-2026-10-05)",
+      "venue": "docker/openssl-rs-asan.{Dockerfile,sh} -- a dedicated sanitizer venue, separate from the forensic court. It bounds real resources (cgroup memory 8 GiB / swap 8 GiB, --pids-limit=2048, --cpus clamped to nproc, a wall-clock timeout, --security-opt no-new-privileges, the court's network policy) and deliberately leaves the per-process RLIMIT_DATA unset, because ASan's shadow is PROT_NONE/MAP_NORESERVE virtual address space the cgroup does not count. The court's hard 4 GiB RLIMIT_DATA is KEPT for the hostile courts; it is not weakened.",
+      "method": "forensics/tools/asan_closure.py, run inside that venue: RUSTFLAGS='-Zsanitizer=address -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=1' cargo +nightly-2026-10-05 build -Zbuild-std --release --lib (std rebuilt under ASan; the single-codegen-unit schedule keeps the instrumented build reproducible and avoids LLVM's duplicate `.llvm.<n>` function symbols); the first-party C adapters (build.rs) compiled through a CC wrapper that appends -fsanitize=address -fno-omit-frame-pointer -g; the probes compiled by clang with the same flags and statically linked against the instrumented archive. A sensitivity canary (forensics/tools/asan_canary.c, a deliberate heap use-after-free/buffer-overflow) must be diagnosed with a nonzero exit before any zero-findings result is trusted. Layers: allocator/unit tests, targeted ownership tests, the Phase-18 hostile TLS and X.509 corpora, the 16384-case mutation corpus, and the six sealed Phase-17 downstream consumers. The downstream layer builds the instrumented distribution DSOs into a dedicated prefix (/asan/install, forensics/tools/build_phase2_asan.sh), loads each Phase-17 consumer build onto them with LD_LIBRARY_PATH plus a preloaded clang dynamic ASan runtime (forensics/tools/asan_downstream.py), and requires zero ASan findings per consumer.",
+      "instrumentation_closure": "closed: the Rust staticlib (crate + std, rebuilt with -Zbuild-std), the first-party C adapters and the probes are all ASan-instrumented (79/79 retained first-party archive members, 7/7 adapters, probes carry 822 __asan references); libc is runtime-intercepted (ASan interceptors), which is the designed closure for the C runtime.",
+      "canary": "detected: heap-use-after-free, nonzero exit, verbatim in artifacts/phase18/asan.json",
+      "layers_run": ["allocator-unit-tests", "ownership-tests", "hostile-tls", "hostile-x509", "mutation-corpus", "downstream-consumers"],
+      "layers_clean": ["allocator-unit-tests", "ownership-tests", "hostile-tls", "hostile-x509", "mutation-corpus", "downstream-consumers"],
+      "layers_with_findings": [],
+      "findings": [],
+      "result_path": "artifacts/phase18/asan.json",
+      "downstream_result_path": "artifacts/phase18/asan-downstream.json",
+      "downstream_consumers": {
+        "clean": ["curl", "nginx", "haproxy", "git", "python"],
+        "envelope_limited": ["openssh"],
+        "envelope_limited_reason": "OpenSSH's sshd applies a seccomp filter to the preauth child (sandbox-seccomp-filter.c:193-203, SC_MMAP) that denies the mmap ASan uses for its shadow (ReserveShadowMemoryRange failed ... errno: 22); the handshake path cannot run under ASan, while key generation / sign / verify / fingerprints / algorithm enumeration do and are clean.",
+        "total_findings": 0
+      },
+      "not_run": "TSan/UBSan/MSan (a later step, by instruction); the authority under ASan.",
+      "note": "ASan ran over every layer and the layers are now clean: five clean layers, no findings, 1163/1163 allocator/unit tests passing. The five defects the venue surfaced are fixed at the root, each cited to `crypto/`'s authority: (1) src/modes/wrap.rs `CRYPTO_128_unwrap_pad` stack-buffer-overflow in aes::tests::rfc5649_wrap_pad_vectors -- a TEST-BUFFER bug: the authority's `out` needs `padded_len = inlen - 8` writable (crypto/modes/wrap128.c:112,242) and its failure paths cleanse `inlen` (wrap128.c:291,303,317,327), so the 20-byte `back` buffer was undersized; the function is faithful and the test now uses 32/16-byte buffers. (2) src/provider/rand.rs `ctr_BCC_update` global-buffer-overflow -- a CANDIDATE bug: the authority counts the NUL of `ossl_pers_string[]` via `sizeof` (providers/implementations/rands/drbg.c:40,368, `prov/drbg.h:45`), and the Rust byte literal omitted that NUL while `perslen` used `len()+1`; the constant now carries the NUL and `perslen = len()`. (3) src/evp/pem_bridge.rs `has_prefix` heap-buffer-overflow -- a CANDIDATE bug: the authority's `HAS_PREFIX` is a bounded `strncmp(str, pre, sizeof(pre)-1)` (include/internal/common.h:58) with the short-circuit at crypto/pem/pem_lib.c:900, while the Rust used an unbounded `CStr::from_ptr` and probed `p + namelen` eagerly; `has_prefix` is now byte-bounded and the PEM free path short-circuits as the authority does. Fixing the three unmasked two further first-party defects that `halt_on_error=1` had hidden behind them: (4) src/dso/dlfcn.rs `dlfcn_name_converter` wrote a second NUL one byte past a `len + 1` allocation on the slash-free branch, where the authority's `BIO_snprintf(translated, rsize, \"%s\", filename)` writes exactly `len + 1` (crypto/dso/dso_dlfcn.c:269); and (5) four src/evp/legacy_evp.rs tests registered a stack-built `EVP_MD`/`EVP_CIPHER` into the process-global `OBJ_NAME` registry, which borrows the pointer (crypto/evp/names.c) and so dereferenced the dead frame in the later legacy-name walk; the tests now leak the method, as RT-PEM's own cipher test already did. (6) The downstream CPython layer then found a SIXTH first-party defect once the instrumented distribution DSOs were installed: src/ssl/ssl_lib.rs `SSL_new` took ONE reference to the initial context but assigned it to both `ssl->ctx` and `session_ctx`, while the authority up-refs once for `ssl->ctx` (ssl/ssl_lib.c:705) and once for `s->session_ctx` (ssl_lib.c:828) and releases both in SSL_free (ssl_lib.c:1438 and :1485); CPython's test_sni_callback_context_released_before_second_client_hello released the dispatch context once an SNI callback switched contexts via SSL_set_SSL_CTX (ssl_lib.c:5535), which dropped the context to zero while `session_ctx` still alias it, and a TLS 1.3 session ticket read the freed context (heap-use-after-free at src/ssl/statem/statem_srvr.rs:2892). `SSL_new` now takes, and SSL_free releases, the second reference; CPython's bounded test_ssl went from 171 pass / 1 unknown to 172 pass / 0 unknown with zero ASan findings. A green ASan layer is still a bounded observation, not a memory-safety proof."
+    },
+    "miri": {
+      "status": "ran",
+      "tool": "cargo +nightly miri test --lib miri_tcb (miri 0.1.0)",
+      "method": "the Miri-admitted TCB suite src/runtime/miri_tcb.rs, run with MIRIFLAGS=-Zmiri-strict-provenance under seeds 0, 1 and 2 and in ordinary mode (seed 0); the suite installs a Rust-backed allocator shim through CRYPTO_set_mem_functions before its first allocation, so it does not reach libc",
+      "admitted_tests": 9,
+      "passed": 9,
+      "unsupported_tests_ran": 0,
+      "result": "all 9 admitted tests pass in every run (strict-provenance seeds 0/1/2 and ordinary seed 0). The allocator-trampoline provenance blocker recorded in the previous revision is fixed at its root: the callback slots in src/runtime/mem.rs are AtomicPtr<()> installed as `f as *const () as *mut ()` and recovered by a pointer->function-pointer transmute after a null check, CRYPTO_get_mem_functions reconstructs pointer-shaped values, and CRYPTO_aligned_alloc uses ptr.addr() for its address-only alignment observation. Miri additionally found a real aliasing defect -- object_free (src/runtime/obj.rs) formed `&mut *p` on a static registry object reachable from X509_free -- which is now fixed by reading the flags before any mutable reference is formed. The surface Miri refuses (libc FFI, DSOs, the ucontext fibres, getrandom, rdtsc) is excluded by name with a reason in forensics/miri-tcb-suite.json rather than suppressed.",
+      "result_path": "artifacts/phase18/miri-tcb.json",
+      "suite": "forensics/miri-tcb-suite.json",
+      "guard": "forensics/tools/provenance_court.py (run inside the HOSTILE-BOUNDARY-REGISTER court)"
+    },
+    "fuzz": {
+      "status": "ran",
+      "tool": "forensics/tools/fuzz_hostile_corpus.py",
+      "method": "a deterministic mutational loop (seed 24) over the 133-entry RT-HOSTILE-X509 corpus, driven through the same probe the RT-HOSTILE-X509 court uses (artifacts/phase18/probes/rt_hostile_x509_probe.candidate), which forks once per entry and bounds each at 4 s",
+      "cases_driven": 16384,
+      "classes": {"parse": 16384},
+      "finding_count": 0,
+      "result_path": "artifacts/phase18/fuzz-hostile-corpus.json",
+      "bound": "16384 mutants, 300 s wall budget, one seed; NOT coverage-guided, NOT libFuzzer/AFL, NOT a campaign, and not a coverage claim",
+      "note": "the corpus is a fixed enumeration and the mutants are deterministic; the run observed no crash, OOM or timeout class, which is what it establishes and no more",
+      "note_under_asan": "the same probe over the same 16384 mutants under ASan (artifacts/phase18/asan.json) reached 10 crashes before the fix, all at src/evp/pem_bridge.rs:235 has_prefix (strlen on an unterminated buffer); after the bounded-comparison fix the mutation-corpus layer is clean (0 crashes). This non-ASan row's finding_count 0 is what the un-instrumented run observed; the two differ because the instrument differs, and the ASan row is the one that saw the defect."
+    }
+  },
+  "measured_residuals": [
+    {
+      "id": "bn-modexp",
+      "unit": "BN",
+      "kind": "timing / secret-independence",
+      "classification": "measured",
+      "property_status": "NOT_CLAIMED",
+      "court": "CT-PRIMITIVES",
+      "what": "BN_mod_exp_mont_consttime over a fixed 255-bit prime, two 255-bit secret exponents of the same public length and different Hamming weight",
+      "where_measured": "artifacts/phase18/COURTS.json (CT-PRIMITIVES, path bn-modexp, class separated); artifacts/phase18/hostile-boundary-register.json (ct-bn-separations); forensics/phase18-obligations.json (constant-time unit, property_status NOT_CLAIMED)"
+    },
+    {
+      "id": "bn-inverse",
+      "unit": "BN",
+      "kind": "timing / secret-independence",
+      "classification": "measured",
+      "property_status": "NOT_CLAIMED",
+      "court": "CT-PRIMITIVES",
+      "what": "BN_mod_inverse over a fixed 255-bit prime modulus, two fixed coprime secret operands",
+      "where_measured": "artifacts/phase18/COURTS.json (CT-PRIMITIVES, path bn-inverse, class separated); artifacts/phase18/hostile-boundary-register.json (ct-bn-separations); forensics/phase18-obligations.json (constant-time unit, property_status NOT_CLAIMED)"
+    }
+  ],
+  "non_claim": "ASan now runs in its own dedicated venue (docker/openssl-rs-asan.*) and has found six distinct first-party memory defects, recorded verbatim in artifacts/phase18/asan.json; its instrumentation closure is the Rust staticlib, the first-party C adapters and the probes, with libc runtime-intercepted. It also runs the six sealed Phase-17 downstream consumers against installed ASan DSOs (five clean, OpenSSH envelope-limited by its seccomp sandbox), recorded in artifacts/phase18/asan-downstream.json. Miri executed the admitted TCB subset and passed while refusing the libc-FFI / DSO / intrinsic surface, and the fuzz is a bounded deterministic screen (which, under ASan, surfaced the PEM defect). TSan/UBSan/MSan did not run. Together with forensics/atlas/unsafe-footprint.json -- which measures the size and location of the unsafe surface, not its correctness -- these are measurements, and the memory-safety benefit remains unproven: an executed subset under one model, a bounded screen, and a sanitizer that has found real defects are not a proof that any remaining unsafe block is sound."
+}
