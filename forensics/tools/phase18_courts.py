@@ -116,15 +116,25 @@ every case was driven and every boundary group carries its below/at/above phases
 **and** the injected-failure control observed the allocation actually fail. It is a bounded
 measurement, not a memory-safety proof and not a parity claim (sections 3.1, 3.4 and 3.6).
 
-The pending courts
-------------------
-One of the five courts the plan names is not runnable yet. `PENDING_COURTS` names it with the
-subphase that lands its instrument, so "not registered" is a stated distance rather than a court
-quietly dropped:
+`HOSTILE-BOUNDARY-REGISTER`, and what it checks
+----------------------------------------------
+18.5's court, and the stratum's own non-claims. It stages no probe: its subject is
+`artifacts/phase18/hostile-boundary-register.json`, the authored register that records, per
+surface, whether it is *hardened* (a change landed), *measured* (a court covers it) or
+*not-claimed* (explicitly outside this stratum). The court re-reads the live courts registry
+(the four probe courts above, already computed) and fails the stratum if any recorded
+classification, capacity, count or evidence value has drifted from what the courts actually
+show (section 3.5). Three drift classes are caught explicitly: a row marked `hardened` or
+`measured` whose court no longer covers its surface, a `not-claimed` row that a passing court
+now covers, and a stated capacity or count that moved. A surface the corpus does not reach is
+`not-claimed`/`measured`, never `hardened`; the register may not claim more than the courts
+above measured (docs/PHASE-18-SUBPHASES.md sections 3.5 and 3.6).
 
-  * `HOSTILE-BOUNDARY-REGISTER` (18.5) — the register that records what is hardened, what is
-    measured and what is explicitly not claimed, and that fails the stratum if a recorded
-    boundary drifts from its evidence.
+The register is authored rather than derived -- it is the stratum's answer to
+`docs/NON_CLAIMS.md`, and its `not-claimed` rows are exactly the claims a generator cannot
+make -- so the court's job is to bind it back to the evidence. It is a court with no probe, no
+transcript and no authority: it stages no `artifacts/phase18/probes/` pair and is marked
+`frf_declarable: false`.
 
 The runner reads no obligations ledger: the ledger's contract-unit states are measured from this
 registry, so the edge runs ledger -> courts and binding it back would form a digest cycle neither
@@ -162,6 +172,9 @@ import gen_hostile_tls_corpus  # noqa: E402
 import gen_hostile_x509_corpus  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase18" / "COURTS.json"
+REGISTER = REPO_ROOT / "artifacts" / "phase18" / "hostile-boundary-register.json"
+REGISTER_COURT = "HOSTILE-BOUNDARY-REGISTER"
+REGISTER_SCHEMA = "openssl-rs/hostile-boundary-register/v1"
 GENERATOR = "forensics/tools/phase18_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-18-SUBPHASES.md"
 PROBE_DIR = REPO_ROOT / "courts" / "phase18"
@@ -175,25 +188,26 @@ AUTH_PREFIX = (REPO_ROOT / "forensics" / "authorities" / "prefix"
                / "openssl-3.6.4-production")
 RUN_TIMEOUT_S = "900"
 
-# The courts, in the order they land. `(name, probe filename)`, and the probe is declared in the
-# same commit as the entry, so a runner that names a probe which does not exist cannot be
-# committed.
-COURTS: list[tuple[str, str]] = [
+# The courts, in the order they land. `(name, probe filename or None)`, and the probe is declared
+# in the same commit as the entry, so a runner that names a probe which does not exist cannot be
+# committed. The register court has no probe: its subject is the authored register, and it reads
+# the four probe courts' records computed ahead of it.
+COURTS: list[tuple[str, str | None]] = [
     ("RT-HOSTILE-TLS", "rt_hostile_tls_probe.c"),
     ("RT-HOSTILE-X509", "rt_hostile_x509_probe.c"),
     ("CT-PRIMITIVES", "ct_primitives_probe.c"),
     ("RT-MEM-HARDENING", "rt_mem_hardening_probe.c"),
+    (REGISTER_COURT, None),
 ]
 
-# A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
-# the instrument and what the court will drive, so "nothing registered" is a stated distance
-# rather than a court quietly dropped.
-PENDING_COURTS: dict[str, str] = {
-    "HOSTILE-BOUNDARY-REGISTER": (
-        "18.5 lands the register; it checks that every recorded hardened/measured/not-claimed "
-        "boundary still matches the evidence that establishes it"
-    ),
-}
+# The classifications the register may use. `hardened` is a change that landed; `measured` is a
+# passing court that covers the surface; `not-claimed` is explicitly outside the stratum.
+REGISTER_CLASSIFICATIONS = ("hardened", "measured", "not-claimed")
+
+# The courts the plan names and this stratum still cannot run. Empty since 18.5 landed the
+# register; kept as the stated-distance mechanism, so a court the plan names but the runner cannot
+# run is recorded here rather than quietly dropped.
+PENDING_COURTS: dict[str, str] = {}
 
 # The entry whose authority disposition proves the corpus drove a real parser rather than only
 # rejecting. The plan requires the differential control to keep the expectation honest (section
@@ -1043,6 +1057,244 @@ def mem_hardening_court(name: str, src: Path, auth, work: Path) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# `HOSTILE-BOUNDARY-REGISTER` -- the stratum's own non-claims, bound to the courts
+# ---------------------------------------------------------------------------
+
+# `recorded_boundaries` entries carry a long functional `buffer` string; these tokens map each to
+# the flat evidence field the register cites, so the comparison is against a normalized view
+# rather than a substring of prose.
+_BOUNDARY_TOKENS: tuple[tuple[str, str], ...] = (
+    ("ssl3_write_bytes", "boundary_write"),
+    ("tls13_encrypt_record inner buffer contract", "boundary_encrypt_inner"),
+    ("rd_msg_buf", "boundary_read_handshake"),
+    ("rec_body", "boundary_read_record"),
+)
+
+
+def _registry_names(records: list[dict]) -> dict[str, dict]:
+    return {r.get("court"): r for r in records}
+
+
+def court_coverage(record: dict) -> set[str]:
+    """The surface keys a court covers, from its own record -- and only when it passed.
+
+    A non-`pass` court covers nothing: its row is still in the registry but no surface may lean on
+    it. That is what makes "a row marked hardened/measured whose court no longer covers it"
+    detectable -- the coverage set for that court goes empty (or loses the key).
+    """
+    if record.get("verdict") != "pass":
+        return set()
+    court = record.get("court")
+    if court == "RT-HOSTILE-TLS":
+        return {f"tls.{k}" for k in (record.get("corpus", {}).get("by_category") or {})}
+    if court == "RT-HOSTILE-X509":
+        return {f"x509.{k}" for k in (record.get("corpus", {}).get("by_arm") or {})}
+    if court == "CT-PRIMITIVES":
+        return {f"ct.{p['path']}" for p in record.get("paths") or []}
+    if court == "RT-MEM-HARDENING":
+        keys = {f"mem.{g}" for g in (record.get("boundary_groups") or {})}
+        keys |= {f"mem.control.{c}" for c in (record.get("control", {}).get("cases") or {})}
+        return keys
+    return set()
+
+
+def _boundary_evidence(record: dict) -> dict:
+    out: dict = {}
+    for b in record.get("recorded_boundaries") or []:
+        buf = b.get("buffer", "")
+        for token, field in _BOUNDARY_TOKENS:
+            if token in buf:
+                out[field] = {"capacity": b.get("capacity"),
+                              "disposition": b.get("disposition")}
+                break
+    return out
+
+
+def register_evidence(record: dict) -> dict:
+    """The court record's classification evidence, as the flat vocabulary the register cites.
+
+    The register's `evidence` block is a dict of `{key: expected}` over this view, and the court
+    compares them exactly, so a stated capacity or count that moves is a failure rather than a
+    register that silently describes the previous generation.
+    """
+    court = record.get("court")
+    ev: dict = {"verdict": record.get("verdict")}
+    if court in ("RT-HOSTILE-TLS", "RT-HOSTILE-X509"):
+        corpus = record.get("corpus") or {}
+        ev["corpus_entries"] = corpus.get("entries")
+        ev["corpus_total_bytes"] = corpus.get("total_bytes")
+        if "by_category" in corpus:
+            ev["corpus_by_category"] = corpus["by_category"]
+        if "by_arm" in corpus:
+            ev["corpus_by_arm"] = corpus["by_arm"]
+        ev["entries_driven_corpus"] = (record.get("entries_driven") or {}).get("corpus")
+        ctrl = record.get("control") or {}
+        ev["control_honest"] = ctrl.get("honest")
+        ev["control_class"] = ctrl.get("class")
+        ev["candidate_findings"] = (record.get("findings_count") or {}).get("candidate")
+    elif court == "CT-PRIMITIVES":
+        ev["threshold_percent"] = record.get("threshold_percent")
+        ev["path_classes"] = {p["path"]: p["class"] for p in record.get("paths") or []}
+        ev["findings"] = sorted(record.get("findings") or [])
+        ev["finding_count"] = len(record.get("findings") or [])
+        ctrl = record.get("control") or {}
+        ev["control_honest"] = ctrl.get("honest")
+        ev["control_class"] = ctrl.get("class")
+    elif court == "RT-MEM-HARDENING":
+        ev["cases_driven_candidate"] = (record.get("cases_driven") or {}).get("candidate")
+        ev["boundary_groups"] = record.get("boundary_groups")
+        ev.update(_boundary_evidence(record))
+        ctrl = record.get("control") or {}
+        ev["control_failure_driven"] = ctrl.get("failure_driven")
+        ev["control_case_classes"] = {
+            cid: (row.get("candidate") or {}).get("class")
+            for cid, row in (ctrl.get("cases") or {}).items()
+        }
+    return ev
+
+
+def verify_register_surface(row: dict, registry: dict[str, dict], coverage: dict[str, set[str]],
+                            covered_any: set[str]) -> list[str]:
+    """Every way one register row drifts from the courts it cites.
+
+    The three named drift classes are checks here: a `hardened`/`measured` row whose court no
+    longer covers its surface (the `not_covered` clause and the `verdict` clause), a
+    `not-claimed` row a passing court now covers (the `covered_any` clause), and a stated
+    capacity/count that moved (the `evidence` equality, plus the declared-count check in
+    `register_court`).
+    """
+    problems: list[str] = []
+    sid = row.get("id", "<unnamed>")
+    cls = row.get("classification")
+    keys = row.get("surface_keys") or []
+    court = row.get("court")
+    if cls not in REGISTER_CLASSIFICATIONS:
+        problems.append(f"{sid}: classification {cls!r} is not one of {list(REGISTER_CLASSIFICATIONS)}")
+        return problems
+    if cls == "not-claimed":
+        if court is not None:
+            problems.append(f"{sid}: a not-claimed row must name no court (got {court!r})")
+        for k in keys:
+            if k in covered_any:
+                problems.append(
+                    f"{sid}: recorded not-claimed but a passing court now covers {k!r}")
+        return problems
+    rec = registry.get(court)
+    if rec is None:
+        problems.append(f"{sid}: cites court {court!r} which is not registered")
+        return problems
+    if rec.get("verdict") != "pass":
+        problems.append(f"{sid}: recorded {cls} but its court {court} is {rec.get('verdict')}")
+    not_covered = sorted(k for k in keys if k not in coverage.get(court, set()))
+    if not_covered:
+        problems.append(f"{sid}: recorded {cls} but {court} does not cover {not_covered}")
+    ev = register_evidence(rec)
+    want = row.get("evidence") or {}
+    for key, expected in want.items():
+        if key not in ev:
+            problems.append(f"{sid}: evidence key {key!r} has no value in the {court} record")
+        elif ev[key] != expected:
+            problems.append(
+                f"{sid}: evidence {key} = {expected!r} but {court} shows {ev[key]!r}")
+    # Classification consistency against the boundary dispositions the row cites: a `hardened`
+    # row must cite a boundary the court records as hardened, and a `measured` row must not.
+    for key in want:
+        if (not key.startswith("boundary_") or key not in ev
+                or not isinstance(ev[key], dict) or "disposition" not in ev[key]):
+            continue
+        disposition = str(ev[key].get("disposition", ""))
+        if cls == "hardened" and "hardened" not in disposition:
+            problems.append(
+                f"{sid}: recorded hardened but {court} disposition is {disposition!r}")
+        if cls == "measured" and "hardened" in disposition:
+            problems.append(
+                f"{sid}: recorded measured but {court} disposition is hardened "
+                f"({disposition!r}); a landed change is not a measurement")
+    return problems
+
+
+def register_court(name: str, records: list[dict]) -> dict:
+    """`HOSTILE-BOUNDARY-REGISTER`: bind the authored register to the live courts registry.
+
+    Reads the four already-computed probe-court records and the authored register, re-derives
+    each court's coverage and each row's expected evidence, and reports every drift. A non-empty
+    `problems` is `fail`.
+    """
+    if not REGISTER.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "register-missing",
+                "frf_declarable": False,
+                "frf_exclusion": "the register court re-reads the courts registry; it stages no "
+                                  "probe pair",
+                "detail": rel(REGISTER)}
+    doc = json.loads(REGISTER.read_text(encoding="utf-8"))
+    problems: list[str] = []
+    if doc.get("schema") != REGISTER_SCHEMA:
+        problems.append(f"schema {doc.get('schema')!r} != {REGISTER_SCHEMA!r}")
+    surfaces = doc.get("surfaces") or []
+    registry = _registry_names(records)
+    coverage = {r.get("court"): court_coverage(r) for r in records}
+    covered_any: set[str] = set()
+    for keys in coverage.values():
+        covered_any |= keys
+    for row in surfaces:
+        problems += verify_register_surface(row, registry, coverage, covered_any)
+    # Completeness: every passing court that covers surfaces must be cited by at least one
+    # hardened/measured row, so a new court cannot pass unregistered.
+    cited = {r.get("court") for r in surfaces
+             if r.get("classification") in ("hardened", "measured")}
+    for court, keys in coverage.items():
+        if keys and court not in cited:
+            problems.append(
+                f"court {court} passes and covers {len(keys)} surface(s) but no "
+                f"hardened/measured register row cites it")
+    counts = {cls: 0 for cls in REGISTER_CLASSIFICATIONS}
+    for row in surfaces:
+        if row.get("classification") in counts:
+            counts[row["classification"]] += 1
+    declared = doc.get("classifications") or {}
+    for cls in REGISTER_CLASSIFICATIONS:
+        if declared.get(cls) != counts[cls]:
+            problems.append(
+                f"declared {cls} count {declared.get(cls)!r} but the register has "
+                f"{counts[cls]} row(s)")
+    if declared.get("total") != len(surfaces):
+        problems.append(f"declared total {declared.get('total')!r} but the register has "
+                        f"{len(surfaces)} row(s)")
+    verdict = "pass" if not problems else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it re-reads the live courts registry (the four probe courts above) "
+            "and the authored register artifacts/phase18/hostile-boundary-register.json, and "
+            "fails the stratum if any recorded hardened/measured/not-claimed classification, "
+            "surface key, capacity, count or evidence value has drifted from what the courts "
+            "show (docs/PHASE-18-SUBPHASES.md section 3.5). A not-claimed row that a passing "
+            "court now covers, a hardened/measured row whose court no longer covers it, and a "
+            "stated capacity/count that moved are all failures. It is a record of a boundary, "
+            "not a security proof (sections 3.1 and 3.6)."),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the register re-reads the courts registry and stages no artifacts/phase18/probes/ "
+            "pair, so it takes no transcript to diff and carries no FRF declaration"),
+        "register": {
+            "path": rel(REGISTER),
+            "schema": doc.get("schema"),
+            "sha256": sha256_file(REGISTER),
+            "counts": counts,
+            "total": len(surfaces),
+        },
+        "surfaces": [
+            {"id": r.get("id"), "classification": r.get("classification"),
+             "court": r.get("court"), "surface_keys": r.get("surface_keys") or []}
+            for r in surfaces
+        ],
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 COURT_IMPL = {
     "RT-HOSTILE-TLS": hostile_tls_court,
     "RT-HOSTILE-X509": hostile_x509_court,
@@ -1063,6 +1315,13 @@ def main(argv: list[str]) -> int:
 
     records: list[dict] = []
     for name, filename in COURTS:
+        if name == REGISTER_COURT:
+            records.append(register_court(name, records))
+            continue
+        if filename is None:
+            records.append({"court": name, "verdict": "fail", "stage": "probe-missing",
+                            "detail": "<no probe declared>"})
+            continue
         src = PROBE_DIR / filename
         if not src.is_file():
             records.append({"court": name, "verdict": "fail",
@@ -1169,11 +1428,21 @@ def main(argv: list[str]) -> int:
             "own contract does not -- is recorded here, not silently fixed. It is a bounded "
             "measurement, not a memory-safety proof and not a parity claim (sections 3.1, 3.4 "
             "and 3.6). "
-            "`HOSTILE-BOUNDARY-REGISTER` is 18.5's: the register of what "
-            "is hardened, what is measured and what is explicitly not claimed, which fails the "
-            "stratum if a recorded boundary drifts from its evidence. This stratum owns no "
-            "exported symbol, so no differential probe over a symbol set is its evidence: the "
-            "subject is a hostile input against a finished implementation. "
+            "`HOSTILE-BOUNDARY-REGISTER` is 18.5's court, and it stages no probe: its subject is "
+            "artifacts/phase18/hostile-boundary-register.json, the authored register that records, "
+            "per surface, whether it is `hardened` (a change landed), `measured` (a passing court "
+            "covers it) or `not-claimed` (explicitly outside this stratum). The court re-reads the "
+            "live courts registry (the four probe courts above) and fails the stratum if any "
+            "recorded classification, surface key, capacity, count or evidence value has drifted "
+            "from what the courts show (section 3.5): a `hardened`/`measured` row whose court no "
+            "longer covers its surface, a `not-claimed` row that a passing court now covers, and a "
+            "stated capacity/count that moved are all failures. The register records one "
+            "`hardened` surface -- the record write path at SSL3_RT_MAX_PLAIN_LENGTH -- and the "
+            "rest as `measured` or `not-claimed`; a surface the corpus does not reach is never "
+            "`hardened`, so the register cannot claim more than the courts above measured "
+            "(sections 3.5 and 3.6). This stratum owns no exported symbol, so no differential "
+            "probe over a symbol set is its evidence: the subject is a hostile input against a "
+            "finished implementation. "
             "docs/PHASE-18-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts."
         ),
     }
@@ -1209,13 +1478,21 @@ def main(argv: list[str]) -> int:
         # 18.4's fixed-buffer boundary / allocation-failure probe. It loads the same fixed Phase 17
         # signer/key the hostile TLS probe does to stand up its TLS 1.3 flight.
         InputRef(name="mem-hardening-probe", path=PROBE_DIR / "rt_mem_hardening_probe.c"),
+        # 18.5's authored boundary register: the four probe-court records above are its evidence,
+        # and the register court binds every recorded classification back to them.
+        InputRef(name="hostile-boundary-register", path=REGISTER),
     ]
     doc = envelope(kind="phase18-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
 
     for r in records:
-        if r["verdict"] == "pass" and r["court"] == "CT-PRIMITIVES":
+        if r["verdict"] == "pass" and r["court"] == REGISTER_COURT:
+            c = r["register"]["counts"]
+            print(f"  {r['court']:<18} pass   ({r['register']['total']} surfaces: "
+                  f"{c['hardened']} hardened, {c['measured']} measured, "
+                  f"{c['not-claimed']} not-claimed; no drift)")
+        elif r["verdict"] == "pass" and r["court"] == "CT-PRIMITIVES":
             print(f"  {r['court']:<18} pass   ({len(r['paths'])} paths, "
                   f"{len(r['findings'])} separated finding(s), control "
                   f"{r['control']['class']} vs reference "
