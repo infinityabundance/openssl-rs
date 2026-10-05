@@ -32,7 +32,12 @@
 //!   computes at `statem_clnt.c:2851-2872`), and resumes by the internal-cache lookup. The client-
 //!   observable shape is the authority's (`session.id` is `SHA256(ticket)`, `has_ticket` true, the
 //!   lifetime hint is the session timeout); the ticket bytes themselves and `SSL_CTX_sess_number`
-//!   after a handshake differ. No court compares the TLS1.2 ticket wire.
+//!   after a handshake differ. No court compares the TLS1.2 ticket wire. **TLS1.3 tickets are the
+//!   authority's stateless form** (`construct_stateless_ticket`/`tls13_decrypt_ticket`,
+//!   `statem_srvr.rs`), encrypted through the application's `ticket_key_cb`, so TLS1.3 resumption
+//!   works across nginx workers exactly as the authority's; the client-side `pre_shared_key`
+//!   offering remains a boundary (a candidate client stores the ticket but a subsequent connect
+//!   falls back to a full handshake).
 //! * **`ssl_session_dup_intern` copies the parsed fields but not `early_secret`'s length** — the
 //!   authority `memcpy`s the first `offsetof(SSL_SESSION, prev)` bytes, which includes it; this
 //!   crate copies the field explicitly, so the result is the same.

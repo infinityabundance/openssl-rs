@@ -131,6 +131,7 @@ def analyse(program: str, logs: Path) -> dict:
                 "TLS 1.3 session resumption is unavailable: the candidate does not emit the "
                 "post-handshake NewSessionTicket flight, so `s_client -sess_out` saves nothing; "
                 "TLS 1.2 resumption and tickets work (see the CPython test_ssl record)")
+        d_resumed = "D_tls13_resumed=1" in probe
         return dict(
             build=stage(build_ok, "nginx/1.26.3, built with OpenSSL 3.6.4"),
             link=link_stage(lok, f"libssl.so.3 -> {lpath}", ["libssl.so.3", "libcrypto.so.3"]),
@@ -139,9 +140,11 @@ def analyse(program: str, logs: Path) -> dict:
             functional=functional(
                 functional_ok,
                 "TLS 1.3 termination for the authority s_client and the candidate curl, "
-                "16/16 concurrent verified fetches, reload 2->3 workers",
+                "16/16 concurrent verified fetches, reload 2->3 workers, "
+                "post-handshake NewSessionTicket + TLS 1.3 resumption",
                 ["A_tls13_handshake=1", "B_http_code=200",
-                 one(r"(C_concurrent_200s=\d+/\d+)", probe)]),
+                 one(r"(C_concurrent_200s=\d+/\d+)", probe),
+                 "D_tls13_resumed=1" if d_resumed else "D_tls13_resumed=0"]),
             concurrency={"ok": c_ok, "total": c_tot},
             known_residuals=residuals,
         )

@@ -226,7 +226,7 @@ unsafe fn hkdf_expand(
 /// `md` is live; `secret` readable for `secret_len`; `context` readable for `context_len` when
 /// non-NULL; `out` writable for `out_len`.
 #[allow(clippy::too_many_arguments)] // mirrors `prov_tls13_hkdf_expand`'s signature exactly
-unsafe fn hkdf_expand_label(
+pub(crate) unsafe fn hkdf_expand_label(
     md: *const EvpMd,
     secret: *const u8,
     secret_len: usize,
@@ -394,7 +394,23 @@ pub(crate) unsafe fn tls13_generate_secret(
 ) -> c_int {
     // SAFETY: `s` is live.
     let md = handshake_md(s);
-    // SAFETY: `md` is the live digest selector.
+    // SAFETY: `s` is live; `md` is the connection's digest selector.
+    unsafe { tls13_generate_secret_md(md, prevsecret, insecret, out) }
+}
+
+/// [`tls13_generate_secret`] with an explicit digest — used by the PSK binder, whose digest comes
+/// from the session's ciphersuite before the handshake digest is known (`tls_psk_do_binder`,
+/// `extensions.c:1519`).
+///
+/// # Safety
+/// `md` is live; the optional slices are readable; `out` writable for the md size.
+pub(crate) unsafe fn tls13_generate_secret_md(
+    md: *const EvpMd,
+    prevsecret: Option<&[u8]>,
+    insecret: Option<&[u8]>,
+    out: *mut u8,
+) -> c_int {
+    // SAFETY: `md` is live.
     let sz = unsafe { EVP_MD_get_size(md) };
     if sz <= 0 {
         return 0;
@@ -443,8 +459,18 @@ pub(crate) unsafe fn tls13_generate_secret(
 pub(crate) unsafe fn tls13_generate_handshake_secret(s: *mut Ssl, pms: &[u8]) -> c_int {
     // SAFETY: `s` is live; the early-secret field is writable.
     let early = unsafe { (*s).early_secret.as_mut_ptr() };
+    // A selected resumption PSK replaces the zero early-secret IKM (`extensions.c:1519`); an empty
+    // `psk_secret_len` keeps the fresh-handshake behaviour.
+    // SAFETY: `s` is live.
+    let psk_len = unsafe { (*s).psk_secret_len };
+    let psk_slice: Option<&[u8]> = if psk_len > 0 {
+        // SAFETY: `psk_secret` is `psk_secret_len` initialised bytes when the length is non-zero.
+        Some(unsafe { core::slice::from_raw_parts((*s).psk_secret.as_ptr(), psk_len) })
+    } else {
+        None
+    };
     // SAFETY: `s` is live; the buffers are the connection's.
-    if unsafe { tls13_generate_secret(s, None, None, early) } == 0 {
+    if unsafe { tls13_generate_secret(s, None, psk_slice, early) } == 0 {
         return 0;
     }
     // SAFETY: `s` is live; the handshake-secret field is writable.
@@ -734,6 +760,207 @@ pub(crate) unsafe fn tls13_derive_application_traffic(s: *mut Ssl) -> c_int {
             }
         }
         1
+    }
+}
+
+/// The `"res master"` derivation of `tls13_change_cipher_state` (`tls13_enc.c:675-685`): when the
+/// client-application secret is derived, the authority also stores
+/// `Derive-Secret(master_secret, "res master", ClientHello...client Finished)`. On the server that
+/// happens while reading the client Finished (`SSL3_CHANGE_CIPHER_SERVER_READ`); on the client while
+/// writing its own Finished (`SSL3_CHANGE_CIPHER_CLIENT_WRITE`). The caller must invoke this after
+/// the client Finished has entered the transcript.
+///
+/// # Safety
+/// `s` is live with a current transcript and a derived master secret.
+pub(crate) unsafe fn tls13_derive_resumption_master_secret(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live.
+    unsafe {
+        let md = handshake_md(s);
+        let hash_len = (*s).hs_md_len;
+        let mut hash = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+        if transcript_hash(s, hash.as_mut_ptr(), ptr::null_mut()) == 0 {
+            return 0;
+        }
+        let ms = core::slice::from_raw_parts((*s).master_secret.as_ptr(), hash_len);
+        derive_secret(
+            md,
+            ms.as_ptr(),
+            hash_len,
+            b"res master",
+            hash.as_ptr(),
+            (*s).resumption_master_secret.as_mut_ptr(),
+        )
+    }
+}
+
+/// The digest selector for a TLS1.3 ciphersuite id: 0 is SHA256, 1 is SHA384, `-1` unknown
+/// (`ssl_cipher_get_evp`'s `md_kind` mapping, `t1_enc.c`).
+pub(crate) fn tls13_cipher_md_kind(id: u16) -> c_int {
+    match id {
+        0x1301 | 0x1303 => 0,
+        0x1302 => 1,
+        _ => -1,
+    }
+}
+
+/// The `EVP_MD *` for a [`tls13_cipher_md_kind`] selector.
+pub(crate) fn tls13_md_for_kind(kind: c_int) -> *const EvpMd {
+    if kind == 1 {
+        EVP_sha384()
+    } else {
+        EVP_sha256()
+    }
+}
+
+/// `int tls_psk_do_binder(...)` — `ssl/statem/extensions.c:1463-1638`, the internal (resumption)
+/// arm: derive the early secret from the session's PSK, the `"res binder"` binder key, and its
+/// finished key, then HMAC `Hash(ClientHello up to the binders)` (`extensions.c:1519-1627`).
+///
+/// When `sign` is false (`binderout == NULL` on the caller's side) the received binder is compared
+/// in constant time; here the caller supplies the receive buffer to compare. `msgstart` is the
+/// ClientHello message start and `binderoffset` the byte offset of the `binders` vector.
+///
+/// # Safety
+/// `md` is live; `msgstart` readable for `binderoffset`; `psk` readable; `binder` readable and
+/// writable for the md size.
+pub(crate) unsafe fn tls13_psk_do_binder(
+    md: *const EvpMd,
+    msgstart: *const u8,
+    binderoffset: usize,
+    psk: &[u8],
+    binder: *mut u8,
+    sign: bool,
+    received: *const u8,
+) -> c_int {
+    // SAFETY: `md` is live.
+    let sz = unsafe { EVP_MD_get_size(md) };
+    if sz <= 0 {
+        return 0;
+    }
+    let hashsize = sz as usize;
+    // `tls13_generate_secret(s, md, NULL, sess->master_key, sess->master_key_length, early)`.
+    let mut early = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+    // SAFETY: buffers are this frame's; `psk` is the caller's.
+    if unsafe { tls13_generate_secret_md(md, None, Some(psk), early.as_mut_ptr()) } == 0 {
+        return 0;
+    }
+    // `hash = Hash("")` (`extensions.c:1526-1533`).
+    let mut empty_hash = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+    // SAFETY: `md` is live; the buffers are this frame's.
+    if unsafe { hash_empty(md, empty_hash.as_mut_ptr(), ptr::null_mut()) } == 0 {
+        return 0;
+    }
+    // `binderkey = HKDF-Expand-Label(early_secret, "res binder", hash, hashsize)`.
+    let mut binderkey = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+    // SAFETY: the arguments are this frame's.
+    if unsafe {
+        hkdf_expand_label(
+            md,
+            early.as_ptr(),
+            hashsize,
+            b"res binder",
+            empty_hash.as_ptr(),
+            hashsize,
+            binderkey.as_mut_ptr(),
+            hashsize,
+        )
+    } == 0
+    {
+        return 0;
+    }
+    // `finishedkey = HKDF-Expand-Label(binderkey, "finished", "", hashsize)`.
+    let mut finishedkey = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+    // SAFETY: the arguments are this frame's.
+    if unsafe {
+        tls13_derive_finishedkey(
+            md,
+            binderkey.as_ptr(),
+            hashsize,
+            finishedkey.as_mut_ptr(),
+            hashsize,
+        )
+    } == 0
+    {
+        return 0;
+    }
+    // `hash = Hash(msgstart[..binderoffset])` (`extensions.c:1574-1591`).
+    // SAFETY: no preconditions.
+    let ctx = EVP_MD_CTX_new();
+    if ctx.is_null() {
+        return 0;
+    }
+    let mut th = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+    // SAFETY: `ctx` is this frame's; `msgstart`/`binderoffset` are the caller's.
+    let ok = unsafe {
+        let mut r = EVP_DigestInit_ex(ctx, md, ptr::null_mut()) > 0;
+        if r && binderoffset != 0 {
+            r = EVP_DigestUpdate(ctx, msgstart.cast(), binderoffset) > 0;
+        }
+        if r {
+            let mut l: c_uint = 0;
+            r = EVP_DigestFinal_ex(ctx, th.as_mut_ptr().cast(), &mut l) > 0;
+        }
+        r
+    };
+    // SAFETY: `ctx` is this frame's.
+    unsafe { EVP_MD_CTX_free(ctx) };
+    if !ok {
+        return 0;
+    }
+    // `binder = HMAC(finishedkey, hash)` (`extensions.c:1610-1627`).
+    // SAFETY: `md`/`finishedkey`/`th` are live for the hash length; `binder` is writable.
+    let ret = unsafe {
+        HMAC(
+            md,
+            finishedkey.as_ptr().cast(),
+            hashsize as c_int,
+            th.as_ptr(),
+            hashsize,
+            binder,
+            ptr::null_mut(),
+        )
+    };
+    if ret.is_null() {
+        return 0;
+    }
+    if !sign {
+        // Constant-time compare against the received binder (`extensions.c:1628-1636`).
+        let mut diff = 0u8;
+        for i in 0..hashsize {
+            // SAFETY: `binder`/`received` are the caller's `hashsize`-byte buffers.
+            diff |= unsafe { *binder.add(i) ^ *received.add(i) };
+        }
+        if diff != 0 {
+            return 0;
+        }
+    }
+    1
+}
+
+/// The ticket nonce expansion of `tls_construct_new_session_ticket` (`statem_srvr.c:4433-4441`):
+/// `HKDF-Expand-Label(resumption_master_secret, "resumption", tick_nonce, Hash.length)`. The
+/// nonce is the 8-byte big-endian ticket nonce, not a transcript hash, so this cannot use
+/// [`derive_secret`].
+///
+/// # Safety
+/// `s` is live with a derived resumption master secret; `out` writable for the hash length.
+pub(crate) unsafe fn tls13_ticket_psk(s: *mut Ssl, nonce: &[u8], out: *mut u8) -> c_int {
+    // SAFETY: `s` is live.
+    let md = handshake_md(s);
+    // SAFETY: `s` is live.
+    let hash_len = unsafe { (*s).hs_md_len };
+    // SAFETY: the resumption secret is `hash_len` bytes; `out` is `hash_len` writable.
+    unsafe {
+        hkdf_expand_label(
+            md,
+            (*s).resumption_master_secret.as_ptr(),
+            hash_len,
+            b"resumption",
+            nonce.as_ptr(),
+            nonce.len(),
+            out,
+            hash_len,
+        )
     }
 }
 

@@ -1634,6 +1634,19 @@ pub struct Ssl {
     pub handshake_traffic_hash: [u8; EVP_MAX_MD_SIZE],
     /// `unsigned char server_finished_hash[EVP_MAX_MD_SIZE]` (`tls13_enc.c:468`).
     pub server_finished_hash: [u8; EVP_MAX_MD_SIZE],
+    /// `unsigned char resumption_master_secret[EVP_MAX_MD_SIZE]` (`ssl_local.h:1511`) — the
+    /// `Derive-Secret(master_secret, "res master", ClientHello...client Finished)` secret the TLS1.3
+    /// ticket nonce is expanded under (`tls13_enc.c:678-685`).
+    pub resumption_master_secret: [u8; EVP_MAX_MD_SIZE],
+    /// `uint64_t next_ticket_nonce` (`ssl_local.h`) — the monotonic ticket nonce
+    /// (`tls_construct_new_session_ticket`, `statem_srvr.c:4364-4365`).
+    pub next_ticket_nonce: u64,
+    /// `unsigned char *psk_secret` / `size_t psk_secret_len` — the resumption PSK selected in
+    /// `tls_parse_ctos_psk` (`extensions_srvr.c:1310`) and consumed as the early-secret IKM
+    /// (`tls13_generate_secret`, `tls13_enc.c:1519`). Zero length means a full handshake.
+    pub psk_secret: [u8; EVP_MAX_MD_SIZE],
+    /// `size_t psk_secret_len` — see [`Self::psk_secret`].
+    pub psk_secret_len: usize,
     /// `EVP_MD_get_size(ssl_handshake_md(s))` — the negotiated transcript hash length.
     pub hs_md_len: usize,
     /// The reduced digest selector: 0 is SHA256, 1 is SHA384 (`ssl_cipher_get_evp`, `t1_enc.c`).
@@ -5719,8 +5732,27 @@ pub(crate) unsafe fn ssl_read_internal(
                     ptr::copy_nonoverlapping((*s).rx_buf.as_ptr(), scratch.as_mut_ptr(), mlen);
                     let msg = &scratch[..mlen];
                     let handled = if (*s).server == 0 {
-                        // The client: a post-handshake `CertificateRequest` (`SSL_PHA_EXT_SENT`).
-                        if (*s).post_handshake_auth == SSL_PHA_EXT_SENT {
+                        // The client: a post-handshake `NewSessionTicket` (type 4) is stored on
+                        // the session; a post-handshake `CertificateRequest`
+                        // (`SSL_PHA_EXT_SENT`) drives a PHA exchange. The authority's reader
+                        // dispatches both from `TLS_ST_OK` (`statem_clnt.c:193-213`,
+                        // `:282-290`).
+                        if !msg.is_empty() && msg[0] == 4 {
+                            if crate::ssl::statem::statem_clnt::tls13_process_new_session_ticket(
+                                s, msg,
+                            ) == 0
+                            {
+                                if crate::ssl::statem::statem::ossl_statem_in_error(s) == 0 {
+                                    crate::ssl::statem::statem::ossl_statem_fatal(
+                                        s,
+                                        SSL_AD_INTERNAL_ERROR,
+                                        ERR_R_INTERNAL_ERROR,
+                                    );
+                                }
+                                return -1;
+                            }
+                            true
+                        } else if (*s).post_handshake_auth == SSL_PHA_EXT_SENT {
                             if crate::ssl::statem::statem_clnt::tls13_client_process_post_handshake(
                                 s, msg,
                             ) == 0

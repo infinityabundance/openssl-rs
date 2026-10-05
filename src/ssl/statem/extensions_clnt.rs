@@ -512,12 +512,18 @@ unsafe fn tls_construct_ctos_session_ticket(s: *mut Ssl, pkt: *mut Wpacket) -> c
     if unsafe { (*s).options } & SSL_OP_NO_TICKET != 0 {
         return EXT_RETURN_NOT_SENT;
     }
-    // `tls_construct_ctos_session_ticket` (`extensions_clnt.c:283-321`): a resumption offers the
-    // session's stored ticket; otherwise the extension is sent empty to solicit one.
+    // `tls_construct_ctos_session_ticket` (`extensions_clnt.c:283-321`): a TLS1.2 resumption offers
+    // the session's stored ticket; a TLS1.3 session's ticket travels in `pre_shared_key` instead
+    // (the client-side PSK offering is a recorded boundary), so the legacy extension is sent empty.
     // SAFETY: `s` is live.
     let (tick, ticklen) = unsafe {
         let sess = (*s).session;
-        if !sess.is_null() && !(*sess).ext_tick.is_null() && (*sess).ext_ticklen > 0 {
+        if (*s).new_session == 0
+            && !sess.is_null()
+            && !(*sess).ext_tick.is_null()
+            && (*sess).ext_ticklen > 0
+            && (*sess).ssl_version != crate::ssl::ssl_lib::TLS1_3_VERSION
+        {
             ((*sess).ext_tick, (*sess).ext_ticklen)
         } else {
             (core::ptr::null_mut::<u8>(), 0usize)

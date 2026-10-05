@@ -16,7 +16,7 @@ Status: **build/link/start/functional all PROVEN** (PASS). This file is generate
 | build | PASS | nginx/1.26.3, built with OpenSSL 3.6.4 |
 | link | PASS | libssl.so.3 -> /work/artifacts/phase2/install/lib/libssl.so.3 |
 | start | PASS | the TLS listener starts and answers an authority s_client |
-| functional | PASS | TLS 1.3 termination for the authority s_client and the candidate curl, 16/16 concurrent verified fetches, reload 2->3 workers |
+| functional | PASS | TLS 1.3 termination for the authority s_client and the candidate curl, 16/16 concurrent verified fetches, reload 2->3 workers, post-handshake NewSessionTicket + TLS 1.3 resumption |
 | concurrency | 16/16 | parallel operations completed |
 
 Functional evidence (harness lines):
@@ -24,10 +24,11 @@ Functional evidence (harness lines):
 - `A_tls13_handshake=1`
 - `B_http_code=200`
 - `C_concurrent_200s=16/16`
+- `D_tls13_resumed=1`
 
 ## Known residuals
 
-- TLS 1.3 session resumption is unavailable: the candidate does not emit the post-handshake NewSessionTicket flight, so `s_client -sess_out` saves nothing; TLS 1.2 resumption and tickets work (see the CPython test_ssl record)
+None measured.
 
 ## Historical failures
 
