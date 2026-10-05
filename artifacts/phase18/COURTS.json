@@ -1893,7 +1893,7 @@
     {
       "name": "phase-18-plan",
       "path": "docs/PHASE-18-SUBPHASES.md",
-      "sha256": "9ff1298c2901accffa341fa207cc7d8a542cc16a730b16c74f2542f9107ccf78"
+      "sha256": "a182ffed42f8fe6ca0b187e8b35f6ed32cc0bc95245cb08b234fff6ed001d637"
     },
     {
       "name": "corpus-generator",

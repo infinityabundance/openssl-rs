@@ -171,6 +171,37 @@ def court_observations(row: dict) -> int:
     return a
 
 
+def contract_unit_lines(ledger_body: dict) -> list[str]:
+    """Markdown lines for a ledger's contract-unit block, or `[]` when it has none.
+
+    A contract unit has **two** axes, and a renderer that showed only one would let a passing
+    court read as a claim about the security property the unit names. `measurement_state` is the
+    instrument's state; `property_status` and `findings` are the property's. For the
+    `constant-time` unit the property is `NOT_CLAIMED` while its court records the two BN paths
+    as `separated` findings, so every surface that summarises units says so explicitly. Shared by
+    `render_seal_census.py` and `render_status.py` so the two cannot drift.
+    """
+    units = ledger_body.get("contract_units") or []
+    if not units:
+        return []
+    lines = ["Contract units (measurement vs property):", "",
+             "| unit | measurement_state | property_status | findings |",
+             "|---|---|---|---|"]
+    for u in units:
+        findings = u.get("findings") or []
+        rendered = ", ".join(f"`{f}`" for f in findings) or "—"
+        lines.append(f"| {u.get('unit')} | `{u.get('measurement_state')}` | "
+                     f"`{u.get('property_status')}` | {rendered} |")
+    lines += [
+        "",
+        "A `complete` measurement means the unit's court ran and its control was honest. It is "
+        "**not** a claim that the security property the unit names is achieved: where a property "
+        "is measured and the court recorded findings, the property reads `NOT_CLAIMED` with "
+        "`findings_present` and the findings are named above.",
+    ]
+    return lines
+
+
 # ---------------------------------------------------------------------------
 # hashing / canonicalisation
 # ---------------------------------------------------------------------------

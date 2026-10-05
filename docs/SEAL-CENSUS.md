@@ -519,6 +519,15 @@ Courts: `all pass`, 2 court(s), **33** authority observation(s) over 2 transcrip
 * deferred to a later stratum with a stated reason: 0
 * **open in this stratum: 0**
 
+Contract units (measurement vs property):
+
+| unit | measurement_state | property_status | findings |
+|---|---|---|---|
+| cli | `None` | `None` | — |
+| config | `None` | `None` | — |
+| filesystem | `None` | `None` | — |
+
+A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
 Courts: `all pass`, 6 court(s), **667** authority observation(s) over 6 transcript court(s).
 
 | court | verdict | observations |
@@ -541,6 +550,17 @@ Courts: `all pass`, 6 court(s), **667** authority observation(s) over 6 transcri
 * deferred to a later stratum with a stated reason: 0
 * **open in this stratum: 0**
 
+Contract units (measurement vs property):
+
+| unit | measurement_state | property_status | findings |
+|---|---|---|---|
+| command-bodies | `None` | `None` | — |
+| tls13-interop | `None` | `None` | — |
+| cross-dso-state | `None` | `None` | — |
+| downstream-consumer | `None` | `None` | — |
+| downstream-corpus | `None` | `None` | — |
+
+A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
 Courts: `all pass`, 6 court(s), **1111** authority observation(s) over 6 transcript court(s).
 
 | court | verdict | observations |
@@ -564,6 +584,17 @@ Courts: `all pass`, 6 court(s), **1111** authority observation(s) over 6 transcr
 * deferred to a later stratum with a stated reason: 0
 * **open in this stratum: 0**
 
+Contract units (measurement vs property):
+
+| unit | measurement_state | property_status | findings |
+|---|---|---|---|
+| hostile-tls | `complete` | `not_claimed` | — |
+| hostile-x509 | `complete` | `not_claimed` | — |
+| constant-time | `complete` | `NOT_CLAIMED` | `bn-modexp`, `bn-inverse` |
+| memory-hardening | `complete` | `not_claimed` | — |
+| hostile-boundary-register | `complete` | `not_claimed` | — |
+
+A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
 Courts: `all pass`, 5 court(s), **2394** authority observation(s) over 3 transcript court(s).
 
 The other 2 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.

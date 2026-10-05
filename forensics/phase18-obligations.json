@@ -4,7 +4,11 @@
     "contract_units": [
       {
         "closure": "the `RT-HOSTILE-TLS` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "complete",
         "observation": "RT-HOSTILE-TLS is pass",
+        "property_status": "not_claimed",
         "state": "implemented",
         "surface": "artifacts/phase18/COURTS.json",
         "unit": "hostile-tls",
@@ -12,7 +16,11 @@
       },
       {
         "closure": "the `RT-HOSTILE-X509` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "complete",
         "observation": "RT-HOSTILE-X509 is pass",
+        "property_status": "not_claimed",
         "state": "implemented",
         "surface": "artifacts/phase18/COURTS.json",
         "unit": "hostile-x509",
@@ -20,7 +28,14 @@
       },
       {
         "closure": "the `CT-PRIMITIVES` court passes",
+        "findings": [
+          "bn-modexp",
+          "bn-inverse"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
         "observation": "CT-PRIMITIVES is pass",
+        "property_status": "NOT_CLAIMED",
         "state": "implemented",
         "surface": "artifacts/phase18/COURTS.json",
         "unit": "constant-time",
@@ -28,7 +43,11 @@
       },
       {
         "closure": "the `RT-MEM-HARDENING` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "complete",
         "observation": "RT-MEM-HARDENING is pass",
+        "property_status": "not_claimed",
         "state": "implemented",
         "surface": "artifacts/phase18/COURTS.json",
         "unit": "memory-hardening",
@@ -36,7 +55,11 @@
       },
       {
         "closure": "the `HOSTILE-BOUNDARY-REGISTER` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "complete",
         "observation": "HOSTILE-BOUNDARY-REGISTER is pass",
+        "property_status": "not_claimed",
         "state": "implemented",
         "surface": "artifacts/phase18/COURTS.json",
         "unit": "hostile-boundary-register",
@@ -58,7 +81,7 @@
     "deferrals": [],
     "deferred": [],
     "implemented": [],
-    "note": "`open` is the only list that blocks this stratum, and its count is over the hostile hardening contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. Phase 18 owns no provider registration row and no export: it activates no provider and adds no library surface, because it hardens the implementation the sixteen strata before it completed. Its five contract units are the hostile hardening contract docs/PHASE-18-SUBPHASES.md section 1 names -- a hostile TLS corpus, a hostile X.509 / malformed-input corpus, the constant-time secret-independence checks, the memory-safety / resource-exhaustion hardening and the hostile-boundary register -- and at activation all five are open, so this stratum's working set is exactly its five contract units. Nothing here is a security or parity claim: a passing hostile court is a bounded differential result over the corpus it drives, a `CT-*` court is a bounded secret-independence check rather than a proof, and docs/PHASE-18-SUBPHASES.md section 4 decides when the stratum may be called complete.",
+    "note": "`open` is the only list that blocks this stratum, and its count is over the hostile hardening contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. Phase 18 owns no provider registration row and no export: it activates no provider and adds no library surface, because it hardens the implementation the sixteen strata before it completed. Its five contract units are the hostile hardening contract docs/PHASE-18-SUBPHASES.md section 1 names -- a hostile TLS corpus, a hostile X.509 / malformed-input corpus, the constant-time secret-independence checks, the memory-safety / resource-exhaustion hardening and the hostile-boundary register -- and at activation all five are open, so this stratum's working set is exactly its five contract units. Nothing here is a security or parity claim: a passing hostile court is a bounded differential result over the corpus it drives, a `CT-*` court is a bounded secret-independence check rather than a proof, and docs/PHASE-18-SUBPHASES.md section 4 decides when the stratum may be called complete. Each contract unit records its two axes separately: `measurement_state` says the instrument completed, and `property_status`/`findings` say what is claimed about a security property. The `constant-time` unit's property is `NOT_CLAIMED` with the two BN separations (`bn-modexp`, `bn-inverse`) named as findings, so a passing `CT-PRIMITIVES` is an instrument result and must never be read as 'constant-time achieved'.",
     "open": [],
     "provider_rows": [],
     "rule": "this stratum's working set is not a set of exported symbols: Phase 18 owns no export, no provider registration row and no prerequisite deferral, so its working set is exactly the hostile hardening contract units docs/PHASE-18-SUBPHASES.md names, each measured by the Phase-18 courts registry. Every row is read from those atlases; the ledger types none of them, and `main` fails closed if the ownership atlas assigns this stratum an export, the provider census assigns it a row, or the prerequisite plane assigns it a deferral or unit",
@@ -85,12 +108,12 @@
     {
       "name": "phase-18-plan",
       "path": "docs/PHASE-18-SUBPHASES.md",
-      "sha256": "9ff1298c2901accffa341fa207cc7d8a542cc16a730b16c74f2542f9107ccf78"
+      "sha256": "a182ffed42f8fe6ca0b187e8b35f6ed32cc0bc95245cb08b234fff6ed001d637"
     },
     {
       "name": "phase-18-courts",
       "path": "artifacts/phase18/COURTS.json",
-      "sha256": "24bc158d51a3d98dd2e15eb403c02eacbd9751bf75f6f9f7c5c728a0a1b2711f"
+      "sha256": "f8f2fae114c65a65864cbcb3df53593de8b9e8df553d6d167f96a1183436fbb1"
     }
   ],
   "kind": "phase18-obligations",

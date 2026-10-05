@@ -50,6 +50,25 @@ Four situations, kept apart
   * `implemented`/`open` as *export* lists are empty by measurement; the working set lives in the
     contract-unit block, not in those two keys.
 
+Measurement and property are two axes, and a pass is only about the first
+-------------------------------------------------------------------------
+A contract unit's court passing says the **instrument** worked: it ran and its control was
+honest. It does **not** say the security property the unit names has been achieved. The ledger
+records both axes explicitly so the two cannot be conflated:
+
+  * `measurement_state` — `complete` when the unit's court passed as an instrument (it ran and
+    its control was honest), `not_measured` otherwise. This is the same fact `state` records.
+  * `property_status` — `NOT_CLAIMED` where the unit measures a security property and the court
+    recorded findings bearing on it, `not_claimed` where the unit makes no such claim.
+  * `findings_present` / `findings` — whether the court recorded property findings, and the
+    list itself.
+
+`constant-time` is the unit where the two axes visibly diverge: `CT-PRIMITIVES` passes as an
+instrument while recording the two BN paths (`bn-modexp`, `bn-inverse`) as `separated` findings,
+so its property reads `NOT_CLAIMED` with `findings_present`. **A passing `CT-PRIMITIVES` must
+never be read as "constant-time achieved".** The findings are read from the court row, not typed
+here; the ledger fails closed if the court stops carrying them.
+
 Outputs
 -------
   forensics/phase18-obligations.json
@@ -119,6 +138,15 @@ COURT_UNITS: tuple[tuple[str, str, str, str], ...] = (
      "claimed, and that fails the stratum if a recorded boundary drifts from its evidence"),
 )
 
+# The contract units that measure a **security property** rather than a differential or resource
+# behaviour. `constant-time`'s subject is secret-independence, and its court is candid that a
+# passing verdict is about the instrument's sensitivity, not about the property: the reduced
+# engine's BN square-and-multiply core is documented as carrying this implementation's timing
+# profile, so the two BN paths are recorded as `separated` findings and the property is explicitly
+# NOT claimed. Every other unit makes no security-property claim at all, which `property_status`
+# records as `not_claimed`.
+SECURITY_PROPERTY_UNITS: frozenset[str] = frozenset({"constant-time"})
+
 
 def load(relpath: str) -> dict:
     """Read an atlas, failing closed when it is absent.
@@ -133,6 +161,18 @@ def load(relpath: str) -> dict:
             f"derived; the read is fail-closed rather than empty"
         )
     return json.loads(p.read_text(encoding="utf-8"))
+
+
+def court_row(courts_body: dict, court: str) -> dict:
+    """The registry row for a court, or an empty row when nothing names it.
+
+    The row carries the court's own `findings`, so a property finding is read from the
+    instrument that produced it rather than typed into this ledger.
+    """
+    for row in courts_body.get("courts") or []:
+        if row.get("court") == court:
+            return row
+    return {}
 
 
 def court_state(courts_body: dict, court: str) -> tuple[bool, str]:
@@ -197,10 +237,25 @@ def contract_units(courts_body: dict) -> list[dict]:
 
     The units are policy -- which surfaces the hardening owes evidence over -- but no unit's
     state is typed: each is closed when its court passes and open otherwise.
+
+    Two axes are recorded, and they are deliberately distinct. `measurement_state` says whether
+    the instrument completed; `property_status`/`findings` say what, if anything, the unit claims
+    about a security property. `constant-time`'s court passes while recording the two BN paths as
+    findings, so its property is `NOT_CLAIMED`; a reader can no longer mistake the pass for
+    "constant-time achieved".
     """
     units: list[dict] = []
     for name, court, closure, what in COURT_UNITS:
         passed, observation = court_state(courts_body, court)
+        row = court_row(courts_body, court)
+        # The court's `findings`, when it is a list, are the property findings its instrument
+        # recorded (the CT court's shape). The hostile and resource courts record a
+        # `{crash, oom, timeout}` mapping instead, which is a corpus disposition and not a
+        # property-findings list, so it is not claimed here.
+        raw_findings = row.get("findings")
+        property_findings = ([str(f) for f in raw_findings]
+                             if isinstance(raw_findings, list) else [])
+        measures_property = name in SECURITY_PROPERTY_UNITS
         units.append(
             {
                 "unit": name,
@@ -208,6 +263,17 @@ def contract_units(courts_body: dict) -> list[dict]:
                 "surface": COURTS,
                 "closure": closure,
                 "state": "implemented" if passed else "open",
+                # The instrument axis: `complete` means the court ran and its control was honest,
+                # never that the property it names has been achieved.
+                "measurement_state": "complete" if passed else "not_measured",
+                # The property axis: a measured security property is NOT_CLAIMED while findings
+                # are present; a unit that makes no such claim reads `not_claimed`.
+                "property_status": (
+                    "NOT_CLAIMED" if measures_property and property_findings
+                    else "not_claimed"
+                ),
+                "findings_present": bool(property_findings),
+                "findings": property_findings,
                 "observation": f"{court} is {observation}",
             }
         )
@@ -318,7 +384,12 @@ def main(argv: list[str]) -> int:
             "security or parity claim: a passing hostile court is a bounded differential result "
             "over the corpus it drives, a `CT-*` court is a bounded secret-independence check "
             "rather than a proof, and docs/PHASE-18-SUBPHASES.md section 4 decides when the "
-            "stratum may be called complete."
+            "stratum may be called complete. Each contract unit records its two axes "
+            "separately: `measurement_state` says the instrument completed, and "
+            "`property_status`/`findings` say what is claimed about a security property. The "
+            "`constant-time` unit's property is `NOT_CLAIMED` with the two BN separations "
+            "(`bn-modexp`, `bn-inverse`) named as findings, so a passing `CT-PRIMITIVES` is an "
+            "instrument result and must never be read as 'constant-time achieved'."
         ),
     }
 
@@ -341,6 +412,10 @@ def main(argv: list[str]) -> int:
     print(f"  unit={body['unit']}  complete={open_count == 0}")
     print(f"  contract: "
           + ", ".join(f"{u['unit']}={u['state']} ({u['observation']})" for u in contracts))
+    for u in contracts:
+        if u["findings_present"]:
+            print(f"  property: {u['unit']} measurement={u['measurement_state']} "
+                  f"property={u['property_status']} findings={u['findings']}")
     print(f"  -> {rel(OUT)}")
     return 0
 

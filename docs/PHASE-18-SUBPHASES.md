@@ -61,6 +61,15 @@ working set is entirely its own authored contract.
 (`HOSTILE-BOUNDARY-REGISTER`). At activation the runner registers all five as `pending`, so all
 five units are open.
 
+**A passing court is an instrument result, not a property claim, and the ledger records the two
+axes separately.** Each contract unit carries `measurement_state` (the instrument ran and its
+control was honest) beside `property_status` and `findings` (what, if anything, the unit claims
+about a security property). `constant-time` is the unit where the two diverge: `CT-PRIMITIVES`
+passes while recording the two BN paths (`bn-modexp`, `bn-inverse`) as `separated` findings, so the
+property reads `NOT_CLAIMED` with `findings_present`. **A passing `CT-PRIMITIVES` must never be
+read as "constant-time achieved".** The findings are read from the court row rather than typed, and
+`forensics/phase18-obligations.json` carries both axes for every unit.
+
 **The ledger's unit is not an exported symbol.** `forensics/phase18-obligations.json` publishes
 `unit: "hostile hardening contract"`, its `implemented`/`open` export lists are empty *by
 measurement*, and its working set is counted in `open_in_this_stratum` over the five contract
@@ -102,7 +111,11 @@ the candidate are driven over them and the two observations are compared, so a h
 disposition cannot be invented. Where the subject is a `CT-*` secret-independence property there
 is no authority transcript to diff, so the court must carry a **sensitivity control**: a
 deliberately branch-on-secret variant must be caught, or the court is `fail` rather than `pass`.
-A control that cannot fail is not evidence.
+A control that cannot fail is not evidence. Because the court's verdict is about the instrument's
+sensitivity, a `pass` is recorded with `measurement_state: complete` and, where the court recorded
+property findings, a `property_status` of `NOT_CLAIMED` beside them (`findings_present`): the
+secret-independence property is explicitly *not* claimed merely because the instrument proved it
+can tell the difference.
 
 **3.3 Crash, OOM and timeout are findings, not aborts.** A hostile run that takes the process
 down, exhausts the allocation budget or fails to terminate is a recorded finding for that corpus

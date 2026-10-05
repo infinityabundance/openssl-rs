@@ -237,13 +237,13 @@
       "name": "phase-8-obligations",
       "note": "the Phase 8 ledger, whose open_in_this_stratum is what a freeing row would move",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "6025aa4f346d254e31feec084ccf9062bbbe933bee1bd06d4ed9c9244860a7cd"
+      "sha256": "bd23c3948ff8d53f567202a22e3eeebe110e17aaefa194562c989b73a60203c7"
     },
     {
       "name": "phase-9-obligations",
       "note": "the Phase 9 ledger, whose open_in_this_stratum is what a freeing row would move",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "3706c5f1cec23fb0d354418e6c87912896b8791f961b2a6ed60215e2399bba21"
+      "sha256": "d0f673a80dbf79782e68583968abbbc1f77f5eff142c770d236fcf9f5311d0b4"
     },
     {
       "name": "provider-algorithms",
