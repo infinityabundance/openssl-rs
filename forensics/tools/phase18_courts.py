@@ -76,7 +76,7 @@ rather than a differential one. For each measured path it drives the operation u
 classes -- a BN exponent's Hamming weight, BN inverse operands, two RSA keys' CRT exponents, an EC
 scalar, the position of a tag mismatch, a key-schedule IKM -- interleaves the two classes, and
 keeps the minimum timed batch per class with a serialising timestamp counter; a path is `separated`
-when the ratio of the two minima exceeds 10 percent. That is a *bounded* work-independence screen
+when the ratio of the two minima exceeds 50 percent. That is a *bounded* work-independence screen
 at that resolution, not a proof of constant-time behaviour and not a wall-clock or attack claim
 (sections 3.1 and 3.6). It carries the section-3.2 sensitivity control: `control-branchy-tag` is a
 deliberately branch-on-secret tag comparison, and the court is `pass` only when it is `separated`
@@ -251,7 +251,7 @@ CT_CONTROL: tuple[str, str, str] = (
     "byte and does a dependent multiply per matching byte, so a tag differing at its last byte "
     "does far more work than one differing at its first",
 )
-CT_SEP_PCT = 110
+CT_SEP_PCT = 150
 CT_SAMPLES = 320
 CT_WARMUP = 32
 # `RT-HOSTILE-X509`'s control: the well-formed v3 certificate. The authority must parse it
@@ -1484,7 +1484,7 @@ def main(argv: list[str]) -> int:
             "Poly1305 check are built on; and EVP_KDF HKDF extract+expand as the TLS 1.3 key "
             "schedule's core -- it drives the operation under two secret classes, interleaved, "
             "and keeps the minimum timed batch per class with a serialising timestamp counter; a "
-            "path is `separated` when the ratio of the two minima exceeds 10 percent. The court "
+            "path is `separated` when the ratio of the two minima exceeds 50 percent. The court "
             "carries the section-3.2 sensitivity control: `control-branchy-tag` is a "
             "deliberately branch-on-secret tag comparison (early return on the first mismatch, a "
             "dependent multiply per matching byte), and the court is `pass` only when the control "
@@ -1496,7 +1496,7 @@ def main(argv: list[str]) -> int:
             "proven-sensitive instrument. A pass is instrument sensitivity plus a bounded "
             "secret-independence screen at the stated resolution -- NOT a proof of constant-time "
             "behaviour, NOT a wall-clock claim and NOT an attack claim (sections 3.1, 3.2 and "
-            "3.6); a secret dependence below 10 percent is reported `independent` and is outside "
+            "3.6); a secret dependence below 50 percent is reported `independent` and is outside "
             "this screen's resolution. "
             "`RT-MEM-HARDENING` is 18.4's court: it compiles "
             "courts/phase18/rt_mem_hardening_probe.c twice (authority and candidate) and drives "

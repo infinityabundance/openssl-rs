@@ -254,7 +254,7 @@ the register all carry them with `property_status: NOT_CLAIMED`. The separation 
 than a surprise — `src/bn/exp.rs` documents a square-and-multiply core — and the court's job is to
 record it with a *proven-sensitive* instrument: the `control-branchy-tag` control is `separated`
 exactly where the real tag-memcmp path is `independent`. **This is an instrument result, not a
-constant-time claim**; a secret dependence below the screen's 10 percent floor reads `independent`
+constant-time claim**; a secret dependence below the screen's 50 percent floor reads `independent`
 and is outside its resolution (`docs/PHASE-18-SUBPHASES.md` §3.2).
 
 **The memory court found the read path's bounds are enforced, and one contract is only as strong as
@@ -387,7 +387,7 @@ derives `complete`. The boundaries this stratum actually met are recorded in the
 4. **`CT-PRIMITIVES` is candidate-only, and that is the instrument.** A secret-independence
    property has no authority transcript to diff, so the court compiles once against the candidate
    and carries a sensitivity control instead; it is not FRF-declarable (D13, D201). A path below the
-   screen's 10 percent floor reads `independent` and is outside its resolution.
+   screen's 50 percent floor reads `independent` and is outside its resolution.
 5. **`HOSTILE-BOUNDARY-REGISTER` stages no probe.** Its subject is the authored register and the
    live courts registry, so it carries no `artifacts/phase18/probes/` pair and no FRF declaration;
    `frf_declarable` is false.
@@ -421,9 +421,9 @@ derives `complete`. The boundaries this stratum actually met are recorded in the
    explicitly **not** coverage-guided, **not** a campaign and **not** a security proof. A corpus
    that does not reach a surface is named `pending`, not counted as passing
    (`docs/PHASE-18-SUBPHASES.md` §3.1, §3.6).
-3. **The constant-time screen has a 10 percent floor, and a pass is not constant-time achieved.**
+3. **The constant-time screen has a 50 percent floor, and a pass is not constant-time achieved.**
    `CT-PRIMITIVES` reports a path `separated` only when the ratio of the two minimum batch times
-   exceeds 110 percent; a smaller secret dependence is reported `independent` and is outside its
+   exceeds 150 percent; a smaller secret dependence is reported `independent` and is outside its
    resolution. A passing `CT-PRIMITIVES` is the instrument's proven sensitivity plus a bounded
    screen at that resolution — never a proof of constant-time behaviour, never a wall-clock claim
    and never an attack claim. The `bn-modexp`/`bn-inverse` findings read `NOT_CLAIMED`, not
