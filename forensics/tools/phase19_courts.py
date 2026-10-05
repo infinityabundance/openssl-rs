@@ -98,13 +98,29 @@ is named `pending` rather than counted as passing. The counting allocator observ
 not total CPU instructions, and the block counts are input-implied: the court makes **no
 benchmark-parity claim** and **no assembly-versus-Rust equivalence claim** (sections 3.1, 3.6).
 
-The pending courts
-------------------
-The other two courts the plan names are `pending` with the subphase that lands each:
+`RT-PERFORMANCE-SENSITIVITY`, and what it drives
+---------------------------------------------
+19.4's court. It is **candidate-only** — the deliberately slowed variant is a construction of the
+harness, never product code, so there is no authority counterpart to drive — in the shape Phase
+8's `CT-*` courts and Phase 18's `CT-PRIMITIVES` use (D13, D201). Its instrument is
+`courts/phase19/rt_performance_sensitivity_probe.c`, compiled once against the candidate
+distribution shell, and it drives two arms under exactly the 19.3 work instrument (the counting
+`CRYPTO` allocator the stratum introduces, plus the method-derived geometry): a **reference** arm,
+the real `aes-128-cbc` path, and a **slowed** arm (`control-extra-pass`), the same path with an
+injected extra full pass over the primitive. Section 3.2's rule is mechanical here — a control that
+cannot fail is not evidence — so the verdict is `pass` only when the slowed arm is caught, and the
+catch must be on the work counter the stratum introduces (a library-side `allocs`/`reallocs`/`bytes`
+difference), not merely on the driver-side `calls` that 19.3 excludes from its findings. The
+reference arm is anchored to the authority: the court requires its work vector to equal the
+authority's `aes-128-cbc` vector the 19.3 court already recorded, so a reference that is the real
+path is distinguished from a broken instrument's answer. The verdict is about the *instrument's
+resolution* and makes no throughput or benchmark-parity claim (sections 3.2 and 3.6); if the
+instrument cannot be made to catch the slowed variant the court is `fail`, never a vacuous `pass`.
 
-  * `RT-PERFORMANCE-SENSITIVITY` (19.4) — the instrument-sensitivity control: a deliberately slowed
-    path must be caught, so a measure that cannot tell a slow path from a fast one is `fail` rather
-    than `pass`; candidate-only;
+The pending court
+-----------------
+The last court the plan names is `pending` with the subphase that lands it:
+
   * `PERFORMANCE-BOUNDARY-REGISTER` (19.5) — the register that records what is measured, what is
     not, and the explicit non-claims (no benchmark-parity claim, no assembly-versus-Rust
     equivalence claim), and that fails the stratum if a recorded boundary drifts from its evidence.
@@ -155,20 +171,18 @@ RUN_TIMEOUT_S = "120"
 CPU_CAPABILITY = "RT-CPU-CAPABILITY"
 EVP_DISPATCH = "RT-EVP-DISPATCH"
 PERFORMANCE_WORK = "RT-PERFORMANCE-WORK"
+PERFORMANCE_SENSITIVITY = "RT-PERFORMANCE-SENSITIVITY"
 COURTS: list[tuple[str, str]] = [
     (CPU_CAPABILITY, "rt_cpu_capability_probe.c"),
     (EVP_DISPATCH, "rt_evp_dispatch_probe.c"),
     (PERFORMANCE_WORK, "rt_performance_work_probe.c"),
+    (PERFORMANCE_SENSITIVITY, "rt_performance_sensitivity_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
 # the instrument and what the court will drive, so "nothing registered" is a stated distance rather
 # than a court quietly dropped.
 PENDING_COURTS: dict[str, str] = {
-    "RT-PERFORMANCE-SENSITIVITY": (
-        "19.4 lands the sensitivity control; it requires a deliberately slowed path to be caught, "
-        "so the work measure is proven able to tell a slow path from a fast one"
-    ),
     "PERFORMANCE-BOUNDARY-REGISTER": (
         "19.5 lands the register; it records what is measured, what is not, and the explicit "
         "non-claims (no benchmark-parity claim, no assembly-versus-Rust equivalence claim), and "
@@ -365,6 +379,39 @@ def performance_work_schema() -> tuple[str, ...]:
 
 
 PERFORMANCE_WORK_PROBE_SCHEMA: tuple[str, ...] = performance_work_schema()
+
+
+# --------------------------------------------------------------------------------------------
+# `RT-PERFORMANCE-SENSITIVITY` (19.4): the instrument-sensitivity control. Candidate-only, so its
+# transcript is one side's. The reference arm re-measures the 19.3 `aes-128-cbc` path with the same
+# instrument and the court anchors it to the authority's recorded 19.3 vector; the slowed arm is
+# `control-extra-pass`, the reference path with an injected extra full pass over the primitive.
+# --------------------------------------------------------------------------------------------
+SENSITIVITY_REFERENCE = "aes-128-cbc"
+SENSITIVITY_CONTROL = "control-extra-pass"
+SENSITIVITY_ARMS: tuple[str, ...] = ("reference", "slowed")
+# The counting-allocator keys -- the work counter the stratum introduces. The catch must land on at
+# least one of these, not merely on the driver-side `calls` 19.3 excludes from its findings: an
+# extra pass the counter cannot see is exactly the dead instrument section 3.2 refuses.
+SENSITIVITY_COUNTER_KEYS: tuple[str, ...] = ("allocs", "reallocs", "bytes")
+
+
+def performance_sensitivity_schema() -> tuple[str, ...]:
+    """The fixed transcript schema for `RT-PERFORMANCE-SENSITIVITY`.
+
+    One side's transcript (the court is candidate-only) emits every key -- an arm that did not run
+    prints `n/a` in every numeric field -- so the schema is closed over the same field list 19.3
+    uses.
+    """
+    keys: list[str] = ["probe.kind", "work.hook.install", "work.default_provider",
+                       "sens.reference.id", "sens.slowed.id"]
+    for arm in SENSITIVITY_ARMS:
+        keys += [f"sens.{arm}.{field}" for field in WORK_VECTOR_FIELDS]
+    keys.append("probe.done")
+    return tuple(keys)
+
+
+PERFORMANCE_SENSITIVITY_PROBE_SCHEMA: tuple[str, ...] = performance_sensitivity_schema()
 
 
 def side_env(libdir: Path, modulesdir: Path, cap: str | None) -> dict[str, str]:
@@ -908,6 +955,153 @@ COURT_IMPL = {
 }
 
 
+def performance_sensitivity_court(name: str, src: Path, auth, work: Path,
+                                 work_row: dict) -> dict:
+    """`RT-PERFORMANCE-SENSITIVITY`: the candidate-only instrument-sensitivity control.
+
+    The court is candidate-only -- the deliberately slowed variant is a construction of the probe,
+    so there is no authority transcript to diff -- and compiles its probe **once** against the
+    candidate distribution shell. It drives two arms under the same 19.3 work instrument: the
+    reference (`aes-128-cbc`, the real path) and `control-extra-pass` (the same path with an
+    injected extra full pass over the primitive, never product code).
+
+    The verdict follows section 3.2. It is `pass` only when the instrument ran (the counting hook
+    installed and both arms completed), the reference arm's work vector **equals the authority's
+    `aes-128-cbc` vector 19.3 recorded** (so the reference is the real path rather than a broken
+    instrument's answer), and the slowed arm is **caught on the work counter the stratum
+    introduces** -- a library-side `allocs`/`reallocs`/`bytes` difference -- not merely on the
+    driver-side `calls` 19.3 excludes from its findings. If the instrument cannot tell the slowed
+    path from the reference, the court is `fail`: a control that cannot fail is not evidence. The
+    verdict is about the instrument's resolution and makes no throughput or benchmark-parity claim.
+    """
+    del auth  # candidate-only: the slowed variant is a harness construction, not a library path
+
+    cand_bin = work / f"{src.stem}.candidate"
+    ok, err = compile_candidate(src, cand_bin)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-candidate",
+                "detail": err.splitlines()[:12]}
+
+    c_out, c_err, c_code = run_probe(
+        cand_bin, side_env(PHASE2, PHASE2 / "install" / "lib" / "ossl-modules", None))
+    if not c_out.strip():
+        return {"court": name, "verdict": "fail", "stage": "candidate-run",
+                "detail": {"exit_code": c_code, "stderr": c_err.splitlines()[:12]}}
+
+    c_keys = keyed(c_out)
+    problems: list[str] = []
+
+    if c_keys.get("probe.done") != "1":
+        problems.append("candidate transcript did not complete")
+    for key in PERFORMANCE_SENSITIVITY_PROBE_SCHEMA:
+        if key not in c_keys:
+            problems.append(f"candidate is missing {key}")
+
+    # The authority anchor: the reference arm must reproduce the vector the 19.3 court recorded for
+    # `aes-128-cbc` on the authority, so the reference is the real measured path and not a broken
+    # instrument's constant. The full vector is compared, including the driver-side `in`/`calls`
+    # (the same driver over the same fixed input).
+    authority_ref: dict[str, str | None] = {}
+    for p in (work_row.get("paths") or []):
+        if p.get("path") == SENSITIVITY_REFERENCE:
+            authority_ref = dict(p.get("authority") or {})
+            break
+
+    def arm(which: str) -> dict[str, str | None]:
+        return {f: c_keys.get(f"sens.{which}.{f}") for f in WORK_VECTOR_FIELDS}
+
+    reference = arm("reference")
+    slowed = arm("slowed")
+
+    if not authority_ref:
+        problems.append(
+            f"the authority's {SENSITIVITY_REFERENCE} work vector was not available from "
+            "`RT-PERFORMANCE-WORK`: the reference arm cannot be anchored")
+    else:
+        mismatched = {f: (authority_ref.get(f), reference.get(f)) for f in WORK_VECTOR_FIELDS
+                      if authority_ref.get(f) != reference.get(f)}
+        if mismatched:
+            problems.append(
+                f"the reference arm does not match the authority's {SENSITIVITY_REFERENCE} work "
+                "vector: " + "; ".join(f"{f} authority={av} reference={rv}"
+                                        for f, (av, rv) in sorted(mismatched.items())))
+
+    if reference.get("ran") != "1":
+        problems.append("the reference arm did not run")
+    if slowed.get("ran") != "1":
+        problems.append("the slowed arm did not run")
+
+    # The instrument-sensitivity control: the slowed variant must differ from the reference on a
+    # library-side work key in general, and on the counting allocator (the work counter the stratum
+    # introduces) specifically. `calls` is driver-side -- a slowed path the counter cannot see,
+    # differing only in `calls`, is exactly the dead instrument this court refuses to pass.
+    diffs = {f: (reference.get(f), slowed.get(f)) for f in WORK_FINDING_KEYS
+             if reference.get(f) != slowed.get(f)}
+    counter_diffs = {f: diffs[f] for f in SENSITIVITY_COUNTER_KEYS if f in diffs}
+    caught = bool(diffs)
+    counter_caught = bool(counter_diffs)
+    calls_differ = reference.get("calls") != slowed.get("calls")
+    if not caught:
+        problems.append(
+            f"the instrument did not catch the deliberately slowed {SENSITIVITY_CONTROL}: its "
+            f"work vector equals the reference's ({diffs}): the court is fail, not vacuous pass")
+    elif not counter_caught:
+        problems.append(
+            f"the slowed {SENSITIVITY_CONTROL} moved only non-counter work keys "
+            f"({sorted(diffs)}); the counting allocator the stratum introduces did not catch it")
+
+    honest = (not problems) and caught and counter_caught
+
+    staged: dict[str, str] = {}
+    STAGED.mkdir(parents=True, exist_ok=True)
+    dst = STAGED / f"{src.stem}.candidate"
+    if cand_bin.is_file():
+        shutil.copyfile(cand_bin, dst)
+        dst.chmod(0o755)
+        staged["candidate"] = rel(dst)
+
+    verdict = "pass" if not problems else "fail"
+
+    return {
+        "court": name,
+        "probe": rel(src),
+        "candidate_only": True,
+        "method": (
+            "candidate-only; the probe is compiled once against the candidate distribution shell "
+            "and drives two arms under the same 19.3 work instrument (the counting `CRYPTO` "
+            "allocator the stratum introduces plus the method-derived geometry): a reference arm, "
+            "the real `aes-128-cbc` path, and a slowed arm, the same path with an injected extra "
+            "full pass over the primitive. The reference must equal the authority's `aes-128-cbc` "
+            "vector the 19.3 court recorded and the slowed arm must be caught on a library-side "
+            "counter key. No address, clock or duration is observed. The verdict is about the "
+            "instrument's resolution: it makes no throughput or benchmark-parity claim."),
+        "reference": reference,
+        "slowed": slowed,
+        "authority_reference": authority_ref,
+        "control": {
+            "path": SENSITIVITY_CONTROL,
+            "what": (
+                "the reference `aes-128-cbc` path with an injected extra full pass over the "
+                "primitive inside the measured region -- extra library work constructed in the "
+                "harness, never product code -- so the counting allocator must register it"),
+            "reference": SENSITIVITY_REFERENCE,
+            "caught": caught,
+            "counter_caught": counter_caught,
+            "counter_keys": list(SENSITIVITY_COUNTER_KEYS),
+            "library_side_keys_differing": sorted(diffs),
+            "counter_keys_differing": sorted(counter_diffs),
+            "driver_side_calls_differ": calls_differ,
+            "honest": honest,
+        },
+        "observations_recorded": {"candidate": len(c_keys)},
+        "candidate_exit_code": c_code,
+        "problems": problems,
+        "verdict": verdict,
+        "staged_binaries": staged,
+        "candidate_stderr_tail": c_err.splitlines()[-3:],
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -919,13 +1113,23 @@ def main(argv: list[str]) -> int:
     work.mkdir(parents=True, exist_ok=True)
 
     records: list[dict] = []
+    work_row: dict = {}
     for name, filename in COURTS:
         src = PROBE_DIR / filename
         if not src.is_file():
             records.append({"court": name, "verdict": "fail",
                             "stage": "probe-missing", "detail": rel(src)})
             continue
-        records.append(COURT_IMPL[name](name, src, auth, work))
+        # 19.4's sensitivity court is candidate-only and anchors its reference arm to the
+        # authority vector 19.3 records, so it is handed the work court's row. Both are produced
+        # in this one run, so the registry is not read back from disk and no digest cycle forms.
+        if name == PERFORMANCE_SENSITIVITY:
+            rec = performance_sensitivity_court(name, src, auth, work, work_row)
+        else:
+            rec = COURT_IMPL[name](name, src, auth, work)
+        if name == PERFORMANCE_WORK:
+            work_row = rec
+        records.append(rec)
 
     passed = sum(1 for r in records if r["verdict"] == "pass")
     failed = sum(1 for r in records if r["verdict"] == "fail")
@@ -996,9 +1200,21 @@ def main(argv: list[str]) -> int:
             "every divergence was recorded -- NOT when nothing diverged. The counting allocator "
             "observes heap operations, not total CPU instructions, and the block counts are "
             "input-implied: no benchmark-parity claim and no assembly-versus-Rust equivalence "
-            "claim (sections 3.1 and 3.6). `RT-PERFORMANCE-SENSITIVITY` 19.4's and "
-            "`PERFORMANCE-BOUNDARY-REGISTER` 19.5's remain `pending` with the subphase that lands "
-            "their instrument. This stratum owns "
+            "claim (sections 3.1 and 3.6). `RT-PERFORMANCE-SENSITIVITY` is 19.4's court: it is "
+            "candidate-only -- the deliberately slowed variant is a construction of the harness, "
+            "never product code -- and compiles courts/phase19/rt_performance_sensitivity_probe.c "
+            "once against the candidate distribution shell. It drives a reference arm (the real "
+            "`aes-128-cbc` path, which must equal the authority vector 19.3 recorded) and a slowed "
+            "arm (`control-extra-pass`, the same path with an injected extra full pass over the "
+            "primitive) under the same 19.3 work instrument, and the court is `pass` only when the "
+            "slowed arm is caught on the counting allocator the stratum introduces (a library-side "
+            "`allocs`/`reallocs`/`bytes` difference), not merely on the driver-side `calls` 19.3 "
+            "excludes from its findings. Section 3.2's rule is mechanical here: a control that "
+            "cannot fail is not evidence, so if the instrument cannot tell the slowed path from "
+            "the reference the verdict is `fail`, never a vacuous `pass`. It is evidence about the "
+            "instrument's resolution and makes no throughput or benchmark-parity claim. Only "
+            "`PERFORMANCE-BOUNDARY-REGISTER` 19.5's remains `pending` with the subphase that lands "
+            "its instrument. This stratum owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence: the "
             "subject is dispatch behaviour and deterministic work over a finished implementation, "
             "with no benchmark-parity claim and no assembly-versus-Rust equivalence claim. "
@@ -1011,6 +1227,8 @@ def main(argv: list[str]) -> int:
         InputRef(name="cpu-capability-probe", path=PROBE_DIR / "rt_cpu_capability_probe.c"),
         InputRef(name="evp-dispatch-probe", path=PROBE_DIR / "rt_evp_dispatch_probe.c"),
         InputRef(name="performance-work-probe", path=PROBE_DIR / "rt_performance_work_probe.c"),
+        InputRef(name="performance-sensitivity-probe",
+                 path=PROBE_DIR / "rt_performance_sensitivity_probe.c"),
         InputRef(name="performance-work-fixture",
                  path=PROBE_DIR / "fixtures" / "rsa-work.pem"),
     ]
@@ -1039,6 +1257,13 @@ def main(argv: list[str]) -> int:
                   f"hook installed={c['authority_hook_installed']})")
             for f in r["findings"]:
                 print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == PERFORMANCE_SENSITIVITY:
+            c = r["control"]
+            print(f"  {r['court']:<32} pass   (candidate-only, "
+                  f"{r['observations_recorded']['candidate']} observations, control "
+                  f"{c['path']} caught={c['caught']} on counter={c['counter_caught']} "
+                  f"keys={c['counter_keys_differing']}, reference={c['reference']} matches "
+                  f"authority)")
         elif r["verdict"] != "pass":
             print(f"  {r['court']:<32} FAIL   stage={r.get('stage', 'compare')}")
             for p in (r.get("detail") if isinstance(r.get("detail"), list)

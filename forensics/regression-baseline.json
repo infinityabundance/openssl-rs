@@ -501,6 +501,10 @@
       "observations": 102,
       "verdict": "pass"
     },
+    "RT-PERFORMANCE-SENSITIVITY": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-PERFORMANCE-WORK": {
       "observations": 84,
       "verdict": "pass"
@@ -804,7 +808,7 @@
     "phase16": 0,
     "phase17": 0,
     "phase18": 0,
-    "phase19": 2,
+    "phase19": 1,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,

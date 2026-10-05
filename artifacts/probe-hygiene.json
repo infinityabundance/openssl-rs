@@ -3794,6 +3794,68 @@
         "verdict": "clean"
       },
       {
+        "probe": "courts/phase19/rt_performance_sensitivity_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 26,
+              "-O1": 26,
+              "-O2": 26
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 26,
+              "-O1": 26,
+              "-O2": 26
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
         "probe": "courts/phase19/rt_performance_work_probe.c",
         "sides": {
           "authority": {
@@ -9252,8 +9314,8 @@
     ],
     "runs_per_level": 2,
     "summary": {
-      "clean": 149,
-      "total": 149,
+      "clean": 150,
+      "total": 150,
       "unstable": 0
     }
   },
@@ -9563,6 +9625,11 @@
       "name": "probe",
       "path": "courts/phase19/rt_evp_dispatch_probe.c",
       "sha256": "a7ad5f31d7ec6c6c89dc3a81d2050441df66f0189cb1a74fa8b084227c62588a"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase19/rt_performance_sensitivity_probe.c",
+      "sha256": "a7cf24f135ac9ef7e33e75d70caa61d2690199635da2f0ebf9ac28930dab3990"
     },
     {
       "name": "probe",
