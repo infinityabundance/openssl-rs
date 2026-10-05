@@ -46,9 +46,9 @@ when called.
   `forensics/phase-state.json` (`forensics/phase-state.json:450-453`) — every registration row the
   plan gives this stratum is implemented
 - FRF receipts and claim: **four receipts, eight challenges, twelve captures and one compiled
-  `sensitivity-backed` claim** — claim `097cf98169a50b5baef127ee1a14ec33ff3edd0016d2dad0caa827a2f27e90ea`
-  over candidate `openssl-rs 0.0.23`, authority `openssl-rt-3.6.4-r2` and the four differential courts,
-  with `blockers: []` and `excluded_evidence: []` (`.frf/claims/097cf981….json`). §8 states what the
+  `sensitivity-backed` claim** — claim `9d911a2abe4ba0a35626d1bfd30a150e506c0fb5b00d24b711b05621dc14e682`
+  over candidate `openssl-rs 0.0.24`, authority `openssl-rt-3.6.4-r2` and the four differential courts,
+  with `blockers: []` and `excluded_evidence: []` (`.frf/claims/9d911a2a….json`). §8 states what the
   entry is
 - Gemel checkpoint: **`K48`** —
   `checkpoint.79bf9b1418be4e8fcafc3889e99f49358fb0120dae2e0545416f698486a96f3b`, the state Phase 9's
@@ -484,11 +484,11 @@ courts are §3's other plane, not a chain subject.
   `.frf/challenges/` and `.frf/captures/` under the `openssl-rs-rt-{rand,drbg,bn-rand,rand-users}`
   names; the store's `openssl-rs-rt-evp-rand` objects are **Phase 7's**, not this stratum's.
 - **One `sensitivity-backed` claim.**
-  `097cf98169a50b5baef127ee1a14ec33ff3edd0016d2dad0caa827a2f27e90ea` binds authority
-  `openssl-rt-3.6.4-r2` to candidate `openssl-rs 0.0.23` (`identity_hash e4f60d8b…`) over the four
-  differential courts, with `blockers: []` and `excluded_evidence: []` (`.frf/claims/097cf981….json`).
-  **The identity moved with the 0.0.23 release.** The store was recreated from clean at candidate
-  0.0.23 — FRF run identities are content-addressed on the declaration, which carries the candidate
+  `9d911a2abe4ba0a35626d1bfd30a150e506c0fb5b00d24b711b05621dc14e682` binds authority
+  `openssl-rt-3.6.4-r2` to candidate `openssl-rs 0.0.24` (`identity_hash e4f60d8b…`) over the four
+  differential courts, with `blockers: []` and `excluded_evidence: []` (`.frf/claims/9d911a2a….json`).
+  **The identity moved with the 0.0.24 release.** The store was recreated from clean at candidate
+  0.0.24 — FRF run identities are content-addressed on the declaration, which carries the candidate
   version, so every claim identity moves with a release — and the id quoted here supersedes the
   previous generation's `a2a6cb61…`, the 0.0.19 claim.
 - **One Gemel checkpoint, `K48`.** `forensics/GEMEL_TRAJECTORY.md`'s head change is `C94` — "Phase 9

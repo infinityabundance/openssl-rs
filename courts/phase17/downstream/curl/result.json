@@ -4,7 +4,7 @@
     "detail": "curl 8.22.0 (x86_64-pc-linux-gnu) libcurl/8.22.0 OpenSSL/3.6.4 zlib/1.2.13\nRelease-Date: 2026-09-02\nProtocols: file ftp ftps http https ipfs ipns ws wss\nFeatures: alt-svc HSTS HTTPS-proxy IPv6 Largefile libz SSL threadsafe UnixSockets",
     "ok": true
   },
-  "candidate": "0.0.23",
+  "candidate": "0.0.24",
   "concurrency": {
     "ok": 16,
     "total": 16

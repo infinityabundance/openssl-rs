@@ -6,7 +6,7 @@ Status: **build/link/start/functional all PROVEN** (PASS). This file is generate
 
 - **haproxy 3.0.29**, `https://www.haproxy.org/download/3.0/src/haproxy-3.0.29.tar.gz`
   sha256 `225dbddbab9eb0abc0ff3db39ded1e07f20028105a36f4c36fc2f85bf86835d1` (parsed from `build.sh`).
-- Candidate identity: `0.0.23` (the `RT-DOWNSTREAM-CORPUS` freshness key).
+- Candidate identity: `0.0.24` (the `RT-DOWNSTREAM-CORPUS` freshness key).
 - Authority: `openssl-rt-3.6.4-r2`.
 
 ## Measured result
