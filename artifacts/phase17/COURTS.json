@@ -1,0 +1,894 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "`RT-CLI-BODIES` is 17.1's court: it **runs** the authority's own built `openssl` and the candidate distribution shell's over a fixed argv, comparing the two transcripts line by line. 17.1a drives `errstr` -- the option parser's end-of-options boundary, the `sscanf(\"%lx\")` success and failure arms, the failure-count exit status and `ERR_error_string_n`'s rendering over fixed packed error codes. 17.1b adds five bodies over fixed fixtures: `info` (four build-independent selectors and two refusal arms), `prime` (the numeric check, the `-hex` refusal and the no-number/`-generate` refusals), `skeyutl` (the no-selector and selector-without-`-genkey` refusals), `configutl` (a fixed configuration's linearized re-emit, with and without the header), `pkeyparam` (the default/`-noout`/`-text`/`-check` arms over a fixed `DH PARAMETERS` PEM) and `nseq` (`-toseq` over a fixed certificate and the read/dump arm over the fixed sequence), all through the shell probe courts/phase17/rt_cli_bodies_probe.sh, the per-side staged pair the FRF runtime harness runs. 17.1c adds eight more bodies over fixed fixtures: `crl2pkcs7` (the `-nocrl -certfile` PKCS7 in PEM and DER), `ciphers` (the `-convert` name lookup), `sess_id` (the default/`-text`/`-cert`/`-noout`/`-context` arms over a fixed session), `kdf` (PBKDF2 over fixed `-kdfopt`s in hex and binary, plus the refusal arms), `mac` (HMAC over a fixed file, hex and binary, plus the refusal arms), `spkac` (the print/`-noout`/`-verify`/`-pubkey` arms over a fixed SPKAC config), `genrsa` and `dsaparam` (the pre-randomness bitsize and refusal arms). 17.1d adds ten more bodies over fixed fixtures: `asn1parse` (the generic PEM reader and the raw DER reader, with and without `-i`), `ecparam` (`-list_curves` and the `-name prime256v1` parameter generation), `rsa`/`dsa`/`ec` (the private/public text and re-encode arms, and `rsa -check -pubin`'s refusal), `pkey` (the `-noout`/`-check`/`-pubout`/`-pubin`/default arms), `pkcs8` (the `-topk8 -nocrypt` and read-back arms), `verify` (the fixed CA/leaf pair), `crl` (the text/issuer/update/crlnumber/hash/fingerprint and re-encode arms) and `rsautl` (the private-key-required and unknown-option refusals). 17.1e adds ten more bodies over fixed fixtures: `gendsa` (the missing-argument refusal), `rand` (the zero-length and size-suffix refusals), `rehash` (the unwritable-directory refusal), `storeutl` (the `-noout -keys`/`-noout -certs` type and `Total found` status), `dhparam` (the `-in` text/`-noout`/`-check` arms), `genpkey` (the no-algorithm refusal), `passwd` (the fixed-salt `-1`/`-5`/`-6` and `-table`/`-reverse` hashes), `pkeyutl` (`-sign`/`-verify`/`-encrypt`/`-decrypt` over the fixed key/input) and `enc` (the raw-key AES-CBC `-e`/`-d`/`-a`/`-A`/`-nopad`/`-P` arms); `engine`'s listing arms are recorded because the candidate's engine init fails. 17.1f adds seven more bodies over fixed fixtures: `dgst` (the digest, `-hex`/`-binary`, `-c`/`-r`, `-hmac`, `-sign` and `-verify` arms), `pkcs7` (the re-encode and `-print_certs` arms), `ocsp` (the no-work refusal and the fixed-CA/leaf `-reqout`/`-req_text` request arms), `ts` (the mode refusals and the `-query -no_nonce -data` DER/text arms), `speed` (the `-bogus` refusal), `fipsinstall` (the `-verify`/no-module refusals) and `srp` (the action-count refusals). 17.1g, the final slice, lands the last ten bodies over fixed fixtures: `x509` (the text/subject/issuer/dates/fingerprint/serial/pubkey/hash and re-encode arms), `req` (the read-back `-text`/`-verify`/`-subject`/re-encode arms over a fixed CSR), `smime` and `cms` (the `-sign -nodetach -outform PEM|DER` over a fixed content/signer/key, the `-verify -noverify` and `-decrypt` over fixed fixtures, and the operation refusals), `pkcs12` (the deterministic `-export -nomac -keypbe NONE -certpbe NONE`), and the option-parser refusals of `ca`, `s_client`, `s_server`, `s_time` and `cmp`. Each command's `-help` arm is not driven (`opt_help` is unlanded), and the many divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/ `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms, `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`, `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl` operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam` generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms, and the 17.1f `dgst -bogus`/`-list`/`-mac`, `pkcs7 -print`, `ocsp -bogus`/responder, `ts` nonce/`-reply`/`-verify`, `speed` benchmark/`-evp`/`-hmac`, `fipsinstall -module` and `srp` action arms -- are recorded in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: 17.2a registers it over the probe courts/phase17/rt_tls13_interop_probe.c, which connects a client and a server over memory BIOs and drives the flight. 17.2a lands tls_construct_client_hello over a reduced plaintext record write; 17.2b lands the server's first flight -- tls_process_client_hello over a reduced plaintext record read and tls_construct_server_hello plus the extensions_srvr framework and the reduced group/key-share infrastructure -- and fixes the BIO_C_SET_FILENAME constant so the fixture loads. 17.2c lands the rest of the flight: the reduced TLS1.3 key schedule (src/ssl/tls13_enc.rs -- HKDF-Extract/Expand over SHA256/SHA384, the early/handshake/master secrets, the handshake and application traffic secrets, the Finished MAC and per-record AES-GCM/ChaCha20-Poly1305 protection), the client's read path (tls_process_server_hello and the EncryptedExtensions/Certificate/CertificateVerify/Finished handlers) and the server's encrypted flight (tls_construct_encrypted_extensions/certificate/cert_verify/finished). Both sides now reach TLS_ST_OK, report SSL_is_init_finished, and exchange a 15-byte application record in each direction, so the court compares the terminal states, the two carrying rounds and the application-data exchange as well as the first-flight structure. The reduced flight now also sends the three ClientHello extensions it was missing (`signature_algorithms`, `ec_point_formats`, `renegotiation_info`) and the outer `key_share` list length the authority's parser reads, carries record version 0x0303 on protected records, validates the peer's RSA-PSS CertificateVerify and signs its own with `rsa_pss_rsae_sha256`, and skips the middlebox-compatibility ChangeCipherSpec -- so the same-implementation flight and the cross-implementation matrix agree. `RT-TLS13-INTEROP-MATRIX` is 17.2's interoperability court: it compiles courts/phase17/rt_tls13_matrix_peer.c twice (authority and candidate) and runs courts/phase17/rt_tls13_matrix_driver.c, which forks one peer per side over a real AF_UNIX socketpair and drives the four cells `auth-auth`/`cand-auth`/`auth-cand`/`cand-cand`, exchanging a fixed 15-byte application record each way. The verdict is `pass` only when all four cells handshake and exchange application data; the two cross cells are the interoperability receipt. `RT-CROSS-DSO-STATE` is 17.3's: it registers the probe courts/phase17/rt_cross_dso_state_probe.c and measures the shared-state contract the candidate's whole-crate archives break, in both directions -- a libssl-raised error read through libcrypto's ERR queue, and a `CONF` command set `CONF_modules_load_file` stored through libcrypto read through libssl's `SSL_CTX_config` (over the fixed fixtures/cross_dso.cnf). It reports two verdicts: a *measurement verdict*, `pass` when the authority shares one `libcrypto.so.3` via `DT_NEEDED` and drove both reads (so the comparison cannot be vacuous), and a *compatibility verdict*, `PASS` iff the candidate's two DSOs reproduce the authority on every cross-DSO read and `KNOWN_DIVERGENCE` otherwise. 17.3 landed with the whole-crate duplication (`err.ssl.peek=0`, `conf.ctx_config.ret=0`), so the compatibility verdict began as `KNOWN_DIVERGENCE`; the runtime now resolves libcrypto's exported `ERR_get_state`/`conf_ssl_*` owners (`src/runtime/dso_shared.rs`), so one queue and one store serve both DSOs and the verdicts are `pass`/`PASS`. counts. `RT-DOWNSTREAM-CONSUMER` is 17.4's: courts/phase17/rt_downstream_consumer_probe.c is a real downstream consumer linked only against the shipped install prefix (an EVP digest, an X.509 PEM parse, a libcrypto ERR round-trip and a TLS 1.3 handshake over memory BIOs exchanging a fixed 15-byte application record), and the court records the flight's on-the-wire byte counts the candidate's reduced engine moves rather than asserting wire parity (section 3.4). `RT-DOWNSTREAM-CORPUS` is 17.4a's: it consumes the machine-owned downstream corpus (forensics/atlas/downstream-corpus.json, aggregated from the six courts/phase17/downstream/<program>/result.json records the driver run_all.sh writes) and fails Phase 17 unless every program is present, every required field is present, functional is true, candidate equals the current Cargo.toml version, and each corpus record still equals its per-program result.json. No court remains pending. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence. No court is registered in forensics/tools/gen_frf_courts.py: that registry is the stratum's seal (section 4.2), as Phase 16 registered its six courts only at 16.6. docs/PHASE-17-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts (docs/DECISIONS.md D530).",
+    "courts": [
+      {
+        "argv_cases": 198,
+        "authority_exit_code": 0,
+        "authority_observations": 805,
+        "candidate_exit_code": 0,
+        "candidate_observations": 805,
+        "candidate_stderr_tail": [
+          "/work/courts/phase17/rt_cli_bodies_probe.sh: 1: pkcs7: not found",
+          "/work/courts/phase17/rt_cli_bodies_probe.sh: 1: ocsp: not found",
+          "/work/courts/phase17/rt_cli_bodies_probe.sh: 17: /,: not found"
+        ],
+        "court": "RT-CLI-BODIES",
+        "probe": "courts/phase17/rt_cli_bodies_probe.sh",
+        "recorded_divergences": [
+          {
+            "argv": "errstr 0xdeadbeef",
+            "authority": "error:DEADBEEF:system library::reason(1585561327)",
+            "candidate": "error:DEADBEEF:system library::Unknown error 1588444911",
+            "reason": "`ERR_error_string_n` on an unknown system error: the authority's `openssl_strerror_r` (`crypto/o_str.c`, the POSIX `strerror_r`) refuses the out-of-range errno and falls back to `reason(r & ~flags)`, while the crate's `strerror_into` (`src/runtime/err.rs`) calls the GNU `strerror_r`, which answers `Unknown error N`. Recorded here rather than diffed; see `src/apps/errstr.rs`."
+          },
+          {
+            "argv": "info -seeds",
+            "authority": "os-specific",
+            "candidate": "Undefined",
+            "reason": "`OPENSSL_info(OPENSSL_INFO_SEED_SOURCE)` (1007): the authority answers its libcrypto seed-source string; the candidate's RAND is a later stratum and the canonical `src/runtime/init.rs` `OPENSSL_info` answers NULL, so the body prints `Undefined`. Recorded here rather than diffed; see `src/apps/info.rs`."
+          },
+          {
+            "argv": "info -cpusettings",
+            "authority": "OPENSSL_ia32cap=0x7ed8320b078bffff:0x19405fdef1bf97ab:0x0000003010000110:0x0000000000000000:0x0000000000000000",
+            "candidate": "Undefined",
+            "reason": "`OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` (1008): the authority answers its captured `OPENSSL_ia32cap=...` line; the candidate's CPU dispatch is Phase 19 and `OPENSSL_info(1008)` is NULL, so the body prints `Undefined`. Recorded here rather than diffed; see `src/apps/info.rs`."
+          },
+          {
+            "argv": "info -configdir",
+            "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production/ssl",
+            "candidate": "",
+            "reason": "`OPENSSL_info(OPENSSL_INFO_CONFIG_DIR)` (1001): the authority answers its own configured prefix; the candidate's `crypto/defaults.c` `ossl_get_openssldir` answers its own build's (empty) `OPENSSLDIR`, so the body prints an empty line. Recorded here rather than diffed; see `src/apps/info.rs`."
+          },
+          {
+            "argv": "info -enginesdir",
+            "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/engines-3",
+            "candidate": "Undefined",
+            "reason": "`OPENSSL_info(OPENSSL_INFO_ENGINES_DIR)` (1002): the authority answers its configured engines directory; the candidate configured no prefix and answers NULL, so the body prints `Undefined`. Recorded here rather than diffed; see `src/apps/info.rs`."
+          },
+          {
+            "argv": "info -modulesdir",
+            "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/ossl-modules",
+            "candidate": "Undefined",
+            "reason": "`OPENSSL_info(OPENSSL_INFO_MODULES_DIR)` (1003): the authority answers its configured module directory; the candidate configured no prefix and answers NULL, so the body prints `Undefined`. Recorded here rather than diffed; see `src/apps/info.rs`."
+          },
+          {
+            "argv": "prime 2 3 4",
+            "authority": "2 (2) is prime|3 (3) is prime|4 (4) is not prime|",
+            "candidate": "02 (2) is prime|03 (3) is prime|04 (4) is not prime|",
+            "reason": "`BN_print` rendering: the authority (`crypto/bn/bn_print.c`) strips leading nibbles and writes uppercase; the candidate (`src/bn/bignum.rs:1655`) writes lowercase and pads to whole bytes. Recorded here rather than diffed; the `prime 97` case avoids both differences. See `src/apps/prime.rs`."
+          },
+          {
+            "argv": "prime -hex FF",
+            "authority": "FF (FF) is not prime|",
+            "candidate": "ff (FF) is not prime|",
+            "reason": "`BN_print` case: the authority writes uppercase, the candidate lowercase (`src/bn/bignum.rs:1655`). Recorded here rather than diffed; see `src/apps/prime.rs`."
+          },
+          {
+            "argv": "ciphers",
+            "authority": "<the default TLS cipher list, TLS_AES_256_GCM_SHA384:...:PSK-AES128-CBC-SHA>",
+            "candidate": "",
+            "reason": "`ciphers`' default-list arms build a TLS context and walk `SSL_get_ciphers`. The candidate's default-list construction raises `inner_evp_generic_fetch:unsupported` for the legacy ciphers (RC4, RC2, IDEA, SEED, the GOST family), so `SSL_new` fails: exit 1, empty stdout, and those `ERR_print_errors` lines, where the authority serves the full list. The divergence is the `EVP`-fetch/legacy-provider surface's, not the body's. Recorded here rather than diffed; see `src/apps/ciphers.rs`."
+          },
+          {
+            "argv": "ciphers -v",
+            "authority": "<the default TLS cipher list, verbose>",
+            "candidate": "",
+            "reason": "As `ciphers`: the verbose list diverges at the same default-list construction. Recorded here rather than diffed; see `src/apps/ciphers.rs`."
+          },
+          {
+            "argv": "ciphers -stdname",
+            "authority": "<the default TLS cipher list, with standard names>",
+            "candidate": "",
+            "reason": "As `ciphers`: the standard-name list diverges at the same default-list construction. Recorded here rather than diffed; see `src/apps/ciphers.rs`."
+          },
+          {
+            "argv": "ciphers -tls1_2",
+            "authority": "<the TLS 1.2 default cipher list>",
+            "candidate": "",
+            "reason": "As `ciphers`: pinning the protocol bound still builds the default list, so it diverges the same way. Recorded here rather than diffed; see `src/apps/ciphers.rs`."
+          },
+          {
+            "argv": "sess_id -in <session.pem> -text -cert",
+            "authority": "...|                CA:FALSE|",
+            "candidate": "...|                CA:TRUE|",
+            "reason": "`X509_print`'s basicConstraints rendering: the authority prints `CA:FALSE` for the fixture peer certificate and the crate prints `CA:TRUE`. That is the `X509_print` extension surface's divergence, not the body's. `sess_id -cert` and `-outform DER -cert` are byte-identical and are driven. Recorded here rather than diffed; see `src/apps/sess_id.rs`."
+          },
+          {
+            "argv": "kdf nonexistent",
+            "authority": "Invalid KDF name nonexistent|kdf: Use -help for summary.|<ptr>:error:...unsupported...(nonexistent : 0)|",
+            "candidate": "Invalid KDF name nonexistent|kdf: Use -help for summary.|",
+            "reason": "An unknown KDF name: the authority's `EVP_KDF_fetch` raises `inner_evp_generic_fetch:unsupported` and the `err:`-label `ERR_print_errors` emits that pointer-bearing line; the crate's fetch returns NULL without raising, so the candidate's queue is empty. The line begins with a per-run pointer in any case. Recorded here rather than diffed; see `src/apps/kdf.rs`."
+          },
+          {
+            "argv": "mac NOPE",
+            "authority": "Invalid MAC name NOPE|mac: Use -help for summary.|<ptr>:error:...unsupported...(NOPE : 0)|",
+            "candidate": "Invalid MAC name NOPE|mac: Use -help for summary.|",
+            "reason": "An unknown MAC name: as `kdf nonexistent`, the authority's `EVP_MAC_fetch` raises the pointer-bearing `unsupported` line and the crate's fetch does not. Recorded here rather than diffed; see `src/apps/mac.rs`."
+          },
+          {
+            "argv": "spkac -in <spkac.cnf> -spkac NOPE",
+            "authority": "Can't find SPKAC called \"NOPE\"|<ptr>:error:0700006C:configuration file routines:NCONF_get_string:no value:...group=default name=NOPE|",
+            "candidate": "Can't find SPKAC called \"NOPE\"|<ptr>:error:0700006C:configuration file routines:NCONF_get_string:no value:...group=default name=NOPE|",
+            "reason": "A missing SPKAC name: both sides print the same message and raise the same `NCONF_get_string:no value` error, but the rendered error line begins with a per-run pointer and cannot be diffed. Recorded here rather than diffed; see `src/apps/spkac.rs`."
+          },
+          {
+            "argv": "genrsa -bogus",
+            "authority": "genrsa: Unknown option or cipher: bogus|<ptr>:error:...unsupported...(bogus : 0)|",
+            "candidate": "genrsa: Unknown option: -bogus|genrsa: Use -help for summary.|",
+            "reason": "`opt_set_unknown_name('cipher')` (`apps/genrsa.c:103`) makes an otherwise-unknown option a cipher name; the authority answers `Unknown option or cipher: bogus` and then the pointer-bearing fetch error. The crate's parser has no unknown-name mode, so it answers its `Unknown option: -bogus` refusal. Recorded here rather than diffed; see `src/apps/genrsa.rs`."
+          },
+          {
+            "argv": "ecparam -name <invalid curve>",
+            "authority": "unable to generate key|<ptr>:error:0800008D:elliptic curve routines:group_new_from_name:invalid curve:...ec_lib.c:1495:",
+            "candidate": "unable to generate key",
+            "reason": "An unknown `-name`: both sides print `unable to generate key` and exit 1, but the authority's `EVP_PKEY_CTX_new_from_name`/keygen path leaves a `group_new_from_name:invalid curve` error in the queue, and the `ERR_print_errors` line begins with a per-run pointer. That tail is the `ERR` surface's. Recorded here rather than diffed; see `src/apps/ecparam.rs`."
+          },
+          {
+            "argv": "rsa -in <rsa-key.pem> -modulus -noout",
+            "authority": "Modulus=AF1F…E9B",
+            "candidate": "Modulus=af1f…e9b",
+            "reason": "`BN_print` rendering: as `prime 2 3 4`, the authority strips leading nibbles and writes uppercase, the crate pads to whole bytes and writes lowercase (`src/bn/bignum.rs`). Recorded here rather than diffed; see `src/apps/rsa.rs`. The same divergence applies to `dsa -modulus`."
+          },
+          {
+            "argv": "rsautl <operation>",
+            "authority": "<the raw RSA result, or a PKCS#1 v1.5/OAEP ciphertext>",
+            "candidate": "<not driven>",
+            "reason": "`rsautl`'s operation arm reads the input, runs `EVP_PKEY_verify_recover`/`_sign`/`_encrypt`/`_decrypt` and writes raw bytes; the PKCS#1 v1.5 and OAEP paddings draw randomness and the raw arms are binary. The refusal arms are driven instead. Recorded here rather than diffed; see `src/apps/rsautl.rs`."
+          },
+          {
+            "argv": "rand 1K",
+            "authority": "<1024 fresh DRBG bytes>",
+            "candidate": "<1024 fresh DRBG bytes>",
+            "reason": "The random stream itself: both sides write a fresh DRBG output, so the bytes are independent and cannot be diffed. The zero-length and suffix-refusal arms (`rand`, `rand 0`, `rand abc`, `rand -hex abc`) are driven. Recorded here rather than diffed; see `src/apps/rand.rs`."
+          },
+          {
+            "argv": "rand -hex 8",
+            "authority": "<16 hex chars from fresh DRBG bytes>",
+            "candidate": "<16 hex chars from fresh DRBG bytes>",
+            "reason": "As `rand 1K`: the `-hex` stream is a fresh DRBG output. Recorded here rather than diffed; see `src/apps/rand.rs`."
+          },
+          {
+            "argv": "gendsa <missing-file>",
+            "authority": "Could not open file or uri for loading key parameters of DSA parameters from ...|<ptr>:error:...",
+            "candidate": "openssl-rs: command 'gendsa' is a Phase 16 boundary: its apps/gendsa.c body is not landed.",
+            "reason": "Key generation is not landed (the generated key is random besides); the parameter-load failure carries the pointer-bearing `ERR_print_errors` tail. The missing-argument refusal (`gendsa`) is driven. Recorded here rather than diffed; see `src/apps/gendsa.rs`."
+          },
+          {
+            "argv": "genpkey -algorithm NOPE",
+            "authority": "Error initializing NOPE context|<ptr>:error:...unsupported...(NOPE : 0)",
+            "candidate": "<not landed>",
+            "reason": "Key generation is not landed; the unknown-algorithm arm carries the pointer-bearing `ERR_print_errors` tail. The no-algorithm refusal (`genpkey`) is driven. Recorded here rather than diffed; see `src/apps/genpkey.rs`."
+          },
+          {
+            "argv": "passwd <password> (no -salt)",
+            "authority": "$1$<random salt>$<hash>",
+            "candidate": "$1$<random salt>$<hash>",
+            "reason": "With no `-salt` the salt is drawn through `RAND_bytes`, so the hash is fresh; the fixed-salt arms are driven. Recorded here rather than diffed; see `src/apps/passwd.rs`."
+          },
+          {
+            "argv": "engine -pre foo",
+            "authority": "(rdrand) Intel RDRAND engine|[Failure]: foo|<ptr>:error:13000089:engine routines:ENGINE_ctrl_cmd_string:invalid cmd name:...",
+            "candidate": "(rdrand) Intel RDRAND engine|[Failure]: foo|<ptr>:error:...",
+            "reason": "The failing `-pre` control command prints a pointer-bearing `ERR_print_errors` tail on both sides. This arm is recorded with the engine listing: the candidate's engine init fails first (see the next entry), so the whole `engine` surface is recorded rather than diffed. See `src/apps/engine.rs`."
+          },
+          {
+            "argv": "engine / engine -c / engine -t / engine -post foo",
+            "authority": "(rdrand) Intel RDRAND engine| [RAND]|...|     [ available ]|(dynamic) ...|     [ unavailable ]|",
+            "candidate": "",
+            "reason": "The candidate's `ENGINE_load_builtin_engines` calls `OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_ALL_BUILTIN)`, which the crate's `crypto/init.c` arm still refuses (the engine bits `eng_openssl.c`/`eng_rdrand.c` are unlanded, as `docs/PHASE-16-CLI-SEAL.md` records), so `engine` exits with `OPENSSL_init_crypto:init fail` on stderr and an empty listing where the authority prints the two built-in engines. The body is landed and its parse/listing/`-c`/`-t`/`-pre`/`-post` arms are transcribed; only this init-fail surface is the engine stratum's. Recorded here rather than diffed; see `src/apps/engine.rs`."
+          },
+          {
+            "argv": "storeutl <missing-file>",
+            "authority": "Couldn't open file or uri ...|<ptr>:error:80000002:system library:file_open:No such file or directory:...",
+            "candidate": "Couldn't open file or uri ...|<ptr>:error:...",
+            "reason": "A failed open leaves a pointer-bearing `ERR_print_errors` tail; the `-noout -keys`/`-noout -certs` status arms over the fixed fixtures are driven. Recorded here rather than diffed; see `src/apps/storeutl.rs`."
+          },
+          {
+            "argv": "dhparam <numbits>",
+            "authority": "Generating DH parameters, ...|<the generated parameters>",
+            "candidate": "<not landed>",
+            "reason": "Parameter generation is not landed and the generated safe prime is random; the `-in <dhparams.pem>` text/`-noout`/`-check` arms are driven. Recorded here rather than diffed; see `src/apps/dhparam.rs`."
+          },
+          {
+            "argv": "dgst -bogus <file>",
+            "authority": "dgst: Unknown option or message digest: bogus|dgst: Use -help for summary.|<ptr>:error:0308010C:...inner_evp_generic_fetch:unsupported...(bogus : 0)",
+            "candidate": "dgst: Unknown option or message digest: bogus|dgst: Use -help for summary.|",
+            "reason": "The `-bogus` sentinel arm: both sides print the same refusal, but the authority's `opt_md_silent` (`apps/lib/opt.c:470-489`) leaves `inner_evp_generic_fetch:unsupported` in the queue and `dgst_main`'s `end:` label calls `ERR_print_errors`, so its stderr carries a pointer-bearing tail the candidate's empty queue does not. The `-sha256` fetch resolves, so every digest arm is diffed. Recorded here rather than diffed; see `src/apps/dgst.rs`."
+          },
+          {
+            "argv": "dgst -list",
+            "authority": "Supported digests:|<the fetched digest names>|",
+            "candidate": "<not landed>",
+            "reason": "`show_digests` (`apps/dgst.c:521-549`) walks `OBJ_NAME_do_all_sorted` and fetches each name through `EVP_MD_fetch`, the fetch/legacy-provider surface `ciphers` records. The digest/HMAC/sign arms are driven. Recorded here rather than diffed; see `src/apps/dgst.rs`."
+          },
+          {
+            "argv": "dgst -mac <name>",
+            "authority": "<the MAC value over the named MAC>",
+            "candidate": "<not landed>",
+            "reason": "`-mac` builds a MAC through `init_gen_str`/`app_keygen` (`apps/dgst.c:327-349`), whose EVP-`MAC` generation path is other strata's. The `-hmac` arm, which uses the raw HMAC key, is driven. Recorded here rather than diffed; see `src/apps/dgst.rs`."
+          },
+          {
+            "argv": "pkcs7 -print <p7>",
+            "authority": "PKCS7:|  type: pkcs7-signedData|...|          issuer: C=AU, ST=QLD, CN=SSLeay rsa test cert|...|          key: X509_PUBKEY:",
+            "candidate": "PKCS7:|  type: pkcs7-signedData|...|          issuer:           validity:|...|          key: X509_PUBKEY_INTERNAL:",
+            "reason": "`PKCS7_print_ctx` walks `ASN1_item_print` into the certificate's own printer, so the issuer/subject name rendering and the public-key type line are the `X509_print`/`X509_PUBKEY` surface's (the same divergence `sess_id -text -cert` records). The `-print_certs` and re-encode arms avoid it and are driven. Recorded here rather than diffed; see `src/apps/pkcs7.rs`."
+          },
+          {
+            "argv": "ocsp -bogus",
+            "authority": "ocsp: Unknown option or message digest: bogus|ocsp: Use -help for summary.|<ptr>:error:0308010C:...inner_evp_generic_fetch:unsupported...(bogus : 0)",
+            "candidate": "ocsp: Unknown option or message digest: bogus|ocsp: Use -help for summary.|",
+            "reason": "As `dgst -bogus`: the authority's `opt_md` leaves the pointer-bearing `unsupported` fetch error and `ocsp_main`'s `end:` label prints it. The no-work refusal and the fixed-CA/leaf request arms are driven. Recorded here rather than diffed; see `src/apps/ocsp.rs`."
+          },
+          {
+            "argv": "ocsp <responder/verification arms>",
+            "authority": "<a response, printing or verifying status>",
+            "candidate": "<not landed>",
+            "reason": "`-index`/`-CA` (`load_index`), `-port`/`-url`/`-host` (a live server or `OSSL_HTTP`), `-respin`/`-rsigner`/`-rkey`/`-CAfile` verification and `-signer`/`-signkey` request signing need a responder or a network, so they cannot be diffed deterministically. The fixed `-issuer`/`-cert` request arms are driven. Recorded here rather than diffed; see `src/apps/ocsp.rs`."
+          },
+          {
+            "argv": "ts -query (no -no_nonce) / ts -reply / ts -verify",
+            "authority": "<a query with a random nonce, or a TSA response/verification>",
+            "candidate": "<not landed>",
+            "reason": "A query without `-no_nonce` draws a random nonce through `create_nonce`; `-reply`/`-verify` need the TSA config section, `EVP_PKEY` signing and certificate verification. The `-query -no_nonce -data <file>` arm (DER and `-text`) is driven. Recorded here rather than diffed; see `src/apps/ts.rs`."
+          },
+          {
+            "argv": "speed / speed -evp <alg> / speed -hmac <md> / speed -bogus",
+            "authority": "<a wall-clock benchmark>|<ptr>:error:...",
+            "candidate": "speed: Use -help for summary.| or <not landed>",
+            "reason": "The benchmark is a function of the machine and is never driven; `-evp NOPE`/`-hmac NOPE` also carry the pointer-bearing fetch tail (`opt_md_silent`) that the candidate's empty queue does not. `speed -bogus`, decided before any fetch, is driven. Recorded here rather than diffed; see `src/apps/speed.rs`."
+          },
+          {
+            "argv": "fipsinstall -module <f> / -config <f>",
+            "authority": "<the module MAC and INSTALL VERIFY PASSED>",
+            "candidate": "<not landed>",
+            "reason": "`do_mac` over the module BIO, `EVP_MAC_fetch`, the self-test provider load and the config writer are the FIPS module's and the provider surface's. The `fipsinstall`/`-verify`/`-bogus` refusals are driven. Recorded here rather than diffed; see `src/apps/fipsinstall.rs`."
+          },
+          {
+            "argv": "srp -list / -add <user> (index file)",
+            "authority": "<the listed users, or a written verifier>",
+            "candidate": "<not landed>",
+            "reason": "The action arms load a verifier-file index through `load_index`/`index_index` and the `CA_DB` type (`apps/lib/apps.c`), which this stratum does not own. The `srp`/`-add`/`-list -add`/`-srpvfile -config` refusals are driven. Recorded here rather than diffed; see `src/apps/srp.rs`."
+          },
+          {
+            "argv": "x509 <generation/checking arms>",
+            "authority": "<a generated or re-signed certificate, or a check result>",
+            "candidate": "<not landed>",
+            "reason": "`x509 -new`/`-x509toreq`/`-req`/`-CA`/`-set_serial`/`-days`/`-not_before`/`-not_after`/`-force_pubkey`/`-key`/`-extfile` and the trust/alias writers build or mutate a certificate; `-checkend` reads the wall clock and `-purpose`/`-modulus`/`-ocspid`/`-ext`/`-email`/`-ocsp_uri`/`-alias`/`-next_serial` reach the `X509V3`/purpose/`BN_print` surfaces. The print/re-encode arms over the fixed certificate are driven. Recorded here rather than diffed; see `src/apps/x509.rs`."
+          },
+          {
+            "argv": "req <generation arms>",
+            "authority": "<a generated request/certificate, or a key modulus>",
+            "candidate": "<not landed>",
+            "reason": "`req -new`/`-newkey`/`-key`/`-x509`/`-CA`/`-subj`/`-addext`/`-extensions`/`-precert`/`-config` build a request or certificate and `-modulus` reaches `BN_print`. The read-back `-text`/`-verify`/`-subject`/re-encode arms over the fixed CSR are driven. Recorded here rather than diffed; see `src/apps/req.rs`."
+          },
+          {
+            "argv": "smime -encrypt / cms -encrypt / -EncryptedData_encrypt",
+            "authority": "<a fresh S/MIME or CMS envelope>",
+            "candidate": "<the same operation over a fresh random key>",
+            "reason": "The content-encryption key is drawn at random, so the envelope bytes are independent on the two sides; the fixed `smime-enc.pem`/`cms-enc.pem` fixtures are decrypted instead. Recorded here rather than diffed; see `src/apps/smime.rs` and `src/apps/cms.rs`."
+          },
+          {
+            "argv": "smime/-cms <S/MIME output format>",
+            "authority": "<a multipart S/MIME message with a fresh boundary>",
+            "candidate": "<a multipart S/MIME message with a fresh boundary>",
+            "reason": "`SMIME_write_PKCS7`/`SMIME_write_CMS` draw a random MIME boundary, so the `SMIME` output format is not byte-deterministic; the `PEM` and `DER` output formats are driven. Recorded here rather than diffed; see `src/apps/smime.rs` and `src/apps/cms.rs`."
+          },
+          {
+            "argv": "pkcs12 -info / <ordinary -export>",
+            "authority": "MAC: sha256, Iteration 2048|…|Shrouded Keybag: … / <a salted PKCS#12>",
+            "candidate": "<not landed> / <a salted PKCS#12>",
+            "reason": "`-info` needs `alg_print` (the `PBES2`/`PKCS12KDF` algorithm printer) and the `PKCS12_SAFEBAG` walk; the ordinary `-export` draws a random salt/MAC. The `-export -nomac -keypbe NONE -certpbe NONE` arm over the fixed certificate/key is deterministic and is driven. Recorded here rather than diffed; see `src/apps/pkcs12.rs`."
+          },
+          {
+            "argv": "ca <config/index/issuance arms>",
+            "authority": "<the CA database output, or a pointer-bearing config error>",
+            "candidate": "<not landed>",
+            "reason": "`ca` past the option parser reads the `ca` config section and the index database and issues/revokes certificates; its failure path carries a pointer-bearing `NCONF_get_string` `ERR_print_errors` tail. The `-bogus` and missing-value parser refusals are driven. Recorded here rather than diffed; see `src/apps/ca.rs`."
+          },
+          {
+            "argv": "s_client / s_server / s_time <network arms>",
+            "authority": "<a TLS handshake, session or a wall-clock benchmark>",
+            "candidate": "<not landed>",
+            "reason": "The transport, handshake, session cache and application-data loop (and `s_time`'s wall-clock benchmark) need a live peer and are a function of the network and machine. The parser's unknown-option and missing-value refusals (`-bogus`, `-connect`/`-accept`) are driven. Recorded here rather than diffed; see `src/apps/s_client.rs`, `src/apps/s_server.rs` and `src/apps/s_time.rs`."
+          },
+          {
+            "argv": "smime/-cms -sign (default attributes) and -sign -noattr <invalid>",
+            "authority": "<a signature carrying a signing-time attribute>",
+            "candidate": "<a signature carrying its own (later) signing-time attribute>",
+            "reason": "`PKCS7_sign`/`CMS_sign` include the `signingTime` signed attribute from the wall clock unless `-noattr`/`-no_signing_time` is given, so the default `-sign` bytes differ across a second boundary. The driven sign arms pass `-noattr`, which removes the only wall-clock input. Recorded here rather than diffed; see `src/apps/smime.rs` and `src/apps/cms.rs`."
+          }
+        ],
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase17/probes/rt_cli_bodies_probe.authority",
+          "candidate": "artifacts/phase17/probes/rt_cli_bodies_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 69,
+        "candidate_exit_code": 0,
+        "candidate_observations": 69,
+        "candidate_stderr_tail": [],
+        "comparable_keys": [
+          "ctx.client.nonnull",
+          "ctx.server.nonnull",
+          "server.cert.load",
+          "server.key.load",
+          "server.key.check",
+          "server.cert.err.count",
+          "client.nonnull",
+          "server.nonnull",
+          "client.ciphers.count",
+          "flight.0.client.ret",
+          "flight.0.server.ret",
+          "ch.present",
+          "ch.rectype",
+          "ch.recversion",
+          "ch.hs_type",
+          "ch.legacy_version",
+          "ch.random_len",
+          "ch.session_id_len",
+          "ch.cipher_len",
+          "ch.cipher_count",
+          "ch.comp_len",
+          "ch.ext_count.present",
+          "ch.ext.35.len",
+          "ch.ext.35.data",
+          "ch.ext.22.len",
+          "ch.ext.22.data",
+          "ch.ext.23.len",
+          "ch.ext.23.data",
+          "ch.ext.45.len",
+          "ch.ext.45.data",
+          "flight.1.client.ret",
+          "flight.1.server.ret",
+          "flight.2.client.ret",
+          "flight.2.server.ret",
+          "flights.used",
+          "client.state",
+          "client.want",
+          "client.in_init",
+          "client.finished",
+          "server.state",
+          "server.want",
+          "server.in_init",
+          "server.finished",
+          "app.skipped",
+          "app.write.client",
+          "app.client.bytes",
+          "app.read.server",
+          "app.server.match",
+          "app.write.server",
+          "app.server.bytes",
+          "app.read.client",
+          "app.client.match",
+          "client.err.count",
+          "server.err.count",
+          "probe.done"
+        ],
+        "comparable_observations": 55,
+        "court": "RT-TLS13-INTEROP",
+        "crashed": false,
+        "flight_finished": true,
+        "probe": "courts/phase17/rt_tls13_interop_probe.c",
+        "recorded_count": 12,
+        "recorded_divergences": [
+          {
+            "authority": "1522",
+            "candidate": "306",
+            "class": "value",
+            "observation": "flight.0.client.out",
+            "reason": "the extension set is partial (renegotiation_info/ec_point_formats/signature_algorithms and the hybrid key share are unlanded), so the ClientHello is smaller than the authority's"
+          },
+          {
+            "authority": "1517",
+            "candidate": "301",
+            "class": "value",
+            "observation": "ch.reclen",
+            "reason": "the extension set is partial (renegotiation_info/ec_point_formats/signature_algorithms and the hybrid key share are unlanded), so the ClientHello is smaller than the authority's"
+          },
+          {
+            "authority": "1522",
+            "candidate": "306",
+            "class": "value",
+            "observation": "ch.recbytes",
+            "reason": "the extension set is partial (renegotiation_info/ec_point_formats/signature_algorithms and the hybrid key share are unlanded), so the ClientHello is smaller than the authority's"
+          },
+          {
+            "authority": "1513",
+            "candidate": "297",
+            "class": "value",
+            "observation": "ch.hs_len",
+            "reason": "the extension set is partial (renegotiation_info/ec_point_formats/signature_algorithms and the hybrid key share are unlanded), so the ClientHello is smaller than the authority's"
+          },
+          {
+            "authority": "1380",
+            "candidate": "164",
+            "class": "value",
+            "observation": "ch.ext_total_len",
+            "reason": "the extension set is partial (renegotiation_info/ec_point_formats/signature_algorithms and the hybrid key share are unlanded), so the ClientHello is smaller than the authority's"
+          },
+          {
+            "authority": "65281,11,10,35,22,23,13,43,45,51",
+            "candidate": "65281,11,10,13,35,22,23,43,45,51",
+            "class": "value",
+            "observation": "ch.ext.types",
+            "reason": "the extension set is partial (renegotiation_info/ec_point_formats/signature_algorithms and the hybrid key share are unlanded), so the ClientHello is smaller than the authority's"
+          },
+          {
+            "authority": "5",
+            "candidate": "11",
+            "class": "value",
+            "observation": "ch.ext.43.len",
+            "reason": "supported_versions body: the candidate's reduced security callback admits SSL3 through TLS1.2, so the offered list is longer than the authority's"
+          },
+          {
+            "authority": "04,03,04,03,03",
+            "candidate": "0a,03,04,03,03,03,02,03,01,03,00",
+            "class": "value",
+            "observation": "ch.ext.43.data",
+            "reason": "supported_versions body: the candidate's reduced security callback admits SSL3 through TLS1.2, so the offered list is longer than the authority's"
+          },
+          {
+            "authority": "1258",
+            "candidate": "38",
+            "class": "value",
+            "observation": "ch.ext.51.len",
+            "reason": "key_share: the reduced default group list drops the hybrid `X25519MLKEM768`, so the candidate sends the `X25519` share (36 bytes) where the authority sends the hybrid one (1258); the hybrid share is the key-schedule boundary"
+          },
+          {
+            "authority": "2410",
+            "candidate": "1316",
+            "class": "value",
+            "observation": "flight.0.server.out",
+            "reason": "the flight now exchanges ClientHello and ServerHello (17.2b): the server reads the ClientHello, `tls_process_client_hello` chooses TLS1.3/cipher/group and `tls_construct_server_hello` writes a ServerHello (record type 22, message type 2, supported_versions + X25519 key_share); it stops before EncryptedExtensions because the key schedule (`tls13_enc.c`) and the certificate flight are unlanded, and the client's read path cannot consume the ServerHello"
+          },
+          {
+            "authority": "80",
+            "candidate": "74",
+            "class": "value",
+            "observation": "flight.1.client.out",
+            "reason": "the flight now exchanges ClientHello and ServerHello (17.2b): the server reads the ClientHello, `tls_process_client_hello` chooses TLS1.3/cipher/group and `tls_construct_server_hello` writes a ServerHello (record type 22, message type 2, supported_versions + X25519 key_share); it stops before EncryptedExtensions because the key schedule (`tls13_enc.c`) and the certificate flight are unlanded, and the client's read path cannot consume the ServerHello"
+          },
+          {
+            "authority": "510",
+            "candidate": "0",
+            "class": "value",
+            "observation": "flight.1.server.out",
+            "reason": "the flight now exchanges ClientHello and ServerHello (17.2b): the server reads the ClientHello, `tls_process_client_hello` chooses TLS1.3/cipher/group and `tls_construct_server_hello` writes a ServerHello (record type 22, message type 2, supported_versions + X25519 key_share); it stops before EncryptedExtensions because the key schedule (`tls13_enc.c`) and the certificate flight are unlanded, and the client's read path cannot consume the ServerHello"
+          }
+        ],
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase17/probes/rt_tls13_interop_probe.authority",
+          "candidate": "artifacts/phase17/probes/rt_tls13_interop_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 154,
+        "candidate_observations": 154,
+        "candidate_stderr_tail": [],
+        "cells": [
+          {
+            "cell": "auth-auth",
+            "client_alert": null,
+            "client_app_match": "1",
+            "client_err": null,
+            "client_handshake": "1",
+            "client_server": "auth -> auth",
+            "complete": true,
+            "server_alert": null,
+            "server_app_match": "1",
+            "server_err": null,
+            "server_handshake": "1",
+            "status": "complete"
+          },
+          {
+            "cell": "cand-auth",
+            "client_alert": null,
+            "client_app_match": "1",
+            "client_err": null,
+            "client_handshake": "1",
+            "client_server": "cand -> auth",
+            "complete": true,
+            "server_alert": null,
+            "server_app_match": "1",
+            "server_err": null,
+            "server_handshake": "1",
+            "status": "complete"
+          },
+          {
+            "cell": "auth-cand",
+            "client_alert": null,
+            "client_app_match": "1",
+            "client_err": null,
+            "client_handshake": "1",
+            "client_server": "auth -> cand",
+            "complete": true,
+            "server_alert": null,
+            "server_app_match": "1",
+            "server_err": null,
+            "server_handshake": "1",
+            "status": "complete"
+          },
+          {
+            "cell": "cand-cand",
+            "client_alert": null,
+            "client_app_match": "1",
+            "client_err": null,
+            "client_handshake": "1",
+            "client_server": "cand -> cand",
+            "complete": true,
+            "server_alert": null,
+            "server_app_match": "1",
+            "server_err": null,
+            "server_handshake": "1",
+            "status": "complete"
+          }
+        ],
+        "comparable_observations": 154,
+        "court": "RT-TLS13-INTEROP-MATRIX",
+        "crashed": false,
+        "cross_cells_pass": true,
+        "driver": "courts/phase17/rt_tls13_matrix_driver.c",
+        "observations": 154,
+        "probe": "courts/phase17/rt_tls13_matrix_peer.c",
+        "staged_binaries": {
+          "authority": "artifacts/phase17/probes/rt_tls13_matrix_peer.authority",
+          "candidate": "artifacts/phase17/probes/rt_tls13_matrix_peer.candidate",
+          "driver": "artifacts/phase17/probes/rt_tls13_matrix_driver"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_conf_shared": true,
+        "authority_contract_problems": [],
+        "authority_error_shared": true,
+        "authority_exit_code": 0,
+        "authority_observations": 18,
+        "candidate_conf_shared": true,
+        "candidate_error_shared": true,
+        "candidate_exit_code": 0,
+        "candidate_observations": 18,
+        "candidate_stderr_tail": [],
+        "comparable_keys": [
+          "err.crypto.peek",
+          "err.crypto.lib",
+          "err.crypto.reason",
+          "ctx.nonnull",
+          "err.ssl.null_ret",
+          "conf.load.ret",
+          "conf.load.peek",
+          "probe.done"
+        ],
+        "comparable_observations": 8,
+        "compatibility_residuals": [],
+        "compatibility_verdict": "PASS",
+        "court": "RT-CROSS-DSO-STATE",
+        "crashed": false,
+        "measurement_verdict": "pass",
+        "probe": "courts/phase17/rt_cross_dso_state_probe.c",
+        "recorded_count": 0,
+        "recorded_divergences": [],
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase17/probes/rt_cross_dso_state_probe.authority",
+          "candidate": "artifacts/phase17/probes/rt_cross_dso_state_probe.candidate"
+        },
+        "state_keys": [
+          "err.ssl.peek",
+          "err.ssl.lib",
+          "err.ssl.reason",
+          "err.ssl.get",
+          "err.ssl.after_get",
+          "conf.ctx_config.ret",
+          "conf.ctx_config.peek",
+          "conf.ctx_config.lib",
+          "conf.ctx_config.reason",
+          "conf.ctx.min_proto"
+        ],
+        "state_observations": 10,
+        "verdict": "pass"
+      },
+      {
+        "authority_contract_problems": [],
+        "authority_exit_code": 0,
+        "authority_handshake_finished": true,
+        "authority_observations": 59,
+        "candidate_exit_code": 0,
+        "candidate_handshake_finished": true,
+        "candidate_observations": 59,
+        "candidate_stderr_tail": [],
+        "comparable_keys": [
+          "evp.ctx.nonnull",
+          "evp.digest.init",
+          "evp.digest.update",
+          "evp.digest.final",
+          "evp.digest.len",
+          "evp.digest.hex",
+          "x509.bio.nonnull",
+          "x509.load.nonnull",
+          "x509.version",
+          "x509.pubkey.nonnull",
+          "x509.subject.entries",
+          "x509.digest.ret",
+          "x509.digest.len",
+          "x509.digest.hex",
+          "err.user.peek",
+          "err.user.lib",
+          "err.user.reason",
+          "err.user.text",
+          "err.user.get",
+          "err.user.after_get",
+          "tls.ctx.client.nonnull",
+          "tls.ctx.server.nonnull",
+          "tls.server.cert.load",
+          "tls.server.key.load",
+          "tls.server.key.check",
+          "tls.client.nonnull",
+          "tls.server.nonnull",
+          "tls.ciphers.count",
+          "tls.flight.0.client.ret",
+          "tls.flight.0.server.ret",
+          "tls.flight.1.client.ret",
+          "tls.flight.1.server.ret",
+          "tls.flight.2.client.ret",
+          "tls.flight.2.server.ret",
+          "tls.flights.used",
+          "tls.client.state",
+          "tls.client.want",
+          "tls.client.in_init",
+          "tls.client.finished",
+          "tls.server.state",
+          "tls.server.want",
+          "tls.server.in_init",
+          "tls.server.finished",
+          "app.skipped",
+          "app.write.client",
+          "app.client.bytes",
+          "app.read.server",
+          "app.server.match",
+          "app.write.server",
+          "app.server.bytes",
+          "app.read.client",
+          "app.client.match",
+          "probe.done"
+        ],
+        "comparable_observations": 53,
+        "court": "RT-DOWNSTREAM-CONSUMER",
+        "crashed": false,
+        "divergence_keys": [
+          "tls.flight.0.client.out",
+          "tls.flight.0.server.out",
+          "tls.flight.1.client.out",
+          "tls.flight.1.server.out",
+          "tls.flight.2.client.out",
+          "tls.flight.2.server.out"
+        ],
+        "link_prefix": "artifacts/phase2/install",
+        "probe": "courts/phase17/rt_downstream_consumer_probe.c",
+        "recorded_count": 4,
+        "recorded_divergences": [
+          {
+            "authority": "1522",
+            "candidate": "306",
+            "class": "value",
+            "observation": "tls.flight.0.client.out",
+            "reason": "the candidate's reduced TLS 1.3 engine builds a smaller ClientHello than the authority's full stack (fewer optional extensions), so the client's on-the-wire byte counts differ even though the handshake completes and the application data matches (docs/PHASE-17-SUBPHASES.md section 3.4)"
+          },
+          {
+            "authority": "2410",
+            "candidate": "1316",
+            "class": "value",
+            "observation": "tls.flight.0.server.out",
+            "reason": "the candidate's reduced TLS 1.3 engine emits a smaller server flight than the authority's full stack -- it carries the handshake to `SSL_is_init_finished` without the authority's extra records (the post-handshake `NewSessionTicket` flight is one, `tls.flight.1.server.out` being 0 where the authority writes it) -- so the server's on-the-wire byte counts differ even though the terminal state and the application data agree (docs/PHASE-17-SUBPHASES.md section 3.4)"
+          },
+          {
+            "authority": "80",
+            "candidate": "74",
+            "class": "value",
+            "observation": "tls.flight.1.client.out",
+            "reason": "the candidate's reduced TLS 1.3 engine builds a smaller ClientHello than the authority's full stack (fewer optional extensions), so the client's on-the-wire byte counts differ even though the handshake completes and the application data matches (docs/PHASE-17-SUBPHASES.md section 3.4)"
+          },
+          {
+            "authority": "510",
+            "candidate": "0",
+            "class": "value",
+            "observation": "tls.flight.1.server.out",
+            "reason": "the candidate's reduced TLS 1.3 engine emits a smaller server flight than the authority's full stack -- it carries the handshake to `SSL_is_init_finished` without the authority's extra records (the post-handshake `NewSessionTicket` flight is one, `tls.flight.1.server.out` being 0 where the authority writes it) -- so the server's on-the-wire byte counts differ even though the terminal state and the application data agree (docs/PHASE-17-SUBPHASES.md section 3.4)"
+          }
+        ],
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase17/probes/rt_downstream_consumer_probe.authority",
+          "candidate": "artifacts/phase17/probes/rt_downstream_consumer_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_observations": 6,
+        "candidate": "0.0.21",
+        "candidate_observations": 6,
+        "concurrency": {
+          "curl": {
+            "ok": 16,
+            "total": 16
+          },
+          "git": {
+            "ok": 16,
+            "total": 16
+          },
+          "haproxy": {
+            "ok": 16,
+            "total": 16
+          },
+          "nginx": {
+            "ok": 16,
+            "total": 16
+          },
+          "openssh": {
+            "ok": 16,
+            "total": 16
+          },
+          "python": {
+            "ok": 16,
+            "total": 16
+          }
+        },
+        "court": "RT-DOWNSTREAM-CORPUS",
+        "frf_declarable": false,
+        "frf_exclusion": "corpus court: consumes the recorded downstream records, stages no probe pair and diffs no authority transcript (D13)",
+        "functional": {
+          "curl": true,
+          "git": true,
+          "haproxy": true,
+          "nginx": true,
+          "openssh": true,
+          "python": true
+        },
+        "probe": "forensics/atlas/downstream-corpus.json",
+        "problems": [],
+        "programs": [
+          "curl",
+          "git",
+          "haproxy",
+          "nginx",
+          "openssh",
+          "python"
+        ],
+        "recorded_divergences": [
+          "TLS 1.3 session resumption is unavailable: the candidate does not emit the post-handshake NewSessionTicket flight, so `s_client -sess_out` saves nothing; TLS 1.2 resumption and tickets work (see the CPython test_ssl record)",
+          "`regress/unittests/utf8` aborts on both the candidate and the authority: the court image ships only C/C.utf8/POSIX locales and the test setlocale()s en_US.UTF-8",
+          "t5540-http-push-webdav is skipped: Git is built without expat (the court image ships no libexpat headers); it is a plain-HTTP path with no OpenSSL use"
+        ],
+        "residuals": [],
+        "stage": "corpus",
+        "verdict": "pass"
+      }
+    ],
+    "pending_courts": {},
+    "summary": {
+      "fail": 0,
+      "pass": 6,
+      "pending": 0,
+      "total": 6
+    }
+  },
+  "generator": "forensics/tools/phase17_courts.py",
+  "inputs": [
+    {
+      "name": "phase-17-plan",
+      "path": "docs/PHASE-17-SUBPHASES.md",
+      "sha256": "39993c520778e80fa01a4db3ca384924785003d5ddabc3537b5eb08f06554eaf"
+    },
+    {
+      "name": "prerequisites",
+      "path": "forensics/prerequisites.json",
+      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase17/rt_cli_bodies_probe.sh",
+      "sha256": "32020af922723b0a82c21e36ed25cb0962bb23ecea0036c50dd09c6600efdf83"
+    },
+    {
+      "name": "interop-probe",
+      "path": "courts/phase17/rt_tls13_interop_probe.c",
+      "sha256": "3ad05305d847b00e57baca03ee1f4b01fd73c69729815a76a0dfa98004ea1ec8"
+    },
+    {
+      "name": "interop-cert",
+      "path": "courts/phase17/fixtures/signer.pem",
+      "sha256": "c07bb2be720860e61d8498ff2978195bff963a308adb3bfade5effe087c1bab2"
+    },
+    {
+      "name": "interop-key",
+      "path": "courts/phase17/fixtures/rsa-key.pem",
+      "sha256": "160668f021d13c0be038675dccdbb0e9666d9d2babd825b6c81b6375831efa5a"
+    },
+    {
+      "name": "matrix-peer",
+      "path": "courts/phase17/rt_tls13_matrix_peer.c",
+      "sha256": "f565f4b16862476879cb913a57e6123ba2058c2bb990bad146c4865c6ccc9000"
+    },
+    {
+      "name": "matrix-driver",
+      "path": "courts/phase17/rt_tls13_matrix_driver.c",
+      "sha256": "8a4d64fb3bcb890ba276b5c01770ebddcfa76075ed8a854fca25b6c2ef8e5d12"
+    },
+    {
+      "name": "cross-dso-probe",
+      "path": "courts/phase17/rt_cross_dso_state_probe.c",
+      "sha256": "d7dd3431f6babe12c7d2f5806c1789a85c278989e6580f66b502f384a532efd1"
+    },
+    {
+      "name": "cross-dso-conf",
+      "path": "courts/phase17/fixtures/cross_dso.cnf",
+      "sha256": "19c88597c8e8761abd1c70e44b98bb16b87293c37c069c95f0206bfd8ce03788"
+    },
+    {
+      "name": "downstream-probe",
+      "path": "courts/phase17/rt_downstream_consumer_probe.c",
+      "sha256": "cd50b67cf30db1e77649714a71263c8852ee0a901624d43d5a3b121fd64ff00d"
+    },
+    {
+      "name": "downstream-leaf",
+      "path": "courts/phase17/fixtures/leaf.pem",
+      "sha256": "919c5179d7ae2465263904600082681099076f2f59eafecdb5445b9ed50431d1"
+    },
+    {
+      "name": "downstream-corpus",
+      "path": "forensics/atlas/downstream-corpus.json",
+      "sha256": "5f168f0be8b56187487bca114ebfdaee3558f80f9eba83a6597570ac4c4dabfa"
+    },
+    {
+      "name": "downstream-readme",
+      "path": "courts/phase17/downstream/README.md",
+      "sha256": "bde06d47fb89a5b0e6850501f3f9e18da1cfc68ee04311fadb7ccd2bc2b5fded"
+    },
+    {
+      "name": "downstream-curl-record",
+      "path": "courts/phase17/downstream/curl/result.json",
+      "sha256": "c4860b2f47bd8bcea7c43809a30aa92b0cededeeefc2399377236b34a20e993e"
+    },
+    {
+      "name": "downstream-git-record",
+      "path": "courts/phase17/downstream/git/result.json",
+      "sha256": "9b75e54a43e3d4fb8c8bc8975e0419356355bb9e0e2fa0f0e82e730974c2a37f"
+    },
+    {
+      "name": "downstream-haproxy-record",
+      "path": "courts/phase17/downstream/haproxy/result.json",
+      "sha256": "ac3834e22021b733918c29e37ea7f48dceec1cd8d75c5135ddd7c3a6a460ce0f"
+    },
+    {
+      "name": "downstream-nginx-record",
+      "path": "courts/phase17/downstream/nginx/result.json",
+      "sha256": "d3f69698e1365f0ad321ac7f3235bd941b7aff9dd987e9698109b03bf4fef8aa"
+    },
+    {
+      "name": "downstream-openssh-record",
+      "path": "courts/phase17/downstream/openssh/result.json",
+      "sha256": "a30179c6b645a90d8ea6b0f88540a4a330fc720f799f0003c7b9b16dcc97d848"
+    },
+    {
+      "name": "downstream-python-record",
+      "path": "courts/phase17/downstream/python/result.json",
+      "sha256": "b0e056e360f07a0627f8040ca7401696c9c0c29ac12c365c01824f78a488a20d"
+    }
+  ],
+  "kind": "phase17-courts",
+  "schema": "openssl-rs/atlas/phase17-courts/v1"
+}

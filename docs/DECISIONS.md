@@ -35402,3 +35402,55 @@ queue, so the divergence is a receipt rather than an architectural intuition.
 Verified (container): `plan_reconciliation.py` reads 151 unit records with 545 plan-named units
 reached and 0 not; `prerequisite_gate.py` passes; `phase_state.py --self-test` passes. The 52 records
 name only `apps/<name>.c` units and a single shared evidence citation.
+
+## D531 -- the Phase-17 seal re-derives the prerequisite atlas, and the sealed-stratum census rises 404 -> 468
+
+The Phase-17 gate run re-derives `forensics/atlas/transcription-edges.json` for the first time since
+the stride's downstream modules landed, and that atlas had drifted. It covered 596 authority units
+against the 599 a clean re-derivation produces; the three the committed copy had not carried are
+`ssl/statem/extensions_clnt.c` and `ssl/statem/extensions_srvr.c`, reached by the new
+`src/ssl/statem/extensions_clnt.rs`/`extensions_srvr.rs`, and `ssl/tls13_enc.c`, reached by
+`src/ssl/tls13_enc.rs` (where `src/runtime/dso_shared.rs` gives `crypto/conf/conf_ssl.c` a module).
+The sealed-stratum census counts authority internals a transcribed unit reaches whose own defining
+unit's stratum has sealed, so re-deriving made those three units' unbuilt tails countable.
+
+**The movement, measured against `origin/main`.** Eighty-four names enter: forty-one of
+`extensions_srvr.c`, thirty-one of `extensions_clnt.c`, ten of `tls13_enc.c`, and the
+certificate-message internals `tls_construct_server_certificate` (`statem_srvr.c`) and
+`tls_process_server_certificate` (`statem_clnt.c`). They are the extension callbacks
+(`tls_construct_ctos_*`, `tls_parse_stoc_*`, `tls_parse_ctos_*`, `tls_construct_stoc_*`) and
+key-schedule helpers (`tls13_hkdf_expand`, `tls13_setup_key_block`, `tls13_update_key`,
+`tls13_final_finish_mac`) the reduced TLS 1.3 engine does not build, invisible while no module
+reached their units. Twenty names leave because the same stride built them: `ssl3_read_bytes` and
+`ssl3_write_bytes` (`rec_layer_s3.c`), `ssl_verify_cert_chain` (`ssl_cert.c`), the session
+lookup/creation helpers (`ssl_sess.c`), the PHA digest save/restore and `tls_process_cert_verify`
+(`statem_lib.c`), `tls1_set_groups` and its two accessors (`t1_lib.c`), `ssl_log_secret` and
+`ssl_update_cache` (`ssl_lib.c`), `ssl3_shutdown` and `ssl3_set_handshake_header` (`s3_lib.c`) and
+`ssl_dh_to_pkey` (`tls_depr.c`). The net against `origin/main`'s baseline is **404 -> 468 (+64)**, and
+because it rises it needs an approved row: `forensics/ownership-transitions.json`'s
+`prerequisite_transitions` gained `{metric: sealed_census, before: 404, after: 468}`. The class is the
+one D314, D324 and D529 each recorded for this metric -- landing work can move such a count up
+without any work being undone, because whole authority units that nothing referenced become visible.
+A sealed-census entry is not a failure; the gate prints the count rather than gating on it, and the
+residue is the stride's recorded unlanded extension and key-schedule surface (TLS 1.3 tickets, SRP,
+NPN, `use_srtp`, certificate-status callbacks).
+
+**The generator drifts reconciled with it.** The same staleness had left three committed artefacts
+ahead of their generators, the class D525 item 9 and D529 recorded: `forensics/atlas/prerequisite-gate.json`
+consumes the atlas, so its census and its `transcription-edges.json` input hash moved
+(`language_census` 11769 -> 11848, `covered_by_a_divergence` 159 -> 155, `divergence_names_covered`
+105 -> 98, `authority_units` 596 -> 599); `forensics/atlas/plan-reconciliation.json` moved with the
+same atlas (the four units above gained `transcribed_by` rows, 596 -> 599 transcribed units);
+`forensics/regression-baseline.json` was rewritten from the observed evidence (`sealed_census`
+386 -> 468, `language_census` 11668 -> 11848); and `artifacts/phase16/COURTS.json` recorded a stale
+`phase16-obligations.json` hash (`7f0a...` -> `5dc5...`, the file's actual sha256). All are regenerated
+rather than hand-edited.
+
+**Verified (container).** The step's own staleness check -- `gen_prerequisite_atlas.py` then
+`git diff --exit-code` over the four atlases -- is clean and the re-derivation is byte-identical on a
+second run; `evidence_determinism.py --keep` reproduces 45 artefacts; `regression_guard.py --update`
+then `--baseline-ref origin/main --require-current` passes with no regression; `docs_consistency.py`
+and its `--self-test`; `phase_state.py` and its `--self-test`; `plan_reconciliation.py`;
+`gen_frf_courts.py --check`; `cargo fmt`; `cargo clippy --all-targets -- -D warnings`.
+
+The push-event comparison reads its `before` from the seal commit's `github.event.before` (`3297fbae`), whose committed gate was stale at **386**, so the same regeneration is recorded a second time as `386 -> 468`; `forensics/ownership-transitions.json` carries both rows (the ref supplying `before` is the only difference) and `regression_guard.py --baseline-ref 3297fbae --require-current` passes.

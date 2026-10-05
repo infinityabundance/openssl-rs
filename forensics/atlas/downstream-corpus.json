@@ -1,0 +1,295 @@
+{
+  "programs": [
+    {
+      "authority": "openssl-rt-3.6.4-r2",
+      "build": {
+        "detail": "curl 8.22.0 (x86_64-pc-linux-gnu) libcurl/8.22.0 OpenSSL/3.6.4 zlib/1.2.13\nRelease-Date: 2026-09-02\nProtocols: file ftp ftps http https ipfs ipns ws wss\nFeatures: alt-svc HSTS HTTPS-proxy IPv6 Largefile libz SSL threadsafe UnixSockets",
+        "ok": true
+      },
+      "candidate": "0.0.21",
+      "concurrency": {
+        "ok": 16,
+        "total": 16
+      },
+      "functional": {
+        "detail": "TLS 1.3 verified fetch of the authority s_server (HTTP 200) with an unrelated CA rejected",
+        "evidence": [
+          "live_tls_probe.sh: OK",
+          "http_code=200",
+          "curl_negative_exit=60"
+        ],
+        "ok": true
+      },
+      "historical_failures": [
+        {
+          "commit": "91eb5398",
+          "fixed_by": "91eb5398 (ssl: implement SSL_CTX_ctrl/SSL_ctrl SET_MIN/MAX_PROTO_VERSION)",
+          "summary": "the candidate's SSL_CTX_set_min_proto_version/SSL_CTX_set_max_proto_version returned 0, so curl's TLS setup failed before a request was sent"
+        },
+        {
+          "commit": "e7b50d10",
+          "fixed_by": "e7b50d10 (ssl: expose the peer certificate/chain and fix the post-handshake read path)",
+          "summary": "curl fetched HTTPS without verifying the chain: the peer certificate/chain was not exposed and the post-handshake read path stalled"
+        }
+      ],
+      "known_residuals": [],
+      "link": {
+        "detail": "libssl.so.3 -> /work/artifacts/phase2/install/lib/libssl.so.3",
+        "libs": [
+          "libssl.so.3",
+          "libcrypto.so.3"
+        ],
+        "ok": true
+      },
+      "program": "curl",
+      "source_sha256": "d54dd598bf05927a726deb38df31c6a255ba83ff1de57c5d1464dac3ed8f44a1",
+      "source_url": "https://curl.se/download/curl-8.22.0.tar.gz",
+      "start": {
+        "detail": "the candidate-linked curl runs and reports -V",
+        "ok": true
+      },
+      "version": "8.22.0"
+    },
+    {
+      "authority": "openssl-rt-3.6.4-r2",
+      "build": {
+        "detail": "Git 2.56.0, SHA-1/SHA-256 via the candidate libcrypto",
+        "ok": true
+      },
+      "candidate": "0.0.21",
+      "concurrency": {
+        "ok": 16,
+        "total": 16
+      },
+      "functional": {
+        "detail": "SHA-1/SHA-256 object hashing agrees with GNU coreutils; HTTPS push/clone/pull with both TLS endpoints on the candidate, unrelated CA rejected; bounded t/ subset green",
+        "evidence": [
+          "hash_check.sh: PASS",
+          "HTTPS PUSH/PULL PASS",
+          "concurrent_ok=16/16"
+        ],
+        "ok": true
+      },
+      "historical_failures": [
+        {
+          "commit": "3e1c5313",
+          "fixed_by": "3e1c5313 (ssl: fix the nginx-exposed defects)",
+          "summary": "Git's HTTPS transport could not complete end to end because candidate-linked nginx (the test server) carried the five TLS defects above"
+        },
+        {
+          "commit": "bb5958a9",
+          "fixed_by": "bb5958a9 (p17: the Git downstream passes its own tests and pushes/clones/pulls over HTTPS via the candidate)",
+          "summary": "the Git downstream had no reproducing harness: its own t/ subset and an HTTPS push/clone/pull were not yet exercised against the candidate"
+        }
+      ],
+      "known_residuals": [
+        "t5540-http-push-webdav is skipped: Git is built without expat (the court image ships no libexpat headers); it is a plain-HTTP path with no OpenSSL use"
+      ],
+      "link": {
+        "detail": "libcrypto.so.3 -> /work/artifacts/phase2/install/lib/libcrypto.so.3",
+        "libs": [
+          "libcrypto.so.3"
+        ],
+        "ok": true
+      },
+      "program": "git",
+      "source_sha256": "26c56c296b38c0695b26fa95f475f1d01704d2d38e73465ca30b0b2f5dc789d3",
+      "source_url": "https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.56.0.tar.xz",
+      "start": {
+        "detail": "the candidate-linked git runs and hashes objects",
+        "ok": true
+      },
+      "version": "2.56.0"
+    },
+    {
+      "authority": "openssl-rt-3.6.4-r2",
+      "build": {
+        "detail": "HAProxy 3.0.29, built with the candidate OpenSSL 3.6.4",
+        "ok": true
+      },
+      "candidate": "0.0.21",
+      "concurrency": {
+        "ok": 16,
+        "total": 16
+      },
+      "functional": {
+        "detail": "TLS 1.3 termination in front of a plain-HTTP backend for the authority s_client and the candidate curl; backend UP/L7OK; broken config rejected",
+        "evidence": [
+          "A_tls13_handshake=1",
+          "B_http_code=200",
+          "B_neg_exit=60",
+          "B_broken_cfg_exit=1",
+          "C_concurrent_200s=16/16"
+        ],
+        "ok": true
+      },
+      "historical_failures": [
+        {
+          "commit": "6b65e05b",
+          "fixed_by": "a742f27d (ssl: fix the HAProxy crash and handshake: SNI arg ctrl, client_hello_cb, ERR constant)",
+          "summary": "candidate-linked HAProxy 3.0.29 SIGSEGV'd on the first TLS handshake: SSL_CTX_set_tlsext_servername_arg (SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG=54) had no SSL_CTX_ctrl arm, so the servername callback's priv argument stayed NULL and ssl_sock_switchctx_err_cbk dereferenced it"
+        }
+      ],
+      "known_residuals": [],
+      "link": {
+        "detail": "libssl.so.3 -> /work/artifacts/phase2/install/lib/libssl.so.3",
+        "libs": [
+          "libssl.so.3",
+          "libcrypto.so.3"
+        ],
+        "ok": true
+      },
+      "program": "haproxy",
+      "source_sha256": "225dbddbab9eb0abc0ff3db39ded1e07f20028105a36f4c36fc2f85bf86835d1",
+      "source_url": "https://www.haproxy.org/download/3.0/src/haproxy-3.0.29.tar.gz",
+      "start": {
+        "detail": "the frontend binds and reaches readiness",
+        "ok": true
+      },
+      "version": "3.0.29"
+    },
+    {
+      "authority": "openssl-rt-3.6.4-r2",
+      "build": {
+        "detail": "nginx/1.26.3, built with OpenSSL 3.6.4",
+        "ok": true
+      },
+      "candidate": "0.0.21",
+      "concurrency": {
+        "ok": 16,
+        "total": 16
+      },
+      "functional": {
+        "detail": "TLS 1.3 termination for the authority s_client and the candidate curl, 16/16 concurrent verified fetches, reload 2->3 workers",
+        "evidence": [
+          "A_tls13_handshake=1",
+          "B_http_code=200",
+          "C_concurrent_200s=16/16"
+        ],
+        "ok": true
+      },
+      "historical_failures": [
+        {
+          "commit": "6448fa4c",
+          "fixed_by": "3e1c5313 (ssl: fix the nginx-exposed defects: SNI, ticket cb, close_notify, EOF option, record resync)",
+          "summary": "nginx 1.26.3 exposed five candidate defects: SNI disabled (tlsext servername callback returned 0), TLS session tickets disabled, no close_notify teardown after Connection: close, SSL_OP_IGNORE_UNEXPECTED_EOF not honoured, and an intermittent server-side handshake stall under concurrency"
+        }
+      ],
+      "known_residuals": [
+        "TLS 1.3 session resumption is unavailable: the candidate does not emit the post-handshake NewSessionTicket flight, so `s_client -sess_out` saves nothing; TLS 1.2 resumption and tickets work (see the CPython test_ssl record)"
+      ],
+      "link": {
+        "detail": "libssl.so.3 -> /work/artifacts/phase2/install/lib/libssl.so.3",
+        "libs": [
+          "libssl.so.3",
+          "libcrypto.so.3"
+        ],
+        "ok": true
+      },
+      "program": "nginx",
+      "source_sha256": "69ee2b237744036e61d24b836668aad3040dda461fe6f570f1787eab570c75aa",
+      "source_url": "https://nginx.org/download/nginx-1.26.3.tar.gz",
+      "start": {
+        "detail": "the TLS listener starts and answers an authority s_client",
+        "ok": true
+      },
+      "version": "1.26.3"
+    },
+    {
+      "authority": "openssl-rt-3.6.4-r2",
+      "build": {
+        "detail": "OpenSSH 10.5p1 (portable), libcrypto-only consumer",
+        "ok": true
+      },
+      "candidate": "0.0.21",
+      "concurrency": {
+        "ok": 16,
+        "total": 16
+      },
+      "functional": {
+        "detail": "live sshd+ssh login, the forced kex/cipher/MAC/host-key matrix including RSA/ECDSA, ssh-keygen RSA/ECDSA/Ed25519 sign+verify, and the regress unit suite",
+        "evidence": [
+          "probe SUMMARY: 31 pass, 0 fail",
+          "regress unit 12 pass, 1 fail",
+          "concurrent_logins=16/16"
+        ],
+        "ok": true
+      },
+      "historical_failures": [
+        {
+          "commit": "45095bfe",
+          "fixed_by": "52b61567 (evp: legacy-origin EVP_PKEY signs/verifies -- OpenSSH RSA/ECDSA fixed)",
+          "summary": "OpenSSH's RSA and ECDSA signing/verification and the parsing of native openssh-key-v1 RSA/ECDSA private keys failed with `error in libcrypto: initialization error`, so RSA/ECDSA host keys and user keys were rejected and the handshake fell back to Ed25519"
+        }
+      ],
+      "known_residuals": [
+        "`regress/unittests/utf8` aborts on both the candidate and the authority: the court image ships only C/C.utf8/POSIX locales and the test setlocale()s en_US.UTF-8"
+      ],
+      "link": {
+        "detail": "libcrypto.so.3 -> /work/artifacts/phase2/install/lib/libcrypto.so.3 (no libssl)",
+        "libs": [
+          "libcrypto.so.3"
+        ],
+        "ok": true
+      },
+      "program": "openssh",
+      "source_sha256": "d44d28a839ea9daf969cc69150fde59910b2b39361dad81a3bd6cbd19218db11",
+      "source_url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.5p1.tar.gz",
+      "start": {
+        "detail": "the candidate-linked sshd starts on a high port",
+        "ok": true
+      },
+      "version": "10.5p1"
+    },
+    {
+      "authority": "openssl-rt-3.6.4-r2",
+      "build": {
+        "detail": "CPython 3.12.15, _ssl/hashlib built with OpenSSL 3.6.4",
+        "ok": true
+      },
+      "candidate": "0.0.21",
+      "concurrency": {
+        "ok": 16,
+        "total": 16
+      },
+      "functional": {
+        "detail": "live TLS 1.3 with an unrelated CA rejected, plus CPython's own bounded test_ssl: 172 passed, 0 failed, 0 errors",
+        "evidence": [
+          "live_tls_probe.sh: OK",
+          "test_ssl passed=172 failed=0 errors=0"
+        ],
+        "ok": true
+      },
+      "historical_failures": [
+        {
+          "commit": "4aa82846",
+          "fixed_by": "e7b50d10 (ssl: expose the peer certificate/chain and fix the post-handshake read path)",
+          "summary": "CPython's _ssl accepted a server certificate signed by an unrelated CA: the candidate had no certificate-verification path, and the post-handshake read stalled when the caller's buffer was smaller than the record"
+        },
+        {
+          "commit": "fb701d66",
+          "fixed_by": "27b3e300 (ssl: TLS1.2 session creation, tickets and resumption -- CPython test_ssl all-green)",
+          "summary": "CPython's own test_ssl stood at 153 passing methods while TLS 1.2 session creation/ALPN/SNI/alerts and the server-side gaps remained"
+        }
+      ],
+      "known_residuals": [],
+      "link": {
+        "detail": "_ssl*.so libssl -> /work/artifacts/phase2/install/lib/libssl.so.3",
+        "libs": [
+          "libssl.so.3",
+          "libcrypto.so.3"
+        ],
+        "ok": true
+      },
+      "program": "python",
+      "source_sha256": "c2c4321961fab0fb999d66e0cecf521c2ab3994c7992873ea99e306c1094fd5a",
+      "source_url": "https://www.python.org/ftp/python/3.12.15/Python-3.12.15.tar.xz",
+      "start": {
+        "detail": "the interpreter starts and its ssl/hashlib surface answers",
+        "ok": true
+      },
+      "version": "3.12.15"
+    }
+  ],
+  "schema": "openssl-rs/downstream-corpus/v1"
+}

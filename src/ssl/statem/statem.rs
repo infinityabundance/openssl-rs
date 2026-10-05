@@ -67,8 +67,17 @@ pub const TLS_ST_BEFORE: c_int = 0;
 pub const TLS_ST_OK: c_int = 1;
 /// `TLS_ST_CW_CLNT_HELLO` — `ssl.h:1078`, the client's post-ClientHello state.
 const TLS_ST_CW_CLNT_HELLO: c_int = 13;
+/// `TLS_ST_CR_SRVR_HELLO` — `ssl.h:1067`, the client's read-the-ServerHello state (17.2a).
+#[allow(dead_code)] // retained as the 17.2a state-name record
+const TLS_ST_CR_SRVR_HELLO: c_int = 3;
 /// `TLS_ST_SR_CLNT_HELLO` — `ssl.h:1087`, the server's post-ClientHello-read state.
 const TLS_ST_SR_CLNT_HELLO: c_int = 22;
+/// `TLS_ST_SW_SRVR_HELLO` — `ssl.h` (24), the server's write-the-ServerHello state (17.2b).
+#[allow(dead_code)] // retained as the 17.2b state-name record; the 17.2c driver keys on `TLS_ST_BEFORE`
+const TLS_ST_SW_SRVR_HELLO: c_int = 24;
+/// `TLS_ST_SW_ENCRYPTED_EXTENSIONS` — `ssl.h` (41), the state after the ServerHello (17.2b).
+#[allow(dead_code)] // as `TLS_ST_SW_SRVR_HELLO`
+const TLS_ST_SW_ENCRYPTED_EXTENSIONS: c_int = 41;
 /// `TLS_ST_SW_HELLO_REQ` — `ssl.h:1086`, the renegotiation request state.
 const TLS_ST_SW_HELLO_REQ: c_int = 21;
 /// `TLS_ST_SW_FINISHED` — `ssl.h:1105`, the `ossl_statem_export_allowed` exclusion.
@@ -83,6 +92,7 @@ const MSG_FLOW_UNINITED: c_int = 0;
 /// `MSG_FLOW_ERROR` — `internal/statem.h:55`, "a permanent error with this connection".
 const MSG_FLOW_ERROR: c_int = 1;
 /// `MSG_FLOW_READING` — `internal/statem.h:57`.
+#[allow(dead_code)] // the 17.2c drivers set this state through their own local constant
 const MSG_FLOW_READING: c_int = 2;
 /// `MSG_FLOW_FINISHED` — `internal/statem.h:61`.
 const MSG_FLOW_FINISHED: c_int = 4;
@@ -91,10 +101,15 @@ const MSG_FLOW_FINISHED: c_int = 4;
 const SSL3_VERSION_MAJOR: c_int = 3;
 /// `SSL_AD_NO_ALERT` — `ssl3.h:328`, "we don't want to send an alert".
 const SSL_AD_NO_ALERT: c_int = 0;
+/// `SSL3_AL_FATAL` — `ssl3.h:334`.
+const SSL3_AL_FATAL: c_int = 2;
+/// `SSL3_RT_ALERT` — `ssl3.h:146`.
+const SSL3_RT_ALERT: u8 = 21;
 
 /// `SSL_NOTHING` — `ssl.h:932` (the `rwstate` idle value).
 const SSL_NOTHING: c_int = 1;
 /// `SSL_READING` — `ssl.h:934`.
+#[allow(dead_code)] // the 17.2c drivers set this `rwstate` through `statem_clnt.rs`'s driver
 const SSL_READING: c_int = 3;
 /// `SSL_WRITING` — `ssl.h:933`.
 const SSL_WRITING: c_int = 2;
@@ -214,16 +229,16 @@ pub unsafe fn ossl_statem_set_renegotiate(s: *mut Ssl) {
     }
 }
 
-/// `void ossl_statem_send_fatal(SSL_CONNECTION *s, int al)` — `ssl/statem/statem.c:147-156`,
-/// reduced to the state transition.
+/// `void ossl_statem_send_fatal(SSL_CONNECTION *s, int al)` — `ssl/statem/statem.c:147-156`.
 ///
-/// The authority calls `ssl3_send_alert(s, SSL3_AL_FATAL, al)` when a record-write method is
-/// installed; this crate models no record method, so the alert is skipped (recorded in the module
-/// header).
+/// Performs the `MSG_FLOW_ERROR` transition and, when the alert is not `SSL_AD_NO_ALERT` and a write
+/// BIO is installed, sends the fatal alert through the record layer (`ssl3_send_alert`,
+/// `s3_msg.c:45-58`). The pre-ServerHello alerts are plaintext; the record layer encrypts once a
+/// TLS1.3 write key is active.
 ///
 /// # Safety
 /// `s` must point to a live connection.
-pub unsafe fn ossl_statem_send_fatal(s: *mut Ssl, _al: c_int) {
+pub unsafe fn ossl_statem_send_fatal(s: *mut Ssl, al: c_int) {
     // SAFETY: `s` is live per the caller's contract.
     unsafe {
         if (*s).in_init != 0 && (*s).statem_state == MSG_FLOW_ERROR {
@@ -231,6 +246,16 @@ pub unsafe fn ossl_statem_send_fatal(s: *mut Ssl, _al: c_int) {
         }
         ossl_statem_set_in_init(s, 1);
         (*s).statem_state = MSG_FLOW_ERROR;
+        if al != SSL_AD_NO_ALERT && !(*s).wbio.is_null() {
+            // `ssl3_send_alert(s, SSL3_AL_FATAL, al)`: `[level, description]` as record type 21.
+            let alert = [SSL3_AL_FATAL as u8, al as u8];
+            let _ = crate::ssl::record::rec_layer_s3::ssl3_write_bytes(
+                s,
+                SSL3_RT_ALERT,
+                alert.as_ptr(),
+                alert.len(),
+            );
+        }
     }
 }
 
@@ -439,18 +464,19 @@ unsafe fn state_machine(s: *mut Ssl, server: bool) -> c_int {
             }
         }
 
-        // The authority now allocates `init_buf`, pushes the write-buffering BIO, calls
-        // `tls_setup_handshake` and builds its first flight. Those units and the message layer they
-        // reach are unlanded, so the driver stops here and reproduces the state the authority's
-        // first read leaves: `MSG_FLOW_READING` with the peer waiting, the client having reached
-        // `TLS_ST_CW_CLNT_HELLO` and the server still at `TLS_ST_BEFORE` (module header).
-        (*s).statem_state = MSG_FLOW_READING;
-        if !server {
-            (*s).hand_state = TLS_ST_CW_CLNT_HELLO;
-        }
-        (*s).rwstate = SSL_READING;
+        // Phase 17.2c: the reduced flight driver pumps one record per call until the handshake
+        // finishes (`1`) or the peer BIO is empty (`-1`). It spans the authority's
+        // `tls_setup_handshake`, the read/write sub-state machines and the message-construction
+        // boundary the earlier slices stopped at (see `statem_clnt.rs`/`statem_srvr.rs`).
+        let ret = if server {
+            // SAFETY: `s` is live.
+            crate::ssl::statem::statem_srvr::tls13_server_drive(s)
+        } else {
+            // SAFETY: `s` is live.
+            crate::ssl::statem::statem_clnt::tls13_client_drive(s)
+        };
         (*s).statem_in_handshake -= 1;
-        -1
+        ret
     }
 }
 

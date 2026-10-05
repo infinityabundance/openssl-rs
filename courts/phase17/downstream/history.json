@@ -1,0 +1,60 @@
+{
+  "_comment": "Authored historical record, one list per program. Each entry names the commit at which the downstream first exposed the defect and the commit/fix that closed it. lib/record.py merges this into result.json; the `RT-DOWNSTREAM-CORPUS` court verifies every named commit exists in the checked-out history, so a fabricated entry fails the court.",
+  "curl": [
+    {
+      "commit": "91eb5398",
+      "summary": "the candidate's SSL_CTX_set_min_proto_version/SSL_CTX_set_max_proto_version returned 0, so curl's TLS setup failed before a request was sent",
+      "fixed_by": "91eb5398 (ssl: implement SSL_CTX_ctrl/SSL_ctrl SET_MIN/MAX_PROTO_VERSION)"
+    },
+    {
+      "commit": "e7b50d10",
+      "summary": "curl fetched HTTPS without verifying the chain: the peer certificate/chain was not exposed and the post-handshake read path stalled",
+      "fixed_by": "e7b50d10 (ssl: expose the peer certificate/chain and fix the post-handshake read path)"
+    }
+  ],
+  "nginx": [
+    {
+      "commit": "6448fa4c",
+      "summary": "nginx 1.26.3 exposed five candidate defects: SNI disabled (tlsext servername callback returned 0), TLS session tickets disabled, no close_notify teardown after Connection: close, SSL_OP_IGNORE_UNEXPECTED_EOF not honoured, and an intermittent server-side handshake stall under concurrency",
+      "fixed_by": "3e1c5313 (ssl: fix the nginx-exposed defects: SNI, ticket cb, close_notify, EOF option, record resync)"
+    }
+  ],
+  "haproxy": [
+    {
+      "commit": "6b65e05b",
+      "summary": "candidate-linked HAProxy 3.0.29 SIGSEGV'd on the first TLS handshake: SSL_CTX_set_tlsext_servername_arg (SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG=54) had no SSL_CTX_ctrl arm, so the servername callback's priv argument stayed NULL and ssl_sock_switchctx_err_cbk dereferenced it",
+      "fixed_by": "a742f27d (ssl: fix the HAProxy crash and handshake: SNI arg ctrl, client_hello_cb, ERR constant)"
+    }
+  ],
+  "python": [
+    {
+      "commit": "4aa82846",
+      "summary": "CPython's _ssl accepted a server certificate signed by an unrelated CA: the candidate had no certificate-verification path, and the post-handshake read stalled when the caller's buffer was smaller than the record",
+      "fixed_by": "e7b50d10 (ssl: expose the peer certificate/chain and fix the post-handshake read path)"
+    },
+    {
+      "commit": "fb701d66",
+      "summary": "CPython's own test_ssl stood at 153 passing methods while TLS 1.2 session creation/ALPN/SNI/alerts and the server-side gaps remained",
+      "fixed_by": "27b3e300 (ssl: TLS1.2 session creation, tickets and resumption -- CPython test_ssl all-green)"
+    }
+  ],
+  "git": [
+    {
+      "commit": "3e1c5313",
+      "summary": "Git's HTTPS transport could not complete end to end because candidate-linked nginx (the test server) carried the five TLS defects above",
+      "fixed_by": "3e1c5313 (ssl: fix the nginx-exposed defects)"
+    },
+    {
+      "commit": "bb5958a9",
+      "summary": "the Git downstream had no reproducing harness: its own t/ subset and an HTTPS push/clone/pull were not yet exercised against the candidate",
+      "fixed_by": "bb5958a9 (p17: the Git downstream passes its own tests and pushes/clones/pulls over HTTPS via the candidate)"
+    }
+  ],
+  "openssh": [
+    {
+      "commit": "45095bfe",
+      "summary": "OpenSSH's RSA and ECDSA signing/verification and the parsing of native openssh-key-v1 RSA/ECDSA private keys failed with `error in libcrypto: initialization error`, so RSA/ECDSA host keys and user keys were rejected and the handshake fell back to Ed25519",
+      "fixed_by": "52b61567 (evp: legacy-origin EVP_PKEY signs/verifies -- OpenSSH RSA/ECDSA fixed)"
+    }
+  ]
+}

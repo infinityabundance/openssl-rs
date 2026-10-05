@@ -1,0 +1,8 @@
+# openssl-rs RT-CLI-BODIES fixture: a fixed SPKAC for `spkac`.
+#
+# The value is an RSA/MD5 Netscape SPKI produced offline by the authority's own
+# `openssl spkac -key <fixed-key> -challenge challenge-123`. RSA PKCS#1 v1.5
+# signing is deterministic, so the SPKAC is a pure function of that fixed key and
+# challenge, and `spkac`'s print/verify/pubkey arms over it cannot drift.
+[default]
+SPKAC = MIICTTCCATUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDDfQrNX6vkkx0aqz4wVDqv3kA6Q44Kr/jmk4MKDw0BikKvxvo2b45i6wis5P7zLDUzfC/qvbkuDQzvneR2/SCWBzHiATJAptcsmY5BOE0GjaO8xITTl/Rf8TrPwYdW5hDAls/RsYn6ym+s5mzjF0uiibMokHIo1+/pd/ejxc7mCQBnVPInQzolPM9BSzjnTd9IsQEI5rXLIn+CpsJDdRpFbFZDja+qaPxsMK2BRzv3suLDwJuKuJCVehwayV4yQTaXpPXit0A5om2zkOs2RI9x+GjENz2Mi9Ae1ATsKoFLGTOfT7edZlFiMs/GJkGf5GX7LKxKeDuMX0faVJX3wE69AgMBAAEWDWNoYWxsZW5nZS0xMjMwDQYJKoZIhvcNAQEEBQADggEBAACqjp+OzBAuKc7vFxF1Dzm3U7yyKv+fWGZwQiJvu54luoqqf/5IKYlYnxlAsrWsYwwtffP06+k8kGrmzfbT9TmzZJfpiys4uQqNKyoY7qOn5cpPexn8D8v5uZymtOAQTYbbGXE31Ougu3KfZCoYqp5GCd7CUB3nDBWSjJpeXQe0xUcwZ72dhDhhfmUQZtLCgnzzUTTyU5bL2EEy0wsWEO8RD6HBAeld9X3y0PKlVqStDlQ2GYGqX4QboHwS9gj7sg5AkVgMnnY1WK1zHwVZF3hEdtTk0ac2SOuGLE4crmpRsSPLVXRzMnFk8i//XwwUb1/kMPl3c8jOTxlq5bRFCaE=

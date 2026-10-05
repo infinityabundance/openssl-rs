@@ -1044,6 +1044,27 @@ PHASE16_MODULES = [
     "forensics/tools/phase16_obligations.py",
 ]
 
+# Phase 17 is the downstream replacement court stratum, and **it owns no exported symbol**: reading
+# `forensics/atlas/symbol-ownership.json` for `owner_phase == 17` yields no record, so its ledger's
+# unit is not a symbol. `forensics/phase17-obligations.json` records its unit as `downstream
+# replacement contract` (in `atlas_common.NON_EXPORT_UNITS`, so the export-partitioning tools skip
+# it, as they skip Phase 16's `cli-config contract` and Phase 22's `compatibility plane`), and its
+# working set is the 52 `apps/<name>.c` unit deferrals `forensics/prerequisites.json` records with
+# `owner_phase: 17` (D530) plus four downstream replacement contract units. It owns no provider
+# registration row -- it activates no provider -- and no symbol deferral. It registers no
+# coverage-reference probe, because it owns no symbol to take an address of, so its runner's registry
+# is empty at activation and its four behavioural courts are `pending` with the subphase that lands
+# each. The ledger measures its contract-unit states from the courts registry, so the runner does not
+# bind the ledger (the edge runs ledger -> courts, the reverse of Phase 16's).
+# `docs/PHASE-17-SUBPHASES.md` section 4 records the activation measurement and the precondition it
+# places on the runner.
+PHASE17_COURTS = "artifacts/phase17/COURTS.json"
+PHASE17_OBLIGATIONS = "forensics/phase17-obligations.json"
+PHASE17_MODULES = [
+    "docs/PHASE-17-SUBPHASES.md",
+    "forensics/tools/phase17_obligations.py",
+]
+
 # Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
 # every other stratum's: no export universe, no ownership projection and no provider row. What it
 # owes instead is the plan, the residual ledger its closure produces, the atlas's own courts and
@@ -1199,6 +1220,36 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "`pending` with the subphases that land them. "
                             "`docs/PHASE-16-SUBPHASES.md` sections 1 and 4 record the "
                             "measurement (docs/DECISIONS.md D485, D525, D528)"
+                        )),
+    17: StratumEvidence(PHASE17_MODULES, PHASE17_OBLIGATIONS, PHASE17_COURTS,
+                        ledger_note=(
+                            "This stratum owns **no exported symbol**, so its ledger's unit is "
+                            "not a symbol: `forensics/phase17-obligations.json` publishes "
+                            "`unit: downstream replacement contract` and its `implemented`/`open` "
+                            "*export* lists are empty by measurement, while `open_in_this_stratum` "
+                            "counts the 52 `apps/<name>.c` unit deferrals it owns (D530) and the "
+                            "five downstream replacement contract units (`command-bodies`, "
+                            "`tls13-interop`, `cross-dso-state`, `downstream-consumer` and the "
+                            "machine-owned `downstream-corpus`). It owns no provider registration "
+                            "row -- it activates no provider -- and no symbol deferral. Its "
+                            "sealed `artifacts/phase17/COURTS.json` registers **six** courts: the "
+                            "five differential courts `RT-CLI-BODIES`, `RT-TLS13-INTEROP`, "
+                            "`RT-TLS13-INTEROP-MATRIX`, `RT-CROSS-DSO-STATE` and "
+                            "`RT-DOWNSTREAM-CONSUMER`, and the data-validation "
+                            "`RT-DOWNSTREAM-CORPUS`, whose row is marked `frf_declarable: false` "
+                            "because it consumes the recorded downstream records and stages no "
+                            "probe pair, so the FRF chain requires the five declarable ones. "
+                            "The corpus is the seal's mechanical dependency: `phase_state.py` "
+                            "blocks the stratum on any non-`pass` court in "
+                            "`artifacts/phase17/COURTS.json`, so a program whose `functional` is "
+                            "false, a missing required field or a recorded `candidate` that is "
+                            "not the current `Cargo.toml` version fails the stratum rather than "
+                            "the corpus alone. The ledger's contract-unit states are measured "
+                            "from the courts registry, so the runner does not bind the ledger "
+                            "and the edge runs ledger -> courts, the reverse of Phase 16's. "
+                            "`docs/PHASE-17-SUBPHASES.md` and "
+                            "`docs/PHASE-17-DOWNSTREAM-SEAL.md` record the measurement and the "
+                            "chain (docs/DECISIONS.md D530)"
                         )),
     # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
     # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no
