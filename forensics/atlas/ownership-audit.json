@@ -1402,17 +1402,17 @@
     {
       "name": "ledger-7",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "e1a2da3798d75e99530d822b771df54b3016d1f805640022d4f3b5fe62f9e7d8"
+      "sha256": "888d341492e11f9c545b8dd8e99afea594f32d60366a30203e54ea3732d110a3"
     },
     {
       "name": "ledger-8",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "0b2c6faf9d3f8b2ab4bc07811e4ad59de33c961dfc8caf7bef9e8d2135b9bdbf"
+      "sha256": "caea34cd3fdf6e3d557b03f86fba46b514290a504d6a651cf4e95a7ae5080db5"
     },
     {
       "name": "ledger-9",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "f2d0900803ed44904075f34acc2ba986656cac9f1420cb3f372fd377a06e0855"
+      "sha256": "35999aadac909562ec7e45a6c325bc1bfcb029c6843b473fd040c9e5617c34f5"
     },
     {
       "name": "ledger-10",
