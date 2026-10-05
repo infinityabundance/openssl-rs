@@ -575,7 +575,7 @@ Courts: `all pass`, 6 court(s), **1111** authority observation(s) over 6 transcr
 ## Phase 18 — Hostile fuzz / security / side-channel hardening
 
 * state: `in-progress`
-* blocking: Phase 18's FRF chain entry is incomplete: 3 court(s) that artifacts/phase18/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; 3 of 3 required court(s) have no FRF declaration staging their artifacts/phase18/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; 3 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; 3 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 3 required court(s); no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 18 and the FRF chain
+* blocking: Phase 18's FRF chain entry is incomplete: no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 18 and the FRF chain
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase18-obligations.json`
 * atlas-owned: 0

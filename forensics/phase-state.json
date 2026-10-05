@@ -627,7 +627,7 @@
         "stratum": "Downstream replacement court"
       },
       {
-        "blocking": "Phase 18's FRF chain entry is incomplete: 3 court(s) that artifacts/phase18/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; 3 of 3 required court(s) have no FRF declaration staging their artifacts/phase18/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; 3 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; 3 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 3 required court(s); no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 18 and the FRF chain",
+        "blocking": "Phase 18's FRF chain entry is incomplete: no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 18 and the FRF chain",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -707,7 +707,7 @@
       "not_started": 3
     }
   },
-  "body_hash": "589fbccd6acdf0b6f92a7642dd2f50760db5874b3c32581bed019bd8f82ba2b3",
+  "body_hash": "e125b5f7e17dfe450091c92f21612f5f80c0b5bf333d25c80944330fdb28c15a",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
