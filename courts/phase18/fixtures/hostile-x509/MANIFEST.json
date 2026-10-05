@@ -1,0 +1,1287 @@
+{
+  "body": {
+    "counts": {
+      "by_arm": {
+        "alg": 7,
+        "atype": 15,
+        "cert": 29,
+        "crl": 8,
+        "gn": 1,
+        "gtime": 8,
+        "pemcert": 14,
+        "pemcrl": 4,
+        "pemreq": 4,
+        "req": 8,
+        "spki": 3,
+        "utime": 6,
+        "xext": 22,
+        "xexts": 4
+      },
+      "by_category": {
+        "bitstring": 3,
+        "control": 17,
+        "crl": 7,
+        "extensions": 22,
+        "length-bomb": 8,
+        "malformed-asn1": 3,
+        "malformed-tbs": 12,
+        "oversized": 7,
+        "pem": 19,
+        "req": 7,
+        "sigalg": 8,
+        "time": 12,
+        "truncated": 8
+      },
+      "entries": 133,
+      "total_bytes": 42802
+    },
+    "entries": [
+      {
+        "arm": "cert",
+        "bytes": 768,
+        "category": "control",
+        "description": "a well-formed v3 certificate (the Phase 17 leaf); the authority differential control for the DER certificate reader",
+        "file": "cert__cert-valid.bin",
+        "id": "cert-valid",
+        "sha256": "e10d8c7cfa19ec6de76e58ea19b98d128b9c1a827fef2210fe424b205fb041c9"
+      },
+      {
+        "arm": "cert",
+        "bytes": 375,
+        "category": "control",
+        "description": "a well-formed v1 certificate (the Phase 17 cert.der)",
+        "file": "cert__cert-v1-valid.bin",
+        "id": "cert-v1-valid",
+        "sha256": "15629dca8d7a63ed5241ba73483e95a62818caf01e1e90e105f45c7ec9eeeb9f"
+      },
+      {
+        "arm": "crl",
+        "bytes": 379,
+        "category": "control",
+        "description": "a well-formed CRL (the Phase 17 crl.pem, base64-decoded)",
+        "file": "crl__crl-valid.bin",
+        "id": "crl-valid",
+        "sha256": "65ca98b6a2b92c6984c2b74a3007a2481c64a114d1d0ac05b7ca54f3e2ddf43b"
+      },
+      {
+        "arm": "req",
+        "bytes": 629,
+        "category": "control",
+        "description": "a well-formed CSR (the Phase 17 req.pem, base64-decoded)",
+        "file": "req__req-valid.bin",
+        "id": "req-valid",
+        "sha256": "12126f79eca4fe1149e10436be38e195d0a4d13c5995dc690c22196fb95e8a2f"
+      },
+      {
+        "arm": "xext",
+        "bytes": 25,
+        "category": "control",
+        "description": "a well-formed subjectAltName extension",
+        "file": "xext__xext-valid.bin",
+        "id": "xext-valid",
+        "sha256": "10c217344bbd7dcd91de88ad9fcf6041e6a90d8b3c3c9a79c138ba99d39e684e"
+      },
+      {
+        "arm": "xext",
+        "bytes": 14,
+        "category": "control",
+        "description": "a well-formed basicConstraints extension",
+        "file": "xext__xext-bc-valid.bin",
+        "id": "xext-bc-valid",
+        "sha256": "f1ab32750c885bacab18e78e6d29173dad99ed30b03afda03e48833152eaaea7"
+      },
+      {
+        "arm": "xext",
+        "bytes": 32,
+        "category": "control",
+        "description": "a well-formed nameConstraints extension",
+        "file": "xext__xext-nc-valid.bin",
+        "id": "xext-nc-valid",
+        "sha256": "91217fe0cf16a35a92cd9fe4184e6800cc7816b4c8760f64d9b1fc1aa677fabf"
+      },
+      {
+        "arm": "xexts",
+        "bytes": 29,
+        "category": "control",
+        "description": "a well-formed SEQUENCE of two distinct extensions (keyUsage + basicConstraints)",
+        "file": "xexts__xexts-valid.bin",
+        "id": "xexts-valid",
+        "sha256": "864b149e1c126a7864afd81f3806ee9bcb95e1666f0f11888069313b74a15983"
+      },
+      {
+        "arm": "gn",
+        "bytes": 16,
+        "category": "control",
+        "description": "a well-formed GENERAL_NAMES with one dNSName",
+        "file": "gn__gn-valid.bin",
+        "id": "gn-valid",
+        "sha256": "3943ab5b17c97f53fc82b94adc88a9241334a61879871e4694582d92396ab305"
+      },
+      {
+        "arm": "atype",
+        "bytes": 3,
+        "category": "control",
+        "description": "a well-formed ASN.1 INTEGER",
+        "file": "atype__atype-valid.bin",
+        "id": "atype-valid",
+        "sha256": "77a82a9cddd518edfe671c1d8f9afb5b8ea0eac66cdc8c591e4ae7985828f9f3"
+      },
+      {
+        "arm": "gtime",
+        "bytes": 17,
+        "category": "control",
+        "description": "a well-formed GeneralizedTime",
+        "file": "gtime__gtime-valid.bin",
+        "id": "gtime-valid",
+        "sha256": "488ce57ce8cc1301675926039c0eb6b697c949454700b3d71b53f5d8442a9ebf"
+      },
+      {
+        "arm": "utime",
+        "bytes": 15,
+        "category": "control",
+        "description": "a well-formed UTCTime",
+        "file": "utime__utime-valid.bin",
+        "id": "utime-valid",
+        "sha256": "60900b7a98b287ccfb870207afd533121adb5e05427fb48aa1638bb2319a3c2a"
+      },
+      {
+        "arm": "alg",
+        "bytes": 15,
+        "category": "control",
+        "description": "the certificate's own signature AlgorithmIdentifier",
+        "file": "alg__alg-valid.bin",
+        "id": "alg-valid",
+        "sha256": "beef31b653b95e04fde915ea3c41772fa8b398f56e7420dbfaea2696066d8814"
+      },
+      {
+        "arm": "spki",
+        "bytes": 294,
+        "category": "control",
+        "description": "the certificate's own SubjectPublicKeyInfo",
+        "file": "spki__spki-valid.bin",
+        "id": "spki-valid",
+        "sha256": "588c27cf1f3eefa5944f44955cd533aa83acade34bc6766bbb2f76f3685dff54"
+      },
+      {
+        "arm": "cert",
+        "bytes": 0,
+        "category": "truncated",
+        "description": "the certificate truncated to 0 byte(s): empty",
+        "file": "cert__cert-trunc-empty.bin",
+        "id": "cert-trunc-empty",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "arm": "cert",
+        "bytes": 1,
+        "category": "truncated",
+        "description": "the certificate truncated to 1 byte(s): one byte of the SEQUENCE header",
+        "file": "cert__cert-trunc-one-byte-of-the-SEQUENCE-header.bin",
+        "id": "cert-trunc-one-byte-of-the-SEQUENCE-header",
+        "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+      },
+      {
+        "arm": "cert",
+        "bytes": 3,
+        "category": "truncated",
+        "description": "the certificate truncated to 3 byte(s): a truncated length",
+        "file": "cert__cert-trunc-a-truncated-length.bin",
+        "id": "cert-trunc-a-truncated-length",
+        "sha256": "374864c2bbd7c8cfd0bd3d06f9e73f9a3fb4536f01a8d1b3efb2841b2f959763"
+      },
+      {
+        "arm": "cert",
+        "bytes": 8,
+        "category": "truncated",
+        "description": "the certificate truncated to 8 byte(s): inside the TBS header",
+        "file": "cert__cert-trunc-inside-the-TBS-header.bin",
+        "id": "cert-trunc-inside-the-TBS-header",
+        "sha256": "54ff2a2d4cf83e8a891dbf9007b15adc76ba3a04e72713d8d26417aaa014b740"
+      },
+      {
+        "arm": "cert",
+        "bytes": 40,
+        "category": "truncated",
+        "description": "the certificate truncated to 40 byte(s): inside the TBS fields",
+        "file": "cert__cert-trunc-inside-the-TBS-fields.bin",
+        "id": "cert-trunc-inside-the-TBS-fields",
+        "sha256": "34234278e5f891cda09efff7016578d6f5b0d4a3ecf78ab0109fd69b5d05f65b"
+      },
+      {
+        "arm": "cert",
+        "bytes": 384,
+        "category": "truncated",
+        "description": "the certificate truncated to 384 byte(s): half the document",
+        "file": "cert__cert-trunc-half-the-document.bin",
+        "id": "cert-trunc-half-the-document",
+        "sha256": "64bfd81944c4724c5e2bad844ea34a21cfc08a4714f32a1630947894b2457798"
+      },
+      {
+        "arm": "cert",
+        "bytes": 767,
+        "category": "truncated",
+        "description": "the certificate truncated to 767 byte(s): the final byte short",
+        "file": "cert__cert-trunc-the-final-byte-short.bin",
+        "id": "cert-trunc-the-final-byte-short",
+        "sha256": "2b47cc06df5a83efe13a66bfec2c7a873701604616330ca664d390a85444c4fd"
+      },
+      {
+        "arm": "cert",
+        "bytes": 513,
+        "category": "truncated",
+        "description": "the certificate truncated inside the signatureValue BIT STRING",
+        "file": "cert__cert-sigval-trunc.bin",
+        "id": "cert-sigval-trunc",
+        "sha256": "77577d796f4499d095ded8c7fd30877e150927257d1f18121bdeb8e6294511b7"
+      },
+      {
+        "arm": "cert",
+        "bytes": 769,
+        "category": "oversized",
+        "description": "the certificate plus one trailing byte",
+        "file": "cert__cert-trailing-1.bin",
+        "id": "cert-trailing-1",
+        "sha256": "4f3422f42b501a3b0e7e3b450b3ae17bebb80ad24771752e99bd412d6ccc63b1"
+      },
+      {
+        "arm": "cert",
+        "bytes": 832,
+        "category": "oversized",
+        "description": "the certificate plus 64 trailing bytes",
+        "file": "cert__cert-trailing-64.bin",
+        "id": "cert-trailing-64",
+        "sha256": "23fbae0b7885fb56aba70b502c177d743a67a8fa53a5e89212948332dcc09236"
+      },
+      {
+        "arm": "cert",
+        "bytes": 770,
+        "category": "oversized",
+        "description": "the certificate with its outer length declared as 0x7fffffff (a length bomb)",
+        "file": "cert__cert-len-huge.bin",
+        "id": "cert-len-huge",
+        "sha256": "fd5edaed3862fb8d036cbd24e1e057dade85bc6509f0fe84ca603d297b4634d8"
+      },
+      {
+        "arm": "cert",
+        "bytes": 768,
+        "category": "oversized",
+        "description": "the certificate with its outer length declared as 16",
+        "file": "cert__cert-len-short.bin",
+        "id": "cert-len-short",
+        "sha256": "b12a0f18459379b01b5f32618f80f99fa622d8e2e61ee96018927a5d79ca30fe"
+      },
+      {
+        "arm": "cert",
+        "bytes": 769,
+        "category": "oversized",
+        "description": "the certificate with an overlong three-byte length for the same value",
+        "file": "cert__cert-len-overlong.bin",
+        "id": "cert-len-overlong",
+        "sha256": "af5fd3d506ecb48479d81d5f597685c24188e2fdc97af37f13d4781937b3a212"
+      },
+      {
+        "arm": "cert",
+        "bytes": 768,
+        "category": "oversized",
+        "description": "the certificate's outer SEQUENCE under an indefinite length, terminated",
+        "file": "cert__cert-len-indefinite.bin",
+        "id": "cert-len-indefinite",
+        "sha256": "7c5ed89946b9ba15dbe9a6b0776ebd3d06a4a4ddd0a1648f26be279d95f10b54"
+      },
+      {
+        "arm": "cert",
+        "bytes": 768,
+        "category": "oversized",
+        "description": "the certificate's outer length declared as zero",
+        "file": "cert__cert-len-zero.bin",
+        "id": "cert-len-zero",
+        "sha256": "b5ab6cdc55b15ae16efc6ac91a2e847deb5d2b053d75efff1e58ac16d2345b71"
+      },
+      {
+        "arm": "atype",
+        "bytes": 22,
+        "category": "length-bomb",
+        "description": "a SEQUENCE declaring 0x7fffffff bytes over a 16-byte body",
+        "file": "atype__asn1-len-2g.bin",
+        "id": "asn1-len-2g",
+        "sha256": "f709d51f8644587ac8861b958d3b63fa6faea6c43de08e7f9acc46dbda8bfa41"
+      },
+      {
+        "arm": "atype",
+        "bytes": 21,
+        "category": "length-bomb",
+        "description": "a SEQUENCE declaring 0x00a00000 bytes (10 MiB) over a 16-byte body",
+        "file": "atype__asn1-len-10m.bin",
+        "id": "asn1-len-10m",
+        "sha256": "1cd8246cb347a01f705d43a1933276c7d07cf0be9a2b2c3d04c0ae3e509cabba"
+      },
+      {
+        "arm": "atype",
+        "bytes": 7,
+        "category": "length-bomb",
+        "description": "a SEQUENCE declaring 255 bytes over a 4-byte body",
+        "file": "atype__asn1-len-ff.bin",
+        "id": "asn1-len-ff",
+        "sha256": "25bcab1c6585357b7a45ab4e768a42aaea8d4ae8e082ce8534800eb98f1992d1"
+      },
+      {
+        "arm": "atype",
+        "bytes": 8,
+        "category": "length-bomb",
+        "description": "a SEQUENCE under an indefinite length",
+        "file": "atype__asn1-len-indefinite.bin",
+        "id": "asn1-len-indefinite",
+        "sha256": "d4f81ea44d3fc36201fb1a73fe6e2e99815ee994e1b9a29c7544628c37f84fb8"
+      },
+      {
+        "arm": "atype",
+        "bytes": 3,
+        "category": "length-bomb",
+        "description": "a SEQUENCE whose long-form length is truncated",
+        "file": "atype__asn1-len-truncated.bin",
+        "id": "asn1-len-truncated",
+        "sha256": "ee8aaf07412e0aa0ca9dfcb31bac409af11760c1307ae92617782b2bdd90bb40"
+      },
+      {
+        "arm": "atype",
+        "bytes": 7,
+        "category": "length-bomb",
+        "description": "a SEQUENCE with a non-minimal two-byte length for a 3-byte body",
+        "file": "atype__asn1-len-nonminimal.bin",
+        "id": "asn1-len-nonminimal",
+        "sha256": "21a88a0e47502415969d172d93cdf7f2337dca888a1467e93f2dc113016e96f5"
+      },
+      {
+        "arm": "atype",
+        "bytes": 4,
+        "category": "length-bomb",
+        "description": "a high-tag-number constructed tag",
+        "file": "atype__asn1-high-tag.bin",
+        "id": "asn1-high-tag",
+        "sha256": "f4ea3b9fde40a05a3381be533c60230c087e3c5d2901c5a368d59bed62999251"
+      },
+      {
+        "arm": "atype",
+        "bytes": 0,
+        "category": "malformed-asn1",
+        "description": "an empty input",
+        "file": "atype__asn1-empty.bin",
+        "id": "asn1-empty",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "arm": "atype",
+        "bytes": 2,
+        "category": "malformed-asn1",
+        "description": "an empty SEQUENCE",
+        "file": "atype__asn1-zero-len.bin",
+        "id": "asn1-zero-len",
+        "sha256": "e4f60d0aa6d7f3d3b6a6494b1c861b99f649c6f9ec51abaf201b20f297327c95"
+      },
+      {
+        "arm": "atype",
+        "bytes": 2,
+        "category": "malformed-asn1",
+        "description": "an INTEGER declaring 4 bytes with none present",
+        "file": "atype__asn1-trunc-int.bin",
+        "id": "asn1-trunc-int",
+        "sha256": "421dd6c30feb9149b349ae67525aae7556eb6c552e0b363edd78f8a8d8646ab8"
+      },
+      {
+        "arm": "atype",
+        "bytes": 10,
+        "category": "length-bomb",
+        "description": "three nested indefinite-length SEQUENCEs",
+        "file": "atype__asn1-indef-nested.bin",
+        "id": "asn1-indef-nested",
+        "sha256": "3fb0ae8da3f6665bf77c505b873ed10d0a123592c7e6902eff4966d88d62e078"
+      },
+      {
+        "arm": "cert",
+        "bytes": 768,
+        "category": "malformed-tbs",
+        "description": "the version INTEGER changed to 7 (outside the defined range)",
+        "file": "cert__tbs-version-7.bin",
+        "id": "tbs-version-7",
+        "sha256": "5dfbac0a4a40b194629aeaf90c456670185ce8e777e65189d33581a44a4e1010"
+      },
+      {
+        "arm": "cert",
+        "bytes": 768,
+        "category": "malformed-tbs",
+        "description": "the version INTEGER changed to 255",
+        "file": "cert__tbs-version-ff.bin",
+        "id": "tbs-version-ff",
+        "sha256": "c3928877c8f5984aedad76fd916af31f7a7c89530d0bd7c21436af61c6fe53e2"
+      },
+      {
+        "arm": "cert",
+        "bytes": 766,
+        "category": "malformed-tbs",
+        "description": "the serialNumber replaced with a zero-length INTEGER",
+        "file": "cert__tbs-serial-empty.bin",
+        "id": "tbs-serial-empty",
+        "sha256": "94e2b8445f429bd3d7e13cb2224ecb445539468760fcf410494fcb7a7abf7761"
+      },
+      {
+        "arm": "cert",
+        "bytes": 768,
+        "category": "malformed-tbs",
+        "description": "the serialNumber's first byte forced negative",
+        "file": "cert__tbs-serial-neg.bin",
+        "id": "tbs-serial-neg",
+        "sha256": "4e0b0dc0aa63ff6e936434397924f681f76544b3d686a7c50b439cbc250dbb93"
+      },
+      {
+        "arm": "cert",
+        "bytes": 768,
+        "category": "malformed-tbs",
+        "description": "the TBS signature AlgorithmIdentifier's OID arc changed to an unknown value",
+        "file": "cert__tbs-sigalg-unknown.bin",
+        "id": "tbs-sigalg-unknown",
+        "sha256": "01fd98c99c10f502bbf39ca8860e2e0c602bdcd73d01250e7acfb9dfa5f097dc"
+      },
+      {
+        "arm": "cert",
+        "bytes": 766,
+        "category": "malformed-tbs",
+        "description": "the TBS signature AlgorithmIdentifier's parameters removed",
+        "file": "cert__tbs-sigalg-noparams.bin",
+        "id": "tbs-sigalg-noparams",
+        "sha256": "67c59dcb849e09fef181d6f3f7036f5838d512c311f6b1da420b901380cedd63"
+      },
+      {
+        "arm": "cert",
+        "bytes": 768,
+        "category": "malformed-tbs",
+        "description": "the validity's first time tag changed to an invalid 0x99",
+        "file": "cert__tbs-validity-tag.bin",
+        "id": "tbs-validity-tag",
+        "sha256": "ed7cba5bb00ac32faf0e84a4685151c88dbf16677b972eaa66428224a134fff1"
+      },
+      {
+        "arm": "cert",
+        "bytes": 739,
+        "category": "malformed-tbs",
+        "description": "the validity field truncated",
+        "file": "cert__tbs-validity-trunc.bin",
+        "id": "tbs-validity-trunc",
+        "sha256": "2ec41bf686033c8cf7eaa5696ff2204668f3b18e463666fae3d1f33eccaa92eb"
+      },
+      {
+        "arm": "cert",
+        "bytes": 768,
+        "category": "malformed-tbs",
+        "description": "the subject's first attribute string tag changed to a reserved 0x1f",
+        "file": "cert__tbs-subject-tag.bin",
+        "id": "tbs-subject-tag",
+        "sha256": "ee17a5ea31f217a6d42b9d42f40b657adb7da12499cad083128b97f011ca3d3c"
+      },
+      {
+        "arm": "cert",
+        "bytes": 768,
+        "category": "malformed-tbs",
+        "description": "the SPKI subjectPublicKey BIT STRING's length inflated",
+        "file": "cert__tbs-spki-bitstr-len.bin",
+        "id": "tbs-spki-bitstr-len",
+        "sha256": "9148307b89ff3e7555598c491ae3917962f69468f3bdd9d102fa118b2b22ee4f"
+      },
+      {
+        "arm": "cert",
+        "bytes": 768,
+        "category": "malformed-tbs",
+        "description": "the [3] extensions field's first extension OID arc changed to an unknown value",
+        "file": "cert__tbs-exts-unknown-oid.bin",
+        "id": "tbs-exts-unknown-oid",
+        "sha256": "2fbd1505e000446081f32dd5843d3ab506281c7c5f1480d41956bfdf7d0a78c8"
+      },
+      {
+        "arm": "cert",
+        "bytes": 706,
+        "category": "malformed-tbs",
+        "description": "the [3] extensions field truncated inside its first extension",
+        "file": "cert__tbs-exts-trunc.bin",
+        "id": "tbs-exts-trunc",
+        "sha256": "3829e1088bfb1b00f190dd6e27a36063733a77107edea100a466827c203679d3"
+      },
+      {
+        "arm": "xext",
+        "bytes": 26,
+        "category": "extensions",
+        "description": "an extension with an unknown OID and a well-formed body",
+        "file": "xext__xext-unknown-oid.bin",
+        "id": "xext-unknown-oid",
+        "sha256": "452442688184ef8a447c2ab7162d3258efc0140f5b2068b767b7feb14221eb14"
+      },
+      {
+        "arm": "xext",
+        "bytes": 10,
+        "category": "extensions",
+        "description": "an unknown zero-length extension",
+        "file": "xext__xext-unknown-oid-zero.bin",
+        "id": "xext-unknown-oid-zero",
+        "sha256": "d69a151e3e177062ad4008f1d38a1d0c01b5924dbdf155c00607eb0524b05dac"
+      },
+      {
+        "arm": "xext",
+        "bytes": 28,
+        "category": "extensions",
+        "description": "a critical subjectAltName extension",
+        "file": "xext__xext-critical-san.bin",
+        "id": "xext-critical-san",
+        "sha256": "91da3320059a871cc24e85f45db814e23f3150e103734e52ff3ddd410ebd172a"
+      },
+      {
+        "arm": "xext",
+        "bytes": 15,
+        "category": "extensions",
+        "description": "a critical unknown extension",
+        "file": "xext__xext-critical-unknown.bin",
+        "id": "xext-critical-unknown",
+        "sha256": "e2927c980b71700ed3784d3bb9c2b765858861ebcaa1eec51b826ce794c6252b"
+      },
+      {
+        "arm": "xext",
+        "bytes": 13,
+        "category": "extensions",
+        "description": "a critical basicConstraints extension with a malformed body",
+        "file": "xext__xext-critical-bc.bin",
+        "id": "xext-critical-bc",
+        "sha256": "0fda79fc8ccaa38ee4a557cd91fed1e7252305bf6483916cec3e0d1e9f7685d1"
+      },
+      {
+        "arm": "xexts",
+        "bytes": 52,
+        "category": "extensions",
+        "description": "the same subjectAltName extension twice",
+        "file": "xexts__xext-duplicate.bin",
+        "id": "xext-duplicate",
+        "sha256": "213be1275e10f76d3f773e4a0a5ce64b47f71e44cf47b052abea6ed71b6da14d"
+      },
+      {
+        "arm": "xexts",
+        "bytes": 75,
+        "category": "extensions",
+        "description": "a critical unknown, a duplicate SAN and a malformed keyUsage in one sequence",
+        "file": "xexts__xexts-mixed.bin",
+        "id": "xexts-mixed",
+        "sha256": "6c57107bf56e4abefd1d2356f393a931607d46215e69a58407b39075aa5ee8d6"
+      },
+      {
+        "arm": "xexts",
+        "bytes": 2,
+        "category": "extensions",
+        "description": "an empty extension sequence",
+        "file": "xexts__xexts-empty.bin",
+        "id": "xexts-empty",
+        "sha256": "e4f60d0aa6d7f3d3b6a6494b1c861b99f649c6f9ec51abaf201b20f297327c95"
+      },
+      {
+        "arm": "xext",
+        "bytes": 9,
+        "category": "extensions",
+        "description": "subjectAltName with an empty body",
+        "file": "xext__san-empty.bin",
+        "id": "san-empty",
+        "sha256": "ff87340eba771202b6548ec49cec4f835719e23488b99206213e407540d6f5c9"
+      },
+      {
+        "arm": "xext",
+        "bytes": 12,
+        "category": "extensions",
+        "description": "subjectAltName whose body is an INTEGER, not a SEQUENCE",
+        "file": "xext__san-not-seq.bin",
+        "id": "san-not-seq",
+        "sha256": "edfb45275513cbc1a8f4f40a50097e33db34eb0c52de122e07b634dfd450ab4e"
+      },
+      {
+        "arm": "xext",
+        "bytes": 14,
+        "category": "extensions",
+        "description": "subjectAltName with a GeneralName tag 0xff",
+        "file": "xext__san-bad-name-tag.bin",
+        "id": "san-bad-name-tag",
+        "sha256": "e1ef6d394d30257b81c88eeea89df22201e7c5bd57bc12a07683efad87cfb821"
+      },
+      {
+        "arm": "xext",
+        "bytes": 18,
+        "category": "extensions",
+        "description": "subjectAltName whose dNSName length runs past the body",
+        "file": "xext__san-len-overrun.bin",
+        "id": "san-len-overrun",
+        "sha256": "0d590d22a13ae740c13b217ed4d493fd32c36c5adf17df255545536bb7eb5a69"
+      },
+      {
+        "arm": "xext",
+        "bytes": 16,
+        "category": "extensions",
+        "description": "subjectAltName containing a nested SEQUENCE where a GeneralName belongs",
+        "file": "xext__san-nested.bin",
+        "id": "san-nested",
+        "sha256": "c939a53254b5649b7d6945e13c3c53e65217249503a3a3da5320b99449cacc07"
+      },
+      {
+        "arm": "xext",
+        "bytes": 9,
+        "category": "extensions",
+        "description": "nameConstraints with an empty body",
+        "file": "xext__nc-empty.bin",
+        "id": "nc-empty",
+        "sha256": "365dcc29bd17b262ee2ae13ef5f785ef474deccb8585bf0cfcc8865abe3f5b1c"
+      },
+      {
+        "arm": "xext",
+        "bytes": 20,
+        "category": "extensions",
+        "description": "nameConstraints with a GeneralSubtree whose dNSName tag is wrong",
+        "file": "xext__nc-bad-subtree.bin",
+        "id": "nc-bad-subtree",
+        "sha256": "128f91ed84abd7286abf1fd8863ddcd3621ecf4c93db81b189db6091d81184d7"
+      },
+      {
+        "arm": "xext",
+        "bytes": 18,
+        "category": "extensions",
+        "description": "nameConstraints whose subtree length runs past the body",
+        "file": "xext__nc-len-overrun.bin",
+        "id": "nc-len-overrun",
+        "sha256": "dd305cfa4bee3d3107a331e9f8f66c57da0a2f2aeaec86ac9d0a0ed7fd9ed8d8"
+      },
+      {
+        "arm": "xext",
+        "bytes": 15,
+        "category": "extensions",
+        "description": "nameConstraints with an empty permittedSubtrees SEQUENCE",
+        "file": "xext__nc-empty-subtree.bin",
+        "id": "nc-empty-subtree",
+        "sha256": "6f59f97caf4dd12a2c2ca2a3a9af854e09307de05fe53e97887534574975f7a3"
+      },
+      {
+        "arm": "xext",
+        "bytes": 12,
+        "category": "extensions",
+        "description": "nameConstraints whose body is an OCTET STRING, not a SEQUENCE",
+        "file": "xext__nc-not-seq.bin",
+        "id": "nc-not-seq",
+        "sha256": "9c7df5af431f2beee58a33c2ba1b6f0517c55b357dc8d734146167d7ab324bcd"
+      },
+      {
+        "arm": "xext",
+        "bytes": 2,
+        "category": "extensions",
+        "description": "an empty extension",
+        "file": "xext__xext-empty.bin",
+        "id": "xext-empty",
+        "sha256": "e4f60d0aa6d7f3d3b6a6494b1c861b99f649c6f9ec51abaf201b20f297327c95"
+      },
+      {
+        "arm": "xext",
+        "bytes": 6,
+        "category": "extensions",
+        "description": "a truncated extension",
+        "file": "xext__xext-trunc.bin",
+        "id": "xext-trunc",
+        "sha256": "3becc704deecb14281c1d976408f8155422057f74b61eeba973c851837d73816"
+      },
+      {
+        "arm": "xext",
+        "bytes": 7,
+        "category": "extensions",
+        "description": "an extension carrying only its OID",
+        "file": "xext__xext-no-value.bin",
+        "id": "xext-no-value",
+        "sha256": "410146c258cbd2d44cb526780831a248016ca2f8fe3f5fecfe61990c142c3b25"
+      },
+      {
+        "arm": "xext",
+        "bytes": 10,
+        "category": "extensions",
+        "description": "an extension whose second element is an INTEGER, not the value OCTET STRING",
+        "file": "xext__xext-oid-only-int.bin",
+        "id": "xext-oid-only-int",
+        "sha256": "038b6d4f41c36813d26bae573a692e82c907424bc7004779f715a340ca99cf7c"
+      },
+      {
+        "arm": "alg",
+        "bytes": 10,
+        "category": "sigalg",
+        "description": "an AlgorithmIdentifier with an unknown OID",
+        "file": "alg__alg-unknown-oid.bin",
+        "id": "alg-unknown-oid",
+        "sha256": "fa003dc6b365ffd45d49d05de229ad2147fafc747cae1be30d09c6052c47e33b"
+      },
+      {
+        "arm": "alg",
+        "bytes": 13,
+        "category": "sigalg",
+        "description": "a bare AlgorithmIdentifier with no parameters",
+        "file": "alg__alg-noparams.bin",
+        "id": "alg-noparams",
+        "sha256": "6b2398f494d9f8ba60160da70b364204fe477a60207f9f6e897269e7bde3052e"
+      },
+      {
+        "arm": "alg",
+        "bytes": 15,
+        "category": "sigalg",
+        "description": "an AlgorithmIdentifier with an explicit NULL parameter",
+        "file": "alg__alg-null-params.bin",
+        "id": "alg-null-params",
+        "sha256": "beef31b653b95e04fde915ea3c41772fa8b398f56e7420dbfaea2696066d8814"
+      },
+      {
+        "arm": "alg",
+        "bytes": 16,
+        "category": "sigalg",
+        "description": "an AlgorithmIdentifier whose parameters are an INTEGER, not NULL",
+        "file": "alg__alg-bad-params.bin",
+        "id": "alg-bad-params",
+        "sha256": "15e925932d73b21328e0570e664cbb19ed461b47b3572d74133992f0dca494a9"
+      },
+      {
+        "arm": "alg",
+        "bytes": 4,
+        "category": "sigalg",
+        "description": "a truncated AlgorithmIdentifier",
+        "file": "alg__alg-trunc.bin",
+        "id": "alg-trunc",
+        "sha256": "79330331eac08bcdc1c5c68d651e6114860d72fc139bdf10f02f479fb8e381f0"
+      },
+      {
+        "arm": "alg",
+        "bytes": 2,
+        "category": "sigalg",
+        "description": "an empty SEQUENCE",
+        "file": "alg__alg-empty-seq.bin",
+        "id": "alg-empty-seq",
+        "sha256": "e4f60d0aa6d7f3d3b6a6494b1c861b99f649c6f9ec51abaf201b20f297327c95"
+      },
+      {
+        "arm": "spki",
+        "bytes": 10,
+        "category": "sigalg",
+        "description": "a truncated SubjectPublicKeyInfo",
+        "file": "spki__spki-trunc.bin",
+        "id": "spki-trunc",
+        "sha256": "f9ed6031d61409880e3e6d1db1ff4c87c98a5a705cdab162a27cfc566293da4d"
+      },
+      {
+        "arm": "spki",
+        "bytes": 294,
+        "category": "sigalg",
+        "description": "a SubjectPublicKeyInfo whose BIT STRING length is inflated",
+        "file": "spki__spki-bad-bitstr.bin",
+        "id": "spki-bad-bitstr",
+        "sha256": "233efd0d1fb0bbd4cdbd5213c1adcb2931eb87fd673c9a9c3c864e9ea9719830"
+      },
+      {
+        "arm": "pemcert",
+        "bytes": 1094,
+        "category": "control",
+        "description": "a well-formed PEM certificate",
+        "file": "pemcert__pemcert-valid.bin",
+        "id": "pemcert-valid",
+        "sha256": "919c5179d7ae2465263904600082681099076f2f59eafecdb5445b9ed50431d1"
+      },
+      {
+        "arm": "pemcrl",
+        "bytes": 564,
+        "category": "control",
+        "description": "a well-formed PEM CRL",
+        "file": "pemcrl__pemcrl-valid.bin",
+        "id": "pemcrl-valid",
+        "sha256": "4d7ae6d842a63e79f2b80c4f4b309d3e0e074c2b8eab812b55b55d7e6e72bfba"
+      },
+      {
+        "arm": "pemreq",
+        "bytes": 924,
+        "category": "control",
+        "description": "a well-formed PEM CSR",
+        "file": "pemreq__pemreq-valid.bin",
+        "id": "pemreq-valid",
+        "sha256": "356d1f7a9257bfee4cc30d7f7ce81cf61f4d85c29b17b09a414d199f63843a8d"
+      },
+      {
+        "arm": "pemcert",
+        "bytes": 1066,
+        "category": "pem",
+        "description": "a PEM certificate with the BEGIN line removed",
+        "file": "pemcert__pemcert-no-begin.bin",
+        "id": "pemcert-no-begin",
+        "sha256": "450a64997341b5018967d6444006b6205c6f79fcc0cfa919e32ccd5f624f639f"
+      },
+      {
+        "arm": "pemcert",
+        "bytes": 1068,
+        "category": "pem",
+        "description": "a PEM certificate with the END line removed",
+        "file": "pemcert__pemcert-no-end.bin",
+        "id": "pemcert-no-end",
+        "sha256": "4d33022108117e53b7fc4eeb0355bb8b5c2d0c03bdaa475c8f0edbc90c6f626a"
+      },
+      {
+        "arm": "pemcert",
+        "bytes": 1110,
+        "category": "pem",
+        "description": "a PEM certificate whose label is CERTIFICATE REQUEST",
+        "file": "pemcert__pemcert-wrong-label.bin",
+        "id": "pemcert-wrong-label",
+        "sha256": "2804b0917c1e815000ab7a995714de6a066967446e78dd57fbef9f9f2fa5f91e"
+      },
+      {
+        "arm": "pemcert",
+        "bytes": 1094,
+        "category": "pem",
+        "description": "a PEM certificate with a corrupt base64 character",
+        "file": "pemcert__pemcert-bad-b64.bin",
+        "id": "pemcert-bad-b64",
+        "sha256": "7fbaf81c751ee383efd34e66279617272343325e4b7fb258985a2d56aee415ad"
+      },
+      {
+        "arm": "pemcert",
+        "bytes": 54,
+        "category": "pem",
+        "description": "a PEM certificate with an empty body",
+        "file": "pemcert__pemcert-empty-b64.bin",
+        "id": "pemcert-empty-b64",
+        "sha256": "8944ea1031367945f4bc0ba05d8d125678f1b4c7a8aca51088695f4d176b7232"
+      },
+      {
+        "arm": "pemcert",
+        "bytes": 67,
+        "category": "pem",
+        "description": "a PEM certificate whose base64 body is truncated to 12 bytes",
+        "file": "pemcert__pemcert-short-b64.bin",
+        "id": "pemcert-short-b64",
+        "sha256": "84139679cde569185a00e0c3440de6f9d671ba5040f459cf208281f7943b1d9c"
+      },
+      {
+        "arm": "pemcert",
+        "bytes": 1102,
+        "category": "pem",
+        "description": "a PEM certificate with trailing garbage after the END line",
+        "file": "pemcert__pemcert-extra-data.bin",
+        "id": "pemcert-extra-data",
+        "sha256": "ecda13b9b180d4baa93d93bd95b4853075080e033111ccebebd001e5c53457d0"
+      },
+      {
+        "arm": "pemcert",
+        "bytes": 1112,
+        "category": "pem",
+        "description": "a PEM certificate with CRLF line endings",
+        "file": "pemcert__pemcert-crlf.bin",
+        "id": "pemcert-crlf",
+        "sha256": "7932c3a8c6972d605ce6d45737c39a976bafae88d102a7c78c82b089ccd9bf93"
+      },
+      {
+        "arm": "pemcert",
+        "bytes": 1093,
+        "category": "pem",
+        "description": "a PEM certificate with no trailing newline",
+        "file": "pemcert__pemcert-no-final-newline.bin",
+        "id": "pemcert-no-final-newline",
+        "sha256": "b6e087c589b7689b21f45244d4fc4fdb8fbba3ec1ec8cb0fb1877dd029a27c60"
+      },
+      {
+        "arm": "pemcert",
+        "bytes": 1094,
+        "category": "pem",
+        "description": "a PEM certificate whose BEGIN label is lower-case",
+        "file": "pemcert__pemcert-lower-tag.bin",
+        "id": "pemcert-lower-tag",
+        "sha256": "7f571c5b13edd62d63ada3b650cde7f8ff45b973d9097020f1f81746103e389d"
+      },
+      {
+        "arm": "pemcert",
+        "bytes": 2188,
+        "category": "pem",
+        "description": "two concatenated PEM certificates",
+        "file": "pemcert__pemcert-two-certs.bin",
+        "id": "pemcert-two-certs",
+        "sha256": "cba68eb41a1368fe51270e8e1ccd379fd89bdd031476bb43b7300ba8b263b5d2"
+      },
+      {
+        "arm": "pemcert",
+        "bytes": 59,
+        "category": "pem",
+        "description": "a private-key PEM fed to the certificate reader",
+        "file": "pemcert__pemcert-key-as-cert.bin",
+        "id": "pemcert-key-as-cert",
+        "sha256": "041e60b8076ef87219ab446fb584df7337a7e20ff707625f56a21c83cd589eb8"
+      },
+      {
+        "arm": "pemcert",
+        "bytes": 1093,
+        "category": "pem",
+        "description": "a PEM certificate whose base64 padding is stripped",
+        "file": "pemcert__pemcert-padding-bad.bin",
+        "id": "pemcert-padding-bad",
+        "sha256": "aae973e3ca37ffc40f2f42a223b7515af01a4fbc56f0966f10c748a2306f23f5"
+      },
+      {
+        "arm": "pemcrl",
+        "bytes": 541,
+        "category": "pem",
+        "description": "a PEM CRL with the END line removed",
+        "file": "pemcrl__pemcrl-no-end.bin",
+        "id": "pemcrl-no-end",
+        "sha256": "b29e7dde0917fdb4cdfebc7bcac52609632ae9e1071fc79ece2f20e60233ac8b"
+      },
+      {
+        "arm": "pemcrl",
+        "bytes": 554,
+        "category": "pem",
+        "description": "a PEM CRL whose label is CRL (not X509 CRL)",
+        "file": "pemcrl__pemcrl-wrong-label.bin",
+        "id": "pemcrl-wrong-label",
+        "sha256": "08c57d857ae0bb991dcd2d493db4cc04cdd15c68b20d2a54cf6b28cb6e8d6acd"
+      },
+      {
+        "arm": "pemcrl",
+        "bytes": 564,
+        "category": "pem",
+        "description": "a PEM CRL with a corrupt base64 character",
+        "file": "pemcrl__pemcrl-bad-b64.bin",
+        "id": "pemcrl-bad-b64",
+        "sha256": "41de0e58e9efdd081eb45bc6c3731cd16f69c36efcae3b5b68d6f6906d406e51"
+      },
+      {
+        "arm": "pemreq",
+        "bytes": 888,
+        "category": "pem",
+        "description": "a PEM CSR with the BEGIN line removed",
+        "file": "pemreq__pemreq-no-begin.bin",
+        "id": "pemreq-no-begin",
+        "sha256": "2c56eba3f8ac9cb3908680031ea7263ad851a37cd55accbf9080e9c8fb4fda2b"
+      },
+      {
+        "arm": "pemreq",
+        "bytes": 908,
+        "category": "pem",
+        "description": "a PEM CSR whose label is CERTIFICATE",
+        "file": "pemreq__pemreq-wrong-label.bin",
+        "id": "pemreq-wrong-label",
+        "sha256": "2561751241dccbdf67a8f1d2632ba4396b0d0e313a8290637e50507749c24232"
+      },
+      {
+        "arm": "pemreq",
+        "bytes": 91,
+        "category": "pem",
+        "description": "a PEM CSR whose base64 body is truncated to 20 bytes",
+        "file": "pemreq__pemreq-trunc-b64.bin",
+        "id": "pemreq-trunc-b64",
+        "sha256": "a3ced1c091ccb2e57770f542458265b0fea4fd3f8c5baa134f17f69629370bd7"
+      },
+      {
+        "arm": "crl",
+        "bytes": 0,
+        "category": "crl",
+        "description": "the CRL truncated to 0 byte(s): empty",
+        "file": "crl__crl-trunc-empty.bin",
+        "id": "crl-trunc-empty",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "arm": "crl",
+        "bytes": 1,
+        "category": "crl",
+        "description": "the CRL truncated to 1 byte(s): one byte",
+        "file": "crl__crl-trunc-one-byte.bin",
+        "id": "crl-trunc-one-byte",
+        "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+      },
+      {
+        "arm": "crl",
+        "bytes": 189,
+        "category": "crl",
+        "description": "the CRL truncated to 189 byte(s): half",
+        "file": "crl__crl-trunc-half.bin",
+        "id": "crl-trunc-half",
+        "sha256": "3ce988d92a2f8753acc207a489623f864464dff46c69e3e722914659402e19a2"
+      },
+      {
+        "arm": "crl",
+        "bytes": 378,
+        "category": "crl",
+        "description": "the CRL truncated to 378 byte(s): one byte short",
+        "file": "crl__crl-trunc-one-byte-short.bin",
+        "id": "crl-trunc-one-byte-short",
+        "sha256": "6b1c3b75431ae4811b539f94f97c9be325a18b53a568eb7f47c51897d4682b8b"
+      },
+      {
+        "arm": "crl",
+        "bytes": 395,
+        "category": "crl",
+        "description": "the CRL plus 16 trailing bytes",
+        "file": "crl__crl-trailing.bin",
+        "id": "crl-trailing",
+        "sha256": "ce86899d0748798be03e695cf2049d3a5cfb9f951a92327cbd18e2c8c8d8f8c7"
+      },
+      {
+        "arm": "crl",
+        "bytes": 381,
+        "category": "crl",
+        "description": "the CRL with its outer length declared 0x7fffffff",
+        "file": "crl__crl-len-huge.bin",
+        "id": "crl-len-huge",
+        "sha256": "211763a81c10f31c25528148193e6fa2b2d8fd40a5dbb6a4f1c0029707c75dd0"
+      },
+      {
+        "arm": "crl",
+        "bytes": 379,
+        "category": "crl",
+        "description": "the CRL's outer SEQUENCE under an indefinite length",
+        "file": "crl__crl-len-indefinite.bin",
+        "id": "crl-len-indefinite",
+        "sha256": "b0de957df9ce60a91f20bce9ee05162e8f62302f59245627d98af4af35d8a436"
+      },
+      {
+        "arm": "req",
+        "bytes": 0,
+        "category": "req",
+        "description": "the CSR truncated to 0 byte(s): empty",
+        "file": "req__req-trunc-empty.bin",
+        "id": "req-trunc-empty",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "arm": "req",
+        "bytes": 1,
+        "category": "req",
+        "description": "the CSR truncated to 1 byte(s): one byte",
+        "file": "req__req-trunc-one-byte.bin",
+        "id": "req-trunc-one-byte",
+        "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+      },
+      {
+        "arm": "req",
+        "bytes": 314,
+        "category": "req",
+        "description": "the CSR truncated to 314 byte(s): half",
+        "file": "req__req-trunc-half.bin",
+        "id": "req-trunc-half",
+        "sha256": "8fcef0e86755ead21d15317d5968a511322246551dd452555e070d430fe8d899"
+      },
+      {
+        "arm": "req",
+        "bytes": 628,
+        "category": "req",
+        "description": "the CSR truncated to 628 byte(s): one byte short",
+        "file": "req__req-trunc-one-byte-short.bin",
+        "id": "req-trunc-one-byte-short",
+        "sha256": "dcd1fe47193ca1f076a090e7044a0572f127265a4ad6a770695974d9bed04b3b"
+      },
+      {
+        "arm": "req",
+        "bytes": 645,
+        "category": "req",
+        "description": "the CSR plus 16 trailing bytes",
+        "file": "req__req-trailing.bin",
+        "id": "req-trailing",
+        "sha256": "c6233462a8277fd28d9b5055d0622bfa1151a92e75909859ab3297c78f871ad2"
+      },
+      {
+        "arm": "req",
+        "bytes": 631,
+        "category": "req",
+        "description": "the CSR with its outer length declared 0x7fffffff",
+        "file": "req__req-len-huge.bin",
+        "id": "req-len-huge",
+        "sha256": "df32840aae4b6ea216764acccc7bca8624cf0e7dff1c55a8e211c49e1e3e42d4"
+      },
+      {
+        "arm": "req",
+        "bytes": 629,
+        "category": "req",
+        "description": "the CSR's outer SEQUENCE under an indefinite length",
+        "file": "req__req-len-indefinite.bin",
+        "id": "req-len-indefinite",
+        "sha256": "a04aa9580aaa76b43669143d354176d4fb75b1f1a2c9e3cc0b9eab587e111557"
+      },
+      {
+        "arm": "gtime",
+        "bytes": 16,
+        "category": "time",
+        "description": "a GeneralizedTime without the Z terminator",
+        "file": "gtime__gtime-no-z.bin",
+        "id": "gtime-no-z",
+        "sha256": "57ac156d112dd748c3e67f8f55d96421be800073dc0c2a25a1ff25d275d2cf3d"
+      },
+      {
+        "arm": "gtime",
+        "bytes": 17,
+        "category": "time",
+        "description": "a GeneralizedTime with a non-digit",
+        "file": "gtime__gtime-bad-digit.bin",
+        "id": "gtime-bad-digit",
+        "sha256": "3de6c7a4dbd79fe5ae4266642ab54d8872c315b249cddad358d95bbe45eceafb"
+      },
+      {
+        "arm": "gtime",
+        "bytes": 16,
+        "category": "time",
+        "description": "a GeneralizedTime truncated",
+        "file": "gtime__gtime-short.bin",
+        "id": "gtime-short",
+        "sha256": "956f54a337d4bb6d9847239de91f31e00dcf5242e868eafa2cac3f9957b4b4b4"
+      },
+      {
+        "arm": "gtime",
+        "bytes": 17,
+        "category": "time",
+        "description": "a GeneralizedTime at second 60",
+        "file": "gtime__gtime-leap-second.bin",
+        "id": "gtime-leap-second",
+        "sha256": "781e0e39abb388e93dc887c59b3b209ea4845162e944771974635c7adef7f7b4"
+      },
+      {
+        "arm": "gtime",
+        "bytes": 17,
+        "category": "time",
+        "description": "a GeneralizedTime in year 0000",
+        "file": "gtime__gtime-year-zero.bin",
+        "id": "gtime-year-zero",
+        "sha256": "5cf258bb1da8fbfea0fa002c80030c93eef7e3c7e8f1b5a9727ef9c5e1010088"
+      },
+      {
+        "arm": "gtime",
+        "bytes": 2,
+        "category": "time",
+        "description": "an empty GeneralizedTime",
+        "file": "gtime__gtime-empty.bin",
+        "id": "gtime-empty",
+        "sha256": "78a23af8da46b1b37e8767921a2d3f528fdc8eca37cea8aea775fd2b283d3776"
+      },
+      {
+        "arm": "gtime",
+        "bytes": 17,
+        "category": "time",
+        "description": "a GeneralizedTime with an out-of-range month 99",
+        "file": "gtime__gtime-overflow.bin",
+        "id": "gtime-overflow",
+        "sha256": "a5b6129702c1f52e2378207d82216182293009879a8d5af6f6d5f6316f42527c"
+      },
+      {
+        "arm": "utime",
+        "bytes": 14,
+        "category": "time",
+        "description": "a UTCTime without the Z terminator",
+        "file": "utime__utime-no-z.bin",
+        "id": "utime-no-z",
+        "sha256": "13b94e381fb2d61cfd9baa73719a8fde295359dd6e013d515cdc51900a5f6283"
+      },
+      {
+        "arm": "utime",
+        "bytes": 15,
+        "category": "time",
+        "description": "a UTCTime with a non-digit",
+        "file": "utime__utime-bad-digit.bin",
+        "id": "utime-bad-digit",
+        "sha256": "a1e1694b2b16498deb12618d69433f9c9b6911a24bc88c037846bc8af6034f1e"
+      },
+      {
+        "arm": "utime",
+        "bytes": 14,
+        "category": "time",
+        "description": "a UTCTime truncated",
+        "file": "utime__utime-short.bin",
+        "id": "utime-short",
+        "sha256": "3bed349d2f3734b7a139eafe3a26c59b168c1c93323ced18a1f002b37ed1f823"
+      },
+      {
+        "arm": "utime",
+        "bytes": 2,
+        "category": "time",
+        "description": "an empty UTCTime",
+        "file": "utime__utime-empty.bin",
+        "id": "utime-empty",
+        "sha256": "009bcd40e9707180cd0f5b0a16f497a82ece54d6fe538d5861b47c49ffd91773"
+      },
+      {
+        "arm": "utime",
+        "bytes": 15,
+        "category": "time",
+        "description": "a UTCTime with an out-of-range day 99",
+        "file": "utime__utime-overflow.bin",
+        "id": "utime-overflow",
+        "sha256": "07be85f05981648e506affa7957d12eff7a297369c189a5f1a742e4a5e23f4fe"
+      },
+      {
+        "arm": "atype",
+        "bytes": 4,
+        "category": "bitstring",
+        "description": "a BIT STRING declaring 8 unused bits",
+        "file": "atype__bitstr-bad-unused.bin",
+        "id": "bitstr-bad-unused",
+        "sha256": "ebd16d3c43d8cba8ab46b73af33adf3de624667a8f4857696f8fcaaba2980e75"
+      },
+      {
+        "arm": "atype",
+        "bytes": 2,
+        "category": "bitstring",
+        "description": "a zero-length BIT STRING",
+        "file": "atype__bitstr-empty.bin",
+        "id": "bitstr-empty",
+        "sha256": "9b4fb24edd6d1d8830e272398263cdbf026b97392cc35387b991dc0248a628f9"
+      },
+      {
+        "arm": "atype",
+        "bytes": 4,
+        "category": "bitstring",
+        "description": "a BIT STRING declaring 16 bytes with two present",
+        "file": "atype__bitstr-len-overrun.bin",
+        "id": "bitstr-len-overrun",
+        "sha256": "9b8738474d5229dcde525aeb4691c9d9fdf70a209a70f5ba3cff76ebbc2df79b"
+      }
+    ],
+    "note": "The Phase 18 hostile X.509 / malformed-input corpus: one file per entry, named `<arm>__<id>.bin`, with the stable id and the reader arm the bytes are fed to. It is a fixed enumeration, not a fuzzer, and not a coverage claim. `forensics/tools/gen_hostile_x509_corpus.py` is the source of truth and `--check` proves the committed files are the ones it derives.",
+    "provenance": {
+      "base-cert-v1": {
+        "path": "courts/phase17/fixtures/cert.der",
+        "sha256": "15629dca8d7a63ed5241ba73483e95a62818caf01e1e90e105f45c7ec9eeeb9f"
+      },
+      "base-cert-v3": {
+        "path": "courts/phase17/fixtures/leaf.pem",
+        "sha256": "919c5179d7ae2465263904600082681099076f2f59eafecdb5445b9ed50431d1"
+      },
+      "base-crl": {
+        "path": "courts/phase17/fixtures/crl.pem",
+        "sha256": "4d7ae6d842a63e79f2b80c4f4b309d3e0e074c2b8eab812b55b55d7e6e72bfba"
+      },
+      "base-req": {
+        "path": "courts/phase17/fixtures/req.pem",
+        "sha256": "356d1f7a9257bfee4cc30d7f7ce81cf61f4d85c29b17b09a414d199f63843a8d"
+      }
+    }
+  },
+  "generator": "forensics/tools/gen_hostile_x509_corpus.py",
+  "inputs": [
+    {
+      "name": "corpus-generator",
+      "path": "forensics/tools/gen_hostile_x509_corpus.py",
+      "sha256": "42604ce2c40290addc994c33794f688e7db4fd99a619448624dc88b115a8c721"
+    },
+    {
+      "name": "base-cert-v3",
+      "path": "courts/phase17/fixtures/leaf.pem",
+      "sha256": "919c5179d7ae2465263904600082681099076f2f59eafecdb5445b9ed50431d1"
+    },
+    {
+      "name": "base-cert-v1",
+      "path": "courts/phase17/fixtures/cert.der",
+      "sha256": "15629dca8d7a63ed5241ba73483e95a62818caf01e1e90e105f45c7ec9eeeb9f"
+    },
+    {
+      "name": "base-crl",
+      "path": "courts/phase17/fixtures/crl.pem",
+      "sha256": "4d7ae6d842a63e79f2b80c4f4b309d3e0e074c2b8eab812b55b55d7e6e72bfba"
+    },
+    {
+      "name": "base-req",
+      "path": "courts/phase17/fixtures/req.pem",
+      "sha256": "356d1f7a9257bfee4cc30d7f7ce81cf61f4d85c29b17b09a414d199f63843a8d"
+    }
+  ],
+  "kind": "hostile-x509-corpus",
+  "schema": "openssl-rs/atlas/hostile-x509-corpus/v1"
+}

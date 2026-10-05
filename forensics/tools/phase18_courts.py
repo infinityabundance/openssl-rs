@@ -45,15 +45,34 @@ dispositions legitimately differ from the authority's — which is why the verdi
 the corpus was driven, every candidate disposition was recorded, and the authority control held,
 **not** when nothing diverged. It is not a security proof and not a parity claim (section 3.6).
 
+`RT-HOSTILE-X509`, and what it drives
+------------------------------------
+18.2's court. Its instrument is `courts/phase18/rt_hostile_x509_probe.c`, compiled twice (once
+against the admitted authority's prefix, once against the candidate distribution shell). It reads
+`courts/phase18/fixtures/hostile-x509/`, the fixed malformed-input corpus
+`forensics/tools/gen_hostile_x509_corpus.py` writes, one file per entry named `<arm>__<id>.bin`,
+and feeds each entry to the reader its arm names: `cert` (`d2i_X509`), `crl` (`d2i_X509_CRL`),
+`req` (`d2i_X509_REQ`), `xext` (`d2i_X509_EXTENSION`, plus `X509V3_EXT_d2i` to drive the
+subjectAltName / nameConstraints / basicConstraints body parsers), `xexts` (`d2i_X509_EXTENSIONS`),
+`gn` (`d2i_GENERAL_NAMES`), `atype` (`d2i_ASN1_TYPE`), `gtime`/`utime`
+(`d2i_ASN1_GENERALIZEDTIME`/`d2i_ASN1_UTCTIME`), `alg` (`d2i_X509_ALGOR`), `spki`
+(`d2i_X509_PUBKEY`) and the three PEM containers (`PEM_read_bio_X509`/`_X509_CRL`/`_X509_REQ`).
+The corpus enumerates truncated and oversized DER certificates, ASN.1 length bombs (deep nesting,
+huge declared lengths, indefinite-length misuse), malformed TBSCertificate fields, bad extensions
+(duplicate / unknown / critical, malformed name constraints and SAN), bad signature
+`AlgorithmIdentifier`s, malformed CRL and CSR containers, malformed PEM containers (bad base64,
+missing / extra delimiters, wrong labels), time and bit-string edge cases, and one well-formed
+control per arm -- not a fuzzer, and **not a coverage claim**: a surface no entry reaches is named
+in the court's row rather than counted as passing (section 3.1). Each entry runs in its own forked
+child, exactly as `RT-HOSTILE-TLS` does, so a crash, an exhausted allocation budget or a
+non-terminating parse is a *recorded finding* rather than a harness abort (section 3.3).
+
 The pending courts
 ------------------
-Four of the five courts the plan names are not runnable yet. `PENDING_COURTS` names each with the
+Three of the five courts the plan names are not runnable yet. `PENDING_COURTS` names each with the
 subphase that lands its instrument, so "not registered" is a stated distance rather than a court
 quietly dropped:
 
-  * `RT-HOSTILE-X509` (18.2) — a hostile X.509 / malformed-input corpus: certificates, extensions
-    and DER/PEM containers with truncated, oversized and ill-formed encodings, with an
-    authority-linked differential control;
   * `CT-PRIMITIVES` (18.3) — secret-independence checks for the primitive-bearing paths (BN, RSA,
     EC, the AEADs and the TLS key schedule), with a sensitivity control that a deliberate
     branch-on-secret is caught;
@@ -96,34 +115,34 @@ from atlas_common import (  # noqa: E402
 )
 
 import gen_hostile_tls_corpus  # noqa: E402
+import gen_hostile_x509_corpus  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase18" / "COURTS.json"
 GENERATOR = "forensics/tools/phase18_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-18-SUBPHASES.md"
 PROBE_DIR = REPO_ROOT / "courts" / "phase18"
 FIXTURES = PROBE_DIR / "fixtures" / "hostile-tls"
+X509_FIXTURES = PROBE_DIR / "fixtures" / "hostile-x509"
 CORPUS_GENERATOR = REPO_ROOT / "forensics" / "tools" / "gen_hostile_tls_corpus.py"
+X509_CORPUS_GENERATOR = REPO_ROOT / "forensics" / "tools" / "gen_hostile_x509_corpus.py"
 STAGED = REPO_ROOT / "artifacts" / "phase18" / "probes"
 PHASE2 = REPO_ROOT / "artifacts" / "phase2"
 AUTH_PREFIX = (REPO_ROOT / "forensics" / "authorities" / "prefix"
                / "openssl-3.6.4-production")
-RUN_TIMEOUT_S = "300"
+RUN_TIMEOUT_S = "900"
 
 # The courts, in the order they land. `(name, probe filename)`, and the probe is declared in the
 # same commit as the entry, so a runner that names a probe which does not exist cannot be
 # committed.
 COURTS: list[tuple[str, str]] = [
     ("RT-HOSTILE-TLS", "rt_hostile_tls_probe.c"),
+    ("RT-HOSTILE-X509", "rt_hostile_x509_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
 # the instrument and what the court will drive, so "nothing registered" is a stated distance
 # rather than a court quietly dropped.
 PENDING_COURTS: dict[str, str] = {
-    "RT-HOSTILE-X509": (
-        "18.2 lands the corpus; it drives truncated, oversized and ill-formed certificates, "
-        "extensions and DER/PEM containers with an authority-linked differential control"
-    ),
     "CT-PRIMITIVES": (
         "18.3 lands the check; it measures secret-independence over the primitive-bearing paths "
         "(BN, RSA, EC, the AEADs and the TLS key schedule) and carries a sensitivity control"
@@ -142,6 +161,9 @@ PENDING_COURTS: dict[str, str] = {
 # rejecting. The plan requires the differential control to keep the expectation honest (section
 # 3.2); this is the arm that fails if it cannot.
 CONTROL_ENTRY = "ch-min-valid"
+# `RT-HOSTILE-X509`'s control: the well-formed v3 certificate. The authority must parse it
+# into a real certificate (version 2, at least one extension), not merely reject it.
+X509_CONTROL_ENTRY = "cert-valid"
 CONTROL_CLASSES = ("parse",)
 HOSTILE_CLASSES = ("crash", "oom", "timeout")
 
@@ -265,6 +287,7 @@ def findings_of(side: str, values: dict[str, str], corpus_ids: list[str]) -> dic
             out[cls].append({
                 "entry": entry,
                 "role": values.get(f"entry.{entry}.role", ""),
+                "arm": values.get(f"entry.{entry}.arm", ""),
                 "signal": values.get(f"entry.{entry}.signal", ""),
             })
     return out
@@ -420,6 +443,164 @@ def hostile_tls_court(name: str, src: Path, auth, work: Path) -> dict:
     }
 
 
+def hostile_x509_court(name: str, src: Path, auth, work: Path) -> dict:
+    """`RT-HOSTILE-X509`: the fixed malformed-input corpus over the X.509/ASN.1/PEM readers.
+
+    Returns a `pass` record when the corpus was driven on both sides, every entry's candidate
+    disposition was recorded, and the authority differential control held; the candidate-vs-
+    authority differences and any crash/oom/timeout findings are recorded in the row, not
+    failed. It is a bounded differential result over the corpus it drives, not a security proof
+    and not a parity claim (sections 3.1 and 3.6).
+    """
+    problems = gen_hostile_x509_corpus.verify()
+    if problems:
+        return {"court": name, "verdict": "fail", "stage": "corpus",
+                "detail": problems[:8]}
+    body = gen_hostile_x509_corpus.manifest()
+    corpus_ids = [e["id"] for e in body["entries"]]
+
+    auth_bin = work / f"{src.stem}.authority"
+    cand_bin = work / f"{src.stem}.candidate"
+    ok, err = compile_probe(src, auth_bin, auth.prefix / "include", auth.libdir)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-authority",
+                "detail": err.splitlines()[:12]}
+    ok, err = compile_probe(src, cand_bin, PHASE2 / "include", PHASE2)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-candidate",
+                "detail": err.splitlines()[:12]}
+
+    a_out, a_err, a_code = run_probe(
+        auth_bin, side_env(auth.libdir, auth.libdir / "ossl-modules"))
+    c_out, c_err, c_code = run_probe(
+        cand_bin, side_env(PHASE2, PHASE2 / "install" / "lib" / "ossl-modules"))
+
+    if not a_out.strip():
+        return {"court": name, "verdict": "fail", "stage": "authority-run",
+                "detail": {"exit_code": a_code, "stderr": a_err.splitlines()[:12]}}
+    if not c_out.strip():
+        return {"court": name, "verdict": "fail", "stage": "candidate-run",
+                "detail": {"exit_code": c_code, "stderr": c_err.splitlines()[:12]}}
+
+    a_vals, c_vals = keyed(a_out), keyed(c_out)
+    residuals = residual_rows(a_vals, c_vals)
+    findings = {
+        "authority": findings_of("authority", a_vals, corpus_ids),
+        "candidate": findings_of("candidate", c_vals, corpus_ids),
+    }
+
+    a_driven, c_driven = _entry_ids(a_vals), _entry_ids(c_vals)
+
+    def ctl(vals: dict[str, str]) -> dict:
+        e = X509_CONTROL_ENTRY
+        return {
+            "class": _class_of(vals, e),
+            "ret": vals.get(f"entry.{e}.ret"),
+            "obs": vals.get(f"entry.{e}.obs"),
+            "obs2": vals.get(f"entry.{e}.obs2"),
+            "err": vals.get(f"entry.{e}.err"),
+        }
+
+    a_control, c_control = ctl(a_vals), ctl(c_vals)
+
+    # The corpus is driven when every manifest entry got a class on both sides; the authority
+    # control is honest when the *authority* parsed the well-formed v3 certificate into a real
+    # certificate (version 2, at least one extension, no queued error) and itself suffered no
+    # hostile finding -- a control that cannot fail is not evidence (section 3.2).
+    control_ok = (
+        a_control["class"] in CONTROL_CLASSES
+        and a_control["ret"] == "1"
+        and a_control["obs"] == "2"
+        and int(a_control["obs2"] or "0") >= 1
+        and a_control["err"] == "none"
+        and not any(findings["authority"][k] for k in HOSTILE_CLASSES)
+        and c_control["class"] in CONTROL_CLASSES
+        and c_control["ret"] == "1"
+    )
+    driven_ok = (a_driven == set(corpus_ids) and c_driven == set(corpus_ids))
+
+    if not driven_ok:
+        missing_a = sorted(set(corpus_ids) - a_driven)
+        missing_c = sorted(set(corpus_ids) - c_driven)
+        problems = []
+        if missing_a:
+            problems.append(f"authority did not drive: {missing_a[:8]}")
+        if missing_c:
+            problems.append(f"candidate did not drive: {missing_c[:8]}")
+    else:
+        problems = []
+
+    staged: dict[str, str] = {}
+    STAGED.mkdir(parents=True, exist_ok=True)
+    for side, srcbin in (("authority", auth_bin), ("candidate", cand_bin)):
+        dst = STAGED / f"{src.stem}.{side}"
+        if srcbin.is_file():
+            shutil.copyfile(srcbin, dst)
+            dst.chmod(0o755)
+            staged[side] = rel(dst)
+
+    divergent = [r for r in residuals if r["class"] != "hostile"]
+    hostile = [r for r in residuals if r["class"] == "hostile"]
+
+    verdict = "pass" if (driven_ok and control_ok) else "fail"
+    rlimit_data = resource.getrlimit(resource.RLIMIT_DATA)[0]
+    cgroup_max = None
+    try:
+        cgroup_max = int(Path("/sys/fs/cgroup/memory.max").read_text().strip())
+    except (OSError, ValueError):
+        cgroup_max = None
+
+    return {
+        "court": name,
+        "probe": rel(src),
+        "corpus": {
+            "path": rel(X509_FIXTURES),
+            "manifest": rel(gen_hostile_x509_corpus.MANIFEST),
+            "manifest_sha256": sha256_file(gen_hostile_x509_corpus.MANIFEST),
+            "generator": rel(X509_CORPUS_GENERATOR),
+            "entries": body["counts"]["entries"],
+            "total_bytes": body["counts"]["total_bytes"],
+            "by_category": body["counts"]["by_category"],
+            "by_arm": body["counts"]["by_arm"],
+            "provenance": body["provenance"],
+        },
+        "authority_exit_code": a_code,
+        "candidate_exit_code": c_code,
+        "authority_observations": len([ln for ln in a_out.splitlines() if "=" in ln]),
+        "candidate_observations": len([ln for ln in c_out.splitlines() if "=" in ln]),
+        "entries_driven": {
+            "corpus": len(corpus_ids),
+            "authority": len(a_driven),
+            "candidate": len(c_driven),
+        },
+        "control": {"entry": X509_CONTROL_ENTRY, "authority": a_control,
+                    "candidate": c_control, "honest": control_ok},
+        "findings": findings,
+        "findings_count": {side: {k: len(v) for k, v in findings[side].items()}
+                           for side in findings},
+        "residual_count": len(residuals),
+        "residuals": hostile,
+        "hostile_residual_count": len(hostile),
+        "recorded_divergences": divergent[:48],
+        "recorded_divergence_count": len(divergent),
+        "problems": problems,
+        "bounds": {
+            "rlimit_data_kib": None if rlimit_data == resource.RLIM_INFINITY else rlimit_data,
+            "cgroup_memory_max_bytes": cgroup_max,
+            "entry_timeout_ms": 4000,
+        },
+        "verdict": verdict,
+        "staged_binaries": staged,
+        "candidate_stderr_tail": c_err.splitlines()[-3:],
+    }
+
+
+COURT_IMPL = {
+    "RT-HOSTILE-TLS": hostile_tls_court,
+    "RT-HOSTILE-X509": hostile_x509_court,
+}
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -437,7 +618,7 @@ def main(argv: list[str]) -> int:
             records.append({"court": name, "verdict": "fail",
                             "stage": "probe-missing", "detail": rel(src)})
             continue
-        records.append(hostile_tls_court(name, src, auth, work))
+        records.append(COURT_IMPL[name](name, src, auth, work))
 
     passed = sum(1 for r in records if r["verdict"] == "pass")
     failed = sum(1 for r in records if r["verdict"] == "fail")
@@ -470,9 +651,28 @@ def main(argv: list[str]) -> int:
             "ClientHello into a real handshake record and itself suffered no hostile finding "
             "(section 3.2). It is a bounded differential result over the corpus it drives, not a "
             "security proof and not a parity claim (sections 3.1 and 3.6). "
-            "`RT-HOSTILE-X509` is 18.2's: a hostile X.509 / malformed-input corpus of truncated, "
-            "oversized and ill-formed certificates, extensions and DER/PEM containers, with an "
-            "authority-linked differential control. `CT-PRIMITIVES` is 18.3's: secret-independence "
+            "`RT-HOSTILE-X509` is 18.2's court: it compiles "
+            "courts/phase18/rt_hostile_x509_probe.c twice (authority and candidate) and drives the "
+            "fixed malformed-input corpus courts/phase18/fixtures/hostile-x509/ -- one file per "
+            "entry, `<arm>__<id>.bin` -- through the X.509, ASN.1 and PEM readers the arm names "
+            "(d2i_X509, d2i_X509_CRL, d2i_X509_REQ, d2i_X509_EXTENSION, d2i_X509_EXTENSIONS, "
+            "d2i_GENERAL_NAMES, d2i_ASN1_TYPE, d2i_ASN1_GENERALIZEDTIME, d2i_ASN1_UTCTIME, "
+            "d2i_X509_ALGOR, d2i_X509_PUBKEY and PEM_read_bio_X509/_X509_CRL/_X509_REQ). The "
+            "corpus enumerates truncated and oversized DER certificates, ASN.1 length bombs, "
+            "malformed TBSCertificate fields, bad extensions (duplicate / unknown / critical, "
+            "malformed name constraints and SAN), bad signature AlgorithmIdentifiers, malformed "
+            "CRL and CSR containers, malformed PEM containers (bad base64, missing / extra "
+            "delimiters, wrong labels), time and bit-string edge cases, and one well-formed "
+            "control per arm; it is a fixed enumeration, not a fuzzer, and not a coverage claim. "
+            "Each entry runs in its own forked child, so a crash, an OOM or a timeout is a "
+            "recorded finding rather than a harness abort (section 3.3). The court is `pass` "
+            "only when the corpus was driven on both sides, every candidate disposition was "
+            "recorded, and the authority differential control held -- the authority parsed the "
+            "well-formed v3 control certificate into a real certificate (version 2, at least one "
+            "extension) and itself suffered no hostile finding (section 3.2). It is a bounded "
+            "differential result over the corpus it drives, not a security proof and not a "
+            "parity claim (sections 3.1 and 3.6). "
+            "`CT-PRIMITIVES` is 18.3's: secret-independence "
             "checks over the primitive-bearing paths (BN, RSA, EC, the AEADs and the TLS key "
             "schedule), with a sensitivity control that a deliberate branch-on-secret is caught. "
             "`RT-MEM-HARDENING` is 18.4's: memory-safety and resource-exhaustion hardening for the "
@@ -496,6 +696,19 @@ def main(argv: list[str]) -> int:
                  / "signer.pem"),
         InputRef(name="tls-key", path=REPO_ROOT / "courts" / "phase17" / "fixtures"
                  / "rsa-key.pem"),
+        # 18.2's hostile X.509 / malformed-input corpus and its driver.
+        InputRef(name="x509-corpus-generator", path=X509_CORPUS_GENERATOR),
+        InputRef(name="x509-corpus-manifest", path=gen_hostile_x509_corpus.MANIFEST),
+        InputRef(name="hostile-x509-probe", path=PROBE_DIR / "rt_hostile_x509_probe.c"),
+        # The fixed Phase 17 base objects the X.509 corpus mutates (read, never written).
+        InputRef(name="x509-base-cert-v3", path=REPO_ROOT / "courts" / "phase17" / "fixtures"
+                 / "leaf.pem"),
+        InputRef(name="x509-base-cert-v1", path=REPO_ROOT / "courts" / "phase17" / "fixtures"
+                 / "cert.der"),
+        InputRef(name="x509-base-crl", path=REPO_ROOT / "courts" / "phase17" / "fixtures"
+                 / "crl.pem"),
+        InputRef(name="x509-base-req", path=REPO_ROOT / "courts" / "phase17" / "fixtures"
+                 / "req.pem"),
     ]
     doc = envelope(kind="phase18-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

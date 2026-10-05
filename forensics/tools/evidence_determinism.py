@@ -123,6 +123,14 @@ GENERATORS_BEFORE_LEDGERS = [
     # compared below, and `RT-HOSTILE-TLS` itself re-verifies every entry byte for byte, so a hand
     # edit to a fixture fails the court rather than changing what it drove.
     "forensics/tools/gen_hostile_tls_corpus.py",
+    # Phase 18.2's hostile X.509 / malformed-input corpus. Like 18.1's it reads no authority --
+    # the corpus is authored state over four committed Phase 17 fixtures -- but it is listed
+    # here so a stale committed fixture is a failure and not a silent divergence: the whole
+    # point of a *fixed* corpus is that the bytes the court drove are the bytes the generator
+    # derives. It writes one file per entry plus the manifest; the manifest is compared below,
+    # and `RT-HOSTILE-X509` itself re-verifies every entry byte for byte, so a hand edit to a
+    # fixture fails the court rather than changing what it drove.
+    "forensics/tools/gen_hostile_x509_corpus.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -269,6 +277,11 @@ COMPARED = [
     # themselves are binary and are re-derived by the generator above and re-verified by the
     # court, so the compared artefact is the manifest that pins them.
     "courts/phase18/fixtures/hostile-tls/MANIFEST.json",
+    # Phase 18.2's hostile X.509 / malformed-input corpus manifest: the entries, their per-entry
+    # sha256 and the provenance of the four fixed Phase 17 base objects the corpus mutates. The
+    # `.bin` fixtures are re-derived by the generator above and re-verified by the court, so the
+    # compared artefact is the manifest that pins them.
+    "courts/phase18/fixtures/hostile-x509/MANIFEST.json",
 ]
 
 # ---------------------------------------------------------------------------
