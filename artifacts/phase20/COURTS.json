@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-CUSTODIAN-MATURITY` is 20.1's court: it stages no probe and derives the L0-L9 maturity ladder of docs/RELEASE_GATES.md section 3 for libcrypto and libssl from committed evidence -- each stratum's seal and court registry, the provider census and its coverage join, the export court-coverage join and the Phase-17 downstream corpus. It records, per level per library, `{level, evidence_present, source_artifacts}`, and names only the highest level whose cumulative evidence is present. On the current tree that is L8 (downstream custodian court) for both libraries; L9 (high-assurance custodian seal) is absent because it is the level Phase 20 itself is establishing, and the gap is recorded as a finding, so the ledger's `custodian-maturity` property reads NOT_CLAIMED with findings_present. The court is pass as an instrument -- it derived the ladder, its evidence is committed, and a synthetic evidence view with a prerequisite removed detects the gap -- NOT because the ladder reaches L9. A passing RT-CUSTODIAN-MATURITY must never be read as 'L9 custodian seal achieved'. The other four courts (`RT-RECEIPT-CLOSURE` 20.2, `RT-CUSTODIAN-RESIDUALS` 20.3, `RT-SUBSTITUTION-WITNESS` 20.4 and `CUSTODIAN-BOUNDARY-REGISTER` 20.5) are named and `pending`. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the custodian claim over a finished implementation, with no FIPS validation, no universal-parity claim from finite evidence and no claim that memory safety is established. docs/PHASE-20-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "claim": "`RT-CUSTODIAN-MATURITY` is 20.1's court: it stages no probe and derives the L0-L9 maturity ladder of docs/RELEASE_GATES.md section 3 for libcrypto and libssl from committed evidence -- each stratum's seal and court registry, the provider census and its coverage join, the export court-coverage join and the Phase-17 downstream corpus. It records, per level per library, `{level, evidence_present, source_artifacts}`, and names only the highest level whose cumulative evidence is present. On the current tree that is L8 (downstream custodian court) for both libraries; L9 (high-assurance custodian seal) is absent because it is the level Phase 20 itself is establishing, and the gap is recorded as a finding, so the ledger's `custodian-maturity` property reads NOT_CLAIMED with findings_present. The court is pass as an instrument -- it derived the ladder, its evidence is committed, and a synthetic evidence view with a prerequisite removed detects the gap -- NOT because the ladder reaches L9. A passing RT-CUSTODIAN-MATURITY must never be read as 'L9 custodian seal achieved'. `RT-RECEIPT-CLOSURE` is 20.2's court: it stages no probe and joins every obligation the in-scope strata recorded `implemented` or closed to the FRF receipt that proves it, requiring a receipt, two adjudicated challenges and a zero-blocker `sensitivity-backed` claim at the current candidate identity for every FRF-declarable court each stratum ran, and joining each implemented export to its courts through the court-coverage atlas. On the current tree the closure is complete -- every stratum's chain is complete, the covering claims carry zero blockers and no export is courted by no court -- so it records zero findings; a real gap would be a finding and a `fail`, and a synthetic evidence view with a receipt removed, a claim blocker injected or a stale candidate identity detects the gap. The other three courts (`RT-CUSTODIAN-RESIDUALS` 20.3, `RT-SUBSTITUTION-WITNESS` 20.4 and `CUSTODIAN-BOUNDARY-REGISTER` 20.5) are named and `pending`. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the custodian claim over a finished implementation, with no FIPS validation, no universal-parity claim from finite evidence and no claim that memory safety is established. docs/PHASE-20-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
     "courts": [
       {
         "control": {
@@ -395,18 +395,426 @@
           "9": "complete"
         },
         "verdict": "pass"
+      },
+      {
+        "candidate_version": "0.0.24",
+        "closure_authority": [
+          "docs/CUSTODIAN_CONTRACT.md",
+          "docs/RELEASE_GATES.md",
+          "docs/PARITY_MODEL.md"
+        ],
+        "control": {
+          "baseline_blockers": 0,
+          "baseline_complete": true,
+          "baseline_gaps": 0,
+          "baseline_joined": 6517,
+          "caught_missing_receipt": true,
+          "caught_nonzero_blocker": true,
+          "caught_stale_identity": true,
+          "honest": true,
+          "injected_blocker_claim": "021a5687dc98b623d31227a7b4ddf0ef0fd7fc2e38a5cf709c5e3e6bc95b3658",
+          "injected_blocker_count": 1,
+          "injected_missing_receipt_court": "openssl-rs-rt-mem",
+          "injected_missing_receipt_gaps": 251,
+          "injected_stale_claim": "021a5687dc98b623d31227a7b4ddf0ef0fd7fc2e38a5cf709c5e3e6bc95b3658"
+        },
+        "court": "RT-RECEIPT-CLOSURE",
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the receipt-closure court reads the FRF store's own receipts and claims and stages no artifacts/phase20/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it joins every obligation the in-scope strata recorded `implemented` or closed to the FRF receipt that proves it. It reads the per-stratum obligation ledgers, the export court-coverage join and its authored `reference_probes` set, the FRF declarations, receipts, challenges and claims in .frf/, and the Gemel checkpoint projection -- the registers the earlier strata and the FRF store write, maintaining no list of its own (docs/PHASE-20-SUBPHASES.md section 3.4). For every FRF-declarable court each stratum ran it requires a declaration, a receipt, two adjudicated challenges and a `sensitivity-backed` claim of zero blockers covering the receipt and recording the current candidate identity, the five clauses forensics/tools/phase_state.py's frf_gemel_blocking_reason derives a stratum's blocking reason from, and it joins each implemented export to its courts through the atlas. It is pass only when the closure is complete for every stratum and a synthetic evidence view with a receipt removed, a claim blocker injected or a stale candidate identity detects the gap (section 3.2, docs/CUSTODIAN_CONTRACT.md section 6).",
+        "probe": "",
+        "problems": [],
+        "strata": [
+          {
+            "blockers": 0,
+            "closed": true,
+            "covering_claim": "021a5687dc98b623d31227a7b4ddf0ef0fd7fc2e38a5cf709c5e3e6bc95b3658",
+            "joined": true,
+            "missing": [],
+            "obligations": 251,
+            "phase": 3,
+            "receipts": 10,
+            "required_courts": [
+              "openssl-rs-rt-mem",
+              "openssl-rs-rt-mem-default",
+              "openssl-rs-rt-mem-install",
+              "openssl-rs-rt-exdata",
+              "openssl-rs-rt-err",
+              "openssl-rs-rt-stack",
+              "openssl-rs-rt-thread",
+              "openssl-rs-rt-secure",
+              "openssl-rs-rt-lhash",
+              "openssl-rs-rt-runtime-ext"
+            ],
+            "unit": null
+          },
+          {
+            "blockers": 0,
+            "closed": true,
+            "covering_claim": "a78affb47f6f22474e6e252067c00bb3e6734dac983a145c01c2e4b6ae41a518",
+            "joined": true,
+            "missing": [],
+            "obligations": 249,
+            "phase": 4,
+            "receipts": 17,
+            "required_courts": [
+              "openssl-rs-rt-bio",
+              "openssl-rs-rt-err-bio",
+              "openssl-rs-rt-bio-addr",
+              "openssl-rs-rt-bio-resolve",
+              "openssl-rs-rt-bio-sock",
+              "openssl-rs-rt-bio-comp",
+              "openssl-rs-rt-bio-debug",
+              "openssl-rs-rt-bio-print",
+              "openssl-rs-rt-bio-file",
+              "openssl-rs-rt-bio-filter",
+              "openssl-rs-rt-bio-pair",
+              "openssl-rs-rt-bio-dgram-pair",
+              "openssl-rs-rt-bio-dgram",
+              "openssl-rs-rt-bio-conn",
+              "openssl-rs-rt-obj-stream",
+              "openssl-rs-rt-conf",
+              "openssl-rs-rt-comp"
+            ],
+            "unit": null
+          },
+          {
+            "blockers": 0,
+            "closed": true,
+            "covering_claim": "487c75e2872660ba0a26355f0112c8e3766f0f3295c5a9d8971200ca84db34d3",
+            "joined": true,
+            "missing": [],
+            "obligations": 474,
+            "phase": 5,
+            "receipts": 9,
+            "required_courts": [
+              "openssl-rs-rt-bn",
+              "openssl-rs-rt-asn1",
+              "openssl-rs-rt-asn1-template",
+              "openssl-rs-rt-asn1-time",
+              "openssl-rs-rt-asn1-str",
+              "openssl-rs-rt-bio-asn1",
+              "openssl-rs-rt-asn1-print",
+              "openssl-rs-rt-asn1-mime",
+              "openssl-rs-rt-pem"
+            ],
+            "unit": null
+          },
+          {
+            "blockers": 0,
+            "closed": true,
+            "covering_claim": "d58125a4af67ab2abdf694ad25139f9ea8cb19a3a409f570f169a60be2880cce",
+            "joined": true,
+            "missing": [],
+            "obligations": 161,
+            "phase": 6,
+            "receipts": 9,
+            "required_courts": [
+              "openssl-rs-rt-libctx",
+              "openssl-rs-rt-param",
+              "openssl-rs-rt-selftest",
+              "openssl-rs-rt-threaddata",
+              "openssl-rs-rt-bio-core",
+              "openssl-rs-rt-dso",
+              "openssl-rs-rt-provider",
+              "openssl-rs-rt-provider-3p",
+              "openssl-rs-rt-conf-mod"
+            ],
+            "unit": null
+          },
+          {
+            "blockers": 0,
+            "closed": true,
+            "covering_claim": "4b263b4ac60d388f8155767e0bc48ec2f62e23907be0a2ab36ba2a833d1f5e88",
+            "joined": true,
+            "missing": [],
+            "obligations": 736,
+            "phase": 7,
+            "receipts": 18,
+            "required_courts": [
+              "openssl-rs-rt-fetch",
+              "openssl-rs-rt-evp-cipher",
+              "openssl-rs-rt-evp-mac",
+              "openssl-rs-rt-evp-kdf",
+              "openssl-rs-rt-evp-rand",
+              "openssl-rs-rt-evp-skey",
+              "openssl-rs-rt-evp-keymgmt",
+              "openssl-rs-rt-evp-names",
+              "openssl-rs-rt-evp-pkey",
+              "openssl-rs-rt-evp-pbe",
+              "openssl-rs-rt-evp-bio",
+              "openssl-rs-rt-evp-pem",
+              "openssl-rs-rt-hmac",
+              "openssl-rs-rt-cmac",
+              "openssl-rs-rt-hpke",
+              "openssl-rs-rt-evp-introspect",
+              "openssl-rs-rt-evp-class",
+              "openssl-rs-rt-evp-pkey-ops"
+            ],
+            "unit": null
+          },
+          {
+            "blockers": 0,
+            "closed": true,
+            "covering_claim": "6948b9ce36ecb9de1c3b4679789f3c66c90730e27ecb6fd3a8bb2d1f9ccbbd5f",
+            "joined": true,
+            "missing": [],
+            "obligations": 786,
+            "phase": 8,
+            "receipts": 15,
+            "required_courts": [
+              "openssl-rs-rt-digest",
+              "openssl-rs-rt-cipher",
+              "openssl-rs-rt-cipher-mem",
+              "openssl-rs-rt-rsa",
+              "openssl-rs-rt-dh",
+              "openssl-rs-rt-dsa",
+              "openssl-rs-rt-ec",
+              "openssl-rs-rt-ameth",
+              "openssl-rs-rt-pem-key",
+              "openssl-rs-rt-pubkey",
+              "openssl-rs-rt-ecx",
+              "openssl-rs-rt-keymgmt",
+              "openssl-rs-rt-signature",
+              "openssl-rs-rt-asym-cipher",
+              "openssl-rs-rt-provider-cap"
+            ],
+            "unit": null
+          },
+          {
+            "blockers": 0,
+            "closed": true,
+            "covering_claim": "9d911a2abe4ba0a35626d1bfd30a150e506c0fb5b00d24b711b05621dc14e682",
+            "joined": true,
+            "missing": [],
+            "obligations": 69,
+            "phase": 9,
+            "receipts": 4,
+            "required_courts": [
+              "openssl-rs-rt-drbg",
+              "openssl-rs-rt-rand",
+              "openssl-rs-rt-bn-rand",
+              "openssl-rs-rt-rand-users"
+            ],
+            "unit": null
+          },
+          {
+            "blockers": 0,
+            "closed": true,
+            "covering_claim": "d6d4f9c242519fdcdc3ee902df24cf918c548ecf79d70149edf0a91bd4ca2488",
+            "joined": true,
+            "missing": [],
+            "obligations": 298,
+            "phase": 10,
+            "receipts": 4,
+            "required_courts": [
+              "openssl-rs-rt-codec",
+              "openssl-rs-rt-keyformat",
+              "openssl-rs-rt-pkcs12",
+              "openssl-rs-rt-store"
+            ],
+            "unit": null
+          },
+          {
+            "blockers": 0,
+            "closed": true,
+            "covering_claim": "13cf75de083de9f3b02fd3dc5868f1231a2e0fa5876cbdb0784ed94e9a436752",
+            "joined": true,
+            "missing": [],
+            "obligations": 1465,
+            "phase": 11,
+            "receipts": 8,
+            "required_courts": [
+              "openssl-rs-rt-x509-store",
+              "openssl-rs-rt-x509-verify-surface",
+              "openssl-rs-rt-x509-verify-engine",
+              "openssl-rs-rt-x509-v3",
+              "openssl-rs-rt-x509-pem",
+              "openssl-rs-rt-x509-acert",
+              "openssl-rs-rt-x509-req",
+              "openssl-rs-rt-x509"
+            ],
+            "unit": null
+          },
+          {
+            "blockers": 0,
+            "closed": true,
+            "covering_claim": "8c7178812b1f1b216b61986e2414b10835195e7f91eb1e0b39dafa0a397b86ee",
+            "joined": true,
+            "missing": [],
+            "obligations": 1030,
+            "phase": 12,
+            "receipts": 10,
+            "required_courts": [
+              "openssl-rs-rt-http",
+              "openssl-rs-rt-pkcs7",
+              "openssl-rs-rt-cms",
+              "openssl-rs-rt-cmp",
+              "openssl-rs-rt-ts",
+              "openssl-rs-rt-ocsp",
+              "openssl-rs-rt-crmf",
+              "openssl-rs-rt-ess",
+              "openssl-rs-rt-srp",
+              "openssl-rs-rt-cms-remainder"
+            ],
+            "unit": null
+          },
+          {
+            "blockers": 0,
+            "closed": true,
+            "covering_claim": "28423ad27ef5293c1bf5337cb82ce464f500a4d61aa6741ea32fcb9632a49ff9",
+            "joined": true,
+            "missing": [],
+            "obligations": 377,
+            "phase": 13,
+            "receipts": 8,
+            "required_courts": [
+              "openssl-rs-rt-engine",
+              "openssl-rs-rt-engine-table",
+              "openssl-rs-rt-engine-ctrl",
+              "openssl-rs-rt-ui",
+              "openssl-rs-rt-txtdb",
+              "openssl-rs-rt-evp-legacy",
+              "openssl-rs-rt-legacy-remainder",
+              "openssl-rs-rt-handoff"
+            ],
+            "unit": null
+          },
+          {
+            "blockers": 0,
+            "closed": true,
+            "covering_claim": "e3585e3cea1170cc635d269a1415f695639d7daeab824362bd6e8465de33b981",
+            "joined": true,
+            "missing": [],
+            "obligations": 600,
+            "phase": 14,
+            "receipts": 10,
+            "required_courts": [
+              "openssl-rs-rt-ssl-object",
+              "openssl-rs-rt-ssl-methods",
+              "openssl-rs-rt-ssl-ciph",
+              "openssl-rs-rt-record",
+              "openssl-rs-rt-statem",
+              "openssl-rs-rt-ssl-bio",
+              "openssl-rs-rt-dtls",
+              "openssl-rs-rt-ssl-init",
+              "openssl-rs-rt-session-cert",
+              "openssl-rs-rt-ssl-ext"
+            ],
+            "unit": null
+          },
+          {
+            "blockers": 0,
+            "closed": true,
+            "covering_claim": "9960f8b729a43a040ee991b9a920b957e0ded58d73d66c636a213ed31705cb5e",
+            "joined": true,
+            "missing": [],
+            "obligations": 3,
+            "phase": 15,
+            "receipts": 1,
+            "required_courts": [
+              "openssl-rs-rt-quic"
+            ],
+            "unit": null
+          },
+          {
+            "blockers": 0,
+            "closed": false,
+            "covering_claim": "86f58bfc966fd1859d4356a3c99f87ca6096b698dbeb0b72db7c21dd6cb68940",
+            "joined": true,
+            "missing": [],
+            "obligations": 3,
+            "phase": 16,
+            "receipts": 6,
+            "required_courts": [
+              "openssl-rs-rt-legacy-module",
+              "openssl-rs-rt-engine-dyn",
+              "openssl-rs-rt-defaults",
+              "openssl-rs-rt-config",
+              "openssl-rs-rt-statem-remainder",
+              "openssl-rs-rt-cli"
+            ],
+            "unit": "cli-config contract"
+          },
+          {
+            "blockers": 0,
+            "closed": false,
+            "covering_claim": "58986709f8b9433bc686363d25c22eac9340b862b8bb349ac04d05d2a849fa98",
+            "joined": true,
+            "missing": [],
+            "obligations": 5,
+            "phase": 17,
+            "receipts": 5,
+            "required_courts": [
+              "openssl-rs-rt-cli-bodies",
+              "openssl-rs-rt-tls13-interop",
+              "openssl-rs-rt-tls13-interop-matrix",
+              "openssl-rs-rt-cross-dso-state",
+              "openssl-rs-rt-downstream-consumer"
+            ],
+            "unit": "downstream replacement contract"
+          },
+          {
+            "blockers": 0,
+            "closed": false,
+            "covering_claim": "473b07f3f1195960ba67329ad58d702ab66aa0c797c8f613ba62aed3e7b88cd7",
+            "joined": true,
+            "missing": [],
+            "obligations": 5,
+            "phase": 18,
+            "receipts": 3,
+            "required_courts": [
+              "openssl-rs-rt-hostile-tls",
+              "openssl-rs-rt-hostile-x509",
+              "openssl-rs-rt-mem-hardening"
+            ],
+            "unit": "hostile hardening contract"
+          },
+          {
+            "blockers": 0,
+            "closed": false,
+            "covering_claim": "4293b9a67fa11c4543b8706e68ecce08ee5ac87b6b49517ea61013f304a6853d",
+            "joined": true,
+            "missing": [],
+            "obligations": 5,
+            "phase": 19,
+            "receipts": 3,
+            "required_courts": [
+              "openssl-rs-rt-cpu-capability",
+              "openssl-rs-rt-evp-dispatch",
+              "openssl-rs-rt-performance-work"
+            ],
+            "unit": "performance dispatch contract"
+          }
+        ],
+        "totals": {
+          "blockers": 0,
+          "contract_obligations": 18,
+          "export_obligations": 6499,
+          "gaps": 0,
+          "obligations": 6517,
+          "obligations_joined": 6517,
+          "obligations_to_no_court": 0,
+          "obligations_to_receipt": 6041,
+          "obligations_to_reference_basis": 476,
+          "receipts": 140,
+          "store_blockers": 0,
+          "strata": 17,
+          "strata_joined": 17
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
       "CUSTODIAN-BOUNDARY-REGISTER": "20.5 lands the register; it records what is claimed, what is bounded, and the explicit non-claims (no FIPS validation, no universal parity from finite evidence, memory safety measured-not-established), and checks that every recorded boundary still matches the evidence that establishes it",
       "RT-CUSTODIAN-RESIDUALS": "20.3 lands the residual disposition; it requires every residual to be dispositioned and zero `UNKNOWN` to intersect the claimed production profile, so a newly discovered un-dispositioned residual is a `fail`",
-      "RT-RECEIPT-CLOSURE": "20.2 lands the receipt closure; it joins every obligation recorded `implemented` or closed to its FRF receipt and requires the FRF store's compiled parity claim to carry zero blockers",
       "RT-SUBSTITUTION-WITNESS": "20.4 lands the substitution witness; it runs binaries built against the admitted authority unmodified against the candidate over the machine-owned Phase-17 downstream corpus, which it re-establishes as current and functional, and records each witness's build, run and observation"
     },
     "summary": {
       "fail": 0,
-      "pass": 1,
-      "total": 1
+      "pass": 2,
+      "total": 2
     }
   },
   "generator": "forensics/tools/phase20_courts.py",
@@ -420,6 +828,16 @@
       "name": "release-gates",
       "path": "docs/RELEASE_GATES.md",
       "sha256": "99c80e1f36abede7ef3425c1f5dcd71ba40e0d0d77317346d3564313f9a4f294"
+    },
+    {
+      "name": "custodian-contract",
+      "path": "docs/CUSTODIAN_CONTRACT.md",
+      "sha256": "a96c8951ffdf6ab0d9feadefb397107a27cbdb028d98840aff2b3f532c8e81fb"
+    },
+    {
+      "name": "parity-model",
+      "path": "docs/PARITY_MODEL.md",
+      "sha256": "1f5080bc6d68ae64c693c80422bb0f0dd73bf67fd2cd46090b315a7e60215e2a"
     },
     {
       "name": "phase1-completeness",
@@ -454,7 +872,27 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "9523b090087387ac2a459e5e77df06c3efbf12afa2d971caeb81bee74f8186ac"
+      "sha256": "9d3da27a1bb52a2b3f22c1afa00e9c64b1651c93e0979f46306c0b8144e96d72"
+    },
+    {
+      "name": "court-coverage-rows",
+      "path": "forensics/atlas/court-coverage-rows.json",
+      "sha256": "74fc30129bb4ad4a9ad87973a451ea85780698bf8cdd1c63c8c125ef6904d2fa"
+    },
+    {
+      "name": "gen-frf-courts",
+      "path": "forensics/tools/gen_frf_courts.py",
+      "sha256": "f413e98312e470ee93eb483766e93e9860855349c8a0deea41bf258f4df7c1ca"
+    },
+    {
+      "name": "frf-readme",
+      "path": "forensics/frf/README.md",
+      "sha256": "8d7396e1191203f95072c7f2d2fdef163338888d496ea83bddfcd383537a0dfb"
+    },
+    {
+      "name": "gemel-trajectory",
+      "path": "forensics/GEMEL_TRAJECTORY.md",
+      "sha256": "92ede47742acce498f25ce95553446bdca147fd4bb96bce8372bac6fa2e1f05d"
     }
   ],
   "kind": "phase20-courts",

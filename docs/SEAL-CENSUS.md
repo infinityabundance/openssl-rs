@@ -45,7 +45,7 @@ declared owner; this is that assignment.
 | 17 | Downstream replacement court | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 19 | Performance / CPU dispatch | `complete` | 0 | 5 | 5 | 0 | 0 |
-| 20 | 3.6.4 custodian seal | `in-progress` | 0 | 5 | 1 | 0 | 4 |
+| 20 | 3.6.4 custodian seal | `in-progress` | 0 | 5 | 2 | 0 | 3 |
 | 21 | Maintenance delta machinery | `not-started` | 0 | — | — | — | — |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
 
@@ -643,33 +643,34 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 ## Phase 20 — 3.6.4 custodian seal
 
 * state: `in-progress`
-* blocking: 4 open obligation(s) of this stratum recorded in forensics/phase20-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase20-obligations.json` publishes `unit: custodian seal contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`custodian-maturity`, `receipt-closure`, `custodian-residuals`, `substitution-witness` and `custodian-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it compiles the custodian claim over the implementation the strata before it completed. Its `artifacts/phase20/COURTS.json` lands its five courts with the subphases that build their instruments: 20.1's `RT-CUSTODIAN-MATURITY` is registered and passing -- it derives the L0-L9 maturity ladder from committed evidence and records the L9 gap as a finding, so its property reads NOT_CLAIMED -- while `RT-RECEIPT-CLOSURE`, `RT-CUSTODIAN-RESIDUALS`, `RT-SUBSTITUTION-WITNESS` and `CUSTODIAN-BOUNDARY-REGISTER` are `pending`. A passing court is an **instrument**, not a property claim: the property it names may still carry findings, so `measurement_state` says the instrument completed while `property_status`/`findings` say what is claimed. The stratum makes no claim stronger than `docs/CUSTODIAN_CONTRACT.md` section 6's -- in particular no FIPS validation, no universal parity from finite evidence and no claim that memory safety is established (`docs/NON_CLAIMS.md`) -- and a passing `RT-CUSTODIAN-MATURITY` must never be read as 'L9 custodian seal achieved'. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-20-SUBPHASES.md` sections 1 and 4 record the measurement
+* blocking: 3 open obligation(s) of this stratum recorded in forensics/phase20-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase20-obligations.json` publishes `unit: custodian seal contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`custodian-maturity`, `receipt-closure`, `custodian-residuals`, `substitution-witness` and `custodian-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it compiles the custodian claim over the implementation the strata before it completed. Its `artifacts/phase20/COURTS.json` lands its five courts with the subphases that build their instruments: 20.1's `RT-CUSTODIAN-MATURITY` is registered and passing -- it derives the L0-L9 maturity ladder from committed evidence and records the L9 gap as a finding, so its property reads NOT_CLAIMED -- and 20.2's `RT-RECEIPT-CLOSURE` is registered and passing: it joins every obligation the in-scope strata recorded `implemented` or closed to the FRF receipt that proves it and requires the covering `sensitivity-backed` claim in the FRF store to carry zero blockers, recording zero findings because the closure is complete. `RT-CUSTODIAN-RESIDUALS`, `RT-SUBSTITUTION-WITNESS` and `CUSTODIAN-BOUNDARY-REGISTER` are `pending`. A passing court is an **instrument**, not a property claim: the property it names may still carry findings, so `measurement_state` says the instrument completed while `property_status`/`findings` say what is claimed. The stratum makes no claim stronger than `docs/CUSTODIAN_CONTRACT.md` section 6's -- in particular no FIPS validation, no universal parity from finite evidence and no claim that memory safety is established (`docs/NON_CLAIMS.md`) -- and a passing `RT-CUSTODIAN-MATURITY` must never be read as 'L9 custodian seal achieved'. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-20-SUBPHASES.md` sections 1 and 4 record the measurement
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase20-obligations.json`
 * atlas-owned: 0
 * owned working set: 5
-* implemented: 1
+* implemented: 2
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 4**
+* **open in this stratum: 3**
 
 Contract units (measurement vs property):
 
 | unit | measurement_state | property_status | findings |
 |---|---|---|---|
 | custodian-maturity | `complete` | `NOT_CLAIMED` | `the committed evidence establishes L8 for libcrypto and libssl, not the L9 high-assurance custodian seal the seal names: stratum 20 is 'in-progress', not `complete`; artefact docs/PHASE-20-CUSTODIAN-SEAL.md is absent. L9 is the level Phase 20 itself is establishing (docs/PHASE-20-SUBPHASES.md section 4.2); a passing RT-CUSTODIAN-MATURITY is an instrument plus this derivation and must never be read as 'L9 custodian seal achieved'.` |
-| receipt-closure | `not_measured` | `not_claimed` | — |
+| receipt-closure | `complete` | `not_claimed` | — |
 | custodian-residuals | `not_measured` | `not_claimed` | — |
 | substitution-witness | `not_measured` | `not_claimed` | — |
 | custodian-boundary-register | `not_measured` | `not_claimed` | — |
 
 A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
-Courts: `all pass`, 1 court(s), **0** authority observation(s) over 0 transcript court(s).
+Courts: `all pass`, 2 court(s), **0** authority observation(s) over 0 transcript court(s).
 
-The other 1 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
+The other 2 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
 | RT-CUSTODIAN-MATURITY | `pass` | — (structural) |
+| RT-RECEIPT-CLOSURE | `pass` | — (structural) |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 

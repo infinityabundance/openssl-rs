@@ -638,6 +638,10 @@
       "observations": 111,
       "verdict": "pass"
     },
+    "RT-RECEIPT-CLOSURE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-RECORD": {
       "observations": 38,
       "verdict": "pass"
@@ -819,7 +823,7 @@
     "phase17": 0,
     "phase18": 0,
     "phase19": 0,
-    "phase20": 4,
+    "phase20": 3,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
