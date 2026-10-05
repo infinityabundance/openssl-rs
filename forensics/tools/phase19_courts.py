@@ -12,17 +12,42 @@ Where the subject is the *instrument's* sensitivity — can the work measure tel
 slowed path from a fast one — the court is candidate-only and carries a sensitivity control instead
 (D13, D201), exactly as Phase 8's `CT-*` courts and Phase 18's `CT-PRIMITIVES` do.
 
+`RT-CPU-CAPABILITY`, and what it drives
+--------------------------------------
+19.1's court. Its instrument is `courts/phase19/rt_cpu_capability_probe.c`, compiled twice: once
+against the admitted authority and once against the candidate distribution shell. It reports the
+CPU-capability surface deterministically — `OPENSSL_ia32cap_P[0..3]`, the effect of calling
+`OPENSSL_cpuid_setup`, the raw vector `OPENSSL_ia32_cpuid` returns, and the capability-derived
+selection observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`,
+`OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and the four `EVP_aes_*_cbc_hmac_sha*` constructors, which
+answer NULL when `AESNI_CAPABLE` is clear) — as `key=value` observations with no address, clock or
+duration.
+
+The three names are declared `weak`: `OPENSSL_ia32cap_P` is `.hidden` and `OPENSSL_cpuid_setup` /
+`OPENSSL_ia32_cpuid` live only in the static archive, so a side that does not provide them answers
+`probe.reachable.*=0` instead of failing to link. The authority's static archive provides all three;
+**the candidate provides none of them** — this is the `symbols_not_reached` census
+`docs/PHASE-19-SUBPHASES.md` section 4.2 records, and the court records it honestly (the candidate's
+CPU-dispatch string is `CPUINFO: N/A` and `OPENSSL_info(1008)` is NULL) rather than substituting an
+answer. Because a dynamic link never resolves the hidden symbol, the court links the authority
+against `libcrypto.a` with `-Wl,-u,` forcing and the candidate against its distribution shell.
+
+The *fixed and faulted CPUID facade* is the `OPENSSL_ia32cap` environment variable: the authority's
+`OPENSSL_cpuid_setup` reads it in the ELF `.init` constructor and masks the capability vector with
+it, so the court fixes the capability set by running the probe under a chosen value. The probe is
+driven under three sets — the host set, an AES-NI-cleared set and a fully cleared set — and the
+authority's report and selection move with the facade while the candidate's do not. Every
+candidate-vs-authority difference is *recorded* in the court's `divergences` block, not failed: the
+reduced engine deliberately does not model `OPENSSL_ia32cap` masking (`src/provider/cipher.rs`).
+The verdict is `pass` when the authority's capability surface was actually driven (the
+authority-linked differential control), both transcripts are complete, and every divergence was
+recorded — **not** when nothing diverged. It is not a parity claim and not an
+assembly-versus-Rust equivalence claim (section 3.6).
+
 The pending courts
 ------------------
-None of the five courts the plan names is runnable at activation. This stratum owns no exported
-symbol, so no differential probe over a symbol set is its evidence; its first runnable court is a
-later subphase's, and `COURTS` is therefore empty while `PENDING_COURTS` names each court with the
-subphase that lands its instrument:
+The other four courts the plan names are `pending` with the subphase that lands each:
 
-  * `RT-CPU-CAPABILITY` (19.1) — the CPU-capability dispatch audit: how the candidate's
-    CPU-capability surface (`OPENSSL_ia32cap_P`, `OPENSSL_cpuid_setup`, `OPENSSL_ia32_cpuid`)
-    reports under a fixed and faulted CPUID facade, against the admitted authority, with an
-    authority-linked differential control;
   * `RT-EVP-DISPATCH` (19.2) — the EVP / cipher dispatch comparison: which implementation a fetch
     or a cipher context selects for a given capability set, driven on both sides over the same set,
     with an authority-linked differential control;
@@ -30,8 +55,8 @@ subphase that lands its instrument:
     primitive-bearing paths (not wall-clock-only), driven on the authority and the candidate over
     the same inputs, recording every path whose work differs as a finding;
   * `RT-PERFORMANCE-SENSITIVITY` (19.4) — the instrument-sensitivity control: a deliberately slowed
-    path must be caught, so a measure that cannot tell a slow path from a fast one is `fail`
-    rather than `pass`; candidate-only;
+    path must be caught, so a measure that cannot tell a slow path from a fast one is `fail` rather
+    than `pass`; candidate-only;
   * `PERFORMANCE-BOUNDARY-REGISTER` (19.5) — the register that records what is measured, what is
     not, and the explicit non-claims (no benchmark-parity claim, no assembly-versus-Rust
     equivalence claim), and that fails the stratum if a recorded boundary drifts from its evidence.
@@ -49,6 +74,9 @@ SPDX-License-Identifier: Apache-2.0"""
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -61,28 +89,30 @@ from atlas_common import (  # noqa: E402
     envelope,
     rel,
     resolve_authority,
+    run,
     write_json,
 )
 
 OUT = REPO_ROOT / "artifacts" / "phase19" / "COURTS.json"
 GENERATOR = "forensics/tools/phase19_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-19-SUBPHASES.md"
+PROBE_DIR = REPO_ROOT / "courts" / "phase19"
+STAGED = REPO_ROOT / "artifacts" / "phase19" / "probes"
+PHASE2 = REPO_ROOT / "artifacts" / "phase2"
+RUN_TIMEOUT_S = "120"
 
 # The courts, in the order they land. `(name, probe filename)`, and the probe is declared in the
 # same commit as the entry, so a runner that names a probe which does not exist cannot be
-# committed. **Empty at activation**: this stratum owns no symbol for a differential probe to
-# observe, so its first runnable instrument is a later subphase's.
-COURTS: list[tuple[str, str]] = []
+# committed.
+CPU_CAPABILITY = "RT-CPU-CAPABILITY"
+COURTS: list[tuple[str, str]] = [
+    (CPU_CAPABILITY, "rt_cpu_capability_probe.c"),
+]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
 # the instrument and what the court will drive, so "nothing registered" is a stated distance rather
 # than a court quietly dropped.
 PENDING_COURTS: dict[str, str] = {
-    "RT-CPU-CAPABILITY": (
-        "19.1 lands the capability-set driver; it drives the CPU-capability surface "
-        "(`OPENSSL_ia32cap_P`, `OPENSSL_cpuid_setup`, `OPENSSL_ia32_cpuid`) under a fixed and "
-        "faulted CPUID facade against the authority, with an authority-linked differential control"
-    ),
     "RT-EVP-DISPATCH": (
         "19.2 lands the selection comparison; it drives which implementation a fetch or cipher "
         "context selects for a given capability set on both sides, with an authority-linked "
@@ -104,6 +134,310 @@ PENDING_COURTS: dict[str, str] = {
     ),
 }
 
+# The fixed capability sets the capability probe is driven under. `(set name, OPENSSL_ia32cap
+# value or None)`. The first is the host's own CPU, the second clears the AES-NI bit (bit 25 of
+# `OPENSSL_ia32cap_P[1]`, `1 << 25` of the high 64-bit word) and the third clears everything; the
+# authority's `OPENSSL_cpuid_setup` masks the vector with the value at load, so the *court* fixes
+# the capability set the surface reports and the selection is made over.
+CAPABILITY_SETS: list[tuple[str, str | None]] = [
+    ("host", None),
+    ("aesni-off", "~0x0200000000000000"),
+    ("cleared", "~0xffffffffffffffff"),
+]
+
+# The capability-derived selection the facade must move on the authority, as the section-3.2
+# authority-linked differential control: `sel.aes128cbcsha1.null` is 0 under the host set and 1
+# under the AES-NI-cleared set. The facade's job is to drive *the authority's* selection; a court
+# whose facade cannot move it has not driven the surface.
+FACADE_CONTROL_KEY = "sel.aes128cbcsha1.null"
+
+# The three capability-surface names the plan's census records as `symbols_not_reached` for the
+# candidate. The authority must reach all three or the court has no expectation to compare; the
+# candidate's reachability is recorded (whatever it is) rather than required.
+REACHABLE_KEYS = (
+    "probe.reachable.ia32cap_p",
+    "probe.reachable.cpuid_setup",
+    "probe.reachable.ia32_cpuid",
+)
+
+# The fixed transcript schema. Both sides emit every key (an unreached numeric observation is
+# `n/a`), so the two observation counts agree and `atlas_common.court_observations` holds.
+PROBE_SCHEMA = (
+    "probe.kind",
+    "probe.arch",
+    *REACHABLE_KEYS,
+    "probe.setup.called",
+    "probe.setup.stable",
+    "probe.cpuid.called",
+    "probe.cpuid.ret",
+    "cap.word.0",
+    "cap.word.1",
+    "cap.word.2",
+    "cap.word.3",
+    "cap.after_setup.0",
+    "cap.after_setup.1",
+    "cap.after_setup.2",
+    "cap.after_setup.3",
+    "cap.raw.word.2",
+    "cap.raw.word.3",
+    "api.cpuinfo",
+    "api.cpu_settings_null",
+    "api.cpu_settings",
+    "sel.aes128cbcsha1.null",
+    "sel.aes256cbcsha1.null",
+    "sel.aes128cbcsha256.null",
+    "sel.aes256cbcsha256.null",
+    "probe.done",
+)
+
+
+def side_env(libdir: Path, modulesdir: Path, cap: str | None) -> dict[str, str]:
+    """The environment one probe run sees on one side.
+
+    `LD_LIBRARY_PATH` fixes the DSO the candidate probe resolves against, `OPENSSL_MODULES` points
+    at that side's own `ossl-modules/`, and `OPENSSL_CONF=/dev/null` keeps the host's configuration
+    out of a deterministic transcript. `cap`, when set, is the `OPENSSL_ia32cap` facade value the
+    authority's `.init` constructor reads.
+    """
+    env = dict(os.environ)
+    env["LD_LIBRARY_PATH"] = str(libdir)
+    env["OPENSSL_MODULES"] = str(modulesdir)
+    env["OPENSSL_CONF"] = "/dev/null"
+    env.pop("OPENSSL_CONF_INCLUDE", None)
+    if cap is None:
+        env.pop("OPENSSL_ia32cap", None)
+    else:
+        env["OPENSSL_ia32cap"] = cap
+    return env
+
+
+def run_probe(binary: Path, env: dict[str, str]) -> tuple[str, str, int | None]:
+    """Run one side's probe and decode its transcript, tolerating a signal or a timeout."""
+    proc = subprocess.run(
+        ["timeout", RUN_TIMEOUT_S, str(binary)],
+        env=env,
+        capture_output=True,
+        check=False,
+    )
+    code = proc.returncode
+    out = proc.stdout.decode("latin-1")
+    err = proc.stderr.decode("latin-1")
+    if code == 124:
+        return out, err, None
+    return out, err, code
+
+
+def _clang(src: Path, out: Path, include: Path) -> list[str]:
+    return [
+        "clang", "-std=c11", "-Wall", "-Wno-deprecated-declarations",
+        "-Werror=implicit-function-declaration", "-O1",
+        "-D_GNU_SOURCE",
+        "-I", str(include),
+        "-o", str(out), str(src),
+    ]
+
+
+def compile_authority(src: Path, out: Path, auth) -> tuple[bool, str]:
+    """Compile the probe against the authority and link it statically.
+
+    The capability surface is `.hidden`/archive-only, so a dynamic link cannot reach it: the
+    authority probe links its static `libcrypto.a`, and `-Wl,-u,` forces the archive members that
+    define the three names to be pulled in even though the probe's references are weak.
+    """
+    res = run(_clang(src, out, auth.prefix / "include") + [
+        str(auth.libdir / "libcrypto.a"),
+        "-Wl,-u,OPENSSL_cpuid_setup",
+        "-Wl,-u,OPENSSL_ia32_cpuid",
+        "-Wl,-u,OPENSSL_ia32cap_P",
+        "-ldl", "-lpthread",
+    ])
+    return res.ok, res.stderr.strip()
+
+
+def compile_candidate(src: Path, out: Path) -> tuple[bool, str]:
+    """Compile the probe against the candidate distribution shell.
+
+    The candidate provides none of the three capability-surface names, so the probe's weak
+    references resolve to NULL and it answers `probe.reachable.*=0`; the public-API observations
+    are driven exactly as on the authority.
+    """
+    res = run(_clang(src, out, PHASE2 / "include") + [
+        "-L", str(PHASE2), "-lssl", "-lcrypto",
+        f"-Wl,-rpath,{PHASE2}",
+    ])
+    return res.ok, res.stderr.strip()
+
+
+def keyed(text: str) -> dict[str, str]:
+    """The `key=value` observations, keyed for a line-independent comparison."""
+    values: dict[str, str] = {}
+    for line in text.splitlines():
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        values[key] = value
+    return values
+
+
+def residual_rows(a: dict[str, str], c: dict[str, str]) -> list[dict]:
+    """Every observation that differs between the two sides, classified by its kind."""
+    rows: list[dict] = []
+    for key in sorted(set(a) | set(c)):
+        av, cv = a.get(key), c.get(key)
+        if av == cv:
+            continue
+        if key not in c:
+            cls = "missing"
+        elif key not in a:
+            cls = "extra"
+        else:
+            cls = "value"
+        rows.append({"observation": key, "authority": av, "candidate": cv, "class": cls})
+    return rows
+
+
+def cpu_capability_court(name: str, src: Path, auth, work: Path) -> dict:
+    """`RT-CPU-CAPABILITY`: the capability surface and its selection, under fixed CPUID facades.
+
+    The verdict is `pass` when the authority's capability surface was actually driven (the
+    authority linked and reached `OPENSSL_ia32cap_P`), the faulted facade moved the authority's
+    capability-derived selection, both transcripts are complete under every set, and every
+    candidate-vs-authority difference was recorded. The candidate's `symbols_not_reached`
+    disposition is a recorded divergence, not a failure.
+    """
+    auth_bin = work / f"{src.stem}.authority"
+    cand_bin = work / f"{src.stem}.candidate"
+    ok, err = compile_authority(src, auth_bin, auth)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-authority",
+                "detail": err.splitlines()[:12]}
+    ok, err = compile_candidate(src, cand_bin)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-candidate",
+                "detail": err.splitlines()[:12]}
+
+    problems: list[str] = []
+    sets: list[dict] = []
+    divergences: list[dict] = []
+    a_obs_total = 0
+    c_obs_total = 0
+    per_set: dict[str, dict[str, str]] = {"authority": {}, "candidate": {}}
+
+    for scenario, cap in CAPABILITY_SETS:
+        a_out, a_err, a_code = run_probe(
+            auth_bin, side_env(auth.libdir, auth.libdir / "ossl-modules", cap))
+        c_out, c_err, c_code = run_probe(
+            cand_bin, side_env(PHASE2, PHASE2 / "install" / "lib" / "ossl-modules", cap))
+        if not a_out.strip():
+            problems.append(f"{scenario}: authority produced no transcript "
+                            f"(exit={a_code})")
+        if not c_out.strip():
+            problems.append(f"{scenario}: candidate produced no transcript "
+                            f"(exit={c_code})")
+
+        a_keys = keyed(a_out)
+        c_keys = keyed(c_out)
+        a_ns = {f"{scenario}.{k}": v for k, v in a_keys.items()}
+        c_ns = {f"{scenario}.{k}": v for k, v in c_keys.items()}
+        per_set["authority"].update(a_ns)
+        per_set["candidate"].update(c_ns)
+        a_obs_total += len(a_keys)
+        c_obs_total += len(c_keys)
+
+        if a_keys.get("probe.done") != "1":
+            problems.append(f"{scenario}: authority transcript did not complete")
+        if c_keys.get("probe.done") != "1":
+            problems.append(f"{scenario}: candidate transcript did not complete")
+        for key in PROBE_SCHEMA:
+            if key not in a_keys:
+                problems.append(f"{scenario}: authority is missing {key}")
+            if key not in c_keys:
+                problems.append(f"{scenario}: candidate is missing {key}")
+
+        set_div = residual_rows(a_ns, c_ns)
+        for row in set_div:
+            row["set"] = scenario
+        divergences.extend(set_div)
+        sets.append({
+            "set": scenario,
+            "OPENSSL_ia32cap": cap if cap is not None else "(unset)",
+            "authority_exit_code": a_code,
+            "candidate_exit_code": c_code,
+            "authority_observations": len(a_keys),
+            "candidate_observations": len(c_keys),
+            "divergence_count": len(set_div),
+        })
+
+    # The authority-linked differential control: the authority must have reached its own
+    # capability surface, and the faulted facade must have moved its capability-derived selection.
+    host = per_set["authority"]
+    reached = {key: host.get(f"host.{key}", "missing") for key in REACHABLE_KEYS}
+    if host.get("host.probe.reachable.ia32cap_p") != "1":
+        problems.append(
+            "authority did not reach OPENSSL_ia32cap_P: the capability surface was not driven "
+            f"({reached})")
+    if host.get("host.probe.reachable.cpuid_setup") != "1":
+        problems.append("authority did not reach OPENSSL_cpuid_setup")
+    if host.get("host.probe.reachable.ia32_cpuid") != "1":
+        problems.append("authority did not reach OPENSSL_ia32_cpuid")
+    facade_before = host.get(f"host.{FACADE_CONTROL_KEY}")
+    facade_after = host.get(f"aesni-off.{FACADE_CONTROL_KEY}")
+    facade_ok = (facade_before == "0" and facade_after == "1")
+    if not facade_ok:
+        problems.append(
+            f"the faulted facade did not move the authority's selection: "
+            f"{FACADE_CONTROL_KEY} host={facade_before} aesni-off={facade_after}")
+
+    candidate_reached = {key: per_set["candidate"].get(f"host.{key}", "missing")
+                         for key in REACHABLE_KEYS}
+
+    staged: dict[str, str] = {}
+    STAGED.mkdir(parents=True, exist_ok=True)
+    for side, srcbin in (("authority", auth_bin), ("candidate", cand_bin)):
+        dst = STAGED / f"{src.stem}.{side}"
+        if srcbin.is_file():
+            shutil.copyfile(srcbin, dst)
+            dst.chmod(0o755)
+            staged[side] = rel(dst)
+
+    verdict = "pass" if not problems else "fail"
+
+    return {
+        "court": name,
+        "probe": rel(src),
+        "method": (
+            "the probe is compiled twice and its `key=value` transcript compared. It is driven "
+            "under three fixed capability sets via the `OPENSSL_ia32cap` facade (the host set, an "
+            "AES-NI-cleared set and a fully cleared set). The authority probe links its static "
+            "`libcrypto.a` with `-Wl,-u,` forcing so the hidden `OPENSSL_ia32cap_P` and the "
+            "archive-only `OPENSSL_cpuid_setup` / `OPENSSL_ia32_cpuid` are reachable; the "
+            "candidate probe links its distribution shell, where the weak references resolve to "
+            "NULL. No address, clock or duration is observed."),
+        "capability_sets": sets,
+        "observations_recorded": {"authority": a_obs_total, "candidate": c_obs_total},
+        "authority_observations": a_obs_total,
+        "candidate_observations": c_obs_total,
+        "reached": {"authority": reached, "candidate": candidate_reached},
+        "control": {
+            "authority_surface_reached": host.get("host.probe.reachable.ia32cap_p") == "1",
+            "facade_key": FACADE_CONTROL_KEY,
+            "facade_host": facade_before,
+            "facade_aesni_off": facade_after,
+            "facade_moved_selection": facade_ok,
+        },
+        "divergences": divergences,
+        "divergence_count": len(divergences),
+        "problems": problems,
+        "verdict": verdict,
+        "staged_binaries": staged,
+        "candidate_stderr_tail": c_err.splitlines()[-3:],
+    }
+
+
+COURT_IMPL = {
+    CPU_CAPABILITY: cpu_capability_court,
+}
+
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -115,47 +449,80 @@ def main(argv: list[str]) -> int:
     work = REPO_ROOT / "court" / "phase19"
     work.mkdir(parents=True, exist_ok=True)
 
-    # No court is runnable at activation, so the registry is empty and every planned court is
-    # `pending`. The runner still has to exist and write this file: `run_courts.py` refuses a
-    # stratum in `in-progress` with no runner, and a committed courts file no run reproduces.
     records: list[dict] = []
+    for name, filename in COURTS:
+        src = PROBE_DIR / filename
+        if not src.is_file():
+            records.append({"court": name, "verdict": "fail",
+                            "stage": "probe-missing", "detail": rel(src)})
+            continue
+        records.append(COURT_IMPL[name](name, src, auth, work))
 
     passed = sum(1 for r in records if r["verdict"] == "pass")
+    failed = sum(1 for r in records if r["verdict"] == "fail")
     body = {
-        "all_pass": passed == len(records),
+        "all_pass": failed == 0 and len(records) == len(COURTS),
         "authority": auth.id,
         "courts": records,
-        "summary": {"total": len(records), "pass": passed, "fail": len(records) - passed},
+        "summary": {"total": len(records), "pass": passed, "fail": failed},
         "pending_courts": PENDING_COURTS,
         "claim": (
-            "Phase 19's five courts are named and `pending`; none is registered as passing at "
-            "activation. `RT-CPU-CAPABILITY` is 19.1's: a CPU-capability dispatch audit that "
-            "drives the candidate's capability surface under a fixed and faulted CPUID facade "
-            "against the authority, with an authority-linked differential control. "
-            "`RT-EVP-DISPATCH` is 19.2's: an EVP / cipher dispatch comparison of which "
-            "implementation is selected for a given capability set, on both sides. "
-            "`RT-PERFORMANCE-WORK` is 19.3's: deterministic operation and block counts over the "
-            "primitive-bearing paths (not wall-clock-only) on both sides, recording every path "
-            "whose work differs as a finding. `RT-PERFORMANCE-SENSITIVITY` is 19.4's: the "
-            "instrument-sensitivity control, candidate-only, which requires a deliberately slowed "
-            "path to be caught. `PERFORMANCE-BOUNDARY-REGISTER` is 19.5's: the register of what is "
-            "measured, what is not, and the explicit non-claims. This stratum owns no exported "
-            "symbol, so no differential probe over a symbol set is its evidence: the subject is "
-            "dispatch behaviour and deterministic work over a finished implementation, with no "
-            "benchmark-parity claim and no assembly-versus-Rust equivalence claim. "
+            "`RT-CPU-CAPABILITY` is 19.1's court: it compiles "
+            "courts/phase19/rt_cpu_capability_probe.c twice (authority and candidate) and reports "
+            "the CPU-capability surface deterministically -- `OPENSSL_ia32cap_P[0..3]`, the effect "
+            "of `OPENSSL_cpuid_setup`, the raw vector `OPENSSL_ia32_cpuid` returns, and the "
+            "capability-derived selection observable through the public API "
+            "(`OpenSSL_version(OPENSSL_CPU_INFO)`, `OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and "
+            "the four `EVP_aes_*_cbc_hmac_sha*` constructors, which answer NULL when "
+            "`AESNI_CAPABLE` is clear). The probe is driven under three fixed capability sets via "
+            "the `OPENSSL_ia32cap` facade: the host set, an AES-NI-cleared set and a fully cleared "
+            "set. The three capability names are declared weak because `OPENSSL_ia32cap_P` is "
+            "`.hidden` and `OPENSSL_cpuid_setup`/`OPENSSL_ia32_cpuid` live only in the static "
+            "archive: the authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so "
+            "the surface is reached, and the candidate provides none of the three, so it answers "
+            "`probe.reachable.*=0` -- the `symbols_not_reached` census the plan records -- and its "
+            "CPU-dispatch string is `CPUINFO: N/A` with `OPENSSL_info(1008)` NULL. That disposition "
+            "and every other candidate-vs-authority difference is *recorded* in the court's "
+            "`divergences` block, not failed: the reduced engine deliberately does not model "
+            "`OPENSSL_ia32cap` masking, so under a cleared facade the authority's selection moves "
+            "to the non-AES-NI arm and the candidate's does not. The court is `pass` when the "
+            "authority's capability surface was actually driven, the faulted facade moved the "
+            "authority's selection, both transcripts are complete under every set, and every "
+            "divergence was recorded -- NOT when nothing diverged. It is a bounded audit of the "
+            "capability surface at the sets it drives, not a parity claim and not an "
+            "assembly-versus-Rust equivalence claim (sections 3.4 and 3.6). "
+            "`RT-EVP-DISPATCH` is 19.2's, `RT-PERFORMANCE-WORK` 19.3's, "
+            "`RT-PERFORMANCE-SENSITIVITY` 19.4's and `PERFORMANCE-BOUNDARY-REGISTER` 19.5's; all "
+            "four are `pending` with the subphase that lands their instrument. This stratum owns "
+            "no exported symbol, so no differential probe over a symbol set is its evidence: the "
+            "subject is dispatch behaviour and deterministic work over a finished implementation, "
+            "with no benchmark-parity claim and no assembly-versus-Rust equivalence claim. "
             "docs/PHASE-19-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts."
         ),
     }
 
     inputs = [
         InputRef(name="phase-19-plan", path=PLAN),
+        InputRef(name="cpu-capability-probe", path=PROBE_DIR / "rt_cpu_capability_probe.c"),
     ]
     doc = envelope(kind="phase19-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
 
-    for name, needs in PENDING_COURTS.items():
-        print(f"  {name:<32} PENDING (not registered as passing) -- {needs}")
+    for r in records:
+        if r["verdict"] == "pass" and r["court"] == CPU_CAPABILITY:
+            c = r["control"]
+            print(f"  {r['court']:<32} pass   ({r['authority_observations']} observations x "
+                  f"{len(r['capability_sets'])} sets, {r['divergence_count']} recorded "
+                  f"divergence(s), authority reached={c['authority_surface_reached']}, "
+                  f"facade {c['facade_host']}->{c['facade_aesni_off']})")
+        elif r["verdict"] != "pass":
+            print(f"  {r['court']:<32} FAIL   stage={r.get('stage', 'compare')}")
+            for p in (r.get("detail") if isinstance(r.get("detail"), list)
+                      else r.get("problems", []))[:12]:
+                print(f"      {p}")
+    for cname, needs in PENDING_COURTS.items():
+        print(f"  {cname:<32} PENDING (not registered as passing) -- {needs}")
     print(f"  -> {rel(OUT)} all_pass={body['all_pass']} over {len(records)} court(s)")
     return 0 if body["all_pass"] else 1
 

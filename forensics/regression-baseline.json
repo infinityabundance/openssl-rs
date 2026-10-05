@@ -253,6 +253,10 @@
       "observations": 31,
       "verdict": "pass"
     },
+    "RT-CPU-CAPABILITY": {
+      "observations": 81,
+      "verdict": "pass"
+    },
     "RT-CRMF": {
       "observations": 138,
       "verdict": "pass"
@@ -792,7 +796,7 @@
     "phase16": 0,
     "phase17": 0,
     "phase18": 0,
-    "phase19": 5,
+    "phase19": 4,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
