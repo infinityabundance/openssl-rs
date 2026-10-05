@@ -48,10 +48,13 @@ PRODUCTION_AUTHORITY = "openssl-3.6.4-production"
 # names subphases -- so a ledger that counted symbols would count zero. **Phase 16 owns no export
 # either**: the ownership atlas assigns `owner_phase == 16` no row, and its unit is the CLI /
 # config / filesystem contract over 39 provider registration rows, six prerequisite deferrals and
-# three contract units, which a symbol-counting ledger would count zero. The marker is a property
+# three contract units, which a symbol-counting ledger would count zero. **Phase 17 owns no export
+# either**: the ownership atlas assigns `owner_phase == 17` no row, and its unit is the downstream
+# replacement contract over the 52 `apps/<name>.c` command unit deferrals and four contract units,
+# which a symbol-counting ledger would count zero. The marker is a property
 # of the document rather than a phase number those tools know (`docs/PHASE-22-SUBPHASES.md`, D485;
-# `docs/PHASE-16-SUBPHASES.md`, section 1).
-NON_EXPORT_UNITS = {"compatibility plane", "cli-config contract"}
+# `docs/PHASE-16-SUBPHASES.md`, section 1; `docs/PHASE-17-SUBPHASES.md`, section 1).
+NON_EXPORT_UNITS = {"compatibility plane", "cli-config contract", "downstream replacement contract"}
 HISTORICAL_AUTHORITY = "openssl-3.6.3-historical"
 
 # Which seal document belongs to which stratum, where one exists. **One table, because two tools
@@ -86,6 +89,7 @@ SEAL_DOCS: dict[int, str] = {
     14: "docs/PHASE-14-TLS-SEAL.md",
     15: "docs/PHASE-15-QUIC-SEAL.md",
     16: "docs/PHASE-16-CLI-SEAL.md",
+    17: "docs/PHASE-17-DOWNSTREAM-SEAL.md",
     # Phase 22 is an atlas stratum rather than an export stratum, but its seal is the same kind of
     # document and `phase_state.py` records its sha256 the same way. Its `evidence_for` branch is
     # its own because its ledger's unit is a compatibility plane, not a symbol (D485).

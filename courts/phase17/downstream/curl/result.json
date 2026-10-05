@@ -1,0 +1,50 @@
+{
+  "authority": "openssl-rt-3.6.4-r2",
+  "build": {
+    "detail": "curl 8.22.0 (x86_64-pc-linux-gnu) libcurl/8.22.0 OpenSSL/3.6.4 zlib/1.2.13\nRelease-Date: 2026-09-02\nProtocols: file ftp ftps http https ipfs ipns ws wss\nFeatures: alt-svc HSTS HTTPS-proxy IPv6 Largefile libz SSL threadsafe UnixSockets",
+    "ok": true
+  },
+  "candidate": "0.0.21",
+  "concurrency": {
+    "ok": 16,
+    "total": 16
+  },
+  "functional": {
+    "detail": "TLS 1.3 verified fetch of the authority s_server (HTTP 200) with an unrelated CA rejected",
+    "evidence": [
+      "live_tls_probe.sh: OK",
+      "http_code=200",
+      "curl_negative_exit=60"
+    ],
+    "ok": true
+  },
+  "historical_failures": [
+    {
+      "commit": "91eb5398",
+      "fixed_by": "91eb5398 (ssl: implement SSL_CTX_ctrl/SSL_ctrl SET_MIN/MAX_PROTO_VERSION)",
+      "summary": "the candidate's SSL_CTX_set_min_proto_version/SSL_CTX_set_max_proto_version returned 0, so curl's TLS setup failed before a request was sent"
+    },
+    {
+      "commit": "e7b50d10",
+      "fixed_by": "e7b50d10 (ssl: expose the peer certificate/chain and fix the post-handshake read path)",
+      "summary": "curl fetched HTTPS without verifying the chain: the peer certificate/chain was not exposed and the post-handshake read path stalled"
+    }
+  ],
+  "known_residuals": [],
+  "link": {
+    "detail": "libssl.so.3 -> /work/artifacts/phase2/install/lib/libssl.so.3",
+    "libs": [
+      "libssl.so.3",
+      "libcrypto.so.3"
+    ],
+    "ok": true
+  },
+  "program": "curl",
+  "source_sha256": "d54dd598bf05927a726deb38df31c6a255ba83ff1de57c5d1464dac3ed8f44a1",
+  "source_url": "https://curl.se/download/curl-8.22.0.tar.gz",
+  "start": {
+    "detail": "the candidate-linked curl runs and reports -V",
+    "ok": true
+  },
+  "version": "8.22.0"
+}

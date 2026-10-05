@@ -160,6 +160,13 @@ GENERATORS_AFTER_LEDGERS = [
     # question about what is left of the stratum, and a copy nothing re-runs would drift
     # from the ledger it projects.
     "forensics/tools/phase8_remaining.py",
+    # The Phase 17 downstream corpus and its generated prose. Both are pure functions of the
+    # measured records under `courts/phase17/downstream/<program>/result.json`, which the driver
+    # `courts/phase17/downstream/run_all.sh` writes; listing them here is what makes a stale
+    # committed corpus or `EVIDENCE.md` a failure rather than a silent divergence. They need no
+    # authority and no container.
+    "courts/phase17/downstream/lib/build_corpus.py",
+    "forensics/tools/gen_downstream_evidence.py",
 ]
 
 
@@ -241,6 +248,14 @@ COMPARED = [
     # file generated from the authority, whose renderer is `rustfmt`-stable, so a formatter pass
     # cannot move it. It is 75 `EC_CURVE_DATA` structures and `curve_list[]`'s eighty-two rows.
     "src/ec/curve_data.rs",
+    # The Phase 17 downstream corpus and the prose generated from it. The records themselves are
+    # measurement, not generator output, so they are the court's business (RT-DOWNSTREAM-CORPUS);
+    # the aggregate and the EVIDENCE.md/README.md built from them are compared here so prose
+    # cannot drift from the recorded measurement.
+    "forensics/atlas/downstream-corpus.json",
+    "courts/phase17/downstream/README.md",
+    *[f"courts/phase17/downstream/{p}/EVIDENCE.md"
+      for p in ("curl", "git", "haproxy", "nginx", "openssh", "python")],
 ]
 
 # ---------------------------------------------------------------------------

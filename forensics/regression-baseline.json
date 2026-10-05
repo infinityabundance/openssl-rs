@@ -7,6 +7,7 @@
     "phase14",
     "phase15",
     "phase16",
+    "phase17",
     "phase2",
     "phase22",
     "phase3",
@@ -202,6 +203,10 @@
       "observations": 252,
       "verdict": "pass"
     },
+    "RT-CLI-BODIES": {
+      "observations": 805,
+      "verdict": "pass"
+    },
     "RT-CMAC": {
       "observations": 26,
       "verdict": "pass"
@@ -242,6 +247,10 @@
       "observations": 138,
       "verdict": "pass"
     },
+    "RT-CROSS-DSO-STATE": {
+      "observations": 18,
+      "verdict": "pass"
+    },
     "RT-DEFAULTS": {
       "observations": 10,
       "verdict": "pass"
@@ -252,6 +261,14 @@
     },
     "RT-DIGEST": {
       "observations": 670,
+      "verdict": "pass"
+    },
+    "RT-DOWNSTREAM-CONSUMER": {
+      "observations": 59,
+      "verdict": "pass"
+    },
+    "RT-DOWNSTREAM-CORPUS": {
+      "observations": 6,
       "verdict": "pass"
     },
     "RT-DRBG": {
@@ -658,6 +675,14 @@
       "observations": 54,
       "verdict": "pass"
     },
+    "RT-TLS13-INTEROP": {
+      "observations": 69,
+      "verdict": "pass"
+    },
+    "RT-TLS13-INTEROP-MATRIX": {
+      "observations": 154,
+      "verdict": "pass"
+    },
     "RT-TS": {
       "observations": 275,
       "verdict": "pass"
@@ -719,6 +744,7 @@
     "phase14": 0,
     "phase15": 0,
     "phase16": 0,
+    "phase17": 0,
     "phase22": 0,
     "phase3": 43,
     "phase4": 23,
@@ -740,6 +766,7 @@
     "phase14": 0,
     "phase15": 0,
     "phase16": 0,
+    "phase17": 0,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -757,6 +784,7 @@
     "phase14": 600,
     "phase15": 3,
     "phase16": 42,
+    "phase17": 5,
     "phase22": 18,
     "phase3": 294,
     "phase4": 272,
@@ -776,7 +804,7 @@
     "14": "complete",
     "15": "complete",
     "16": "complete",
-    "17": "not-started",
+    "17": "complete",
     "18": "not-started",
     "19": "not-started",
     "2": "complete",
@@ -793,10 +821,10 @@
   },
   "prerequisites": {
     "blocking_dependencies": 0,
-    "divergence_names_covered": 105,
+    "divergence_names_covered": 98,
     "findings": 0,
-    "language_census": 11769,
-    "sealed_census": 404
+    "language_census": 11848,
+    "sealed_census": 468
   },
   "provider_implemented": [
     "base/OSSL_OP_DECODER/DER",

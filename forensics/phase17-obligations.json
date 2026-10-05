@@ -1,0 +1,98 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "contract_units": [
+      {
+        "closure": "every `apps/<name>.c` unit deferred to this stratum is discharged",
+        "observation": "all command body units discharged",
+        "state": "implemented",
+        "surface": "forensics/prerequisites.json",
+        "unit": "command-bodies",
+        "what": "the 52 `openssl` command bodies over libcrypto/libssl"
+      },
+      {
+        "closure": "the `RT-TLS13-INTEROP-MATRIX` court passes",
+        "observation": "RT-TLS13-INTEROP-MATRIX is pass",
+        "state": "implemented",
+        "surface": "artifacts/phase17/COURTS.json",
+        "unit": "tls13-interop",
+        "what": "a real TLS 1.3 client/server flight, ClientHello through Finished plus application data, over all four authority/candidate client-server cells"
+      },
+      {
+        "closure": "the `RT-CROSS-DSO-STATE` court passes",
+        "observation": "RT-CROSS-DSO-STATE is pass",
+        "state": "implemented",
+        "surface": "artifacts/phase17/COURTS.json",
+        "unit": "cross-dso-state",
+        "what": "an ERR/`CONF` raised through one DSO and read through another"
+      },
+      {
+        "closure": "the `RT-DOWNSTREAM-CONSUMER` court passes",
+        "observation": "RT-DOWNSTREAM-CONSUMER is pass",
+        "state": "implemented",
+        "surface": "artifacts/phase17/COURTS.json",
+        "unit": "downstream-consumer",
+        "what": "a real downstream consumer built against the candidate distribution shell"
+      },
+      {
+        "closure": "the `RT-DOWNSTREAM-CORPUS` court passes",
+        "observation": "RT-DOWNSTREAM-CORPUS is pass",
+        "state": "implemented",
+        "surface": "artifacts/phase17/COURTS.json",
+        "unit": "downstream-corpus",
+        "what": "the machine-owned per-program downstream records (build/link/start/functional/concurrency) the seal consumes, and their freshness"
+      }
+    ],
+    "counts": {
+      "atlas_owned": 0,
+      "contract_units": 5,
+      "deferrals_received": 0,
+      "deferred_to_later_phase": 0,
+      "implemented": 5,
+      "open_in_this_stratum": 0,
+      "owned": 5,
+      "provider_rows_open": 0,
+      "provider_rows_owned": 0,
+      "unit_deferrals_received": 0
+    },
+    "deferrals": [],
+    "deferred": [],
+    "implemented": [],
+    "note": "`open` is the only list that blocks this stratum, and its count is over the unit deferrals and contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. Phase 17 owns no provider registration row: it activates no provider, and the 39 legacy rows the census assigns are the loadable module Phase 16 owns (D525). The 52 command bodies are the `apps/<name>.c` units Phase 16.4 landed a dispatcher for but not the bodies (D530): each landed body's row is rewritten from `deferred_to_later_stratum` to the `reached_by_a_named_construct` record `plan_reconciliation.py` requires, so `unit_deferrals` is empty once all 52 are discharged and the ledger fails closed unless the plane still records all 52. The five contract units are the downstream replacement contract docs/PHASE-17-SUBPHASES.md section 1 names -- the command bodies, a real TLS 1.3 interoperability handshake, the cross-DSO shared state, a real downstream consumer and the machine-owned downstream corpus -- and the four courts pass while `command-bodies` closes with the last landed body. Nothing here is a parity claim: a published command body or a passing handshake is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-17-SUBPHASES.md section 4 decides when the stratum may be called complete.",
+    "open": [],
+    "provider_rows": [],
+    "rule": "this stratum's working set is not a set of exported symbols: it is (a) the 52 `apps/<name>.c` command bodies D530 hands it, which forensics/prerequisites.json records either as `deferred_to_later_stratum` rows with owner_phase 17 or as the `reached_by_a_named_construct` records that discharge them, and (b) the downstream replacement contract units docs/PHASE-17-SUBPHASES.md names, each measured by the prerequisite plane or by the Phase-17 courts registry. Every row is read from those atlases; the ledger types none of them, and `main` fails closed if the ownership atlas assigns this stratum an export or the prerequisite plane drops a command body",
+    "unit": "downstream replacement contract",
+    "unit_deferrals": []
+  },
+  "generator": "forensics/tools/phase17_obligations.py",
+  "inputs": [
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "provider-algorithms",
+      "path": "forensics/atlas/provider-algorithms.json",
+      "sha256": "8a767c9f5c456e1b3b8e2d01a88f0b17f2184313d421c0a9e513c1dd2d118589"
+    },
+    {
+      "name": "prerequisites",
+      "path": "forensics/prerequisites.json",
+      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+    },
+    {
+      "name": "phase-17-plan",
+      "path": "docs/PHASE-17-SUBPHASES.md",
+      "sha256": "39993c520778e80fa01a4db3ca384924785003d5ddabc3537b5eb08f06554eaf"
+    },
+    {
+      "name": "phase-17-courts",
+      "path": "artifacts/phase17/COURTS.json",
+      "sha256": "f0c9257f0b2f127d0415cfa5a94e5c36510b2bcb1fc9d67a95c60bb091064e54"
+    }
+  ],
+  "kind": "phase17-obligations",
+  "schema": "openssl-rs/atlas/phase17-obligations/v1"
+}

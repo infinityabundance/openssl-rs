@@ -1,0 +1,51 @@
+{
+  "authority": "openssl-rt-3.6.4-r2",
+  "build": {
+    "detail": "Git 2.56.0, SHA-1/SHA-256 via the candidate libcrypto",
+    "ok": true
+  },
+  "candidate": "0.0.21",
+  "concurrency": {
+    "ok": 16,
+    "total": 16
+  },
+  "functional": {
+    "detail": "SHA-1/SHA-256 object hashing agrees with GNU coreutils; HTTPS push/clone/pull with both TLS endpoints on the candidate, unrelated CA rejected; bounded t/ subset green",
+    "evidence": [
+      "hash_check.sh: PASS",
+      "HTTPS PUSH/PULL PASS",
+      "concurrent_ok=16/16"
+    ],
+    "ok": true
+  },
+  "historical_failures": [
+    {
+      "commit": "3e1c5313",
+      "fixed_by": "3e1c5313 (ssl: fix the nginx-exposed defects)",
+      "summary": "Git's HTTPS transport could not complete end to end because candidate-linked nginx (the test server) carried the five TLS defects above"
+    },
+    {
+      "commit": "bb5958a9",
+      "fixed_by": "bb5958a9 (p17: the Git downstream passes its own tests and pushes/clones/pulls over HTTPS via the candidate)",
+      "summary": "the Git downstream had no reproducing harness: its own t/ subset and an HTTPS push/clone/pull were not yet exercised against the candidate"
+    }
+  ],
+  "known_residuals": [
+    "t5540-http-push-webdav is skipped: Git is built without expat (the court image ships no libexpat headers); it is a plain-HTTP path with no OpenSSL use"
+  ],
+  "link": {
+    "detail": "libcrypto.so.3 -> /work/artifacts/phase2/install/lib/libcrypto.so.3",
+    "libs": [
+      "libcrypto.so.3"
+    ],
+    "ok": true
+  },
+  "program": "git",
+  "source_sha256": "26c56c296b38c0695b26fa95f475f1d01704d2d38e73465ca30b0b2f5dc789d3",
+  "source_url": "https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.56.0.tar.xz",
+  "start": {
+    "detail": "the candidate-linked git runs and hashes objects",
+    "ok": true
+  },
+  "version": "2.56.0"
+}

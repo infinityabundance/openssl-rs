@@ -22,14 +22,22 @@
 //!
 //! * **`time`/`timeout`/`calc_timeout` are seconds.** See `src/ssl/ssl_lib.rs`: every reader
 //!   converts to `time_t`, so the codec and the accessors agree.
-//! * **`ssl_generate_session_id` and `ssl_get_new_session` are not landed.** They are internal to
-//!   `ssl_sess.c` and drive the handshake; no exported row names them, and the handshake is not
-//!   driven. `SSL_SESSION_new` itself is landed whole.
+//! * **`ssl_generate_session_id`, `ssl_get_new_session`, `ssl_get_prev_session`, `lookup_sess_in_cache`
+//!   and `ssl_update_cache` are landed** (Phase 17): they drive the TLS1.2 handshake session. The
+//!   TLS1.3 arms are the reduced ones `tls13_client_create_session` already provided.
+//! * **The TLS1.2 NewSessionTicket is stateful, not the authority's stateless blob.** The authority
+//!   encrypts an `i2d_SSL_SESSION` under the context ticket key and reconstructs the session by
+//!   decrypting it (`construct_stateless_ticket`/`tls_decrypt_ticket`). This crate mints an opaque
+//!   64-byte ticket, caches the server session under `SHA256(ticket)` (the same id the client
+//!   computes at `statem_clnt.c:2851-2872`), and resumes by the internal-cache lookup. The client-
+//!   observable shape is the authority's (`session.id` is `SHA256(ticket)`, `has_ticket` true, the
+//!   lifetime hint is the session timeout); the ticket bytes themselves and `SSL_CTX_sess_number`
+//!   after a handshake differ. No court compares the TLS1.2 ticket wire.
 //! * **`ssl_session_dup_intern` copies the parsed fields but not `early_secret`'s length** — the
 //!   authority `memcpy`s the first `offsetof(SSL_SESSION, prev)` bytes, which includes it; this
 //!   crate copies the field explicitly, so the result is the same.
-//! * **`SSL_CTX_sess_set_new_cb`'s callback is stored but never invoked.** Nothing this crate
-//!   builds completes a handshake, so the "new session" trigger is unreachable.
+//! * **`SSL_CTX_sess_set_new_cb`'s callback is stored and invoked** by `ssl_update_cache` once a
+//!   handshake completes (Phase 17).
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -55,8 +63,8 @@ use crate::runtime::thread::{
 use crate::ssl::ssl_asn1::{d2i_SSL_SESSION, i2d_SSL_SESSION};
 use crate::ssl::ssl_init::OPENSSL_init_ssl;
 use crate::ssl::ssl_lib::{
-    ClientCertCb, GenCookieCb, GenStatelessCookieCb, GetSessionCb, InfoCb, NewSessionCb,
-    RemoveSessionCb, Ssl, SslCtx, SslSession, TlsSessionTicketExt, VerifyCookieCb,
+    ClientCertCb, GenCookieCb, GenStatelessCookieCb, GenerateSessionIdCb, GetSessionCb, InfoCb,
+    NewSessionCb, RemoveSessionCb, Ssl, SslCtx, SslSession, TlsSessionTicketExt, VerifyCookieCb,
     VerifyStatelessCookieCb, SSL_MAX_SID_CTX_LENGTH, SSL_MAX_SSL_SESSION_ID_LENGTH,
     TLS13_MAX_RESUMPTION_PSK_LENGTH,
 };
@@ -74,6 +82,20 @@ const ERR_LIB_SSL: c_int = 20;
 const SSL_R_SSL_SESSION_ID_TOO_LONG: c_int = 408;
 /// `SSL_R_SSL_SESSION_ID_CONTEXT_TOO_LONG` — `sslerr.h:294`.
 const SSL_R_SSL_SESSION_ID_CONTEXT_TOO_LONG: c_int = 273;
+/// `SSL_R_SESSION_ID_CONTEXT_UNINITIALIZED` — `sslerr.h:261`.
+const SSL_R_SESSION_ID_CONTEXT_UNINITIALIZED: c_int = 277;
+/// `SSL_R_SSL_SESSION_ID_CALLBACK_FAILED` — `sslerr.h:292`.
+const SSL_R_SSL_SESSION_ID_CALLBACK_FAILED: c_int = 301;
+/// `SSL_R_SSL_SESSION_ID_HAS_BAD_LENGTH` — `sslerr.h:295`.
+const SSL_R_SSL_SESSION_ID_HAS_BAD_LENGTH: c_int = 303;
+/// `SSL_R_UNSUPPORTED_SSL_VERSION` — `sslerr.h:362`.
+const SSL_R_UNSUPPORTED_SSL_VERSION: c_int = 259;
+/// `ERR_R_INTERNAL_ERROR` — `err.h:356`.
+const ERR_R_INTERNAL_ERROR: c_int = 259 | (3 << 18);
+/// `ERR_R_MALLOC_FAILURE` — `err.h:354`.
+const ERR_R_MALLOC_FAILURE: c_int = 256 | (3 << 18);
+/// `TLS1_FLAGS_RECEIVED_EXTMS` — `ssl3.h:300`.
+const TLS1_FLAGS_RECEIVED_EXTMS: u64 = 0x0200;
 /// `SSL_SESS_CACHE_UPDATE_TIME` — `ssl.h:721`.
 const SSL_SESS_CACHE_UPDATE_TIME: c_long = 0x0400;
 /// `TLSEXT_max_fragment_length_UNSPECIFIED` — `tls1.h:234`.
@@ -192,7 +214,7 @@ pub unsafe extern "C" fn SSL_SESSION_new() -> *mut SslSession {
 }
 
 /// Seconds since the epoch, the authority's `ossl_time_now` at second resolution.
-fn time_now_secs() -> u64 {
+pub(crate) fn time_now_secs() -> u64 {
     match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
         Ok(d) => d.as_secs(),
         Err(_) => 0,
@@ -726,6 +748,319 @@ pub(crate) unsafe fn ssl_ctx_session_cache_free(ctx: *mut SslCtx) {
         }
         OPENSSL_sk_free(st);
         (*ctx).sessions = ptr::null_mut();
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// Phase 17 — the handshake session (`ssl/ssl_sess.c`'s `ssl_get_new_session`, the server's
+// `ssl_get_prev_session`, and `ssl_update_cache`)
+// -------------------------------------------------------------------------------------------
+
+/// `SSL3_VERSION` — `ssl3.h`.
+const SSL3_VERSION: c_int = 0x0300;
+/// `TLS1_1_VERSION` — `tls1.h`.
+const TLS1_1_VERSION: c_int = 0x0302;
+/// `TLS1_2_VERSION` — `tls1.h`.
+const TLS1_2_VERSION: c_int = 0x0303;
+/// `SSL3_SSL_SESSION_ID_LENGTH` — `ssl3.h` (32).
+const SSL3_SSL_SESSION_ID_LENGTH: usize = 32;
+/// `SSL_SESS_CACHE_CLIENT` — `ssl.h:711`.
+pub(crate) const SSL_SESS_CACHE_CLIENT: c_long = 0x0001;
+/// `SSL_SESS_CACHE_SERVER` — `ssl.h:713`.
+pub(crate) const SSL_SESS_CACHE_SERVER: c_long = 0x0002;
+/// `SSL_SESS_CACHE_NO_INTERNAL_STORE` — `ssl.h:715`.
+const SSL_SESS_CACHE_NO_INTERNAL_STORE: c_long = 0x0200;
+/// `SSL_VERIFY_PEER` — `ssl.h`.
+const SSL_VERIFY_PEER: c_int = 0x01;
+
+/// `static int def_generate_session_id(SSL *ssl, unsigned char *id, unsigned int *id_len)` —
+/// `ssl/ssl_sess.c:321-346`, reduced to the RAND arm (no FUZZING retry).
+///
+/// # Safety
+/// `ssl` must be NULL or a live connection; `id` writable for `*id_len`; `id_len` writable.
+unsafe extern "C" fn def_generate_session_id(
+    ssl: *mut Ssl,
+    id: *mut u8,
+    id_len: *mut c_uint,
+) -> c_int {
+    let _ = ssl;
+    // SAFETY: `id`/`id_len` are the caller's per the contract.
+    unsafe {
+        if id_len.is_null() || crate::rand::rand_lib::RAND_bytes(id, *id_len as c_int) <= 0 {
+            return 0;
+        }
+    }
+    1
+}
+
+/// `int ssl_generate_session_id(SSL_CONNECTION *s, SSL_SESSION *ss)` — `ssl/ssl_sess.c:348-433`,
+/// reduced at the callback selection and the `SSL_has_matching_session_id` conflict check.
+///
+/// # Safety
+/// `s` must be a live connection; `ss` a live session.
+pub(crate) unsafe fn ssl_generate_session_id(s: *mut Ssl, ss: *mut SslSession) -> c_int {
+    // SAFETY: `s`/`ss` are live per the contract.
+    unsafe {
+        match (*s).version {
+            SSL3_VERSION
+            | TLS1_VERSION
+            | TLS1_1_VERSION
+            | TLS1_2_VERSION
+            | crate::ssl::ssl_lib::TLS1_3_VERSION => {
+                (*ss).session_id_length = SSL3_SSL_SESSION_ID_LENGTH;
+            }
+            _ => {
+                raise_ssl(SSL_R_UNSUPPORTED_SSL_VERSION, 366);
+                return 0;
+            }
+        }
+        // The RFC5077 arm: when the server will issue a stateless ticket, the session id is empty.
+        if (*s).ext_ticket_expected != 0 {
+            (*ss).session_id_length = 0;
+            return 1;
+        }
+        let mut cb: Option<GenerateSessionIdCb> = None;
+        if let Some(c) = (*s).generate_session_id {
+            cb = Some(c);
+        } else if !(*s).session_ctx.is_null() {
+            if let Some(c) = (*(*s).session_ctx).generate_session_id {
+                cb = Some(c);
+            }
+        }
+        let cb = cb.unwrap_or(def_generate_session_id);
+        ptr::write_bytes((*ss).session_id.as_mut_ptr(), 0, (*ss).session_id_length);
+        let mut tmp = (*ss).session_id_length as c_uint;
+        if cb(s, (*ss).session_id.as_mut_ptr(), &mut tmp) == 0 {
+            raise_ssl(SSL_R_SSL_SESSION_ID_CALLBACK_FAILED, 410);
+            return 0;
+        }
+        if tmp == 0 || tmp as usize > (*ss).session_id_length {
+            raise_ssl(SSL_R_SSL_SESSION_ID_HAS_BAD_LENGTH, 420);
+            return 0;
+        }
+        (*ss).session_id_length = tmp as usize;
+    }
+    1
+}
+
+/// `int ssl_get_new_session(SSL_CONNECTION *s, int session)` — `ssl/ssl_sess.c:435-489`.
+///
+/// # Safety
+/// `s` must be a live connection.
+pub(crate) unsafe fn ssl_get_new_session(s: *mut Ssl, session: c_int) -> c_int {
+    // SAFETY: `s` is live per the contract.
+    let ss = unsafe { SSL_SESSION_new() };
+    if ss.is_null() {
+        // SAFETY: `s` is live.
+        raise_ssl(ERR_R_MALLOC_FAILURE, 442);
+        return 0;
+    }
+    // SAFETY: `s`/`ss` are live per the contract.
+    unsafe {
+        let ctx = (*s).session_ctx;
+        let timeout = if ctx.is_null() || (*ctx).session_timeout == 0 {
+            (*(*s).method).timeout_secs
+        } else {
+            (*ctx).session_timeout
+        };
+        (*ss).timeout = timeout;
+        ssl_session_calculate_timeout(ss);
+
+        SSL_SESSION_free((*s).session);
+        (*s).session = ptr::null_mut();
+
+        if session != 0 {
+            if (*s).version == crate::ssl::ssl_lib::TLS1_3_VERSION {
+                (*ss).session_id_length = 0;
+            } else if ssl_generate_session_id(s, ss) == 0 {
+                SSL_SESSION_free(ss);
+                return 0;
+            }
+        } else {
+            (*ss).session_id_length = 0;
+        }
+
+        if (*s).sid_ctx_length as usize > SSL_MAX_SID_CTX_LENGTH {
+            raise_ssl(ERR_R_INTERNAL_ERROR, 475);
+            SSL_SESSION_free(ss);
+            return 0;
+        }
+        let n = (*s).sid_ctx_length as usize;
+        core::ptr::copy_nonoverlapping(
+            core::ptr::addr_of!((*s).sid_ctx).cast::<u8>(),
+            core::ptr::addr_of_mut!((*ss).sid_ctx).cast::<u8>(),
+            n,
+        );
+        (*ss).sid_ctx_length = n;
+        (*s).session = ss;
+        (*ss).ssl_version = (*s).version;
+        (*ss).verify_result = X509_V_OK;
+        if (*s).s3_flags & TLS1_FLAGS_RECEIVED_EXTMS != 0 {
+            (*ss).flags |= crate::ssl::ssl_lib::SSL_SESS_FLAG_EXTMS;
+        }
+    }
+    1
+}
+
+/// `SSL_SESSION *lookup_sess_in_cache(SSL_CONNECTION *s, const unsigned char *sess_id,`
+/// `size_t sess_id_len)` — `ssl/ssl_sess.c:491-566`, reduced to the internal stack lookup (the
+/// external `get_session_cb` arm is not exercised). Returns a session with one reference owned by
+/// the caller, or NULL.
+///
+/// # Safety
+/// `s` must be a live connection; `sess_id` a readable slice.
+unsafe fn lookup_sess_in_cache(s: *mut Ssl, sess_id: &[u8]) -> *mut SslSession {
+    // SAFETY: `s` is live per the contract.
+    unsafe {
+        let ctx = (*s).session_ctx;
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: a zeroed session is a valid scratch key for `session_cmp`.
+        let mut data: SslSession = core::mem::zeroed();
+        data.ssl_version = (*s).version;
+        let n = sess_id.len().min(SSL_MAX_SSL_SESSION_ID_LENGTH);
+        data.session_id[..n].copy_from_slice(&sess_id[..n]);
+        data.session_id_length = n;
+        if CRYPTO_THREAD_read_lock((*ctx).lock) == 0 {
+            return ptr::null_mut();
+        }
+        let ret = cache_find(ctx, &data);
+        if !ret.is_null() && SSL_SESSION_up_ref(ret) == 0 {
+            CRYPTO_THREAD_unlock((*ctx).lock);
+            return ptr::null_mut();
+        }
+        CRYPTO_THREAD_unlock((*ctx).lock);
+        if ret.is_null() {
+            (*ctx).stats.sess_miss.fetch_add(1, Ordering::Relaxed);
+        }
+        ret
+    }
+}
+
+/// `int ssl_get_prev_session(SSL_CONNECTION *s, CLIENTHELLO_MSG *hello)` — `ssl/ssl_sess.c:585-747`.
+///
+/// This crate's TLS1.2 tickets are stateful: the server records the session under
+/// `SHA256(ticket)` and looks it up by the client-offered session id, which the client sets to
+/// that same hash (`tls_process_new_session_ticket`, `statem_clnt.c:2851`). The authority's
+/// stateless-ticket decrypt path is recorded as a divergence in the module header. Returns 1 on a
+/// hit (with `s->session` and `s->hit` side effects left to the caller), 0 on a miss.
+///
+/// # Safety
+/// `s` must be a live connection; `session_id`/`ticket` are readable slices.
+pub(crate) unsafe fn ssl_get_prev_session(s: *mut Ssl, session_id: &[u8]) -> c_int {
+    // SAFETY: `s` is live per the contract.
+    unsafe {
+        // `tls_get_ticket_from_client` clears the flag first (`t1_lib.c:3000`).
+        (*s).ext_ticket_expected = 0;
+        if session_id.is_empty() {
+            // No session looked up: the server will issue a fresh ticket and session.
+            (*s).ext_ticket_expected = 1;
+            return 0;
+        }
+        let ctx = (*s).session_ctx;
+        let mut ret = lookup_sess_in_cache(s, session_id);
+        if ret.is_null() {
+            (*s).ext_ticket_expected = 1;
+            return 0;
+        }
+        // Version consistency (`ssl_sess.c:641`).
+        if (*ret).ssl_version != (*s).version {
+            SSL_SESSION_free(ret);
+            ret = ptr::null_mut();
+        }
+        // `sid_ctx` consistency (`ssl_sess.c:644`).
+        if !ret.is_null() {
+            let rn = (*ret).sid_ctx_length;
+            let sn = (*s).sid_ctx_length as usize;
+            let same = if rn != sn {
+                false
+            } else if rn == 0 {
+                true
+            } else {
+                let a = core::slice::from_raw_parts(
+                    core::ptr::addr_of!((*ret).sid_ctx).cast::<u8>(),
+                    rn,
+                );
+                let b =
+                    core::slice::from_raw_parts(core::ptr::addr_of!((*s).sid_ctx).cast::<u8>(), rn);
+                a == b
+            };
+            if !same {
+                SSL_SESSION_free(ret);
+                ret = ptr::null_mut();
+            }
+        }
+        if ret.is_null() {
+            (*s).ext_ticket_expected = 1;
+            return 0;
+        }
+        if (*s).verify_mode & SSL_VERIFY_PEER != 0 && (*s).sid_ctx_length == 0 {
+            raise_ssl(SSL_R_SESSION_ID_CONTEXT_UNINITIALIZED, 665);
+            SSL_SESSION_free(ret);
+            return -1;
+        }
+        if sess_timedout(time_now_secs(), ret) {
+            (*ctx).stats.sess_timeout.fetch_add(1, Ordering::Relaxed);
+            SSL_CTX_remove_session(ctx, ret);
+            SSL_SESSION_free(ret);
+            (*s).ext_ticket_expected = 1;
+            return 0;
+        }
+        // The explicit offered/embedded id match (`ssl_sess.c:717-723`).
+        if (*ret).session_id_length != session_id.len() || {
+            let a = core::slice::from_raw_parts(
+                core::ptr::addr_of!((*ret).session_id).cast::<u8>(),
+                session_id.len(),
+            );
+            a != session_id
+        } {
+            SSL_SESSION_free(ret);
+            (*s).ext_ticket_expected = 1;
+            return 0;
+        }
+        (*ctx).stats.sess_hit.fetch_add(1, Ordering::Relaxed);
+        (*s).verify_result = (*ret).verify_result;
+        SSL_SESSION_free((*s).session);
+        (*s).session = ret;
+    }
+    1
+}
+
+/// `void ssl_update_cache(SSL_CONNECTION *s, int mode)` — `ssl/ssl_lib.c:4712-4783`, reduced to
+/// the internal-store and `new_session_cb` arms (the auto-flush every 255 connections is not
+/// modelled).
+///
+/// # Safety
+/// `s` must be a live connection with its session set.
+pub(crate) unsafe fn ssl_update_cache(s: *mut Ssl, mode: c_long) {
+    // SAFETY: `s` is live per the contract.
+    unsafe {
+        let sess = (*s).session;
+        if sess.is_null() || (*sess).session_id_length == 0 || (*sess).not_resumable != 0 {
+            return;
+        }
+        if (*s).server != 0
+            && (*sess).sid_ctx_length == 0
+            && (*s).verify_mode & SSL_VERIFY_PEER != 0
+        {
+            return;
+        }
+        let ctx = (*s).session_ctx;
+        if ctx.is_null() {
+            return;
+        }
+        let i = (*ctx).session_cache_mode;
+        if (i & mode) != 0 && (*s).hit == 0 {
+            if (i & SSL_SESS_CACHE_NO_INTERNAL_STORE) == 0 {
+                SSL_CTX_add_session(ctx, sess);
+            }
+            if let Some(cb) = (*ctx).new_session_cb {
+                if SSL_SESSION_up_ref(sess) != 0 && cb(s, sess) == 0 {
+                    SSL_SESSION_free(sess);
+                }
+            }
+        }
     }
 }
 

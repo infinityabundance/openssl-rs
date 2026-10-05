@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 796,
+      "crate_files_read": 854,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 286,
       "signatures_checked": 353,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 259,
+      "signatures_not_a_dispatch": 266,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -5586,6 +5586,31 @@
           "why": "not a provider dispatch: the crate's `conf_finish_func` equivalent for the `CONF_METHOD` vtable; the authority declares the module finish callback only as a local typedef in `conf.h`, which the atlas does not record"
         },
         {
+          "alias": "ErrGetStateFn",
+          "at": "src/runtime/dso_shared.rs",
+          "why": "not a provider dispatch: a function-pointer prototype for a `dlsym(RTLD_DEFAULT, ...)` lookup of an authority export, used only to type the resolved address at the call site; the authority declares the function directly rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "NameFindFn",
+          "at": "src/runtime/dso_shared.rs",
+          "why": "not a provider dispatch: a function-pointer prototype for a `dlsym(RTLD_DEFAULT, ...)` lookup of an authority export, used only to type the resolved address at the call site; the authority declares the function directly rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "GetFn",
+          "at": "src/runtime/dso_shared.rs",
+          "why": "not a provider dispatch: a function-pointer prototype for a `dlsym(RTLD_DEFAULT, ...)` lookup of an authority export, used only to type the resolved address at the call site; the authority declares the function directly rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "GetCmdFn",
+          "at": "src/runtime/dso_shared.rs",
+          "why": "not a provider dispatch: a function-pointer prototype for a `dlsym(RTLD_DEFAULT, ...)` lookup of an authority export, used only to type the resolved address at the call site; the authority declares the function directly rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "InitCryptoFn",
+          "at": "src/runtime/dso_shared.rs",
+          "why": "not a provider dispatch: a function-pointer prototype for a `dlsym(RTLD_DEFAULT, ...)` lookup of an authority export, used only to type the resolved address at the call site; the authority declares the function directly rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
           "alias": "ErrPrintCb",
           "at": "src/runtime/err.rs",
           "why": "not a provider dispatch: the type of a parameter of `ERR_print_errors_cb`, spelled `int (*cb)(const char *, size_t, void *)` inline in the header rather than as a typedef"
@@ -5767,6 +5792,16 @@
         },
         {
           "alias": "SessionTicketCb",
+          "at": "src/ssl/ssl_lib.rs",
+          "why": "not a provider dispatch: a libssl callback typedef (`ssl.h`/`tls1.h`/`tls_depr.h`), an application callback the `SSL_CTX`/`SSL` setters take rather than a provider dispatch function; the crate's alias name does not squash to the authority's `SSL_*`/`TLS_*` typedef name, so the convention rule has no name to join on"
+        },
+        {
+          "alias": "ServernameCb",
+          "at": "src/ssl/ssl_lib.rs",
+          "why": "not a provider dispatch: a libssl callback typedef (`ssl.h`/`tls1.h`/`tls_depr.h`), an application callback the `SSL_CTX`/`SSL` setters take rather than a provider dispatch function; the crate's alias name does not squash to the authority's `SSL_*`/`TLS_*` typedef name, so the convention rule has no name to join on"
+        },
+        {
+          "alias": "TicketKeyCb",
           "at": "src/ssl/ssl_lib.rs",
           "why": "not a provider dispatch: a libssl callback typedef (`ssl.h`/`tls1.h`/`tls_depr.h`), an application callback the `SSL_CTX`/`SSL` setters take rather than a provider dispatch function; the crate's alias name does not squash to the authority's `SSL_*`/`TLS_*` typedef name, so the convention rule has no name to join on"
         },

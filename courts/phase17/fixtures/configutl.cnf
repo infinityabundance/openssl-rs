@@ -1,0 +1,17 @@
+# openssl-rs RT-CLI-BODIES fixture: a fixed configuration for `configutl`.
+# Every case reads this same file, so `configutl`'s linearized output is a pure
+# function of the parser and cannot drift with wall clock or environment.
+HOME = .
+
+[default]
+alpha = 1
+beta = two words
+backslash = a\b
+hash = a#b
+
+[zeta]
+last = yes
+
+[alpha]
+first = no
+spaced = " x "

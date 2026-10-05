@@ -48,6 +48,7 @@ use crate::evp::legacy_evp::EVP_get_digestbyname;
 use crate::evp::signature::{EVP_SIGNATURE_fetch, EVP_SIGNATURE_free};
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::comp::{COMP_get_name, COMP_get_type, CompMethod};
+use crate::runtime::err::{ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::mem::CRYPTO_malloc;
 use crate::runtime::obj::{NID_undef, OBJ_nid2sn};
 use crate::runtime::stack::{
@@ -865,6 +866,15 @@ unsafe fn set_ciphersuites(currciphers: *mut *mut OpenSslStack, str_: *const c_c
 
 /// Fetch one cipher by NID name, returning NULL when the provider has none.
 ///
+/// This is the authority's `ssl_evp_cipher_fetch` without its engine arm (the
+/// crate's profile has no engine cipher), and the `ERR_set_mark`/`ERR_pop_to_mark`
+/// pair is the whole point: `ssl_lib.c:7496-7513` wraps the explicit fetch in a
+/// mark because "this may fail and that could be ok", so a cipher no provider
+/// publishes is disabled by [`ssl_load_ciphers`] **without** leaving an error in
+/// the queue. Omitting it left one fetch error per unavailable legacy cipher in
+/// libssl's queue (`evp_fetch.c:376`), which the shared-state court would then
+/// read through libcrypto.
+///
 /// # Safety
 /// `libctx` NULL or live; `propq` NULL or NUL-terminated.
 unsafe fn fetch_cipher(libctx: *mut c_void, propq: *const c_char, nid: c_int) -> *mut EvpCipher {
@@ -873,8 +883,14 @@ unsafe fn fetch_cipher(libctx: *mut c_void, propq: *const c_char, nid: c_int) ->
     if sn.is_null() {
         return ptr::null_mut();
     }
+    // The mark and its rollback are the authority's (`ssl_lib.c:7496-7513`): the
+    // fetch may push an error that must not survive a miss.
+    let _ = ERR_set_mark();
     // SAFETY: `sn` is a static string; `libctx`/`propq` are per the caller's contract.
-    unsafe { EVP_CIPHER_fetch(libctx, sn, propq) }
+    let c = unsafe { EVP_CIPHER_fetch(libctx, sn, propq) };
+    // Consumes the mark set above; the fetched cipher, if any, is kept.
+    let _ = ERR_pop_to_mark();
+    c
 }
 
 /// `ssl_load_ciphers` — `ssl_ciph.c:326-446`, setting the four disabled masks.
@@ -909,8 +925,14 @@ pub(crate) unsafe fn ssl_load_ciphers(ctx: *mut SslCtx) {
         let md = if sn.is_null() {
             ptr::null_mut()
         } else {
+            // `ssl_evp_md_fetch` (`ssl_lib.c:7543-7558`) marks before the explicit
+            // fetch and rolls back to the mark after, so an unavailable digest is
+            // disabled without leaving the fetch's error in the queue.
+            let _ = ERR_set_mark();
             // SAFETY: `sn` is a static string; the fetch arguments are per its contract.
-            unsafe { EVP_MD_fetch(libctx, sn, propq) }
+            let md = unsafe { EVP_MD_fetch(libctx, sn, propq) };
+            let _ = ERR_pop_to_mark();
+            md
         };
         if md.is_null() {
             // SAFETY: `ctx` is live.
@@ -925,7 +947,12 @@ pub(crate) unsafe fn ssl_load_ciphers(ctx: *mut SslCtx) {
         (*ctx).disabled_mkey_mask = 0;
         (*ctx).disabled_auth_mask = 0;
     }
-    // The four probe fetches below are each checked for presence and freed.
+    // The four probe fetches below are each checked for presence and freed. The
+    // authority wraps the whole group in one mark: "We ignore any errors from the
+    // fetches below. They are expected to fail if these algorithms are not
+    // available" (`ssl_ciph.c:365-394`), so an absent signature/key-exchange must
+    // not leave its error in the queue.
+    let _ = ERR_set_mark();
     // SAFETY: the fetch arguments are per the fetch contracts.
     unsafe {
         let sig = EVP_SIGNATURE_fetch(libctx, c"DSA".as_ptr(), propq);
@@ -957,6 +984,8 @@ pub(crate) unsafe fn ssl_load_ciphers(ctx: *mut SslCtx) {
         (*ctx).disabled_auth_mask |= (t::SSL_aGOST01 | t::SSL_aGOST12) as u32;
         (*ctx).disabled_mkey_mask |= (t::SSL_kGOST | t::SSL_kGOST18) as u32;
     }
+    // Consumes the group's mark, rolling back every probe failure above.
+    let _ = ERR_pop_to_mark();
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -33,6 +33,7 @@ pub mod ctype;
 pub mod ctype_table;
 pub mod defaults;
 pub mod dir;
+pub mod dso_shared;
 pub mod err;
 pub mod err_state;
 pub mod ex_data;

@@ -305,7 +305,15 @@ fn dtls_ordinal(v: c_int) -> c_int {
 }
 
 /// `ssl_set_version_bound` — `ssl/statem/statem_lib.c:2107-2156` (pulled forward from 14.5).
-fn ssl_set_version_bound(method_version: c_int, version: c_int, bound: *mut c_int) -> bool {
+///
+/// `pub(crate)` because the version-bound control arms (`SSL_CTRL_SET_MIN/MAX_PROTO_VERSION`,
+/// `ssl/ssl_lib.c:3199-3209`) call it from `src/ssl/ssl_lib.rs`, exactly as the authority's
+/// `SSL_CTX_ctrl`/`SSL_ctrl` call it from `ssl_lib.c`.
+pub(crate) fn ssl_set_version_bound(
+    method_version: c_int,
+    version: c_int,
+    bound: *mut c_int,
+) -> bool {
     if version == 0 {
         // SAFETY: `bound` is a live context/connection field per the callers' contract.
         unsafe { *bound = version };

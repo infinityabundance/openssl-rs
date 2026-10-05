@@ -7,6 +7,12 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 pub mod extensions_cust;
+// Phase 17.2a lands the client's ClientHello extension construction (`extensions_clnt.c`), reduced
+// to the initial flight (the module header names each boundary).
+pub mod extensions_clnt;
+// Phase 17.2b lands the server's first-flight extension block (`extensions_srvr.c`): the
+// `SSL_EXT_TLS1_3_SERVER_HELLO` supported_versions and key_share rows.
+pub mod extensions_srvr;
 // Phase 16.5 lands the client and server halves of the message layer: the read/write
 // transition surface (`statem_clnt.c`/`statem_srvr.c`) Phase 15 sealed without.
 pub mod statem_clnt;

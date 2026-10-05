@@ -1,0 +1,47 @@
+{
+  "authority": "openssl-rt-3.6.4-r2",
+  "build": {
+    "detail": "HAProxy 3.0.29, built with the candidate OpenSSL 3.6.4",
+    "ok": true
+  },
+  "candidate": "0.0.21",
+  "concurrency": {
+    "ok": 16,
+    "total": 16
+  },
+  "functional": {
+    "detail": "TLS 1.3 termination in front of a plain-HTTP backend for the authority s_client and the candidate curl; backend UP/L7OK; broken config rejected",
+    "evidence": [
+      "A_tls13_handshake=1",
+      "B_http_code=200",
+      "B_neg_exit=60",
+      "B_broken_cfg_exit=1",
+      "C_concurrent_200s=16/16"
+    ],
+    "ok": true
+  },
+  "historical_failures": [
+    {
+      "commit": "6b65e05b",
+      "fixed_by": "a742f27d (ssl: fix the HAProxy crash and handshake: SNI arg ctrl, client_hello_cb, ERR constant)",
+      "summary": "candidate-linked HAProxy 3.0.29 SIGSEGV'd on the first TLS handshake: SSL_CTX_set_tlsext_servername_arg (SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG=54) had no SSL_CTX_ctrl arm, so the servername callback's priv argument stayed NULL and ssl_sock_switchctx_err_cbk dereferenced it"
+    }
+  ],
+  "known_residuals": [],
+  "link": {
+    "detail": "libssl.so.3 -> /work/artifacts/phase2/install/lib/libssl.so.3",
+    "libs": [
+      "libssl.so.3",
+      "libcrypto.so.3"
+    ],
+    "ok": true
+  },
+  "program": "haproxy",
+  "source_sha256": "225dbddbab9eb0abc0ff3db39ded1e07f20028105a36f4c36fc2f85bf86835d1",
+  "source_url": "https://www.haproxy.org/download/3.0/src/haproxy-3.0.29.tar.gz",
+  "start": {
+    "detail": "the frontend binds and reaches readiness",
+    "ok": true
+  },
+  "version": "3.0.29"
+}

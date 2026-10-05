@@ -11,12 +11,18 @@
 //! `main`'s global `-help`/`-version` arm, `prog_init`'s table sort, `do_cmd`'s
 //! table lookup, its `no-` "is this feature unsupported" arm, its
 //! `Invalid command` arm and its deprecated-command warning are transcribed
-//! whole. Three command bodies are landed because their output is
-//! build-independent and the court drives them — `help` (this module), `list`
-//! ([`crate::apps::list`]) and `version` ([`crate::apps::version`]). **Every other
-//! command name is present in the table and dispatches, but its body
-//! (`apps/<name>.c`) is a unit this stratum does not own**, so it reaches
-//! [`not_landed`] rather than printing a wrong body.
+//! whole. The command bodies land slice by slice: `help` (this module), `list`
+//! ([`crate::apps::list`]) and `version` ([`crate::apps::version`]) from Phase
+//! 16.4; `errstr` ([`crate::apps::errstr`]) from 17.1a; `info`, `prime`,
+//! `skeyutl`, `configutl`, `pkeyparam`, `nseq` from 17.1b; `crl2pkcs7`, `ciphers`,
+//! `sess_id`, `kdf`, `mac`, `spkac`, `genrsa`, `dsaparam` from 17.1c; and
+//! `asn1parse`, `ecparam`, `rsa`, `dsa`, `ec`, `pkey`, `pkcs8`, `verify`, `crl`,
+//! `rsautl` from 17.1d; `gendsa`, `rand`, `rehash`, `engine`, `storeutl`,
+//! `dhparam`, `genpkey`, `passwd`, `pkeyutl`, `enc` from 17.1e; and `dgst`,
+//! `pkcs7`, `ocsp`, `ts`, `speed`, `fipsinstall`, `srp` from 17.1f. **Every other
+//! command name is present in the table and
+//! dispatches, but its body (`apps/<name>.c`) is a unit this stratum does not
+//! own**, so it reaches [`not_landed`] rather than printing a wrong body.
 //!
 //! ## Recorded divergences (module header)
 //!
@@ -34,10 +40,62 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use crate::apps::asn1parse;
+use crate::apps::ca;
+use crate::apps::ciphers;
+use crate::apps::cmp;
+use crate::apps::cms;
+use crate::apps::configutl;
+use crate::apps::crl;
+use crate::apps::crl2pkcs7;
+use crate::apps::dgst;
+use crate::apps::dhparam;
+use crate::apps::dsa;
+use crate::apps::dsaparam;
+use crate::apps::ec;
+use crate::apps::ecparam;
+use crate::apps::enc;
+use crate::apps::engine;
+use crate::apps::errstr;
+use crate::apps::fipsinstall;
+use crate::apps::gendsa;
+use crate::apps::genpkey;
+use crate::apps::genrsa;
+use crate::apps::info;
+use crate::apps::kdf;
 use crate::apps::list;
+use crate::apps::mac;
+use crate::apps::nseq;
+use crate::apps::ocsp;
 use crate::apps::opt::{progname, OptMatch, Opts};
+use crate::apps::passwd;
+use crate::apps::pkcs12;
+use crate::apps::pkcs7;
+use crate::apps::pkcs8;
+use crate::apps::pkey;
+use crate::apps::pkeyparam;
+use crate::apps::pkeyutl;
+use crate::apps::prime;
+use crate::apps::rand;
+use crate::apps::rehash;
+use crate::apps::req;
+use crate::apps::rsa;
+use crate::apps::rsautl;
+use crate::apps::s_client;
+use crate::apps::s_server;
+use crate::apps::s_time;
+use crate::apps::sess_id;
+use crate::apps::skeyutl;
+use crate::apps::smime;
+use crate::apps::speed;
+use crate::apps::spkac;
+use crate::apps::srp;
+use crate::apps::storeutl;
 use crate::apps::tables::{Func, FuncKind, FUNCTIONS, HELP_OPTIONS};
+use crate::apps::ts;
+use crate::apps::verify;
 use crate::apps::version;
+use crate::apps::x509;
 
 /// A command body this stratum does not own, reached rather than fabricated.
 ///
@@ -58,16 +116,16 @@ fn find(name: &str) -> Option<&'static Func> {
 
 /// `static void warn_deprecated(const FUNCTION *fp)` — `apps/openssl.c:48-58`.
 fn warn_deprecated(fp: &Func) {
-    match fp.deprecated_version {
-        Some(v) => eprintln!("The command {} was deprecated in version {}.", fp.name, v),
-        None => eprintln!("The command {} is deprecated.", fp.name),
-    }
+    let mut line = match fp.deprecated_version {
+        Some(v) => format!("The command {} was deprecated in version {}.", fp.name, v),
+        None => format!("The command {} is deprecated.", fp.name),
+    };
     if let Some(alt) = fp.deprecated_alternative {
         if alt != "unknown" {
-            eprintln!(" Use '{alt}' instead.");
+            line.push_str(&format!(" Use '{alt}' instead."));
         }
     }
-    eprintln!();
+    eprintln!("{line}");
 }
 
 /// `int help_main(int argc, char **argv)` — `apps/openssl.c:402-465`.
@@ -153,9 +211,61 @@ fn do_cmd(argv: &[String]) -> i32 {
             warn_deprecated(fp);
         }
         return match fp.name {
+            "asn1parse" => asn1parse::main(argv),
+            "ca" => ca::main(argv),
+            "ciphers" => ciphers::main(argv),
+            "cms" => cms::main(argv),
+            "cmp" => cmp::main(argv),
+            "configutl" => configutl::main(argv),
+            "crl" => crl::main(argv),
+            "crl2pkcs7" => crl2pkcs7::main(argv),
+            "dgst" => dgst::main(argv),
+            "dhparam" => dhparam::main(argv),
+            "dsa" => dsa::main(argv),
+            "dsaparam" => dsaparam::main(argv),
+            "ec" => ec::main(argv),
+            "ecparam" => ecparam::main(argv),
+            "enc" => enc::main(argv),
+            "engine" => engine::main(argv),
+            "errstr" => errstr::main(argv),
+            "fipsinstall" => fipsinstall::main(argv),
+            "gendsa" => gendsa::main(argv),
+            "genpkey" => genpkey::main(argv),
+            "genrsa" => genrsa::main(argv),
             "help" => help_main(argv),
+            "info" => info::main(argv),
+            "kdf" => kdf::main(argv),
             "list" => list::main(argv),
+            "mac" => mac::main(argv),
+            "nseq" => nseq::main(argv),
+            "ocsp" => ocsp::main(argv),
+            "passwd" => passwd::main(argv),
+            "pkcs12" => pkcs12::main(argv),
+            "pkcs7" => pkcs7::main(argv),
+            "pkcs8" => pkcs8::main(argv),
+            "pkey" => pkey::main(argv),
+            "pkeyparam" => pkeyparam::main(argv),
+            "pkeyutl" => pkeyutl::main(argv),
+            "prime" => prime::main(argv),
+            "rand" => rand::main(argv),
+            "rehash" => rehash::main(argv),
+            "req" => req::main(argv),
+            "s_client" => s_client::main(argv),
+            "s_server" => s_server::main(argv),
+            "s_time" => s_time::main(argv),
+            "rsa" => rsa::main(argv),
+            "rsautl" => rsautl::main(argv),
+            "sess_id" => sess_id::main(argv),
+            "skeyutl" => skeyutl::main(argv),
+            "smime" => smime::main(argv),
+            "speed" => speed::main(argv),
+            "spkac" => spkac::main(argv),
+            "srp" => srp::main(argv),
+            "storeutl" => storeutl::main(argv),
+            "ts" => ts::main(argv),
+            "verify" => verify::main(argv),
             "version" => version::main(argv),
+            "x509" => x509::main(argv),
             _ => not_landed(fp.name),
         };
     }
