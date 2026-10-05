@@ -45,10 +45,10 @@
         "closure": "the `RT-PERFORMANCE-SENSITIVITY` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-PERFORMANCE-SENSITIVITY is pending",
+        "measurement_state": "complete",
+        "observation": "RT-PERFORMANCE-SENSITIVITY is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase19/COURTS.json",
         "unit": "performance-sensitivity",
         "what": "the instrument-sensitivity control: a deliberately slowed path must be caught, so a measure that cannot tell a slow path from a fast one is `fail` rather than `pass`; candidate-only"
@@ -71,8 +71,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 3,
-      "open_in_this_stratum": 2,
+      "implemented": 4,
+      "open_in_this_stratum": 1,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -113,7 +113,7 @@
     {
       "name": "phase-19-courts",
       "path": "artifacts/phase19/COURTS.json",
-      "sha256": "7d03c84b3b78da69607f427b641e61443ddcf86100f938a5414b42ce6d366b22"
+      "sha256": "ed84b921335e1200ae1329659c4501120450d729a1717b8e0401b7858eb3ae85"
     }
   ],
   "kind": "phase19-obligations",

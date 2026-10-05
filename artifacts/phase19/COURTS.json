@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-CPU-CAPABILITY` is 19.1's court: it compiles courts/phase19/rt_cpu_capability_probe.c twice (authority and candidate) and reports the CPU-capability surface deterministically -- `OPENSSL_ia32cap_P[0..3]`, the effect of `OPENSSL_cpuid_setup`, the raw vector `OPENSSL_ia32_cpuid` returns, and the capability-derived selection observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`, `OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and the four `EVP_aes_*_cbc_hmac_sha*` constructors, which answer NULL when `AESNI_CAPABLE` is clear). The probe is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade: the host set, an AES-NI-cleared set and a fully cleared set. The three capability names are declared weak because `OPENSSL_ia32cap_P` is `.hidden` and `OPENSSL_cpuid_setup`/`OPENSSL_ia32_cpuid` live only in the static archive: the authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so the surface is reached, and the candidate provides none of the three, so it answers `probe.reachable.*=0` -- the `symbols_not_reached` census the plan records -- and its CPU-dispatch string is `CPUINFO: N/A` with `OPENSSL_info(1008)` NULL. That disposition and every other candidate-vs-authority difference is *recorded* in the court's `divergences` block, not failed: the reduced engine deliberately does not model `OPENSSL_ia32cap` masking, so under a cleared facade the authority's selection moves to the non-AES-NI arm and the candidate's does not. The court is `pass` when the authority's capability surface was actually driven, the faulted facade moved the authority's selection, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded audit of the capability surface at the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6). `RT-EVP-DISPATCH` is 19.2's court: it compiles courts/phase19/rt_evp_dispatch_probe.c twice and reports, for a fixed operation set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-1/256 and the four `EVP_aes_*_cbc_hmac_sha*` constructors), which implementation each path selects -- the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context -- as the selected method's name/NID/type/flags/sizes and, for a fetch, its provider name, under the same three fixed capability sets. The authority's default provider filters its `AES-*-CBC-HMAC-*` rows through `ossl_cipher_capable_aes_cbc_hmac_sha*` (`AESNI_CBC_HMAC_SHA_CAPABLE`), so masking the AES-NI bit makes those fetch/legacy/lookup paths answer NULL and moves the authority's selection; the candidate reads CPUID directly and does not model the mask, so its selection does not move. Every candidate-vs-authority difference is recorded in the court's `divergences` block. The court is `pass` when the authority's selection surface was driven, the faulted facade moved it, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded comparison of *selection* over the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6); the engine path is not driven because no engine is configured and the reduced engine does not export the enumeration it would need. `RT-PERFORMANCE-WORK` is 19.3's court: it compiles courts/phase19/rt_performance_work_probe.c twice and reports the deterministic work a fixed operation set performs -- AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an RSA-1024 private decrypt. The library exposes no total instruction counter, so the instrument is a counting `CRYPTO` allocator the stratum introduces (the number of malloc/realloc operations and total bytes the library requests for a fixed primitive -- a deterministic instruction-path proxy for its memory work; the shims forward to the default allocator and change no behaviour) plus the method-derived input/blocks/output/tag sizes. No address, clock or duration is observed. Every path whose library-side work vector differs from the authority's is a *finding* recorded, not failed -- the reduced engine's allocations differ on the EC and RSA paths while the symmetric/digest paths agree -- and a path the probe cannot drive is `pending`. The court is `pass` when the authority installed the hook and the paths ran, both transcripts are complete, every schema key is present and every divergence was recorded -- NOT when nothing diverged. The counting allocator observes heap operations, not total CPU instructions, and the block counts are input-implied: no benchmark-parity claim and no assembly-versus-Rust equivalence claim (sections 3.1 and 3.6). `RT-PERFORMANCE-SENSITIVITY` 19.4's and `PERFORMANCE-BOUNDARY-REGISTER` 19.5's remain `pending` with the subphase that lands their instrument. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is dispatch behaviour and deterministic work over a finished implementation, with no benchmark-parity claim and no assembly-versus-Rust equivalence claim. docs/PHASE-19-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "claim": "`RT-CPU-CAPABILITY` is 19.1's court: it compiles courts/phase19/rt_cpu_capability_probe.c twice (authority and candidate) and reports the CPU-capability surface deterministically -- `OPENSSL_ia32cap_P[0..3]`, the effect of `OPENSSL_cpuid_setup`, the raw vector `OPENSSL_ia32_cpuid` returns, and the capability-derived selection observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`, `OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and the four `EVP_aes_*_cbc_hmac_sha*` constructors, which answer NULL when `AESNI_CAPABLE` is clear). The probe is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade: the host set, an AES-NI-cleared set and a fully cleared set. The three capability names are declared weak because `OPENSSL_ia32cap_P` is `.hidden` and `OPENSSL_cpuid_setup`/`OPENSSL_ia32_cpuid` live only in the static archive: the authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so the surface is reached, and the candidate provides none of the three, so it answers `probe.reachable.*=0` -- the `symbols_not_reached` census the plan records -- and its CPU-dispatch string is `CPUINFO: N/A` with `OPENSSL_info(1008)` NULL. That disposition and every other candidate-vs-authority difference is *recorded* in the court's `divergences` block, not failed: the reduced engine deliberately does not model `OPENSSL_ia32cap` masking, so under a cleared facade the authority's selection moves to the non-AES-NI arm and the candidate's does not. The court is `pass` when the authority's capability surface was actually driven, the faulted facade moved the authority's selection, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded audit of the capability surface at the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6). `RT-EVP-DISPATCH` is 19.2's court: it compiles courts/phase19/rt_evp_dispatch_probe.c twice and reports, for a fixed operation set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-1/256 and the four `EVP_aes_*_cbc_hmac_sha*` constructors), which implementation each path selects -- the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context -- as the selected method's name/NID/type/flags/sizes and, for a fetch, its provider name, under the same three fixed capability sets. The authority's default provider filters its `AES-*-CBC-HMAC-*` rows through `ossl_cipher_capable_aes_cbc_hmac_sha*` (`AESNI_CBC_HMAC_SHA_CAPABLE`), so masking the AES-NI bit makes those fetch/legacy/lookup paths answer NULL and moves the authority's selection; the candidate reads CPUID directly and does not model the mask, so its selection does not move. Every candidate-vs-authority difference is recorded in the court's `divergences` block. The court is `pass` when the authority's selection surface was driven, the faulted facade moved it, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded comparison of *selection* over the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6); the engine path is not driven because no engine is configured and the reduced engine does not export the enumeration it would need. `RT-PERFORMANCE-WORK` is 19.3's court: it compiles courts/phase19/rt_performance_work_probe.c twice and reports the deterministic work a fixed operation set performs -- AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an RSA-1024 private decrypt. The library exposes no total instruction counter, so the instrument is a counting `CRYPTO` allocator the stratum introduces (the number of malloc/realloc operations and total bytes the library requests for a fixed primitive -- a deterministic instruction-path proxy for its memory work; the shims forward to the default allocator and change no behaviour) plus the method-derived input/blocks/output/tag sizes. No address, clock or duration is observed. Every path whose library-side work vector differs from the authority's is a *finding* recorded, not failed -- the reduced engine's allocations differ on the EC and RSA paths while the symmetric/digest paths agree -- and a path the probe cannot drive is `pending`. The court is `pass` when the authority installed the hook and the paths ran, both transcripts are complete, every schema key is present and every divergence was recorded -- NOT when nothing diverged. The counting allocator observes heap operations, not total CPU instructions, and the block counts are input-implied: no benchmark-parity claim and no assembly-versus-Rust equivalence claim (sections 3.1 and 3.6). `RT-PERFORMANCE-SENSITIVITY` is 19.4's court: it is candidate-only -- the deliberately slowed variant is a construction of the harness, never product code -- and compiles courts/phase19/rt_performance_sensitivity_probe.c once against the candidate distribution shell. It drives a reference arm (the real `aes-128-cbc` path, which must equal the authority vector 19.3 recorded) and a slowed arm (`control-extra-pass`, the same path with an injected extra full pass over the primitive) under the same 19.3 work instrument, and the court is `pass` only when the slowed arm is caught on the counting allocator the stratum introduces (a library-side `allocs`/`reallocs`/`bytes` difference), not merely on the driver-side `calls` 19.3 excludes from its findings. Section 3.2's rule is mechanical here: a control that cannot fail is not evidence, so if the instrument cannot tell the slowed path from the reference the verdict is `fail`, never a vacuous `pass`. It is evidence about the instrument's resolution and makes no throughput or benchmark-parity claim. Only `PERFORMANCE-BOUNDARY-REGISTER` 19.5's remains `pending` with the subphase that lands its instrument. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is dispatch behaviour and deterministic work over a finished implementation, with no benchmark-parity claim and no assembly-versus-Rust equivalence claim. docs/PHASE-19-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
     "courts": [
       {
         "authority_observations": 81,
@@ -2240,16 +2240,90 @@
           "bytes",
           "ret"
         ]
+      },
+      {
+        "authority_reference": {
+          "allocs": "2",
+          "blocks": "4",
+          "bytes": "640",
+          "calls": "7",
+          "in": "64",
+          "out": "80",
+          "ran": "1",
+          "reallocs": "0",
+          "ret": "1",
+          "tag": "-1"
+        },
+        "candidate_exit_code": 0,
+        "candidate_only": true,
+        "candidate_stderr_tail": [],
+        "control": {
+          "caught": true,
+          "counter_caught": true,
+          "counter_keys": [
+            "allocs",
+            "reallocs",
+            "bytes"
+          ],
+          "counter_keys_differing": [
+            "allocs",
+            "bytes"
+          ],
+          "driver_side_calls_differ": true,
+          "honest": true,
+          "library_side_keys_differing": [
+            "allocs",
+            "bytes",
+            "out"
+          ],
+          "path": "control-extra-pass",
+          "reference": "aes-128-cbc",
+          "what": "the reference `aes-128-cbc` path with an injected extra full pass over the primitive inside the measured region -- extra library work constructed in the harness, never product code -- so the counting allocator must register it"
+        },
+        "court": "RT-PERFORMANCE-SENSITIVITY",
+        "method": "candidate-only; the probe is compiled once against the candidate distribution shell and drives two arms under the same 19.3 work instrument (the counting `CRYPTO` allocator the stratum introduces plus the method-derived geometry): a reference arm, the real `aes-128-cbc` path, and a slowed arm, the same path with an injected extra full pass over the primitive. The reference must equal the authority's `aes-128-cbc` vector the 19.3 court recorded and the slowed arm must be caught on a library-side counter key. No address, clock or duration is observed. The verdict is about the instrument's resolution: it makes no throughput or benchmark-parity claim.",
+        "observations_recorded": {
+          "candidate": 26
+        },
+        "probe": "courts/phase19/rt_performance_sensitivity_probe.c",
+        "problems": [],
+        "reference": {
+          "allocs": "2",
+          "blocks": "4",
+          "bytes": "640",
+          "calls": "7",
+          "in": "64",
+          "out": "80",
+          "ran": "1",
+          "reallocs": "0",
+          "ret": "1",
+          "tag": "-1"
+        },
+        "slowed": {
+          "allocs": "4",
+          "blocks": "4",
+          "bytes": "1280",
+          "calls": "14",
+          "in": "64",
+          "out": "160",
+          "ran": "1",
+          "reallocs": "0",
+          "ret": "1",
+          "tag": "-1"
+        },
+        "staged_binaries": {
+          "candidate": "artifacts/phase19/probes/rt_performance_sensitivity_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
-      "PERFORMANCE-BOUNDARY-REGISTER": "19.5 lands the register; it records what is measured, what is not, and the explicit non-claims (no benchmark-parity claim, no assembly-versus-Rust equivalence claim), and checks that every recorded boundary still matches the evidence that establishes it",
-      "RT-PERFORMANCE-SENSITIVITY": "19.4 lands the sensitivity control; it requires a deliberately slowed path to be caught, so the work measure is proven able to tell a slow path from a fast one"
+      "PERFORMANCE-BOUNDARY-REGISTER": "19.5 lands the register; it records what is measured, what is not, and the explicit non-claims (no benchmark-parity claim, no assembly-versus-Rust equivalence claim), and checks that every recorded boundary still matches the evidence that establishes it"
     },
     "summary": {
       "fail": 0,
-      "pass": 3,
-      "total": 3
+      "pass": 4,
+      "total": 4
     }
   },
   "generator": "forensics/tools/phase19_courts.py",
@@ -2273,6 +2347,11 @@
       "name": "performance-work-probe",
       "path": "courts/phase19/rt_performance_work_probe.c",
       "sha256": "06e905af25d656b915e2edc29aa1cb621e8105fa0673303505fecff4cfdd5f40"
+    },
+    {
+      "name": "performance-sensitivity-probe",
+      "path": "courts/phase19/rt_performance_sensitivity_probe.c",
+      "sha256": "a7cf24f135ac9ef7e33e75d70caa61d2690199635da2f0ebf9ac28930dab3990"
     },
     {
       "name": "performance-work-fixture",
