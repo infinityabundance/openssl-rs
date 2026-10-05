@@ -170,6 +170,7 @@ from atlas_common import (  # noqa: E402
 
 import gen_hostile_tls_corpus  # noqa: E402
 import gen_hostile_x509_corpus  # noqa: E402
+import provenance_court  # noqa: E402
 import unsafe_footprint  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase18" / "COURTS.json"
@@ -1292,6 +1293,13 @@ def register_court(name: str, records: list[dict]) -> dict:
                             f"{UNSAFE_BOUNDS_SCHEMA!r}")
         footprint = unsafe_footprint.scan()
         problems += unsafe_footprint_growth(bounds_doc, footprint)
+    # The provenance regression check: the integer->callable-pointer reconstruction
+    # class that stopped Miri at the allocator trampoline. It is imported rather
+    # than shelled, so the court and forensics/tools/provenance_court.py cannot
+    # disagree about whether the pattern is present. A reappearance fails the
+    # register rather than being reported as a note.
+    prov_findings = provenance_court.scan_repo()
+    problems += [f"provenance regression: {f}" for f in prov_findings]
     # Completeness: every passing court that covers surfaces must be cited by at least one
     # hardened/measured row, so a new court cannot pass unregistered.
     cited = {r.get("court") for r in surfaces
@@ -1330,8 +1338,12 @@ def register_court(name: str, records: list[dict]) -> dict:
             "forensics/tools/unsafe_footprint.py and fails if any core (parser/algorithm) "
             "module's `unsafe_sites` or `extern \"C\" fn` count exceeds the ceiling recorded "
             "in artifacts/phase18/unsafe-bounds.json, while the boundary layer is allowed to "
-            "grow. It is a record of a boundary and a footprint ceiling, not a security proof "
-            "and not a memory-safety proof (sections 3.1 and 3.6)."),
+            "grow. Finally it runs the provenance regression check in "
+            "forensics/tools/provenance_court.py and fails if an integer->callable-pointer "
+            "reconstruction (the class that stopped Miri at the allocator trampoline) has "
+            "reappeared in src/**/*.rs. It is a record of a boundary, a footprint ceiling and "
+            "a provenance regression guard, not a security proof and not a memory-safety "
+            "proof (sections 3.1 and 3.6)."),
         "frf_declarable": False,
         "frf_exclusion": (
             "the register re-reads the courts registry and stages no artifacts/phase18/probes/ "
@@ -1342,6 +1354,10 @@ def register_court(name: str, records: list[dict]) -> dict:
             "sha256": sha256_file(REGISTER),
             "counts": counts,
             "total": len(surfaces),
+        },
+        "provenance": {
+            "tool": "forensics/tools/provenance_court.py",
+            "findings": prov_findings,
         },
         "unsafe_footprint": {
             "bounds": {

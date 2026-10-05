@@ -31,10 +31,10 @@ core module's count rises above the ceiling recorded in
 `artifacts/phase18/unsafe-bounds.json`, while the boundary layer is allowed to
 grow.
 
-At the Phase 18 hostile-hardening revision the measurement is **58,767** unsafe
-sites and **10,860** `extern "C" fn` over **801,094** lines: the **core**
-parser/algorithm modules carry **52,943** unsafe sites (**90.1%**) and the
-**boundary** layer **5,824** (9.9%). `src/ffi` — the boundary the earlier
+At the Phase 18 hostile-hardening revision the measurement is **58,826** unsafe
+sites and **10,866** `extern "C" fn` over **801,594** lines: the **core**
+parser/algorithm modules carry **52,943** unsafe sites (**90.0%**) and the
+**boundary** layer **5,883** (10.0%). `src/ffi` — the boundary the earlier
 revision of this document named as the example — carries **none**. The claim
 that `unsafe` is concentrated in narrow boundary modules is therefore **false of
 this implementation**: the unsafe surface is in the parser and algorithm modules,
@@ -68,12 +68,42 @@ The instrumented checks over the parser/algorithm cores are **measured and recor
 `artifacts/phase18/unsafe-instruments.json`, not asserted here:
 
 - unit tests per invariant, including negative tests (the crate's test modules);
-- `Miri` over the safe-testable subset — attempted (`cargo +nightly miri test --lib`, the
-  `asn1::x_algor` subset). It compiled the crate and executed tests, then reported
-  undefined behaviour at the allocator trampoline (`src/runtime/mem.rs:379`: both the
-  default and any installed allocator are stored as a `usize` and recovered by
-  `transmute`, and the default is the libc `malloc` FFI). The crate is therefore not
-  Miri-tractable beyond non-allocating tests; the exact error is recorded;
+- `Miri` over the **Miri-admitted TCB suite** — `cargo +nightly miri test --lib miri_tcb`
+  with `MIRIFLAGS="-Zmiri-strict-provenance"`, run under seeds 0, 1 and 2 (and ordinary
+  mode, seed 0): **9 admitted tests, 9 passed, 0 unsupported tests ran**. The suite is
+  `src/runtime/miri_tcb.rs` and installs a Rust-backed allocator shim through
+  `CRYPTO_set_mem_functions` before its first allocation, so the `CRYPTO_*` ownership
+  surface, the X.509 refcount/lifetime path, the `OPENSSL_STACK`/`OPENSSL_LHASH`
+  containers, the `BUF_MEM` gateway and the object registry run without libc. The
+  allocator-trampoline provenance blocker is **fixed** at its root: the callback slots
+  in `src/runtime/mem.rs` (and the async stack slots in
+  `src/async/arch/async_posix.rs`) are `AtomicPtr<()>`, installed `f as *const () as
+  *mut ()` and recovered by a pointer->function-pointer `transmute` after a null check;
+  `CRYPTO_get_mem_functions` reconstructs pointer-shaped values; `CRYPTO_aligned_alloc`
+  uses `ptr.addr()` for its address-only alignment observation while keeping `base` for
+  provenance. The class cannot silently return: `forensics/tools/provenance_court.py`
+  is a regression guard inside the `HOSTILE-BOUNDARY-REGISTER` court, and it fails when
+  an integer->callable-pointer reconstruction reappears. Miri also **found a real
+  aliasing defect** the suite exists to catch — `object_free` (`src/runtime/obj.rs`)
+  formed `&mut *p` on a static registry object reachable from `X509_free` — now fixed
+  by reading the flags before any mutable reference is formed. What Miri executes, and
+  the surface it refuses (libc FFI in `src/runtime/bio/sys.rs`, DSOs in
+  `src/dso/dlfcn.rs`, the `ucontext` fibres, `getrandom`, `rdtsc`), is named with a
+  reason in `forensics/miri-tcb-suite.json`; the recorded run is
+  `artifacts/phase18/miri-tcb.json`;
+- a **crate-wide pointer-provenance audit** (Phase 18, Commit A), classifying every
+  occurrence of the pattern: an integer->callable-pointer reconstruction is a defect
+  (fixed in `src/runtime/mem.rs` and `src/async/arch/async_posix.rs`, guarded by
+  `forensics/tools/provenance_court.py`); an address-only `ptr as usize`/`ptr.addr()`
+  observation is left as-is (the `CRYPTO_aligned_alloc` alignment decision, hash keys and
+  test identity comparisons); a stored dereferenceable function pointer cast through
+  `*mut c_void` is provenance-preserving and left as-is (`asn1::utl::call_item_exp`,
+  `context::dispatch::entry_function`); and a dynamic-loader symbol address
+  (`src/dso/dlfcn.rs`'s `dlsym`, `src/engine/eng_dyn.rs`'s `dlsym`-paired cast) is the
+  explicit provenance TCB — the boundary §1 admits for dynamic loading, recorded here
+  rather than mechanised, and the reason the DSO tests are excluded from the Miri set;
+- `AtomicUsize` slots that hold genuine counters (the panic count, the object-registry
+  size, the test counters) are **not** pointer storage and are left as integers;
 - address/UB sanitizers — `AddressSanitizer` **could not run** under the court's hard
   4 GiB `RLIMIT_DATA` (its shadow reservation is ~15.4 TB, the same constraint
   `forensics/tools/probe_hygiene.py` documents), and the attempt and its exact error are

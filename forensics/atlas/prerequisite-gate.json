@@ -795,7 +795,7 @@
     },
     "checked": {
       "authority_units": 599,
-      "crate_modules": 854,
+      "crate_modules": 855,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 1,
       "divergence_names_covered": 98,
@@ -1361,7 +1361,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "54bc6992022d3807544b6eff0ae4552b64fa52cb586ed6f3f1d9a83a6a51b241",
+  "body_hash": "4abb877670ffa18298c573d6117c7472dab0604408ccd0828867c1895614bc08",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {

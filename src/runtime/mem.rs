@@ -85,7 +85,7 @@
 use core::ffi::{c_char, c_int, c_ulong, c_void};
 use core::mem::{size_of, transmute};
 use core::ptr;
-use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 
 use crate::ffi::guard_ffi;
 use crate::runtime::err;
@@ -119,15 +119,36 @@ type MallocFn = unsafe extern "C" fn(usize, *const c_char, c_int) -> *mut c_void
 type ReallocFn = unsafe extern "C" fn(*mut c_void, usize, *const c_char, c_int) -> *mut c_void;
 type FreeFn = unsafe extern "C" fn(*mut c_void, *const c_char, c_int);
 
-// The installed allocator. `0` means "not installed", which is the authority's
-// `malloc_impl == CRYPTO_malloc` — the address of its own function, compared by
-// identity. The crate records the same predicate as a zero slot, so the common
-// case is a single relaxed load and no lock: `CRYPTO_malloc` is on the hot path
-// of everything that follows. Each of the three is installable *separately*, which
-// is why they are three slots and not one `Option<Allocator>`.
-static MALLOC_FN: AtomicUsize = AtomicUsize::new(0);
-static REALLOC_FN: AtomicUsize = AtomicUsize::new(0);
-static FREE_FN: AtomicUsize = AtomicUsize::new(0);
+// The installed allocator. A null pointer means "not installed", which is the
+// authority's `malloc_impl == CRYPTO_malloc` — the address of its own function,
+// compared by identity. The crate records the same predicate as a null slot, so the
+// common case is a single relaxed load and no lock: `CRYPTO_malloc` is on the hot
+// path of everything that follows. Each of the three is installable *separately*,
+// which is why they are three slots and not one `Option<Allocator>`.
+//
+// The slots are `AtomicPtr<()>`, **not** `AtomicUsize`. The authority's `malloc_impl`
+// is a function pointer (`crypto/mem.c:23-25`, `static CRYPTO_malloc_fn
+// malloc_impl = CRYPTO_malloc;`) and it is compared, stored and handed back as a
+// pointer. Recovering a callable pointer from an integer that carries none is exactly
+// what Rust's strict-provenance model forbids (and what Miri rejects with "pointer
+// not dereferenceable ... has no provenance"); storing `f as *const () as *mut ()`
+// keeps the function's provenance across the atomic, and the pointer-to-
+// function-pointer recovery below is the same cast the C projection performs. See
+// `docs/UNSAFE.md` §4.
+static MALLOC_FN: AtomicPtr<()> = AtomicPtr::new(ptr::null_mut());
+static REALLOC_FN: AtomicPtr<()> = AtomicPtr::new(ptr::null_mut());
+static FREE_FN: AtomicPtr<()> = AtomicPtr::new(ptr::null_mut());
+
+// The slot recovery is a `transmute`, which requires the source and destination to
+// have the same size. Rust guarantees a function pointer and a thin raw pointer are
+// the same size on this platform (`core::mem::size_of`); this compile-time assertion
+// fails the build rather than the program if that ever stops being true, so the
+// `transmute::<*mut (), Fn>` sites below cannot silently become a truncation.
+const _: () = {
+    assert!(size_of::<MallocFn>() == size_of::<*mut ()>());
+    assert!(size_of::<ReallocFn>() == size_of::<*mut ()>());
+    assert!(size_of::<FreeFn>() == size_of::<*mut ()>());
+};
 
 /// `static int allow_customize = 1;` — `crypto/mem.c:22`.
 ///
@@ -156,13 +177,13 @@ static ALLOW_CUSTOMIZE: AtomicBool = AtomicBool::new(true);
 /// `malloc_impl == CRYPTO_malloc`.
 #[inline]
 fn malloc_is_default() -> bool {
-    MALLOC_FN.load(Ordering::Relaxed) == 0
+    MALLOC_FN.load(Ordering::Relaxed).is_null()
 }
 
 /// As [`malloc_is_default`], for `realloc_impl == CRYPTO_realloc`.
 #[inline]
 fn realloc_is_default() -> bool {
-    REALLOC_FN.load(Ordering::Relaxed) == 0
+    REALLOC_FN.load(Ordering::Relaxed).is_null()
 }
 
 /// # Safety
@@ -318,10 +339,12 @@ unsafe fn clear_realloc_request(
     ret
 }
 
-fn installed(slot: &AtomicUsize, fallback: usize) -> usize {
-    match slot.load(Ordering::Relaxed) {
-        0 => fallback,
-        p => p,
+fn installed(slot: &AtomicPtr<()>, fallback: *mut ()) -> *mut () {
+    let p = slot.load(Ordering::Relaxed);
+    if p.is_null() {
+        fallback
+    } else {
+        p
     }
 }
 
@@ -337,40 +360,54 @@ fn installed(slot: &AtomicUsize, fallback: usize) -> usize {
 /// only place the two representations meet.
 ///
 /// `exported` is the address of the crate's own exported entry point for the slot.
-fn slot_reported(slot: &AtomicUsize, exported: usize) -> usize {
-    match slot.load(Ordering::Relaxed) {
-        0 => exported,
-        p => p,
+fn slot_reported(slot: &AtomicPtr<()>, exported: *mut ()) -> *mut () {
+    let p = slot.load(Ordering::Relaxed);
+    if p.is_null() {
+        exported
+    } else {
+        p
     }
 }
 
 /// The inverse: an address equal to the exported default means "not installed".
-fn slot_stored(stored: usize, exported: usize) -> usize {
+fn slot_stored(stored: *mut (), exported: *mut ()) -> *mut () {
     if stored == exported {
-        0
+        ptr::null_mut()
     } else {
         stored
     }
 }
 
 fn malloc_fn() -> MallocFn {
-    let raw = installed(&MALLOC_FN, default_malloc as *const () as usize);
-    // SAFETY: the slot only ever holds a value written by `CRYPTO_set_mem_functions`,
-    // which stores a `MallocFn`. `usize` and a function pointer have the same
-    // representation on every platform this project admits.
-    unsafe { transmute::<usize, MallocFn>(raw) }
+    let raw = installed(&MALLOC_FN, default_malloc as *const () as *mut ());
+    // SAFETY: the slot only ever holds a value written by `CRYPTO_set_mem_functions`, which
+    // stores `f as *const () as *mut ()` for a `MallocFn`, or the non-null `default_malloc`
+    // substituted by `installed`. Both carry the function's provenance, so recovering the
+    // function pointer from the pointer is the authority's own cast -- unlike an
+    // integer->pointer reconstruction, it survives strict-provenance execution. `raw` is
+    // non-null by construction; the `debug_assert` documents the invariant rather than
+    // relying on it silently.
+    debug_assert!(!raw.is_null(), "the allocator slot resolves to a function");
+    // SAFETY: `raw` is non-null and carries the function's provenance per the invariant
+    // above, so recovering the function pointer is the authority's own cast rather than an
+    // integer reconstruction.
+    unsafe { transmute::<*mut (), MallocFn>(raw) }
 }
 
 fn realloc_fn() -> ReallocFn {
-    let raw = installed(&REALLOC_FN, default_realloc as *const () as usize);
+    let raw = installed(&REALLOC_FN, default_realloc as *const () as *mut ());
     // SAFETY: as `malloc_fn`.
-    unsafe { transmute::<usize, ReallocFn>(raw) }
+    debug_assert!(!raw.is_null(), "the allocator slot resolves to a function");
+    // SAFETY: as `malloc_fn`.
+    unsafe { transmute::<*mut (), ReallocFn>(raw) }
 }
 
 fn free_fn() -> FreeFn {
-    let raw = installed(&FREE_FN, default_free as *const () as usize);
+    let raw = installed(&FREE_FN, default_free as *const () as *mut ());
     // SAFETY: as `malloc_fn`.
-    unsafe { transmute::<usize, FreeFn>(raw) }
+    debug_assert!(!raw.is_null(), "the allocator slot resolves to a function");
+    // SAFETY: as `malloc_fn`.
+    unsafe { transmute::<*mut (), FreeFn>(raw) }
 }
 
 /// Allocate `n` bytes through the installed allocator.
@@ -513,7 +550,13 @@ pub unsafe extern "C" fn CRYPTO_aligned_alloc(
         if base.is_null() {
             return ptr::null_mut();
         }
-        let addr = base as usize;
+        // The alignment decision is an *address-only* observation: `addr` is the numeric
+        // address, used to choose `off`, while `base` is kept for every pointer operation
+        // below (`*freeptr`, the offset pointer) so its provenance is not discarded. This is
+        // the same `(uintptr_t)`-for-arithmetic pattern the authority's `crypto/mem.c`
+        // uses; `ptr.addr()` makes the address-only intent explicit rather than an `as usize`
+        // cast of the pointer.
+        let addr = base.addr();
         let off = if addr.is_multiple_of(align) {
             0
         } else {
@@ -881,19 +924,28 @@ pub unsafe extern "C" fn CRYPTO_set_mem_functions(
         }
         if let Some(f) = malloc_fn {
             MALLOC_FN.store(
-                slot_stored(f as usize, CRYPTO_malloc as *const () as usize),
+                slot_stored(
+                    f as *const () as *mut (),
+                    CRYPTO_malloc as *const () as *mut (),
+                ),
                 Ordering::Relaxed,
             );
         }
         if let Some(f) = realloc_fn {
             REALLOC_FN.store(
-                slot_stored(f as usize, CRYPTO_realloc as *const () as usize),
+                slot_stored(
+                    f as *const () as *mut (),
+                    CRYPTO_realloc as *const () as *mut (),
+                ),
                 Ordering::Relaxed,
             );
         }
         if let Some(f) = free_fn {
             FREE_FN.store(
-                slot_stored(f as usize, CRYPTO_free as *const () as usize),
+                slot_stored(
+                    f as *const () as *mut (),
+                    CRYPTO_free as *const () as *mut (),
+                ),
                 Ordering::Relaxed,
             );
         }
@@ -916,22 +968,24 @@ pub unsafe extern "C" fn CRYPTO_get_mem_functions(
     free_out: *mut Option<FreeFn>,
 ) {
     guard_ffi((), || {
-        let m = slot_reported(&MALLOC_FN, CRYPTO_malloc as *const () as usize);
-        let r = slot_reported(&REALLOC_FN, CRYPTO_realloc as *const () as usize);
-        let f = slot_reported(&FREE_FN, CRYPTO_free as *const () as usize);
+        let m = slot_reported(&MALLOC_FN, CRYPTO_malloc as *const () as *mut ());
+        let r = slot_reported(&REALLOC_FN, CRYPTO_realloc as *const () as *mut ());
+        let f = slot_reported(&FREE_FN, CRYPTO_free as *const () as *mut ());
         // SAFETY: each output is either NULL or writable, and each slot holds a
         // pointer of the matching function type: written only by
         // `CRYPTO_set_mem_functions` from that type, or the exported default
-        // whose signature the C typedef matches.
+        // whose signature the C typedef matches. The pointer carries the function's
+        // provenance, so the pointer->function-pointer `transmute` is the recovered
+        // cast rather than an unsupported integer reconstruction.
         unsafe {
             if !malloc_out.is_null() {
-                *malloc_out = Some(transmute::<usize, MallocFn>(m));
+                *malloc_out = Some(transmute::<*mut (), MallocFn>(m));
             }
             if !realloc_out.is_null() {
-                *realloc_out = Some(transmute::<usize, ReallocFn>(r));
+                *realloc_out = Some(transmute::<*mut (), ReallocFn>(r));
             }
             if !free_out.is_null() {
-                *free_out = Some(transmute::<usize, FreeFn>(f));
+                *free_out = Some(transmute::<*mut (), FreeFn>(f));
             }
         }
     })
@@ -983,6 +1037,7 @@ unsafe fn strnlen(s: *const c_char, max: usize) -> usize {
 #[allow(clippy::panic, clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use core::sync::atomic::AtomicUsize;
 
     /// Takes the crate-wide global-state lock. `CRYPTO_set_mem_functions`
     /// mutates the process-global allocator slots and clears the

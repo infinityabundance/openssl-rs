@@ -149,10 +149,10 @@ correct or that the memory-safety benefit is realised.**
 | axis | modules | `unsafe` sites | `extern "C" fn` |
 |---|---|---|---|
 | core (parsers/algorithms) | 69 | 52943 | 9777 |
-| boundary (FFI/runtime/OS) | 6 | 5824 | 1083 |
-| **total** | **75** | **58767** | **10860** |
+| boundary (FFI/runtime/OS) | 6 | 5883 | 1089 |
+| **total** | **75** | **58826** | **10866** |
 
-Over 854 files and 801094 lines, with 46312 `SAFETY:` comment(s). The core share is 90.1% of the unsafe sites.
+Over 855 files and 801594 lines, with 46370 `SAFETY:` comment(s). The core share is 90.0% of the unsafe sites.
 
 The ten modules with the largest `unsafe` surface:
 
@@ -161,7 +161,7 @@ The ten modules with the largest `unsafe` surface:
 | `evp` | core | 8029 | 1646 |
 | `x509` | core | 7830 | 1678 |
 | `provider` | core | 6092 | 1600 |
-| `runtime` | boundary | 4334 | 802 |
+| `runtime` | boundary | 4393 | 808 |
 | `ssl` | core | 3503 | 698 |
 | `asn1` | core | 3243 | 425 |
 | `cms` | core | 2408 | 247 |

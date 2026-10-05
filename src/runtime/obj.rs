@@ -681,9 +681,17 @@ pub(crate) unsafe fn object_free(p: *mut Asn1Object) {
     if p.is_null() {
         return;
     }
-    // SAFETY: `p` is a live object per the caller's contract.
-    let o = unsafe { &mut *p };
-    if o.flags & ASN1_OBJECT_FLAG_DYNAMIC_STRINGS != 0 {
+    // SAFETY: `p` is a live object per the caller's contract. The flags are read
+    // through a raw pointer *before* any `&mut` is formed: `p` may be a static
+    // registry entry (`NID_OBJS`, which lives in read-only memory), and forming a
+    // mutable reference to it is undefined behaviour even though the DYNAMIC checks
+    // below then leave it untouched. That is the same reason `ASN1_OBJECT_free`
+    // treats a non-dynamic object as a no-op without writing to it. Found by the
+    // Miri-admitted TCB suite (`src/runtime/miri_tcb.rs`, `X509_new`/`X509_free`).
+    let flags = unsafe { (*p).flags };
+    if flags & ASN1_OBJECT_FLAG_DYNAMIC_STRINGS != 0 {
+        // SAFETY: a dynamic object is heap-allocated and uniquely owned here.
+        let o = unsafe { &mut *p };
         if !o.sn.is_null() {
             // SAFETY: allocated by `dup_cstr` and owned here.
             unsafe { free(o.sn as *mut c_void) };
@@ -695,7 +703,9 @@ pub(crate) unsafe fn object_free(p: *mut Asn1Object) {
         o.sn = core::ptr::null();
         o.ln = core::ptr::null();
     }
-    if o.flags & ASN1_OBJECT_FLAG_DYNAMIC_DATA != 0 {
+    if flags & ASN1_OBJECT_FLAG_DYNAMIC_DATA != 0 {
+        // SAFETY: a dynamic object is heap-allocated and uniquely owned here.
+        let o = unsafe { &mut *p };
         if !o.data.is_null() {
             // SAFETY: allocated for this object and owned here.
             unsafe { free(o.data as *mut c_void) };
@@ -703,7 +713,7 @@ pub(crate) unsafe fn object_free(p: *mut Asn1Object) {
         o.data = core::ptr::null();
         o.length = 0;
     }
-    if o.flags & ASN1_OBJECT_FLAG_DYNAMIC != 0 {
+    if flags & ASN1_OBJECT_FLAG_DYNAMIC != 0 {
         // SAFETY: the object itself was `malloc`ed for this object.
         unsafe { free(p as *mut c_void) };
     }

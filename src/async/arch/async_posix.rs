@@ -21,7 +21,7 @@
 use core::ffi::{c_char, c_int, c_void};
 use core::mem::transmute;
 use core::ptr::{self, null_mut};
-use core::sync::atomic::{AtomicBool, AtomicPtr, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 
 use crate::ffi::guard_ffi;
 use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_ASYNC};
@@ -79,11 +79,22 @@ static ASYNC_MEM_LOCK: AtomicPtr<CryptoRwlock> = AtomicPtr::new(null_mut());
 /// `static int allow_customize = 1;` — `async_posix.c:38`.
 static ALLOW_CUSTOMIZE: AtomicBool = AtomicBool::new(true);
 
-/// `static ASYNC_stack_alloc_fn stack_alloc_impl = async_stack_alloc;` — the slot, with 0 as
-/// the "default" marker exactly as `src/runtime/mem.rs` keeps its allocator slots.
-static STACK_ALLOC_IMPL: AtomicUsize = AtomicUsize::new(0);
+/// `static ASYNC_stack_alloc_fn stack_alloc_impl = async_stack_alloc;` — the slot, with a
+/// null pointer as the "default" marker exactly as `src/runtime/mem.rs` keeps its allocator
+/// slots. `AtomicPtr<()>`, not `AtomicUsize`: the value is a function pointer and must stay
+/// one so its provenance survives the atomic (see `src/runtime/mem.rs` and `docs/UNSAFE.md`
+/// §4).
+static STACK_ALLOC_IMPL: AtomicPtr<()> = AtomicPtr::new(null_mut());
 /// `static ASYNC_stack_free_fn stack_free_impl = async_stack_free;`.
-static STACK_FREE_IMPL: AtomicUsize = AtomicUsize::new(0);
+static STACK_FREE_IMPL: AtomicPtr<()> = AtomicPtr::new(null_mut());
+
+// The pointer->function-pointer recovery below is a `transmute`, so the two types must be
+// the same size. This fails the build, not the run, if Rust ever stops guaranteeing that on
+// this platform.
+const _: () = {
+    assert!(core::mem::size_of::<AsyncStackAllocFn>() == core::mem::size_of::<*mut ()>());
+    assert!(core::mem::size_of::<AsyncStackFreeFn>() == core::mem::size_of::<*mut ()>());
+};
 
 /// `static void *async_stack_alloc(size_t *num)` — `async_posix.c:82-85`.
 ///
@@ -105,23 +116,37 @@ pub(crate) unsafe extern "C" fn async_stack_free(addr: *mut c_void) {
 
 /// The current `stack_alloc_impl`, in the authority's identity-default form.
 fn stack_alloc_fn() -> AsyncStackAllocFn {
-    let raw = match STACK_ALLOC_IMPL.load(Ordering::Relaxed) {
-        0 => async_stack_alloc as *const () as usize,
-        p => p,
+    let slot = STACK_ALLOC_IMPL.load(Ordering::Relaxed);
+    let raw = if slot.is_null() {
+        async_stack_alloc as *const () as *mut ()
+    } else {
+        slot
     };
     // SAFETY: the slot only ever holds a value written by `ASYNC_set_mem_functions`, whose
-    // parameter type is `AsyncStackAllocFn`, or the default whose signature matches.
-    unsafe { transmute::<usize, AsyncStackAllocFn>(raw) }
+    // parameter type is `AsyncStackAllocFn`, or the non-null `async_stack_alloc` substituted
+    // above. Both carry the function's provenance, so the pointer->function-pointer
+    // `transmute` is the recovered cast rather than an integer reconstruction. `raw` is
+    // non-null by construction.
+    debug_assert!(
+        !raw.is_null(),
+        "the stack-alloc slot resolves to a function"
+    );
+    // SAFETY: `raw` is non-null and carries the function's provenance per the invariant above.
+    unsafe { transmute::<*mut (), AsyncStackAllocFn>(raw) }
 }
 
 /// The current `stack_free_impl`, as [`stack_alloc_fn`].
 fn stack_free_fn() -> AsyncStackFreeFn {
-    let raw = match STACK_FREE_IMPL.load(Ordering::Relaxed) {
-        0 => async_stack_free as *const () as usize,
-        p => p,
+    let slot = STACK_FREE_IMPL.load(Ordering::Relaxed);
+    let raw = if slot.is_null() {
+        async_stack_free as *const () as *mut ()
+    } else {
+        slot
     };
     // SAFETY: as `stack_alloc_fn`.
-    unsafe { transmute::<usize, AsyncStackFreeFn>(raw) }
+    debug_assert!(!raw.is_null(), "the stack-free slot resolves to a function");
+    // SAFETY: `raw` is non-null and carries the function's provenance per the invariant above.
+    unsafe { transmute::<*mut (), AsyncStackFreeFn>(raw) }
 }
 
 /// `int async_local_init(void)` — `async_posix.c:27-31`.
@@ -192,10 +217,10 @@ pub unsafe extern "C" fn ASYNC_set_mem_functions(
         // SAFETY: `lock` is held by this thread.
         unsafe { CRYPTO_THREAD_unlock(lock) };
         if let Some(f) = alloc_fn {
-            STACK_ALLOC_IMPL.store(f as *const () as usize, Ordering::Release);
+            STACK_ALLOC_IMPL.store(f as *const () as *mut (), Ordering::Release);
         }
         if let Some(f) = free_fn {
-            STACK_FREE_IMPL.store(f as *const () as usize, Ordering::Release);
+            STACK_FREE_IMPL.store(f as *const () as *mut (), Ordering::Release);
         }
         1
     })

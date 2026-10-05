@@ -14,12 +14,16 @@
       "log": "/court/asan-build.log (container scratch, discarded with the container)"
     },
     "miri": {
-      "status": "ran-and-stopped-at-the-allocator",
-      "tool": "cargo +nightly miri test --lib (miri 0.1.0, rustc 1.101.0-nightly)",
-      "method": "a bounded subset, the asn1::x_algor tests; rerun with MIRIFLAGS=-Zmiri-permissive-provenance",
-      "observations": 4,
-      "result": "Miri compiled the crate and executed the tests, then reported Undefined Behavior at the first allocation: 'pointer not dereferenceable: pointer must point to some allocation, but got 0x15fec39[noalloc] which is a dangling pointer (it has no provenance)' at src/runtime/mem.rs:379. The backtrace is runtime::mem::alloc <- CRYPTO_zalloc <- asn1::new::item_embed_new <- ASN1_item_new <- X509_ALGOR_new. The cause is the allocator slot: both the default allocator and any installed allocator are stored as a usize in an AtomicUsize and recovered with transmute::<usize, fn>(...) (src/runtime/mem.rs:321-379), so pointer provenance is not exposed, and the default is the libc malloc FFI. -Zmiri-permissive-provenance reproduces the same error, so the crate is not Miri-tractable beyond non-allocating tests: every allocating parser path stops at this trampoline. The reason is FFI/provenance modelling, not a demonstrated defect on the target, and Miri is therefore not a usable whole-crate instrument here.",
-      "log": "/court/miri.log, /court/miri-permissive.log (container scratch, discarded with the container)"
+      "status": "ran",
+      "tool": "cargo +nightly miri test --lib miri_tcb (miri 0.1.0)",
+      "method": "the Miri-admitted TCB suite src/runtime/miri_tcb.rs, run with MIRIFLAGS=-Zmiri-strict-provenance under seeds 0, 1 and 2 and in ordinary mode (seed 0); the suite installs a Rust-backed allocator shim through CRYPTO_set_mem_functions before its first allocation, so it does not reach libc",
+      "admitted_tests": 9,
+      "passed": 9,
+      "unsupported_tests_ran": 0,
+      "result": "all 9 admitted tests pass in every run (strict-provenance seeds 0/1/2 and ordinary seed 0). The allocator-trampoline provenance blocker recorded in the previous revision is fixed at its root: the callback slots in src/runtime/mem.rs are AtomicPtr<()> installed as `f as *const () as *mut ()` and recovered by a pointer->function-pointer transmute after a null check, CRYPTO_get_mem_functions reconstructs pointer-shaped values, and CRYPTO_aligned_alloc uses ptr.addr() for its address-only alignment observation. Miri additionally found a real aliasing defect -- object_free (src/runtime/obj.rs) formed `&mut *p` on a static registry object reachable from X509_free -- which is now fixed by reading the flags before any mutable reference is formed. The surface Miri refuses (libc FFI, DSOs, the ucontext fibres, getrandom, rdtsc) is excluded by name with a reason in forensics/miri-tcb-suite.json rather than suppressed.",
+      "result_path": "artifacts/phase18/miri-tcb.json",
+      "suite": "forensics/miri-tcb-suite.json",
+      "guard": "forensics/tools/provenance_court.py (run inside the HOSTILE-BOUNDARY-REGISTER court)"
     },
     "fuzz": {
       "status": "ran",
@@ -33,5 +37,5 @@
       "note": "the corpus is a fixed enumeration and the mutants are deterministic; the run observed no crash, OOM or timeout class, which is what it establishes and no more"
     }
   },
-  "non_claim": "ASan did not run (blocked by the court's RLIMIT_DATA, by design), Miri stopped at the allocator's pointer-provenance trampoline, and the fuzz is a bounded deterministic screen. Together with forensics/atlas/unsafe-footprint.json — which measures the size and location of the unsafe surface, not its correctness — these are measurements, and the memory-safety benefit remains unproven: a footprint and a bounded screen are not a proof that any unsafe block is sound."
+  "non_claim": "ASan did not run (blocked by the court's RLIMIT_DATA, by design), Miri executed the admitted TCB subset and passed while refusing the libc-FFI / DSO / intrinsic surface, and the fuzz is a bounded deterministic screen. Together with forensics/atlas/unsafe-footprint.json -- which measures the size and location of the unsafe surface, not its correctness -- these are measurements, and the memory-safety benefit remains unproven: an executed subset under one model and a bounded screen are not a proof that any unsafe block is sound."
 }

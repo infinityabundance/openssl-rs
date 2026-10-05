@@ -1616,9 +1616,13 @@
         "court": "HOSTILE-BOUNDARY-REGISTER",
         "frf_declarable": false,
         "frf_exclusion": "the register re-reads the courts registry and stages no artifacts/phase18/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
-        "method": "stages no probe: it re-reads the live courts registry (the four probe courts above) and the authored register artifacts/phase18/hostile-boundary-register.json, and fails the stratum if any recorded hardened/measured/not-claimed classification, surface key, capacity, count or evidence value has drifted from what the courts show (docs/PHASE-18-SUBPHASES.md section 3.5). A not-claimed row that a passing court now covers, a hardened/measured row whose court no longer covers it, and a stated capacity/count that moved are all failures. It also runs the `UNSAFE-FOOTPRINT` growth check: it scans src/**/*.rs with the definitions in forensics/tools/unsafe_footprint.py and fails if any core (parser/algorithm) module's `unsafe_sites` or `extern \"C\" fn` count exceeds the ceiling recorded in artifacts/phase18/unsafe-bounds.json, while the boundary layer is allowed to grow. It is a record of a boundary and a footprint ceiling, not a security proof and not a memory-safety proof (sections 3.1 and 3.6).",
+        "method": "stages no probe: it re-reads the live courts registry (the four probe courts above) and the authored register artifacts/phase18/hostile-boundary-register.json, and fails the stratum if any recorded hardened/measured/not-claimed classification, surface key, capacity, count or evidence value has drifted from what the courts show (docs/PHASE-18-SUBPHASES.md section 3.5). A not-claimed row that a passing court now covers, a hardened/measured row whose court no longer covers it, and a stated capacity/count that moved are all failures. It also runs the `UNSAFE-FOOTPRINT` growth check: it scans src/**/*.rs with the definitions in forensics/tools/unsafe_footprint.py and fails if any core (parser/algorithm) module's `unsafe_sites` or `extern \"C\" fn` count exceeds the ceiling recorded in artifacts/phase18/unsafe-bounds.json, while the boundary layer is allowed to grow. Finally it runs the provenance regression check in forensics/tools/provenance_court.py and fails if an integer->callable-pointer reconstruction (the class that stopped Miri at the allocator trampoline) has reappeared in src/**/*.rs. It is a record of a boundary, a footprint ceiling and a provenance regression guard, not a security proof and not a memory-safety proof (sections 3.1 and 3.6).",
         "probe": "",
         "problems": [],
+        "provenance": {
+          "findings": [],
+          "tool": "forensics/tools/provenance_court.py"
+        },
         "register": {
           "counts": {
             "hardened": 1,
@@ -1886,11 +1890,11 @@
             "sha256": "e7c63098c60ad7cdfbfdc90bc51da50882fa6731a1b7591896d2059f34d43872"
           },
           "measured": {
-            "boundary_unsafe_sites": 5824,
+            "boundary_unsafe_sites": 5883,
             "core_extern_c_fns": 9777,
             "core_unsafe_sites": 52943,
-            "extern_c_fns": 10860,
-            "unsafe_sites": 58767
+            "extern_c_fns": 10866,
+            "unsafe_sites": 58826
           }
         },
         "verdict": "pass"
@@ -1998,7 +2002,7 @@
     {
       "name": "unsafe-footprint",
       "path": "forensics/atlas/unsafe-footprint.json",
-      "sha256": "9c2a9044f787d79add2a05c79e2f2c4902d46b4124d32c235408506957630573"
+      "sha256": "deaee0a20881fb9d501d70aaac5fff9655843a073e58d4a0d92a189c34a1e85d"
     },
     {
       "name": "unsafe-bounds",
