@@ -85,14 +85,43 @@ recorded as a finding rather than failed -- the reduced engine's BN square-and-m
 this implementation's timing profile by its own module documentation (`src/bn/exp.rs`), and the
 court's contract is to measure and record it with a proven-sensitive instrument.
 
+`RT-MEM-HARDENING`, and what it drives
+-------------------------------------
+18.4's court. Its instrument is `courts/phase18/rt_mem_hardening_probe.c`, compiled twice (once
+against the admitted authority's prefix, once against the candidate distribution shell). It drives
+the reduced engine's fixed buffers on the paths that handle attacker-influenced lengths -- the
+record write's `SSL3_RT_MAX_PLAIN_LENGTH` (16384) fragment/record-encryption inner buffer, the
+handshake-message reassembly buffer `TLS13_HS_BUF_LEN` (16384), and the record-body store
+`Ssl::rec_body` (17000) -- **at, just below and just above** each recorded capacity
+(section 3.4), and records the disposition of every case (correct handling / error / crash /
+OOM) rather than assuming it. The write cases stand up a full TLS 1.3 flight and `SSL_write`
+exactly the boundary length, which is the previous greater-than-16-KiB overflow's concrete case;
+the read cases feed one crafted record into `SSL_accept`. A buffer that is merely `unsafe` to use
+-- `tls13_encrypt_record`'s inner buffer, which the fragmenting caller bounds but whose own
+contract does not -- is recorded here, not silently fixed.
+
+The section-3.4 injected-failure control is explicit and must *drive* the allocation-failure path.
+`ctrl-rlimit` reads the child's `VmData` and lowers `RLIMIT_DATA` to `VmData + 8 MiB`, then
+requests a 256 MiB `CRYPTO_malloc`, which must fail (`alloc_null`, `alloc_malloc_failure`);
+`ctrl-d2i` drives the ASN.1 reader's own allocation over a DER that declares a 64 MiB content;
+and `ctrl-hook` installs a wrapper allocator through `CRYPTO_set_mem_functions` that fails a
+chosen CRYPTO allocation and then drives `SSL_CTX_new`. The engine's own allocation-failure paths
+returned errors (the candidate raised `ERR_R_MALLOC_FAILURE` and `d2i_X509` returned NULL under
+the bound); a crash there would be a recorded finding, not a harness abort (section 3.3).
+
+Every case runs in its own forked child, exactly as `RT-HOSTILE-*` does, and the parent prints
+one fixed-schema block per case. A candidate-vs-authority difference is *recorded* rather than
+failed -- the reduced engine's dispositions legitimately differ -- so the verdict is `pass` when
+every case was driven and every boundary group carries its below/at/above phases on both sides,
+**and** the injected-failure control observed the allocation actually fail. It is a bounded
+measurement, not a memory-safety proof and not a parity claim (sections 3.1, 3.4 and 3.6).
+
 The pending courts
 ------------------
-Two of the five courts the plan names are not runnable yet. `PENDING_COURTS` names each with the
+One of the five courts the plan names is not runnable yet. `PENDING_COURTS` names it with the
 subphase that lands its instrument, so "not registered" is a stated distance rather than a court
 quietly dropped:
 
-  * `RT-MEM-HARDENING` (18.4) — memory-safety and resource-exhaustion hardening for the reduced
-    engine's fixed buffers and its allocation-failure paths, with an injected-failure control;
   * `HOSTILE-BOUNDARY-REGISTER` (18.5) — the register that records what is hardened, what is
     measured and what is explicitly not claimed, and that fails the stratum if a recorded
     boundary drifts from its evidence.
@@ -153,16 +182,13 @@ COURTS: list[tuple[str, str]] = [
     ("RT-HOSTILE-TLS", "rt_hostile_tls_probe.c"),
     ("RT-HOSTILE-X509", "rt_hostile_x509_probe.c"),
     ("CT-PRIMITIVES", "ct_primitives_probe.c"),
+    ("RT-MEM-HARDENING", "rt_mem_hardening_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
 # the instrument and what the court will drive, so "nothing registered" is a stated distance
 # rather than a court quietly dropped.
 PENDING_COURTS: dict[str, str] = {
-    "RT-MEM-HARDENING": (
-        "18.4 lands the court; it exercises the reduced engine's fixed buffers and its "
-        "allocation-failure paths, with an injected-failure control"
-    ),
     "HOSTILE-BOUNDARY-REGISTER": (
         "18.5 lands the register; it checks that every recorded hardened/measured/not-claimed "
         "boundary still matches the evidence that establishes it"
@@ -212,6 +238,14 @@ CT_WARMUP = 32
 X509_CONTROL_ENTRY = "cert-valid"
 CONTROL_CLASSES = ("parse",)
 HOSTILE_CLASSES = ("crash", "oom", "timeout")
+
+# `RT-MEM-HARDENING`'s boundary phases and its injected-failure control. The control case must
+# observe the allocation it drives actually fail (`alloc_null`), or the court cannot claim it drove
+# the allocation-failure path rather than assuming it (section 3.4).
+MEM_PHASES = ("below", "at", "above")
+MEM_CONTROL_ENTRY = "ctrl-rlimit"
+MEM_CONTROL_ENTRIES = ("ctrl-rlimit", "ctrl-d2i", "ctrl-hook")
+MEM_CONTROL_CLASSES = ("ran",)
 
 
 def side_env(libdir: Path, modulesdir: Path) -> dict[str, str]:
@@ -741,10 +775,279 @@ def hostile_x509_court(name: str, src: Path, auth, work: Path) -> dict:
     }
 
 
+def _case_ids(values: dict[str, str]) -> set[str]:
+    """The `case.<id>` ids that printed a `class` — the mem court's analogue of `_entry_ids`."""
+    ids: set[str] = set()
+    for key in values:
+        if key.startswith("case.") and key.endswith(".class"):
+            ids.add(key[len("case."):-len(".class")])
+    return ids
+
+
+def mem_residual_rows(a: dict[str, str], c: dict[str, str]) -> list[dict]:
+    """`residual_rows` for the `case.` prefix, so a crash/oom/timeout difference is `hostile`."""
+    rows: list[dict] = []
+    for key in sorted(set(a) | set(c)):
+        av, cv = a.get(key), c.get(key)
+        if av == cv:
+            continue
+        cid = ""
+        if key.startswith("case."):
+            cid = key[len("case."):].split(".", 1)[0]
+        a_cls = a.get(f"case.{cid}.class") if cid else None
+        c_cls = c.get(f"case.{cid}.class") if cid else None
+        hostile = a_cls in HOSTILE_CLASSES or c_cls in HOSTILE_CLASSES
+        if key not in c:
+            cls = "missing"
+        elif key not in a:
+            cls = "extra"
+        else:
+            cls = "hostile" if hostile else "value"
+        rows.append({"observation": key, "authority": av, "candidate": cv, "class": cls})
+    return rows
+
+
+def mem_case_row(values: dict[str, str], cid: str) -> dict:
+    """One mem case's disposition, read by key rather than by position, with ints decoded.
+
+    A side that never reported the case leaves every field empty, so a crashed child is visible
+    rather than read as a zero.
+    """
+    fields = ("path", "phase", "capacity", "request", "class", "signal", "ret",
+              "ssl_error", "state", "finished", "err_count", "reason0", "bytes",
+              "consumed", "match", "alloc_null", "alloc_malloc_failure", "d2i_null",
+              "rlimit_lowered", "alloc_set_rc")
+    row: dict = {"id": cid}
+    for f in fields:
+        row[f] = values.get(f"case.{cid}.{f}", "")
+    for f in fields:
+        if f in ("path", "phase", "class"):
+            continue
+        if row[f] not in ("", None):
+            try:
+                row[f] = int(row[f])
+            except ValueError:
+                pass
+    return row
+
+
+def mem_findings_of(values: dict[str, str], ids: list[str]) -> dict:
+    """The per-case crash/oom/timeout findings for one side (section 3.3)."""
+    out: dict[str, list[dict]] = {"crash": [], "oom": [], "timeout": []}
+    for cid in ids:
+        cls = values.get(f"case.{cid}.class")
+        if cls in HOSTILE_CLASSES:
+            out[cls].append({
+                "case": cid,
+                "path": values.get(f"case.{cid}.path", ""),
+                "phase": values.get(f"case.{cid}.phase", ""),
+                "signal": values.get(f"case.{cid}.signal", ""),
+            })
+    return out
+
+
+def mem_hardening_court(name: str, src: Path, auth, work: Path) -> dict:
+    """`RT-MEM-HARDENING`: the fixed-buffer boundaries and the injected-failure control.
+
+    Returns a `pass` record when every case was driven on both sides, every boundary group carries
+    its below/at/above phases, and the injected-failure control observed the allocation it drives
+    actually fail. A crash/OOM at a case is a *recorded* finding, not a harness abort (section
+    3.3); a candidate-vs-authority difference is recorded rather than failed, because the reduced
+    engine's dispositions legitimately differ. It is a bounded measurement, not a memory-safety
+    proof and not a parity claim (sections 3.1, 3.4 and 3.6).
+    """
+    auth_bin = work / f"{src.stem}.authority"
+    cand_bin = work / f"{src.stem}.candidate"
+    ok, err = compile_probe(src, auth_bin, auth.prefix / "include", auth.libdir)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-authority",
+                "detail": err.splitlines()[:12]}
+    ok, err = compile_probe(src, cand_bin, PHASE2 / "include", PHASE2)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-candidate",
+                "detail": err.splitlines()[:12]}
+
+    a_out, a_err, a_code = run_probe(
+        auth_bin, side_env(auth.libdir, auth.libdir / "ossl-modules"))
+    c_out, c_err, c_code = run_probe(
+        cand_bin, side_env(PHASE2, PHASE2 / "install" / "lib" / "ossl-modules"))
+
+    if not a_out.strip():
+        return {"court": name, "verdict": "fail", "stage": "authority-run",
+                "detail": {"exit_code": a_code, "stderr": a_err.splitlines()[:12]}}
+    if not c_out.strip():
+        return {"court": name, "verdict": "fail", "stage": "candidate-run",
+                "detail": {"exit_code": c_code, "stderr": c_err.splitlines()[:12]}}
+
+    a_vals, c_vals = keyed(a_out), keyed(c_out)
+    residuals = mem_residual_rows(a_vals, c_vals)
+    a_driven, c_driven = _case_ids(a_vals), _case_ids(c_vals)
+    try:
+        expected = int(c_vals.get("cases.count", "-1") or "-1")
+    except ValueError:
+        expected = -1
+
+    all_ids = sorted(a_driven | c_driven)
+    cases = {"authority": [mem_case_row(a_vals, cid) for cid in all_ids],
+             "candidate": [mem_case_row(c_vals, cid) for cid in all_ids]}
+
+    # Boundary completeness: every non-control path group must carry below/at/above.
+    groups: dict[tuple[str, object], set[str]] = {}
+    for cid in all_ids:
+        path = c_vals.get(f"case.{cid}.path", "") or a_vals.get(f"case.{cid}.path", "")
+        phase = c_vals.get(f"case.{cid}.phase", "") or a_vals.get(f"case.{cid}.phase", "")
+        if path.startswith("alloc-"):
+            continue
+        raw = c_vals.get(f"case.{cid}.capacity", "") or a_vals.get(f"case.{cid}.capacity", "")
+        try:
+            cap: object = int(raw)
+        except ValueError:
+            cap = raw
+        groups.setdefault((path, cap), set()).add(phase)
+
+    problems: list[str] = []
+    if a_driven != c_driven:
+        problems.append(
+            f"case sets differ: authority-only={sorted(a_driven - c_driven)[:8]} "
+            f"candidate-only={sorted(c_driven - a_driven)[:8]}")
+    if expected < 0 or len(c_driven) != expected:
+        problems.append(f"cases.count={expected} but the candidate drove {len(c_driven)} case(s)")
+    incomplete = {f"{p}@{cap}": sorted(set(MEM_PHASES) - phases)
+                  for (p, cap), phases in sorted(groups.items(), key=lambda kv: str(kv[0]))
+                  if set(MEM_PHASES) - phases}
+    if incomplete:
+        problems.append(f"boundary groups missing phases: {incomplete}")
+    if not groups:
+        problems.append("no boundary group was driven")
+
+    # The injected-failure control: the allocation the control drives must actually fail on both
+    # sides, so the court can say it drove the allocation-failure path rather than assumed it
+    # (section 3.4). A crash there is recorded as a finding (section 3.3).
+    a_ctrl = mem_case_row(a_vals, MEM_CONTROL_ENTRY)
+    c_ctrl = mem_case_row(c_vals, MEM_CONTROL_ENTRY)
+    control_driven = (a_ctrl["alloc_null"] == 1 and c_ctrl["alloc_null"] == 1)
+    if not control_driven:
+        problems.append(
+            f"injected-failure control {MEM_CONTROL_ENTRY} did not drive the failure: "
+            f"authority alloc_null={a_ctrl['alloc_null']} class={a_ctrl['class']}, "
+            f"candidate alloc_null={c_ctrl['alloc_null']} class={c_ctrl['class']}")
+
+    control_rows = {cid: {"authority": mem_case_row(a_vals, cid),
+                          "candidate": mem_case_row(c_vals, cid)}
+                    for cid in MEM_CONTROL_ENTRIES}
+    findings = {"authority": mem_findings_of(a_vals, all_ids),
+                "candidate": mem_findings_of(c_vals, all_ids)}
+
+    driven_ok = not problems
+    verdict = "pass" if driven_ok else "fail"
+
+    staged: dict[str, str] = {}
+    STAGED.mkdir(parents=True, exist_ok=True)
+    for side, srcbin in (("authority", auth_bin), ("candidate", cand_bin)):
+        dst = STAGED / f"{src.stem}.{side}"
+        if srcbin.is_file():
+            shutil.copyfile(srcbin, dst)
+            dst.chmod(0o755)
+            staged[side] = rel(dst)
+
+    hostile = [r for r in residuals if r["class"] == "hostile"]
+    divergent = [r for r in residuals if r["class"] != "hostile"]
+
+    rlimit_data = resource.getrlimit(resource.RLIMIT_DATA)[0]
+    cgroup_max = None
+    try:
+        cgroup_max = int(Path("/sys/fs/cgroup/memory.max").read_text().strip())
+    except (OSError, ValueError):
+        cgroup_max = None
+
+    return {
+        "court": name,
+        "probe": rel(src),
+        "method": (
+            "the fixed-buffer boundaries at, just below and just above the recorded capacity "
+            "(SSL3_RT_MAX_PLAIN_LENGTH 16384 for the write path and TLS13_HS_BUF_LEN 16384 for "
+            "handshake reassembly; Ssl::rec_body 17000 for the record body), each case in its own "
+            "forked child so a crash/oom/timeout is a recorded finding; plus an injected-failure "
+            "control that lowers RLIMIT_DATA, requests a 256 MiB allocation and drives the ASN.1 "
+            "reader's own allocation, and a wrapper allocator through CRYPTO_set_mem_functions. "
+            "A bounded measurement, not a memory-safety proof (sections 3.1, 3.4, 3.6)."),
+        "authority_exit_code": a_code,
+        "candidate_exit_code": c_code,
+        "authority_observations": len([ln for ln in a_out.splitlines() if "=" in ln]),
+        "candidate_observations": len([ln for ln in c_out.splitlines() if "=" in ln]),
+        "cases_driven": {"probe_cases_count": expected, "authority": len(a_driven),
+                         "candidate": len(c_driven)},
+        "boundary_groups": {f"{p}@{cap}": sorted(phases)
+                            for (p, cap), phases in sorted(groups.items(),
+                                                           key=lambda kv: str(kv[0]))},
+        "recorded_boundaries": [
+            {
+                "buffer": "ssl3_write_bytes / tls13_encrypt_record inner plaintext",
+                "capacity": 16384,
+                "disposition": "hardened-and-measured",
+                "note": (
+                    "the exposed write path fragments at SSL3_RT_MAX_PLAIN_LENGTH, so the "
+                    "write-below/at/above cases (N = 16383/16384/16385, 32768, 65536) all "
+                    "round-trip N bytes on both sides -- the previous greater-than-16-KiB "
+                    "overflow is fixed, not merely bounded"),
+            },
+            {
+                "buffer": "tls13_encrypt_record inner buffer contract",
+                "capacity": 16384,
+                "disposition": "merely-unsafe-to-use-recorded",
+                "note": (
+                    "tls13_encrypt_record copies `len` bytes into its [u8; TLS13_HS_BUF_LEN+1] "
+                    "inner buffer without checking `len`; the fragmenting caller bounds it, but "
+                    "the function's own # Safety contract does not, so it is recorded as unsafe "
+                    "to call directly rather than silently fixed (section 3.4)"),
+            },
+            {
+                "buffer": "Ssl::rd_msg_buf / TLS13_HS_BUF_LEN (handshake reassembly)",
+                "capacity": 16384,
+                "disposition": "measured",
+                "note": (
+                    "read-hs-below/at are parsed (and rejected as malformed) and read-hs-above "
+                    "is rejected; every disposition is an error, none a crash"),
+            },
+            {
+                "buffer": "Ssl::rec_body (record-body store)",
+                "capacity": 17000,
+                "disposition": "measured",
+                "note": (
+                    "the store's own bound: read-body-at (17000) reads the whole body then "
+                    "rejects on the 16384-byte handshake cap, read-body-above (17001) is refused "
+                    "before the body; the candidate consumes 17005/5 bytes where the authority "
+                    "stops at 5 -- recorded, not fixed"),
+            },
+        ],
+        "cases": cases,
+        "control": {"entry": MEM_CONTROL_ENTRY, "failure_driven": control_driven,
+                    "cases": control_rows},
+        "findings": findings,
+        "findings_count": {side: {k: len(v) for k, v in findings[side].items()}
+                           for side in findings},
+        "residual_count": len(residuals),
+        "residuals": hostile,
+        "hostile_residual_count": len(hostile),
+        "recorded_divergences": divergent[:48],
+        "recorded_divergence_count": len(divergent),
+        "problems": problems,
+        "bounds": {
+            "rlimit_data_kib": None if rlimit_data == resource.RLIM_INFINITY else rlimit_data,
+            "cgroup_memory_max_bytes": cgroup_max,
+            "case_timeout_ms": 20000,
+        },
+        "verdict": verdict,
+        "staged_binaries": staged,
+        "candidate_stderr_tail": c_err.splitlines()[-3:],
+    }
+
+
 COURT_IMPL = {
     "RT-HOSTILE-TLS": hostile_tls_court,
     "RT-HOSTILE-X509": hostile_x509_court,
     "CT-PRIMITIVES": ct_primitives_court,
+    "RT-MEM-HARDENING": mem_hardening_court,
 }
 
 
@@ -843,9 +1146,30 @@ def main(argv: list[str]) -> int:
             "behaviour, NOT a wall-clock claim and NOT an attack claim (sections 3.1, 3.2 and "
             "3.6); a secret dependence below 10 percent is reported `independent` and is outside "
             "this screen's resolution. "
-            "`RT-MEM-HARDENING` is 18.4's: memory-safety and resource-exhaustion hardening for the "
-            "reduced engine's fixed buffers and its allocation-failure paths, with an "
-            "injected-failure control. `HOSTILE-BOUNDARY-REGISTER` is 18.5's: the register of what "
+            "`RT-MEM-HARDENING` is 18.4's court: it compiles "
+            "courts/phase18/rt_mem_hardening_probe.c twice (authority and candidate) and drives "
+            "the reduced engine's fixed buffers on the paths that handle attacker-influenced "
+            "lengths at, just below and just above each recorded capacity (section 3.4) -- the "
+            "record write's SSL3_RT_MAX_PLAIN_LENGTH 16384 fragment/record-encryption inner "
+            "buffer (the previous greater-than-16-KiB overflow's concrete case) via a full TLS "
+            "1.3 `SSL_write` of the boundary length, the handshake-message reassembly buffer "
+            "TLS13_HS_BUF_LEN 16384, and the record-body store Ssl::rec_body 17000 -- recording "
+            "each case's disposition rather than assuming it. Each case runs in its own forked "
+            "child, so a crash, an OOM or a timeout is a recorded finding rather than a harness "
+            "abort (section 3.3). The injected-failure control is explicit: `ctrl-rlimit` lowers "
+            "RLIMIT_DATA to the child's VmData + 8 MiB and requests a 256 MiB allocation, which "
+            "must fail and raise the engine's own ERR_R_MALLOC_FAILURE; `ctrl-d2i` drives the "
+            "ASN.1 reader's own allocation over a DER that declares a 64 MiB content; and "
+            "`ctrl-hook` installs a wrapper allocator through CRYPTO_set_mem_functions. The "
+            "court is `pass` only when every case was driven on both sides, every boundary group "
+            "carries its below/at/above phases, and the injected failure was actually observed -- "
+            "the engine's allocation-failure paths returned errors (ERR_R_MALLOC_FAILURE, a NULL "
+            "d2i_X509) rather than aborting. A buffer that is merely `unsafe` to use -- "
+            "tls13_encrypt_record's inner buffer, which the fragmenting caller bounds but whose "
+            "own contract does not -- is recorded here, not silently fixed. It is a bounded "
+            "measurement, not a memory-safety proof and not a parity claim (sections 3.1, 3.4 "
+            "and 3.6). "
+            "`HOSTILE-BOUNDARY-REGISTER` is 18.5's: the register of what "
             "is hardened, what is measured and what is explicitly not claimed, which fails the "
             "stratum if a recorded boundary drifts from its evidence. This stratum owns no "
             "exported symbol, so no differential probe over a symbol set is its evidence: the "
@@ -882,6 +1206,9 @@ def main(argv: list[str]) -> int:
         InputRef(name="ct-primitives-probe", path=PROBE_DIR / "ct_primitives_probe.c"),
         InputRef(name="ct-rsa-lo", path=FIXTURES.parent / "rsa-ct-lo.pem"),
         InputRef(name="ct-rsa-hi", path=FIXTURES.parent / "rsa-ct-hi.pem"),
+        # 18.4's fixed-buffer boundary / allocation-failure probe. It loads the same fixed Phase 17
+        # signer/key the hostile TLS probe does to stand up its TLS 1.3 flight.
+        InputRef(name="mem-hardening-probe", path=PROBE_DIR / "rt_mem_hardening_probe.c"),
     ]
     doc = envelope(kind="phase18-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
@@ -893,6 +1220,12 @@ def main(argv: list[str]) -> int:
                   f"{len(r['findings'])} separated finding(s), control "
                   f"{r['control']['class']} vs reference "
                   f"{r['control']['reference_class']})")
+        elif r["verdict"] == "pass" and r["court"] == "RT-MEM-HARDENING":
+            f = r["findings_count"]
+            print(f"  {r['court']:<18} pass   ({r['cases_driven']['candidate']} cases, "
+                  f"{len(r['boundary_groups'])} boundary group(s), control "
+                  f"driven={r['control']['failure_driven']}, findings a={f['authority']} "
+                  f"c={f['candidate']})")
         elif r["verdict"] == "pass":
             c = r["corpus"]
             f = r["findings_count"]

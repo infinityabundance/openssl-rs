@@ -28,8 +28,8 @@
       },
       {
         "closure": "the `RT-MEM-HARDENING` court passes",
-        "observation": "RT-MEM-HARDENING is pending",
-        "state": "open",
+        "observation": "RT-MEM-HARDENING is pass",
+        "state": "implemented",
         "surface": "artifacts/phase18/COURTS.json",
         "unit": "memory-hardening",
         "what": "memory-safety and resource-exhaustion hardening for the reduced engine's fixed buffers and its allocation-failure paths, with an injected-failure control"
@@ -48,8 +48,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 3,
-      "open_in_this_stratum": 2,
+      "implemented": 4,
+      "open_in_this_stratum": 1,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -90,7 +90,7 @@
     {
       "name": "phase-18-courts",
       "path": "artifacts/phase18/COURTS.json",
-      "sha256": "f6f10815dbacae452295dce960ec762602955c1d20ea86711997d09f0bb3d2ff"
+      "sha256": "b54401fbe33b726f603afaaf9af246e2024b1ce10921619f9a14485dc182c142"
     }
   ],
   "kind": "phase18-obligations",
