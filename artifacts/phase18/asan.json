@@ -1,0 +1,748 @@
+{
+  "build": {
+    "archive": "/asan/target/x86_64-unknown-linux-gnu/release/libopenssl_rs.a",
+    "archive_sha256": "478406cd0990388ce31f3f1c9c1644b3a19c92a9069c632d348d20496eeb6cdb",
+    "cc": "/asan/bin/asan-cc",
+    "command": "cargo +nightly-2026-10-05 build -Zbuild-std --release --lib --target x86_64-unknown-linux-gnu",
+    "elapsed_s": 0.0,
+    "log": "/asan/logs/cargo-build.log",
+    "rustflags": "-Zsanitizer=address -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=1"
+  },
+  "canary": {
+    "as_expected": "nonzero exit with an AddressSanitizer use-after-free report",
+    "build_ok": true,
+    "command": "clang -std=c11 -Wall -O0 -D_GNU_SOURCE -fsanitize=address -fno-omit-frame-pointer -g -o /asan/bin/asan_canary /work/forensics/tools/asan_canary.c",
+    "detected": true,
+    "diagnostic": [
+      "==201858==ERROR: AddressSanitizer: heap-use-after-free on address 0x602000000013 at pc 0x556ab6736032 bp 0x7ffc313c3410 sp 0x7ffc313c3408",
+      "SUMMARY: AddressSanitizer: heap-use-after-free /work/forensics/tools/asan_canary.c:31:27 in main"
+    ],
+    "exit_code": 1,
+    "log": "/asan/logs/canary.log",
+    "source": "forensics/tools/asan_canary.c"
+  },
+  "custom_allocator": {
+    "custom_path": "the crate's CRYPTO_set_mem_functions path (src/runtime/mem.rs, exercised by the allocator-unit-tests layer's mem tests and by the miri_tcb TCB suite) installs a Rust-backed shim; ASan still intercepts the underlying global allocator, but this is recorded separately rather than claimed to be ASan-instrumented end to end",
+    "default_path": "libc malloc, ASan-intercepted (every layer ran here)"
+  },
+  "execution_envelope": {
+    "asan_options_probes": "detect_leaks=0:symbolize=1:abort_on_error=1",
+    "asan_options_tests": "detect_leaks=0:symbolize=1:abort_on_error=0",
+    "cgroup_memory": "8g",
+    "cgroup_memory_swap": "8g",
+    "cpus": "8 (clamped to nproc)",
+    "network": "court policy: default bridge, no extra grants",
+    "no_new_privileges": true,
+    "pids_limit": "2048",
+    "rlimit_data": "unset (ASan shadow is PROT_NONE/MAP_NORESERVE virtual; the cgroup bounds resident memory)",
+    "wall_clock_timeout_s": "7200"
+  },
+  "generator": "forensics/tools/asan_closure.py",
+  "instrumentation_closure": {
+    "c_adapters": {
+      "all_instrumented": true,
+      "count": 7,
+      "instrumented": 7,
+      "objects": [
+        {
+          "asan_symbols": 17,
+          "compiled": true,
+          "error": "",
+          "instrumented": true,
+          "source": "src/runtime/err_variadic.c"
+        },
+        {
+          "asan_symbols": 6,
+          "compiled": true,
+          "error": "",
+          "instrumented": true,
+          "source": "src/runtime/bio/bio_variadic.c"
+        },
+        {
+          "asan_symbols": 5,
+          "compiled": true,
+          "error": "",
+          "instrumented": true,
+          "source": "src/runtime/bio/bio_va.c"
+        },
+        {
+          "asan_symbols": 10,
+          "compiled": true,
+          "error": "",
+          "instrumented": true,
+          "source": "src/evp/pkey_q_keygen_variadic.c"
+        },
+        {
+          "asan_symbols": 5,
+          "compiled": true,
+          "error": "",
+          "instrumented": true,
+          "source": "src/store/store_lib_variadic.c"
+        },
+        {
+          "asan_symbols": 9,
+          "compiled": true,
+          "error": "",
+          "instrumented": true,
+          "source": "src/runtime/dir_posix.c"
+        },
+        {
+          "asan_symbols": 8,
+          "compiled": true,
+          "error": "",
+          "instrumented": true,
+          "source": "src/async/arch/async_ucontext.c"
+        }
+      ]
+    },
+    "closure_ok": true,
+    "external": {
+      "detail": "libc is not statically instrumented: the probes are dynamically linked (NEEDED libc.so.6) and ASan's interceptors replace its allocation/string primitives at runtime. This is the designed closure for the C runtime.",
+      "libc": "runtime-intercepted"
+    },
+    "method": "The Rust staticlib is built by rustc with -Zsanitizer=address -Zbuild-std (so std is rebuilt under ASan too). The first-party C adapters are compiled by build.rs through a CC wrapper that appends -fsanitize=address -fno-omit-frame-pointer -g. The probes are compiled by clang with the same flags. The link map (-Wl,-Map) enumerates the archive members the linker retained, and `nm -A --undefined-only` classifies each member as referencing the ASan runtime or not.",
+    "note": "Rust objects (crate + standard library, rebuilt with -Zbuild-std), the first-party C adapters and the probes are instrumented; libc is runtime-intercepted. The only retained member without an ASan reference is std's allocator-shim thunk member, which has no memory operations.",
+    "probes": [
+      {
+        "asan_symbols": 694,
+        "binary": "/asan/bin/rt_hostile_tls_probe.asan",
+        "court": "RT-HOSTILE-TLS",
+        "flags": [
+          "-fsanitize=address",
+          "-fno-omit-frame-pointer",
+          "-g"
+        ],
+        "link_map": "/asan/work/rt_hostile_tls_probe.map",
+        "needed": [
+          "libm.so.6",
+          "libgcc_s.so.1",
+          "libc.so.6"
+        ],
+        "retained_members": [
+          "openssl_rs-cb3bc7197f04ef0d.openssl_rs.5f987b19b98ce832-cgu.0.rcgu.o",
+          "openssl_rs-cb3bc7197f04ef0d.0ysazq2p17dngtj0sk7n0hjqs.rcgu.o",
+          "openssl_rs_err_variadic.o",
+          "openssl_rs_bio_variadic.o",
+          "openssl_rs_bio_va.o",
+          "openssl_rs_dir_posix.o",
+          "openssl_rs_async_ucontext.o",
+          "std-f309d12f7410f38a.std.ae0349685461449e-cgu.0.rcgu.o",
+          "panic_unwind-724aac4b4e0f159e.panic_unwind.b2a7297688a98afa-cgu.0.rcgu.o",
+          "object-8baa7c599c22f5b4.object.faa2a5483c771cc2-cgu.0.rcgu.o",
+          "memchr-ec491bf79dedf3cb.memchr.a5f5f0661078af4f-cgu.0.rcgu.o",
+          "addr2line-aa43b6fc4380229b.addr2line.e8c497ba4542c42f-cgu.0.rcgu.o",
+          "gimli-01909e0ae222e573.gimli.328ce9cae84b046f-cgu.0.rcgu.o",
+          "rustc_demangle-ad6156c4ec8ba6a9.rustc_demangle.3773b6a43957207c-cgu.0.rcgu.o",
+          "hashbrown-1ee6c1e21a8541b2.hashbrown.e36df0eaddcc2f15-cgu.0.rcgu.o",
+          "miniz_oxide-38ea141800ea3310.miniz_oxide.69d623919cf18e22-cgu.0.rcgu.o",
+          "adler2-7059608820415463.adler2.2947f56315d5a4ef-cgu.0.rcgu.o",
+          "alloc-da8f16dec10fdea1.alloc.483329c0ce284807-cgu.0.rcgu.o",
+          "core-364d80e667db65e2.core.2924a1ccf85da54f-cgu.0.rcgu.o",
+          "compiler_builtins-2059f74265ee6659.compiler_builtins.ffb78b127b8b0c6c-cgu.0.rcgu.o"
+        ],
+        "source": "courts/phase18/rt_hostile_tls_probe.c"
+      },
+      {
+        "asan_symbols": 694,
+        "binary": "/asan/bin/rt_hostile_x509_probe.asan",
+        "court": "RT-HOSTILE-X509",
+        "flags": [
+          "-fsanitize=address",
+          "-fno-omit-frame-pointer",
+          "-g"
+        ],
+        "link_map": "/asan/work/rt_hostile_x509_probe.map",
+        "needed": [
+          "libm.so.6",
+          "libgcc_s.so.1",
+          "libc.so.6"
+        ],
+        "retained_members": [
+          "openssl_rs-cb3bc7197f04ef0d.openssl_rs.5f987b19b98ce832-cgu.0.rcgu.o",
+          "openssl_rs-cb3bc7197f04ef0d.0ysazq2p17dngtj0sk7n0hjqs.rcgu.o",
+          "openssl_rs_err_variadic.o",
+          "openssl_rs_bio_variadic.o",
+          "openssl_rs_bio_va.o",
+          "openssl_rs_dir_posix.o",
+          "openssl_rs_async_ucontext.o",
+          "std-f309d12f7410f38a.std.ae0349685461449e-cgu.0.rcgu.o",
+          "panic_unwind-724aac4b4e0f159e.panic_unwind.b2a7297688a98afa-cgu.0.rcgu.o",
+          "object-8baa7c599c22f5b4.object.faa2a5483c771cc2-cgu.0.rcgu.o",
+          "memchr-ec491bf79dedf3cb.memchr.a5f5f0661078af4f-cgu.0.rcgu.o",
+          "addr2line-aa43b6fc4380229b.addr2line.e8c497ba4542c42f-cgu.0.rcgu.o",
+          "gimli-01909e0ae222e573.gimli.328ce9cae84b046f-cgu.0.rcgu.o",
+          "rustc_demangle-ad6156c4ec8ba6a9.rustc_demangle.3773b6a43957207c-cgu.0.rcgu.o",
+          "hashbrown-1ee6c1e21a8541b2.hashbrown.e36df0eaddcc2f15-cgu.0.rcgu.o",
+          "miniz_oxide-38ea141800ea3310.miniz_oxide.69d623919cf18e22-cgu.0.rcgu.o",
+          "adler2-7059608820415463.adler2.2947f56315d5a4ef-cgu.0.rcgu.o",
+          "alloc-da8f16dec10fdea1.alloc.483329c0ce284807-cgu.0.rcgu.o",
+          "core-364d80e667db65e2.core.2924a1ccf85da54f-cgu.0.rcgu.o",
+          "compiler_builtins-2059f74265ee6659.compiler_builtins.ffb78b127b8b0c6c-cgu.0.rcgu.o"
+        ],
+        "source": "courts/phase18/rt_hostile_x509_probe.c"
+      }
+    ],
+    "retained_archive_members": {
+      "all_first_party_instrumented": true,
+      "count": 20,
+      "first_party_count": 19,
+      "first_party_instrumented": 19,
+      "members": [
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "addr2line-aa43b6fc4380229b.addr2line.e8c497ba4542c42f-cgu.0.rcgu.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "adler2-7059608820415463.adler2.2947f56315d5a4ef-cgu.0.rcgu.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "alloc-da8f16dec10fdea1.alloc.483329c0ce284807-cgu.0.rcgu.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "compiler_builtins-2059f74265ee6659.compiler_builtins.ffb78b127b8b0c6c-cgu.0.rcgu.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "core-364d80e667db65e2.core.2924a1ccf85da54f-cgu.0.rcgu.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "gimli-01909e0ae222e573.gimli.328ce9cae84b046f-cgu.0.rcgu.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "hashbrown-1ee6c1e21a8541b2.hashbrown.e36df0eaddcc2f15-cgu.0.rcgu.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "memchr-ec491bf79dedf3cb.memchr.a5f5f0661078af4f-cgu.0.rcgu.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "miniz_oxide-38ea141800ea3310.miniz_oxide.69d623919cf18e22-cgu.0.rcgu.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "object-8baa7c599c22f5b4.object.faa2a5483c771cc2-cgu.0.rcgu.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "runtime-allocator-shim",
+          "instrumented": false,
+          "member": "openssl_rs-cb3bc7197f04ef0d.0ysazq2p17dngtj0sk7n0hjqs.rcgu.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "openssl_rs-cb3bc7197f04ef0d.openssl_rs.5f987b19b98ce832-cgu.0.rcgu.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "openssl_rs_async_ucontext.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "openssl_rs_bio_va.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "openssl_rs_bio_variadic.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "openssl_rs_dir_posix.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "openssl_rs_err_variadic.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "panic_unwind-724aac4b4e0f159e.panic_unwind.b2a7297688a98afa-cgu.0.rcgu.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "rustc_demangle-ad6156c4ec8ba6a9.rustc_demangle.3773b6a43957207c-cgu.0.rcgu.o",
+          "origin": "rust-staticlib"
+        },
+        {
+          "classified_as": "instrumented",
+          "instrumented": true,
+          "member": "std-f309d12f7410f38a.std.ae0349685461449e-cgu.0.rcgu.o",
+          "origin": "rust-staticlib"
+        }
+      ],
+      "runtime_allocator_shims": 1
+    },
+    "rust_staticlib": {
+      "archive": "/asan/target/x86_64-unknown-linux-gnu/release/libopenssl_rs.a",
+      "archive_sha256": "478406cd0990388ce31f3f1c9c1644b3a19c92a9069c632d348d20496eeb6cdb",
+      "members_in_nm_map": 28,
+      "members_referencing_asan": 27,
+      "members_total": 28,
+      "note": "members without an __asan reference are data-only members (e.g. .rodata / compiler-builtins tables); the members the linker actually retains are enumerated below and classified individually"
+    }
+  },
+  "layers": [
+    {
+      "aborting_tests": [],
+      "asan_reports": 0,
+      "command": "cargo +nightly-2026-10-05 test -Zbuild-std --release --lib --target x86_64-unknown-linux-gnu",
+      "diagnostics": [],
+      "elapsed_s": 12.2,
+      "exit_code": 0,
+      "filters": [],
+      "findings": [],
+      "layer": "allocator-unit-tests",
+      "log": "/asan/logs/allocator-unit-tests.log",
+      "ran": true,
+      "result_lines": [
+        "ok 1163 0 0"
+      ],
+      "tests_failed": 0,
+      "tests_ignored": 0,
+      "tests_passed": 1163,
+      "timed_out": false,
+      "verdict": "clean"
+    },
+    {
+      "asan_reports": 0,
+      "filters": [
+        "runtime::mem",
+        "runtime::obj",
+        "runtime::stack",
+        "runtime::lhash",
+        "runtime::buffer",
+        "runtime::ex_data"
+      ],
+      "layer": "ownership-tests",
+      "note": "ownership/lifetime modules, run under the default (libc malloc, ASan-intercepted) allocator. The crate's optional CRYPTO_set_mem_functions path is exercised by the allocator-unit-tests layer's mem tests and is recorded separately, not hidden.",
+      "ran": true,
+      "sub_layers": [
+        {
+          "aborting_tests": [],
+          "asan_reports": 0,
+          "command": "cargo +nightly-2026-10-05 test -Zbuild-std --release --lib --target x86_64-unknown-linux-gnu -- runtime::mem",
+          "diagnostics": [],
+          "elapsed_s": 61.1,
+          "exit_code": 0,
+          "filters": [
+            "runtime::mem"
+          ],
+          "findings": [],
+          "layer": "ownership-runtime_mem",
+          "log": "/asan/logs/ownership-runtime_mem.log",
+          "ran": true,
+          "result_lines": [
+            "ok 8 0 0"
+          ],
+          "tests_failed": 0,
+          "tests_ignored": 0,
+          "tests_passed": 8,
+          "timed_out": false,
+          "verdict": "clean"
+        },
+        {
+          "aborting_tests": [],
+          "asan_reports": 0,
+          "command": "cargo +nightly-2026-10-05 test -Zbuild-std --release --lib --target x86_64-unknown-linux-gnu -- runtime::obj",
+          "diagnostics": [],
+          "elapsed_s": 0.0,
+          "exit_code": 0,
+          "filters": [
+            "runtime::obj"
+          ],
+          "findings": [],
+          "layer": "ownership-runtime_obj",
+          "log": "/asan/logs/ownership-runtime_obj.log",
+          "ran": true,
+          "result_lines": [
+            "ok 14 0 0"
+          ],
+          "tests_failed": 0,
+          "tests_ignored": 0,
+          "tests_passed": 14,
+          "timed_out": false,
+          "verdict": "clean"
+        },
+        {
+          "aborting_tests": [],
+          "asan_reports": 0,
+          "command": "cargo +nightly-2026-10-05 test -Zbuild-std --release --lib --target x86_64-unknown-linux-gnu -- runtime::stack",
+          "diagnostics": [],
+          "elapsed_s": 0.0,
+          "exit_code": 0,
+          "filters": [
+            "runtime::stack"
+          ],
+          "findings": [],
+          "layer": "ownership-runtime_stack",
+          "log": "/asan/logs/ownership-runtime_stack.log",
+          "ran": true,
+          "result_lines": [
+            "ok 0 0 0"
+          ],
+          "tests_failed": 0,
+          "tests_ignored": 0,
+          "tests_passed": 0,
+          "timed_out": false,
+          "verdict": "clean"
+        },
+        {
+          "aborting_tests": [],
+          "asan_reports": 0,
+          "command": "cargo +nightly-2026-10-05 test -Zbuild-std --release --lib --target x86_64-unknown-linux-gnu -- runtime::lhash",
+          "diagnostics": [],
+          "elapsed_s": 0.0,
+          "exit_code": 0,
+          "filters": [
+            "runtime::lhash"
+          ],
+          "findings": [],
+          "layer": "ownership-runtime_lhash",
+          "log": "/asan/logs/ownership-runtime_lhash.log",
+          "ran": true,
+          "result_lines": [
+            "ok 6 0 0"
+          ],
+          "tests_failed": 0,
+          "tests_ignored": 0,
+          "tests_passed": 6,
+          "timed_out": false,
+          "verdict": "clean"
+        },
+        {
+          "aborting_tests": [],
+          "asan_reports": 0,
+          "command": "cargo +nightly-2026-10-05 test -Zbuild-std --release --lib --target x86_64-unknown-linux-gnu -- runtime::buffer",
+          "diagnostics": [],
+          "elapsed_s": 0.0,
+          "exit_code": 0,
+          "filters": [
+            "runtime::buffer"
+          ],
+          "findings": [],
+          "layer": "ownership-runtime_buffer",
+          "log": "/asan/logs/ownership-runtime_buffer.log",
+          "ran": true,
+          "result_lines": [
+            "ok 0 0 0"
+          ],
+          "tests_failed": 0,
+          "tests_ignored": 0,
+          "tests_passed": 0,
+          "timed_out": false,
+          "verdict": "clean"
+        },
+        {
+          "aborting_tests": [],
+          "asan_reports": 0,
+          "command": "cargo +nightly-2026-10-05 test -Zbuild-std --release --lib --target x86_64-unknown-linux-gnu -- runtime::ex_data",
+          "diagnostics": [],
+          "elapsed_s": 0.0,
+          "exit_code": 0,
+          "filters": [
+            "runtime::ex_data"
+          ],
+          "findings": [],
+          "layer": "ownership-runtime_ex_data",
+          "log": "/asan/logs/ownership-runtime_ex_data.log",
+          "ran": true,
+          "result_lines": [
+            "ok 7 0 0"
+          ],
+          "tests_failed": 0,
+          "tests_ignored": 0,
+          "tests_passed": 7,
+          "timed_out": false,
+          "verdict": "clean"
+        }
+      ],
+      "tests_failed": 0,
+      "tests_passed": 35,
+      "verdict": "clean"
+    },
+    {
+      "asan_diagnostics": [],
+      "asan_reports": 0,
+      "classes": {
+        "parse": 87
+      },
+      "command": "/asan/bin/rt_hostile_tls_probe.asan courts/phase18/fixtures/hostile-tls",
+      "corpus_entries": 87,
+      "court": "RT-HOSTILE-TLS",
+      "diagnostics": [],
+      "elapsed_s": 0.8,
+      "exit_code": 0,
+      "findings": [],
+      "first_faulting_entry": null,
+      "hostile_classes": {},
+      "layer": "hostile-tls",
+      "log": "/asan/logs/hostile-tls.log",
+      "ran": true,
+      "verdict": "clean"
+    },
+    {
+      "asan_diagnostics": [],
+      "asan_reports": 0,
+      "classes": {
+        "parse": 133
+      },
+      "command": "/asan/bin/rt_hostile_x509_probe.asan courts/phase18/fixtures/hostile-x509",
+      "corpus_entries": 133,
+      "court": "RT-HOSTILE-X509",
+      "diagnostics": [],
+      "elapsed_s": 0.3,
+      "exit_code": 0,
+      "findings": [],
+      "first_faulting_entry": null,
+      "hostile_classes": {},
+      "layer": "hostile-x509",
+      "log": "/asan/logs/hostile-x509.log",
+      "ran": true,
+      "verdict": "clean"
+    },
+    {
+      "cases_driven": 16384,
+      "cases_requested": 16384,
+      "classes": {
+        "parse": 16384
+      },
+      "command": "python3 forensics/tools/fuzz_hostile_corpus.py --probe /asan/bin/rt_hostile_x509_probe.asan --cases 16384 --wall-budget 300 --seed 24 --workdir /asan/fuzz-work --out /asan/fuzz-hostile-asan.json",
+      "elapsed_s": 38.4,
+      "exit_code": 0,
+      "finding_count": 0,
+      "findings": [],
+      "layer": "mutation-corpus",
+      "log": "/asan/logs/mutation-corpus.log",
+      "note": "ASan errors are surfaced as the probe's own `crash` class because the probe runs with abort_on_error=1; the fuzz tool invokes the same ASan probe binary the RT-HOSTILE-X509 layer uses",
+      "ran": true,
+      "root_cause_diagnostics": [],
+      "root_cause_sites": [],
+      "seed": 24,
+      "verdict": "clean"
+    },
+    {
+      "consumers": [
+        {
+          "asan_findings": 0,
+          "envelope_limited": null,
+          "id": "curl",
+          "runs": [
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "live_tls_probe",
+              "verdict": "clean"
+            }
+          ],
+          "verdict": "clean"
+        },
+        {
+          "asan_findings": 0,
+          "envelope_limited": null,
+          "id": "nginx",
+          "runs": [
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "serve_probe",
+              "verdict": "clean"
+            }
+          ],
+          "verdict": "clean"
+        },
+        {
+          "asan_findings": 0,
+          "envelope_limited": null,
+          "id": "haproxy",
+          "runs": [
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "proxy_probe",
+              "verdict": "clean"
+            }
+          ],
+          "verdict": "clean"
+        },
+        {
+          "asan_findings": 0,
+          "envelope_limited": null,
+          "id": "git",
+          "runs": [
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "https_probe",
+              "verdict": "clean"
+            },
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "run_tests",
+              "verdict": "clean"
+            }
+          ],
+          "verdict": "clean"
+        },
+        {
+          "asan_findings": 0,
+          "envelope_limited": {
+            "captured_diagnostic": "==NNN==ERROR: AddressSanitizer failed to allocate 0x38000 (229376) bytes at address ff443091000 (errno: 22)\n==NNN==ReserveShadowMemoryRange failed while trying to map 0x38000 bytes. Perhaps you're using ulimit -v",
+            "reason": "ssh-keygen/sign/verify/fingerprints/algorithm-enumeration (probe.sh sections 1,2,5) and keyformat_probe.sh run under ASan and are clean. The sshd SSH server path (probe.sh sections 3,4,6,7: login, the kex/cipher/mac/hostkey matrix, agent login, and concurrency) CANNOT run under ASan: OpenSSH applies a seccomp filter to the preauth child (sandbox-seccomp-filter.c:193-203, SC_MMAP; sshd logs `ssh_sandbox_child: attaching seccomp filter program [preauth]`), and the filter denies the mmap ASan uses to reserve its shadow. ASan then cannot start in that child -- `ReserveShadowMemoryRange failed ... (errno: 22)` -- and the child dies before any crypto is exercised. This is a consumer-sandbox-versus-sanitizer incompatibility, not a candidate defect, and it is the same class as the court's RLIMIT_DATA (D105) that forced this dedicated venue.",
+            "sections_not_under_asan": [
+              "3. sshd + ssh localhost handshake",
+              "4. algorithm matrix (needs the sshd login path)",
+              "6. ssh-agent login",
+              "7. 16 concurrent ssh logins"
+            ]
+          },
+          "id": "openssh",
+          "runs": [
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "probe",
+              "verdict": "clean"
+            },
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "keyformat_probe",
+              "verdict": "clean"
+            }
+          ],
+          "verdict": "envelope-limited"
+        },
+        {
+          "asan_findings": 0,
+          "envelope_limited": null,
+          "id": "python",
+          "runs": [
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "bounded_test_ssl",
+              "verdict": "clean"
+            }
+          ],
+          "verdict": "clean"
+        }
+      ],
+      "dsos": {
+        "libcrypto.so.3": "267657727dad1eecc746acb36b3d4958e6007f3941c21ab14fb155e2e6ab1d90",
+        "libssl.so.3": "383bc530714be366289990b4a4355f33723a8d4a92519c81ec388c0981bceae0",
+        "ossl-modules/legacy.so": "b18e6bb5129d490405d5ee5a23f9f3fb118a2e8cc4008bd6ecee877a5bdcda7d"
+      },
+      "excluded_non_candidate_helpers": {
+        "dd": {
+          "observed_report": "==NNN==ERROR: AddressSanitizer: invalid alignment requested in aligned_alloc: 4096, alignment must be a power of two and the requested size 0x400 must be a multiple of alignment (thread T0)\n    #0 0x... in aligned_alloc (/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so+0xd45f2)\n    #1 0x... (/usr/bin/dd+0x4a9d)\n==NNN==HINT: if you don't care about these errors you may set allocator_may_return_null=1\nSUMMARY: AddressSanitizer: invalid-aligned-alloc-alignment (/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so+0xd45f2) in aligned_alloc",
+          "path": "/asan/dsr/bin/dd",
+          "reason": "coreutils dd requests aligned_alloc(4096, 1024) for the 1 KiB block size; C11 requires the size to be a multiple of the alignment, glibc tolerates it and ASan's aligned_alloc interceptor reports invalid-alignment. The helper generates test data and never touches the candidate, so it runs outside the ASan envelope."
+        }
+      },
+      "findings": [],
+      "harness_exit_code": 0,
+      "harness_log": "/asan/logs/downstream-consumers.log",
+      "layer": "downstream-consumers",
+      "note": "Six consumers load the ASan-instrumented candidate DSOs (dedicated prefix, source artifacts/phase18/asan-downstream.json). Five run clean; openssh is envelope-limited (its seccomp sandbox rejects ASan's shadow mapping in the sshd preauth child, so only its libcrypto-only operations run). Every consumer that ran reported zero ASan findings.",
+      "prefix": "/asan/install",
+      "ran": true,
+      "runtime": "/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so",
+      "source": "artifacts/phase18/asan-downstream.json",
+      "summary": {
+        "clean": [
+          "curl",
+          "nginx",
+          "haproxy",
+          "git",
+          "python"
+        ],
+        "envelope_limited": [
+          "openssh"
+        ],
+        "run_failed": [],
+        "total_findings": 0,
+        "with_findings": []
+      },
+      "verdict": "clean"
+    }
+  ],
+  "not_reached": [
+    "TSan, UBSan, MSan (a later step by instruction)",
+    "the authority under ASan (the authority is not rebuilt in this venue)"
+  ],
+  "phase": 18,
+  "rule": "ASan observes specific memory-error classes under specific execution. A clean layer is a bounded observation, not a memory-safety proof and not a parity claim. The canary must fire before any clean result is trusted. The authority is NOT instrumented; the candidate only is. TSan/UBSan/MSan are a later step and did not run here.",
+  "schema": "openssl-rs/phase18-asan/v1",
+  "summary": {
+    "canary_detected": true,
+    "clean_layers": [
+      "allocator-unit-tests",
+      "ownership-tests",
+      "hostile-tls",
+      "hostile-x509",
+      "mutation-corpus",
+      "downstream-consumers"
+    ],
+    "instrumentation_closure_ok": true,
+    "layers_not_run": [],
+    "layers_run": [
+      "allocator-unit-tests",
+      "ownership-tests",
+      "hostile-tls",
+      "hostile-x509",
+      "mutation-corpus",
+      "downstream-consumers"
+    ],
+    "layers_with_findings": [],
+    "trust": "canary-fired"
+  },
+  "venue": {
+    "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+    "dockerfile": "docker/openssl-rs-asan.Dockerfile",
+    "name": "openssl-rs-asan",
+    "nightly": "nightly-2026-10-05",
+    "script": "docker/openssl-rs-asan.sh",
+    "toolchain": "/asan/toolchain.txt",
+    "toolchain_receipt": "venue=openssl-rs-asan\nasan_toolchain:\n  nightly=nightly-2026-10-05\n  rustc=rustc 1.101.0-nightly (282215592 2026-10-04)\n  cargo=cargo 1.101.0-nightly (f3865b2a4 2026-09-29)\n  cc=cc (Debian 12.2.0-14+deb12u1) 12.2.0\n  clang=Debian clang version 14.0.6\n  llvm_symbolizer=llvm-symbolizer\n  ld=GNU ld (GNU Binutils for Debian) 2.40\n  nm=GNU nm (GNU Binutils for Debian) 2.40\n  python=Python 3.11.2\nasan_options=\n"
+  }
+}

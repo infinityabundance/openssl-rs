@@ -1065,6 +1065,30 @@ PHASE17_MODULES = [
     "forensics/tools/phase17_obligations.py",
 ]
 
+# Phase 18 is the hostile fuzz / security / side-channel hardening stratum, and **it owns no
+# exported symbol**: reading `forensics/atlas/symbol-ownership.json` for `owner_phase == 18`
+# yields no record, so its ledger's unit is not a symbol. `forensics/phase18-obligations.json`
+# records its unit as `hostile hardening contract` (in `atlas_common.NON_EXPORT_UNITS`, so the
+# export-partitioning tools skip it, as they skip Phase 16's `cli-config contract` and Phase 17's
+# `downstream replacement contract`), and its working set is five contract units -- a hostile TLS
+# corpus, a hostile X.509 / malformed-input corpus, the constant-time secret-independence checks,
+# the memory-safety / resource-exhaustion hardening and the hostile-boundary register. Unlike
+# Phases 16 and 17 it hands nothing forward and receives nothing: it owns no provider registration
+# row, no symbol deferral and no prerequisite unit, because it hardens the implementation Phases 3
+# through 15 completed rather than adding library surface. It registers no coverage-reference
+# probe, because it owns no symbol to take an address of, so its runner's registry is empty at
+# activation and its five courts are `pending` with the subphase that lands each. The ledger
+# measures its contract-unit states from the courts registry, so the runner does not bind the
+# ledger (the edge runs ledger -> courts, the reverse of Phase 16's).
+# `docs/PHASE-18-SUBPHASES.md` section 4 records the activation measurement and the precondition it
+# places on the runner.
+PHASE18_COURTS = "artifacts/phase18/COURTS.json"
+PHASE18_OBLIGATIONS = "forensics/phase18-obligations.json"
+PHASE18_MODULES = [
+    "docs/PHASE-18-SUBPHASES.md",
+    "forensics/tools/phase18_obligations.py",
+]
+
 # Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
 # every other stratum's: no export universe, no ownership projection and no provider row. What it
 # owes instead is the plan, the residual ledger its closure produces, the atlas's own courts and
@@ -1250,6 +1274,72 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "`docs/PHASE-17-SUBPHASES.md` and "
                             "`docs/PHASE-17-DOWNSTREAM-SEAL.md` record the measurement and the "
                             "chain (docs/DECISIONS.md D530)"
+                        )),
+    18: StratumEvidence(PHASE18_MODULES, PHASE18_OBLIGATIONS, PHASE18_COURTS,
+                        ledger_note=(
+                            "This stratum owns **no exported symbol**, so its ledger's unit is "
+                            "not a symbol: `forensics/phase18-obligations.json` publishes "
+                            "`unit: hostile hardening contract` and its `implemented`/`open` "
+                            "*export* lists are empty by measurement, while "
+                            "`open_in_this_stratum` counts the five contract units "
+                            "(`hostile-tls`, `hostile-x509`, `constant-time`, "
+                            "`memory-hardening` and `hostile-boundary-register`). It owns no "
+                            "provider registration row, no symbol deferral and no prerequisite "
+                            "unit: it activates no provider and adds no library surface, because "
+                            "it hardens the implementation Phases 3 through 15 completed. Its "
+                            "`artifacts/phase18/COURTS.json` landed `RT-HOSTILE-TLS` in 18.1 -- "
+                            "the fixed malformed-input corpus driven through the record layer and "
+                            "the TLS 1.3 flight with crash/OOM/timeout detection and an "
+                            "authority-linked differential control -- and `RT-HOSTILE-X509` in "
+                            "18.2 -- the fixed malformed-input corpus driven through the X.509, "
+                            "ASN.1 and PEM readers with the same detection and an "
+                            "authority-linked differential control -- and `CT-PRIMITIVES` in "
+                            "18.3, the candidate-only secret-independence screen over the "
+                            "primitive-bearing paths (BN, RSA, EC, the AEADs and the TLS key "
+                            "schedule) whose section-3.2 sensitivity control a deliberately "
+                            "branch-on-secret tag comparison is caught by; that probe records the "
+                            "reduced engine's BN square-and-multiply core as separating its two "
+                            "secret classes (`bn-modexp`, `bn-inverse`) as **findings** rather "
+                            "than failing, because `src/bn/exp.rs` documents that timing "
+                            "profile, and the court's pass is the instrument's proven "
+                            "sensitivity plus a bounded screen at its stated resolution, not a "
+                            "claim that the paths are constant-time. `RT-MEM-HARDENING` landed "
+                            "in 18.4: the fixed-buffer boundary court drives "
+                            "`SSL3_RT_MAX_PLAIN_LENGTH` (16384) on the record write path -- the "
+                            "previous greater-than-16-KiB overflow's concrete case, now "
+                            "fragmented and round-tripped at, below and above the capacity -- "
+                            "the `TLS13_HS_BUF_LEN` (16384) handshake-reassembly buffer and the "
+                            "`Ssl::rec_body` (17000) store at, below and above each capacity, "
+                            "each case in its own forked child against both sides, with an "
+                            "explicit injected-failure control that lowers `RLIMIT_DATA` and "
+                            "observes the allocation fail and be handled "
+                            "(`ERR_R_MALLOC_FAILURE`, a NULL `d2i_X509`). A buffer that is "
+                            "merely unsafe to use -- `tls13_encrypt_record`'s inner buffer, "
+                            "which the fragmenting caller bounds but whose own contract does "
+                            "not -- is recorded, not silently fixed. `HOSTILE-BOUNDARY-REGISTER` "
+                            "landed in 18.5: the authored register "
+                            "`artifacts/phase18/hostile-boundary-register.json` records, per "
+                            "surface, whether it is `hardened` (a change landed), `measured` (a "
+                            "passing court covers it) or `not-claimed` (explicitly outside this "
+                            "stratum), and the register court re-reads the live courts registry "
+                            "and fails the stratum if a recorded classification, capacity or "
+                            "count has drifted from what the courts show. So all five contract "
+                            "units are `implemented` and `open_in_this_stratum` has moved from "
+                            "one to zero. The 18.6 seal `docs/PHASE-18-HARDENING-SEAL.md` lands "
+                            "with the FRF chain the release gates require: its three declarable "
+                            "courts (`rt-hostile-tls`, `rt-hostile-x509`, `rt-mem-hardening`) are "
+                            "declared in `gen_frf_courts.py`, each carries a receipt and two "
+                            "adjudicated challenges, and one `sensitivity-backed` claim "
+                            "`ce672949dc8d06ea18b1969c829e7c6314cd8bc2d431975be3cfbfcc72db2e2a` "
+                            "binds authority `openssl-rt-3.6.4-r2` to candidate `openssl-rs "
+                            "0.0.22` (`e4f60d8b`) with zero blockers -- `CT-PRIMITIVES` is "
+                            "candidate-only and `HOSTILE-BOUNDARY-REGISTER` validates data, so "
+                            "neither is declarable (D13, D201). The ledger's contract-unit "
+                            "states are measured from the courts registry, so the runner does "
+                            "not bind the ledger and the edge runs ledger -> courts, the reverse "
+                            "of Phase 16's. `docs/PHASE-18-SUBPHASES.md` sections 1, 3 and 4 and "
+                            "`docs/PHASE-18-HARDENING-SEAL.md` record the measurement and the "
+                            "chain"
                         )),
     # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
     # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no

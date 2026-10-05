@@ -242,8 +242,15 @@ if [ -s "$SERVE/sess.pem" ]; then
         -servername 127.0.0.1 -sess_in "$SERVE/sess.pem" -ign_eof < "$SERVE/req.txt" \
         > "$SERVE/reuse.out" 2> "$SERVE/reuse.err" || true
     echo "reused session lines: $(grep -acE 'Reused, TLSv1.3' "$SERVE/reuse.out" "$SERVE/reuse.err" || true)"
+    # Machine-readable: 1 when the second connection resumed over TLS 1.3.
+    if grep -aqE 'Reused, TLSv1.3' "$SERVE/reuse.out" "$SERVE/reuse.err"; then
+        D_RESUMED=1
+    else
+        D_RESUMED=0
+    fi
 else
-    echo "session saved: NO — no ticket was issued, resumption is impossible"
+    echo "session saved: NO - no ticket was issued, resumption is impossible"
+    D_RESUMED=0
 fi
 
 # --- (c3) worker_processes change + reload ----------------------------------
@@ -300,4 +307,5 @@ echo "=== summary ==="
 echo "A_tls13_handshake=$A_PROTO A_verification_ok=$A_OK A_http200=$A_HTTP a2_close_hang=$([ "$A2_RC" = 124 ] && echo yes || echo no)"
 echo "B_curl_exit=$B_RC B_http_code=$(sed -n 's/^http_code=//p' "$SERVE/curl.out")"
 echo "C_concurrent_200s=$CONC_OK/16 C_reload_workers=$OLD_WORKERS->$NEW_WORKERS"
+echo "D_tls13_resumed=$D_RESUMED"
 echo "serve_probe.sh: done"

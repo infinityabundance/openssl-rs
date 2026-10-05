@@ -1,0 +1,426 @@
+{
+  "schema": "openssl-rs/hostile-boundary-register/v1",
+  "phase": 18,
+  "subphase": "18.5",
+  "authority": "openssl-3.6.4-production",
+  "rule": "This register is the stratum's own non-claims, recorded per surface as `hardened` (a change landed), `measured` (a passing court covers the surface) or `not-claimed` (explicitly outside this stratum). It is authored, not derived: the `HOSTILE-BOUNDARY-REGISTER` court in forensics/tools/phase18_courts.py re-reads the live courts registry and fails the stratum if any recorded classification, capacity, count or evidence value here has drifted from what the courts actually show (docs/PHASE-18-SUBPHASES.md section 3.5). A surface the corpus does not reach is `measured` (covered but only bounded) or `not-claimed`, never `hardened`.",
+  "classifications": {
+    "hardened": 1,
+    "measured": 18,
+    "not-claimed": 10,
+    "total": 29
+  },
+  "surfaces": [
+    {
+      "id": "tls-records",
+      "group": "hostile-tls",
+      "surface": "the TLS record layer (the SSL_accept / SSL_connect record reader)",
+      "classification": "measured",
+      "court": "RT-HOSTILE-TLS",
+      "surface_keys": ["tls.record", "tls.control"],
+      "finding": "the malformed-record corpus is driven through the record reader with crash/OOM/timeout detection and an authority-linked differential control",
+      "evidence": {
+        "verdict": "pass",
+        "corpus_entries": 87,
+        "corpus_total_bytes": 5072,
+        "corpus_by_category": {"clienthello": 14, "control": 6, "extension": 29, "handshake": 9, "record": 20, "serverhello": 9},
+        "entries_driven_corpus": 87,
+        "control_honest": true,
+        "candidate_findings": {"crash": 0, "oom": 0, "timeout": 0}
+      },
+      "note": "measured, not hardened: no change to the record layer landed in this stratum; the court says the corpus it drove produced the recorded dispositions, not that the parser is safe (sections 3.1 and 3.6)."
+    },
+    {
+      "id": "tls-handshake",
+      "group": "hostile-tls",
+      "surface": "the handshake-message reader (ClientHello / ServerHello flights)",
+      "classification": "measured",
+      "court": "RT-HOSTILE-TLS",
+      "surface_keys": ["tls.handshake", "tls.clienthello", "tls.serverhello"],
+      "finding": "malformed handshake headers and truncated/oversized bodies are driven on both sides",
+      "evidence": {
+        "verdict": "pass",
+        "corpus_by_category": {"clienthello": 14, "control": 6, "extension": 29, "handshake": 9, "record": 20, "serverhello": 9},
+        "entries_driven_corpus": 87,
+        "control_honest": true
+      },
+      "note": "measured, not hardened; the corpus is a fixed enumeration rather than a fuzzer, and it is not a coverage claim (section 3.1)."
+    },
+    {
+      "id": "tls-extensions",
+      "group": "hostile-tls",
+      "surface": "TLS extension bodies (key_share, supported_versions, ALPN, SNI, signature_algorithms)",
+      "classification": "measured",
+      "court": "RT-HOSTILE-TLS",
+      "surface_keys": ["tls.extension"],
+      "finding": "malformed extension bodies are driven on both sides",
+      "evidence": {
+        "verdict": "pass",
+        "corpus_by_category": {"clienthello": 14, "control": 6, "extension": 29, "handshake": 9, "record": 20, "serverhello": 9},
+        "control_honest": true
+      },
+      "note": "measured, not hardened; the extension parser is exercised, not proven (section 3.6)."
+    },
+
+    {
+      "id": "x509-der",
+      "group": "hostile-x509",
+      "surface": "the X.509 DER containers: d2i_X509, d2i_X509_CRL, d2i_X509_REQ",
+      "classification": "measured",
+      "court": "RT-HOSTILE-X509",
+      "surface_keys": ["x509.cert", "x509.crl", "x509.req"],
+      "finding": "truncated, oversized and ill-formed DER containers are driven on both sides",
+      "evidence": {
+        "verdict": "pass",
+        "corpus_entries": 133,
+        "corpus_total_bytes": 42802,
+        "corpus_by_arm": {"alg": 7, "atype": 15, "cert": 29, "crl": 8, "gn": 1, "gtime": 8, "pemcert": 14, "pemcrl": 4, "pemreq": 4, "req": 8, "spki": 3, "utime": 6, "xext": 22, "xexts": 4},
+        "entries_driven_corpus": 133,
+        "control_honest": true,
+        "candidate_findings": {"crash": 0, "oom": 0, "timeout": 0}
+      },
+      "note": "measured, not hardened: no X.509 reader changed in this stratum; a bounded differential result over the corpus (sections 3.1 and 3.6)."
+    },
+    {
+      "id": "x509-extensions",
+      "group": "hostile-x509",
+      "surface": "X.509 extension bodies (d2i_X509_EXTENSION, d2i_X509_EXTENSIONS, X509V3_EXT_d2i)",
+      "classification": "measured",
+      "court": "RT-HOSTILE-X509",
+      "surface_keys": ["x509.xext", "x509.xexts"],
+      "finding": "duplicate / unknown / critical extensions and malformed name constraints and SAN are driven",
+      "evidence": {
+        "verdict": "pass",
+        "corpus_by_arm": {"alg": 7, "atype": 15, "cert": 29, "crl": 8, "gn": 1, "gtime": 8, "pemcert": 14, "pemcrl": 4, "pemreq": 4, "req": 8, "spki": 3, "utime": 6, "xext": 22, "xexts": 4},
+        "control_honest": true
+      },
+      "note": "measured, not hardened (section 3.1)."
+    },
+    {
+      "id": "x509-asn1",
+      "group": "hostile-x509",
+      "surface": "the ASN.1 value readers (d2i_ASN1_TYPE, d2i_GENERAL_NAMES, d2i_ASN1_GENERALIZEDTIME, d2i_ASN1_UTCTIME, d2i_X509_ALGOR, d2i_X509_PUBKEY)",
+      "classification": "measured",
+      "court": "RT-HOSTILE-X509",
+      "surface_keys": ["x509.atype", "x509.gn", "x509.gtime", "x509.utime", "x509.alg", "x509.spki"],
+      "finding": "ASN.1 length bombs, deep nesting, indefinite-length misuse, time/bit-string edges and bad signature AlgorithmIdentifiers are driven",
+      "evidence": {
+        "verdict": "pass",
+        "corpus_by_arm": {"alg": 7, "atype": 15, "cert": 29, "crl": 8, "gn": 1, "gtime": 8, "pemcert": 14, "pemcrl": 4, "pemreq": 4, "req": 8, "spki": 3, "utime": 6, "xext": 22, "xexts": 4},
+        "control_honest": true
+      },
+      "note": "measured, not hardened; the readers are exercised, not proven memory-safe (sections 3.1 and 3.6)."
+    },
+    {
+      "id": "x509-pem",
+      "group": "hostile-x509",
+      "surface": "the PEM containers (PEM_read_bio_X509, PEM_read_bio_X509_CRL, PEM_read_bio_X509_REQ)",
+      "classification": "measured",
+      "court": "RT-HOSTILE-X509",
+      "surface_keys": ["x509.pemcert", "x509.pemcrl", "x509.pemreq"],
+      "finding": "bad base64, missing / extra delimiters and wrong labels are driven through the PEM readers",
+      "evidence": {
+        "verdict": "pass",
+        "corpus_by_arm": {"alg": 7, "atype": 15, "cert": 29, "crl": 8, "gn": 1, "gtime": 8, "pemcert": 14, "pemcrl": 4, "pemreq": 4, "req": 8, "spki": 3, "utime": 6, "xext": 22, "xexts": 4},
+        "control_honest": true
+      },
+      "note": "measured, not hardened (section 3.1)."
+    },
+
+    {
+      "id": "ct-bn-separations",
+      "group": "constant-time",
+      "surface": "the BN primitive paths: BN_mod_exp_mont_consttime and BN_mod_inverse over a 255-bit prime",
+      "classification": "measured",
+      "court": "CT-PRIMITIVES",
+      "surface_keys": ["ct.bn-modexp", "ct.bn-inverse"],
+      "finding": "both BN paths measure `separated` -- the two BN separations are recorded as findings, not failed",
+      "evidence": {
+        "verdict": "pass",
+        "threshold_percent": 150,
+        "path_classes": {"bn-modexp": "separated", "bn-inverse": "separated", "rsa-private": "independent", "ec-scalar-mul": "independent", "aead-tag-memcmp": "independent", "tls-key-schedule-hkdf": "independent"},
+        "findings": ["bn-inverse", "bn-modexp"],
+        "finding_count": 2,
+        "control_honest": true
+      },
+      "note": "measured, not hardened: the reduced engine's BN square-and-multiply core carries this implementation's timing profile by its own module documentation (src/bn/exp.rs); the court's contract is to record the separation with a sensitivity-proven instrument, not to claim constant time (section 3.6)."
+    },
+    {
+      "id": "ct-rsa",
+      "group": "constant-time",
+      "surface": "RSA_private_decrypt (C RT exponents of two 1024-bit keys)",
+      "classification": "measured",
+      "court": "CT-PRIMITIVES",
+      "surface_keys": ["ct.rsa-private"],
+      "finding": "independent at the 50 percent floor",
+      "evidence": {
+        "verdict": "pass",
+        "path_classes": {"bn-modexp": "separated", "bn-inverse": "separated", "rsa-private": "independent", "ec-scalar-mul": "independent", "aead-tag-memcmp": "independent", "tls-key-schedule-hkdf": "independent"},
+        "threshold_percent": 150
+      },
+      "note": "measured, not hardened; the screen's resolution is the 50 percent floor (section 3.1)."
+    },
+    {
+      "id": "ct-ec",
+      "group": "constant-time",
+      "surface": "EC_POINT_mul on P-256 (the constant-time ladder)",
+      "classification": "measured",
+      "court": "CT-PRIMITIVES",
+      "surface_keys": ["ct.ec-scalar-mul"],
+      "finding": "independent at the 50 percent floor",
+      "evidence": {
+        "verdict": "pass",
+        "path_classes": {"bn-modexp": "separated", "bn-inverse": "separated", "rsa-private": "independent", "ec-scalar-mul": "independent", "aead-tag-memcmp": "independent", "tls-key-schedule-hkdf": "independent"},
+        "threshold_percent": 150
+      },
+      "note": "measured, not hardened (section 3.1)."
+    },
+    {
+      "id": "ct-aead",
+      "group": "constant-time",
+      "surface": "CRYPTO_memcmp over a 4 KiB tag (the primitive AES-GCM's finish and the Poly1305 check are built on)",
+      "classification": "measured",
+      "court": "CT-PRIMITIVES",
+      "surface_keys": ["ct.aead-tag-memcmp"],
+      "finding": "independent at the 50 percent floor; the sensitivity control varies it and is caught",
+      "evidence": {
+        "verdict": "pass",
+        "path_classes": {"bn-modexp": "separated", "bn-inverse": "separated", "rsa-private": "independent", "ec-scalar-mul": "independent", "aead-tag-memcmp": "independent", "tls-key-schedule-hkdf": "independent"},
+        "control_class": "separated",
+        "control_honest": true
+      },
+      "note": "measured, not hardened (sections 3.1 and 3.2)."
+    },
+    {
+      "id": "ct-key-schedule",
+      "group": "constant-time",
+      "surface": "EVP_KDF HKDF extract+expand (the TLS 1.3 key schedule's core)",
+      "classification": "measured",
+      "court": "CT-PRIMITIVES",
+      "surface_keys": ["ct.tls-key-schedule-hkdf"],
+      "finding": "independent at the 50 percent floor",
+      "evidence": {
+        "verdict": "pass",
+        "path_classes": {"bn-modexp": "separated", "bn-inverse": "separated", "rsa-private": "independent", "ec-scalar-mul": "independent", "aead-tag-memcmp": "independent", "tls-key-schedule-hkdf": "independent"},
+        "threshold_percent": 150
+      },
+      "note": "measured, not hardened (section 3.1)."
+    },
+    {
+      "id": "ct-resolution-floor",
+      "group": "constant-time",
+      "surface": "secret dependence below the 50 percent floor",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["ct.below-floor"],
+      "finding": "outside the screen's resolution",
+      "evidence": {},
+      "note": "not-claimed: a secret dependence below the 50 percent floor is reported `independent` and is outside this screen's resolution, so no constant-time behaviour below the floor is claimed (sections 3.1 and 3.6)."
+    },
+
+    {
+      "id": "mem-write-hardened",
+      "group": "memory-hardening",
+      "surface": "SSL3_RT_MAX_PLAIN_LENGTH (16384) record write / record-encryption inner buffer -- the previous greater-than-16-KiB overflow's concrete case",
+      "classification": "hardened",
+      "court": "RT-MEM-HARDENING",
+      "surface_keys": ["mem.write@16384"],
+      "finding": "the write path fragments at SSL3_RT_MAX_PLAIN_LENGTH; N = 16383/16384/16385/32768/65536 round-trip on both sides",
+      "evidence": {
+        "verdict": "pass",
+        "cases_driven_candidate": 14,
+        "boundary_write": {"capacity": 16384, "disposition": "hardened-and-measured"},
+        "boundary_groups": {"read-handshake@16384": ["above", "at", "below"], "read-record@17000": ["above", "at", "below"], "write@16384": ["above", "at", "below"]},
+        "control_failure_driven": true
+      },
+      "note": "hardened: a change landed (the earlier greater-than-16-KiB write overflow is fixed, not merely bounded) and the court drives it at, below and above 16384 (section 3.4)."
+    },
+    {
+      "id": "mem-encrypt-inner-contract",
+      "group": "memory-hardening",
+      "surface": "the tls13_encrypt_record inner [u8; TLS13_HS_BUF_LEN+1] contract",
+      "classification": "measured",
+      "court": "RT-MEM-HARDENING",
+      "surface_keys": ["mem.write@16384"],
+      "finding": "recorded as merely unsafe to use directly, not fixed",
+      "evidence": {
+        "verdict": "pass",
+        "boundary_encrypt_inner": {"capacity": 16384, "disposition": "merely-unsafe-to-use-recorded"}
+      },
+      "note": "measured, not hardened: tls13_encrypt_record copies `len` bytes into its inner buffer without checking `len`; the fragmenting caller bounds it, but the function's own # Safety contract does not, so it is recorded rather than silently fixed (section 3.4)."
+    },
+    {
+      "id": "mem-read-handshake",
+      "group": "memory-hardening",
+      "surface": "the handshake-message reassembly buffer Ssl::rd_msg_buf / TLS13_HS_BUF_LEN (16384)",
+      "classification": "measured",
+      "court": "RT-MEM-HARDENING",
+      "surface_keys": ["mem.read-handshake@16384"],
+      "finding": "the read path is measured at, below and above its capacity and rejects above it",
+      "evidence": {
+        "verdict": "pass",
+        "boundary_read_handshake": {"capacity": 16384, "disposition": "measured"},
+        "boundary_groups": {"read-handshake@16384": ["above", "at", "below"], "read-record@17000": ["above", "at", "below"], "write@16384": ["above", "at", "below"]}
+      },
+      "note": "measured, not fixed: read-hs-below/at are parsed and rejected as malformed and read-hs-above is rejected; every disposition is an error, none a crash (section 3.4)."
+    },
+    {
+      "id": "mem-read-record",
+      "group": "memory-hardening",
+      "surface": "the record-body store Ssl::rec_body (17000)",
+      "classification": "measured",
+      "court": "RT-MEM-HARDENING",
+      "surface_keys": ["mem.read-record@17000"],
+      "finding": "the record-body store's own bound is measured at, below and above 17000",
+      "evidence": {
+        "verdict": "pass",
+        "boundary_read_record": {"capacity": 17000, "disposition": "measured"},
+        "boundary_groups": {"read-handshake@16384": ["above", "at", "below"], "read-record@17000": ["above", "at", "below"], "write@16384": ["above", "at", "below"]}
+      },
+      "note": "measured, not fixed: read-body-at (17000) reads the whole body then rejects on the 16384-byte handshake cap; read-body-above (17001) is refused before the body; the candidate consumes 17005/5 bytes where the authority stops at 5 -- recorded, not fixed (section 3.4)."
+    },
+    {
+      "id": "mem-ctrl-rlimit",
+      "group": "memory-hardening",
+      "surface": "the injected-failure control ctrl-rlimit (RLIMIT_DATA exhaustion)",
+      "classification": "measured",
+      "court": "RT-MEM-HARDENING",
+      "surface_keys": ["mem.control.ctrl-rlimit"],
+      "finding": "the allocation failure is driven and observed",
+      "evidence": {
+        "verdict": "pass",
+        "control_failure_driven": true,
+        "control_case_classes": {"ctrl-rlimit": "ran", "ctrl-d2i": "ran", "ctrl-hook": "ran"}
+      },
+      "note": "measured: the control lowers RLIMIT_DATA to the child's VmData + 8 MiB and requests a 256 MiB allocation, which must fail and raise the engine's own ERR_R_MALLOC_FAILURE (section 3.4)."
+    },
+    {
+      "id": "mem-ctrl-d2i",
+      "group": "memory-hardening",
+      "surface": "the injected ASN.1 reader allocation control ctrl-d2i",
+      "classification": "measured",
+      "court": "RT-MEM-HARDENING",
+      "surface_keys": ["mem.control.ctrl-d2i"],
+      "finding": "d2i_X509 returns NULL over a DER that declares a 64 MiB content under the bound",
+      "evidence": {
+        "verdict": "pass",
+        "control_case_classes": {"ctrl-rlimit": "ran", "ctrl-d2i": "ran", "ctrl-hook": "ran"}
+      },
+      "note": "measured: the ASN.1 reader's own allocation is driven rather than assumed (section 3.4)."
+    },
+    {
+      "id": "mem-ctrl-hook",
+      "group": "memory-hardening",
+      "surface": "the injected wrapper-allocator control ctrl-hook (CRYPTO_set_mem_functions)",
+      "classification": "measured",
+      "court": "RT-MEM-HARDENING",
+      "surface_keys": ["mem.control.ctrl-hook"],
+      "finding": "the wrapper allocator is observed with no abort or UB",
+      "evidence": {
+        "verdict": "pass",
+        "control_case_classes": {"ctrl-rlimit": "ran", "ctrl-d2i": "ran", "ctrl-hook": "ran"}
+      },
+      "note": "measured: a wrapper allocator that fails a chosen CRYPTO allocation is installed through CRYPTO_set_mem_functions; the candidate records a divergence from the authority's install result, not a crash (section 3.4)."
+    },
+
+    {
+      "id": "nc-der-writer",
+      "group": "not-claimed",
+      "surface": "the DER/PEM writers and serialisers (i2d_X509*, PEM_write_*)",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.i2d"],
+      "finding": "no court drives an encoder",
+      "evidence": {},
+      "note": "not-claimed: this stratum's corpora are malformed *inputs*; no i2d_*/PEM_write_* path is driven, so none is claimed."
+    },
+    {
+      "id": "nc-verification",
+      "group": "not-claimed",
+      "surface": "certificate chain / policy verification (X509_verify_cert, name constraints enforcement)",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.chain-verify"],
+      "finding": "no court drives verification",
+      "evidence": {},
+      "note": "not-claimed: RT-HOSTILE-X509 drives the DER/PEM *readers* and extension *parsers*, not the chain/policy verifier (section 3.1)."
+    },
+    {
+      "id": "nc-tls-state-machine",
+      "group": "not-claimed",
+      "surface": "the full TLS 1.3 state machine (resumption, key updates, post-handshake auth)",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.tls-state-machine"],
+      "finding": "no court drives the full state machine",
+      "evidence": {},
+      "note": "not-claimed: RT-HOSTILE-TLS drives the record/flight readers with malformed bytes, not a complete multi-flight session (section 3.1)."
+    },
+    {
+      "id": "nc-fuzzer",
+      "group": "not-claimed",
+      "surface": "coverage-guided fuzzing",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.fuzz"],
+      "finding": "the corpora are fixed enumerations",
+      "evidence": {},
+      "note": "not-claimed: the hostile corpora are fixed enumerations re-derived by their generators and re-verified byte for byte, not a fuzzer; a surface no entry reaches is not counted as passing (section 3.1)."
+    },
+    {
+      "id": "nc-constant-time-proof",
+      "group": "not-claimed",
+      "surface": "a constant-time / secret-independence proof",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.constant-time-proof"],
+      "finding": "the CT court is a bounded screen",
+      "evidence": {},
+      "note": "not-claimed: CT-PRIMITIVES is a bounded work-independence screen at a stated resolution with a proven-sensitive control, not a proof of constant-time behaviour, not a wall-clock claim and not an attack claim (sections 3.1, 3.2 and 3.6)."
+    },
+    {
+      "id": "nc-wallclock-attack",
+      "group": "not-claimed",
+      "surface": "a wall-clock timing-attack claim",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.wallclock-attack"],
+      "finding": "no attack is demonstrated",
+      "evidence": {},
+      "note": "not-claimed: a `separated` BN path is a recorded finding about this implementation's timing profile, not a demonstrated attack (section 3.6)."
+    },
+    {
+      "id": "nc-memory-safety-proof",
+      "group": "not-claimed",
+      "surface": "a memory-safety proof",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.memory-safety-proof"],
+      "finding": "the memory court is a bounded measurement",
+      "evidence": {},
+      "note": "not-claimed: RT-MEM-HARDENING drives the recorded capacities at, below and above the bound; it is a bounded measurement, not a memory-safety proof (sections 3.4 and 3.6)."
+    },
+    {
+      "id": "nc-parity",
+      "group": "not-claimed",
+      "surface": "library parity for any symbol",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.parity"],
+      "finding": "no parity is claimed",
+      "evidence": {},
+      "note": "not-claimed: a passing hostile court is a bounded differential or property result over the corpus it drives; PARITY_VERIFIED is not claimed for any symbol by this stratum (section 3.6)."
+    },
+    {
+      "id": "nc-security-proof",
+      "group": "not-claimed",
+      "surface": "a security proof",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.security-proof"],
+      "finding": "the register records a boundary, not a guarantee",
+      "evidence": {},
+      "note": "not-claimed: a passing hostile court is a bounded result over the corpus it drove, and a register entry is a record of a boundary, not a guarantee that the boundary cannot be crossed (docs/PHASE-18-SUBPHASES.md section 0)."
+    }
+  ]
+}

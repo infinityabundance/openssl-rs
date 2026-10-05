@@ -4,7 +4,7 @@
     "blocking_dependencies": [],
     "census": {
       "covered_by_a_divergence": 155,
-      "language_surface_not_modelled_by_name": 11848
+      "language_surface_not_modelled_by_name": 11844
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -692,14 +692,14 @@
         "ssl/ssl_sess.c": 48,
         "ssl/ssl_stat.c": 3,
         "ssl/ssl_txt.c": 6,
-        "ssl/statem/extensions_clnt.c": 62,
+        "ssl/statem/extensions_clnt.c": 61,
         "ssl/statem/extensions_cust.c": 32,
-        "ssl/statem/extensions_srvr.c": 73,
+        "ssl/statem/extensions_srvr.c": 72,
         "ssl/statem/statem.c": 57,
         "ssl/statem/statem_clnt.c": 125,
         "ssl/statem/statem_lib.c": 110,
-        "ssl/statem/statem_srvr.c": 149,
-        "ssl/t1_lib.c": 222,
+        "ssl/statem/statem_srvr.c": 148,
+        "ssl/t1_lib.c": 221,
         "ssl/t1_trce.c": 101,
         "ssl/tls13_enc.c": 45,
         "ssl/tls_depr.c": 17,
@@ -795,7 +795,7 @@
     },
     "checked": {
       "authority_units": 599,
-      "crate_modules": 854,
+      "crate_modules": 855,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 1,
       "divergence_names_covered": 98,
@@ -1191,7 +1191,6 @@
           "tls_construct_stoc_etm",
           "tls_construct_stoc_maxfragmentlen",
           "tls_construct_stoc_next_proto_neg",
-          "tls_construct_stoc_psk",
           "tls_construct_stoc_renegotiate",
           "tls_construct_stoc_server_cert_type",
           "tls_construct_stoc_server_name",
@@ -1352,7 +1351,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 468
+      "names": 467
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -1362,7 +1361,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "b28e155522e59d0bc0ad95feec9fe9aec757097b213a9930e024c7d610a54e17",
+  "body_hash": "4abb877670ffa18298c573d6117c7472dab0604408ccd0828867c1895614bc08",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1383,7 +1382,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "47a47286aa6b3ab4e0a5c1e694f1dd32c673eece68d5c8a4ed2f9f99cb69d015"
+      "sha256": "bc26d5c9151789f84c7b4af90d2421010d04deeebeb373bb0e2c2bd66920cd47"
     },
     {
       "name": "symbol-ownership",
@@ -1398,12 +1397,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "9b3cf14b6af86cd83a4bf111912a46c6a21817ff25d468ecd07db67651466668"
+      "sha256": "1530833a4b595521278ea4c4f245e0b18593828e9354dcc66d66db35fb7a5f65"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "571f3b00dff7b873556feb899c7688cd493eedcf8a9a221a0b7502aaa2a4f646"
+      "sha256": "6c420f0ac849cdf9f75c0f80a23aa0a1729bb8cca6601cdf29e6a9049583a642"
     },
     {
       "name": "prerequisites",

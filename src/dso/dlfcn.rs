@@ -335,8 +335,12 @@ unsafe extern "C" fn dlfcn_name_converter(dso: *mut Dso, filename: *const c_char
             );
             out += DSO_EXTENSION.len();
         } else {
-            ptr::copy_nonoverlapping(filename, translated, len + 1);
-            out += len + 1;
+            // `BIO_snprintf(translated, rsize, "%s", filename)` writes exactly `len`
+            // content bytes and one terminating NUL (`dso_dlfcn.c:269`); copying `len + 1`
+            // (which already carries the source NUL) and then adding another NUL below wrote
+            // one byte past the `len + 1`-byte allocation for a slash-free filename.
+            ptr::copy_nonoverlapping(filename, translated, len);
+            out += len;
         }
         *translated.add(out) = 0;
         translated

@@ -1,0 +1,287 @@
+{
+  "bounds": {
+    "aes": {
+      "extern_c_fns": 17,
+      "unsafe_sites": 43
+    },
+    "apps": {
+      "extern_c_fns": 2,
+      "unsafe_sites": 1353
+    },
+    "aria": {
+      "extern_c_fns": 0,
+      "unsafe_sites": 44
+    },
+    "asn1": {
+      "extern_c_fns": 425,
+      "unsafe_sites": 3243
+    },
+    "asn1_dsa": {
+      "extern_c_fns": 0,
+      "unsafe_sites": 47
+    },
+    "blowfish": {
+      "extern_c_fns": 8,
+      "unsafe_sites": 27
+    },
+    "bn": {
+      "extern_c_fns": 205,
+      "unsafe_sites": 1170
+    },
+    "camellia": {
+      "extern_c_fns": 12,
+      "unsafe_sites": 41
+    },
+    "cast": {
+      "extern_c_fns": 7,
+      "unsafe_sites": 24
+    },
+    "chacha": {
+      "extern_c_fns": 0,
+      "unsafe_sites": 17
+    },
+    "cipher_tables": {
+      "extern_c_fns": 0,
+      "unsafe_sites": 0
+    },
+    "cmp": {
+      "extern_c_fns": 196,
+      "unsafe_sites": 2172
+    },
+    "cms": {
+      "extern_c_fns": 247,
+      "unsafe_sites": 2408
+    },
+    "crmf": {
+      "extern_c_fns": 118,
+      "unsafe_sites": 413
+    },
+    "ct": {
+      "extern_c_fns": 80,
+      "unsafe_sites": 513
+    },
+    "decoder_lib": {
+      "extern_c_fns": 28,
+      "unsafe_sites": 234
+    },
+    "decoder_meth": {
+      "extern_c_fns": 47,
+      "unsafe_sites": 149
+    },
+    "decoder_pkey": {
+      "extern_c_fns": 18,
+      "unsafe_sites": 205
+    },
+    "der_writer": {
+      "extern_c_fns": 0,
+      "unsafe_sites": 32
+    },
+    "des": {
+      "extern_c_fns": 33,
+      "unsafe_sites": 90
+    },
+    "dh": {
+      "extern_c_fns": 150,
+      "unsafe_sites": 781
+    },
+    "digest": {
+      "extern_c_fns": 49,
+      "unsafe_sites": 416
+    },
+    "dsa": {
+      "extern_c_fns": 147,
+      "unsafe_sites": 655
+    },
+    "ec": {
+      "extern_c_fns": 545,
+      "unsafe_sites": 1674
+    },
+    "encoder_lib": {
+      "extern_c_fns": 17,
+      "unsafe_sites": 129
+    },
+    "encoder_meth": {
+      "extern_c_fns": 47,
+      "unsafe_sites": 134
+    },
+    "encoder_pkey": {
+      "extern_c_fns": 12,
+      "unsafe_sites": 43
+    },
+    "ess": {
+      "extern_c_fns": 34,
+      "unsafe_sites": 134
+    },
+    "evp": {
+      "extern_c_fns": 1646,
+      "unsafe_sites": 8029
+    },
+    "ffc": {
+      "extern_c_fns": 0,
+      "unsafe_sites": 328
+    },
+    "hpke": {
+      "extern_c_fns": 21,
+      "unsafe_sites": 414
+    },
+    "http": {
+      "extern_c_fns": 25,
+      "unsafe_sites": 114
+    },
+    "idea": {
+      "extern_c_fns": 8,
+      "unsafe_sites": 29
+    },
+    "lib": {
+      "extern_c_fns": 0,
+      "unsafe_sites": 0
+    },
+    "mac": {
+      "extern_c_fns": 21,
+      "unsafe_sites": 228
+    },
+    "ml_dsa": {
+      "extern_c_fns": 0,
+      "unsafe_sites": 411
+    },
+    "ml_kem": {
+      "extern_c_fns": 0,
+      "unsafe_sites": 160
+    },
+    "modes": {
+      "extern_c_fns": 62,
+      "unsafe_sites": 216
+    },
+    "ocsp": {
+      "extern_c_fns": 188,
+      "unsafe_sites": 382
+    },
+    "packet": {
+      "extern_c_fns": 32,
+      "unsafe_sites": 100
+    },
+    "param_build_set": {
+      "extern_c_fns": 7,
+      "unsafe_sites": 28
+    },
+    "params": {
+      "extern_c_fns": 81,
+      "unsafe_sites": 600
+    },
+    "passphrase": {
+      "extern_c_fns": 16,
+      "unsafe_sites": 113
+    },
+    "pem": {
+      "extern_c_fns": 173,
+      "unsafe_sites": 1094
+    },
+    "pkcs12": {
+      "extern_c_fns": 130,
+      "unsafe_sites": 632
+    },
+    "pkcs7": {
+      "extern_c_fns": 126,
+      "unsafe_sites": 931
+    },
+    "property": {
+      "extern_c_fns": 23,
+      "unsafe_sites": 389
+    },
+    "provider": {
+      "extern_c_fns": 1600,
+      "unsafe_sites": 6092
+    },
+    "punycode": {
+      "extern_c_fns": 2,
+      "unsafe_sites": 33
+    },
+    "quic_vlint": {
+      "extern_c_fns": 0,
+      "unsafe_sites": 23
+    },
+    "rand": {
+      "extern_c_fns": 41,
+      "unsafe_sites": 492
+    },
+    "rc2": {
+      "extern_c_fns": 7,
+      "unsafe_sites": 24
+    },
+    "rc4": {
+      "extern_c_fns": 3,
+      "unsafe_sites": 8
+    },
+    "rsa": {
+      "extern_c_fns": 220,
+      "unsafe_sites": 1397
+    },
+    "seed": {
+      "extern_c_fns": 9,
+      "unsafe_sites": 25
+    },
+    "selftest": {
+      "extern_c_fns": 13,
+      "unsafe_sites": 37
+    },
+    "slh_dsa": {
+      "extern_c_fns": 47,
+      "unsafe_sites": 435
+    },
+    "sm2": {
+      "extern_c_fns": 0,
+      "unsafe_sites": 49
+    },
+    "sm3": {
+      "extern_c_fns": 4,
+      "unsafe_sites": 9
+    },
+    "sm4": {
+      "extern_c_fns": 0,
+      "unsafe_sites": 13
+    },
+    "srp": {
+      "extern_c_fns": 30,
+      "unsafe_sites": 251
+    },
+    "ssl": {
+      "extern_c_fns": 698,
+      "unsafe_sites": 3503
+    },
+    "status": {
+      "extern_c_fns": 0,
+      "unsafe_sites": 0
+    },
+    "store": {
+      "extern_c_fns": 117,
+      "unsafe_sites": 652
+    },
+    "test_support": {
+      "extern_c_fns": 0,
+      "unsafe_sites": 0
+    },
+    "ts": {
+      "extern_c_fns": 204,
+      "unsafe_sites": 1125
+    },
+    "txt_db": {
+      "extern_c_fns": 9,
+      "unsafe_sites": 122
+    },
+    "ui": {
+      "extern_c_fns": 92,
+      "unsafe_sites": 434
+    },
+    "x509": {
+      "extern_c_fns": 1678,
+      "unsafe_sites": 7830
+    }
+  },
+  "default": {
+    "extern_c_fns": 0,
+    "unsafe_sites": 0
+  },
+  "phase": 18,
+  "rule": "The recorded ceiling for each core (parser/algorithm) module, in the UNSAFE-FOOTPRINT growth check that forensics/tools/phase18_courts.py runs inside the HOSTILE-BOUNDARY-REGISTER court. A module absent from `bounds` resolves to `default`; the check fails when a core module's `unsafe_sites` or `extern_c_fns` exceeds its ceiling, and never fails the boundary layer (ffi, runtime, dso, engine, async, context), which is allowed to grow. The values are the measurements in forensics/atlas/unsafe-footprint.json at the Phase 18 hostile-hardening revision; raising a bound is a deliberate, reviewable act, not a side effect of adding code. This is a footprint ceiling, not a memory-safety proof.",
+  "schema": "openssl-rs/unsafe-bounds/v1"
+}

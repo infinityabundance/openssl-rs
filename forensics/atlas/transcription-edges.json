@@ -3879,7 +3879,7 @@
         "module": "src/ssl/statem/extensions_srvr.rs",
         "phase": 17,
         "phase_source": "module-declaration",
-        "share": "2/3",
+        "share": "3/4",
         "translation_unit": "ssl/statem/extensions_srvr.c"
       },
       {

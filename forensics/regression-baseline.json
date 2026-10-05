@@ -8,6 +8,7 @@
     "phase15",
     "phase16",
     "phase17",
+    "phase18",
     "phase2",
     "phase22",
     "phase3",
@@ -80,6 +81,14 @@
       "verdict": "pass"
     },
     "CT-PKCS12": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "CT-PRIMITIVES": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "HOSTILE-BOUNDARY-REGISTER": {
       "observations": 0,
       "verdict": "pass"
     },
@@ -403,6 +412,14 @@
       "observations": 32,
       "verdict": "pass"
     },
+    "RT-HOSTILE-TLS": {
+      "observations": 1046,
+      "verdict": "pass"
+    },
+    "RT-HOSTILE-X509": {
+      "observations": 1066,
+      "verdict": "pass"
+    },
     "RT-HPKE": {
       "observations": 65,
       "verdict": "pass"
@@ -445,6 +462,10 @@
     },
     "RT-MEM-DEFAULT": {
       "observations": 39,
+      "verdict": "pass"
+    },
+    "RT-MEM-HARDENING": {
+      "observations": 282,
       "verdict": "pass"
     },
     "RT-MEM-INSTALL": {
@@ -745,6 +766,7 @@
     "phase15": 0,
     "phase16": 0,
     "phase17": 0,
+    "phase18": 0,
     "phase22": 0,
     "phase3": 43,
     "phase4": 23,
@@ -767,6 +789,7 @@
     "phase15": 0,
     "phase16": 0,
     "phase17": 0,
+    "phase18": 0,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -785,6 +808,7 @@
     "phase15": 3,
     "phase16": 42,
     "phase17": 5,
+    "phase18": 5,
     "phase22": 18,
     "phase3": 294,
     "phase4": 272,
@@ -805,7 +829,7 @@
     "15": "complete",
     "16": "complete",
     "17": "complete",
-    "18": "not-started",
+    "18": "complete",
     "19": "not-started",
     "2": "complete",
     "20": "not-started",
@@ -823,8 +847,8 @@
     "blocking_dependencies": 0,
     "divergence_names_covered": 98,
     "findings": 0,
-    "language_census": 11848,
-    "sealed_census": 468
+    "language_census": 11844,
+    "sealed_census": 467
   },
   "provider_implemented": [
     "base/OSSL_OP_DECODER/DER",

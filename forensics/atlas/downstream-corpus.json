@@ -160,11 +160,12 @@
         "total": 16
       },
       "functional": {
-        "detail": "TLS 1.3 termination for the authority s_client and the candidate curl, 16/16 concurrent verified fetches, reload 2->3 workers",
+        "detail": "TLS 1.3 termination for the authority s_client and the candidate curl, 16/16 concurrent verified fetches, reload 2->3 workers, post-handshake NewSessionTicket + TLS 1.3 resumption",
         "evidence": [
           "A_tls13_handshake=1",
           "B_http_code=200",
-          "C_concurrent_200s=16/16"
+          "C_concurrent_200s=16/16",
+          "D_tls13_resumed=1"
         ],
         "ok": true
       },
@@ -175,9 +176,7 @@
           "summary": "nginx 1.26.3 exposed five candidate defects: SNI disabled (tlsext servername callback returned 0), TLS session tickets disabled, no close_notify teardown after Connection: close, SSL_OP_IGNORE_UNEXPECTED_EOF not honoured, and an intermittent server-side handshake stall under concurrency"
         }
       ],
-      "known_residuals": [
-        "TLS 1.3 session resumption is unavailable: the candidate does not emit the post-handshake NewSessionTicket flight, so `s_client -sess_out` saves nothing; TLS 1.2 resumption and tickets work (see the CPython test_ssl record)"
-      ],
+      "known_residuals": [],
       "link": {
         "detail": "libssl.so.3 -> /work/artifacts/phase2/install/lib/libssl.so.3",
         "libs": [

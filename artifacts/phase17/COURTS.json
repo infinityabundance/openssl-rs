@@ -769,7 +769,6 @@
           "python"
         ],
         "recorded_divergences": [
-          "TLS 1.3 session resumption is unavailable: the candidate does not emit the post-handshake NewSessionTicket flight, so `s_client -sess_out` saves nothing; TLS 1.2 resumption and tickets work (see the CPython test_ssl record)",
           "`regress/unittests/utf8` aborts on both the candidate and the authority: the court image ships only C/C.utf8/POSIX locales and the test setlocale()s en_US.UTF-8",
           "t5540-http-push-webdav is skipped: Git is built without expat (the court image ships no libexpat headers); it is a plain-HTTP path with no OpenSSL use"
         ],
@@ -851,12 +850,12 @@
     {
       "name": "downstream-corpus",
       "path": "forensics/atlas/downstream-corpus.json",
-      "sha256": "b341083a0e08a6f9ab3d5f11dc643453a7a41a27b28d53d2f58a1e19e6583a20"
+      "sha256": "6bcb1adbdfd1bae3bad8db0cc5c3082468e1e0f3546bc07ee060b2f6931f0acc"
     },
     {
       "name": "downstream-readme",
       "path": "courts/phase17/downstream/README.md",
-      "sha256": "bde06d47fb89a5b0e6850501f3f9e18da1cfc68ee04311fadb7ccd2bc2b5fded"
+      "sha256": "1c042dee9d1b125b8cde83f5d825474fb7d1b55e687c0151795c33ce1183581b"
     },
     {
       "name": "downstream-curl-record",
@@ -876,7 +875,7 @@
     {
       "name": "downstream-nginx-record",
       "path": "courts/phase17/downstream/nginx/result.json",
-      "sha256": "6cfe68c36357a5a5f4272a51181e0190bc14503d63eabbaa80eb9089b9d2d358"
+      "sha256": "cb086824eebc8791683b46108c0d5283058c8171760ba683e080afbfe89f1c52"
     },
     {
       "name": "downstream-openssh-record",

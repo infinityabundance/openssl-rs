@@ -115,6 +115,30 @@ GENERATORS_BEFORE_LEDGERS = [
     # census is that `DES3-WRAP` was invisible, so a generator nothing re-runs would
     # reintroduce exactly that.
     "forensics/tools/gen_provider_algorithms.py",
+    # Phase 18.1's hostile TLS corpus. It reads no authority -- the corpus is authored state, not
+    # authority-derived -- but it is listed here so a stale committed fixture is a failure and not
+    # a silent divergence: the whole point of a *fixed* corpus is that the bytes the court drove
+    # are the bytes the generator derives, and a corpus nothing re-runs would drift from the
+    # ledger row that names it. It writes one file per entry plus the manifest; the manifest is
+    # compared below, and `RT-HOSTILE-TLS` itself re-verifies every entry byte for byte, so a hand
+    # edit to a fixture fails the court rather than changing what it drove.
+    "forensics/tools/gen_hostile_tls_corpus.py",
+    # Phase 18.2's hostile X.509 / malformed-input corpus. Like 18.1's it reads no authority --
+    # the corpus is authored state over four committed Phase 17 fixtures -- but it is listed
+    # here so a stale committed fixture is a failure and not a silent divergence: the whole
+    # point of a *fixed* corpus is that the bytes the court drove are the bytes the generator
+    # derives. It writes one file per entry plus the manifest; the manifest is compared below,
+    # and `RT-HOSTILE-X509` itself re-verifies every entry byte for byte, so a hand edit to a
+    # fixture fails the court rather than changing what it drove.
+    "forensics/tools/gen_hostile_x509_corpus.py",
+    # Phase 18.6's measured unsafe / FFI footprint. It reads only the crate's own
+    # `src/**/*.rs`, so it has no position dependence beyond being after the sources are final;
+    # it is listed here so a stale committed footprint is a failure and not a silent divergence.
+    # The whole point of the table is that the memory-safety claim is a measurement rather than
+    # an assertion, which a generator nothing re-runs would defeat. `render_status.py` renders it
+    # into `forensics/STATUS.md`, so it must run before that renderer, and the register court in
+    # `phase18_courts.py` re-scans against the authored bounds at court time.
+    "forensics/tools/unsafe_footprint.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -216,6 +240,7 @@ COMPARED = [
     "forensics/atlas/ownership-audit.json",
     "forensics/atlas/prototype-court.json",
     "forensics/atlas/dispatch-court.json",
+    "forensics/atlas/unsafe-footprint.json",
     "forensics/atlas/ctype-table.json",
     "forensics/atlas/err-raise-sites.json",
     "forensics/atlas/bn-primes.json",
@@ -256,6 +281,16 @@ COMPARED = [
     "courts/phase17/downstream/README.md",
     *[f"courts/phase17/downstream/{p}/EVIDENCE.md"
       for p in ("curl", "git", "haproxy", "nginx", "openssh", "python")],
+    # Phase 18.1's hostile TLS corpus manifest: the entries and their per-entry sha256, which the
+    # court's `RT-HOSTILE-TLS` row records as the corpus's provenance. The `.bin` fixtures
+    # themselves are binary and are re-derived by the generator above and re-verified by the
+    # court, so the compared artefact is the manifest that pins them.
+    "courts/phase18/fixtures/hostile-tls/MANIFEST.json",
+    # Phase 18.2's hostile X.509 / malformed-input corpus manifest: the entries, their per-entry
+    # sha256 and the provenance of the four fixed Phase 17 base objects the corpus mutates. The
+    # `.bin` fixtures are re-derived by the generator above and re-verified by the court, so the
+    # compared artefact is the manifest that pins them.
+    "courts/phase18/fixtures/hostile-x509/MANIFEST.json",
 ]
 
 # ---------------------------------------------------------------------------

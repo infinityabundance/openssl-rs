@@ -1,0 +1,304 @@
+{
+  "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production",
+  "build": {
+    "command": "bash forensics/tools/build_phase2_asan.sh",
+    "ok": true,
+    "prefix": "/asan/install",
+    "ran": false
+  },
+  "consumers": [
+    {
+      "asan_findings": 0,
+      "build": "reused-phase17-build",
+      "envelope_limited": null,
+      "id": "curl",
+      "link": "loads ASan DSOs via LD_LIBRARY_PATH; ASan runtime preloaded",
+      "prepared": null,
+      "runs": [
+        {
+          "asan_diagnostics": [],
+          "asan_findings": 0,
+          "asan_options": "detect_leaks=0:symbolize=1:halt_on_error=0:abort_on_error=0:log_path=<report-dir>/asan",
+          "asan_sites": [],
+          "command": "timeout 300 sh courts/phase17/downstream/curl/live_tls_probe.sh",
+          "elapsed_s": 2.3,
+          "exit_code": 0,
+          "ld_library_path": "/asan/install/lib",
+          "ld_preload": "/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so",
+          "log": "/asan/dsr/curl/live_tls_probe/stdout.log",
+          "result_lines": [
+            "live_tls_probe.sh: OK",
+            "http_code=200",
+            "ssl_verify_result=0",
+            "curl_negative_exit=60",
+            "concurrent_200s=16/16"
+          ],
+          "run": "live_tls_probe",
+          "script": "courts/phase17/downstream/curl/live_tls_probe.sh",
+          "timed_out": false,
+          "verdict": "clean"
+        }
+      ],
+      "title": "curl TLS 1.3 client (live_tls_probe.sh)",
+      "verdict": "clean"
+    },
+    {
+      "asan_findings": 0,
+      "build": "reused-phase17-build",
+      "envelope_limited": null,
+      "id": "nginx",
+      "link": "loads ASan DSOs via LD_LIBRARY_PATH; ASan runtime preloaded",
+      "prepared": null,
+      "runs": [
+        {
+          "asan_diagnostics": [],
+          "asan_findings": 0,
+          "asan_options": "detect_leaks=0:symbolize=1:halt_on_error=0:abort_on_error=0:log_path=<report-dir>/asan",
+          "asan_sites": [],
+          "command": "timeout 420 sh courts/phase17/downstream/nginx/serve_probe.sh",
+          "elapsed_s": 9.5,
+          "exit_code": 0,
+          "ld_library_path": "/asan/install/lib",
+          "ld_preload": "/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so",
+          "log": "/asan/dsr/nginx/serve_probe/stdout.log",
+          "result_lines": [
+            "A_tls13_handshake=1 A_verification_ok=1 A_http200=1 a2_close_hang=no",
+            "D_tls13_resumed=1",
+            "C_concurrent_200s=16/16 C_reload_workers=2->3",
+            "serve_probe.sh: done"
+          ],
+          "run": "serve_probe",
+          "script": "courts/phase17/downstream/nginx/serve_probe.sh",
+          "timed_out": false,
+          "verdict": "clean"
+        }
+      ],
+      "title": "nginx TLS 1.3 server (serve_probe.sh)",
+      "verdict": "clean"
+    },
+    {
+      "asan_findings": 0,
+      "build": "reused-phase17-build",
+      "envelope_limited": null,
+      "id": "haproxy",
+      "link": "loads ASan DSOs via LD_LIBRARY_PATH; ASan runtime preloaded",
+      "prepared": null,
+      "runs": [
+        {
+          "asan_diagnostics": [],
+          "asan_findings": 0,
+          "asan_options": "detect_leaks=0:symbolize=1:halt_on_error=0:abort_on_error=0:log_path=<report-dir>/asan",
+          "asan_sites": [],
+          "command": "timeout 420 sh courts/phase17/downstream/haproxy/proxy_probe.sh",
+          "elapsed_s": 3.1,
+          "exit_code": 0,
+          "ld_library_path": "/asan/install/lib",
+          "ld_preload": "/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so",
+          "log": "/asan/dsr/haproxy/proxy_probe/stdout.log",
+          "result_lines": [
+            "A_tls13_handshake=1 A_verification_ok=1 A_http200=1 a2_close_hang=no",
+            "B_curl_exit=0 B_http_code=200 B_neg_exit=60 B_broken_cfg_exit=1",
+            "C_concurrent_200s=16/16",
+            "proxy_probe.sh: done"
+          ],
+          "run": "proxy_probe",
+          "script": "courts/phase17/downstream/haproxy/proxy_probe.sh",
+          "timed_out": false,
+          "verdict": "clean"
+        }
+      ],
+      "title": "HAProxy TLS 1.3 terminator (proxy_probe.sh)",
+      "verdict": "clean"
+    },
+    {
+      "asan_findings": 0,
+      "build": "reused-phase17-build",
+      "envelope_limited": null,
+      "id": "git",
+      "link": "loads ASan DSOs via LD_LIBRARY_PATH; ASan runtime preloaded",
+      "prepared": {
+        "file": "/work/court/phase18-asan/consumers/git/git-2.56.0/GIT-BUILD-OPTIONS",
+        "from": "/court/git",
+        "to": "/work/court/phase18-asan/consumers/git"
+      },
+      "runs": [
+        {
+          "asan_diagnostics": [],
+          "asan_findings": 0,
+          "asan_options": "detect_leaks=0:symbolize=1:halt_on_error=0:abort_on_error=0:log_path=<report-dir>/asan",
+          "asan_sites": [],
+          "command": "timeout 420 sh courts/phase17/downstream/git/https_probe.sh",
+          "elapsed_s": 2.5,
+          "exit_code": 0,
+          "ld_library_path": "/asan/install/lib:/work/court/phase18-asan/consumers/git/deps/lib",
+          "ld_preload": "/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so",
+          "log": "/asan/dsr/git/https_probe/stdout.log",
+          "result_lines": [
+            "https_probe.sh: HTTPS PUSH/PULL PASS",
+            "https_probe.sh: concurrent_ok=16/16",
+            "https_probe.sh: negative arm ok (unrelated CA rejected):"
+          ],
+          "run": "https_probe",
+          "script": "courts/phase17/downstream/git/https_probe.sh",
+          "timed_out": false,
+          "verdict": "clean"
+        },
+        {
+          "asan_diagnostics": [],
+          "asan_findings": 0,
+          "asan_options": "detect_leaks=0:symbolize=1:halt_on_error=0:abort_on_error=0:log_path=<report-dir>/asan",
+          "asan_sites": [],
+          "command": "timeout 900 sh courts/phase17/downstream/git/run_tests.sh",
+          "elapsed_s": 37.9,
+          "exit_code": 0,
+          "ld_library_path": "/asan/install/lib:/work/court/phase18-asan/consumers/git/deps/lib",
+          "ld_preload": "/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so",
+          "log": "/asan/dsr/git/run_tests/stdout.log",
+          "result_lines": [
+            "t0000-basic                  PASS  ok=92 not-ok=0 todo=0 skipped=0",
+            "run_tests.sh: logs in /asan/dsr/git-tests"
+          ],
+          "run": "run_tests",
+          "script": "courts/phase17/downstream/git/run_tests.sh",
+          "timed_out": false,
+          "verdict": "clean"
+        }
+      ],
+      "title": "Git object hashing + Smart HTTP over TLS",
+      "verdict": "clean"
+    },
+    {
+      "asan_findings": 0,
+      "build": "reused-phase17-build",
+      "envelope_limited": {
+        "captured_diagnostic": "==NNN==ERROR: AddressSanitizer failed to allocate 0x38000 (229376) bytes at address ff443091000 (errno: 22)\n==NNN==ReserveShadowMemoryRange failed while trying to map 0x38000 bytes. Perhaps you're using ulimit -v",
+        "reason": "ssh-keygen/sign/verify/fingerprints/algorithm-enumeration (probe.sh sections 1,2,5) and keyformat_probe.sh run under ASan and are clean. The sshd SSH server path (probe.sh sections 3,4,6,7: login, the kex/cipher/mac/hostkey matrix, agent login, and concurrency) CANNOT run under ASan: OpenSSH applies a seccomp filter to the preauth child (sandbox-seccomp-filter.c:193-203, SC_MMAP; sshd logs `ssh_sandbox_child: attaching seccomp filter program [preauth]`), and the filter denies the mmap ASan uses to reserve its shadow. ASan then cannot start in that child -- `ReserveShadowMemoryRange failed ... (errno: 22)` -- and the child dies before any crypto is exercised. This is a consumer-sandbox-versus-sanitizer incompatibility, not a candidate defect, and it is the same class as the court's RLIMIT_DATA (D105) that forced this dedicated venue.",
+        "sections_not_under_asan": [
+          "3. sshd + ssh localhost handshake",
+          "4. algorithm matrix (needs the sshd login path)",
+          "6. ssh-agent login",
+          "7. 16 concurrent ssh logins"
+        ]
+      },
+      "id": "openssh",
+      "link": "loads ASan DSOs via LD_LIBRARY_PATH; ASan runtime preloaded",
+      "prepared": {
+        "symlink": "/court/openssh -> /work/court/phase18-asan/consumers/openssh"
+      },
+      "runs": [
+        {
+          "asan_diagnostics": [],
+          "asan_findings": 0,
+          "asan_options": "detect_leaks=0:symbolize=1:halt_on_error=0:abort_on_error=0:log_path=<report-dir>/asan",
+          "asan_sites": [],
+          "command": "timeout 420 sh courts/phase17/downstream/openssh/probe.sh",
+          "elapsed_s": 8.0,
+          "exit_code": 0,
+          "ld_library_path": "/asan/install/lib",
+          "ld_preload": "/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so",
+          "log": "/asan/dsr/openssh/probe/stdout.log",
+          "result_lines": [
+            "=== SUMMARY: 11 pass, 20 fail ===",
+            "concurrent_logins=0/16"
+          ],
+          "run": "probe",
+          "script": "courts/phase17/downstream/openssh/probe.sh",
+          "timed_out": false,
+          "verdict": "clean"
+        },
+        {
+          "asan_diagnostics": [],
+          "asan_findings": 0,
+          "asan_options": "detect_leaks=0:symbolize=1:halt_on_error=0:abort_on_error=0:log_path=<report-dir>/asan",
+          "asan_sites": [],
+          "command": "timeout 300 sh courts/phase17/downstream/openssh/keyformat_probe.sh",
+          "elapsed_s": 3.7,
+          "exit_code": 0,
+          "ld_library_path": "/asan/install/lib",
+          "ld_preload": "/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so",
+          "log": "/asan/dsr/openssh/keyformat_probe/stdout.log",
+          "result_lines": [
+            "=== A. candidate ssh-keygen writes, both readers read ==="
+          ],
+          "run": "keyformat_probe",
+          "script": "courts/phase17/downstream/openssh/keyformat_probe.sh",
+          "timed_out": false,
+          "verdict": "clean"
+        }
+      ],
+      "title": "OpenSSH libcrypto-only consumer + key-format round-trip",
+      "verdict": "envelope-limited"
+    },
+    {
+      "asan_findings": 0,
+      "build": "reused-phase17-build",
+      "envelope_limited": null,
+      "id": "python",
+      "link": "loads ASan DSOs via LD_LIBRARY_PATH; ASan runtime preloaded",
+      "prepared": null,
+      "runs": [
+        {
+          "asan_diagnostics": [],
+          "asan_findings": 0,
+          "asan_options": "detect_leaks=0:symbolize=1:halt_on_error=0:abort_on_error=0:log_path=<report-dir>/asan",
+          "asan_sites": [],
+          "command": "timeout 2400 sh courts/phase17/downstream/python/run_test_ssl.sh",
+          "elapsed_s": 11.2,
+          "exit_code": 0,
+          "ld_library_path": "/asan/install/lib",
+          "ld_preload": "/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so",
+          "log": "/asan/dsr/python/bounded_test_ssl/stdout.log",
+          "result_lines": [
+            "cases total : 187",
+            "passed      : 172",
+            "failed      : 0",
+            "errors      : 0",
+            "skipped     : 15",
+            "timed out   : 0",
+            "unknown     : 0"
+          ],
+          "run": "bounded_test_ssl",
+          "script": "courts/phase17/downstream/python/run_test_ssl.sh",
+          "timed_out": false,
+          "verdict": "clean"
+        }
+      ],
+      "title": "CPython _ssl bounded test_ssl",
+      "verdict": "clean"
+    }
+  ],
+  "consumers_root": "/work/court/phase18-asan/consumers",
+  "dsos": {
+    "libcrypto.so.3": "267657727dad1eecc746acb36b3d4958e6007f3941c21ab14fb155e2e6ab1d90",
+    "libssl.so.3": "383bc530714be366289990b4a4355f33723a8d4a92519c81ec388c0981bceae0",
+    "ossl-modules/legacy.so": "b18e6bb5129d490405d5ee5a23f9f3fb118a2e8cc4008bd6ecee877a5bdcda7d"
+  },
+  "excluded_non_candidate_helpers": {
+    "dd": {
+      "observed_report": "==NNN==ERROR: AddressSanitizer: invalid alignment requested in aligned_alloc: 4096, alignment must be a power of two and the requested size 0x400 must be a multiple of alignment (thread T0)\n    #0 0x... in aligned_alloc (/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so+0xd45f2)\n    #1 0x... (/usr/bin/dd+0x4a9d)\n==NNN==HINT: if you don't care about these errors you may set allocator_may_return_null=1\nSUMMARY: AddressSanitizer: invalid-aligned-alloc-alignment (/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so+0xd45f2) in aligned_alloc",
+      "path": "/asan/dsr/bin/dd",
+      "reason": "coreutils dd requests aligned_alloc(4096, 1024) for the 1 KiB block size; C11 requires the size to be a multiple of the alignment, glibc tolerates it and ASan's aligned_alloc interceptor reports invalid-alignment. The helper generates test data and never touches the candidate, so it runs outside the ASan envelope."
+    }
+  },
+  "generator": "forensics/tools/asan_downstream.py",
+  "phase": 18,
+  "prefix": "/asan/install",
+  "rule": "The six sealed Phase-17 downstream consumers load the ASan-instrumented candidate DSOs (libcrypto.so.3/libssl.so.3) built into a dedicated prefix. The consumers are their Phase-17 builds, relocated at load time with LD_LIBRARY_PATH to that prefix and LD_PRELOAD of clang's dynamic ASan runtime; the consumers themselves are NOT instrumented, so the defect surface under test is the candidate. Zero ASan findings is the bar; a finding is a defect to attribute, not to hide. A clean run is a bounded observation, not a memory-safety proof.",
+  "runtime": "/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so",
+  "schema": "openssl-rs/phase18-asan-downstream/v1",
+  "summary": {
+    "clean": [
+      "curl",
+      "nginx",
+      "haproxy",
+      "git",
+      "python"
+    ],
+    "envelope_limited": [
+      "openssh"
+    ],
+    "run_failed": [],
+    "total_findings": 0,
+    "with_findings": []
+  }
+}
