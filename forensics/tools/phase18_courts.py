@@ -13,16 +13,44 @@ cannot drift. Where the subject is a `CT-*` secret-independence property the cou
 candidate-only and carries a sensitivity control instead (D13, D201), exactly as Phase 8's
 `CT-*` courts do.
 
+`RT-HOSTILE-TLS`, and what it drives
+------------------------------------
+18.1's court. Its instrument is `courts/phase18/rt_hostile_tls_probe.c`, compiled twice (once
+against the admitted authority's prefix, once against the candidate distribution shell). It reads
+`courts/phase18/fixtures/hostile-tls/`, the fixed malformed-input corpus
+`forensics/tools/gen_hostile_tls_corpus.py` writes, one file per entry named
+`<role>__<id>.bin`, and feeds each entry to the side that receives it: a `server` entry into
+`SSL_accept` (the ClientHello / record reader) and a `client` entry into `SSL_connect` (the
+ServerHello / flight reader), over a read-only memory BIO that reports EOF once the bytes are
+consumed. The corpus is a fixed enumeration — bogus record types, lengths and versions,
+truncated and oversized handshake headers, malformed ClientHello / ServerHello and
+`key_share` / `supported_versions` / ALPN / SNI / `signature_algorithms` extension bodies, bad
+CCS and bad Finished, length-mismatch records, and one well-formed control per role — not a
+fuzzer, and **not a coverage claim**: a surface no entry reaches is named in the court's row
+rather than counted as passing (section 3.1).
+
+Each entry runs in **its own forked child**, so a crash, an exhausted allocation budget or a
+non-terminating parse is a *recorded finding* for that entry rather than a harness abort
+(section 3.3): a child killed by a signal is `crash`, one that reports an allocation failure
+under the process's own `RLIMIT_DATA` is `oom`, and one that outlives the entry bound is killed
+and recorded `timeout`. The parent always exits 0 and prints one fixed-schema block per entry
+whether the child reported, crashed or timed out, so the two sides' observation counts agree and
+a missing entry cannot read as a silently shorter transcript. The authority differential control
+keeps the expectation honest (section 3.2): the corpus carries a well-formed ClientHello and the
+court fails if the *authority* does not parse it into a real handshake message, so the corpus
+cannot pass while having driven no valid input.
+
+Every candidate-vs-authority difference is *recorded* rather than failed — the reduced engine's
+dispositions legitimately differ from the authority's — which is why the verdict is `pass` when
+the corpus was driven, every candidate disposition was recorded, and the authority control held,
+**not** when nothing diverged. It is not a security proof and not a parity claim (section 3.6).
+
 The pending courts
 ------------------
-None of the five courts the plan names is runnable at activation. This stratum owns no exported
-symbol, so no differential probe over a symbol set is its evidence; its first runnable court is a
-later subphase's, and `COURTS` is therefore empty while `PENDING_COURTS` names each court with the
-subphase that lands its instrument:
+Four of the five courts the plan names are not runnable yet. `PENDING_COURTS` names each with the
+subphase that lands its instrument, so "not registered" is a stated distance rather than a court
+quietly dropped:
 
-  * `RT-HOSTILE-TLS` (18.1) — a hostile TLS corpus of malformed records, handshake messages and
-    extension bodies, driven through the record layer and the TLS 1.3 flight, with
-    crash/OOM/timeout detection and an authority-linked differential control;
   * `RT-HOSTILE-X509` (18.2) — a hostile X.509 / malformed-input corpus: certificates, extensions
     and DER/PEM containers with truncated, oversized and ill-formed encodings, with an
     authority-linked differential control;
@@ -45,6 +73,11 @@ SPDX-License-Identifier: Apache-2.0"""
 from __future__ import annotations
 
 import argparse
+import json
+import os
+import resource
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -57,28 +90,36 @@ from atlas_common import (  # noqa: E402
     envelope,
     rel,
     resolve_authority,
+    run,
+    sha256_file,
     write_json,
 )
+
+import gen_hostile_tls_corpus  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase18" / "COURTS.json"
 GENERATOR = "forensics/tools/phase18_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-18-SUBPHASES.md"
+PROBE_DIR = REPO_ROOT / "courts" / "phase18"
+FIXTURES = PROBE_DIR / "fixtures" / "hostile-tls"
+CORPUS_GENERATOR = REPO_ROOT / "forensics" / "tools" / "gen_hostile_tls_corpus.py"
+STAGED = REPO_ROOT / "artifacts" / "phase18" / "probes"
+PHASE2 = REPO_ROOT / "artifacts" / "phase2"
+AUTH_PREFIX = (REPO_ROOT / "forensics" / "authorities" / "prefix"
+               / "openssl-3.6.4-production")
+RUN_TIMEOUT_S = "300"
 
 # The courts, in the order they land. `(name, probe filename)`, and the probe is declared in the
 # same commit as the entry, so a runner that names a probe which does not exist cannot be
-# committed. **Empty at activation**: this stratum owns no symbol for a differential probe to
-# observe, so its first runnable instrument is a later subphase's.
-COURTS: list[tuple[str, str]] = []
+# committed.
+COURTS: list[tuple[str, str]] = [
+    ("RT-HOSTILE-TLS", "rt_hostile_tls_probe.c"),
+]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
 # the instrument and what the court will drive, so "nothing registered" is a stated distance
 # rather than a court quietly dropped.
 PENDING_COURTS: dict[str, str] = {
-    "RT-HOSTILE-TLS": (
-        "18.1 lands the corpus and its driver; it drives malformed records, handshake messages "
-        "and extension bodies through the record layer and the TLS 1.3 flight with "
-        "crash/OOM/timeout detection and an authority-linked differential control"
-    ),
     "RT-HOSTILE-X509": (
         "18.2 lands the corpus; it drives truncated, oversized and ill-formed certificates, "
         "extensions and DER/PEM containers with an authority-linked differential control"
@@ -97,6 +138,287 @@ PENDING_COURTS: dict[str, str] = {
     ),
 }
 
+# The entry whose authority disposition proves the corpus drove a real parser rather than only
+# rejecting. The plan requires the differential control to keep the expectation honest (section
+# 3.2); this is the arm that fails if it cannot.
+CONTROL_ENTRY = "ch-min-valid"
+CONTROL_CLASSES = ("parse",)
+HOSTILE_CLASSES = ("crash", "oom", "timeout")
+
+
+def side_env(libdir: Path, modulesdir: Path) -> dict[str, str]:
+    """The environment a probe runs under on one side.
+
+    `OPENSSL_MODULES` points at that side's own `ossl-modules/`; `LD_LIBRARY_PATH` fixes the DSO
+    the probe resolves against, and `OPENSSL_CONF=/dev/null` keeps the host's configuration out of
+    a deterministic transcript.
+    """
+    env = dict(os.environ)
+    env["LD_LIBRARY_PATH"] = str(libdir)
+    env["OPENSSL_MODULES"] = str(modulesdir)
+    env["OPENSSL_CONF"] = "/dev/null"
+    env.pop("OPENSSL_CONF_INCLUDE", None)
+    return env
+
+
+def run_probe(binary: Path, env: dict[str, str]) -> tuple[str, str, int | None]:
+    """Run one side's probe and decode its transcript, tolerating a signal or a timeout."""
+    proc = subprocess.run(
+        ["timeout", RUN_TIMEOUT_S, str(binary)],
+        env=env,
+        capture_output=True,
+        check=False,
+    )
+    code = proc.returncode
+    out = proc.stdout.decode("latin-1")
+    err = proc.stderr.decode("latin-1")
+    if code == 124:
+        return out, err, None
+    return out, err, code
+
+
+def compile_probe(src: Path, out: Path, include: Path, libdir: Path) -> tuple[bool, str]:
+    """Compile one side's C probe against that side's headers and shared objects.
+
+    The method is Phase 17's: the same source compiles twice, once against the admitted
+    authority's prefix and once against the candidate distribution shell, so the comparison is
+    between two executions of one program.
+    """
+    res = run([
+        "clang", "-std=c11", "-Wall", "-Werror=implicit-function-declaration", "-O1",
+        "-D_GNU_SOURCE",
+        "-I", str(include),
+        "-o", str(out), str(src),
+        "-L", str(libdir), "-lssl", "-lcrypto",
+        f"-Wl,-rpath,{libdir}",
+    ])
+    return res.ok, res.stderr.strip()
+
+
+def keyed(text: str) -> dict[str, str]:
+    """The `key=value` observations, keyed for a line-independent comparison."""
+    values: dict[str, str] = {}
+    for line in text.splitlines():
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        values[key] = value
+    return values
+
+
+def _class_of(values: dict[str, str], entry: str) -> str | None:
+    return values.get(f"entry.{entry}.class")
+
+
+def _entry_ids(values: dict[str, str]) -> set[str]:
+    ids: set[str] = set()
+    for key in values:
+        if key.startswith("entry.") and key.endswith(".class"):
+            ids.add(key[len("entry."):-len(".class")])
+    return ids
+
+
+def residual_rows(a: dict[str, str], c: dict[str, str]) -> list[dict]:
+    """Every observation that differs between the two sides, classified by its kind.
+
+    The comparison is keyed rather than line-wise, so a missing or extra key is one residual
+    instead of a cascade. A residual on an entry either side recorded as `crash`/`oom`/`timeout`
+    is a `hostile` residual -- the finding the court must record honestly -- and every other is a
+    `value`, `missing` or `extra` divergence.
+    """
+    rows: list[dict] = []
+    for key in sorted(set(a) | set(c)):
+        av, cv = a.get(key), c.get(key)
+        if av == cv:
+            continue
+        entry = ""
+        if key.startswith("entry."):
+            entry = key[len("entry."):].split(".", 1)[0]
+        a_class, c_class = _class_of(a, entry), _class_of(c, entry)
+        hostile = (a_class in HOSTILE_CLASSES or c_class in HOSTILE_CLASSES)
+        if key not in c:
+            cls = "missing"
+        elif key not in a:
+            cls = "extra"
+        else:
+            cls = "hostile" if hostile else "value"
+        rows.append({
+            "observation": key,
+            "authority": av,
+            "candidate": cv,
+            "class": cls,
+        })
+    return rows
+
+
+def findings_of(side: str, values: dict[str, str], corpus_ids: list[str]) -> dict:
+    """The crash/oom/timeout findings for one side, per section 3.3.
+
+    A finding is a *recorded* entry, not an abort: its entry id, its class and its signal (for a
+    crash) and the disposition fields that survived are kept so the court can report it and the
+    corpus can continue.
+    """
+    out: dict[str, list[dict]] = {"crash": [], "oom": [], "timeout": []}
+    for entry in corpus_ids:
+        cls = _class_of(values, entry)
+        if cls in HOSTILE_CLASSES:
+            out[cls].append({
+                "entry": entry,
+                "role": values.get(f"entry.{entry}.role", ""),
+                "signal": values.get(f"entry.{entry}.signal", ""),
+            })
+    return out
+
+
+def hostile_tls_court(name: str, src: Path, auth, work: Path) -> dict:
+    """`RT-HOSTILE-TLS`: the fixed malformed-input corpus, differentially, with findings.
+
+    Returns a `pass` record when the corpus was driven on both sides, every entry's candidate
+    disposition was recorded, and the authority differential control held; the candidate-vs-
+    authority differences and any crash/oom/timeout findings are recorded in the row, not failed.
+    """
+    problems = gen_hostile_tls_corpus.verify()
+    if problems:
+        return {"court": name, "verdict": "fail", "stage": "corpus",
+                "detail": problems[:8]}
+    body = gen_hostile_tls_corpus.manifest()
+    corpus_ids = [e["id"] for e in body["entries"]]
+
+    auth_bin = work / f"{src.stem}.authority"
+    cand_bin = work / f"{src.stem}.candidate"
+    ok, err = compile_probe(src, auth_bin, auth.prefix / "include", auth.libdir)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-authority",
+                "detail": err.splitlines()[:12]}
+    ok, err = compile_probe(src, cand_bin, PHASE2 / "include", PHASE2)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-candidate",
+                "detail": err.splitlines()[:12]}
+
+    a_out, a_err, a_code = run_probe(
+        auth_bin, side_env(auth.libdir, auth.libdir / "ossl-modules"))
+    c_out, c_err, c_code = run_probe(
+        cand_bin, side_env(PHASE2, PHASE2 / "install" / "lib" / "ossl-modules"))
+
+    if not a_out.strip():
+        return {"court": name, "verdict": "fail", "stage": "authority-run",
+                "detail": {"exit_code": a_code, "stderr": a_err.splitlines()[:12]}}
+    if not c_out.strip():
+        return {"court": name, "verdict": "fail", "stage": "candidate-run",
+                "detail": {"exit_code": c_code, "stderr": c_err.splitlines()[:12]}}
+
+    a_vals, c_vals = keyed(a_out), keyed(c_out)
+    residuals = residual_rows(a_vals, c_vals)
+    findings = {
+        "authority": findings_of("authority", a_vals, corpus_ids),
+        "candidate": findings_of("candidate", c_vals, corpus_ids),
+    }
+
+    a_driven = _entry_ids(a_vals)
+    c_driven = _entry_ids(c_vals)
+    a_control = {
+        "class": _class_of(a_vals, CONTROL_ENTRY),
+        "out_bytes": a_vals.get(f"entry.{CONTROL_ENTRY}.out_bytes"),
+        "out_first": a_vals.get(f"entry.{CONTROL_ENTRY}.out_first"),
+    }
+    c_control = {
+        "class": _class_of(c_vals, CONTROL_ENTRY),
+        "out_bytes": c_vals.get(f"entry.{CONTROL_ENTRY}.out_bytes"),
+        "out_first": c_vals.get(f"entry.{CONTROL_ENTRY}.out_first"),
+    }
+
+    # The corpus is driven when every manifest entry got a class on both sides; the authority
+    # control is honest when the *authority* parsed the well-formed ClientHello into a real
+    # handshake record (not only a two-byte alert), and when the authority itself suffered no
+    # hostile finding -- a control that cannot fail is not evidence (section 3.2).
+    a_out_bytes = int(a_control["out_bytes"] or "0")
+    control_ok = (
+        a_control["class"] in CONTROL_CLASSES
+        and a_out_bytes > 7
+        and a_control["out_first"] == "2"
+        and not any(findings["authority"][k] for k in HOSTILE_CLASSES)
+        and c_control["class"] in CONTROL_CLASSES
+    )
+    driven_ok = (a_driven == set(corpus_ids) and c_driven == set(corpus_ids))
+
+    if not driven_ok:
+        missing_a = sorted(set(corpus_ids) - a_driven)
+        missing_c = sorted(set(corpus_ids) - c_driven)
+        problems = []
+        if missing_a:
+            problems.append(f"authority did not drive: {missing_a[:8]}")
+        if missing_c:
+            problems.append(f"candidate did not drive: {missing_c[:8]}")
+    else:
+        problems = []
+
+    staged: dict[str, str] = {}
+    STAGED.mkdir(parents=True, exist_ok=True)
+    for side, srcbin in (("authority", auth_bin), ("candidate", cand_bin)):
+        dst = STAGED / f"{src.stem}.{side}"
+        if srcbin.is_file():
+            shutil.copyfile(srcbin, dst)
+            dst.chmod(0o755)
+            staged[side] = rel(dst)
+
+    # A reduced engine's dispositions differ from the authority's, so a difference is recorded
+    # rather than failed. The `residuals` list is deliberately the hostile *class* differences
+    # (which would be failures if unanalysed) plus the counted sample; the full divergence set is
+    # summarised by `residual_count` and the bounded `recorded_divergences` sample.
+    divergent = [r for r in residuals if r["class"] != "hostile"]
+    hostile = [r for r in residuals if r["class"] == "hostile"]
+
+    verdict = "pass" if (driven_ok and control_ok) else "fail"
+    rlimit_data = resource.getrlimit(resource.RLIMIT_DATA)[0]
+    cgroup_max = None
+    try:
+        cgroup_max = int(Path("/sys/fs/cgroup/memory.max").read_text().strip())
+    except (OSError, ValueError):
+        cgroup_max = None
+
+    return {
+        "court": name,
+        "probe": rel(src),
+        "corpus": {
+            "path": rel(FIXTURES),
+            "manifest": rel(gen_hostile_tls_corpus.MANIFEST),
+            "manifest_sha256": sha256_file(gen_hostile_tls_corpus.MANIFEST),
+            "generator": rel(CORPUS_GENERATOR),
+            "entries": body["counts"]["entries"],
+            "total_bytes": body["counts"]["total_bytes"],
+            "by_category": body["counts"]["by_category"],
+            "by_role": body["counts"]["by_role"],
+        },
+        "authority_exit_code": a_code,
+        "candidate_exit_code": c_code,
+        "authority_observations": len([l for l in a_out.splitlines() if "=" in l]),
+        "candidate_observations": len([l for l in c_out.splitlines() if "=" in l]),
+        "entries_driven": {
+            "corpus": len(corpus_ids),
+            "authority": len(a_driven),
+            "candidate": len(c_driven),
+        },
+        "control": {"entry": CONTROL_ENTRY, "authority": a_control, "candidate": c_control,
+                    "honest": control_ok},
+        "findings": findings,
+        "findings_count": {side: {k: len(v) for k, v in findings[side].items()}
+                           for side in findings},
+        "residual_count": len(residuals),
+        "residuals": hostile,
+        "hostile_residual_count": len(hostile),
+        "recorded_divergences": divergent[:48],
+        "recorded_divergence_count": len(divergent),
+        "problems": problems,
+        "bounds": {
+            "rlimit_data_kib": None if rlimit_data == resource.RLIM_INFINITY else rlimit_data,
+            "cgroup_memory_max_bytes": cgroup_max,
+            "entry_timeout_ms": 4000,
+        },
+        "verdict": verdict,
+        "staged_binaries": staged,
+        "candidate_stderr_tail": c_err.splitlines()[-3:],
+    }
+
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -108,48 +430,92 @@ def main(argv: list[str]) -> int:
     work = REPO_ROOT / "court" / "phase18"
     work.mkdir(parents=True, exist_ok=True)
 
-    # No court is runnable at activation, so the registry is empty and every planned court is
-    # `pending`. The runner still has to exist and write this file: `run_courts.py` refuses a
-    # stratum in `in-progress` with no runner, and a committed courts file no run reproduces.
     records: list[dict] = []
+    for name, filename in COURTS:
+        src = PROBE_DIR / filename
+        if not src.is_file():
+            records.append({"court": name, "verdict": "fail",
+                            "stage": "probe-missing", "detail": rel(src)})
+            continue
+        records.append(hostile_tls_court(name, src, auth, work))
 
     passed = sum(1 for r in records if r["verdict"] == "pass")
+    failed = sum(1 for r in records if r["verdict"] == "fail")
     body = {
-        "all_pass": passed == len(records),
+        "all_pass": failed == 0 and len(records) == len(COURTS),
         "authority": auth.id,
         "courts": records,
-        "summary": {"total": len(records), "pass": passed, "fail": len(records) - passed},
+        "summary": {"total": len(records), "pass": passed, "fail": failed},
         "pending_courts": PENDING_COURTS,
         "claim": (
-            "Phase 18's five courts are named and `pending`; none is registered as passing at "
-            "activation. `RT-HOSTILE-TLS` is 18.1's: a hostile corpus of malformed records, "
-            "handshake messages and extension bodies, driven through the record layer and the "
-            "TLS 1.3 flight with crash/OOM/timeout detection and an authority-linked differential "
-            "control. `RT-HOSTILE-X509` is 18.2's: a hostile X.509 / malformed-input corpus of "
-            "truncated, oversized and ill-formed certificates, extensions and DER/PEM containers, "
-            "with an authority-linked differential control. `CT-PRIMITIVES` is 18.3's: "
-            "secret-independence checks over the primitive-bearing paths (BN, RSA, EC, the AEADs "
-            "and the TLS key schedule), with a sensitivity control that a deliberate "
-            "branch-on-secret is caught. `RT-MEM-HARDENING` is 18.4's: memory-safety and "
-            "resource-exhaustion hardening for the reduced engine's fixed buffers and its "
-            "allocation-failure paths, with an injected-failure control. "
-            "`HOSTILE-BOUNDARY-REGISTER` is 18.5's: the register of what is hardened, what is "
-            "measured and what is explicitly not claimed. This stratum owns no exported symbol, "
-            "so no differential probe over a symbol set is its evidence: the subject is a hostile "
-            "input against a finished implementation. docs/PHASE-18-SUBPHASES.md sections 1, 3 "
-            "and 4 record the measurement and the courts."
+            "`RT-HOSTILE-TLS` is 18.1's court: it compiles "
+            "courts/phase18/rt_hostile_tls_probe.c twice (authority and candidate) and drives the "
+            "fixed malformed-input corpus courts/phase18/fixtures/hostile-tls/ -- one file per "
+            "entry, `<role>__<id>.bin` -- through the real record layer and the TLS 1.3 flight. A "
+            "`server` entry is fed into SSL_accept (the ClientHello / record reader) and a "
+            "`client` entry into SSL_connect (the ServerHello / flight reader) over a read-only "
+            "memory BIO that reports EOF. The corpus enumerates bogus record types, lengths and "
+            "versions, truncated and oversized handshake headers, malformed ClientHello / "
+            "ServerHello and key_share / supported_versions / ALPN / SNI / signature_algorithms "
+            "extension bodies, bad CCS and bad Finished, length-mismatch records, and well-formed "
+            "controls; it is a fixed enumeration, not a fuzzer, and not a coverage claim. Each "
+            "entry runs in its own forked child, so a crash (a signal), an OOM (an allocation "
+            "failure under the process's RLIMIT_DATA) or a timeout is a recorded finding rather "
+            "than a harness abort (section 3.3), and the fixed-schema transcript keeps the two "
+            "sides' observation counts equal. The court compares every entry's authority and "
+            "candidate dispositions and records each difference rather than failing it, because "
+            "the reduced engine legitimately differs; it is `pass` only when the corpus was "
+            "driven on both sides, every candidate disposition was recorded, and the authority "
+            "differential control held -- the authority parsed the well-formed control "
+            "ClientHello into a real handshake record and itself suffered no hostile finding "
+            "(section 3.2). It is a bounded differential result over the corpus it drives, not a "
+            "security proof and not a parity claim (sections 3.1 and 3.6). "
+            "`RT-HOSTILE-X509` is 18.2's: a hostile X.509 / malformed-input corpus of truncated, "
+            "oversized and ill-formed certificates, extensions and DER/PEM containers, with an "
+            "authority-linked differential control. `CT-PRIMITIVES` is 18.3's: secret-independence "
+            "checks over the primitive-bearing paths (BN, RSA, EC, the AEADs and the TLS key "
+            "schedule), with a sensitivity control that a deliberate branch-on-secret is caught. "
+            "`RT-MEM-HARDENING` is 18.4's: memory-safety and resource-exhaustion hardening for the "
+            "reduced engine's fixed buffers and its allocation-failure paths, with an "
+            "injected-failure control. `HOSTILE-BOUNDARY-REGISTER` is 18.5's: the register of what "
+            "is hardened, what is measured and what is explicitly not claimed, which fails the "
+            "stratum if a recorded boundary drifts from its evidence. This stratum owns no "
+            "exported symbol, so no differential probe over a symbol set is its evidence: the "
+            "subject is a hostile input against a finished implementation. "
+            "docs/PHASE-18-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts."
         ),
     }
 
     inputs = [
         InputRef(name="phase-18-plan", path=PLAN),
+        InputRef(name="corpus-generator", path=CORPUS_GENERATOR),
+        InputRef(name="corpus-manifest", path=gen_hostile_tls_corpus.MANIFEST),
+        InputRef(name="hostile-tls-probe", path=PROBE_DIR / "rt_hostile_tls_probe.c"),
+        # The fixed Phase 17 fixtures the server context loads to reach the ServerHello.
+        InputRef(name="tls-signer", path=REPO_ROOT / "courts" / "phase17" / "fixtures"
+                 / "signer.pem"),
+        InputRef(name="tls-key", path=REPO_ROOT / "courts" / "phase17" / "fixtures"
+                 / "rsa-key.pem"),
     ]
     doc = envelope(kind="phase18-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
 
-    for name, needs in PENDING_COURTS.items():
-        print(f"  {name:<26} PENDING (not registered as passing) -- {needs}")
+    for r in records:
+        if r["verdict"] == "pass":
+            c = r["corpus"]
+            f = r["findings_count"]
+            print(f"  {r['court']:<18} pass   ({r['authority_observations']} observations, "
+                  f"{r['entries_driven']['corpus']} entries, {c['total_bytes']} corpus bytes, "
+                  f"{r['recorded_divergence_count']} recorded divergence(s), "
+                  f"findings a={f['authority']} c={f['candidate']})")
+        else:
+            print(f"  {r['court']:<18} FAIL   stage={r.get('stage', 'compare')}")
+            for p in (r.get("detail") if isinstance(r.get("detail"), list)
+                      else r.get("problems", []))[:12]:
+                print(f"      {p}")
+    for cname, needs in PENDING_COURTS.items():
+        print(f"  {cname:<26} PENDING (not registered as passing) -- {needs}")
     print(f"  -> {rel(OUT)} all_pass={body['all_pass']} over {len(records)} court(s)")
     return 0 if body["all_pass"] else 1
 

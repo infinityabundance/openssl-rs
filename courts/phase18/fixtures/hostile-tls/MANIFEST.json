@@ -1,0 +1,816 @@
+{
+  "body": {
+    "counts": {
+      "by_category": {
+        "clienthello": 14,
+        "control": 6,
+        "extension": 29,
+        "handshake": 9,
+        "record": 20,
+        "serverhello": 9
+      },
+      "by_role": {
+        "client": 10,
+        "server": 77
+      },
+      "entries": 87,
+      "total_bytes": 5072
+    },
+    "entries": [
+      {
+        "bytes": 117,
+        "category": "control",
+        "description": "a well-formed TLS 1.3 ClientHello (supported_versions/key_share/signature_algorithms); the authority differential control",
+        "file": "server__ch-min-valid.bin",
+        "id": "ch-min-valid",
+        "role": "server",
+        "sha256": "2981758f6dc18964a2b2a4614aaa81f3f600cb08d13e9dd1c440686ea902c1f6"
+      },
+      {
+        "bytes": 117,
+        "category": "control",
+        "description": "the same ClientHello under a 0x0303 record version",
+        "file": "server__ch-min-valid-rec0303.bin",
+        "id": "ch-min-valid-rec0303",
+        "role": "server",
+        "sha256": "59b6bb6d3602c472617661cc8381c135020feefd042c3a8d39092ae90a24f0a8"
+      },
+      {
+        "bytes": 117,
+        "category": "control",
+        "description": "the same ClientHello under a 0x0301 record version",
+        "file": "server__ch-min-valid-rec0301.bin",
+        "id": "ch-min-valid-rec0301",
+        "role": "server",
+        "sha256": "2981758f6dc18964a2b2a4614aaa81f3f600cb08d13e9dd1c440686ea902c1f6"
+      },
+      {
+        "bytes": 75,
+        "category": "control",
+        "description": "a ClientHello with supported_versions/supported_groups/signature_algorithms but no key_share (the HelloRetryRequest path)",
+        "file": "server__ch-no-key-share.bin",
+        "id": "ch-no-key-share",
+        "role": "server",
+        "sha256": "079a73b6cf21bcdbf9777517c4ec4c906561cc88ca6421ea0db400d8b3cdc201"
+      },
+      {
+        "bytes": 122,
+        "category": "control",
+        "description": "the same well-formed ClientHello split across two plaintext records",
+        "file": "server__ch-split-record.bin",
+        "id": "ch-split-record",
+        "role": "server",
+        "sha256": "81ec724a07e00d475279850fe417969410b0980ae30012911e595a7671160eee"
+      },
+      {
+        "bytes": 95,
+        "category": "control",
+        "description": "a structurally well-formed TLS 1.3 ServerHello (supported_versions/key_share), as a client receives it",
+        "file": "client__sh-valid-ish.bin",
+        "id": "sh-valid-ish",
+        "role": "client",
+        "sha256": "f6bb15bf0edfb09d19c7007dfa5552be60cc021f9d0b866674e878076fd978a8"
+      },
+      {
+        "bytes": 0,
+        "category": "record",
+        "description": "a zero-byte record",
+        "file": "server__record-empty.bin",
+        "id": "record-empty",
+        "role": "server",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "bytes": 1,
+        "category": "record",
+        "description": "one byte of a record header",
+        "file": "server__record-trunc-1.bin",
+        "id": "record-trunc-1",
+        "role": "server",
+        "sha256": "7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba"
+      },
+      {
+        "bytes": 4,
+        "category": "record",
+        "description": "four bytes of a record header",
+        "file": "server__record-trunc-4.bin",
+        "id": "record-trunc-4",
+        "role": "server",
+        "sha256": "a2f2c9cfe8910cb3b9fdcdd084567c252c91038c3fd5a22cf04b6a0007508097"
+      },
+      {
+        "bytes": 5,
+        "category": "record",
+        "description": "record type 0xff",
+        "file": "server__record-type-ff.bin",
+        "id": "record-type-ff",
+        "role": "server",
+        "sha256": "8f7491975bc9e807097d191a08c575f19982d329aa6293d234a88e0d82035d8c"
+      },
+      {
+        "bytes": 5,
+        "category": "record",
+        "description": "record type 0x00",
+        "file": "server__record-type-00.bin",
+        "id": "record-type-00",
+        "role": "server",
+        "sha256": "a422d1510c4f5b3245eee255527dccb95c904ecf37af5503dec2249091d40ccc"
+      },
+      {
+        "bytes": 46,
+        "category": "record",
+        "description": "an SSLv2 ClientHello (first byte has the high bit set)",
+        "file": "server__record-ssl2.bin",
+        "id": "record-ssl2",
+        "role": "server",
+        "sha256": "b98d36f20b85e913bd7a6b121ee13405dcc7c8bd4e086470a521bb20573e677e"
+      },
+      {
+        "bytes": 117,
+        "category": "record",
+        "description": "record version 0x0200 (SSLv2)",
+        "file": "server__record-version-0200.bin",
+        "id": "record-version-0200",
+        "role": "server",
+        "sha256": "21e822ec18447f124df26228fb78b248f22680f0c13a47da44656e83268d97f9"
+      },
+      {
+        "bytes": 117,
+        "category": "record",
+        "description": "record version 0xffff",
+        "file": "server__record-version-ffff.bin",
+        "id": "record-version-ffff",
+        "role": "server",
+        "sha256": "b097c56305ab4d1d4d735a77f36e26ea659bcf4c0d4521c8a93c1e31b1cf7be9"
+      },
+      {
+        "bytes": 5,
+        "category": "record",
+        "description": "record declaring length 0",
+        "file": "server__record-len-zero.bin",
+        "id": "record-len-zero",
+        "role": "server",
+        "sha256": "7fef6d539105304918d41df4272f4af012f3cb5db8f0f5817aaf0ab2c79e2e3f"
+      },
+      {
+        "bytes": 10,
+        "category": "record",
+        "description": "record declaring length 100 over a 5-byte body",
+        "file": "server__record-len-short.bin",
+        "id": "record-len-short",
+        "role": "server",
+        "sha256": "0715ecc017c6c6cd991aa0760b5aee2d68f660601b70347def3280c76432329c"
+      },
+      {
+        "bytes": 21,
+        "category": "record",
+        "description": "record declaring 16385 bytes (one over the plaintext maximum)",
+        "file": "server__record-len-over-max.bin",
+        "id": "record-len-over-max",
+        "role": "server",
+        "sha256": "b05ac6c35d59ddf4c4f8a0bb58285502209f35878f5968403d08a076ca6d33cd"
+      },
+      {
+        "bytes": 37,
+        "category": "record",
+        "description": "record declaring 65535 bytes over a 32-byte body",
+        "file": "server__record-len-huge.bin",
+        "id": "record-len-huge",
+        "role": "server",
+        "sha256": "62b3f3abb3bae8ae41bfcedcce55e380b4deaf4b6633bedccf74b054b3b39abf"
+      },
+      {
+        "bytes": 10,
+        "category": "record",
+        "description": "an application-data record before the handshake",
+        "file": "server__record-appdata-first.bin",
+        "id": "record-appdata-first",
+        "role": "server",
+        "sha256": "420646927fd535a5dc539feef077c27d368b9222a411cd866bb6a0e6f2bd21aa"
+      },
+      {
+        "bytes": 7,
+        "category": "record",
+        "description": "an alert record before the handshake",
+        "file": "server__record-alert-first.bin",
+        "id": "record-alert-first",
+        "role": "server",
+        "sha256": "c29a73f289598bf8a30a3e10ccfc7b981dd824f11838b3149c9a71cffe4670bd"
+      },
+      {
+        "bytes": 7,
+        "category": "record",
+        "description": "an alert record with bogus level/description",
+        "file": "server__record-alert-bad.bin",
+        "id": "record-alert-bad",
+        "role": "server",
+        "sha256": "b2c3e65a6f47755f2957bcd9e5a2ed89f3b5391a4827d9b6902575d95ad5813a"
+      },
+      {
+        "bytes": 6,
+        "category": "record",
+        "description": "a ChangeCipherSpec record before the handshake (the middlebox path)",
+        "file": "server__record-ccs-first.bin",
+        "id": "record-ccs-first",
+        "role": "server",
+        "sha256": "d1774c31f81e6a3d13089a34305b3663334ac79cbf358c7572a5fe5f47e36c1c"
+      },
+      {
+        "bytes": 7,
+        "category": "record",
+        "description": "a CCS record whose body is two bytes",
+        "file": "server__record-ccs-badlen.bin",
+        "id": "record-ccs-badlen",
+        "role": "server",
+        "sha256": "1e76dbc78733928a0bfd56c1d88a434199592f8a7467fbef50951fb59ef0ec9a"
+      },
+      {
+        "bytes": 6,
+        "category": "record",
+        "description": "a CCS record under version 0x0301",
+        "file": "server__record-ccs-badver.bin",
+        "id": "record-ccs-badver",
+        "role": "server",
+        "sha256": "28833aeeba61db1e70c2c08b974f59d3661e0777972d8c74e1690f2b6648d3c5"
+      },
+      {
+        "bytes": 6,
+        "category": "record",
+        "description": "a CCS record whose body is 0x02",
+        "file": "server__record-ccs-badvalue.bin",
+        "id": "record-ccs-badvalue",
+        "role": "server",
+        "sha256": "2e3efebacf83cf1e9511d3273375363c5955d406adda183c8abaa84e12e1a6b4"
+      },
+      {
+        "bytes": 8,
+        "category": "record",
+        "description": "a heartbeat record before the handshake",
+        "file": "server__record-heartbeat-first.bin",
+        "id": "record-heartbeat-first",
+        "role": "server",
+        "sha256": "47c0edf34e60ee4c74060ce4a8d888aab57f1a1e73e85ca356565a8efabba443"
+      },
+      {
+        "bytes": 6,
+        "category": "handshake",
+        "description": "a handshake header of one byte",
+        "file": "server__hs-trunc-hdr-1.bin",
+        "id": "hs-trunc-hdr-1",
+        "role": "server",
+        "sha256": "768f6e38c9ef7531dd82a00be1e37496b8dca8dcbb4f91e3667e35f5838da93b"
+      },
+      {
+        "bytes": 8,
+        "category": "handshake",
+        "description": "a handshake header of three bytes",
+        "file": "server__hs-trunc-hdr-3.bin",
+        "id": "hs-trunc-hdr-3",
+        "role": "server",
+        "sha256": "88e362942f559c54a3363a3964958aec6e2cdd50bdf9a8479ab064be92eee5de"
+      },
+      {
+        "bytes": 117,
+        "category": "handshake",
+        "description": "a ClientHello whose handshake length is four bytes short",
+        "file": "server__hs-len-mismatch-short.bin",
+        "id": "hs-len-mismatch-short",
+        "role": "server",
+        "sha256": "b8a2892b0f880c87c07a0a22dde506b0c0ea75718478f8e4b542ad32b35db7af"
+      },
+      {
+        "bytes": 117,
+        "category": "handshake",
+        "description": "a ClientHello whose handshake length runs past the record",
+        "file": "server__hs-len-mismatch-long.bin",
+        "id": "hs-len-mismatch-long",
+        "role": "server",
+        "sha256": "d6480067436466d17eb64bcf311fcb9f04da16d1da5998292cd1ff54b3c832f2"
+      },
+      {
+        "bytes": 25,
+        "category": "handshake",
+        "description": "a handshake length of 0xffffff over 16 bytes",
+        "file": "server__hs-len-huge.bin",
+        "id": "hs-len-huge",
+        "role": "server",
+        "sha256": "6c3d4e159412614a22e64387571f381ade521e5555fe1cd3f941e41969f682fc"
+      },
+      {
+        "bytes": 41,
+        "category": "handshake",
+        "description": "a Finished message before the handshake",
+        "file": "server__hs-type-finished-first.bin",
+        "id": "hs-type-finished-first",
+        "role": "server",
+        "sha256": "17d759fd26123a421edf95864a07a60615008bf6109358b411b4601c5796be7b"
+      },
+      {
+        "bytes": 17,
+        "category": "handshake",
+        "description": "an unknown handshake type 0xff",
+        "file": "server__hs-type-unknown.bin",
+        "id": "hs-type-unknown",
+        "role": "server",
+        "sha256": "7c396e5f3340214881d22d347b35ba1790d2a5e6c8273980aea9abb576a2dd41"
+      },
+      {
+        "bytes": 49,
+        "category": "handshake",
+        "description": "a ServerHello offered to a server",
+        "file": "server__hs-type-serverhello.bin",
+        "id": "hs-type-serverhello",
+        "role": "server",
+        "sha256": "5e570f164ad37f705ab08ca886f2067f402dc3ffaa0d14b7913a4cb062448a0a"
+      },
+      {
+        "bytes": 153,
+        "category": "handshake",
+        "description": "a well-formed ClientHello followed by a Finished in one record",
+        "file": "server__hs-two-in-one-record.bin",
+        "id": "hs-two-in-one-record",
+        "role": "server",
+        "sha256": "29af257cd5086ba4d4da45df8893da1fd0a618f82557cd9fa6cfaf6619f044bd"
+      },
+      {
+        "bytes": 10,
+        "category": "clienthello",
+        "description": "a ClientHello truncated inside legacy_version",
+        "file": "server__ch-trunc-version.bin",
+        "id": "ch-trunc-version",
+        "role": "server",
+        "sha256": "77b1cc5844f35e96723b7ea7687f15785501c24eac7ed73c2fd9d09081312f9c"
+      },
+      {
+        "bytes": 21,
+        "category": "clienthello",
+        "description": "a ClientHello truncated inside the random",
+        "file": "server__ch-trunc-random.bin",
+        "id": "ch-trunc-random",
+        "role": "server",
+        "sha256": "ed5282cb6ef01eaef78310b903c0258e9c52e4c1ea5bb27014b70e7ee514d9cf"
+      },
+      {
+        "bytes": 43,
+        "category": "clienthello",
+        "description": "a ClientHello truncated before the session-id length",
+        "file": "server__ch-trunc-sidlen.bin",
+        "id": "ch-trunc-sidlen",
+        "role": "server",
+        "sha256": "26921e9bd7f3fe319fa7065d9435003abb2c1ab45ede43c0a138d57fbc6220ac"
+      },
+      {
+        "bytes": 52,
+        "category": "clienthello",
+        "description": "a session-id length of 200 with 8 bytes",
+        "file": "server__ch-sid-overrun.bin",
+        "id": "ch-sid-overrun",
+        "role": "server",
+        "sha256": "df7e2a1dafd82655c858f671e5994e80fd3df49473bd9a33d906cfa16a4b35b9"
+      },
+      {
+        "bytes": 48,
+        "category": "clienthello",
+        "description": "a cipher-suite vector length of 0xff00 with one suite",
+        "file": "server__ch-ciphers-len-overrun.bin",
+        "id": "ch-ciphers-len-overrun",
+        "role": "server",
+        "sha256": "adfc26e68ccf3a9be3fb41f50de79afd3067a478dbf9eb5dda40d2823cd90813"
+      },
+      {
+        "bytes": 115,
+        "category": "clienthello",
+        "description": "a cipher-suite vector of length 0",
+        "file": "server__ch-ciphers-empty.bin",
+        "id": "ch-ciphers-empty",
+        "role": "server",
+        "sha256": "54a5506f0d29319ce6472012ba00f8a7e657fa5779dc58950a24be2320d02ec2"
+      },
+      {
+        "bytes": 47,
+        "category": "clienthello",
+        "description": "a cipher-suite vector of odd length",
+        "file": "server__ch-ciphers-odd.bin",
+        "id": "ch-ciphers-odd",
+        "role": "server",
+        "sha256": "a7e5de3ea44435195e0a8af3946723fed84bba422a4acc8beb95b7386582bd5f"
+      },
+      {
+        "bytes": 57,
+        "category": "clienthello",
+        "description": "a compression-methods length past the record",
+        "file": "server__ch-comp-overrun.bin",
+        "id": "ch-comp-overrun",
+        "role": "server",
+        "sha256": "c869284de33ce6679edcf51f4401ccec2051c76cc0fe8c4b3edfcdbd80a418b1"
+      },
+      {
+        "bytes": 116,
+        "category": "clienthello",
+        "description": "a compression-methods vector of length 0",
+        "file": "server__ch-comp-empty.bin",
+        "id": "ch-comp-empty",
+        "role": "server",
+        "sha256": "390b819685aa8cafc18d587ada405f8866c7c865b31bb5fadd85bd1c3e905706"
+      },
+      {
+        "bytes": 182,
+        "category": "clienthello",
+        "description": "a ClientHello whose extensions total length runs past the record",
+        "file": "server__ch-ext-len-overrun.bin",
+        "id": "ch-ext-len-overrun",
+        "role": "server",
+        "sha256": "bfa9d511a36b71d6c53a9c6000537ce69f444cd411c6186bbcdbb8a0db9b040f"
+      },
+      {
+        "bytes": 54,
+        "category": "clienthello",
+        "description": "a TLS 1.2-style ClientHello with no extensions",
+        "file": "server__ch-no-extensions.bin",
+        "id": "ch-no-extensions",
+        "role": "server",
+        "sha256": "fcf566cd3d43cffa310600f0c3053f37f5d668084cd5694e5de37d76316c81ad"
+      },
+      {
+        "bytes": 117,
+        "category": "clienthello",
+        "description": "a ClientHello with legacy_version 0x0304",
+        "file": "server__ch-legacy-0304.bin",
+        "id": "ch-legacy-0304",
+        "role": "server",
+        "sha256": "dceb8263cc9f7f8eca716da15b4e38b6402e5afce6019b132a10420211bed609"
+      },
+      {
+        "bytes": 117,
+        "category": "clienthello",
+        "description": "a ClientHello with legacy_version 0x0000",
+        "file": "server__ch-legacy-0000.bin",
+        "id": "ch-legacy-0000",
+        "role": "server",
+        "sha256": "c8fef132c0747d7c07334098ea862ec91aa8f10ba434d1812ab7c56101c03205"
+      },
+      {
+        "bytes": 66,
+        "category": "clienthello",
+        "description": "a ClientHello carrying supported_versions twice",
+        "file": "server__ch-ext-dup-supported-versions.bin",
+        "id": "ch-ext-dup-supported-versions",
+        "role": "server",
+        "sha256": "1e9825c9a142dc66d1fb9a609dcfcee24f83e75a4a1f67e9dcfb35bc821af89b"
+      },
+      {
+        "bytes": 56,
+        "category": "extension",
+        "description": "supported_versions with an empty body",
+        "file": "server__ext-sv-empty.bin",
+        "id": "ext-sv-empty",
+        "role": "server",
+        "sha256": "41764bfae242dc8aafb23158282cbc656b4b86dd42c074c96f3ed813ba2ee0f4"
+      },
+      {
+        "bytes": 57,
+        "category": "extension",
+        "description": "supported_versions with a one-byte body",
+        "file": "server__ext-sv-short.bin",
+        "id": "ext-sv-short",
+        "role": "server",
+        "sha256": "352cac2fe057666f5c10787c2b5694786f38268c587790e60e63358b617d062a"
+      },
+      {
+        "bytes": 59,
+        "category": "extension",
+        "description": "supported_versions whose list length disagrees with the body",
+        "file": "server__ext-sv-len-mismatch.bin",
+        "id": "ext-sv-len-mismatch",
+        "role": "server",
+        "sha256": "8d843c3c0c580dcdfbf9546f31d8f8c0942f2262c1e67adc361c8b74c8041324"
+      },
+      {
+        "bytes": 59,
+        "category": "extension",
+        "description": "supported_versions offering only 0x0305",
+        "file": "server__ext-sv-badversion.bin",
+        "id": "ext-sv-badversion",
+        "role": "server",
+        "sha256": "55a742e9fc1b32dc6023172d00fea165be6edd24819c1fc713b5787d920335b1"
+      },
+      {
+        "bytes": 65,
+        "category": "extension",
+        "description": "supported_versions offering 0x0300..0x0303",
+        "file": "server__ext-sv-legacy-only.bin",
+        "id": "ext-sv-legacy-only",
+        "role": "server",
+        "sha256": "197d0d35882a2d899fa3f76303b68690f176b6d9b15d4e7761b526f919b102ef"
+      },
+      {
+        "bytes": 59,
+        "category": "extension",
+        "description": "supported_versions whose extension length runs past the record",
+        "file": "server__ext-sv-ext-len-overrun.bin",
+        "id": "ext-sv-ext-len-overrun",
+        "role": "server",
+        "sha256": "79a45a411d8442bf5d4bbf0ffd45734f24e925f86563f48cc88b6426a303ebd8"
+      },
+      {
+        "bytes": 58,
+        "category": "extension",
+        "description": "key_share with an empty body",
+        "file": "server__ext-ks-empty.bin",
+        "id": "ext-ks-empty",
+        "role": "server",
+        "sha256": "476fc8c18f7859d9b40fce82814d3a2065fa0bb46595802003049d0acf9fe4b8"
+      },
+      {
+        "bytes": 94,
+        "category": "extension",
+        "description": "key_share whose list length disagrees with its entries",
+        "file": "server__ext-ks-len-mismatch.bin",
+        "id": "ext-ks-len-mismatch",
+        "role": "server",
+        "sha256": "d95c5cb33922931ac7639896510ee13a858322932585cb8ce19ae461d2f4e4cf"
+      },
+      {
+        "bytes": 102,
+        "category": "extension",
+        "description": "key_share for an unknown group 0xffff",
+        "file": "server__ext-ks-bad-group.bin",
+        "id": "ext-ks-bad-group",
+        "role": "server",
+        "sha256": "ec608add4fd912d67724de484ad89f960ebdc376243f5eded1436d15fb1c39d1"
+      },
+      {
+        "bytes": 66,
+        "category": "extension",
+        "description": "key_share with a 4-byte X25519 key",
+        "file": "server__ext-ks-short-key.bin",
+        "id": "ext-ks-short-key",
+        "role": "server",
+        "sha256": "381de47c2fef0b84f17abce13366c7712e7ce83ce3e7a47d68162450966464f8"
+      },
+      {
+        "bytes": 94,
+        "category": "extension",
+        "description": "key_share whose entry length runs past the extension body",
+        "file": "server__ext-ks-overrun-entry.bin",
+        "id": "ext-ks-overrun-entry",
+        "role": "server",
+        "sha256": "a0cbc95bb5e7888fe383bc4a37985d8be1abb6f3badbf6fccd7668c48e82520b"
+      },
+      {
+        "bytes": 130,
+        "category": "extension",
+        "description": "key_share carrying the same group twice",
+        "file": "server__ext-ks-duplicate.bin",
+        "id": "ext-ks-duplicate",
+        "role": "server",
+        "sha256": "73a519f68cab71f2828c8504933d93cabb644d4c063f1f9c882cfeec9e378916"
+      },
+      {
+        "bytes": 56,
+        "category": "extension",
+        "description": "ALPN with an empty body",
+        "file": "server__ext-alpn-empty.bin",
+        "id": "ext-alpn-empty",
+        "role": "server",
+        "sha256": "22d2857384d4f4f39ff110ddcb16bb4ac2c833a9dacb43e54488895fac850448"
+      },
+      {
+        "bytes": 61,
+        "category": "extension",
+        "description": "ALPN whose protocol-list length disagrees with the body",
+        "file": "server__ext-alpn-len-mismatch.bin",
+        "id": "ext-alpn-len-mismatch",
+        "role": "server",
+        "sha256": "be0687fd5a62b10c3e55f521a2993b22045ab0d0a4924cc942f470a6de5ff91c"
+      },
+      {
+        "bytes": 59,
+        "category": "extension",
+        "description": "ALPN with a zero-length protocol name",
+        "file": "server__ext-alpn-zero-name.bin",
+        "id": "ext-alpn-zero-name",
+        "role": "server",
+        "sha256": "81919dff622668c5b5d2cb63165a6e1a793d149a4d0bcf77c59d2f4b859485a3"
+      },
+      {
+        "bytes": 61,
+        "category": "extension",
+        "description": "ALPN whose protocol name runs past the list",
+        "file": "server__ext-alpn-overrun.bin",
+        "id": "ext-alpn-overrun",
+        "role": "server",
+        "sha256": "94b6c292e27584072b06296ebd6c67b1c95a2f1ce30b83922aaf3830db961d83"
+      },
+      {
+        "bytes": 56,
+        "category": "extension",
+        "description": "SNI with an empty body",
+        "file": "server__ext-sni-empty.bin",
+        "id": "ext-sni-empty",
+        "role": "server",
+        "sha256": "c5451f0071f8d3344443dae10176a685b940aacbdbf264b8458a91965aff3cc3"
+      },
+      {
+        "bytes": 73,
+        "category": "extension",
+        "description": "SNI with name_type 0x02",
+        "file": "server__ext-sni-bad-type.bin",
+        "id": "ext-sni-bad-type",
+        "role": "server",
+        "sha256": "ecc630119008f6a7eece1d304d7d9b210ab36f78775c465e703ecd8ba951d438"
+      },
+      {
+        "bytes": 73,
+        "category": "extension",
+        "description": "SNI whose server-name-list length disagrees with the body",
+        "file": "server__ext-sni-len-mismatch.bin",
+        "id": "ext-sni-len-mismatch",
+        "role": "server",
+        "sha256": "531004d42fcd9715aa4a6030f9140616f42213f4349e028cc4059a6f45f1a8bc"
+      },
+      {
+        "bytes": 61,
+        "category": "extension",
+        "description": "SNI with a zero-length host name",
+        "file": "server__ext-sni-empty-name.bin",
+        "id": "ext-sni-empty-name",
+        "role": "server",
+        "sha256": "3a5279f8164b2f3cb3d48259110c1b29848bf7c91a3c4040d26c5e87c1336ab8"
+      },
+      {
+        "bytes": 56,
+        "category": "extension",
+        "description": "signature_algorithms with an empty body",
+        "file": "server__ext-sigalgs-empty.bin",
+        "id": "ext-sigalgs-empty",
+        "role": "server",
+        "sha256": "e714ce2179d854959088dbade7057e33e611972c77b4743711e67350979f279c"
+      },
+      {
+        "bytes": 59,
+        "category": "extension",
+        "description": "signature_algorithms whose vector length disagrees with the body",
+        "file": "server__ext-sigalgs-len-mismatch.bin",
+        "id": "ext-sigalgs-len-mismatch",
+        "role": "server",
+        "sha256": "9a6d2a49a31e32376a211c2c34da57f0eab762005d1c56a96c10c7f65d57e460"
+      },
+      {
+        "bytes": 60,
+        "category": "extension",
+        "description": "signature_algorithms offering only an unknown scheme 0xffff",
+        "file": "server__ext-sigalgs-unknown.bin",
+        "id": "ext-sigalgs-unknown",
+        "role": "server",
+        "sha256": "0d1f528300e97ec55ed6b14a8444f3fce8041bb20f2dbc096071f6e4b34b8720"
+      },
+      {
+        "bytes": 56,
+        "category": "extension",
+        "description": "supported_groups with an empty body",
+        "file": "server__ext-groups-empty.bin",
+        "id": "ext-groups-empty",
+        "role": "server",
+        "sha256": "1f1902d3538516c1cd696414568ab52815470649165fc5c767f0d985e617431f"
+      },
+      {
+        "bytes": 59,
+        "category": "extension",
+        "description": "supported_groups whose list length disagrees with the body",
+        "file": "server__ext-groups-len-mismatch.bin",
+        "id": "ext-groups-len-mismatch",
+        "role": "server",
+        "sha256": "8108c28651ac6ac33de9c6f9c0b15ab73420cfadfc27107ac3c6ff676ed4ef56"
+      },
+      {
+        "bytes": 56,
+        "category": "extension",
+        "description": "ec_point_formats with an empty body",
+        "file": "server__ext-ecpf-empty.bin",
+        "id": "ext-ecpf-empty",
+        "role": "server",
+        "sha256": "9b5989995f0d12a11f3cf7aa67dfa5e92ccef3d7f59afdc684684d820c88f791"
+      },
+      {
+        "bytes": 58,
+        "category": "extension",
+        "description": "ec_point_formats naming format 0x05",
+        "file": "server__ext-ecpf-bad-format.bin",
+        "id": "ext-ecpf-bad-format",
+        "role": "server",
+        "sha256": "b8e65f1eabe8d6a6b1daea73425ecc5c5e130daa14a50d18db32a202f7db27c1"
+      },
+      {
+        "bytes": 59,
+        "category": "extension",
+        "description": "an unknown extension type 0xfade",
+        "file": "server__ext-unknown.bin",
+        "id": "ext-unknown",
+        "role": "server",
+        "sha256": "1bea810134be18e60568c4dd9ea62cb6504bf53727c16a1081498af91439008a"
+      },
+      {
+        "bytes": 121,
+        "category": "extension",
+        "description": "an unknown zero-length extension alongside a valid flight",
+        "file": "server__ext-zero-length-unknown.bin",
+        "id": "ext-zero-length-unknown",
+        "role": "server",
+        "sha256": "21a823ec45736216ee0f5554aae3877a35527e38edcec29341acfcd8138d1921"
+      },
+      {
+        "bytes": 0,
+        "category": "serverhello",
+        "description": "a zero-byte server flight",
+        "file": "client__sh-empty.bin",
+        "id": "sh-empty",
+        "role": "client",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "bytes": 19,
+        "category": "serverhello",
+        "description": "a ServerHello truncated inside the random",
+        "file": "client__sh-trunc.bin",
+        "id": "sh-trunc",
+        "role": "client",
+        "sha256": "65c4558027f34412ada98893ccc7ec69a291a09000e3e6962706ebc4f0582d3f"
+      },
+      {
+        "bytes": 49,
+        "category": "serverhello",
+        "description": "a ServerHello whose handshake length runs past the record",
+        "file": "client__sh-hs-len-overrun.bin",
+        "id": "sh-hs-len-overrun",
+        "role": "client",
+        "sha256": "2e30bb560ae863d76dcf7df948fd430e31782e646245793230c36d4b23a774ca"
+      },
+      {
+        "bytes": 49,
+        "category": "serverhello",
+        "description": "a ServerHello with legacy_version 0x0304",
+        "file": "client__sh-bad-legacy-version.bin",
+        "id": "sh-bad-legacy-version",
+        "role": "client",
+        "sha256": "47b1035a878f33212216b33ba1daeb0f6b9be163e33d1b0461a164c49f5c959c"
+      },
+      {
+        "bytes": 49,
+        "category": "serverhello",
+        "description": "a ServerHello naming a cipher not offered",
+        "file": "client__sh-bad-cipher.bin",
+        "id": "sh-bad-cipher",
+        "role": "client",
+        "sha256": "e7079d217b54a49c02dbbc7e6a152ea453f269a596d4db0272e207529216eb7b"
+      },
+      {
+        "bytes": 57,
+        "category": "serverhello",
+        "description": "a ServerHello whose extensions length runs past the record",
+        "file": "client__sh-ext-len-overrun.bin",
+        "id": "sh-ext-len-overrun",
+        "role": "client",
+        "sha256": "58e891794d58695073eaea9801b3842a0f385bd8b244985cb8d6f2aeb0da13ef"
+      },
+      {
+        "bytes": 67,
+        "category": "serverhello",
+        "description": "a ServerHello key_share with a 4-byte key",
+        "file": "client__sh-ks-short.bin",
+        "id": "sh-ks-short",
+        "role": "client",
+        "sha256": "caa9e2d11e65317a276b55217fd251ba573e96091944b766508fa18fd119d420"
+      },
+      {
+        "bytes": 52,
+        "category": "serverhello",
+        "description": "a server flight whose first message is a ClientHello",
+        "file": "client__sh-unknown-hs-type.bin",
+        "id": "sh-unknown-hs-type",
+        "role": "client",
+        "sha256": "9ccfbcff02443f0ad9a6d02ca9aaf45972c8fbc044630b51890ad342af4fa543"
+      },
+      {
+        "bytes": 101,
+        "category": "serverhello",
+        "description": "a server flight beginning with a ChangeCipherSpec",
+        "file": "client__sh-ccs-first.bin",
+        "id": "sh-ccs-first",
+        "role": "client",
+        "sha256": "367da521f41c28b85afa254729371a0d9a6d2cf5d7928ae8c8b0137e23e45238"
+      }
+    ],
+    "note": "The Phase 18 hostile TLS corpus: one file per entry, named `<role>__<id>.bin`, with the stable id and the side that receives the bytes. It is a fixed enumeration, not a fuzzer, and not a coverage claim. `forensics/tools/gen_hostile_tls_corpus.py` is the source of truth and `--check` proves the committed files are the ones it derives."
+  },
+  "generator": "forensics/tools/gen_hostile_tls_corpus.py",
+  "inputs": [
+    {
+      "name": "corpus-generator",
+      "path": "forensics/tools/gen_hostile_tls_corpus.py",
+      "sha256": "af5041d765056bb93f3cbf5d3a9c3efa928b3e8098372df6c5082e9ae7d11606"
+    }
+  ],
+  "kind": "hostile-tls-corpus",
+  "schema": "openssl-rs/atlas/hostile-tls-corpus/v1"
+}
