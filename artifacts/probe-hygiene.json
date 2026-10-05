@@ -3794,6 +3794,68 @@
         "verdict": "clean"
       },
       {
+        "probe": "courts/phase19/rt_performance_work_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 84,
+              "-O1": 84,
+              "-O2": 84
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 84,
+              "-O1": 84,
+              "-O2": 84
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
         "probe": "courts/phase3/rt_coverage_ref_probe.c",
         "sides": {
           "authority": {
@@ -9190,8 +9252,8 @@
     ],
     "runs_per_level": 2,
     "summary": {
-      "clean": 148,
-      "total": 148,
+      "clean": 149,
+      "total": 149,
       "unstable": 0
     }
   },
@@ -9501,6 +9563,11 @@
       "name": "probe",
       "path": "courts/phase19/rt_evp_dispatch_probe.c",
       "sha256": "a7ad5f31d7ec6c6c89dc3a81d2050441df66f0189cb1a74fa8b084227c62588a"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase19/rt_performance_work_probe.c",
+      "sha256": "06e905af25d656b915e2edc29aa1cb621e8105fa0673303505fecff4cfdd5f40"
     },
     {
       "name": "probe",
