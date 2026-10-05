@@ -18,10 +18,10 @@
         "closure": "the `RT-EVP-DISPATCH` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-EVP-DISPATCH is pending",
+        "measurement_state": "complete",
+        "observation": "RT-EVP-DISPATCH is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase19/COURTS.json",
         "unit": "evp-dispatch",
         "what": "an EVP / cipher dispatch comparison: which implementation a fetch or cipher context selects for a given capability set, driven on both sides over the same set, with an authority-linked differential control"
@@ -68,8 +68,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 1,
-      "open_in_this_stratum": 4,
+      "implemented": 2,
+      "open_in_this_stratum": 3,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -110,7 +110,7 @@
     {
       "name": "phase-19-courts",
       "path": "artifacts/phase19/COURTS.json",
-      "sha256": "8bbee6e3be67307e4d73ccb59f6fb10353f28a3e3fb973979c98522071598a33"
+      "sha256": "744101f8f226186d57784351f0c0e3a993ea9c933854b4eef76885559c06e667"
     }
   ],
   "kind": "phase19-obligations",
