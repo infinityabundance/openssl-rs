@@ -57,8 +57,8 @@ generated projection's.
 - FRF receipts and claim: **present, and the chain's objects are on disk.** `.frf` carries three
   receipts, one per declarable court; six adjudicated challenge records (both declared operators
   on every court); and the `sensitivity-backed` claim
-  `ce672949dc8d06ea18b1969c829e7c6314cd8bc2d431975be3cfbfcc72db2e2a`, binding
-  `openssl-rt-3.6.4-r2` to `openssl-rs 0.0.22` (`identity_hash e4f60d8b`) with zero blockers. Two
+  `454d468e1373c050e3d4b54f23632a825e907bfff93c843e46c92707e604051e`, binding
+  `openssl-rt-3.6.4-r2` to `openssl-rs 0.0.23` (`identity_hash e4f60d8b`) with zero blockers. Two
   of the three premises are narrowed to the exit class, and §8 states what that is.
 - Gemel checkpoint: **present, and it is this stratum's.** `forensics/GEMEL_TRAJECTORY.md`'s
   `current:` is the checkpoint `K63`
@@ -347,7 +347,7 @@ hostile courts record their divergences rather than diffing them (§5), so `rt-h
 `rt-mem-hardening` raise one `open` first-stdout-line residual each. Disposing it would have let the
 claim assert a first stdout line it does not have; **leaving it open narrows those two premises to
 the exit class** and the claim carries both axes on `rt-hostile-x509`. The claim
-`ce672949dc8d06ea18b1969c829e7c6314cd8bc2d431975be3cfbfcc72db2e2a` compiles with zero blockers.
+`454d468e1373c050e3d4b54f23632a825e907bfff93c843e46c92707e604051e` compiles with zero blockers.
 
 **The one instrument boundary: the register stages no probe, and the sanitizer venue is not the
 court.** `HOSTILE-BOUNDARY-REGISTER` is a data-validation court that re-reads the live courts
@@ -447,7 +447,7 @@ derives `complete`. The boundaries this stratum actually met are recorded in the
 7. **The FRF and Gemel evidence is established, and §8 records what it is.**
    `docs/RELEASE_GATES.md` §2 items 6, 8 and 10 are met by the chain entry §8 records: three
    receipts, six adjudicated challenge records, the `sensitivity-backed` claim
-   `ce672949dc8d06ea18b1969c829e7c6314cd8bc2d431975be3cfbfcc72db2e2a` with zero blockers, and the
+   `454d468e1373c050e3d4b54f23632a825e907bfff93c843e46c92707e604051e` with zero blockers, and the
    Gemel checkpoint `K63` whose summary names Phase 18 and the FRF chain. Phase 18's derived state
    is `complete`. Two premises are narrowed to the exit class (§4), and that is recorded rather
    than smoothed.
@@ -526,10 +526,10 @@ not claim more than the courts above measured.
   axes (`stdout-first-line`, `exit-class`) on all three courts, every one `saw_defect` and
   `specificity_clean` — which is what makes the claim `sensitivity-backed` rather than merely green
   (D13). `.frf/claims/` carries the compiled claim
-  `ce672949dc8d06ea18b1969c829e7c6314cd8bc2d431975be3cfbfcc72db2e2a`, compiled at
+  `454d468e1373c050e3d4b54f23632a825e907bfff93c843e46c92707e604051e`, compiled at
   `--policy sensitivity-backed` over the three receipts, binding authority `openssl-rt-3.6.4-r2` to
-  candidate `openssl-rs 0.0.22` (`identity_hash e4f60d8b`) with zero blockers. **The identity is the
-  current 0.0.22 release**: the claim records the candidate the tree is
+  candidate `openssl-rs 0.0.23` (`identity_hash e4f60d8b`) with zero blockers. **The identity is the
+  current 0.0.23 release**: the claim records the candidate the tree is
   (`gen_frf_courts.CANDIDATE_VERSION`), which is what the fix-4 identity clause requires. Two
   premises — `rt-hostile-tls` and `rt-mem-hardening` — are narrowed to the exit class because the
   hostile transcripts' raw digest differs on the harness's first-line digest; §4 records why leaving
@@ -564,7 +564,7 @@ nothing moves forward.
 
 - **The FRF/Gemel chain entry has landed.** §8's subject is now the objects on disk: the three
   declarations, three receipts, six adjudicated challenges, the claim
-  `ce672949dc8d06ea18b1969c829e7c6314cd8bc2d431975be3cfbfcc72db2e2a` and the checkpoint `K63`. This
+  `454d468e1373c050e3d4b54f23632a825e907bfff93c843e46c92707e604051e` and the checkpoint `K63`. This
   stratum registers no `CT-*` court in the FRF registry and no data-validation court, so the entry
   covers the three behavioural differential courts and records the other two as not declarable.
   Items 6, 8 and 10 of §7 retired with it, and `phase_state.py` derives `complete`.
@@ -607,7 +607,7 @@ corrections the evidence forced rather than the ones a reviewer might have prefe
    Phase 16's and Phase 17's seals are recorded.
 5. **The FRF/Gemel chain entry landed, and §7 and §8 record it.** The seal's §8 records the three
    declarations, three receipts, six adjudicated challenges, the `sensitivity-backed` claim
-   `ce672949dc8d06ea18b1969c829e7c6314cd8bc2d431975be3cfbfcc72db2e2a` and the Gemel change `C110`
+   `454d468e1373c050e3d4b54f23632a825e907bfff93c843e46c92707e604051e` and the Gemel change `C110`
    / checkpoint `K63`
    (`checkpoint.b64e46d7d62f37035f586a7bdeddfafc39751738649c804c31ab4f5ecb306cff`), so items 6, 8
    and 10 retired and `phase_state.py` derives `complete`. `seal_sha256` is recomputed from the
