@@ -1089,6 +1089,29 @@ PHASE18_MODULES = [
     "forensics/tools/phase18_obligations.py",
 ]
 
+# Phase 19 is the performance / CPU dispatch stratum, and **it owns no exported symbol**: reading
+# `forensics/atlas/symbol-ownership.json` for `owner_phase == 19` yields no record, so its ledger's
+# unit is not a symbol. `forensics/phase19-obligations.json` records its unit as `performance
+# dispatch contract` (in `atlas_common.NON_EXPORT_UNITS`, so the export-partitioning tools skip it,
+# as they skip Phase 16's `cli-config contract`, Phase 17's `downstream replacement contract` and
+# Phase 18's `hostile hardening contract`), and its working set is five contract units -- the
+# CPU-capability dispatch audit, the EVP / cipher dispatch comparison, the deterministic work
+# court, the instrument-sensitivity court and the performance-boundary register. Like Phase 18 it
+# hands nothing forward and receives nothing: it owns no provider registration row, no symbol
+# deferral and no prerequisite unit, because it measures the implementation the strata before it
+# completed rather than adding library surface. It registers no coverage-reference probe, because
+# it owns no symbol to take an address of, so its runner's registry is empty at activation and its
+# five courts are `pending` with the subphase that lands each. The ledger measures its
+# contract-unit states from the courts registry, so the runner does not bind the ledger (the edge
+# runs ledger -> courts, the reverse of Phase 16's). `docs/PHASE-19-SUBPHASES.md` section 4 records
+# the activation measurement and the precondition it places on the runner.
+PHASE19_COURTS = "artifacts/phase19/COURTS.json"
+PHASE19_OBLIGATIONS = "forensics/phase19-obligations.json"
+PHASE19_MODULES = [
+    "docs/PHASE-19-SUBPHASES.md",
+    "forensics/tools/phase19_obligations.py",
+]
+
 # Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
 # every other stratum's: no export universe, no ownership projection and no provider row. What it
 # owes instead is the plan, the residual ledger its closure produces, the atlas's own courts and
@@ -1340,6 +1363,38 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "of Phase 16's. `docs/PHASE-18-SUBPHASES.md` sections 1, 3 and 4 and "
                             "`docs/PHASE-18-HARDENING-SEAL.md` record the measurement and the "
                             "chain"
+                        )),
+    19: StratumEvidence(PHASE19_MODULES, PHASE19_OBLIGATIONS, PHASE19_COURTS,
+                        ledger_note=(
+                            "This stratum owns **no exported symbol**, so its ledger's unit is "
+                            "not a symbol: `forensics/phase19-obligations.json` publishes "
+                            "`unit: performance dispatch contract` and its `implemented`/`open` "
+                            "*export* lists are empty by measurement, while "
+                            "`open_in_this_stratum` counts the five contract units "
+                            "(`cpu-capability`, `evp-dispatch`, `performance-work`, "
+                            "`performance-sensitivity` and `performance-boundary-register`). It "
+                            "owns no provider registration row, no symbol deferral and no "
+                            "prerequisite unit: it activates no provider and adds no library "
+                            "surface, because it measures the implementation the strata before "
+                            "it completed. Its `artifacts/phase19/COURTS.json` registered no "
+                            "court at activation because it owns no symbol for a differential "
+                            "probe to observe; the five courts (`RT-CPU-CAPABILITY`, "
+                            "`RT-EVP-DISPATCH`, `RT-PERFORMANCE-WORK`, "
+                            "`RT-PERFORMANCE-SENSITIVITY` and "
+                            "`PERFORMANCE-BOUNDARY-REGISTER`) are `pending` with the subphases "
+                            "that land them. Nothing here is a throughput or parity claim: there "
+                            "is no benchmark-parity claim and no assembly-versus-Rust "
+                            "equivalence claim, and no verdict is ever taken from wall-clock "
+                            "time alone. The ledger records two axes separately -- "
+                            "`measurement_state` says the instrument completed and "
+                            "`property_status`/`findings` say what is claimed -- so a passing "
+                            "`RT-PERFORMANCE-WORK` is an instrument plus bounded "
+                            "deterministic-work comparison and must never be read as "
+                            "'performance parity achieved'. The ledger's contract-unit states "
+                            "are measured from the courts registry, so the runner does not bind "
+                            "the ledger and the edge runs ledger -> courts, the reverse of "
+                            "Phase 16's. `docs/PHASE-19-SUBPHASES.md` sections 1 and 4 record the "
+                            "measurement"
                         )),
     # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
     # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no

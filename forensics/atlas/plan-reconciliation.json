@@ -4,10 +4,20 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {},
-    "census_by_stratum": {},
+    "census": {
+      "symbols_not_reached": 3
+    },
+    "census_by_stratum": {
+      "19": 3
+    },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {},
+    "census_samples": {
+      "symbols_not_reached": [
+        "OPENSSL_cpuid_setup",
+        "OPENSSL_ia32_cpuid",
+        "OPENSSL_ia32cap_P"
+      ]
+    },
     "checked": {
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
@@ -19,6 +29,7 @@
         "docs/PHASE-16-SUBPHASES.md",
         "docs/PHASE-17-SUBPHASES.md",
         "docs/PHASE-18-SUBPHASES.md",
+        "docs/PHASE-19-SUBPHASES.md",
         "docs/PHASE-22-SUBPHASES.md",
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
@@ -26,8 +37,8 @@
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 190,
-      "symbols_named_by_a_row": 115,
+      "rows_judged": 197,
+      "symbols_named_by_a_row": 118,
       "symbols_reached": 115,
       "unit_records": 152,
       "units_named_by_a_record": 161,
@@ -8110,7 +8121,7 @@
       "transcribed_units": 599
     }
   },
-  "body_hash": "b42cb9d64bebd7b1fa2adaafd85f8a3dbba5ed7da86dada9ba85c6f5206c0440",
+  "body_hash": "503d79f6e4fd95f2148b30bd8519487a0bfbab6741f6d61ccbaba26752068592",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -8131,7 +8142,7 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "6ad2b540f98f60fd18a384adbbf76b5078dcae3f82dba3d0ef282bfd7be1417a"
+      "sha256": "d03ebe7a7e9845db1e1cf932995b066453fe8b4b5316ac55aeda5b9ee1b968bd"
     },
     {
       "name": "prerequisites",
@@ -8187,6 +8198,11 @@
       "name": "plan-PHASE-18-SUBPHASES",
       "path": "docs/PHASE-18-SUBPHASES.md",
       "sha256": "a182ffed42f8fe6ca0b187e8b35f6ed32cc0bc95245cb08b234fff6ed001d637"
+    },
+    {
+      "name": "plan-PHASE-19-SUBPHASES",
+      "path": "docs/PHASE-19-SUBPHASES.md",
+      "sha256": "c6342ad8a9ec8636c02710f5fc12ccaee6781672699fb9c2ffab90c61721011e"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",
