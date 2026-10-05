@@ -45,7 +45,7 @@ declared owner; this is that assignment.
 | 17 | Downstream replacement court | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 19 | Performance / CPU dispatch | `complete` | 0 | 5 | 5 | 0 | 0 |
-| 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
+| 20 | 3.6.4 custodian seal | `in-progress` | 0 | 5 | 0 | 0 | 5 |
 | 21 | Maintenance delta machinery | `not-started` | 0 | — | — | — | — |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
 
@@ -639,6 +639,34 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 | RT-PERFORMANCE-WORK | `pass` | 84 |
 | RT-PERFORMANCE-SENSITIVITY | `pass` | — (structural) |
 | PERFORMANCE-BOUNDARY-REGISTER | `pass` | — (structural) |
+
+## Phase 20 — 3.6.4 custodian seal
+
+* state: `in-progress`
+* blocking: 5 open obligation(s) of this stratum recorded in forensics/phase20-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase20-obligations.json` publishes `unit: custodian seal contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`custodian-maturity`, `receipt-closure`, `custodian-residuals`, `substitution-witness` and `custodian-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it compiles the custodian claim over the implementation the strata before it completed. Its `artifacts/phase20/COURTS.json` registered no court at activation because it owns no symbol for a differential probe to observe; the five courts (`RT-CUSTODIAN-MATURITY`, `RT-RECEIPT-CLOSURE`, `RT-CUSTODIAN-RESIDUALS`, `RT-SUBSTITUTION-WITNESS` and `CUSTODIAN-BOUNDARY-REGISTER`) are `pending` with the subphases that land them. A passing court is an **instrument**, not a property claim: the property it names may still carry findings, so `measurement_state` says the instrument completed while `property_status`/`findings` say what is claimed. The stratum makes no claim stronger than `docs/CUSTODIAN_CONTRACT.md` section 6's -- in particular no FIPS validation, no universal parity from finite evidence and no claim that memory safety is established (`docs/NON_CLAIMS.md`) -- and a passing `RT-CUSTODIAN-MATURITY` must never be read as 'L9 custodian seal achieved'. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-20-SUBPHASES.md` sections 1 and 4 record the measurement
+* seal: none written yet (`unnamed`)
+* ledger: `forensics/phase20-obligations.json`
+* atlas-owned: 0
+* owned working set: 5
+* implemented: 0
+* deferred to a later stratum with a stated reason: 0
+* **open in this stratum: 5**
+
+Contract units (measurement vs property):
+
+| unit | measurement_state | property_status | findings |
+|---|---|---|---|
+| custodian-maturity | `not_measured` | `not_claimed` | — |
+| receipt-closure | `not_measured` | `not_claimed` | — |
+| custodian-residuals | `not_measured` | `not_claimed` | — |
+| substitution-witness | `not_measured` | `not_claimed` | — |
+| custodian-boundary-register | `not_measured` | `not_claimed` | — |
+
+A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
+Courts: `all pass`, 0 court(s), **0** authority observation(s) over 0 transcript court(s).
+
+| court | verdict | observations |
+|---|---|---|
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 

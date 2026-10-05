@@ -1,0 +1,31 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "Phase 20's five courts are named and `pending`; none is registered as passing at activation. `RT-CUSTODIAN-MATURITY` is 20.1's: the derivation of the L0-L9 maturity ladder for `libcrypto` and `libssl` from committed evidence, naming only a level whose evidence is present. `RT-RECEIPT-CLOSURE` is 20.2's: the join of every obligation recorded `implemented` or closed to its FRF receipt, and the FRF store's compiled parity claim with zero blockers. `RT-CUSTODIAN-RESIDUALS` is 20.3's: the disposition of every residual, requiring zero `UNKNOWN` intersecting the claimed production profile. `RT-SUBSTITUTION-WITNESS` is 20.4's: the ABI-substitution witness chain and the machine-owned Phase-17 downstream corpus witness chain. `CUSTODIAN-BOUNDARY-REGISTER` is 20.5's: the register of what is claimed, what is bounded, and the explicit non-claims. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the custodian claim over a finished implementation, with no FIPS validation, no universal-parity claim from finite evidence and no claim that memory safety is established. docs/PHASE-20-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "courts": [],
+    "pending_courts": {
+      "CUSTODIAN-BOUNDARY-REGISTER": "20.5 lands the register; it records what is claimed, what is bounded, and the explicit non-claims (no FIPS validation, no universal parity from finite evidence, memory safety measured-not-established), and checks that every recorded boundary still matches the evidence that establishes it",
+      "RT-CUSTODIAN-MATURITY": "20.1 lands the maturity derivation; it derives the L0-L9 ladder of `docs/RELEASE_GATES.md` section 3 for `libcrypto` and `libssl` from committed evidence, naming only a level whose evidence is present and recording the gap as a finding when the evidence supports less than the level the seal might claim",
+      "RT-CUSTODIAN-RESIDUALS": "20.3 lands the residual disposition; it requires every residual to be dispositioned and zero `UNKNOWN` to intersect the claimed production profile, so a newly discovered un-dispositioned residual is a `fail`",
+      "RT-RECEIPT-CLOSURE": "20.2 lands the receipt closure; it joins every obligation recorded `implemented` or closed to its FRF receipt and requires the FRF store's compiled parity claim to carry zero blockers",
+      "RT-SUBSTITUTION-WITNESS": "20.4 lands the substitution witness; it runs binaries built against the admitted authority unmodified against the candidate over the machine-owned Phase-17 downstream corpus, which it re-establishes as current and functional, and records each witness's build, run and observation"
+    },
+    "summary": {
+      "fail": 0,
+      "pass": 0,
+      "total": 0
+    }
+  },
+  "generator": "forensics/tools/phase20_courts.py",
+  "inputs": [
+    {
+      "name": "phase-20-plan",
+      "path": "docs/PHASE-20-SUBPHASES.md",
+      "sha256": "dac989cbf03e478e95ed668266cf6eb970a72ff48ade7c5e5dacf8378db84f3e"
+    }
+  ],
+  "kind": "phase20-courts",
+  "schema": "openssl-rs/atlas/phase20-courts/v1"
+}
