@@ -3,19 +3,396 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "Phase 18's five courts are named and `pending`; none is registered as passing at activation. `RT-HOSTILE-TLS` is 18.1's: a hostile corpus of malformed records, handshake messages and extension bodies, driven through the record layer and the TLS 1.3 flight with crash/OOM/timeout detection and an authority-linked differential control. `RT-HOSTILE-X509` is 18.2's: a hostile X.509 / malformed-input corpus of truncated, oversized and ill-formed certificates, extensions and DER/PEM containers, with an authority-linked differential control. `CT-PRIMITIVES` is 18.3's: secret-independence checks over the primitive-bearing paths (BN, RSA, EC, the AEADs and the TLS key schedule), with a sensitivity control that a deliberate branch-on-secret is caught. `RT-MEM-HARDENING` is 18.4's: memory-safety and resource-exhaustion hardening for the reduced engine's fixed buffers and its allocation-failure paths, with an injected-failure control. `HOSTILE-BOUNDARY-REGISTER` is 18.5's: the register of what is hardened, what is measured and what is explicitly not claimed. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is a hostile input against a finished implementation. docs/PHASE-18-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
-    "courts": [],
+    "claim": "`RT-HOSTILE-TLS` is 18.1's court: it compiles courts/phase18/rt_hostile_tls_probe.c twice (authority and candidate) and drives the fixed malformed-input corpus courts/phase18/fixtures/hostile-tls/ -- one file per entry, `<role>__<id>.bin` -- through the real record layer and the TLS 1.3 flight. A `server` entry is fed into SSL_accept (the ClientHello / record reader) and a `client` entry into SSL_connect (the ServerHello / flight reader) over a read-only memory BIO that reports EOF. The corpus enumerates bogus record types, lengths and versions, truncated and oversized handshake headers, malformed ClientHello / ServerHello and key_share / supported_versions / ALPN / SNI / signature_algorithms extension bodies, bad CCS and bad Finished, length-mismatch records, and well-formed controls; it is a fixed enumeration, not a fuzzer, and not a coverage claim. Each entry runs in its own forked child, so a crash (a signal), an OOM (an allocation failure under the process's RLIMIT_DATA) or a timeout is a recorded finding rather than a harness abort (section 3.3), and the fixed-schema transcript keeps the two sides' observation counts equal. The court compares every entry's authority and candidate dispositions and records each difference rather than failing it, because the reduced engine legitimately differs; it is `pass` only when the corpus was driven on both sides, every candidate disposition was recorded, and the authority differential control held -- the authority parsed the well-formed control ClientHello into a real handshake record and itself suffered no hostile finding (section 3.2). It is a bounded differential result over the corpus it drives, not a security proof and not a parity claim (sections 3.1 and 3.6). `RT-HOSTILE-X509` is 18.2's: a hostile X.509 / malformed-input corpus of truncated, oversized and ill-formed certificates, extensions and DER/PEM containers, with an authority-linked differential control. `CT-PRIMITIVES` is 18.3's: secret-independence checks over the primitive-bearing paths (BN, RSA, EC, the AEADs and the TLS key schedule), with a sensitivity control that a deliberate branch-on-secret is caught. `RT-MEM-HARDENING` is 18.4's: memory-safety and resource-exhaustion hardening for the reduced engine's fixed buffers and its allocation-failure paths, with an injected-failure control. `HOSTILE-BOUNDARY-REGISTER` is 18.5's: the register of what is hardened, what is measured and what is explicitly not claimed, which fails the stratum if a recorded boundary drifts from its evidence. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is a hostile input against a finished implementation. docs/PHASE-18-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 1046,
+        "bounds": {
+          "cgroup_memory_max_bytes": 8589934592,
+          "entry_timeout_ms": 4000,
+          "rlimit_data_kib": 4294967296
+        },
+        "candidate_exit_code": 0,
+        "candidate_observations": 1046,
+        "candidate_stderr_tail": [],
+        "control": {
+          "authority": {
+            "class": "parse",
+            "out_bytes": "1320",
+            "out_first": "2"
+          },
+          "candidate": {
+            "class": "parse",
+            "out_bytes": "1292",
+            "out_first": "2"
+          },
+          "entry": "ch-min-valid",
+          "honest": true
+        },
+        "corpus": {
+          "by_category": {
+            "clienthello": 14,
+            "control": 6,
+            "extension": 29,
+            "handshake": 9,
+            "record": 20,
+            "serverhello": 9
+          },
+          "by_role": {
+            "client": 10,
+            "server": 77
+          },
+          "entries": 87,
+          "generator": "forensics/tools/gen_hostile_tls_corpus.py",
+          "manifest": "courts/phase18/fixtures/hostile-tls/MANIFEST.json",
+          "manifest_sha256": "4c5abbf0a07db36dee0d80bea6fb1268b101578512c706e7e152532fa7d75f48",
+          "path": "courts/phase18/fixtures/hostile-tls",
+          "total_bytes": 5072
+        },
+        "court": "RT-HOSTILE-TLS",
+        "entries_driven": {
+          "authority": 87,
+          "candidate": 87,
+          "corpus": 87
+        },
+        "findings": {
+          "authority": {
+            "crash": [],
+            "oom": [],
+            "timeout": []
+          },
+          "candidate": {
+            "crash": [],
+            "oom": [],
+            "timeout": []
+          }
+        },
+        "findings_count": {
+          "authority": {
+            "crash": 0,
+            "oom": 0,
+            "timeout": 0
+          },
+          "candidate": {
+            "crash": 0,
+            "oom": 0,
+            "timeout": 0
+          }
+        },
+        "hostile_residual_count": 0,
+        "probe": "courts/phase18/rt_hostile_tls_probe.c",
+        "problems": [],
+        "recorded_divergence_count": 283,
+        "recorded_divergences": [
+          {
+            "authority": "decode error",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-ciphers-empty.alert"
+          },
+          {
+            "authority": "183",
+            "candidate": "193",
+            "class": "value",
+            "observation": "entry.ch-ciphers-empty.reason0"
+          },
+          {
+            "authority": "22",
+            "candidate": "0",
+            "class": "value",
+            "observation": "entry.ch-ciphers-empty.state"
+          },
+          {
+            "authority": "decode error",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-ciphers-len-overrun.alert"
+          },
+          {
+            "authority": "159",
+            "candidate": "786691",
+            "class": "value",
+            "observation": "entry.ch-ciphers-len-overrun.reason0"
+          },
+          {
+            "authority": "22",
+            "candidate": "0",
+            "class": "value",
+            "observation": "entry.ch-ciphers-len-overrun.state"
+          },
+          {
+            "authority": "decode error",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-ciphers-odd.alert"
+          },
+          {
+            "authority": "159",
+            "candidate": "786691",
+            "class": "value",
+            "observation": "entry.ch-ciphers-odd.reason0"
+          },
+          {
+            "authority": "22",
+            "candidate": "0",
+            "class": "value",
+            "observation": "entry.ch-ciphers-odd.state"
+          },
+          {
+            "authority": "decode error",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-comp-empty.alert"
+          },
+          {
+            "authority": "7",
+            "candidate": "1292",
+            "class": "value",
+            "observation": "entry.ch-comp-empty.out_bytes"
+          },
+          {
+            "authority": "187",
+            "candidate": "294",
+            "class": "value",
+            "observation": "entry.ch-comp-empty.reason0"
+          },
+          {
+            "authority": "22",
+            "candidate": "36",
+            "class": "value",
+            "observation": "entry.ch-comp-empty.state"
+          },
+          {
+            "authority": "decode error",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-comp-overrun.alert"
+          },
+          {
+            "authority": "159",
+            "candidate": "193",
+            "class": "value",
+            "observation": "entry.ch-comp-overrun.reason0"
+          },
+          {
+            "authority": "22",
+            "candidate": "0",
+            "class": "value",
+            "observation": "entry.ch-comp-overrun.state"
+          },
+          {
+            "authority": "illegal parameter",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-ext-dup-supported-versions.alert"
+          },
+          {
+            "authority": "110",
+            "candidate": "786691",
+            "class": "value",
+            "observation": "entry.ch-ext-dup-supported-versions.reason0"
+          },
+          {
+            "authority": "22",
+            "candidate": "24",
+            "class": "value",
+            "observation": "entry.ch-ext-dup-supported-versions.state"
+          },
+          {
+            "authority": "decode error",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-ext-len-overrun.alert"
+          },
+          {
+            "authority": "7",
+            "candidate": "1292",
+            "class": "value",
+            "observation": "entry.ch-ext-len-overrun.out_bytes"
+          },
+          {
+            "authority": "159",
+            "candidate": "294",
+            "class": "value",
+            "observation": "entry.ch-ext-len-overrun.reason0"
+          },
+          {
+            "authority": "22",
+            "candidate": "36",
+            "class": "value",
+            "observation": "entry.ch-ext-len-overrun.state"
+          },
+          {
+            "authority": "protocol version",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-legacy-0000.alert"
+          },
+          {
+            "authority": "7",
+            "candidate": "1292",
+            "class": "value",
+            "observation": "entry.ch-legacy-0000.out_bytes"
+          },
+          {
+            "authority": "292",
+            "candidate": "294",
+            "class": "value",
+            "observation": "entry.ch-legacy-0000.reason0"
+          },
+          {
+            "authority": "22",
+            "candidate": "36",
+            "class": "value",
+            "observation": "entry.ch-legacy-0000.state"
+          },
+          {
+            "authority": "decode error",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-legacy-0304.alert"
+          },
+          {
+            "authority": "1320",
+            "candidate": "1292",
+            "class": "value",
+            "observation": "entry.ch-legacy-0304.out_bytes"
+          },
+          {
+            "authority": "50",
+            "candidate": "36",
+            "class": "value",
+            "observation": "entry.ch-legacy-0304.state"
+          },
+          {
+            "authority": "decode error",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-min-valid-rec0301.alert"
+          },
+          {
+            "authority": "1320",
+            "candidate": "1292",
+            "class": "value",
+            "observation": "entry.ch-min-valid-rec0301.out_bytes"
+          },
+          {
+            "authority": "50",
+            "candidate": "36",
+            "class": "value",
+            "observation": "entry.ch-min-valid-rec0301.state"
+          },
+          {
+            "authority": "decode error",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-min-valid-rec0303.alert"
+          },
+          {
+            "authority": "1320",
+            "candidate": "1292",
+            "class": "value",
+            "observation": "entry.ch-min-valid-rec0303.out_bytes"
+          },
+          {
+            "authority": "50",
+            "candidate": "36",
+            "class": "value",
+            "observation": "entry.ch-min-valid-rec0303.state"
+          },
+          {
+            "authority": "decode error",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-min-valid.alert"
+          },
+          {
+            "authority": "1320",
+            "candidate": "1292",
+            "class": "value",
+            "observation": "entry.ch-min-valid.out_bytes"
+          },
+          {
+            "authority": "50",
+            "candidate": "36",
+            "class": "value",
+            "observation": "entry.ch-min-valid.state"
+          },
+          {
+            "authority": "handshake failure",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-no-extensions.alert"
+          },
+          {
+            "authority": "7",
+            "candidate": "846",
+            "class": "value",
+            "observation": "entry.ch-no-extensions.out_bytes"
+          },
+          {
+            "authority": "193",
+            "candidate": "380",
+            "class": "value",
+            "observation": "entry.ch-no-extensions.reason0"
+          },
+          {
+            "authority": "22",
+            "candidate": "27",
+            "class": "value",
+            "observation": "entry.ch-no-extensions.state"
+          },
+          {
+            "authority": "unknown",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-no-key-share.alert"
+          },
+          {
+            "authority": "101",
+            "candidate": "786691",
+            "class": "value",
+            "observation": "entry.ch-no-key-share.reason0"
+          },
+          {
+            "authority": "22",
+            "candidate": "24",
+            "class": "value",
+            "observation": "entry.ch-no-key-share.state"
+          },
+          {
+            "authority": "decode error",
+            "candidate": "-",
+            "class": "value",
+            "observation": "entry.ch-sid-overrun.alert"
+          },
+          {
+            "authority": "159",
+            "candidate": "786691",
+            "class": "value",
+            "observation": "entry.ch-sid-overrun.reason0"
+          }
+        ],
+        "residual_count": 283,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase18/probes/rt_hostile_tls_probe.authority",
+          "candidate": "artifacts/phase18/probes/rt_hostile_tls_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
     "pending_courts": {
       "CT-PRIMITIVES": "18.3 lands the check; it measures secret-independence over the primitive-bearing paths (BN, RSA, EC, the AEADs and the TLS key schedule) and carries a sensitivity control",
       "HOSTILE-BOUNDARY-REGISTER": "18.5 lands the register; it checks that every recorded hardened/measured/not-claimed boundary still matches the evidence that establishes it",
-      "RT-HOSTILE-TLS": "18.1 lands the corpus and its driver; it drives malformed records, handshake messages and extension bodies through the record layer and the TLS 1.3 flight with crash/OOM/timeout detection and an authority-linked differential control",
       "RT-HOSTILE-X509": "18.2 lands the corpus; it drives truncated, oversized and ill-formed certificates, extensions and DER/PEM containers with an authority-linked differential control",
       "RT-MEM-HARDENING": "18.4 lands the court; it exercises the reduced engine's fixed buffers and its allocation-failure paths, with an injected-failure control"
     },
     "summary": {
       "fail": 0,
-      "pass": 0,
-      "total": 0
+      "pass": 1,
+      "total": 1
     }
   },
   "generator": "forensics/tools/phase18_courts.py",
@@ -24,6 +401,31 @@
       "name": "phase-18-plan",
       "path": "docs/PHASE-18-SUBPHASES.md",
       "sha256": "9ff1298c2901accffa341fa207cc7d8a542cc16a730b16c74f2542f9107ccf78"
+    },
+    {
+      "name": "corpus-generator",
+      "path": "forensics/tools/gen_hostile_tls_corpus.py",
+      "sha256": "af5041d765056bb93f3cbf5d3a9c3efa928b3e8098372df6c5082e9ae7d11606"
+    },
+    {
+      "name": "corpus-manifest",
+      "path": "courts/phase18/fixtures/hostile-tls/MANIFEST.json",
+      "sha256": "4c5abbf0a07db36dee0d80bea6fb1268b101578512c706e7e152532fa7d75f48"
+    },
+    {
+      "name": "hostile-tls-probe",
+      "path": "courts/phase18/rt_hostile_tls_probe.c",
+      "sha256": "d6ad8b622587e99d5e4ea22bb150fe39933c52fce8ad4f90251263f2278fdc6f"
+    },
+    {
+      "name": "tls-signer",
+      "path": "courts/phase17/fixtures/signer.pem",
+      "sha256": "c07bb2be720860e61d8498ff2978195bff963a308adb3bfade5effe087c1bab2"
+    },
+    {
+      "name": "tls-key",
+      "path": "courts/phase17/fixtures/rsa-key.pem",
+      "sha256": "160668f021d13c0be038675dccdbb0e9666d9d2babd825b6c81b6375831efa5a"
     }
   ],
   "kind": "phase18-courts",
