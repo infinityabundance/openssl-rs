@@ -1080,6 +1080,12 @@ def performance_sensitivity_court(name: str, src: Path, auth, work: Path,
         "court": name,
         "probe": rel(src),
         "candidate_only": True,
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "candidate-only instrument-sensitivity control: the deliberately slowed variant is a "
+            "construction of the harness, so there is no authority transcript to diff and no "
+            "artifacts/phase19/probes/<probe>.authority pair to stage, and the probe is compiled "
+            "once against the candidate distribution shell (D13, D201)"),
         "method": (
             "candidate-only; the probe is compiled once against the candidate distribution shell "
             "and drives two arms under the same 19.3 work instrument (the counting `CRYPTO` "

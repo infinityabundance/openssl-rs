@@ -4,20 +4,10 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {
-      "symbols_not_reached": 3
-    },
-    "census_by_stratum": {
-      "19": 3
-    },
+    "census": {},
+    "census_by_stratum": {},
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {
-      "symbols_not_reached": [
-        "OPENSSL_cpuid_setup",
-        "OPENSSL_ia32_cpuid",
-        "OPENSSL_ia32cap_P"
-      ]
-    },
+    "census_samples": {},
     "checked": {
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
@@ -38,7 +28,7 @@
         "docs/PHASE-9-SUBPHASES.md"
       ],
       "rows_judged": 197,
-      "symbols_named_by_a_row": 118,
+      "symbols_named_by_a_row": 115,
       "symbols_reached": 115,
       "unit_records": 152,
       "units_named_by_a_record": 161,
@@ -8121,7 +8111,7 @@
       "transcribed_units": 599
     }
   },
-  "body_hash": "503d79f6e4fd95f2148b30bd8519487a0bfbab6741f6d61ccbaba26752068592",
+  "body_hash": "d04956f97cd4072b4edb023af5c44b51adcb0e27284a5f8d6f617f36a1f70d47",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -8142,7 +8132,7 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "dee9d3fb07dff81e0ab834e6c8c86710e13b6c5ffdc6a7e2806936695ee9f0ba"
+      "sha256": "3b4cdafe58e284a6be0da40d5986929fcc50326f0834218f2aaeae810f2f392a"
     },
     {
       "name": "prerequisites",
@@ -8202,7 +8192,7 @@
     {
       "name": "plan-PHASE-19-SUBPHASES",
       "path": "docs/PHASE-19-SUBPHASES.md",
-      "sha256": "c6342ad8a9ec8636c02710f5fc12ccaee6781672699fb9c2ffab90c61721011e"
+      "sha256": "580dce1c06c00280bf50a310f2a5c48ea5f1dff5e5edeeee2e6498ae68458be1"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",

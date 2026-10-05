@@ -705,6 +705,34 @@ COURTS: list[tuple[str, int, str, str]] = [
     ("rt-mem-hardening", 18, "rt_mem_hardening_probe",
      "the reduced engine's fixed buffers at, below and above each recorded capacity, with an "
      "injected allocation-failure control"),
+    #
+    # Phase 19 -- the performance / CPU dispatch contract stratum. Like Phases 16, 17 and 18 it owns
+    # no exported symbol, so its courts are not a symbol projection: the three rows below each diff a
+    # real transcript and stage an `artifacts/phase19/probes/<probe>.{authority,candidate}` pair, so
+    # all three are declarable. The fourth probe court, `RT-PERFORMANCE-SENSITIVITY`, is
+    # candidate-only -- the deliberately slowed variant is a construction of the harness, compiled
+    # once against the candidate, with no authority transcript to diff and no `{fixture}` for a
+    # challenge to locate -- so its own `artifacts/phase19/COURTS.json` row is marked
+    # `frf_declarable: false` and it is not declared here, exactly as Phase 8's, 9's and 10's `CT-*`
+    # courts and Phase 18's `CT-PRIMITIVES` are not (D13, D201). The fifth court,
+    # `PERFORMANCE-BOUNDARY-REGISTER`, stages no probe: its `artifacts/phase19/COURTS.json` row is
+    # marked `frf_declarable: false` because it re-reads the live courts registry and the authored
+    # boundary register rather than diffing a transcript, so no row here names it.
+    #
+    ("rt-cpu-capability", 19, "rt_cpu_capability_probe",
+     "the CPU-capability surface (`OPENSSL_ia32cap_P`, `OPENSSL_cpuid_setup` and "
+     "`OPENSSL_ia32_cpuid`) driven under fixed and faulted CPUID facades, with an "
+     "authority-linked differential control"),
+    ("rt-evp-dispatch", 19, "rt_evp_dispatch_probe",
+     "the selection surface (the legacy constructor, the provider fetch, the legacy name lookup "
+     "and the cipher/digest context) over fixed capability sets, where masking the AES-NI bit "
+     "moves the authority's `AES-*-CBC-HMAC-*` selection and the candidate's does not"),
+    ("rt-performance-work", 19, "rt_performance_work_probe",
+     "the deterministic work vector over a fixed primitive set (AES-128/256-CBC/GCM, "
+     "ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an RSA-1024 private "
+     "decrypt), measured by a counting `CRYPTO` allocator plus the method-derived "
+     "block/output/tag sizes, with the EC and RSA paths recording a divergent-work finding and "
+     "the symmetric/digest paths agreeing"),
 ]
 
 

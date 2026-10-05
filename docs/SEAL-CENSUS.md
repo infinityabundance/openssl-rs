@@ -44,7 +44,7 @@ declared owner; this is that assignment.
 | 16 | CLI / config / filesystem contract | `complete` | 0 | 42 | 42 | 0 | 0 |
 | 17 | Downstream replacement court | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` | 0 | 5 | 5 | 0 | 0 |
-| 19 | Performance / CPU dispatch | `in-progress` | 0 | 5 | 5 | 0 | 0 |
+| 19 | Performance / CPU dispatch | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
 | 21 | Maintenance delta machinery | `not-started` | 0 | — | — | — | — |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
@@ -608,9 +608,8 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 
 ## Phase 19 — Performance / CPU dispatch
 
-* state: `in-progress`
-* blocking: Phase 19's FRF chain entry is incomplete: 4 court(s) that artifacts/phase19/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-cpu-capability, openssl-rs-rt-evp-dispatch, openssl-rs-rt-performance-work, openssl-rs-rt-performance-sensitivity; 4 of 4 required court(s) have no FRF declaration staging their artifacts/phase19/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-cpu-capability, openssl-rs-rt-evp-dispatch, openssl-rs-rt-performance-work, openssl-rs-rt-performance-sensitivity; 4 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-cpu-capability, openssl-rs-rt-evp-dispatch, openssl-rs-rt-performance-work, openssl-rs-rt-performance-sensitivity; 4 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-cpu-capability, openssl-rs-rt-evp-dispatch, openssl-rs-rt-performance-work, openssl-rs-rt-performance-sensitivity; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 4 required court(s); no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 19 and the FRF chain
-* seal: none written yet (`unnamed`)
+* state: `complete`
+* seal: `docs/PHASE-19-PERFORMANCE-SEAL.md`
 * ledger: `forensics/phase19-obligations.json`
 * atlas-owned: 0
 * owned working set: 5

@@ -39,7 +39,7 @@ renderer does not know any phase status.
 | 16 | CLI / config / filesystem contract | `complete` |  |
 | 17 | Downstream replacement court | `complete` |  |
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` |  |
-| 19 | Performance / CPU dispatch | `in-progress` | Phase 19's FRF chain entry is incomplete: 4 court(s) that artifacts/phase19/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-cpu-capability, openssl-rs-rt-evp-dispatch, openssl-rs-rt-performance-work, openssl-rs-rt-performance-sensitivity; 4 of 4 required court(s) have no FRF declaration staging their artifacts/phase19/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-cpu-capability, openssl-rs-rt-evp-dispatch, openssl-rs-rt-performance-work, openssl-rs-rt-performance-sensitivity; 4 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-cpu-capability, openssl-rs-rt-evp-dispatch, openssl-rs-rt-performance-work, openssl-rs-rt-performance-sensitivity; 4 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-cpu-capability, openssl-rs-rt-evp-dispatch, openssl-rs-rt-performance-work, openssl-rs-rt-performance-sensitivity; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 4 required court(s); no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 19 and the FRF chain |
+| 19 | Performance / CPU dispatch | `complete` |  |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 
 Not started: strata 20-21 (2 total).
