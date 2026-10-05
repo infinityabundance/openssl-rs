@@ -6,7 +6,7 @@ Status: **build/link/start/functional all PROVEN** (PASS). This file is generate
 
 - **curl 8.22.0**, `https://curl.se/download/curl-8.22.0.tar.gz`
   sha256 `d54dd598bf05927a726deb38df31c6a255ba83ff1de57c5d1464dac3ed8f44a1` (parsed from `build.sh`).
-- Candidate identity: `0.0.21` (the `RT-DOWNSTREAM-CORPUS` freshness key).
+- Candidate identity: `0.0.22` (the `RT-DOWNSTREAM-CORPUS` freshness key).
 - Authority: `openssl-rt-3.6.4-r2`.
 
 ## Measured result

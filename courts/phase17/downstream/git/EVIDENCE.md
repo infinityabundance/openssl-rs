@@ -6,7 +6,7 @@ Status: **build/link/start/functional all PROVEN** (PASS). This file is generate
 
 - **git 2.56.0**, `https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.56.0.tar.xz`
   sha256 `26c56c296b38c0695b26fa95f475f1d01704d2d38e73465ca30b0b2f5dc789d3` (parsed from `build.sh`).
-- Candidate identity: `0.0.21` (the `RT-DOWNSTREAM-CORPUS` freshness key).
+- Candidate identity: `0.0.22` (the `RT-DOWNSTREAM-CORPUS` freshness key).
 - Authority: `openssl-rt-3.6.4-r2`.
 
 ## Measured result

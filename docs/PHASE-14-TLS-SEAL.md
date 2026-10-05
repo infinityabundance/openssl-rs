@@ -55,8 +55,8 @@ live implemented surface.
   (`receipt-run-openssl-rs-rt-{ssl-object,ssl-methods,ssl-ciph,record,statem,ssl-bio,dtls,ssl-init,session-cert,ssl-ext}-*`),
   twenty adjudicated challenge records (both operators on every court) and the
   `sensitivity-backed` claim
-  `1691842e6f130436ff0a2ea1dbf50e9384cb08e071f06db2e185ad7a36c7515b`, binding
-  `openssl-rt-3.6.4-r2` to `openssl-rs 0.0.21` with zero blockers and all ten premises carrying
+  `3ed1f351d0432f2643365df7a150a1be5681cf1b75a9d6e84c03cc36628af01c`, binding
+  `openssl-rt-3.6.4-r2` to `openssl-rs 0.0.22` with zero blockers and all ten premises carrying
   stdout and exit. §8 states what that is.
 - Gemel checkpoint: **present, and it is this stratum's.** `forensics/GEMEL_TRAJECTORY.md`'s head
   change is Phase 14's `C101` and its `current:` is `checkpoint.23b2564b0f48b12146b8b842338cd365879e9bf550a43e33f6d348d61ee7595e`
@@ -400,7 +400,7 @@ The boundaries this stratum actually met are recorded in the places below.
 8. **The FRF and Gemel evidence is established, and §8 records what it is.** `docs/RELEASE_GATES.md`
    §2 items 6, 8 and 10 are met by the chain entry §8 records: ten receipts, twenty adjudicated
    challenge records, the `sensitivity-backed` claim
-   `1691842e6f130436ff0a2ea1dbf50e9384cb08e071f06db2e185ad7a36c7515b` with zero blockers, and the
+   `3ed1f351d0432f2643365df7a150a1be5681cf1b75a9d6e84c03cc36628af01c` with zero blockers, and the
    Gemel checkpoint `K55` whose summary names Phase 14 and the FRF chain. Phase 14's
    derived state is `complete`.
 
@@ -475,11 +475,11 @@ attaches to a Phase-14 FRF residual.** Items 6, 8 and 10 retired when §8's chai
   records — both declared axes (`stdout-first-line` and `exit-class`) on each of the ten courts,
   every one `saw_defect` and `specificity_clean` — which is what makes the claim
   `sensitivity-backed` rather than merely green (D13). `.frf/claims/` carries the compiled claim
-  `1691842e6f130436ff0a2ea1dbf50e9384cb08e071f06db2e185ad7a36c7515b`, compiled at
+  `3ed1f351d0432f2643365df7a150a1be5681cf1b75a9d6e84c03cc36628af01c`, compiled at
   `--policy sensitivity-backed` over the ten receipts, binding authority `openssl-rt-3.6.4-r2` to
-  candidate `openssl-rs 0.0.21` (`identity_hash e4f60d8b…`) with zero blockers and all ten premises
+  candidate `openssl-rs 0.0.22` (`identity_hash e4f60d8b…`) with zero blockers and all ten premises
   asserting both `stdout` and `exit`.
-  **The identity is the current 0.0.21 release.** The chain was cut into the store the 0.0.21
+  **The identity is the current 0.0.22 release.** The chain was cut into the store the 0.0.22
   release regenerated from clean — FRF run identities are content-addressed on the declaration,
   which carries the candidate version — so this claim records the candidate the tree is
   (`gen_frf_courts.CANDIDATE_VERSION`), which is what the fix-4 identity clause requires.
@@ -508,7 +508,7 @@ stratum's (`docs/PHASE-14-SUBPHASES.md:18-46`).
 
 - **The FRF/Gemel chain entry has landed.** §8's subject is now the objects on disk: the ten
   declarations, ten receipts, twenty adjudicated challenges, the claim
-  `1691842e6f130436ff0a2ea1dbf50e9384cb08e071f06db2e185ad7a36c7515b` and the checkpoint
+  `3ed1f351d0432f2643365df7a150a1be5681cf1b75a9d6e84c03cc36628af01c` and the checkpoint
   `K55`. This stratum registers no `CT-*` court, so the entry covers the ten behavioural
   differential courts and nothing is recorded as not declarable; `RT-PHASE14-REF` is the reference
   basis and is not declarable. Items 6, 8 and 10 of §7 retired with it, and `phase_state.py`
@@ -565,7 +565,7 @@ the evidence forced rather than the ones a reviewer might have preferred.
    (`src/ssl/mod.rs:394-404`).
 7. **The FRF/Gemel chain entry landed, and §7 and §8 record it.** The seal's §8 records the ten
    declarations, ten receipts, twenty adjudicated challenges, the `sensitivity-backed` claim
-   `1691842e6f130436ff0a2ea1dbf50e9384cb08e071f06db2e185ad7a36c7515b` and the Gemel change
+   `3ed1f351d0432f2643365df7a150a1be5681cf1b75a9d6e84c03cc36628af01c` and the Gemel change
    `C101` / checkpoint `K55`, so items 6, 8 and 10 retired and `phase_state.py`
    derives `complete`. `seal_sha256` is recomputed from the document's new bytes.
 8. **The Phase-14 slices left four generator drifts, and 14.12 regenerates and reconciles them.**
