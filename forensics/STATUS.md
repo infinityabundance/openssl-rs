@@ -38,7 +38,7 @@ renderer does not know any phase status.
 | 15 | QUIC / ECH and modern SSL surface | `complete` |  |
 | 16 | CLI / config / filesystem contract | `complete` |  |
 | 17 | Downstream replacement court | `complete` |  |
-| 18 | Hostile fuzz / security / side-channel hardening | `in-progress` | 4 open obligation(s) of this stratum recorded in forensics/phase18-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase18-obligations.json` publishes `unit: hostile hardening contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`hostile-tls`, `hostile-x509`, `constant-time`, `memory-hardening` and `hostile-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it hardens the implementation Phases 3 through 15 completed. Its `artifacts/phase18/COURTS.json` landed `RT-HOSTILE-TLS` in 18.1 -- the fixed malformed-input corpus driven through the record layer and the TLS 1.3 flight with crash/OOM/timeout detection and an authority-linked differential control -- so one of the five contract units is `implemented` and `open_in_this_stratum` has moved from five to four. `RT-HOSTILE-X509`, `CT-PRIMITIVES`, `RT-MEM-HARDENING` and `HOSTILE-BOUNDARY-REGISTER` remain `pending` with the subphases that land them. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-18-SUBPHASES.md` sections 1 and 4 record the measurement |
+| 18 | Hostile fuzz / security / side-channel hardening | `in-progress` | 3 open obligation(s) of this stratum recorded in forensics/phase18-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase18-obligations.json` publishes `unit: hostile hardening contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`hostile-tls`, `hostile-x509`, `constant-time`, `memory-hardening` and `hostile-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it hardens the implementation Phases 3 through 15 completed. Its `artifacts/phase18/COURTS.json` landed `RT-HOSTILE-TLS` in 18.1 -- the fixed malformed-input corpus driven through the record layer and the TLS 1.3 flight with crash/OOM/timeout detection and an authority-linked differential control -- and `RT-HOSTILE-X509` in 18.2 -- the fixed malformed-input corpus driven through the X.509, ASN.1 and PEM readers with the same detection and an authority-linked differential control -- so two of the five contract units are `implemented` and `open_in_this_stratum` has moved from five to three. `CT-PRIMITIVES`, `RT-MEM-HARDENING` and `HOSTILE-BOUNDARY-REGISTER` remain `pending` with the subphases that land them. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-18-SUBPHASES.md` sections 1 and 4 record the measurement |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 
 Not started: strata 19-21 (3 total).
@@ -260,9 +260,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 18 working set: 5
-* implemented: 1
+* implemented: 2
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 4
+* open in this stratum: 3
 
 ### Phase 22 obligation ledger
 

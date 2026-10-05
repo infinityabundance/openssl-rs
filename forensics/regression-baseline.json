@@ -408,6 +408,10 @@
       "observations": 1046,
       "verdict": "pass"
     },
+    "RT-HOSTILE-X509": {
+      "observations": 1066,
+      "verdict": "pass"
+    },
     "RT-HPKE": {
       "observations": 65,
       "verdict": "pass"
@@ -773,7 +777,7 @@
     "phase15": 0,
     "phase16": 0,
     "phase17": 0,
-    "phase18": 4,
+    "phase18": 3,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,

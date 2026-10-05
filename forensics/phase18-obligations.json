@@ -12,8 +12,8 @@
       },
       {
         "closure": "the `RT-HOSTILE-X509` court passes",
-        "observation": "RT-HOSTILE-X509 is pending",
-        "state": "open",
+        "observation": "RT-HOSTILE-X509 is pass",
+        "state": "implemented",
         "surface": "artifacts/phase18/COURTS.json",
         "unit": "hostile-x509",
         "what": "a hostile X.509 / malformed-input corpus: certificates, extensions and DER/PEM containers with truncated, oversized and ill-formed encodings, with an authority-linked differential control"
@@ -48,8 +48,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 1,
-      "open_in_this_stratum": 4,
+      "implemented": 2,
+      "open_in_this_stratum": 3,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -90,7 +90,7 @@
     {
       "name": "phase-18-courts",
       "path": "artifacts/phase18/COURTS.json",
-      "sha256": "d621b18e941710542735b793ca2f40c28bae40d040b60706c523d61538459bee"
+      "sha256": "0feb8bc0f9243f83c95235f196a2f75dd9048675657263d9d11e2513ab55d267"
     }
   ],
   "kind": "phase18-obligations",
