@@ -3670,6 +3670,254 @@
         "verdict": "clean"
       },
       {
+        "probe": "courts/phase19/rt_cpu_capability_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 27,
+              "-O1": 27,
+              "-O2": 27
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 27,
+              "-O1": 27,
+              "-O2": 27
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
+        "probe": "courts/phase19/rt_evp_dispatch_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 259,
+              "-O1": 259,
+              "-O2": 259
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 259,
+              "-O1": 259,
+              "-O2": 259
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
+        "probe": "courts/phase19/rt_performance_sensitivity_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 26,
+              "-O1": 26,
+              "-O2": 26
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 26,
+              "-O1": 26,
+              "-O2": 26
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
+        "probe": "courts/phase19/rt_performance_work_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 84,
+              "-O1": 84,
+              "-O2": 84
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 84,
+              "-O1": 84,
+              "-O2": 84
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
         "probe": "courts/phase3/rt_coverage_ref_probe.c",
         "sides": {
           "authority": {
@@ -9066,8 +9314,8 @@
     ],
     "runs_per_level": 2,
     "summary": {
-      "clean": 146,
-      "total": 146,
+      "clean": 150,
+      "total": 150,
       "unstable": 0
     }
   },
@@ -9367,6 +9615,26 @@
       "name": "probe",
       "path": "courts/phase18/rt_mem_hardening_probe.c",
       "sha256": "62b9b5c972a3edacc034e2ffe65732f5a6d94aa8b508079fe8648872fa6ac884"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase19/rt_cpu_capability_probe.c",
+      "sha256": "79fd360f778268d32d0c02210c3118c6098849a6aa515b3ee8aa74f8c69cf886"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase19/rt_evp_dispatch_probe.c",
+      "sha256": "a7ad5f31d7ec6c6c89dc3a81d2050441df66f0189cb1a74fa8b084227c62588a"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase19/rt_performance_sensitivity_probe.c",
+      "sha256": "a7cf24f135ac9ef7e33e75d70caa61d2690199635da2f0ebf9ac28930dab3990"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase19/rt_performance_work_probe.c",
+      "sha256": "06e905af25d656b915e2edc29aa1cb621e8105fa0673303505fecff4cfdd5f40"
     },
     {
       "name": "probe",

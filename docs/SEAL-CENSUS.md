@@ -44,7 +44,7 @@ declared owner; this is that assignment.
 | 16 | CLI / config / filesystem contract | `complete` | 0 | 42 | 42 | 0 | 0 |
 | 17 | Downstream replacement court | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` | 0 | 5 | 5 | 0 | 0 |
-| 19 | Performance / CPU dispatch | `not-started` | 0 | — | — | — | — |
+| 19 | Performance / CPU dispatch | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
 | 21 | Maintenance delta machinery | `not-started` | 0 | — | — | — | — |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
@@ -605,6 +605,40 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 | CT-PRIMITIVES | `pass` | — (structural) |
 | RT-MEM-HARDENING | `pass` | 282 |
 | HOSTILE-BOUNDARY-REGISTER | `pass` | — (structural) |
+
+## Phase 19 — Performance / CPU dispatch
+
+* state: `complete`
+* seal: `docs/PHASE-19-PERFORMANCE-SEAL.md`
+* ledger: `forensics/phase19-obligations.json`
+* atlas-owned: 0
+* owned working set: 5
+* implemented: 5
+* deferred to a later stratum with a stated reason: 0
+* **open in this stratum: 0**
+
+Contract units (measurement vs property):
+
+| unit | measurement_state | property_status | findings |
+|---|---|---|---|
+| cpu-capability | `complete` | `not_claimed` | — |
+| evp-dispatch | `complete` | `not_claimed` | — |
+| performance-work | `complete` | `NOT_CLAIMED` | `ec-p256-mul: deterministic work differs (allocs authority=3 candidate=4; bytes authority=2121 candidate=160)`, `rsa-1024-private: deterministic work differs (allocs authority=46 candidate=31; bytes authority=4541 candidate=2669)` |
+| performance-sensitivity | `complete` | `not_claimed` | — |
+| performance-boundary-register | `complete` | `not_claimed` | — |
+
+A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
+Courts: `all pass`, 5 court(s), **942** authority observation(s) over 3 transcript court(s).
+
+The other 2 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
+
+| court | verdict | observations |
+|---|---|---|
+| RT-CPU-CAPABILITY | `pass` | 81 |
+| RT-EVP-DISPATCH | `pass` | 777 |
+| RT-PERFORMANCE-WORK | `pass` | 84 |
+| RT-PERFORMANCE-SENSITIVITY | `pass` | — (structural) |
+| PERFORMANCE-BOUNDARY-REGISTER | `pass` | — (structural) |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 

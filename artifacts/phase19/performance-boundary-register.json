@@ -1,0 +1,200 @@
+{
+  "schema": "openssl-rs/performance-boundary-register/v1",
+  "phase": 19,
+  "subphase": "19.5",
+  "authority": "openssl-3.6.4-production",
+  "rule": "This register is the stratum's own non-claims, recorded per surface as `measured` (a passing court covers the surface), `not-measured` (a surface this stratum names but no court reaches, so it is named `pending` rather than counted as passing) or `not-claimed` (explicitly outside this stratum -- including benchmark parity and assembly-versus-Rust equivalence). It is authored, not derived: the `PERFORMANCE-BOUNDARY-REGISTER` court in forensics/tools/phase19_courts.py re-reads the live courts registry and the four probe courts' evidence and fails the stratum if any recorded classification, surface key or stated count/evidence value here has drifted from what the courts actually show (docs/PHASE-19-SUBPHASES.md sections 3.1, 3.5 and 3.6). A surface the courts do not reach is `not-measured` or `not-claimed`, never `measured`, and the register may not claim more than the courts above measured.",
+  "classifications": {
+    "measured": 7,
+    "not-measured": 1,
+    "not-claimed": 6,
+    "total": 14
+  },
+  "surfaces": [
+    {
+      "id": "cpu-names-not-reached",
+      "group": "cpu-capability",
+      "surface": "the three candidate CPU-capability names OPENSSL_ia32cap_P, OPENSSL_cpuid_setup and OPENSSL_ia32_cpuid",
+      "classification": "measured",
+      "court": "RT-CPU-CAPABILITY",
+      "surface_keys": ["cpu.reach.ia32cap_p", "cpu.reach.cpuid_setup", "cpu.reach.ia32_cpuid"],
+      "finding": "the candidate reaches none of the three (probe.reachable.*=0, CPUINFO: N/A), while the authority reaches all three through the -Wl,-u forced static link; the disposition is recorded, not substituted",
+      "evidence": {
+        "verdict": "pass",
+        "authority_reached": {"probe.reachable.cpuid_setup": "1", "probe.reachable.ia32_cpuid": "1", "probe.reachable.ia32cap_p": "1"},
+        "candidate_reached": {"probe.reachable.cpuid_setup": "0", "probe.reachable.ia32_cpuid": "0", "probe.reachable.ia32cap_p": "0"},
+        "divergence_count": 68
+      },
+      "note": "measured, not claimed: the court records which names each side reaches under the fixed link, not that the candidate implements a CPU-capability surface. It is the `symbols_not_reached` census docs/PHASE-19-SUBPHASES.md section 4.2 records (sections 3.4 and 3.6)."
+    },
+    {
+      "id": "cpu-dispatch-invariance",
+      "group": "cpu-capability",
+      "surface": "the candidate's capability-derived selection under the OPENSSL_ia32cap facade (dispatch invariance under masking)",
+      "classification": "measured",
+      "court": "RT-CPU-CAPABILITY",
+      "surface_keys": ["cpu.masking"],
+      "finding": "the authority's capability-derived selection moves with the facade (sel.aes128cbcsha1.null 0 -> 1 with AES-NI masked); the candidate's does not, because the reduced engine does not model OPENSSL_ia32cap masking",
+      "evidence": {
+        "verdict": "pass",
+        "facade_reference": "0",
+        "facade_aesni_off": "1",
+        "facade_moved_selection": true
+      },
+      "note": "measured, not claimed: this is a bounded audit of the capability surface at the three sets the court drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6)."
+    },
+    {
+      "id": "evp-reference-agreement",
+      "group": "evp-dispatch",
+      "surface": "the selection each path makes under the reference capability set",
+      "classification": "measured",
+      "court": "RT-EVP-DISPATCH",
+      "surface_keys": ["evp.reference"],
+      "finding": "0 divergences at the reference set: the authority and the candidate select identically across the legacy constructor, provider fetch, name lookup and cipher/digest context paths",
+      "evidence": {
+        "verdict": "pass",
+        "reference_divergence_count": 0
+      },
+      "note": "measured, not claimed: a bounded comparison of selection over the sets the court drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6)."
+    },
+    {
+      "id": "evp-masked-divergence",
+      "group": "evp-dispatch",
+      "surface": "the selection each path makes under the AES-NI-cleared and fully-cleared capability sets",
+      "classification": "measured",
+      "court": "RT-EVP-DISPATCH",
+      "surface_keys": ["evp.masked"],
+      "finding": "masking the AES-NI bit moves the authority's AES-*-CBC-HMAC-* fetch/legacy/lookup selection to NULL and does not move the candidate's; the 88 differences per faulted set are recorded, not failed",
+      "evidence": {
+        "verdict": "pass",
+        "masked_sets": ["aesni-off", "cleared"],
+        "masked_divergence_count": {"aesni-off": 88, "cleared": 88}
+      },
+      "note": "measured, not claimed: the candidate reads CPUID directly and does not model the mask, so its selection does not move; that disposition is a recorded divergence rather than a parity claim (sections 3.4 and 3.6)."
+    },
+    {
+      "id": "evp-engine-path",
+      "group": "evp-dispatch",
+      "surface": "the ENGINE selection path",
+      "classification": "not-measured",
+      "court": null,
+      "surface_keys": ["evp.engine"],
+      "finding": "no engine is configured and the reduced engine does not export the enumeration the probe would need, so the engine path is not driven",
+      "evidence": {},
+      "note": "not-measured: the engine path is named but no court reaches it, so it is recorded rather than assumed; a name that cannot be driven is `pending`, never counted as passing (docs/PHASE-19-SUBPHASES.md sections 3.1 and 3.6)."
+    },
+    {
+      "id": "work-agreement",
+      "group": "performance-work",
+      "surface": "the symmetric and digest paths (AES-128/256-CBC, AES-128/256-GCM, ChaCha20-Poly1305, SHA-256)",
+      "classification": "measured",
+      "court": "RT-PERFORMANCE-WORK",
+      "surface_keys": ["work.agree.aes-128-cbc", "work.agree.aes-256-cbc", "work.agree.aes-128-gcm", "work.agree.aes-256-gcm", "work.agree.chacha20-poly1305", "work.agree.sha256"],
+      "finding": "each of these paths' library-side work vector equals the authority's -- the counting allocator records the same malloc/realloc/byte counts",
+      "evidence": {
+        "verdict": "pass",
+        "agreeing_paths": ["aes-128-cbc", "aes-128-gcm", "aes-256-cbc", "aes-256-gcm", "chacha20-poly1305", "sha256"],
+        "pending_paths": []
+      },
+      "note": "measured, not claimed: the counting allocator observes heap operations, not total CPU instructions, and the block counts are input-implied; agreement on this instrument is not a benchmark-parity claim (sections 3.1, 3.3 and 3.6)."
+    },
+    {
+      "id": "work-divergence",
+      "group": "performance-work",
+      "surface": "the two divergent-work paths (a P-256 scalar multiplication and an RSA-1024 private decrypt)",
+      "classification": "measured",
+      "court": "RT-PERFORMANCE-WORK",
+      "surface_keys": ["work.diverge.ec-p256-mul", "work.diverge.rsa-1024-private"],
+      "finding": "these paths' library-side work vectors differ from the authority's (ec-p256-mul allocs 3 vs 4, bytes 2121 vs 160; rsa-1024-private allocs 46 vs 31, bytes 4541 vs 2669) and are recorded as findings, so the property is NOT_CLAIMED",
+      "evidence": {
+        "verdict": "pass",
+        "findings_count": 2,
+        "divergent_paths": ["ec-p256-mul", "rsa-1024-private"]
+      },
+      "note": "measured, not claimed: the court passes as an instrument while recording every path whose deterministic work differs from the authority's as a finding; a passing RT-PERFORMANCE-WORK must never be read as 'performance parity achieved' (sections 3.1, 3.3 and 3.6)."
+    },
+    {
+      "id": "sensitivity-control",
+      "group": "performance-sensitivity",
+      "surface": "the counting-allocator instrument's resolution against a deliberately slowed path",
+      "classification": "measured",
+      "court": "RT-PERFORMANCE-SENSITIVITY",
+      "surface_keys": ["sens.control"],
+      "finding": "the deliberately slowed control-extra-pass variant is caught on the counting allocator (allocs and bytes differ) while the reference arm equals the authority's recorded aes-128-cbc vector",
+      "evidence": {
+        "verdict": "pass",
+        "caught": true,
+        "counter_caught": true,
+        "reference": "aes-128-cbc",
+        "counter_keys_differing": ["allocs", "bytes"]
+      },
+      "note": "measured, not claimed: the verdict is about the instrument's resolution and makes no throughput or benchmark-parity claim; a control that cannot tell a slow path from a fast one is `fail`, never a vacuous `pass` (sections 3.2 and 3.6)."
+    },
+    {
+      "id": "nc-benchmark-parity",
+      "group": "not-claimed",
+      "surface": "benchmark / throughput parity with the authority",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.benchmark-parity"],
+      "finding": "no throughput ratio to the authority is asserted anywhere in this stratum",
+      "evidence": {},
+      "note": "not-claimed: a passing performance court is a bounded deterministic-work comparison at the resolution it declares, and this stratum makes no benchmark-parity claim (docs/PHASE-19-SUBPHASES.md section 0)."
+    },
+    {
+      "id": "nc-asm-rust-equivalence",
+      "group": "not-claimed",
+      "surface": "assembly-versus-Rust equivalence of the per-CPU paths",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.asm-rust-equivalence"],
+      "finding": "the authority's per-CPU assembly paths and the candidate's reduced implementations are not asserted to be the same work",
+      "evidence": {},
+      "note": "not-claimed: the two implementations are not asserted to perform identical work; this stratum makes no assembly-versus-Rust equivalence claim (docs/PHASE-19-SUBPHASES.md section 0)."
+    },
+    {
+      "id": "nc-wallclock",
+      "group": "not-claimed",
+      "surface": "a wall-clock measurement",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.wallclock"],
+      "finding": "no verdict is ever taken from elapsed time alone",
+      "evidence": {},
+      "note": "not-claimed: a wall-clock measurement on a shared host is not reproducible, so the courts count deterministic work instead; where a wall-clock figure is recorded at all no verdict is taken from it alone (docs/PHASE-19-SUBPHASES.md section 3.3)."
+    },
+    {
+      "id": "nc-instruction-count",
+      "group": "not-claimed",
+      "surface": "a total CPU-instruction count",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.instruction-count"],
+      "finding": "the counting allocator observes heap operations, not total CPU instructions",
+      "evidence": {},
+      "note": "not-claimed: the instrument is a counting CRYPTO allocator plus input-implied block counts, a deterministic instruction-path proxy rather than a total instruction count (docs/PHASE-19-SUBPHASES.md sections 1 and 3.3)."
+    },
+    {
+      "id": "nc-parity",
+      "group": "not-claimed",
+      "surface": "PARITY_VERIFIED for any symbol",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.parity"],
+      "finding": "this stratum claims no parity for any symbol",
+      "evidence": {},
+      "note": "not-claimed: PARITY_VERIFIED is not claimed for any symbol by this stratum, which owns no exported symbol and measures the implementation the strata before it completed (docs/PHASE-19-SUBPHASES.md sections 0 and 3.6)."
+    },
+    {
+      "id": "nc-guarantee",
+      "group": "not-claimed",
+      "surface": "a guarantee about throughput or about the recorded boundary",
+      "classification": "not-claimed",
+      "court": null,
+      "surface_keys": ["nc.guarantee"],
+      "finding": "a register entry is a record of a boundary, not a guarantee",
+      "evidence": {},
+      "note": "not-claimed: a register entry records a boundary and a passing performance court is a measurement result; neither guarantees throughput or that the boundary cannot be crossed (docs/PHASE-19-SUBPHASES.md section 0)."
+    }
+  ]
+}

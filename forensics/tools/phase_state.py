@@ -1089,6 +1089,29 @@ PHASE18_MODULES = [
     "forensics/tools/phase18_obligations.py",
 ]
 
+# Phase 19 is the performance / CPU dispatch stratum, and **it owns no exported symbol**: reading
+# `forensics/atlas/symbol-ownership.json` for `owner_phase == 19` yields no record, so its ledger's
+# unit is not a symbol. `forensics/phase19-obligations.json` records its unit as `performance
+# dispatch contract` (in `atlas_common.NON_EXPORT_UNITS`, so the export-partitioning tools skip it,
+# as they skip Phase 16's `cli-config contract`, Phase 17's `downstream replacement contract` and
+# Phase 18's `hostile hardening contract`), and its working set is five contract units -- the
+# CPU-capability dispatch audit, the EVP / cipher dispatch comparison, the deterministic work
+# court, the instrument-sensitivity court and the performance-boundary register. Like Phase 18 it
+# hands nothing forward and receives nothing: it owns no provider registration row, no symbol
+# deferral and no prerequisite unit, because it measures the implementation the strata before it
+# completed rather than adding library surface. It registers no coverage-reference probe, because
+# it owns no symbol to take an address of, so its runner's registry is empty at activation and its
+# five courts are `pending` with the subphase that lands each. The ledger measures its
+# contract-unit states from the courts registry, so the runner does not bind the ledger (the edge
+# runs ledger -> courts, the reverse of Phase 16's). `docs/PHASE-19-SUBPHASES.md` section 4 records
+# the activation measurement and the precondition it places on the runner.
+PHASE19_COURTS = "artifacts/phase19/COURTS.json"
+PHASE19_OBLIGATIONS = "forensics/phase19-obligations.json"
+PHASE19_MODULES = [
+    "docs/PHASE-19-SUBPHASES.md",
+    "forensics/tools/phase19_obligations.py",
+]
+
 # Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
 # every other stratum's: no export universe, no ownership projection and no provider row. What it
 # owes instead is the plan, the residual ledger its closure produces, the atlas's own courts and
@@ -1340,6 +1363,77 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "of Phase 16's. `docs/PHASE-18-SUBPHASES.md` sections 1, 3 and 4 and "
                             "`docs/PHASE-18-HARDENING-SEAL.md` record the measurement and the "
                             "chain"
+                        )),
+    19: StratumEvidence(PHASE19_MODULES, PHASE19_OBLIGATIONS, PHASE19_COURTS,
+                        ledger_note=(
+                            "This stratum owns **no exported symbol**, so its ledger's unit is "
+                            "not a symbol: `forensics/phase19-obligations.json` publishes "
+                            "`unit: performance dispatch contract` and its `implemented`/`open` "
+                            "*export* lists are empty by measurement, while "
+                            "`open_in_this_stratum` counts the five contract units "
+                            "(`cpu-capability`, `evp-dispatch`, `performance-work`, "
+                            "`performance-sensitivity` and `performance-boundary-register`). It "
+                            "owns no provider registration row, no symbol deferral and no "
+                            "prerequisite unit: it activates no provider and adds no library "
+                            "surface, because it measures the implementation the strata before "
+                            "it completed. Its `artifacts/phase19/COURTS.json` landed "
+                            "`RT-CPU-CAPABILITY` in 19.1 -- the CPU-capability surface "
+                            "(`OPENSSL_ia32cap_P`, `OPENSSL_cpuid_setup`, `OPENSSL_ia32_cpuid`) "
+                            "driven under fixed and faulted CPUID facades against the authority, "
+                            "with an authority-linked differential control -- and `RT-EVP-DISPATCH` "
+                            "in 19.2 -- the selection surface (the legacy constructor, the provider "
+                            "fetch, the legacy name lookup and the cipher/digest context) driven "
+                            "over the same fixed capability sets, where masking the AES-NI bit "
+                            "moves the authority's `AES-*-CBC-HMAC-*` selection and the candidate's "
+                            "does not -- and `RT-PERFORMANCE-WORK` in 19.3 -- the deterministic "
+                            "work vector over a fixed primitive set (AES-128/256-CBC/GCM, "
+                            "ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an "
+                            "RSA-1024 private decrypt), measured by a counting `CRYPTO` allocator "
+                            "the stratum introduces plus the method-derived block/output/tag "
+                            "sizes, with the EC and RSA paths recording a divergent-work `finding` "
+                            "and the symmetric/digest paths agreeing -- and `RT-PERFORMANCE-SENSITIVITY` "
+                            "in 19.4 -- the candidate-only instrument-sensitivity control, where a "
+                            "deliberately slowed `control-extra-pass` variant of `aes-128-cbc` (an "
+                            "injected extra full pass over the primitive in the harness, never product "
+                            "code) is caught on the counting allocator the stratum introduces while the "
+                            "reference arm matches the authority's recorded vector, so the instrument "
+                            "is proven able to tell a slow path from a fast one -- and "
+                            "`PERFORMANCE-BOUNDARY-REGISTER` in 19.5 -- the performance-boundary "
+                            "register, which reads the authored "
+                            "`artifacts/phase19/performance-boundary-register.json` against the four "
+                            "probe-court records and fails the stratum if a measured row's court no "
+                            "longer covers its surface, a not-measured or not-claimed row a passing "
+                            "court now covers, or a stated count/evidence value has moved, recording "
+                            "what is measured, what is not (the ENGINE path, the three capability "
+                            "names the candidate does not implement) and the explicit non-claims "
+                            "(no benchmark-parity claim, no assembly-versus-Rust equivalence claim) "
+                            "-- so all five contract units are `implemented` and "
+                            "`open_in_this_stratum` is zero. Nothing here is a throughput or parity "
+                            "claim: there is no benchmark-parity claim and no "
+                            "assembly-versus-Rust equivalence claim, and no verdict is ever "
+                            "taken from wall-clock time alone. The ledger records two axes "
+                            "separately -- "
+                            "`measurement_state` says the instrument completed and "
+                            "`property_status`/`findings` say what is claimed -- so a passing "
+                            "`RT-PERFORMANCE-WORK` is an instrument plus bounded "
+                            "deterministic-work comparison and must never be read as "
+                            "'performance parity achieved'. The ledger's contract-unit states "
+                            "are measured from the courts registry, so the runner does not bind "
+                            "the ledger and the edge runs ledger -> courts, the reverse of "
+                            "Phase 16's. The 19.6 seal `docs/PHASE-19-PERFORMANCE-SEAL.md` lands "
+                            "with the FRF chain the release gates require: its three declarable "
+                            "courts (`rt-cpu-capability`, `rt-evp-dispatch`, "
+                            "`rt-performance-work`) are declared in `gen_frf_courts.py`, each "
+                            "carries a receipt and two adjudicated challenges, and one "
+                            "`sensitivity-backed` claim "
+                            "`63f910ced5baf43c6dc30b2da63996fb3fb0e1b1334e8d89be2f5ad23c528af8` binds "
+                            "authority `openssl-rt-3.6.4-r2` to candidate `openssl-rs 0.0.23` "
+                            "(`e4f60d8b`) with zero blockers -- `RT-PERFORMANCE-SENSITIVITY` is "
+                            "candidate-only (its row carries `frf_declarable` false) and "
+                            "`PERFORMANCE-BOUNDARY-REGISTER` validates data, so neither is "
+                            "declarable (D13, D201). `docs/PHASE-19-SUBPHASES.md` sections 1 and 4 "
+                            "and `docs/PHASE-19-PERFORMANCE-SEAL.md` record the measurement and "
+                            "the chain"
                         )),
     # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
     # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no

@@ -49643,7 +49643,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "1530833a4b595521278ea4c4f245e0b18593828e9354dcc66d66db35fb7a5f65"
+      "sha256": "69ff47b924da07ba47c97a35b2b3fb0377d4c6f77e01c920fc1c1b59a7e66c84"
     },
     {
       "name": "symbol-ownership",
@@ -49698,7 +49698,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "6ba4cebeb00d9a6ffd399aeb29d83881f95fff51811f0eb00b8cfb4e74f64c21"
+      "sha256": "e1a2da3798d75e99530d822b771df54b3016d1f805640022d4f3b5fe62f9e7d8"
     },
     {
       "name": "phase7-courts",
@@ -49708,7 +49708,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "8eb790412c3cc5256136b5d548daf09c59795925179df100b2a52a8cbfa518f0"
+      "sha256": "0b2c6faf9d3f8b2ab4bc07811e4ad59de33c961dfc8caf7bef9e8d2135b9bdbf"
     },
     {
       "name": "phase8-courts",
@@ -49718,7 +49718,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "ce1d6c98448dcbe623b9bb1f54ceb3dbf1dea8bd5c8c94e1be01cf6e6a611350"
+      "sha256": "f2d0900803ed44904075f34acc2ba986656cac9f1420cb3f372fd377a06e0855"
     },
     {
       "name": "phase9-courts",
@@ -49728,7 +49728,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "2095726e7dd68877dc39807693ed90c4505c6acb0614f000ea04010e22c4eb74"
+      "sha256": "e221e4147d211709aa0c468e861b838989ef1d3e5674bed92ae5ef03e214c21d"
     },
     {
       "name": "phase10-courts",
@@ -49738,7 +49738,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "caff81b25092862b61c0b2bdb73c698d18ce0ed8e19609969526aae62fb0121c"
+      "sha256": "e83abe23a25583c43c143847fe4e3266f9c84b6bcc49ca3125f1cd58e48d09ac"
     },
     {
       "name": "phase11-courts",
@@ -49748,7 +49748,7 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "1da30b70c1646921851af7d7b5171de7fe028884aec31c2299a0f4e5eb74e032"
+      "sha256": "b5eb47149fe3584c9f09e5cd938ddeb64ec11c94c5d4206659a4ef5ed45753bd"
     },
     {
       "name": "phase12-courts",
@@ -49758,7 +49758,7 @@
     {
       "name": "phase13-obligations",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "e3aefd7b82698fbf1d685705ad83a3b1e8499816bd4d27f5adc4e8584fb1a34e"
+      "sha256": "c5041d40d413d1071c6c19887cee4e43c83c0bb71b64674cbf61f742d7a79ebb"
     },
     {
       "name": "phase13-courts",
