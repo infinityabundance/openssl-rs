@@ -51,10 +51,19 @@ PRODUCTION_AUTHORITY = "openssl-3.6.4-production"
 # three contract units, which a symbol-counting ledger would count zero. **Phase 17 owns no export
 # either**: the ownership atlas assigns `owner_phase == 17` no row, and its unit is the downstream
 # replacement contract over the 52 `apps/<name>.c` command unit deferrals and four contract units,
-# which a symbol-counting ledger would count zero. The marker is a property
+# which a symbol-counting ledger would count zero. **Phase 18 owns no export either**: the
+# ownership atlas assigns `owner_phase == 18` no row, and its unit is the hostile hardening
+# contract over five contract units and no deferral, which a symbol-counting ledger would count
+# zero. The marker is a property
 # of the document rather than a phase number those tools know (`docs/PHASE-22-SUBPHASES.md`, D485;
-# `docs/PHASE-16-SUBPHASES.md`, section 1; `docs/PHASE-17-SUBPHASES.md`, section 1).
-NON_EXPORT_UNITS = {"compatibility plane", "cli-config contract", "downstream replacement contract"}
+# `docs/PHASE-16-SUBPHASES.md`, section 1; `docs/PHASE-17-SUBPHASES.md`, section 1;
+# `docs/PHASE-18-SUBPHASES.md`, section 1).
+NON_EXPORT_UNITS = {
+    "compatibility plane",
+    "cli-config contract",
+    "downstream replacement contract",
+    "hostile hardening contract",
+}
 HISTORICAL_AUTHORITY = "openssl-3.6.3-historical"
 
 # Which seal document belongs to which stratum, where one exists. **One table, because two tools

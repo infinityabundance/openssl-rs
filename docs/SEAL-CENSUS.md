@@ -43,7 +43,7 @@ declared owner; this is that assignment.
 | 15 | QUIC / ECH and modern SSL surface | `complete` | 3 | 3 | 3 | 0 | 0 |
 | 16 | CLI / config / filesystem contract | `complete` | 0 | 42 | 42 | 0 | 0 |
 | 17 | Downstream replacement court | `complete` | 0 | 5 | 5 | 0 | 0 |
-| 18 | Hostile fuzz / security / side-channel hardening | `not-started` | 0 | — | — | — | — |
+| 18 | Hostile fuzz / security / side-channel hardening | `in-progress` | 0 | 5 | 0 | 0 | 5 |
 | 19 | Performance / CPU dispatch | `not-started` | 0 | — | — | — | — |
 | 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
 | 21 | Maintenance delta machinery | `not-started` | 0 | — | — | — | — |
@@ -551,6 +551,23 @@ Courts: `all pass`, 6 court(s), **1111** authority observation(s) over 6 transcr
 | RT-CROSS-DSO-STATE | `pass` | 18 |
 | RT-DOWNSTREAM-CONSUMER | `pass` | 59 |
 | RT-DOWNSTREAM-CORPUS | `pass` | 6 |
+
+## Phase 18 — Hostile fuzz / security / side-channel hardening
+
+* state: `in-progress`
+* blocking: 5 open obligation(s) of this stratum recorded in forensics/phase18-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase18-obligations.json` publishes `unit: hostile hardening contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`hostile-tls`, `hostile-x509`, `constant-time`, `memory-hardening` and `hostile-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it hardens the implementation Phases 3 through 15 completed. Its `artifacts/phase18/COURTS.json` registered no court at activation because it owns no symbol for a differential probe to observe; the five courts (`RT-HOSTILE-TLS`, `RT-HOSTILE-X509`, `CT-PRIMITIVES`, `RT-MEM-HARDENING` and `HOSTILE-BOUNDARY-REGISTER`) are `pending` with the subphases that land them. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-18-SUBPHASES.md` sections 1 and 4 record the measurement
+* seal: none written yet (`unnamed`)
+* ledger: `forensics/phase18-obligations.json`
+* atlas-owned: 0
+* owned working set: 5
+* implemented: 0
+* deferred to a later stratum with a stated reason: 0
+* **open in this stratum: 5**
+
+Courts: `all pass`, 0 court(s), **0** authority observation(s) over 0 transcript court(s).
+
+| court | verdict | observations |
+|---|---|---|
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 

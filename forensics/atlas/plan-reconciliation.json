@@ -18,6 +18,7 @@
         "docs/PHASE-15-SUBPHASES.md",
         "docs/PHASE-16-SUBPHASES.md",
         "docs/PHASE-17-SUBPHASES.md",
+        "docs/PHASE-18-SUBPHASES.md",
         "docs/PHASE-22-SUBPHASES.md",
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
@@ -25,7 +26,7 @@
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 183,
+      "rows_judged": 190,
       "symbols_named_by_a_row": 115,
       "symbols_reached": 115,
       "unit_records": 152,
@@ -8109,7 +8110,7 @@
       "transcribed_units": 599
     }
   },
-  "body_hash": "14708edc5137b29c9539abf664ec964159d7b74f6cbe33d61bcb5702c14789fd",
+  "body_hash": "b42cb9d64bebd7b1fa2adaafd85f8a3dbba5ed7da86dada9ba85c6f5206c0440",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -8130,7 +8131,7 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "571f3b00dff7b873556feb899c7688cd493eedcf8a9a221a0b7502aaa2a4f646"
+      "sha256": "cb67ac2e044dff206e88b2e09349642a1e69ab37f9c756d06a2487b6bc50bae9"
     },
     {
       "name": "prerequisites",
@@ -8181,6 +8182,11 @@
       "name": "plan-PHASE-17-SUBPHASES",
       "path": "docs/PHASE-17-SUBPHASES.md",
       "sha256": "39993c520778e80fa01a4db3ca384924785003d5ddabc3537b5eb08f06554eaf"
+    },
+    {
+      "name": "plan-PHASE-18-SUBPHASES",
+      "path": "docs/PHASE-18-SUBPHASES.md",
+      "sha256": "9ff1298c2901accffa341fa207cc7d8a542cc16a730b16c74f2542f9107ccf78"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",

@@ -1065,6 +1065,30 @@ PHASE17_MODULES = [
     "forensics/tools/phase17_obligations.py",
 ]
 
+# Phase 18 is the hostile fuzz / security / side-channel hardening stratum, and **it owns no
+# exported symbol**: reading `forensics/atlas/symbol-ownership.json` for `owner_phase == 18`
+# yields no record, so its ledger's unit is not a symbol. `forensics/phase18-obligations.json`
+# records its unit as `hostile hardening contract` (in `atlas_common.NON_EXPORT_UNITS`, so the
+# export-partitioning tools skip it, as they skip Phase 16's `cli-config contract` and Phase 17's
+# `downstream replacement contract`), and its working set is five contract units -- a hostile TLS
+# corpus, a hostile X.509 / malformed-input corpus, the constant-time secret-independence checks,
+# the memory-safety / resource-exhaustion hardening and the hostile-boundary register. Unlike
+# Phases 16 and 17 it hands nothing forward and receives nothing: it owns no provider registration
+# row, no symbol deferral and no prerequisite unit, because it hardens the implementation Phases 3
+# through 15 completed rather than adding library surface. It registers no coverage-reference
+# probe, because it owns no symbol to take an address of, so its runner's registry is empty at
+# activation and its five courts are `pending` with the subphase that lands each. The ledger
+# measures its contract-unit states from the courts registry, so the runner does not bind the
+# ledger (the edge runs ledger -> courts, the reverse of Phase 16's).
+# `docs/PHASE-18-SUBPHASES.md` section 4 records the activation measurement and the precondition it
+# places on the runner.
+PHASE18_COURTS = "artifacts/phase18/COURTS.json"
+PHASE18_OBLIGATIONS = "forensics/phase18-obligations.json"
+PHASE18_MODULES = [
+    "docs/PHASE-18-SUBPHASES.md",
+    "forensics/tools/phase18_obligations.py",
+]
+
 # Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
 # every other stratum's: no export universe, no ownership projection and no provider row. What it
 # owes instead is the plan, the residual ledger its closure produces, the atlas's own courts and
@@ -1250,6 +1274,29 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "`docs/PHASE-17-SUBPHASES.md` and "
                             "`docs/PHASE-17-DOWNSTREAM-SEAL.md` record the measurement and the "
                             "chain (docs/DECISIONS.md D530)"
+                        )),
+    18: StratumEvidence(PHASE18_MODULES, PHASE18_OBLIGATIONS, PHASE18_COURTS,
+                        ledger_note=(
+                            "This stratum owns **no exported symbol**, so its ledger's unit is "
+                            "not a symbol: `forensics/phase18-obligations.json` publishes "
+                            "`unit: hostile hardening contract` and its `implemented`/`open` "
+                            "*export* lists are empty by measurement, while "
+                            "`open_in_this_stratum` counts the five contract units "
+                            "(`hostile-tls`, `hostile-x509`, `constant-time`, "
+                            "`memory-hardening` and `hostile-boundary-register`). It owns no "
+                            "provider registration row, no symbol deferral and no prerequisite "
+                            "unit: it activates no provider and adds no library surface, because "
+                            "it hardens the implementation Phases 3 through 15 completed. Its "
+                            "`artifacts/phase18/COURTS.json` registered no court at activation "
+                            "because it owns no symbol for a differential probe to observe; the "
+                            "five courts (`RT-HOSTILE-TLS`, `RT-HOSTILE-X509`, "
+                            "`CT-PRIMITIVES`, `RT-MEM-HARDENING` and "
+                            "`HOSTILE-BOUNDARY-REGISTER`) are `pending` with the subphases that "
+                            "land them. The ledger's contract-unit states are measured from the "
+                            "courts registry, so the runner does not bind the ledger and the "
+                            "edge runs ledger -> courts, the reverse of Phase 16's. "
+                            "`docs/PHASE-18-SUBPHASES.md` sections 1 and 4 record the "
+                            "measurement"
                         )),
     # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
     # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no

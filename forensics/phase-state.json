@@ -627,15 +627,23 @@
         "stratum": "Downstream replacement court"
       },
       {
-        "blocking": "not started",
+        "blocking": "5 open obligation(s) of this stratum recorded in forensics/phase18-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase18-obligations.json` publishes `unit: hostile hardening contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`hostile-tls`, `hostile-x509`, `constant-time`, `memory-hardening` and `hostile-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it hardens the implementation Phases 3 through 15 completed. Its `artifacts/phase18/COURTS.json` registered no court at activation because it owns no symbol for a differential probe to observe; the five courts (`RT-HOSTILE-TLS`, `RT-HOSTILE-X509`, `CT-PRIMITIVES`, `RT-MEM-HARDENING` and `HOSTILE-BOUNDARY-REGISTER`) are `pending` with the subphases that land them. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-18-SUBPHASES.md` sections 1 and 4 record the measurement",
         "deferred": [],
         "evidence_absent": [],
-        "evidence_present": [],
+        "evidence_present": [
+          "docs/PHASE-18-SUBPHASES.md",
+          "forensics/tools/phase18_obligations.py",
+          "forensics/phase18-obligations.json",
+          "artifacts/phase18/COURTS.json",
+          "forensics/atlas/court-coverage.json",
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
+        ],
         "name": "hostile-hardening",
         "phase": 18,
         "provider_rows": null,
         "seal_sha256": null,
-        "state": "not-started",
+        "state": "in-progress",
         "stratum": "Hostile fuzz / security / side-channel hardening"
       },
       {
@@ -695,11 +703,11 @@
     "rule": "a phase may be complete only if every phase it requires is complete (forensics/tools/phase_state.py REQUIRES; docs/PHASE-22-SUBPHASES.md section 8)",
     "summary": {
       "complete": 19,
-      "in_progress": 0,
-      "not_started": 4
+      "in_progress": 1,
+      "not_started": 3
     }
   },
-  "body_hash": "85e446858adfff6434eab146091003c87b773e3cfa62aefeb815882c80376c5b",
+  "body_hash": "f13247f14cf18d78c4467469301f9d7010a75bef0938454ebecfe5559571e20a",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
