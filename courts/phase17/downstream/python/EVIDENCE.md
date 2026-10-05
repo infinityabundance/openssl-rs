@@ -6,7 +6,7 @@ Status: **build/link/start/functional all PROVEN** (PASS). This file is generate
 
 - **python 3.12.15**, `https://www.python.org/ftp/python/3.12.15/Python-3.12.15.tar.xz`
   sha256 `c2c4321961fab0fb999d66e0cecf521c2ab3994c7992873ea99e306c1094fd5a` (parsed from `build.sh`).
-- Candidate identity: `0.0.23` (the `RT-DOWNSTREAM-CORPUS` freshness key).
+- Candidate identity: `0.0.24` (the `RT-DOWNSTREAM-CORPUS` freshness key).
 - Authority: `openssl-rt-3.6.4-r2`.
 
 ## Measured result

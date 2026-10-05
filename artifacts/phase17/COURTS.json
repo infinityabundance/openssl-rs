@@ -719,7 +719,7 @@
       },
       {
         "authority_observations": 6,
-        "candidate": "0.0.23",
+        "candidate": "0.0.24",
         "candidate_observations": 6,
         "concurrency": {
           "curl": {
@@ -850,7 +850,7 @@
     {
       "name": "downstream-corpus",
       "path": "forensics/atlas/downstream-corpus.json",
-      "sha256": "f2ca0318bde7dbdc3b4e20a817ff989304f074e6219168a1a8415ca12ade5802"
+      "sha256": "4406df8974086a6b483d0e4e6f45bd45e265ff4c3cd4cb8e04d579e89228c95d"
     },
     {
       "name": "downstream-readme",
@@ -860,32 +860,32 @@
     {
       "name": "downstream-curl-record",
       "path": "courts/phase17/downstream/curl/result.json",
-      "sha256": "f8262ab63c262b1efa50146e9e1451e76f35f5fe9d8d50d050c8b8c7273ea318"
+      "sha256": "25687db7d55f414b4649b0ababeac7e36ed7d582afa05ab345baaaecca6c2a66"
     },
     {
       "name": "downstream-git-record",
       "path": "courts/phase17/downstream/git/result.json",
-      "sha256": "a197c41ea79f1a310ce11e47f12ab6006749796357c06c108620197913fc5f6f"
+      "sha256": "8bd62b5418e86912f4a3c81d6e8a07e942e4073a75d70ec7d095ca48d9168789"
     },
     {
       "name": "downstream-haproxy-record",
       "path": "courts/phase17/downstream/haproxy/result.json",
-      "sha256": "4eddd4d0c6314e3a1c29d255ef0266f2717b68d6e91de6045b93a2daac491d32"
+      "sha256": "39b7c3f525d0430a8b680a1e0305ba9a390283b8aa6ade43eedd341578ba3121"
     },
     {
       "name": "downstream-nginx-record",
       "path": "courts/phase17/downstream/nginx/result.json",
-      "sha256": "97cad2048781f3a2a37a7c0a397bfd66e1e58033ed333cd9031e451146e287aa"
+      "sha256": "066759c1e6e15911860c2f6940827ceb27fb0f69a412429a75e5821c0a39be8e"
     },
     {
       "name": "downstream-openssh-record",
       "path": "courts/phase17/downstream/openssh/result.json",
-      "sha256": "35eddc54369c49796f0b3bc73ecfb2ec13a61c0927dc612e4e7472c936e6b711"
+      "sha256": "8b439fe34be7a52e048eb0c7dba4e97a4de0d07e615ccabc678f1c6a3e874957"
     },
     {
       "name": "downstream-python-record",
       "path": "courts/phase17/downstream/python/result.json",
-      "sha256": "a8b961419a95d6ca629c39f4f60d736f585cec3aab057e6a77e14828665bd4e2"
+      "sha256": "335f9fe361b3c2015267e5b5660a7642e09f2ff73b9a8bd94278eb36702eb4ee"
     }
   ],
   "kind": "phase17-courts",

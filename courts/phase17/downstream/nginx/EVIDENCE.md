@@ -6,7 +6,7 @@ Status: **build/link/start/functional all PROVEN** (PASS). This file is generate
 
 - **nginx 1.26.3**, `https://nginx.org/download/nginx-1.26.3.tar.gz`
   sha256 `69ee2b237744036e61d24b836668aad3040dda461fe6f570f1787eab570c75aa` (parsed from `build.sh`).
-- Candidate identity: `0.0.23` (the `RT-DOWNSTREAM-CORPUS` freshness key).
+- Candidate identity: `0.0.24` (the `RT-DOWNSTREAM-CORPUS` freshness key).
 - Authority: `openssl-rt-3.6.4-r2`.
 
 ## Measured result
