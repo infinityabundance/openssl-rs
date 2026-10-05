@@ -104,10 +104,26 @@ The instrumented checks over the parser/algorithm cores are **measured and recor
   rather than mechanised, and the reason the DSO tests are excluded from the Miri set;
 - `AtomicUsize` slots that hold genuine counters (the panic count, the object-registry
   size, the test counters) are **not** pointer storage and are left as integers;
-- address/UB sanitizers — `AddressSanitizer` **could not run** under the court's hard
-  4 GiB `RLIMIT_DATA` (its shadow reservation is ~15.4 TB, the same constraint
-  `forensics/tools/probe_hygiene.py` documents), and the attempt and its exact error are
-  recorded rather than skipped silently;
+- `AddressSanitizer`, run in a **dedicated sanitizer venue** rather than the court. The
+  court's hard 4 GiB `RLIMIT_DATA` (`docker/openssl-rs-court.sh`) is what keeps a runaway court
+  off the host, and it is **kept**; ASan is given `docker/openssl-rs-asan.{Dockerfile,sh}`
+  instead, which bounds every real resource (cgroup memory, `--pids-limit`, `--cpus`, a wall-clock
+  timeout, `--security-opt no-new-privileges`, the court's network policy) and leaves only the
+  per-process `RLIMIT_DATA` unset, because ASan's shadow is a `PROT_NONE`/`MAP_NORESERVE` virtual
+  reservation the cgroup does not count against resident memory. The candidate is instrumented
+  **closed** — the Rust staticlib (`-Zsanitizer=address -Zbuild-std`), the first-party C adapters
+  (`build.rs` through a `CC` wrapper) and the test probes — and a sensitivity canary (a deliberate
+  heap use-after-free) must be diagnosed before any zero-findings result is trusted. Five layers
+  ran: the allocator/unit tests, targeted ownership tests, the hostile TLS corpus, the hostile
+  X.509 corpus, and the 16,384-case mutation corpus. The downstream consumer probes
+  (CPython/nginx/curl/Git/HAProxy/OpenSSH) are recorded **not-yet**, because they need consumer
+  binaries loaded against ASan candidate DSOs, which this step did not build. The venue, its
+  execution envelope, its instrumentation-closure receipt, the canary and every layer's verbatim
+  result are recorded in `artifacts/phase18/asan.json`, and it found three distinct first-party
+  defects (the unit suite can no longer complete; `RT-HOSTILE-TLS` now crashes on every
+  ClientHello; and the mutation corpus crashes on malformed PEM), so the earlier "could not run"
+  note is **superseded, not softened**. **It is still not a memory-safety proof**: a clean layer
+  is a bounded observation under one instrument, and TSan/UBSan/MSan did not run;
 - a bounded, deterministic mutational fuzz
   (`forensics/tools/fuzz_hostile_corpus.py`) over the hostile X.509 corpus: 16,384
   mutants in a 300 s bound, recorded in `artifacts/phase18/fuzz-hostile-corpus.json`;
