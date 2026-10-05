@@ -20,10 +20,10 @@
         "closure": "the `RT-RECEIPT-CLOSURE` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-RECEIPT-CLOSURE is pending",
+        "measurement_state": "complete",
+        "observation": "RT-RECEIPT-CLOSURE is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase20/COURTS.json",
         "unit": "receipt-closure",
         "what": "the join of every obligation recorded `implemented` or closed to its FRF receipt, and the FRF store's compiled parity claim with zero blockers, so `docs/CUSTODIAN_CONTRACT.md` section 6's claim is a join over immutable receipts rather than an assertion"
@@ -70,8 +70,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 1,
-      "open_in_this_stratum": 4,
+      "implemented": 2,
+      "open_in_this_stratum": 3,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -112,7 +112,7 @@
     {
       "name": "phase-20-courts",
       "path": "artifacts/phase20/COURTS.json",
-      "sha256": "b3e60f396a77c35fca18fde6f0b08a199cf366ec128bfe3bb2bf646ac9cbda89"
+      "sha256": "48ac7901e853d3c3626d08b81a5b3a026d323fbbb7bd27de13a6eb4dfcdbcff6"
     }
   ],
   "kind": "phase20-obligations",
