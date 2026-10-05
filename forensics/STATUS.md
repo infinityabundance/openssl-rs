@@ -38,7 +38,7 @@ renderer does not know any phase status.
 | 15 | QUIC / ECH and modern SSL surface | `complete` |  |
 | 16 | CLI / config / filesystem contract | `complete` |  |
 | 17 | Downstream replacement court | `complete` |  |
-| 18 | Hostile fuzz / security / side-channel hardening | `in-progress` | Phase 18's FRF chain entry is incomplete: no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 18 and the FRF chain |
+| 18 | Hostile fuzz / security / side-channel hardening | `complete` |  |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 
 Not started: strata 19-21 (3 total).
