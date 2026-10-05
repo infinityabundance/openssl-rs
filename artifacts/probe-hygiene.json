@@ -3670,6 +3670,68 @@
         "verdict": "clean"
       },
       {
+        "probe": "courts/phase19/rt_cpu_capability_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 27,
+              "-O1": 27,
+              "-O2": 27
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 27,
+              "-O1": 27,
+              "-O2": 27
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
         "probe": "courts/phase3/rt_coverage_ref_probe.c",
         "sides": {
           "authority": {
@@ -9066,8 +9128,8 @@
     ],
     "runs_per_level": 2,
     "summary": {
-      "clean": 146,
-      "total": 146,
+      "clean": 147,
+      "total": 147,
       "unstable": 0
     }
   },
@@ -9367,6 +9429,11 @@
       "name": "probe",
       "path": "courts/phase18/rt_mem_hardening_probe.c",
       "sha256": "62b9b5c972a3edacc034e2ffe65732f5a6d94aa8b508079fe8648872fa6ac884"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase19/rt_cpu_capability_probe.c",
+      "sha256": "b456168e877543a0586710fbb4d1ae888b3fd74b1ca7d5d09151a94e4d4f3867"
     },
     {
       "name": "probe",
