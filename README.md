@@ -16,15 +16,35 @@ LibreSSL, or `ring`.
 | Build profile | `linux-x86_64-default-shared-legacy-notests` |
 | Implementation | one first-party Rust crate, zero dependencies |
 
-> **Status:** active reconstruction, not yet a general OpenSSL replacement.
-> `IMPLEMENTED` means the crate's compiled output defines a symbol with that
-> name. It does not mean `PARITY_VERIFIED`, and it is not a compatibility claim.
-> Current state is reported by the generated evidence, not by this file.
+> **Status:** the implementation state is generated, not typed here. `IMPLEMENTED`
+> (a symbol the crate's compiled output defines) and `SCAFFOLDED` (a shell-only
+> abort) are counted in [`STATUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/forensics/STATUS.md)
+> and [`SEAL-CENSUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/SEAL-CENSUS.md),
+> which are authoritative; this page does not restate the counts. `IMPLEMENTED` is
+> neither `PARITY_VERIFIED` nor a compatibility claim.
 
 **Current state:**
 [`STATUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/forensics/STATUS.md) ·
 [`SEAL-CENSUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/SEAL-CENSUS.md) ·
 [`PARITY_MODEL.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/PARITY_MODEL.md)
+
+## Where the conservation strata stand
+
+The twenty-two strata and their subjects are in `docs/RELEASE_GATES.md` §1. Their
+**derived state** is generated in
+[`forensics/phase-state.md`](https://github.com/infinityabundance/openssl-rs/blob/main/forensics/phase-state.md)
+by `forensics/tools/phase_state.py` and rendered into
+[`STATUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/forensics/STATUS.md);
+that generated file is authoritative over any prose, and this page does not restate
+which strata are complete. For shape, the strata group as:
+
+| strata | subject |
+|---|---|
+| 0–2 | the constitution, the archaeology, and the distribution shell — the `libcrypto.so.3` / `libssl.so.3` / `libcrypto.a` / `libssl.a` / `legacy.so` / `openssl` artefacts, headers, pkg-config and install tree, with the ABI courts that prove a binary built against the authority runs against the candidate unmodified |
+| 3–17 | the substantive library strata: the runtime, BIO/CONF, `BN`/`ASN.1`/DER/PEM, the provider core, the EVP framework, the native primitives, RAND/DRBG, the key formats, X.509, the protocol families, legacy compatibility, TLS/DTLS, QUIC/ECH, the CLI/config contract, and the downstream replacement court |
+| 18 | the hostile fuzz / security / side-channel hardening stratum |
+| 19–21 | performance / CPU dispatch, the 3.6.4 custodian seal, and the maintenance-delta machinery |
+| 22 | authority exhaustiveness and the whole-program compatibility atlas |
 
 ## Compatibility target
 
@@ -52,7 +72,11 @@ and dispatch planes are checked independently. Results are retained as
 machine-readable evidence and are not converted directly into compatibility
 claims — promotion to `PARITY_VERIFIED` is per dimension, by court.
 
-Every symbol is `SCAFFOLDED` or `IMPLEMENTED`, and none is `PARITY_VERIFIED`.
+Which symbols are `SCAFFOLDED` and which are `IMPLEMENTED` — per library — is
+generated in [`STATUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/forensics/STATUS.md)
+under "Implementation state"; this page types none of those counts. No symbol is
+`PARITY_VERIFIED`; that state is promoted only by a court, dimension by dimension
+(`docs/PARITY_MODEL.md`).
 
 > Generated evidence is authoritative over descriptive prose. Where a document
 > and a generated artifact disagree, the artifact is right.

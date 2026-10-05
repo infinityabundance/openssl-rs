@@ -175,5 +175,13 @@ no hidden OpenSSL runtime dependency
 no implementation dependency on prohibited crypto backends
 ```
 
+Before committing a change that moves any derived evidence, run the single regeneration
+step inside the court container; it produces every derived atlas and evidence artefact in
+dependency order and is the pre-commit check `docs/CI.md` names:
+
+```
+bash docker/openssl-rs-court.sh exec bash forensics/tools/regen_all.sh
+```
+
 Produced binaries are inspected with dynamic-loader tooling. A build that
 accidentally links a system `libcrypto` is a **hard failure**.

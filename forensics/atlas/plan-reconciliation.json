@@ -8121,7 +8121,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "47a47286aa6b3ab4e0a5c1e694f1dd32c673eece68d5c8a4ed2f9f99cb69d015"
+      "sha256": "bc26d5c9151789f84c7b4af90d2421010d04deeebeb373bb0e2c2bd66920cd47"
     },
     {
       "name": "implemented-surface",
@@ -8186,7 +8186,7 @@
     {
       "name": "plan-PHASE-18-SUBPHASES",
       "path": "docs/PHASE-18-SUBPHASES.md",
-      "sha256": "9ff1298c2901accffa341fa207cc7d8a542cc16a730b16c74f2542f9107ccf78"
+      "sha256": "a182ffed42f8fe6ca0b187e8b35f6ed32cc0bc95245cb08b234fff6ed001d637"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",

@@ -42,6 +42,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from atlas_common import (  # noqa: E402
     REPO_ROOT,
     SEAL_DOCS,
+    contract_unit_lines,
     court_observations,
     has_transcript,
     rel,
@@ -169,6 +170,11 @@ def main(argv: list[str]) -> int:
         if "open_in_this_stratum" in counts:
             L.append(f"* **open in this stratum: {counts['open_in_this_stratum']}**")
         L.append("")
+
+        # A non-export stratum's working set lives in its contract units, so they are rendered
+        # here with both axes. Without this, a passing `CT-PRIMITIVES` and a not-claimed
+        # constant-time property would look identical to a reader of this census.
+        L.extend(contract_unit_lines(ledger))
 
         by_owner: dict[int, list[dict]] = {}
         for r in ledger.get("deferred", []):

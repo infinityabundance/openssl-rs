@@ -20,6 +20,7 @@ from atlas_common import (  # noqa: E402
     FORENSICS,
     PRODUCTION_AUTHORITY,
     authority_atlas_dir,
+    contract_unit_lines,
     rel,
     write_text,
 )
@@ -268,6 +269,9 @@ def main() -> int:
         if "open_in_this_stratum" in counts:
             L.append(f"* open in this stratum: {counts['open_in_this_stratum']}")
         L.append("")
+        # A stratum whose unit is not an export publishes its working set as contract units;
+        # render both axes so a passing court cannot read as a property claim.
+        L.extend(contract_unit_lines(ledger["body"]))
         by_phase: dict[int, list[dict]] = {}
         for row in ledger["body"].get("deferred", []):
             by_phase.setdefault(row["owning_phase"], []).append(row)

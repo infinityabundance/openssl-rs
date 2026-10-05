@@ -1382,7 +1382,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "47a47286aa6b3ab4e0a5c1e694f1dd32c673eece68d5c8a4ed2f9f99cb69d015"
+      "sha256": "bc26d5c9151789f84c7b4af90d2421010d04deeebeb373bb0e2c2bd66920cd47"
     },
     {
       "name": "symbol-ownership",
