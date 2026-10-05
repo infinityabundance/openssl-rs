@@ -93,7 +93,7 @@ record and this section is the activation measurement.**
 | # | Subphase | Owns | Depends on | Courts |
 |---|---|---|---|---|
 | 19.0 | **The plan and the ledger** | `docs/PHASE-19-SUBPHASES.md` and the measurement in §1. The ledger (`forensics/phase19-obligations.json`) and its generator land with it, together with the runner `forensics/tools/phase19_courts.py` and the registry it writes. **The runner cannot be deferred**: `run_courts.py` refuses a stratum in `in-progress` with no runner, and this stratum's obligations are not exports, so its first runnable court is a later subphase's. | 18 | — |
-| 19.1 | **The CPU-capability dispatch audit** | the capability-set driver over the candidate's CPU-capability surface (`OPENSSL_ia32cap_P`, `OPENSSL_cpuid_setup`, `OPENSSL_ia32_cpuid`) and its report under a fixed and faulted CPUID façade, against the admitted authority, with an authority-linked differential control. | 19.0 | `RT-CPU-CAPABILITY` |
+| 19.1 | **The CPU-capability dispatch audit** | the capability-set driver over the CPU-capability surface -- the ia32cap array words, the cpuid-setup effect and the raw cpuid vector the authority's cpuid units define, none of which the reduced candidate implements and whose not-reached disposition `RT-CPU-CAPABILITY` records -- and its report under a fixed and faulted CPUID façade, against the admitted authority, with an authority-linked differential control. | 19.0 | `RT-CPU-CAPABILITY` |
 | 19.2 | **The EVP / cipher dispatch comparison** | the selection surface: which implementation a fetch or a cipher context selects for a given capability set, driven on both sides over the same set, with an authority-linked differential control. | 19.1 | `RT-EVP-DISPATCH` |
 | 19.3 | **The deterministic work court** | work measures over the primitive-bearing paths — operation and block counts through the crate's own counters, **not wall-clock-only** — driven on the authority and the candidate over the same inputs, recording every path whose work differs as a finding. | 19.0 | `RT-PERFORMANCE-WORK` |
 | 19.4 | **The sensitivity court** | the instrument-sensitivity control: a deliberately slowed path must be caught, so a court whose measure cannot tell a slow path from a fast one is `fail` rather than `pass`. Candidate-only, in the shape Phases 8 and 18 use for a `CT-*`-style control. | 19.3 | `RT-PERFORMANCE-SENSITIVITY` |
@@ -190,8 +190,22 @@ proxy become the claim.
 
 **4.4 The prerequisite plane is not this stratum's universe, and the plan says so.** No row of
 `forensics/prerequisites.json` is owned by phase 19, so this plan names no prerequisite unit and
-plan reconciliation has nothing of this stratum's to judge; a subphase that discovers its unit is
+plan reconciliation has no unit of this stratum's to judge; a subphase that discovers its unit is
 elsewhere records that rather than forcing a row (§0, §5).
+
+**4.5 The plan named the authority's capability symbols as the candidate's surface, and the seal
+corrected it (measured).** Row 19.1 originally wrote "the candidate's CPU-capability surface
+(`OPENSSL_ia32cap_P`, `OPENSSL_cpuid_setup`, `OPENSSL_ia32_cpuid`)". Deriving Phase 19 `complete`
+turned on `plan_reconciliation.py`'s `plan_named_symbol_not_reached` (P2) for the stratum, and it
+reported all three: they are authority internals (of the legacy-DSO `cpuid` units) that the reduced
+candidate builds nowhere -- `RT-CPU-CAPABILITY` records `probe.reachable.*=0` for each -- and no
+deferral records them (there is no later implementation stratum the candidate's direct-CPUID model
+defers them to) and no divergence covers them (the crate never references them, so a `covers` entry
+would fail the prerequisite gate's direction D). The row now names the surface the driver drives
+without promising crate symbols, and the three names are recorded as the not-reached disposition in
+`artifacts/phase19/COURTS.json` and `docs/PHASE-19-PERFORMANCE-SEAL.md` §4. This is the one
+reconciliation deriving `complete` forced; §0's and §1's prose still name the authority symbols,
+which is where the surface belongs.
 
 ## 5. Process
 

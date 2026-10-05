@@ -2281,6 +2281,8 @@
           "what": "the reference `aes-128-cbc` path with an injected extra full pass over the primitive inside the measured region -- extra library work constructed in the harness, never product code -- so the counting allocator must register it"
         },
         "court": "RT-PERFORMANCE-SENSITIVITY",
+        "frf_declarable": false,
+        "frf_exclusion": "candidate-only instrument-sensitivity control: the deliberately slowed variant is a construction of the harness, so there is no authority transcript to diff and no artifacts/phase19/probes/<probe>.authority pair to stage, and the probe is compiled once against the candidate distribution shell (D13, D201)",
         "method": "candidate-only; the probe is compiled once against the candidate distribution shell and drives two arms under the same 19.3 work instrument (the counting `CRYPTO` allocator the stratum introduces plus the method-derived geometry): a reference arm, the real `aes-128-cbc` path, and a slowed arm, the same path with an injected extra full pass over the primitive. The reference must equal the authority's `aes-128-cbc` vector the 19.3 court recorded and the slowed arm must be caught on a library-side counter key. No address, clock or duration is observed. The verdict is about the instrument's resolution: it makes no throughput or benchmark-parity claim.",
         "observations_recorded": {
           "candidate": 26

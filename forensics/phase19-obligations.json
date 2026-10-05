@@ -108,12 +108,12 @@
     {
       "name": "phase-19-plan",
       "path": "docs/PHASE-19-SUBPHASES.md",
-      "sha256": "c6342ad8a9ec8636c02710f5fc12ccaee6781672699fb9c2ffab90c61721011e"
+      "sha256": "580dce1c06c00280bf50a310f2a5c48ea5f1dff5e5edeeee2e6498ae68458be1"
     },
     {
       "name": "phase-19-courts",
       "path": "artifacts/phase19/COURTS.json",
-      "sha256": "5edbe6174606557d9c0aca4999d7b51f104568f67824b2f2af710540476cd77e"
+      "sha256": "bb2269fb74581e9271aac4e3567bebd8079941e6db0a7fb6c7f468e8012ae452"
     }
   ],
   "kind": "phase19-obligations",

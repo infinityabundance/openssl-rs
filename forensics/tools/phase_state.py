@@ -1420,8 +1420,20 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "'performance parity achieved'. The ledger's contract-unit states "
                             "are measured from the courts registry, so the runner does not bind "
                             "the ledger and the edge runs ledger -> courts, the reverse of "
-                            "Phase 16's. `docs/PHASE-19-SUBPHASES.md` sections 1 and 4 record the "
-                            "measurement"
+                            "Phase 16's. The 19.6 seal `docs/PHASE-19-PERFORMANCE-SEAL.md` lands "
+                            "with the FRF chain the release gates require: its three declarable "
+                            "courts (`rt-cpu-capability`, `rt-evp-dispatch`, "
+                            "`rt-performance-work`) are declared in `gen_frf_courts.py`, each "
+                            "carries a receipt and two adjudicated challenges, and one "
+                            "`sensitivity-backed` claim "
+                            "`63f910ced5baf43c6dc30b2da63996fb3fb0e1b1334e8d89be2f5ad23c528af8` binds "
+                            "authority `openssl-rt-3.6.4-r2` to candidate `openssl-rs 0.0.23` "
+                            "(`e4f60d8b`) with zero blockers -- `RT-PERFORMANCE-SENSITIVITY` is "
+                            "candidate-only (its row carries `frf_declarable` false) and "
+                            "`PERFORMANCE-BOUNDARY-REGISTER` validates data, so neither is "
+                            "declarable (D13, D201). `docs/PHASE-19-SUBPHASES.md` sections 1 and 4 "
+                            "and `docs/PHASE-19-PERFORMANCE-SEAL.md` record the measurement and "
+                            "the chain"
                         )),
     # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
     # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no
