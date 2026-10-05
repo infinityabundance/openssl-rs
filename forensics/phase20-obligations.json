@@ -1,0 +1,118 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "contract_units": [
+      {
+        "closure": "the `RT-CUSTODIAN-MATURITY` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-CUSTODIAN-MATURITY is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase20/COURTS.json",
+        "unit": "custodian-maturity",
+        "what": "the derivation of the L0-L9 maturity ladder of `docs/RELEASE_GATES.md` section 3 for `libcrypto` and `libssl` from committed evidence, naming only a level whose evidence is present and recording the gap as a finding when the evidence supports less than the level the seal might claim"
+      },
+      {
+        "closure": "the `RT-RECEIPT-CLOSURE` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-RECEIPT-CLOSURE is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase20/COURTS.json",
+        "unit": "receipt-closure",
+        "what": "the join of every obligation recorded `implemented` or closed to its FRF receipt, and the FRF store's compiled parity claim with zero blockers, so `docs/CUSTODIAN_CONTRACT.md` section 6's claim is a join over immutable receipts rather than an assertion"
+      },
+      {
+        "closure": "the `RT-CUSTODIAN-RESIDUALS` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-CUSTODIAN-RESIDUALS is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase20/COURTS.json",
+        "unit": "custodian-residuals",
+        "what": "the disposition of every residual, requiring zero `UNKNOWN` intersecting the claimed production profile, so a newly discovered un-dispositioned residual is a `fail` rather than a silent addition"
+      },
+      {
+        "closure": "the `RT-SUBSTITUTION-WITNESS` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-SUBSTITUTION-WITNESS is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase20/COURTS.json",
+        "unit": "substitution-witness",
+        "what": "the ABI-substitution witness chain and the machine-owned downstream corpus witness chain: binaries built against the admitted authority run unmodified against the candidate, over the Phase-17 corpus the court re-establishes as current and functional"
+      },
+      {
+        "closure": "the `CUSTODIAN-BOUNDARY-REGISTER` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "CUSTODIAN-BOUNDARY-REGISTER is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase20/COURTS.json",
+        "unit": "custodian-boundary-register",
+        "what": "the register that records what is claimed, what is bounded, and the explicit non-claims (no FIPS validation, no universal parity from finite evidence, memory safety measured-not-established), and that fails the stratum if a recorded boundary drifts from its evidence"
+      }
+    ],
+    "counts": {
+      "atlas_owned": 0,
+      "contract_units": 5,
+      "deferrals_received": 0,
+      "deferred_to_later_phase": 0,
+      "implemented": 0,
+      "open_in_this_stratum": 5,
+      "owned": 5,
+      "provider_rows_open": 0,
+      "provider_rows_owned": 0,
+      "unit_deferrals_received": 0
+    },
+    "deferrals": [],
+    "deferred": [],
+    "implemented": [],
+    "note": "`open` is the only list that blocks this stratum, and its count is over the custodian seal contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. Phase 20 owns no provider registration row and no export: it activates no provider and adds no library surface, because it compiles the custodian claim over the implementation the strata before it completed. Its five contract units are the custodian seal contract docs/PHASE-20-SUBPHASES.md section 1 names -- the maturity derivation, the receipt closure, the residual disposition, the substitution witness and the custodian-boundary register -- and at activation all five are open, so this stratum's working set is exactly its five contract units. Nothing here is a claim stronger than docs/CUSTODIAN_CONTRACT.md section 6's: a passing custodian court is an instrument and a bounded measurement, not a universal-parity claim, and there is no FIPS-validation claim, no claim of universal parity from finite evidence, and no claim that memory safety is established. Each contract unit records its two axes separately: `measurement_state` says the instrument completed, and `property_status`/`findings` say what is claimed about a custodian property. The `custodian-maturity` unit's property is `NOT_CLAIMED` with the gap between the evidence-supported level and the level the seal might name recorded as a finding, so a passing `RT-CUSTODIAN-MATURITY` is an instrument plus a derived measurement and must never be read as 'L9 custodian seal achieved'.",
+    "open": [],
+    "provider_rows": [],
+    "rule": "this stratum's working set is not a set of exported symbols: Phase 20 owns no export, no provider registration row and no prerequisite deferral, so its working set is exactly the custodian seal contract units docs/PHASE-20-SUBPHASES.md names, each measured by the Phase-20 courts registry. Every row is read from those atlases; the ledger types none of them, and `main` fails closed if the ownership atlas assigns this stratum an export, the provider census assigns it a row, or the prerequisite plane assigns it a deferral or unit",
+    "unit": "custodian seal contract",
+    "unit_deferrals": []
+  },
+  "generator": "forensics/tools/phase20_obligations.py",
+  "inputs": [
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "provider-algorithms",
+      "path": "forensics/atlas/provider-algorithms.json",
+      "sha256": "8a767c9f5c456e1b3b8e2d01a88f0b17f2184313d421c0a9e513c1dd2d118589"
+    },
+    {
+      "name": "prerequisites",
+      "path": "forensics/prerequisites.json",
+      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+    },
+    {
+      "name": "phase-20-plan",
+      "path": "docs/PHASE-20-SUBPHASES.md",
+      "sha256": "dac989cbf03e478e95ed668266cf6eb970a72ff48ade7c5e5dacf8378db84f3e"
+    },
+    {
+      "name": "phase-20-courts",
+      "path": "artifacts/phase20/COURTS.json",
+      "sha256": "c5d1cc938b9602b4c89d526cb25286252f345d7379a09fee8a897ec7975dff11"
+    }
+  ],
+  "kind": "phase20-obligations",
+  "schema": "openssl-rs/atlas/phase20-obligations/v1"
+}
