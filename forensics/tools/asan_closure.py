@@ -241,7 +241,17 @@ def build_env() -> dict:
         # -Clinker=clang so build scripts and test harnesses link ASan through
         # clang's bundled compiler-rt runtime, not gcc's libasan, keeping one
         # sanitizer runtime for the whole closure.
-        "RUSTFLAGS": "-Zsanitizer=address -Cdebuginfo=1 -Clinker=clang",
+        #
+        # -Ccodegen-units=1 so the instrumented build is codegen-deterministic:
+        # with the default many-CGU schedule LLVM can promote a small
+        # `extern "C"` function into a second `.llvm.<n>` symbol when it is
+        # address-taken from both the defining CGU and the test CGU, so a test
+        # that compares a statically-initialised function pointer against a
+        # direct reference to the same function (e.g.
+        # `provider::cipher::tests::the_chacha20_hw_leaves_copyctx_null`) sees
+        # two distinct addresses. That is an artifact of the schedule, not a
+        # memory error, and a single CGU removes it without touching the tests.
+        "RUSTFLAGS": "-Zsanitizer=address -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=1",
         "CARGO_TARGET_DIR": str(TARGET),
         "CC": str(CC_WRAPPER),
         "AR": "ar",

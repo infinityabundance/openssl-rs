@@ -2002,7 +2002,7 @@
     {
       "name": "unsafe-footprint",
       "path": "forensics/atlas/unsafe-footprint.json",
-      "sha256": "deaee0a20881fb9d501d70aaac5fff9655843a073e58d4a0d92a189c34a1e85d"
+      "sha256": "4abdae8d040edd6f997b5f8a3564bf323de68862ec43bf595374feb624a94665"
     },
     {
       "name": "unsafe-bounds",

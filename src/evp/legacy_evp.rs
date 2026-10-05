@@ -446,21 +446,27 @@ mod tests {
     }
 
     /// A cipher object with nothing in it but the one field an adder reads.
-    fn a_bare_cipher(nid: c_int) -> EvpCipher {
+    ///
+    /// It is **leaked**, not stack-allocated: `EVP_add_cipher` borrows its argument and stores the
+    /// pointer in the process-global `OBJ_NAME` registry, which outlives the test frame. Handing it
+    /// a stack object (as this helper used to do, by returning by value) leaves the registry — and
+    /// `get_legacy_cipher_names`' later walk of it — dereferencing a dead frame.
+    fn a_bare_cipher(nid: c_int) -> *mut EvpCipher {
         // SAFETY: the struct is read only through `nid` by the code under test, and every other
         // field's all-zero bit pattern is a valid value for it.
         let mut c = unsafe { core::mem::zeroed::<EvpCipher>() };
         c.nid = nid;
-        c
+        Box::into_raw(Box::new(c))
     }
 
-    /// A digest object with the two fields an adder reads.
-    fn a_bare_digest(type_: c_int, pkey_type: c_int) -> EvpMd {
+    /// A digest object with the two fields an adder reads. Leaked for the reason [`a_bare_cipher`]
+    /// gives.
+    fn a_bare_digest(type_: c_int, pkey_type: c_int) -> *mut EvpMd {
         // SAFETY: as above.
         let mut md = unsafe { core::mem::zeroed::<EvpMd>() };
         md.type_ = type_;
         md.pkey_type = pkey_type;
-        md
+        Box::into_raw(Box::new(md))
     }
 
     /// A NULL cipher and a NULL digest are both refused, and neither raises: the adder is a
@@ -485,20 +491,20 @@ mod tests {
         );
         assert_ne!(nid, 0, "the test needed a fresh NID");
         let cipher = a_bare_cipher(nid);
-        // SAFETY: `cipher` is this frame's own live object and stays alive for the registrations.
-        assert_eq!(unsafe { EVP_add_cipher(core::ptr::addr_of!(cipher)) }, 1);
+        // SAFETY: `cipher` is a leaked heap object that outlives the registry entry.
+        assert_eq!(unsafe { EVP_add_cipher(cipher) }, 1);
         // SAFETY: `nid` is live in the object table.
         let (short, long) = (OBJ_nid2sn(nid), OBJ_nid2ln(nid));
         // SAFETY: both are NUL-terminated strings owned by the object table.
         unsafe {
             assert_eq!(
                 OBJ_NAME_get(short, OBJ_NAME_TYPE_CIPHER_METH),
-                core::ptr::addr_of!(cipher).cast::<c_char>(),
+                cipher.cast::<c_char>(),
                 "the short name answers the method"
             );
             assert_eq!(
                 OBJ_NAME_get(long, OBJ_NAME_TYPE_CIPHER_METH),
-                core::ptr::addr_of!(cipher).cast::<c_char>(),
+                cipher.cast::<c_char>(),
                 "and so does the long name"
             );
         }
@@ -517,10 +523,10 @@ mod tests {
         assert_ne!(nid, 0, "the test needed a fresh NID");
         let first = a_bare_cipher(nid);
         let second = a_bare_cipher(nid);
-        // SAFETY: both are this frame's own live objects.
+        // SAFETY: both are leaked heap objects that outlive the registry entries.
         unsafe {
-            assert_eq!(EVP_add_cipher(core::ptr::addr_of!(first)), 1);
-            assert_eq!(EVP_add_cipher(core::ptr::addr_of!(second)), 1);
+            assert_eq!(EVP_add_cipher(first), 1);
+            assert_eq!(EVP_add_cipher(second), 1);
         }
         // SAFETY: `nid` is live and its short name is a static string.
         let short = OBJ_nid2sn(nid);
@@ -528,7 +534,7 @@ mod tests {
         unsafe {
             assert_eq!(
                 OBJ_NAME_get(short, OBJ_NAME_TYPE_CIPHER_METH),
-                core::ptr::addr_of!(second).cast::<c_char>(),
+                second.cast::<c_char>(),
                 "the second add is the one the table holds",
             );
         }
@@ -552,8 +558,8 @@ mod tests {
         assert_ne!(type_, 0, "the test needed a fresh NID");
         assert_ne!(pkey_type, 0, "and a second one");
         let md = a_bare_digest(type_, pkey_type);
-        // SAFETY: `md` is this frame's own live object.
-        assert_eq!(unsafe { EVP_add_digest(core::ptr::addr_of!(md)) }, 1);
+        // SAFETY: `md` is a leaked heap object that outlives the registry entries.
+        assert_eq!(unsafe { EVP_add_digest(md) }, 1);
         let (short, pkey_short) = (OBJ_nid2sn(type_), OBJ_nid2sn(pkey_type));
         // SAFETY: `pkey_short` is a NUL-terminated string owned by the object table.
         unsafe {
@@ -568,7 +574,7 @@ mod tests {
              * which is what makes the alias useful to `EVP_get_digestbyname`. */
             assert_eq!(
                 OBJ_NAME_get(pkey_short, OBJ_NAME_TYPE_MD_METH),
-                core::ptr::addr_of!(md).cast::<c_char>(),
+                md.cast::<c_char>(),
                 "and the plain lookup follows it to the method"
             );
         }
@@ -585,15 +591,15 @@ mod tests {
         );
         assert_ne!(type_, 0, "the test needed a fresh NID");
         let md = a_bare_digest(type_, 0);
-        // SAFETY: `md` is this frame's own live object.
-        assert_eq!(unsafe { EVP_add_digest(core::ptr::addr_of!(md)) }, 1);
+        // SAFETY: `md` is a leaked heap object that outlives the registry entries.
+        assert_eq!(unsafe { EVP_add_digest(md) }, 1);
         // SAFETY: `type_` is live and its short name is a static string.
         let short = OBJ_nid2sn(type_);
         // SAFETY: `short` is NUL-terminated.
         unsafe {
             assert_eq!(
                 OBJ_NAME_get(short, OBJ_NAME_TYPE_MD_METH),
-                core::ptr::addr_of!(md).cast::<c_char>()
+                md.cast::<c_char>()
             );
         }
     }

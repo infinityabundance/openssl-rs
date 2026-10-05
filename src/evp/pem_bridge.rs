@@ -225,15 +225,28 @@ pub(crate) unsafe fn pem_free(
     }
 }
 
-/// `HAS_PREFIX(str, pre)` — `include/internal/common.h:59`:
+/// `HAS_PREFIX(str, pre)` — `include/internal/common.h:58`:
 /// `strncmp(str, pre "", sizeof(pre) - 1) == 0`.
 ///
+/// The authority compares at most `pre.len()` bytes and stops at the first
+/// differing byte *or* the first NUL in `s`, so it never requires `s` to be a
+/// complete NUL-terminated string: only the `pre.len()`-byte prefix (or a NUL
+/// before it) has to be readable. The earlier `CStr::from_ptr` spelling did an
+/// unbounded `strlen` instead, which walked off the end of the caller's
+/// `LINESIZE + 1` buffer when the prefix pointer was one-past-the-line.
+///
 /// # Safety
-/// `s` must be NUL-terminated.
+/// `s` must be readable for up to `pre.len()` bytes, or contain a NUL byte
+/// before then; the loop returns at the first mismatch and never reads further.
 unsafe fn has_prefix(s: *const c_char, pre: &[u8]) -> bool {
-    // SAFETY: the caller's contract.
-    let bytes = unsafe { CStr::from_ptr(s) }.to_bytes();
-    bytes.len() >= pre.len() && &bytes[..pre.len()] == pre
+    for (i, &want) in pre.iter().enumerate() {
+        // SAFETY: `strncmp` reads at most `pre.len()` bytes; the contract above
+        // guarantees that prefix (or a NUL within it) is readable.
+        if unsafe { *s.add(i) } as u8 != want {
+            return false;
+        }
+    }
+    true
 }
 
 /// `CHECK_AND_SKIP_PREFIX(str, pre)` — `include/internal/common.h:61`.
@@ -819,11 +832,19 @@ unsafe fn get_header_and_data(
             // SAFETY: `name` is NUL-terminated per the contract.
             let name_bytes = unsafe { CStr::from_ptr(name) }.to_bytes();
             let namelen = name_bytes.len();
-            // SAFETY: `p` is NUL-terminated and `namelen` bytes of it are compared with `name`.
+            // SAFETY: `linebuf` is NUL-terminated by `sanitize_line`, so `p` is in range.
             let rest = unsafe { CStr::from_ptr(p) }.to_bytes();
-            // SAFETY: the pointer is live per the caller's contract.
-            let tail_ok = unsafe { has_prefix(p.add(namelen), TAILSTR) };
-            if rest.len() < namelen || &rest[..namelen] != name_bytes || !tail_ok {
+            // `crypto/pem/pem_lib.c:900` evaluates `HAS_PREFIX(p + namelen, TAILSTR)` only
+            // after `strncmp(p, name, namelen) == 0` has held, so `p + namelen` is known to be
+            // inside the NUL-terminated line. Probing it eagerly (as this code did) dereferenced
+            // one-past-the-end when the names differed and `namelen` ran to the line's NUL.
+            let tail_ok = rest.len() >= namelen && &rest[..namelen] == name_bytes && {
+                // SAFETY: the two tests above proved `p + namelen` is inside the
+                // NUL-terminated line, so `has_prefix`'s bounded comparison reads only live
+                // bytes (and stops at the line's NUL).
+                unsafe { has_prefix(p.add(namelen), TAILSTR) }
+            };
+            if !tail_ok {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::PEM_LIB_901) };
                 // SAFETY: this frame's own buffer.

@@ -157,9 +157,13 @@ const LINE: c_int = 0;
 // =============================================================================================
 
 /// `DRBG_DEFAULT_PERS_STRING` — `prov/drbg.h:45`. ASCII "OpenSSL NIST SP 800-90A DRBG" written
-/// in hex for EBCDIC compatibility; 29 bytes including the implicit trailing NUL that
-/// `sizeof(ossl_pers_string)` counts.
-const DRBG_DEFAULT_PERS_STRING: &[u8] = b"\x4f\x70\x65\x6e\x53\x53\x4c\x20\x4e\x49\x53\x54\x20\x53\x50\x20\x38\x30\x30\x2d\x39\x30\x41\x20\x44\x52\x42\x47";
+/// in hex for EBCDIC compatibility. The authority's `static const char ossl_pers_string[] =
+/// DRBG_DEFAULT_PERS_STRING` (`providers/implementations/rands/drbg.c:40`) is a string-literal
+/// initialiser, so the array carries the implicit trailing NUL and `sizeof(ossl_pers_string)`
+/// (`drbg.c:368`) is 29. The NUL is spelled here rather than left implicit because this slice is
+/// handed to `ctr_update` with `perslen` = `len()`, i.e. the *array* length the authority passes.
+const DRBG_DEFAULT_PERS_STRING: &[u8] =
+    b"\x4f\x70\x65\x6e\x53\x53\x4c\x20\x4e\x49\x53\x54\x20\x53\x50\x20\x38\x30\x30\x2d\x39\x30\x41\x20\x44\x52\x42\x47\x00";
 
 /// `DRBG_MAX_LENGTH` — `INT32_MAX`, the maximum input size in bytes.
 const DRBG_MAX_LENGTH: usize = i32::MAX as usize;
@@ -745,7 +749,9 @@ pub(crate) unsafe fn ossl_prov_drbg_instantiate(
             let mut perslen = perslen;
             if pers.is_null() {
                 pers = DRBG_DEFAULT_PERS_STRING.as_ptr();
-                perslen = DRBG_DEFAULT_PERS_STRING.len() + 1;
+                // `sizeof(ossl_pers_string)` (`drbg.c:368`): the 28 content bytes plus the
+                // trailing NUL now carried by the constant above.
+                perslen = DRBG_DEFAULT_PERS_STRING.len();
             }
             if perslen > (*drbg).max_perslen {
                 raise_site(&err_sites::PROV_DRBG_371);
