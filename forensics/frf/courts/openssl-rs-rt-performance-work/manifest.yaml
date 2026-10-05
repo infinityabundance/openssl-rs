@@ -1,0 +1,59 @@
+# openssl-rs court: the Phase 19 `rt-performance-work` runtime surface.
+#
+# The subject is the transcript of a differential probe: one C program that
+# prints one `key=value` line per observation while exercising
+#
+#     the deterministic work vector over a fixed primitive set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an RSA-1024 private decrypt), measured by a counting `CRYPTO` allocator plus the method-derived block/output/tag sizes, with the EC and RSA paths recording a divergent-work finding and the symmetric/digest paths agreeing
+#
+# The same source is compiled against the admitted authority and against the
+# candidate, each side executes its own binary, and FRF compares the
+# transcripts.
+#
+# Scope: the observations the probe makes. It is NOT a claim about surface the
+# probe does not touch, and not a cryptographic or security claim.
+
+court:
+  id: openssl-rs-rt-performance-work
+  question: >-
+    For the rt-performance-work runtime surface in fixture family rt-performance-work, does
+    the candidate produce the same observable transcript as the admitted
+    authority OpenSSL 3.6.4 when both run the same probe over the same
+    fixture?
+  falsifier: >-
+    Any observation line differs between the two transcripts, or either
+    side's exit class differs.
+  authority: openssl-rt-3.6.4-r2
+  candidate:
+    name: openssl-rs
+    version_or_commit: "0.0.23"
+    build_profile: linux-x86_64-default-shared-legacy-notests
+    path: forensics/frf/refs/candidate-runtime-probe.sh
+  fixture:
+    id: probe-list.txt
+    path: forensics/frf/courts/openssl-rs-rt-performance-work/fixtures/probe-list.txt
+    arguments: ["{fixture}", "phase19"]
+  admissibility_envelope:
+    fixture_family: rt-performance-work
+    platforms: ["x86_64-linux"]
+    observables: [stdout, exit]
+    normalizers: []
+    replay_scope: single-run
+  execution_context:
+    artifacts:
+      - path: forensics/frf/refs/authority-runtime-probe.sh
+        role: child-executable
+      - path: forensics/frf/refs/candidate-runtime-probe.sh
+        role: child-executable
+      - path: artifacts/phase19/probes/rt_performance_work_probe.authority
+        role: child-executable
+      - path: artifacts/phase19/probes/rt_performance_work_probe.candidate
+        role: child-executable
+      - path: courts/phase19/rt_performance_work_probe.c
+        role: data
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+        role: runtime-library
+      - path: artifacts/phase2/libcrypto.so.3
+        role: runtime-library
+  environment:
+    LC_ALL: C
+    TZ: UTC

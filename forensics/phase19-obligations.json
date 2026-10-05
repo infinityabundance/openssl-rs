@@ -1,0 +1,121 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "contract_units": [
+      {
+        "closure": "the `RT-CPU-CAPABILITY` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "complete",
+        "observation": "RT-CPU-CAPABILITY is pass",
+        "property_status": "not_claimed",
+        "state": "implemented",
+        "surface": "artifacts/phase19/COURTS.json",
+        "unit": "cpu-capability",
+        "what": "a CPU-capability dispatch audit: the candidate's CPU-capability surface (`OPENSSL_ia32cap_P`, `OPENSSL_cpuid_setup`, `OPENSSL_ia32_cpuid`) driven under a fixed and faulted CPUID facade against the admitted authority, with an authority-linked differential control"
+      },
+      {
+        "closure": "the `RT-EVP-DISPATCH` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "complete",
+        "observation": "RT-EVP-DISPATCH is pass",
+        "property_status": "not_claimed",
+        "state": "implemented",
+        "surface": "artifacts/phase19/COURTS.json",
+        "unit": "evp-dispatch",
+        "what": "an EVP / cipher dispatch comparison: which implementation a fetch or cipher context selects for a given capability set, driven on both sides over the same set, with an authority-linked differential control"
+      },
+      {
+        "closure": "the `RT-PERFORMANCE-WORK` court passes",
+        "findings": [
+          "ec-p256-mul: deterministic work differs (allocs authority=3 candidate=4; bytes authority=2121 candidate=160)",
+          "rsa-1024-private: deterministic work differs (allocs authority=46 candidate=31; bytes authority=4541 candidate=2669)"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "RT-PERFORMANCE-WORK is pass",
+        "property_status": "NOT_CLAIMED",
+        "state": "implemented",
+        "surface": "artifacts/phase19/COURTS.json",
+        "unit": "performance-work",
+        "what": "deterministic operation and block counts over the primitive-bearing paths (not wall-clock-only), driven on the authority and the candidate over the same inputs, recording every path whose work differs as a finding"
+      },
+      {
+        "closure": "the `RT-PERFORMANCE-SENSITIVITY` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "complete",
+        "observation": "RT-PERFORMANCE-SENSITIVITY is pass",
+        "property_status": "not_claimed",
+        "state": "implemented",
+        "surface": "artifacts/phase19/COURTS.json",
+        "unit": "performance-sensitivity",
+        "what": "the instrument-sensitivity control: a deliberately slowed path must be caught, so a measure that cannot tell a slow path from a fast one is `fail` rather than `pass`; candidate-only"
+      },
+      {
+        "closure": "the `PERFORMANCE-BOUNDARY-REGISTER` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "complete",
+        "observation": "PERFORMANCE-BOUNDARY-REGISTER is pass",
+        "property_status": "not_claimed",
+        "state": "implemented",
+        "surface": "artifacts/phase19/COURTS.json",
+        "unit": "performance-boundary-register",
+        "what": "the register that records what is measured, what is not, and the explicit non-claims (no benchmark-parity claim, no assembly-versus-Rust equivalence claim), and that fails the stratum if a recorded boundary drifts from its evidence"
+      }
+    ],
+    "counts": {
+      "atlas_owned": 0,
+      "contract_units": 5,
+      "deferrals_received": 0,
+      "deferred_to_later_phase": 0,
+      "implemented": 5,
+      "open_in_this_stratum": 0,
+      "owned": 5,
+      "provider_rows_open": 0,
+      "provider_rows_owned": 0,
+      "unit_deferrals_received": 0
+    },
+    "deferrals": [],
+    "deferred": [],
+    "implemented": [],
+    "note": "`open` is the only list that blocks this stratum, and its count is over the performance dispatch contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. Phase 19 owns no provider registration row and no export: it activates no provider and adds no library surface, because it measures the implementation the strata before it completed. Its five contract units are the performance dispatch contract docs/PHASE-19-SUBPHASES.md section 1 names -- the CPU-capability dispatch audit, the EVP / cipher dispatch comparison, the deterministic work court, the instrument-sensitivity court and the performance-boundary register -- and at activation all five are open, so this stratum's working set is exactly its five contract units. Nothing here is a throughput or parity claim: a passing performance court is a bounded deterministic-work comparison at its stated resolution, an EVP / cipher dispatch court is a bounded comparison of selection over the capability sets it drives, and there is no benchmark-parity claim and no assembly-versus-Rust equivalence claim anywhere in this stratum. Each contract unit records its two axes separately: `measurement_state` says the instrument completed, and `property_status`/`findings` say what is claimed about a performance property. The `performance-work` unit's property is `NOT_CLAIMED` with the paths whose deterministic work differs from the authority's named as findings, so a passing `RT-PERFORMANCE-WORK` is an instrument plus measurement result and must never be read as 'performance parity achieved'.",
+    "open": [],
+    "provider_rows": [],
+    "rule": "this stratum's working set is not a set of exported symbols: Phase 19 owns no export, no provider registration row and no prerequisite deferral, so its working set is exactly the performance dispatch contract units docs/PHASE-19-SUBPHASES.md names, each measured by the Phase-19 courts registry. Every row is read from those atlases; the ledger types none of them, and `main` fails closed if the ownership atlas assigns this stratum an export, the provider census assigns it a row, or the prerequisite plane assigns it a deferral or unit",
+    "unit": "performance dispatch contract",
+    "unit_deferrals": []
+  },
+  "generator": "forensics/tools/phase19_obligations.py",
+  "inputs": [
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "provider-algorithms",
+      "path": "forensics/atlas/provider-algorithms.json",
+      "sha256": "8a767c9f5c456e1b3b8e2d01a88f0b17f2184313d421c0a9e513c1dd2d118589"
+    },
+    {
+      "name": "prerequisites",
+      "path": "forensics/prerequisites.json",
+      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+    },
+    {
+      "name": "phase-19-plan",
+      "path": "docs/PHASE-19-SUBPHASES.md",
+      "sha256": "c9ba16f46b9e2686d503c7d5234e337b5f6935d0eac82e7dc2e81ebfe7c79348"
+    },
+    {
+      "name": "phase-19-courts",
+      "path": "artifacts/phase19/COURTS.json",
+      "sha256": "192565bc3c2c31d36d8292ded537e167f31cc2a231a4aa39e5a2a2a019fe25ff"
+    }
+  ],
+  "kind": "phase19-obligations",
+  "schema": "openssl-rs/atlas/phase19-obligations/v1"
+}

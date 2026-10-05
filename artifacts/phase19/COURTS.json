@@ -1,0 +1,2511 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "`RT-CPU-CAPABILITY` is 19.1's court: it compiles courts/phase19/rt_cpu_capability_probe.c twice (authority and candidate) and reports the CPU-capability surface deterministically -- `OPENSSL_ia32cap_P[0..3]`, the synthetic words `cap.synthetic.pair`/`.word.4`/`.word.5` the fixed literal's override derives, whether `OPENSSL_cpuid_setup` and `OPENSSL_ia32_cpuid` were reachable and callable, and the capability-derived selection observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`, `OpenSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and the four `EVP_aes_*_cbc_hmac_sha*` constructors, which answer NULL when `AESNI_CAPABLE` is clear). The raw vector `OPENSSL_ia32_cpuid` returns is not recorded: it is the runner's own CPUID and would make the record machine-specific. Three portable observations of the synthetic vector the fixed literal derives (`cap.synthetic.pair`/`.word.4`/`.word.5`) take the place of the host readouts the first version printed, so no coverage is lost. The probe is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade: a synthetic reference set, an AES-NI-cleared set and a fully cleared set, each an explicit literal so the reported vector is never the runner's own CPU. The three capability names are declared weak because `OPENSSL_ia32cap_P` is `.hidden` and `OPENSSL_cpuid_setup`/`OPENSSL_ia32_cpuid` live only in the static archive: the authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so the surface is reached, and the candidate provides none of the three, so it answers `probe.reachable.*=0` -- the `symbols_not_reached` census the plan records -- and its CPU-dispatch string is `CPUINFO: N/A` with `OPENSSL_info(1008)` NULL. That disposition and every other candidate-vs-authority difference is *recorded* in the court's `divergences` block, not failed: the reduced engine deliberately does not model `OPENSSL_ia32cap` masking, so under a cleared facade the authority's selection moves to the non-AES-NI arm and the candidate's does not. The court is `pass` when the authority's capability surface was actually driven, the faulted facade moved the authority's selection, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded audit of the capability surface at the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6). `RT-EVP-DISPATCH` is 19.2's court: it compiles courts/phase19/rt_evp_dispatch_probe.c twice and reports, for a fixed operation set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-1/256 and the four `EVP_aes_*_cbc_hmac_sha*` constructors), which implementation each path selects -- the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context -- as the selected method's name/NID/type/flags/sizes and, for a fetch, its provider name, under the same three fixed capability sets. The authority's default provider filters its `AES-*-CBC-HMAC-*` rows through `ossl_cipher_capable_aes_cbc_hmac_sha*` (`AESNI_CBC_HMAC_SHA_CAPABLE`), so masking the AES-NI bit makes those fetch/legacy/lookup paths answer NULL and moves the authority's selection; the candidate reads CPUID directly and does not model the mask, so its selection does not move. Every candidate-vs-authority difference is recorded in the court's `divergences` block. The court is `pass` when the authority's selection surface was driven, the faulted facade moved it, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded comparison of *selection* over the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6); the engine path is not driven because no engine is configured and the reduced engine does not export the enumeration it would need. `RT-PERFORMANCE-WORK` is 19.3's court: it compiles courts/phase19/rt_performance_work_probe.c twice and reports the deterministic work a fixed operation set performs -- AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an RSA-1024 private decrypt. The library exposes no total instruction counter, so the instrument is a counting `CRYPTO` allocator the stratum introduces (the number of malloc/realloc operations and total bytes the library requests for a fixed primitive -- a deterministic instruction-path proxy for its memory work; the shims forward to the default allocator and change no behaviour) plus the method-derived input/blocks/output/tag sizes. No address, clock or duration is observed. Every path whose library-side work vector differs from the authority's is a *finding* recorded, not failed -- the reduced engine's allocations differ on the EC and RSA paths while the symmetric/digest paths agree -- and a path the probe cannot drive is `pending`. The court is `pass` when the authority installed the hook and the paths ran, both transcripts are complete, every schema key is present and every divergence was recorded -- NOT when nothing diverged. The counting allocator observes heap operations, not total CPU instructions, and the block counts are input-implied: no benchmark-parity claim and no assembly-versus-Rust equivalence claim (sections 3.1 and 3.6). `RT-PERFORMANCE-SENSITIVITY` is 19.4's court: it is candidate-only -- the deliberately slowed variant is a construction of the harness, never product code -- and compiles courts/phase19/rt_performance_sensitivity_probe.c once against the candidate distribution shell. It drives a reference arm (the real `aes-128-cbc` path, which must equal the authority vector 19.3 recorded) and a slowed arm (`control-extra-pass`, the same path with an injected extra full pass over the primitive) under the same 19.3 work instrument, and the court is `pass` only when the slowed arm is caught on the counting allocator the stratum introduces (a library-side `allocs`/`reallocs`/`bytes` difference), not merely on the driver-side `calls` 19.3 excludes from its findings. Section 3.2's rule is mechanical here: a control that cannot fail is not evidence, so if the instrument cannot tell the slowed path from the reference the verdict is `fail`, never a vacuous `pass`. It is evidence about the instrument's resolution and makes no throughput or benchmark-parity claim. `PERFORMANCE-BOUNDARY-REGISTER` is 19.5's court: it stages no probe and reads the authored register artifacts/phase19/performance-boundary-register.json against the four probe courts' records computed above it, failing the stratum if a measured row's court no longer covers its surface, a not-measured or not-claimed row a passing court now covers, or a stated count/evidence value has moved. It records the stratum's own non-claims -- no benchmark-parity claim and no assembly-versus-Rust equivalence claim, the ENGINE path not measured, the three capability names not reached, and the two divergent-work findings -- and may not claim more than the courts above measured. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is dispatch behaviour and deterministic work over a finished implementation, with no benchmark-parity claim and no assembly-versus-Rust equivalence claim. docs/PHASE-19-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "courts": [
+      {
+        "authority_observations": 81,
+        "candidate_observations": 81,
+        "candidate_stderr_tail": [],
+        "capability_sets": [
+          {
+            "OPENSSL_ia32cap": "0x0200000100000000",
+            "authority_exit_code": 0,
+            "authority_observations": 27,
+            "candidate_exit_code": 0,
+            "candidate_observations": 27,
+            "divergence_count": 20,
+            "set": "reference"
+          },
+          {
+            "OPENSSL_ia32cap": "0x0000000100000000",
+            "authority_exit_code": 0,
+            "authority_observations": 27,
+            "candidate_exit_code": 0,
+            "candidate_observations": 27,
+            "divergence_count": 24,
+            "set": "aesni-off"
+          },
+          {
+            "OPENSSL_ia32cap": "0x0000000000000000",
+            "authority_exit_code": 0,
+            "authority_observations": 27,
+            "candidate_exit_code": 0,
+            "candidate_observations": 27,
+            "divergence_count": 24,
+            "set": "cleared"
+          }
+        ],
+        "control": {
+          "authority_surface_reached": true,
+          "facade_aesni_off": "1",
+          "facade_key": "sel.aes128cbcsha1.null",
+          "facade_moved_selection": true,
+          "facade_reference": "0"
+        },
+        "court": "RT-CPU-CAPABILITY",
+        "divergence_count": 68,
+        "divergences": [
+          {
+            "authority": "OPENSSL_ia32cap=0x0200000100000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:0x0200000100000000",
+            "candidate": "",
+            "class": "value",
+            "observation": "reference.api.cpu_settings",
+            "set": "reference"
+          },
+          {
+            "authority": "0",
+            "candidate": "1",
+            "class": "value",
+            "observation": "reference.api.cpu_settings_null",
+            "set": "reference"
+          },
+          {
+            "authority": "CPUINFO: OPENSSL_ia32cap=0x0200000100000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:0x0200000100000000",
+            "candidate": "CPUINFO: N/A",
+            "class": "value",
+            "observation": "reference.api.cpuinfo",
+            "set": "reference"
+          },
+          {
+            "authority": "0x00000400",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "reference.cap.after_setup.0",
+            "set": "reference"
+          },
+          {
+            "authority": "0x02000001",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "reference.cap.after_setup.1",
+            "set": "reference"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "reference.cap.after_setup.2",
+            "set": "reference"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "reference.cap.after_setup.3",
+            "set": "reference"
+          },
+          {
+            "authority": "0x0200000100000400",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "reference.cap.synthetic.pair",
+            "set": "reference"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "reference.cap.synthetic.word.4",
+            "set": "reference"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "reference.cap.synthetic.word.5",
+            "set": "reference"
+          },
+          {
+            "authority": "0x00000400",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "reference.cap.word.0",
+            "set": "reference"
+          },
+          {
+            "authority": "0x02000001",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "reference.cap.word.1",
+            "set": "reference"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "reference.cap.word.2",
+            "set": "reference"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "reference.cap.word.3",
+            "set": "reference"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "reference.probe.cpuid.called",
+            "set": "reference"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "reference.probe.reachable.cpuid_setup",
+            "set": "reference"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "reference.probe.reachable.ia32_cpuid",
+            "set": "reference"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "reference.probe.reachable.ia32cap_p",
+            "set": "reference"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "reference.probe.setup.called",
+            "set": "reference"
+          },
+          {
+            "authority": "1",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "reference.probe.setup.stable",
+            "set": "reference"
+          },
+          {
+            "authority": "OPENSSL_ia32cap=0x0000000100000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:0x0000000100000000",
+            "candidate": "",
+            "class": "value",
+            "observation": "aesni-off.api.cpu_settings",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0",
+            "candidate": "1",
+            "class": "value",
+            "observation": "aesni-off.api.cpu_settings_null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "CPUINFO: OPENSSL_ia32cap=0x0000000100000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:0x0000000100000000",
+            "candidate": "CPUINFO: N/A",
+            "class": "value",
+            "observation": "aesni-off.api.cpuinfo",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0x00000400",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "aesni-off.cap.after_setup.0",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0x00000001",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "aesni-off.cap.after_setup.1",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "aesni-off.cap.after_setup.2",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "aesni-off.cap.after_setup.3",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0x0000000100000400",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "aesni-off.cap.synthetic.pair",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "aesni-off.cap.synthetic.word.4",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "aesni-off.cap.synthetic.word.5",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0x00000400",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "aesni-off.cap.word.0",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0x00000001",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "aesni-off.cap.word.1",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "aesni-off.cap.word.2",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "aesni-off.cap.word.3",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.probe.cpuid.called",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.probe.reachable.cpuid_setup",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.probe.reachable.ia32_cpuid",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.probe.reachable.ia32cap_p",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.probe.setup.called",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "aesni-off.probe.setup.stable",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.sel.aes128cbcsha1.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.sel.aes128cbcsha256.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.sel.aes256cbcsha1.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.sel.aes256cbcsha256.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "OPENSSL_ia32cap=0x0000000000000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:0x0000000000000000",
+            "candidate": "",
+            "class": "value",
+            "observation": "cleared.api.cpu_settings",
+            "set": "cleared"
+          },
+          {
+            "authority": "0",
+            "candidate": "1",
+            "class": "value",
+            "observation": "cleared.api.cpu_settings_null",
+            "set": "cleared"
+          },
+          {
+            "authority": "CPUINFO: OPENSSL_ia32cap=0x0000000000000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:0x0000000000000000",
+            "candidate": "CPUINFO: N/A",
+            "class": "value",
+            "observation": "cleared.api.cpuinfo",
+            "set": "cleared"
+          },
+          {
+            "authority": "0x00000400",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "cleared.cap.after_setup.0",
+            "set": "cleared"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "cleared.cap.after_setup.1",
+            "set": "cleared"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "cleared.cap.after_setup.2",
+            "set": "cleared"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "cleared.cap.after_setup.3",
+            "set": "cleared"
+          },
+          {
+            "authority": "0x0000000000000400",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "cleared.cap.synthetic.pair",
+            "set": "cleared"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "cleared.cap.synthetic.word.4",
+            "set": "cleared"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "cleared.cap.synthetic.word.5",
+            "set": "cleared"
+          },
+          {
+            "authority": "0x00000400",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "cleared.cap.word.0",
+            "set": "cleared"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "cleared.cap.word.1",
+            "set": "cleared"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "cleared.cap.word.2",
+            "set": "cleared"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "cleared.cap.word.3",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.probe.cpuid.called",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.probe.reachable.cpuid_setup",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.probe.reachable.ia32_cpuid",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.probe.reachable.ia32cap_p",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.probe.setup.called",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "cleared.probe.setup.stable",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.sel.aes128cbcsha1.null",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.sel.aes128cbcsha256.null",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.sel.aes256cbcsha1.null",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.sel.aes256cbcsha256.null",
+            "set": "cleared"
+          }
+        ],
+        "method": "the probe is compiled twice and its `key=value` transcript compared. It is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade (a synthetic reference set, an AES-NI-cleared set and a fully cleared set), each an explicit literal so the recorded vector is never the runner's own CPUID. The raw `OPENSSL_ia32_cpuid` return is not recorded; the three host readouts the first version printed are replaced by portable observations of the synthetic vector the literal derives (`cap.synthetic.pair`/`.word.4`/`.word.5`). The authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so the hidden `OPENSSL_ia32cap_P` and the archive-only `OPENSSL_cpuid_setup` / `OPENSSL_ia32_cpuid` are reachable; the candidate probe links its distribution shell, where the weak references resolve to NULL. No address, clock or duration is observed.",
+        "observations_recorded": {
+          "authority": 81,
+          "candidate": 81
+        },
+        "probe": "courts/phase19/rt_cpu_capability_probe.c",
+        "problems": [],
+        "reached": {
+          "authority": {
+            "probe.reachable.cpuid_setup": "1",
+            "probe.reachable.ia32_cpuid": "1",
+            "probe.reachable.ia32cap_p": "1"
+          },
+          "candidate": {
+            "probe.reachable.cpuid_setup": "0",
+            "probe.reachable.ia32_cpuid": "0",
+            "probe.reachable.ia32cap_p": "0"
+          }
+        },
+        "staged_binaries": {
+          "authority": "artifacts/phase19/probes/rt_cpu_capability_probe.authority",
+          "candidate": "artifacts/phase19/probes/rt_cpu_capability_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_observations": 777,
+        "candidate_observations": 777,
+        "candidate_stderr_tail": [],
+        "capability_sets": [
+          {
+            "OPENSSL_ia32cap": "0x0200000100000000",
+            "authority_exit_code": 0,
+            "authority_observations": 259,
+            "candidate_exit_code": 0,
+            "candidate_observations": 259,
+            "divergence_count": 0,
+            "set": "reference"
+          },
+          {
+            "OPENSSL_ia32cap": "0x0000000100000000",
+            "authority_exit_code": 0,
+            "authority_observations": 259,
+            "candidate_exit_code": 0,
+            "candidate_observations": 259,
+            "divergence_count": 88,
+            "set": "aesni-off"
+          },
+          {
+            "OPENSSL_ia32cap": "0x0000000000000000",
+            "authority_exit_code": 0,
+            "authority_observations": 259,
+            "candidate_exit_code": 0,
+            "candidate_observations": 259,
+            "divergence_count": 88,
+            "set": "cleared"
+          }
+        ],
+        "control": {
+          "aes_cbc_hmac_selection": {
+            "fetch.aes-128-cbc-hmac-sha1.null": {
+              "aesni_off": "1",
+              "reference": "0"
+            },
+            "fetch.aes-128-cbc-hmac-sha256.null": {
+              "aesni_off": "1",
+              "reference": "0"
+            },
+            "fetch.aes-256-cbc-hmac-sha1.null": {
+              "aesni_off": "1",
+              "reference": "0"
+            },
+            "fetch.aes-256-cbc-hmac-sha256.null": {
+              "aesni_off": "1",
+              "reference": "0"
+            },
+            "legacy.aes-128-cbc-hmac-sha1.null": {
+              "aesni_off": "1",
+              "reference": "0"
+            },
+            "legacy.aes-128-cbc-hmac-sha256.null": {
+              "aesni_off": "1",
+              "reference": "0"
+            },
+            "legacy.aes-256-cbc-hmac-sha1.null": {
+              "aesni_off": "1",
+              "reference": "0"
+            },
+            "legacy.aes-256-cbc-hmac-sha256.null": {
+              "aesni_off": "1",
+              "reference": "0"
+            },
+            "lookup.aes-128-cbc-hmac-sha1.null": {
+              "aesni_off": "1",
+              "reference": "0"
+            },
+            "lookup.aes-128-cbc-hmac-sha256.null": {
+              "aesni_off": "1",
+              "reference": "0"
+            },
+            "lookup.aes-256-cbc-hmac-sha1.null": {
+              "aesni_off": "1",
+              "reference": "0"
+            },
+            "lookup.aes-256-cbc-hmac-sha256.null": {
+              "aesni_off": "1",
+              "reference": "0"
+            }
+          },
+          "authority_selection_driven": true,
+          "controls": [
+            {
+              "aesni_off": "1",
+              "expected_aesni_off": "1",
+              "expected_reference": "0",
+              "key": "fetch.aes-128-cbc-hmac-sha1.null",
+              "moved": true,
+              "reference": "0"
+            },
+            {
+              "aesni_off": "1",
+              "expected_aesni_off": "1",
+              "expected_reference": "0",
+              "key": "legacy.aes-256-cbc-hmac-sha256.null",
+              "moved": true,
+              "reference": "0"
+            },
+            {
+              "aesni_off": "1",
+              "expected_aesni_off": "1",
+              "expected_reference": "0",
+              "key": "lookup.aes-128-cbc-hmac-sha1.null",
+              "moved": true,
+              "reference": "0"
+            }
+          ],
+          "facade_moved_selection": true
+        },
+        "court": "RT-EVP-DISPATCH",
+        "divergence_count": 176,
+        "divergences": [
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha1.block",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0",
+            "candidate": "7340034",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha1.flags",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha1.is_a",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha1.ivlen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha1.keylen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-128-CBC-HMAC-SHA1",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha1.name",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "916",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha1.nid",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha1.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "",
+            "candidate": "default",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha1.prov_name",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha1.prov_null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha1.type",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha256.block",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0",
+            "candidate": "7340034",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha256.flags",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha256.is_a",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha256.ivlen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha256.keylen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-128-CBC-HMAC-SHA256",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha256.name",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "948",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha256.nid",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha256.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "",
+            "candidate": "default",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha256.prov_name",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha256.prov_null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-128-cbc-hmac-sha256.type",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha1.block",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0",
+            "candidate": "7340034",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha1.flags",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha1.is_a",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha1.ivlen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "32",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha1.keylen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-256-CBC-HMAC-SHA1",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha1.name",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "918",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha1.nid",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha1.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "",
+            "candidate": "default",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha1.prov_name",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha1.prov_null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha1.type",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha256.block",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0",
+            "candidate": "7340034",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha256.flags",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha256.is_a",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha256.ivlen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "32",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha256.keylen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-256-CBC-HMAC-SHA256",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha256.name",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "950",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha256.nid",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha256.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "",
+            "candidate": "default",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha256.prov_name",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha256.prov_null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.fetch.aes-256-cbc-hmac-sha256.type",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha1.block",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0",
+            "candidate": "6291458",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha1.flags",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha1.ivlen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha1.keylen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-128-CBC-HMAC-SHA1",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha1.name",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "916",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha1.nid",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha1.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha1.prov_null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha1.type",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha256.block",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0",
+            "candidate": "6291458",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha256.flags",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha256.ivlen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha256.keylen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-128-CBC-HMAC-SHA256",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha256.name",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "948",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha256.nid",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha256.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha256.prov_null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-128-cbc-hmac-sha256.type",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha1.block",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0",
+            "candidate": "6291458",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha1.flags",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha1.ivlen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "32",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha1.keylen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-256-CBC-HMAC-SHA1",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha1.name",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "918",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha1.nid",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha1.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha1.prov_null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha1.type",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha256.block",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0",
+            "candidate": "6291458",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha256.flags",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha256.ivlen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "32",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha256.keylen",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-256-CBC-HMAC-SHA256",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha256.name",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "950",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha256.nid",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha256.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha256.prov_null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.legacy.aes-256-cbc-hmac-sha256.type",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "916",
+            "class": "value",
+            "observation": "aesni-off.lookup.aes-128-cbc-hmac-sha1.nid",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.lookup.aes-128-cbc-hmac-sha1.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "948",
+            "class": "value",
+            "observation": "aesni-off.lookup.aes-128-cbc-hmac-sha256.nid",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.lookup.aes-128-cbc-hmac-sha256.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "918",
+            "class": "value",
+            "observation": "aesni-off.lookup.aes-256-cbc-hmac-sha1.nid",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.lookup.aes-256-cbc-hmac-sha1.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "950",
+            "class": "value",
+            "observation": "aesni-off.lookup.aes-256-cbc-hmac-sha256.nid",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "aesni-off.lookup.aes-256-cbc-hmac-sha256.null",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha1.block",
+            "set": "cleared"
+          },
+          {
+            "authority": "0",
+            "candidate": "7340034",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha1.flags",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha1.is_a",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha1.ivlen",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha1.keylen",
+            "set": "cleared"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-128-CBC-HMAC-SHA1",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha1.name",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "916",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha1.nid",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha1.null",
+            "set": "cleared"
+          },
+          {
+            "authority": "",
+            "candidate": "default",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha1.prov_name",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha1.prov_null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha1.type",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha256.block",
+            "set": "cleared"
+          },
+          {
+            "authority": "0",
+            "candidate": "7340034",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha256.flags",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha256.is_a",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha256.ivlen",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha256.keylen",
+            "set": "cleared"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-128-CBC-HMAC-SHA256",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha256.name",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "948",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha256.nid",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha256.null",
+            "set": "cleared"
+          },
+          {
+            "authority": "",
+            "candidate": "default",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha256.prov_name",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha256.prov_null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.fetch.aes-128-cbc-hmac-sha256.type",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha1.block",
+            "set": "cleared"
+          },
+          {
+            "authority": "0",
+            "candidate": "7340034",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha1.flags",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha1.is_a",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha1.ivlen",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "32",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha1.keylen",
+            "set": "cleared"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-256-CBC-HMAC-SHA1",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha1.name",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "918",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha1.nid",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha1.null",
+            "set": "cleared"
+          },
+          {
+            "authority": "",
+            "candidate": "default",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha1.prov_name",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha1.prov_null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha1.type",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha256.block",
+            "set": "cleared"
+          },
+          {
+            "authority": "0",
+            "candidate": "7340034",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha256.flags",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha256.is_a",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha256.ivlen",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "32",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha256.keylen",
+            "set": "cleared"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-256-CBC-HMAC-SHA256",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha256.name",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "950",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha256.nid",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha256.null",
+            "set": "cleared"
+          },
+          {
+            "authority": "",
+            "candidate": "default",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha256.prov_name",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha256.prov_null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.fetch.aes-256-cbc-hmac-sha256.type",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha1.block",
+            "set": "cleared"
+          },
+          {
+            "authority": "0",
+            "candidate": "6291458",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha1.flags",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha1.ivlen",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha1.keylen",
+            "set": "cleared"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-128-CBC-HMAC-SHA1",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha1.name",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "916",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha1.nid",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha1.null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha1.prov_null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha1.type",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha256.block",
+            "set": "cleared"
+          },
+          {
+            "authority": "0",
+            "candidate": "6291458",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha256.flags",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha256.ivlen",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha256.keylen",
+            "set": "cleared"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-128-CBC-HMAC-SHA256",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha256.name",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "948",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha256.nid",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha256.null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha256.prov_null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.legacy.aes-128-cbc-hmac-sha256.type",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha1.block",
+            "set": "cleared"
+          },
+          {
+            "authority": "0",
+            "candidate": "6291458",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha1.flags",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha1.ivlen",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "32",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha1.keylen",
+            "set": "cleared"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-256-CBC-HMAC-SHA1",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha1.name",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "918",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha1.nid",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha1.null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha1.prov_null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha1.type",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha256.block",
+            "set": "cleared"
+          },
+          {
+            "authority": "0",
+            "candidate": "6291458",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha256.flags",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "16",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha256.ivlen",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "32",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha256.keylen",
+            "set": "cleared"
+          },
+          {
+            "authority": "",
+            "candidate": "AES-256-CBC-HMAC-SHA256",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha256.name",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "950",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha256.nid",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha256.null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "1",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha256.prov_null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.legacy.aes-256-cbc-hmac-sha256.type",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "916",
+            "class": "value",
+            "observation": "cleared.lookup.aes-128-cbc-hmac-sha1.nid",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.lookup.aes-128-cbc-hmac-sha1.null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "948",
+            "class": "value",
+            "observation": "cleared.lookup.aes-128-cbc-hmac-sha256.nid",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.lookup.aes-128-cbc-hmac-sha256.null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "918",
+            "class": "value",
+            "observation": "cleared.lookup.aes-256-cbc-hmac-sha1.nid",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.lookup.aes-256-cbc-hmac-sha1.null",
+            "set": "cleared"
+          },
+          {
+            "authority": "-1",
+            "candidate": "950",
+            "class": "value",
+            "observation": "cleared.lookup.aes-256-cbc-hmac-sha256.nid",
+            "set": "cleared"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "cleared.lookup.aes-256-cbc-hmac-sha256.null",
+            "set": "cleared"
+          }
+        ],
+        "method": "the probe is compiled twice and its `key=value` transcript compared. It reports, for a fixed operation set, which implementation each path selects -- the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context -- as the selected method's name/NID/type/flags/sizes and, for a fetch, its provider name. It is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade (a synthetic reference set, an AES-NI-cleared set and a fully cleared set), exactly as `RT-CPU-CAPABILITY`. The authority probe links its static `libcrypto.a`; the candidate probe links its distribution shell. No address, clock or duration is observed.",
+        "observations_recorded": {
+          "authority": 777,
+          "candidate": 777
+        },
+        "probe": "courts/phase19/rt_evp_dispatch_probe.c",
+        "problems": [],
+        "reached": {
+          "authority": {
+            "authority_default_provider": true
+          },
+          "candidate": {
+            "candidate_default_provider": true
+          }
+        },
+        "staged_binaries": {
+          "authority": "artifacts/phase19/probes/rt_evp_dispatch_probe.authority",
+          "candidate": "artifacts/phase19/probes/rt_evp_dispatch_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_observations": 84,
+        "candidate_observations": 84,
+        "candidate_stderr_tail": [],
+        "control": {
+          "authority_hook_installed": true,
+          "authority_paths_ran": 8,
+          "candidate_hook_installed": true,
+          "candidate_paths_ran": 8,
+          "total_paths": 8
+        },
+        "court": "RT-PERFORMANCE-WORK",
+        "divergence_count": 4,
+        "divergences": [
+          {
+            "authority": "3",
+            "candidate": "4",
+            "class": "value",
+            "observation": "work.ec-p256-mul.allocs"
+          },
+          {
+            "authority": "2121",
+            "candidate": "160",
+            "class": "value",
+            "observation": "work.ec-p256-mul.bytes"
+          },
+          {
+            "authority": "46",
+            "candidate": "31",
+            "class": "value",
+            "observation": "work.rsa-1024-private.allocs"
+          },
+          {
+            "authority": "4541",
+            "candidate": "2669",
+            "class": "value",
+            "observation": "work.rsa-1024-private.bytes"
+          }
+        ],
+        "finding_keys": [
+          "blocks",
+          "out",
+          "tag",
+          "allocs",
+          "reallocs",
+          "bytes",
+          "ret"
+        ],
+        "findings": [
+          "ec-p256-mul: deterministic work differs (allocs authority=3 candidate=4; bytes authority=2121 candidate=160)",
+          "rsa-1024-private: deterministic work differs (allocs authority=46 candidate=31; bytes authority=4541 candidate=2669)"
+        ],
+        "findings_count": 2,
+        "method": "the probe is compiled twice and its `key=value` transcript compared. It reports, for a fixed operation set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an RSA-1024 private decrypt), a deterministic work vector per path: a counting `CRYPTO` allocator's malloc/realloc/byte counts (the instruction-path proxy the stratum introduces), plus the method-derived input/blocks/output/tag sizes. No address, clock or duration is observed. A path whose library-side work vector differs is recorded as a finding, not failed.",
+        "observations_recorded": {
+          "authority": 84,
+          "candidate": 84
+        },
+        "operation_set": [
+          "aes-128-cbc",
+          "aes-256-cbc",
+          "aes-128-gcm",
+          "aes-256-gcm",
+          "chacha20-poly1305",
+          "sha256",
+          "ec-p256-mul",
+          "rsa-1024-private"
+        ],
+        "paths": [
+          {
+            "authority": {
+              "allocs": "2",
+              "blocks": "4",
+              "bytes": "640",
+              "calls": "7",
+              "in": "64",
+              "out": "80",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "candidate": {
+              "allocs": "2",
+              "blocks": "4",
+              "bytes": "640",
+              "calls": "7",
+              "in": "64",
+              "out": "80",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "divergent_work_keys": [],
+            "path": "aes-128-cbc"
+          },
+          {
+            "authority": {
+              "allocs": "2",
+              "blocks": "4",
+              "bytes": "640",
+              "calls": "7",
+              "in": "64",
+              "out": "80",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "candidate": {
+              "allocs": "2",
+              "blocks": "4",
+              "bytes": "640",
+              "calls": "7",
+              "in": "64",
+              "out": "80",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "divergent_work_keys": [],
+            "path": "aes-256-cbc"
+          },
+          {
+            "authority": {
+              "allocs": "2",
+              "blocks": "64",
+              "bytes": "1152",
+              "calls": "9",
+              "in": "64",
+              "out": "64",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "16"
+            },
+            "candidate": {
+              "allocs": "2",
+              "blocks": "64",
+              "bytes": "1152",
+              "calls": "9",
+              "in": "64",
+              "out": "64",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "16"
+            },
+            "divergent_work_keys": [],
+            "path": "aes-128-gcm"
+          },
+          {
+            "authority": {
+              "allocs": "2",
+              "blocks": "64",
+              "bytes": "1152",
+              "calls": "9",
+              "in": "64",
+              "out": "64",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "16"
+            },
+            "candidate": {
+              "allocs": "2",
+              "blocks": "64",
+              "bytes": "1152",
+              "calls": "9",
+              "in": "64",
+              "out": "64",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "16"
+            },
+            "divergent_work_keys": [],
+            "path": "aes-256-gcm"
+          },
+          {
+            "authority": {
+              "allocs": "2",
+              "blocks": "64",
+              "bytes": "1040",
+              "calls": "9",
+              "in": "64",
+              "out": "64",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "16"
+            },
+            "candidate": {
+              "allocs": "2",
+              "blocks": "64",
+              "bytes": "1040",
+              "calls": "9",
+              "in": "64",
+              "out": "64",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "16"
+            },
+            "divergent_work_keys": [],
+            "path": "chacha20-poly1305"
+          },
+          {
+            "authority": {
+              "allocs": "2",
+              "blocks": "2",
+              "bytes": "184",
+              "calls": "7",
+              "in": "64",
+              "out": "32",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "candidate": {
+              "allocs": "2",
+              "blocks": "2",
+              "bytes": "184",
+              "calls": "7",
+              "in": "64",
+              "out": "32",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "divergent_work_keys": [],
+            "path": "sha256"
+          },
+          {
+            "authority": {
+              "allocs": "3",
+              "blocks": "256",
+              "bytes": "2121",
+              "calls": "6",
+              "in": "32",
+              "out": "65",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "candidate": {
+              "allocs": "4",
+              "blocks": "256",
+              "bytes": "160",
+              "calls": "6",
+              "in": "32",
+              "out": "65",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "1",
+              "tag": "-1"
+            },
+            "divergent_work_keys": [
+              "allocs",
+              "bytes"
+            ],
+            "path": "ec-p256-mul"
+          },
+          {
+            "authority": {
+              "allocs": "46",
+              "blocks": "1024",
+              "bytes": "4541",
+              "calls": "1",
+              "in": "128",
+              "out": "99",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "99",
+              "tag": "-1"
+            },
+            "candidate": {
+              "allocs": "31",
+              "blocks": "1024",
+              "bytes": "2669",
+              "calls": "1",
+              "in": "128",
+              "out": "99",
+              "ran": "1",
+              "reallocs": "0",
+              "ret": "99",
+              "tag": "-1"
+            },
+            "divergent_work_keys": [
+              "allocs",
+              "bytes"
+            ],
+            "path": "rsa-1024-private"
+          }
+        ],
+        "pending_paths": [],
+        "probe": "courts/phase19/rt_performance_work_probe.c",
+        "problems": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase19/probes/rt_performance_work_probe.authority",
+          "candidate": "artifacts/phase19/probes/rt_performance_work_probe.candidate"
+        },
+        "verdict": "pass",
+        "work_fields": [
+          "ran",
+          "in",
+          "blocks",
+          "calls",
+          "out",
+          "tag",
+          "allocs",
+          "reallocs",
+          "bytes",
+          "ret"
+        ]
+      },
+      {
+        "authority_reference": {
+          "allocs": "2",
+          "blocks": "4",
+          "bytes": "640",
+          "calls": "7",
+          "in": "64",
+          "out": "80",
+          "ran": "1",
+          "reallocs": "0",
+          "ret": "1",
+          "tag": "-1"
+        },
+        "candidate_exit_code": 0,
+        "candidate_only": true,
+        "candidate_stderr_tail": [],
+        "control": {
+          "caught": true,
+          "counter_caught": true,
+          "counter_keys": [
+            "allocs",
+            "reallocs",
+            "bytes"
+          ],
+          "counter_keys_differing": [
+            "allocs",
+            "bytes"
+          ],
+          "driver_side_calls_differ": true,
+          "honest": true,
+          "library_side_keys_differing": [
+            "allocs",
+            "bytes",
+            "out"
+          ],
+          "path": "control-extra-pass",
+          "reference": "aes-128-cbc",
+          "what": "the reference `aes-128-cbc` path with an injected extra full pass over the primitive inside the measured region -- extra library work constructed in the harness, never product code -- so the counting allocator must register it"
+        },
+        "court": "RT-PERFORMANCE-SENSITIVITY",
+        "frf_declarable": false,
+        "frf_exclusion": "candidate-only instrument-sensitivity control: the deliberately slowed variant is a construction of the harness, so there is no authority transcript to diff and no artifacts/phase19/probes/<probe>.authority pair to stage, and the probe is compiled once against the candidate distribution shell (D13, D201)",
+        "method": "candidate-only; the probe is compiled once against the candidate distribution shell and drives two arms under the same 19.3 work instrument (the counting `CRYPTO` allocator the stratum introduces plus the method-derived geometry): a reference arm, the real `aes-128-cbc` path, and a slowed arm, the same path with an injected extra full pass over the primitive. The reference must equal the authority's `aes-128-cbc` vector the 19.3 court recorded and the slowed arm must be caught on a library-side counter key. No address, clock or duration is observed. The verdict is about the instrument's resolution: it makes no throughput or benchmark-parity claim.",
+        "observations_recorded": {
+          "candidate": 26
+        },
+        "probe": "courts/phase19/rt_performance_sensitivity_probe.c",
+        "problems": [],
+        "reference": {
+          "allocs": "2",
+          "blocks": "4",
+          "bytes": "640",
+          "calls": "7",
+          "in": "64",
+          "out": "80",
+          "ran": "1",
+          "reallocs": "0",
+          "ret": "1",
+          "tag": "-1"
+        },
+        "slowed": {
+          "allocs": "4",
+          "blocks": "4",
+          "bytes": "1280",
+          "calls": "14",
+          "in": "64",
+          "out": "160",
+          "ran": "1",
+          "reallocs": "0",
+          "ret": "1",
+          "tag": "-1"
+        },
+        "staged_binaries": {
+          "candidate": "artifacts/phase19/probes/rt_performance_sensitivity_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "court": "PERFORMANCE-BOUNDARY-REGISTER",
+        "frf_declarable": false,
+        "frf_exclusion": "the register re-reads the courts registry and stages no artifacts/phase19/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it re-reads the live courts registry (the four probe courts above) and the authored register artifacts/phase19/performance-boundary-register.json, and fails the stratum if any recorded measured/not-measured/not-claimed classification, surface key or stated count/evidence value has drifted from what the courts show (docs/PHASE-19-SUBPHASES.md sections 3.1, 3.5 and 3.6). A not-measured or not-claimed row that a passing court now covers, a measured row whose court no longer covers it, and a stated count that moved are all failures. It is the stratum's own non-claims: no benchmark-parity claim and no assembly-versus-Rust equivalence claim.",
+        "probe": "",
+        "problems": [],
+        "register": {
+          "counts": {
+            "measured": 7,
+            "not-claimed": 6,
+            "not-measured": 1
+          },
+          "path": "artifacts/phase19/performance-boundary-register.json",
+          "schema": "openssl-rs/performance-boundary-register/v1",
+          "sha256": "0e9ec543738e1ef738577c037500b22133c54f31d2a37c1f3f586670cc1467a3",
+          "total": 14
+        },
+        "surfaces": [
+          {
+            "classification": "measured",
+            "court": "RT-CPU-CAPABILITY",
+            "id": "cpu-names-not-reached",
+            "surface_keys": [
+              "cpu.reach.ia32cap_p",
+              "cpu.reach.cpuid_setup",
+              "cpu.reach.ia32_cpuid"
+            ]
+          },
+          {
+            "classification": "measured",
+            "court": "RT-CPU-CAPABILITY",
+            "id": "cpu-dispatch-invariance",
+            "surface_keys": [
+              "cpu.masking"
+            ]
+          },
+          {
+            "classification": "measured",
+            "court": "RT-EVP-DISPATCH",
+            "id": "evp-reference-agreement",
+            "surface_keys": [
+              "evp.reference"
+            ]
+          },
+          {
+            "classification": "measured",
+            "court": "RT-EVP-DISPATCH",
+            "id": "evp-masked-divergence",
+            "surface_keys": [
+              "evp.masked"
+            ]
+          },
+          {
+            "classification": "not-measured",
+            "court": null,
+            "id": "evp-engine-path",
+            "surface_keys": [
+              "evp.engine"
+            ]
+          },
+          {
+            "classification": "measured",
+            "court": "RT-PERFORMANCE-WORK",
+            "id": "work-agreement",
+            "surface_keys": [
+              "work.agree.aes-128-cbc",
+              "work.agree.aes-256-cbc",
+              "work.agree.aes-128-gcm",
+              "work.agree.aes-256-gcm",
+              "work.agree.chacha20-poly1305",
+              "work.agree.sha256"
+            ]
+          },
+          {
+            "classification": "measured",
+            "court": "RT-PERFORMANCE-WORK",
+            "id": "work-divergence",
+            "surface_keys": [
+              "work.diverge.ec-p256-mul",
+              "work.diverge.rsa-1024-private"
+            ]
+          },
+          {
+            "classification": "measured",
+            "court": "RT-PERFORMANCE-SENSITIVITY",
+            "id": "sensitivity-control",
+            "surface_keys": [
+              "sens.control"
+            ]
+          },
+          {
+            "classification": "not-claimed",
+            "court": null,
+            "id": "nc-benchmark-parity",
+            "surface_keys": [
+              "nc.benchmark-parity"
+            ]
+          },
+          {
+            "classification": "not-claimed",
+            "court": null,
+            "id": "nc-asm-rust-equivalence",
+            "surface_keys": [
+              "nc.asm-rust-equivalence"
+            ]
+          },
+          {
+            "classification": "not-claimed",
+            "court": null,
+            "id": "nc-wallclock",
+            "surface_keys": [
+              "nc.wallclock"
+            ]
+          },
+          {
+            "classification": "not-claimed",
+            "court": null,
+            "id": "nc-instruction-count",
+            "surface_keys": [
+              "nc.instruction-count"
+            ]
+          },
+          {
+            "classification": "not-claimed",
+            "court": null,
+            "id": "nc-parity",
+            "surface_keys": [
+              "nc.parity"
+            ]
+          },
+          {
+            "classification": "not-claimed",
+            "court": null,
+            "id": "nc-guarantee",
+            "surface_keys": [
+              "nc.guarantee"
+            ]
+          }
+        ],
+        "verdict": "pass"
+      }
+    ],
+    "pending_courts": {},
+    "summary": {
+      "fail": 0,
+      "pass": 5,
+      "total": 5
+    }
+  },
+  "generator": "forensics/tools/phase19_courts.py",
+  "inputs": [
+    {
+      "name": "phase-19-plan",
+      "path": "docs/PHASE-19-SUBPHASES.md",
+      "sha256": "c9ba16f46b9e2686d503c7d5234e337b5f6935d0eac82e7dc2e81ebfe7c79348"
+    },
+    {
+      "name": "cpu-capability-probe",
+      "path": "courts/phase19/rt_cpu_capability_probe.c",
+      "sha256": "79fd360f778268d32d0c02210c3118c6098849a6aa515b3ee8aa74f8c69cf886"
+    },
+    {
+      "name": "evp-dispatch-probe",
+      "path": "courts/phase19/rt_evp_dispatch_probe.c",
+      "sha256": "a7ad5f31d7ec6c6c89dc3a81d2050441df66f0189cb1a74fa8b084227c62588a"
+    },
+    {
+      "name": "performance-work-probe",
+      "path": "courts/phase19/rt_performance_work_probe.c",
+      "sha256": "06e905af25d656b915e2edc29aa1cb621e8105fa0673303505fecff4cfdd5f40"
+    },
+    {
+      "name": "performance-sensitivity-probe",
+      "path": "courts/phase19/rt_performance_sensitivity_probe.c",
+      "sha256": "a7cf24f135ac9ef7e33e75d70caa61d2690199635da2f0ebf9ac28930dab3990"
+    },
+    {
+      "name": "performance-boundary-register",
+      "path": "artifacts/phase19/performance-boundary-register.json",
+      "sha256": "0e9ec543738e1ef738577c037500b22133c54f31d2a37c1f3f586670cc1467a3"
+    },
+    {
+      "name": "performance-work-fixture",
+      "path": "courts/phase19/fixtures/rsa-work.pem",
+      "sha256": "703634a15e004ffbb8e0819369528ea8b6d8dd5b6914fe03b3d7ae68eff9baba"
+    }
+  ],
+  "kind": "phase19-courts",
+  "schema": "openssl-rs/atlas/phase19-courts/v1"
+}

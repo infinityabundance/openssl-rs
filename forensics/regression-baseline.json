@@ -9,6 +9,7 @@
     "phase16",
     "phase17",
     "phase18",
+    "phase19",
     "phase2",
     "phase22",
     "phase3",
@@ -89,6 +90,10 @@
       "verdict": "pass"
     },
     "HOSTILE-BOUNDARY-REGISTER": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "PERFORMANCE-BOUNDARY-REGISTER": {
       "observations": 0,
       "verdict": "pass"
     },
@@ -252,6 +257,10 @@
       "observations": 31,
       "verdict": "pass"
     },
+    "RT-CPU-CAPABILITY": {
+      "observations": 81,
+      "verdict": "pass"
+    },
     "RT-CRMF": {
       "observations": 138,
       "verdict": "pass"
@@ -342,6 +351,10 @@
     },
     "RT-EVP-CLASS": {
       "observations": 22,
+      "verdict": "pass"
+    },
+    "RT-EVP-DISPATCH": {
+      "observations": 777,
       "verdict": "pass"
     },
     "RT-EVP-INTROSPECT": {
@@ -490,6 +503,14 @@
     },
     "RT-PEM-KEY": {
       "observations": 102,
+      "verdict": "pass"
+    },
+    "RT-PERFORMANCE-SENSITIVITY": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PERFORMANCE-WORK": {
+      "observations": 84,
       "verdict": "pass"
     },
     "RT-PHASE12-REF": {
@@ -767,6 +788,7 @@
     "phase16": 0,
     "phase17": 0,
     "phase18": 0,
+    "phase19": 0,
     "phase22": 0,
     "phase3": 43,
     "phase4": 23,
@@ -790,6 +812,7 @@
     "phase16": 0,
     "phase17": 0,
     "phase18": 0,
+    "phase19": 0,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -809,6 +832,7 @@
     "phase16": 42,
     "phase17": 5,
     "phase18": 5,
+    "phase19": 5,
     "phase22": 18,
     "phase3": 294,
     "phase4": 272,
@@ -830,7 +854,7 @@
     "16": "complete",
     "17": "complete",
     "18": "complete",
-    "19": "not-started",
+    "19": "complete",
     "2": "complete",
     "20": "not-started",
     "21": "not-started",
