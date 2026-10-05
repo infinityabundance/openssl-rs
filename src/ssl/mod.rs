@@ -473,6 +473,15 @@
 //!   are landed** (Phase 17) and drive the TLS1.2 handshake session. The TLS1.2 NewSessionTicket
 //!   is stateful (`SHA256(ticket)`-keyed cache) rather than the authority's encrypted stateless
 //!   blob; the client-observable session shape matches. See `src/ssl/ssl_sess.rs`.
+//! * **TLS1.3 post-handshake tickets and server-side resumption are landed** (Phase 18). The server
+//!   writes `SSL_CTX_get_num_tickets` tickets after the client Finished (`tls_construct_new_session_ticket`,
+//!   `statem_srvr.c:4370`) using the authority's **stateless** form encrypted through the
+//!   application's `ticket_key_cb`; the client stores the ticket (`tls_process_new_session_ticket`,
+//!   `statem_clnt.c:2730`) and the server accepts a `pre_shared_key` offer with a verified binder
+//!   (`tls_psk_do_binder`, `extensions.c:1463`), so nginx resumption works. **The client-side
+//!   `pre_shared_key` offering is a recorded boundary**: a candidate client stores the ticket but
+//!   its next connect does not offer it, so it falls back to a full handshake (`SSL_session_reused`
+//!   stays 0 client-side).
 //! * **The certificate security check reduces to the crate's default callback.**
 //!   `ssl_security_cert` calls the `Cert`'s `sec_cb`, which `ssl_lib.rs` initialises to a callback
 //!   that answers 1 for every operation (14.1's recorded reduction), so a weak-key rejection the

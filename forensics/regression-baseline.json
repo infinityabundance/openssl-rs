@@ -404,6 +404,10 @@
       "observations": 32,
       "verdict": "pass"
     },
+    "RT-HOSTILE-TLS": {
+      "observations": 1046,
+      "verdict": "pass"
+    },
     "RT-HPKE": {
       "observations": 65,
       "verdict": "pass"
@@ -769,7 +773,7 @@
     "phase15": 0,
     "phase16": 0,
     "phase17": 0,
-    "phase18": 5,
+    "phase18": 4,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -827,8 +831,8 @@
     "blocking_dependencies": 0,
     "divergence_names_covered": 98,
     "findings": 0,
-    "language_census": 11848,
-    "sealed_census": 468
+    "language_census": 11844,
+    "sealed_census": 467
   },
   "provider_implemented": [
     "base/OSSL_OP_DECODER/DER",

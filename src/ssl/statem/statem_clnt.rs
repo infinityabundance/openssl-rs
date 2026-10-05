@@ -1841,6 +1841,13 @@ pub(crate) unsafe fn tls13_process_server_finished(s: *mut Ssl, msg: &[u8]) -> c
     if r == 0 {
         return 0;
     }
+    // The `"res master"` arm of `tls13_change_cipher_state` (`tls13_enc.c:675-685`): the client
+    // derives it from the transcript through its own Finished. A post-handshake NewSessionTicket
+    // expands the ticket nonce under this secret (`statem_clnt.c:2884-2898`).
+    // SAFETY: `s` is live.
+    if unsafe { k::tls13_derive_resumption_master_secret(s) } == 0 {
+        return 0;
+    }
     // `ssl_get_new_session` (`ssl_sess.c:181-266`): the authority attaches a session at handshake
     // time; the reduced client creates the connection's session once the handshake completes so
     // `SSL_get1_session` answers non-NULL (CPython's `SSLSocket.session`).
@@ -2889,6 +2896,99 @@ unsafe fn tls12_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -> c_int {
         (*sess).session_id_length = 32;
         core::ptr::copy_nonoverlapping(digest.as_ptr(), (*sess).session_id.as_mut_ptr(), 32);
         (*sess).not_resumable = 0;
+    }
+    1
+}
+
+/// `MSG_PROCESS_RETURN tls_process_new_session_ticket(...)` (`statem_clnt.c:2730-2940`) for the
+/// TLS1.3 shape: the wire body is `ticket_lifetime_hint(4) || ticket_age_add(4) ||
+/// ticket_nonce<0..255> || ticket<1..2^16-1> || extensions<0..2^16-2>`; the session is always
+/// replaced by a duplicate (a ticket arrives post-handshake, after the session entered the cache —
+/// `statem_clnt.c:2767-2795`), its id is set to `SHA256(ticket)`, and its PSK to
+/// `HKDF-Expand-Label(resumption_master_secret, "resumption", nonce, Hash.length)`
+/// (`statem_clnt.c:2884-2898`).
+///
+/// # Safety
+/// `s` is live and the TLS1.3 handshake has completed; `msg` is the full NewSessionTicket message.
+pub(crate) unsafe fn tls13_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -> c_int {
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    if msg.len() < 4 || msg[0] != SSL3_MT_NEWSESSION_TICKET as u8 {
+        return 0;
+    }
+    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
+    if 4 + blen > msg.len() {
+        return 0;
+    }
+    let body = &msg[4..4 + blen];
+    // lifetime(4) + age_add(4) + nonce-length(1) + ticket-length(2) + extensions-length(2).
+    if body.len() < 13 {
+        return 0;
+    }
+    let lifetime = u32::from_be_bytes([body[0], body[1], body[2], body[3]]);
+    let age_add = u32::from_be_bytes([body[4], body[5], body[6], body[7]]);
+    let nonce_len = body[8] as usize;
+    let mut p = 9usize;
+    if p + nonce_len > body.len() {
+        return 0;
+    }
+    let nonce = &body[p..p + nonce_len];
+    p += nonce_len;
+    if p + 2 > body.len() {
+        return 0;
+    }
+    let ticklen = ((body[p] as usize) << 8) | body[p + 1] as usize;
+    p += 2;
+    if ticklen == 0 || p + ticklen > body.len() {
+        // `statem_clnt.c:2749-2758`: a zero-length TLS1.3 ticket is a decode error; treat as no-op
+        // here rather than aborting the connection.
+        return 1;
+    }
+    let ticket = &body[p..p + ticklen];
+    // SAFETY: `s` is live.
+    unsafe {
+        let sess0 = (*s).session;
+        if sess0.is_null() {
+            return 0;
+        }
+        // TLS1.3 always duplicates: the current session may already be in the cache.
+        let dup = crate::ssl::ssl_sess::ssl_session_dup(sess0, 0);
+        if dup.is_null() {
+            return 0;
+        }
+        crate::ssl::ssl_sess::SSL_SESSION_free(sess0);
+        (*s).session = dup;
+        let sess = dup;
+        (*sess).time = crate::ssl::ssl_sess::time_now_secs();
+        crate::ssl::ssl_sess::ssl_session_calculate_timeout(sess);
+        CRYPTO_free((*sess).ext_tick.cast(), core::ptr::null(), 0);
+        let tp = CRYPTO_malloc(ticklen, core::ptr::null(), 0).cast::<u8>();
+        if tp.is_null() {
+            return 0;
+        }
+        core::ptr::copy_nonoverlapping(ticket.as_ptr(), tp, ticklen);
+        (*sess).ext_tick = tp;
+        (*sess).ext_ticklen = ticklen;
+        // RFC 8446 §4.6.1: never cache for longer than 7 days (`statem_clnt.c:2837-2842`).
+        let mut lh = lifetime;
+        if lh > 604800 {
+            lh = 604800;
+        }
+        (*sess).ext_tick_lifetime_hint = lh as core::ffi::c_ulong;
+        (*sess).ext_tick_age_add = age_add;
+        // `tls13_hkdf_expand(... resumption_master_secret, "resumption", nonce,`
+        // `                  s->session->master_key, hashlen, 1)` (`statem_clnt.c:2891-2898`).
+        if crate::ssl::tls13_enc::tls13_ticket_psk(s, nonce, (*sess).master_key.as_mut_ptr()) == 0 {
+            return 0;
+        }
+        (*sess).master_key_length = (*s).hs_md_len;
+        // The client's resume id is `SHA256(ticket)` (`statem_clnt.c:2851-2872`).
+        let mut digest = [0u8; 32];
+        crate::digest::sha2::SHA256(ticket.as_ptr(), ticklen, digest.as_mut_ptr());
+        (*sess).session_id_length = 32;
+        core::ptr::copy_nonoverlapping(digest.as_ptr(), (*sess).session_id.as_mut_ptr(), 32);
+        (*sess).not_resumable = 0;
+        // `ssl_update_cache(s, SSL_SESS_CACHE_CLIENT)` (`statem_clnt.c:2902`).
+        crate::ssl::ssl_sess::ssl_update_cache(s, crate::ssl::ssl_sess::SSL_SESS_CACHE_CLIENT);
     }
     1
 }
