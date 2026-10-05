@@ -6,11 +6,18 @@
  * Phase 19 measures the finished implementation's *dispatch behaviour*. 19.1's subject is the
  * candidate's CPU-capability surface: `OPENSSL_ia32cap_P`, `OPENSSL_cpuid_setup` and
  * `OPENSSL_ia32_cpuid`. This probe reports that surface deterministically. It prints the array
- * words `[0..3]`, the effect of calling `OPENSSL_cpuid_setup`, the raw vector
- * `OPENSSL_ia32_cpuid` returns, and the capability-derived selection observable through the
- * public API (`OpenSSL_version(OPENSSL_CPU_INFO)`, `OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and
- * the four `EVP_aes_*_cbc_hmac_sha*` constructors, which answer NULL when `AESNI_CAPABLE`
- * (`OPENSSL_ia32cap_P[1] & (1 << 25)`) is clear).
+ * words `[0..3]`, whether `OPENSSL_cpuid_setup` was reachable and callable, whether
+ * `OPENSSL_ia32_cpuid` was reachable and callable, and the capability-derived selection
+ * observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`,
+ * `OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and the four `EVP_aes_*_cbc_hmac_sha*` constructors,
+ * which answer NULL when `AESNI_CAPABLE` (`OPENSSL_ia32cap_P[1] & (1 << 25)`) is clear).
+ *
+ * The probe deliberately does **not** print the raw vector `OPENSSL_ia32_cpuid` returns. That
+ * return is built from the runner's own CPUID leaves and is independent of the `OPENSSL_ia32cap`
+ * facade, so it is a property of the machine the probe runs on (D213's class) and cannot be part
+ * of a capability-set differential whose record must reproduce byte for byte on any runner. The
+ * probe still *calls* `OPENSSL_ia32_cpuid`, so `probe.cpuid.called` is an honest observation that
+ * the symbol is reachable and executable.
  *
  * The same source compiles twice, once against the admitted authority and once against the
  * candidate distribution shell. Every `key=value` line is a function of the library under test
@@ -29,14 +36,18 @@
  * (the CPU-dispatch string is `CPUINFO: N/A` and `OPENSSL_info(1008)` is NULL) as
  * `OBL-INIT-VERSION-CPU-INFO` / `OBL-INIT-INFO-CPU-SETTINGS`.
  *
- * The fixed and faulted CPUID facade
- * ----------------------------------
- * `OPENSSL_cpuid_setup` reads the `OPENSSL_ia32cap` environment variable and masks the
- * capability vector with it (`crypto/cpuid.c:106-159`), so the *court* fixes the capability set
- * by running this probe under a chosen `OPENSSL_ia32cap` value. The authority reads that value in
- * its ELF `.init` constructor, before `main`; the candidate never reads it. Running the probe
- * under a cleared value is therefore the differential control over a *fixed* capability set: the
- * authority's report and selection move with the facade and the candidate's do not, and the court
+ * The fixed CPUID facade
+ * ----------------------
+ * `OPENSSL_cpuid_setup` reads the `OPENSSL_ia32cap` environment variable and sets the capability
+ * vector from it (`crypto/cpuid.c:106-159`), so the *court* fixes the capability set by running
+ * this probe under a chosen `OPENSSL_ia32cap` value. The authority reads that value in its ELF
+ * `.init` constructor, before `main`; the candidate never reads it. The court drives every set
+ * under an explicit fixed literal (no leading `~` and no `:`) -- a synthetic *reference* vector,
+ * that vector with the AES-NI bit cleared, and zero -- so `OPENSSL_cpuid_setup` overrides
+ * `OPENSSL_ia32cap_P[0..1]` with the literal and zeroizes `[2..9]` rather than masking the
+ * runner's own CPUID. The vector the authority reports is therefore identical on any runner and
+ * never the capture host's; the masking still moves the authority's selection while the
+ * candidate, which reads CPUID directly and does not model the facade, does not. The court
  * records that divergence rather than inventing agreement.
  *
  * Not a claim
@@ -81,11 +92,6 @@ static void kv(const char *key, const char *value)
     printf("%s=%s\n", key, value != NULL ? value : "");
 }
 
-static void khex64(const char *key, unsigned long long value)
-{
-    printf("%s=0x%016llx\n", key, value);
-}
-
 static void khex32(const char *key, unsigned int value)
 {
     printf("%s=0x%08x\n", key, value);
@@ -121,7 +127,6 @@ int main(void)
     printf("probe.setup.called=0\n");
     printf("probe.setup.stable=-1\n");
     printf("probe.cpuid.called=0\n");
-    printf("probe.cpuid.ret=n/a\n");
     for (int i = 0; i < RT_WORDS; i++) {
         char k[64];
         word_key(k, sizeof k, "cap.word", i);
@@ -129,8 +134,6 @@ int main(void)
         word_key(k, sizeof k, "cap.after_setup", i);
         printf("%s=n/a\n", k);
     }
-    printf("cap.raw.word.2=n/a\n");
-    printf("cap.raw.word.3=n/a\n");
 #else
     /*
      * `OPENSSL_ia32cap_P` is `.hidden`, so a dynamic link never resolves it; the court links the
@@ -183,23 +186,16 @@ int main(void)
             printf("%s=n/a\n", k);
     }
 
-    /* The effect of `OPENSSL_ia32_cpuid` directly: it returns the raw leaf-1 vector and writes
-     * the extended-feature words into the buffer it is handed, independent of the `OPENSSL_ia32cap`
-     * mask. A local buffer keeps the global array isolated. */
+    /* Exercise `OPENSSL_ia32_cpuid` so `probe.cpuid.called` is an honest observation that the
+     * symbol is reachable and executable. Its return is not recorded: it is the runner's raw
+     * CPUID, independent of the `OPENSSL_ia32cap` facade (see the header). */
     if (have_cpuid) {
         unsigned int buf[RT_CPUID_INDEXES];
         memset(buf, 0, sizeof buf);
-        unsigned long long vec =
-            ((unsigned long long (*)(unsigned int *))(uintptr_t)cpuid_addr)(buf);
+        (void)((unsigned long long (*)(unsigned int *))(uintptr_t)cpuid_addr)(buf);
         klong("probe.cpuid.called", 1);
-        khex64("probe.cpuid.ret", vec);
-        khex32("cap.raw.word.2", buf[2]);
-        khex32("cap.raw.word.3", buf[3]);
     } else {
         klong("probe.cpuid.called", 0);
-        printf("probe.cpuid.ret=n/a\n");
-        printf("cap.raw.word.2=n/a\n");
-        printf("cap.raw.word.3=n/a\n");
     }
 #endif
 

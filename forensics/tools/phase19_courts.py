@@ -16,12 +16,13 @@ slowed path from a fast one — the court is candidate-only and carries a sensit
 --------------------------------------
 19.1's court. Its instrument is `courts/phase19/rt_cpu_capability_probe.c`, compiled twice: once
 against the admitted authority and once against the candidate distribution shell. It reports the
-CPU-capability surface deterministically — `OPENSSL_ia32cap_P[0..3]`, the effect of calling
-`OPENSSL_cpuid_setup`, the raw vector `OPENSSL_ia32_cpuid` returns, and the capability-derived
-selection observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`,
+CPU-capability surface deterministically — `OPENSSL_ia32cap_P[0..3]`, whether `OPENSSL_cpuid_setup`
+and `OPENSSL_ia32_cpuid` were reachable and callable, and the capability-derived selection
+observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`,
 `OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and the four `EVP_aes_*_cbc_hmac_sha*` constructors, which
 answer NULL when `AESNI_CAPABLE` is clear) — as `key=value` observations with no address, clock or
-duration.
+duration. The raw vector `OPENSSL_ia32_cpuid` returns is deliberately not recorded: it is the
+runner's own CPUID and would make the record machine-specific (D213's class).
 
 The three names are declared `weak`: `OPENSSL_ia32cap_P` is `.hidden` and `OPENSSL_cpuid_setup` /
 `OPENSSL_ia32_cpuid` live only in the static archive, so a side that does not provide them answers
@@ -32,13 +33,15 @@ CPU-dispatch string is `CPUINFO: N/A` and `OPENSSL_info(1008)` is NULL) rather t
 answer. Because a dynamic link never resolves the hidden symbol, the court links the authority
 against `libcrypto.a` with `-Wl,-u,` forcing and the candidate against its distribution shell.
 
-The *fixed and faulted CPUID facade* is the `OPENSSL_ia32cap` environment variable: the authority's
-`OPENSSL_cpuid_setup` reads it in the ELF `.init` constructor and masks the capability vector with
+The *fixed CPUID facade* is the `OPENSSL_ia32cap` environment variable: the authority's
+`OPENSSL_cpuid_setup` reads it in the ELF `.init` constructor and sets the capability vector from
 it, so the court fixes the capability set by running the probe under a chosen value. The probe is
-driven under three sets — the host set, an AES-NI-cleared set and a fully cleared set — and the
-authority's report and selection move with the facade while the candidate's do not. Every
-candidate-vs-authority difference is *recorded* in the court's `divergences` block, not failed: the
-reduced engine deliberately does not model `OPENSSL_ia32cap` masking (`src/provider/cipher.rs`).
+driven under three fixed literals — a synthetic *reference* vector, that vector with the AES-NI bit
+cleared and zero — so the authority reports the same fictional CPU on any runner, never the capture
+host's; the authority's selection still moves with the facade while the candidate's does not (it
+reads CPUID directly). Every candidate-vs-authority difference is *recorded* in the court's
+`divergences` block, not failed: the reduced engine deliberately does not model `OPENSSL_ia32cap`
+masking (`src/provider/cipher.rs`).
 The verdict is `pass` when the authority's capability surface was actually driven (the
 authority-linked differential control), both transcripts are complete, and every divergence was
 recorded — **not** when nothing diverged. It is not a parity claim and not an
@@ -204,21 +207,28 @@ REGISTER_CLASSIFICATIONS = ("measured", "not-measured", "not-claimed")
 # recorded here rather than quietly dropped.
 PENDING_COURTS: dict[str, str] = {}
 
-# The fixed capability sets the capability probe is driven under. `(set name, OPENSSL_ia32cap
-# value or None)`. The first is the host's own CPU, the second clears the AES-NI bit (bit 25 of
-# `OPENSSL_ia32cap_P[1]`, `1 << 25` of the high 64-bit word) and the third clears everything; the
-# authority's `OPENSSL_cpuid_setup` masks the vector with the value at load, so the *court* fixes
-# the capability set the surface reports and the selection is made over.
-CAPABILITY_SETS: list[tuple[str, str | None]] = [
-    ("host", None),
-    ("aesni-off", "~0x0200000000000000"),
-    ("cleared", "~0xffffffffffffffff"),
+# The fixed capability sets the capability probe is driven under, as `(set name, OPENSSL_ia32cap
+# value)` pairs. Every value is an explicit fixed literal -- never `None` (the capture host's own
+# CPU) and never a `~` mask over it -- so the file the court records is identical on any runner.
+# A literal with no leading `~` and no `:` is an *override*: `OPENSSL_cpuid_setup` sets
+# `OPENSSL_ia32cap_P[0]`/`[1]` from its low/high 32-bit halves and zeroizes `[2..9]`, so the
+# reported vector is this synthetic CPU and not the runner's. `OPENSSL_ia32cap_P[1] & (1 << 25)`
+# is `AESNI_CAPABLE`, i.e. bit 25 of the high 32-bit half of the literal. `reference` sets AES-NI
+# and SSE3 (bit 0 of word[1]); `aesni-off` clears exactly the AES-NI bit and so stays distinct
+# from `cleared`, which is zero.
+REFERENCE_IA32CAP = "0x0200000100000000"
+AESNI_OFF_IA32CAP = "0x0000000100000000"
+CLEARED_IA32CAP = "0x0000000000000000"
+CAPABILITY_SETS: list[tuple[str, str]] = [
+    ("reference", REFERENCE_IA32CAP),
+    ("aesni-off", AESNI_OFF_IA32CAP),
+    ("cleared", CLEARED_IA32CAP),
 ]
 
 # The capability-derived selection the facade must move on the authority, as the section-3.2
-# authority-linked differential control: `sel.aes128cbcsha1.null` is 0 under the host set and 1
-# under the AES-NI-cleared set. The facade's job is to drive *the authority's* selection; a court
-# whose facade cannot move it has not driven the surface.
+# authority-linked differential control: `sel.aes128cbcsha1.null` is 0 under the reference set and
+# 1 under the AES-NI-cleared set. The facade's job is to drive *the authority's* selection; a
+# court whose facade cannot move it has not driven the surface.
 FACADE_CONTROL_KEY = "sel.aes128cbcsha1.null"
 
 # The three capability-surface names the plan's census records as `symbols_not_reached` for the
@@ -239,7 +249,6 @@ PROBE_SCHEMA = (
     "probe.setup.called",
     "probe.setup.stable",
     "probe.cpuid.called",
-    "probe.cpuid.ret",
     "cap.word.0",
     "cap.word.1",
     "cap.word.2",
@@ -248,8 +257,6 @@ PROBE_SCHEMA = (
     "cap.after_setup.1",
     "cap.after_setup.2",
     "cap.after_setup.3",
-    "cap.raw.word.2",
-    "cap.raw.word.3",
     "api.cpuinfo",
     "api.cpu_settings_null",
     "api.cpu_settings",
@@ -301,15 +308,16 @@ PROV_EXTRA = ("prov_name", "is_a")
 CTX_FIELDS = ("init", "name", "nid", "prov_name")
 
 
-# The capability sets `RT-EVP-DISPATCH` drives the selection probe under, shared with 19.1: the
-# host set, an AES-NI-cleared set (the `OPENSSL_ia32cap` facade masks bit 25 of the high word) and
-# a fully cleared set. The authority's provider capability filter and its legacy `AESNI_CAPABLE`
-# predicate both read the masked vector, so its `AES-*-CBC-HMAC-*` selection moves with the facade;
-# the candidate reads CPUID directly and does not.
+# The capability sets `RT-EVP-DISPATCH` drives the selection probe under, shared with 19.1: a
+# synthetic reference set, an AES-NI-cleared set (the fixed `OPENSSL_ia32cap` literal clears bit 25
+# of the high word) and a fully cleared set. The authority's provider capability filter and its
+# legacy `AESNI_CAPABLE` predicate both read the fixed vector, so its `AES-*-CBC-HMAC-*` selection
+# moves with the facade; the candidate reads CPUID directly and does not.
 #
 # `EVP_DISPATCH_CONTROLS` is the section-3.2 authority-linked differential control: each row is
-# `(key, host-value, aesni-off-value)`. The authority's selection must take the host value under
-# the host set and the cleared value under the faulted set, or the facade did not drive it.
+# `(key, reference-value, aesni-off-value)`. The authority's selection must take the reference
+# value under the reference set and the cleared value under the faulted set, or the facade did not
+# drive it.
 EVP_DISPATCH_CONTROLS: tuple[tuple[str, str, str], ...] = (
     ("fetch.aes-128-cbc-hmac-sha1.null", "0", "1"),
     ("legacy.aes-256-cbc-hmac-sha256.null", "0", "1"),
@@ -433,8 +441,10 @@ def side_env(libdir: Path, modulesdir: Path, cap: str | None) -> dict[str, str]:
 
     `LD_LIBRARY_PATH` fixes the DSO the candidate probe resolves against, `OPENSSL_MODULES` points
     at that side's own `ossl-modules/`, and `OPENSSL_CONF=/dev/null` keeps the host's configuration
-    out of a deterministic transcript. `cap`, when set, is the `OPENSSL_ia32cap` facade value the
-    authority's `.init` constructor reads.
+    out of a deterministic transcript. `cap`, when given, is the fixed `OPENSSL_ia32cap` facade
+    value the authority's `.init` constructor reads; the capability courts always pass one of the
+    court's synthetic literals, so the ambient environment is never an input there. `None` removes
+    the variable for the courts that do not drive the facade (the work and sensitivity courts).
     """
     env = dict(os.environ)
     env["LD_LIBRARY_PATH"] = str(libdir)
@@ -597,7 +607,7 @@ def cpu_capability_court(name: str, src: Path, auth, work: Path) -> dict:
         divergences.extend(set_div)
         sets.append({
             "set": scenario,
-            "OPENSSL_ia32cap": cap if cap is not None else "(unset)",
+            "OPENSSL_ia32cap": cap,
             "authority_exit_code": a_code,
             "candidate_exit_code": c_code,
             "authority_observations": len(a_keys),
@@ -607,25 +617,25 @@ def cpu_capability_court(name: str, src: Path, auth, work: Path) -> dict:
 
     # The authority-linked differential control: the authority must have reached its own
     # capability surface, and the faulted facade must have moved its capability-derived selection.
-    host = per_set["authority"]
-    reached = {key: host.get(f"host.{key}", "missing") for key in REACHABLE_KEYS}
-    if host.get("host.probe.reachable.ia32cap_p") != "1":
+    reference = per_set["authority"]
+    reached = {key: reference.get(f"reference.{key}", "missing") for key in REACHABLE_KEYS}
+    if reference.get("reference.probe.reachable.ia32cap_p") != "1":
         problems.append(
             "authority did not reach OPENSSL_ia32cap_P: the capability surface was not driven "
             f"({reached})")
-    if host.get("host.probe.reachable.cpuid_setup") != "1":
+    if reference.get("reference.probe.reachable.cpuid_setup") != "1":
         problems.append("authority did not reach OPENSSL_cpuid_setup")
-    if host.get("host.probe.reachable.ia32_cpuid") != "1":
+    if reference.get("reference.probe.reachable.ia32_cpuid") != "1":
         problems.append("authority did not reach OPENSSL_ia32_cpuid")
-    facade_before = host.get(f"host.{FACADE_CONTROL_KEY}")
-    facade_after = host.get(f"aesni-off.{FACADE_CONTROL_KEY}")
-    facade_ok = (facade_before == "0" and facade_after == "1")
+    facade_reference = reference.get(f"reference.{FACADE_CONTROL_KEY}")
+    facade_after = reference.get(f"aesni-off.{FACADE_CONTROL_KEY}")
+    facade_ok = (facade_reference == "0" and facade_after == "1")
     if not facade_ok:
         problems.append(
             f"the faulted facade did not move the authority's selection: "
-            f"{FACADE_CONTROL_KEY} host={facade_before} aesni-off={facade_after}")
+            f"{FACADE_CONTROL_KEY} reference={facade_reference} aesni-off={facade_after}")
 
-    candidate_reached = {key: per_set["candidate"].get(f"host.{key}", "missing")
+    candidate_reached = {key: per_set["candidate"].get(f"reference.{key}", "missing")
                          for key in REACHABLE_KEYS}
 
     staged: dict[str, str] = {}
@@ -644,21 +654,23 @@ def cpu_capability_court(name: str, src: Path, auth, work: Path) -> dict:
         "probe": rel(src),
         "method": (
             "the probe is compiled twice and its `key=value` transcript compared. It is driven "
-            "under three fixed capability sets via the `OPENSSL_ia32cap` facade (the host set, an "
-            "AES-NI-cleared set and a fully cleared set). The authority probe links its static "
-            "`libcrypto.a` with `-Wl,-u,` forcing so the hidden `OPENSSL_ia32cap_P` and the "
-            "archive-only `OPENSSL_cpuid_setup` / `OPENSSL_ia32_cpuid` are reachable; the "
-            "candidate probe links its distribution shell, where the weak references resolve to "
-            "NULL. No address, clock or duration is observed."),
+            "under three fixed capability sets via the `OPENSSL_ia32cap` facade (a synthetic "
+            "reference set, an AES-NI-cleared set and a fully cleared set), each an explicit "
+            "literal so the recorded vector is never the runner's own CPUID. The authority probe "
+            "links its static `libcrypto.a` with `-Wl,-u,` forcing so the hidden "
+            "`OPENSSL_ia32cap_P` and the archive-only `OPENSSL_cpuid_setup` / "
+            "`OPENSSL_ia32_cpuid` are reachable; the candidate probe links its distribution "
+            "shell, where the weak references resolve to NULL. No address, clock or duration is "
+            "observed."),
         "capability_sets": sets,
         "observations_recorded": {"authority": a_obs_total, "candidate": c_obs_total},
         "authority_observations": a_obs_total,
         "candidate_observations": c_obs_total,
         "reached": {"authority": reached, "candidate": candidate_reached},
         "control": {
-            "authority_surface_reached": host.get("host.probe.reachable.ia32cap_p") == "1",
+            "authority_surface_reached": reference.get("reference.probe.reachable.ia32cap_p") == "1",
             "facade_key": FACADE_CONTROL_KEY,
-            "facade_host": facade_before,
+            "facade_reference": facade_reference,
             "facade_aesni_off": facade_after,
             "facade_moved_selection": facade_ok,
         },
@@ -739,7 +751,7 @@ def evp_dispatch_court(name: str, src: Path, auth, work: Path) -> dict:
         divergences.extend(set_div)
         sets.append({
             "set": scenario,
-            "OPENSSL_ia32cap": cap if cap is not None else "(unset)",
+            "OPENSSL_ia32cap": cap,
             "authority_exit_code": a_code,
             "candidate_exit_code": c_code,
             "authority_observations": len(a_keys),
@@ -752,26 +764,27 @@ def evp_dispatch_court(name: str, src: Path, auth, work: Path) -> dict:
     # whose facade cannot move the authority has not driven the surface. `auth_all` carries every
     # capability set's keys, prefixed by the set name.
     auth_all = per_set["authority"]
-    reached = {"authority_default_provider": auth_all.get("host.prov.default.loaded") == "1"}
+    reached = {"authority_default_provider": auth_all.get("reference.prov.default.loaded") == "1"}
     controls: list[dict] = []
     facade_moved = bool(EVP_DISPATCH_CONTROLS)
-    for key, host_value, faulted_value in EVP_DISPATCH_CONTROLS:
-        h = auth_all.get(f"host.{key}")
+    for key, reference_value, faulted_value in EVP_DISPATCH_CONTROLS:
+        h = auth_all.get(f"reference.{key}")
         f = auth_all.get(f"aesni-off.{key}")
-        moved = (h == host_value and f == faulted_value)
-        controls.append({"key": key, "host": h, "aesni_off": f,
-                         "expected_host": host_value, "expected_aesni_off": faulted_value,
+        moved = (h == reference_value and f == faulted_value)
+        controls.append({"key": key, "reference": h, "aesni_off": f,
+                         "expected_reference": reference_value,
+                         "expected_aesni_off": faulted_value,
                          "moved": moved})
         facade_moved = facade_moved and moved
     if not facade_moved:
         problems.append(
             "the faulted facade did not move the authority's selection: not every "
-            f"AES-*-CBC-HMAC-* control took its host/cleared value ({controls})")
+            f"AES-*-CBC-HMAC-* control took its reference/cleared value ({controls})")
     if not reached["authority_default_provider"]:
         problems.append("authority did not load its default provider")
 
     candidate_reached = {
-        "candidate_default_provider": per_set["candidate"].get("host.prov.default.loaded") == "1",
+        "candidate_default_provider": per_set["candidate"].get("reference.prov.default.loaded") == "1",
     }
 
     # The `AES-*-CBC-HMAC-*` paths, which the facade is expected to move on the authority. Recorded
@@ -781,7 +794,7 @@ def evp_dispatch_court(name: str, src: Path, auth, work: Path) -> dict:
     for oid in hmac_ops:
         for path in ("legacy", "fetch", "lookup"):
             hmac_selection[f"{path}.{oid}.null"] = {
-                "host": auth_all.get(f"host.{path}.{oid}.null"),
+                "reference": auth_all.get(f"reference.{path}.{oid}.null"),
                 "aesni_off": auth_all.get(f"aesni-off.{path}.{oid}.null"),
             }
 
@@ -805,17 +818,17 @@ def evp_dispatch_court(name: str, src: Path, auth, work: Path) -> dict:
             "constructor, the provider fetch, the legacy name lookup and the cipher/digest "
             "context -- as the selected method's name/NID/type/flags/sizes and, for a fetch, its "
             "provider name. It is driven under three fixed capability sets via the "
-            "`OPENSSL_ia32cap` facade (the host set, an AES-NI-cleared set and a fully cleared "
-            "set), exactly as `RT-CPU-CAPABILITY`. The authority probe links its static "
-            "`libcrypto.a`; the candidate probe links its distribution shell. No address, clock "
-            "or duration is observed."),
+            "`OPENSSL_ia32cap` facade (a synthetic reference set, an AES-NI-cleared set and a "
+            "fully cleared set), exactly as `RT-CPU-CAPABILITY`. The authority probe links its "
+            "static `libcrypto.a`; the candidate probe links its distribution shell. No address, "
+            "clock or duration is observed."),
         "capability_sets": sets,
         "observations_recorded": {"authority": a_obs_total, "candidate": c_obs_total},
         "authority_observations": a_obs_total,
         "candidate_observations": c_obs_total,
         "reached": {"authority": reached, "candidate": candidate_reached},
         "control": {
-            "authority_selection_driven": auth_all.get("host.prov.default.loaded") == "1",
+            "authority_selection_driven": auth_all.get("reference.prov.default.loaded") == "1",
             "controls": controls,
             "facade_moved_selection": facade_moved,
             "aes_cbc_hmac_selection": hmac_selection,
@@ -1166,10 +1179,10 @@ def court_coverage(record: dict) -> set[str]:
     if court == EVP_DISPATCH:
         keys = set()
         sets = record.get("capability_sets") or []
-        host = next((s for s in sets if s.get("set") == "host"), None)
-        if host is not None and host.get("divergence_count") == 0:
-            keys.add("evp.host")
-        if any(s.get("divergence_count", 0) > 0 for s in sets if s.get("set") != "host"):
+        reference = next((s for s in sets if s.get("set") == "reference"), None)
+        if reference is not None and reference.get("divergence_count") == 0:
+            keys.add("evp.reference")
+        if any(s.get("divergence_count", 0) > 0 for s in sets if s.get("set") != "reference"):
             keys.add("evp.masked")
         return keys
     if court == PERFORMANCE_WORK:
@@ -1201,17 +1214,17 @@ def register_evidence(record: dict) -> dict:
         ev["candidate_reached"] = reached.get("candidate") or {}
         ev["divergence_count"] = record.get("divergence_count")
         ctrl = record.get("control") or {}
-        ev["facade_host"] = ctrl.get("facade_host")
+        ev["facade_reference"] = ctrl.get("facade_reference")
         ev["facade_aesni_off"] = ctrl.get("facade_aesni_off")
         ev["facade_moved_selection"] = ctrl.get("facade_moved_selection")
     elif court == EVP_DISPATCH:
         sets = record.get("capability_sets") or []
-        ev["host_divergence_count"] = next(
-            (s.get("divergence_count") for s in sets if s.get("set") == "host"), None)
-        ev["masked_sets"] = sorted(s.get("set") for s in sets if s.get("set") != "host")
+        ev["reference_divergence_count"] = next(
+            (s.get("divergence_count") for s in sets if s.get("set") == "reference"), None)
+        ev["masked_sets"] = sorted(s.get("set") for s in sets if s.get("set") != "reference")
         ev["masked_divergence_count"] = {
             s.get("set"): s.get("divergence_count")
-            for s in sets if s.get("set") != "host"
+            for s in sets if s.get("set") != "reference"
         }
     elif court == PERFORMANCE_WORK:
         ev["findings"] = sorted(str(f) for f in record.get("findings") or [])
@@ -1401,14 +1414,17 @@ def main(argv: list[str]) -> int:
         "claim": (
             "`RT-CPU-CAPABILITY` is 19.1's court: it compiles "
             "courts/phase19/rt_cpu_capability_probe.c twice (authority and candidate) and reports "
-            "the CPU-capability surface deterministically -- `OPENSSL_ia32cap_P[0..3]`, the effect "
-            "of `OPENSSL_cpuid_setup`, the raw vector `OPENSSL_ia32_cpuid` returns, and the "
+            "the CPU-capability surface deterministically -- `OPENSSL_ia32cap_P[0..3]`, whether "
+            "`OPENSSL_cpuid_setup` and `OPENSSL_ia32_cpuid` were reachable and callable, and the "
             "capability-derived selection observable through the public API "
-            "(`OpenSSL_version(OPENSSL_CPU_INFO)`, `OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and "
+            "(`OpenSSL_version(OPENSSL_CPU_INFO)`, `OpenSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and "
             "the four `EVP_aes_*_cbc_hmac_sha*` constructors, which answer NULL when "
-            "`AESNI_CAPABLE` is clear). The probe is driven under three fixed capability sets via "
-            "the `OPENSSL_ia32cap` facade: the host set, an AES-NI-cleared set and a fully cleared "
-            "set. The three capability names are declared weak because `OPENSSL_ia32cap_P` is "
+            "`AESNI_CAPABLE` is clear). The raw vector `OPENSSL_ia32_cpuid` returns is not "
+            "recorded: it is the runner's own CPUID and would make the record machine-specific. "
+            "The probe is driven under three fixed capability sets via the `OPENSSL_ia32cap` "
+            "facade: a synthetic reference set, an AES-NI-cleared set and a fully cleared set, "
+            "each an explicit literal so the reported vector is never the runner's own CPU. The "
+            "three capability names are declared weak because `OPENSSL_ia32cap_P` is "
             "`.hidden` and `OPENSSL_cpuid_setup`/`OPENSSL_ia32_cpuid` live only in the static "
             "archive: the authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so "
             "the surface is reached, and the candidate provides none of the three, so it answers "
@@ -1509,7 +1525,7 @@ def main(argv: list[str]) -> int:
             print(f"  {r['court']:<32} pass   ({r['authority_observations']} observations x "
                   f"{len(r['capability_sets'])} sets, {r['divergence_count']} recorded "
                   f"divergence(s), authority reached={c['authority_surface_reached']}, "
-                  f"facade {c['facade_host']}->{c['facade_aesni_off']})")
+                  f"facade {c['facade_reference']}->{c['facade_aesni_off']})")
         elif r["verdict"] == "pass" and r["court"] == EVP_DISPATCH:
             c = r["control"]
             print(f"  {r['court']:<32} pass   ({r['authority_observations']} observations x "

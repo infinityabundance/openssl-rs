@@ -628,13 +628,13 @@ Contract units (measurement vs property):
 | performance-boundary-register | `complete` | `not_claimed` | — |
 
 A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
-Courts: `all pass`, 5 court(s), **942** authority observation(s) over 3 transcript court(s).
+Courts: `all pass`, 5 court(s), **933** authority observation(s) over 3 transcript court(s).
 
 The other 2 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
-| RT-CPU-CAPABILITY | `pass` | 81 |
+| RT-CPU-CAPABILITY | `pass` | 72 |
 | RT-EVP-DISPATCH | `pass` | 777 |
 | RT-PERFORMANCE-WORK | `pass` | 84 |
 | RT-PERFORMANCE-SENSITIVITY | `pass` | — (structural) |

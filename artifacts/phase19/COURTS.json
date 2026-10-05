@@ -3,193 +3,172 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-CPU-CAPABILITY` is 19.1's court: it compiles courts/phase19/rt_cpu_capability_probe.c twice (authority and candidate) and reports the CPU-capability surface deterministically -- `OPENSSL_ia32cap_P[0..3]`, the effect of `OPENSSL_cpuid_setup`, the raw vector `OPENSSL_ia32_cpuid` returns, and the capability-derived selection observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`, `OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and the four `EVP_aes_*_cbc_hmac_sha*` constructors, which answer NULL when `AESNI_CAPABLE` is clear). The probe is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade: the host set, an AES-NI-cleared set and a fully cleared set. The three capability names are declared weak because `OPENSSL_ia32cap_P` is `.hidden` and `OPENSSL_cpuid_setup`/`OPENSSL_ia32_cpuid` live only in the static archive: the authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so the surface is reached, and the candidate provides none of the three, so it answers `probe.reachable.*=0` -- the `symbols_not_reached` census the plan records -- and its CPU-dispatch string is `CPUINFO: N/A` with `OPENSSL_info(1008)` NULL. That disposition and every other candidate-vs-authority difference is *recorded* in the court's `divergences` block, not failed: the reduced engine deliberately does not model `OPENSSL_ia32cap` masking, so under a cleared facade the authority's selection moves to the non-AES-NI arm and the candidate's does not. The court is `pass` when the authority's capability surface was actually driven, the faulted facade moved the authority's selection, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded audit of the capability surface at the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6). `RT-EVP-DISPATCH` is 19.2's court: it compiles courts/phase19/rt_evp_dispatch_probe.c twice and reports, for a fixed operation set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-1/256 and the four `EVP_aes_*_cbc_hmac_sha*` constructors), which implementation each path selects -- the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context -- as the selected method's name/NID/type/flags/sizes and, for a fetch, its provider name, under the same three fixed capability sets. The authority's default provider filters its `AES-*-CBC-HMAC-*` rows through `ossl_cipher_capable_aes_cbc_hmac_sha*` (`AESNI_CBC_HMAC_SHA_CAPABLE`), so masking the AES-NI bit makes those fetch/legacy/lookup paths answer NULL and moves the authority's selection; the candidate reads CPUID directly and does not model the mask, so its selection does not move. Every candidate-vs-authority difference is recorded in the court's `divergences` block. The court is `pass` when the authority's selection surface was driven, the faulted facade moved it, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded comparison of *selection* over the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6); the engine path is not driven because no engine is configured and the reduced engine does not export the enumeration it would need. `RT-PERFORMANCE-WORK` is 19.3's court: it compiles courts/phase19/rt_performance_work_probe.c twice and reports the deterministic work a fixed operation set performs -- AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an RSA-1024 private decrypt. The library exposes no total instruction counter, so the instrument is a counting `CRYPTO` allocator the stratum introduces (the number of malloc/realloc operations and total bytes the library requests for a fixed primitive -- a deterministic instruction-path proxy for its memory work; the shims forward to the default allocator and change no behaviour) plus the method-derived input/blocks/output/tag sizes. No address, clock or duration is observed. Every path whose library-side work vector differs from the authority's is a *finding* recorded, not failed -- the reduced engine's allocations differ on the EC and RSA paths while the symmetric/digest paths agree -- and a path the probe cannot drive is `pending`. The court is `pass` when the authority installed the hook and the paths ran, both transcripts are complete, every schema key is present and every divergence was recorded -- NOT when nothing diverged. The counting allocator observes heap operations, not total CPU instructions, and the block counts are input-implied: no benchmark-parity claim and no assembly-versus-Rust equivalence claim (sections 3.1 and 3.6). `RT-PERFORMANCE-SENSITIVITY` is 19.4's court: it is candidate-only -- the deliberately slowed variant is a construction of the harness, never product code -- and compiles courts/phase19/rt_performance_sensitivity_probe.c once against the candidate distribution shell. It drives a reference arm (the real `aes-128-cbc` path, which must equal the authority vector 19.3 recorded) and a slowed arm (`control-extra-pass`, the same path with an injected extra full pass over the primitive) under the same 19.3 work instrument, and the court is `pass` only when the slowed arm is caught on the counting allocator the stratum introduces (a library-side `allocs`/`reallocs`/`bytes` difference), not merely on the driver-side `calls` 19.3 excludes from its findings. Section 3.2's rule is mechanical here: a control that cannot fail is not evidence, so if the instrument cannot tell the slowed path from the reference the verdict is `fail`, never a vacuous `pass`. It is evidence about the instrument's resolution and makes no throughput or benchmark-parity claim. `PERFORMANCE-BOUNDARY-REGISTER` is 19.5's court: it stages no probe and reads the authored register artifacts/phase19/performance-boundary-register.json against the four probe courts' records computed above it, failing the stratum if a measured row's court no longer covers its surface, a not-measured or not-claimed row a passing court now covers, or a stated count/evidence value has moved. It records the stratum's own non-claims -- no benchmark-parity claim and no assembly-versus-Rust equivalence claim, the ENGINE path not measured, the three capability names not reached, and the two divergent-work findings -- and may not claim more than the courts above measured. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is dispatch behaviour and deterministic work over a finished implementation, with no benchmark-parity claim and no assembly-versus-Rust equivalence claim. docs/PHASE-19-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "claim": "`RT-CPU-CAPABILITY` is 19.1's court: it compiles courts/phase19/rt_cpu_capability_probe.c twice (authority and candidate) and reports the CPU-capability surface deterministically -- `OPENSSL_ia32cap_P[0..3]`, whether `OPENSSL_cpuid_setup` and `OPENSSL_ia32_cpuid` were reachable and callable, and the capability-derived selection observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`, `OpenSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and the four `EVP_aes_*_cbc_hmac_sha*` constructors, which answer NULL when `AESNI_CAPABLE` is clear). The raw vector `OPENSSL_ia32_cpuid` returns is not recorded: it is the runner's own CPUID and would make the record machine-specific. The probe is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade: a synthetic reference set, an AES-NI-cleared set and a fully cleared set, each an explicit literal so the reported vector is never the runner's own CPU. The three capability names are declared weak because `OPENSSL_ia32cap_P` is `.hidden` and `OPENSSL_cpuid_setup`/`OPENSSL_ia32_cpuid` live only in the static archive: the authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so the surface is reached, and the candidate provides none of the three, so it answers `probe.reachable.*=0` -- the `symbols_not_reached` census the plan records -- and its CPU-dispatch string is `CPUINFO: N/A` with `OPENSSL_info(1008)` NULL. That disposition and every other candidate-vs-authority difference is *recorded* in the court's `divergences` block, not failed: the reduced engine deliberately does not model `OPENSSL_ia32cap` masking, so under a cleared facade the authority's selection moves to the non-AES-NI arm and the candidate's does not. The court is `pass` when the authority's capability surface was actually driven, the faulted facade moved the authority's selection, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded audit of the capability surface at the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6). `RT-EVP-DISPATCH` is 19.2's court: it compiles courts/phase19/rt_evp_dispatch_probe.c twice and reports, for a fixed operation set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-1/256 and the four `EVP_aes_*_cbc_hmac_sha*` constructors), which implementation each path selects -- the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context -- as the selected method's name/NID/type/flags/sizes and, for a fetch, its provider name, under the same three fixed capability sets. The authority's default provider filters its `AES-*-CBC-HMAC-*` rows through `ossl_cipher_capable_aes_cbc_hmac_sha*` (`AESNI_CBC_HMAC_SHA_CAPABLE`), so masking the AES-NI bit makes those fetch/legacy/lookup paths answer NULL and moves the authority's selection; the candidate reads CPUID directly and does not model the mask, so its selection does not move. Every candidate-vs-authority difference is recorded in the court's `divergences` block. The court is `pass` when the authority's selection surface was driven, the faulted facade moved it, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded comparison of *selection* over the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6); the engine path is not driven because no engine is configured and the reduced engine does not export the enumeration it would need. `RT-PERFORMANCE-WORK` is 19.3's court: it compiles courts/phase19/rt_performance_work_probe.c twice and reports the deterministic work a fixed operation set performs -- AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an RSA-1024 private decrypt. The library exposes no total instruction counter, so the instrument is a counting `CRYPTO` allocator the stratum introduces (the number of malloc/realloc operations and total bytes the library requests for a fixed primitive -- a deterministic instruction-path proxy for its memory work; the shims forward to the default allocator and change no behaviour) plus the method-derived input/blocks/output/tag sizes. No address, clock or duration is observed. Every path whose library-side work vector differs from the authority's is a *finding* recorded, not failed -- the reduced engine's allocations differ on the EC and RSA paths while the symmetric/digest paths agree -- and a path the probe cannot drive is `pending`. The court is `pass` when the authority installed the hook and the paths ran, both transcripts are complete, every schema key is present and every divergence was recorded -- NOT when nothing diverged. The counting allocator observes heap operations, not total CPU instructions, and the block counts are input-implied: no benchmark-parity claim and no assembly-versus-Rust equivalence claim (sections 3.1 and 3.6). `RT-PERFORMANCE-SENSITIVITY` is 19.4's court: it is candidate-only -- the deliberately slowed variant is a construction of the harness, never product code -- and compiles courts/phase19/rt_performance_sensitivity_probe.c once against the candidate distribution shell. It drives a reference arm (the real `aes-128-cbc` path, which must equal the authority vector 19.3 recorded) and a slowed arm (`control-extra-pass`, the same path with an injected extra full pass over the primitive) under the same 19.3 work instrument, and the court is `pass` only when the slowed arm is caught on the counting allocator the stratum introduces (a library-side `allocs`/`reallocs`/`bytes` difference), not merely on the driver-side `calls` 19.3 excludes from its findings. Section 3.2's rule is mechanical here: a control that cannot fail is not evidence, so if the instrument cannot tell the slowed path from the reference the verdict is `fail`, never a vacuous `pass`. It is evidence about the instrument's resolution and makes no throughput or benchmark-parity claim. `PERFORMANCE-BOUNDARY-REGISTER` is 19.5's court: it stages no probe and reads the authored register artifacts/phase19/performance-boundary-register.json against the four probe courts' records computed above it, failing the stratum if a measured row's court no longer covers its surface, a not-measured or not-claimed row a passing court now covers, or a stated count/evidence value has moved. It records the stratum's own non-claims -- no benchmark-parity claim and no assembly-versus-Rust equivalence claim, the ENGINE path not measured, the three capability names not reached, and the two divergent-work findings -- and may not claim more than the courts above measured. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is dispatch behaviour and deterministic work over a finished implementation, with no benchmark-parity claim and no assembly-versus-Rust equivalence claim. docs/PHASE-19-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
     "courts": [
       {
-        "authority_observations": 81,
-        "candidate_observations": 81,
+        "authority_observations": 72,
+        "candidate_observations": 72,
         "candidate_stderr_tail": [],
         "capability_sets": [
           {
-            "OPENSSL_ia32cap": "(unset)",
+            "OPENSSL_ia32cap": "0x0200000100000000",
             "authority_exit_code": 0,
-            "authority_observations": 27,
+            "authority_observations": 24,
             "candidate_exit_code": 0,
-            "candidate_observations": 27,
-            "divergence_count": 20,
-            "set": "host"
+            "candidate_observations": 24,
+            "divergence_count": 17,
+            "set": "reference"
           },
           {
-            "OPENSSL_ia32cap": "~0x0200000000000000",
+            "OPENSSL_ia32cap": "0x0000000100000000",
             "authority_exit_code": 0,
-            "authority_observations": 27,
+            "authority_observations": 24,
             "candidate_exit_code": 0,
-            "candidate_observations": 27,
-            "divergence_count": 24,
+            "candidate_observations": 24,
+            "divergence_count": 21,
             "set": "aesni-off"
           },
           {
-            "OPENSSL_ia32cap": "~0xffffffffffffffff",
+            "OPENSSL_ia32cap": "0x0000000000000000",
             "authority_exit_code": 0,
-            "authority_observations": 27,
+            "authority_observations": 24,
             "candidate_exit_code": 0,
-            "candidate_observations": 27,
-            "divergence_count": 24,
+            "candidate_observations": 24,
+            "divergence_count": 21,
             "set": "cleared"
           }
         ],
         "control": {
           "authority_surface_reached": true,
           "facade_aesni_off": "1",
-          "facade_host": "0",
           "facade_key": "sel.aes128cbcsha1.null",
-          "facade_moved_selection": true
+          "facade_moved_selection": true,
+          "facade_reference": "0"
         },
         "court": "RT-CPU-CAPABILITY",
-        "divergence_count": 68,
+        "divergence_count": 59,
         "divergences": [
           {
-            "authority": "OPENSSL_ia32cap=0x7ed8320b078bffff:0x19405fdef1bf97ab:0x0000003010000110:0x0000000000000000:0x0000000000000000",
+            "authority": "OPENSSL_ia32cap=0x0200000100000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:0x0200000100000000",
             "candidate": "",
             "class": "value",
-            "observation": "host.api.cpu_settings",
-            "set": "host"
+            "observation": "reference.api.cpu_settings",
+            "set": "reference"
           },
           {
             "authority": "0",
             "candidate": "1",
             "class": "value",
-            "observation": "host.api.cpu_settings_null",
-            "set": "host"
+            "observation": "reference.api.cpu_settings_null",
+            "set": "reference"
           },
           {
-            "authority": "CPUINFO: OPENSSL_ia32cap=0x7ed8320b078bffff:0x19405fdef1bf97ab:0x0000003010000110:0x0000000000000000:0x0000000000000000",
+            "authority": "CPUINFO: OPENSSL_ia32cap=0x0200000100000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:0x0200000100000000",
             "candidate": "CPUINFO: N/A",
             "class": "value",
-            "observation": "host.api.cpuinfo",
-            "set": "host"
+            "observation": "reference.api.cpuinfo",
+            "set": "reference"
           },
           {
-            "authority": "0x078bffff",
+            "authority": "0x00000400",
             "candidate": "n/a",
             "class": "value",
-            "observation": "host.cap.after_setup.0",
-            "set": "host"
+            "observation": "reference.cap.after_setup.0",
+            "set": "reference"
           },
           {
-            "authority": "0x7ed8320b",
+            "authority": "0x02000001",
             "candidate": "n/a",
             "class": "value",
-            "observation": "host.cap.after_setup.1",
-            "set": "host"
+            "observation": "reference.cap.after_setup.1",
+            "set": "reference"
           },
           {
-            "authority": "0xf1bf97ab",
+            "authority": "0x00000000",
             "candidate": "n/a",
             "class": "value",
-            "observation": "host.cap.after_setup.2",
-            "set": "host"
+            "observation": "reference.cap.after_setup.2",
+            "set": "reference"
           },
           {
-            "authority": "0x19405fde",
+            "authority": "0x00000000",
             "candidate": "n/a",
             "class": "value",
-            "observation": "host.cap.after_setup.3",
-            "set": "host"
+            "observation": "reference.cap.after_setup.3",
+            "set": "reference"
           },
           {
-            "authority": "0xf1bf97ab",
+            "authority": "0x00000400",
             "candidate": "n/a",
             "class": "value",
-            "observation": "host.cap.raw.word.2",
-            "set": "host"
+            "observation": "reference.cap.word.0",
+            "set": "reference"
           },
           {
-            "authority": "0x19405fde",
+            "authority": "0x02000001",
             "candidate": "n/a",
             "class": "value",
-            "observation": "host.cap.raw.word.3",
-            "set": "host"
+            "observation": "reference.cap.word.1",
+            "set": "reference"
           },
           {
-            "authority": "0x078bffff",
+            "authority": "0x00000000",
             "candidate": "n/a",
             "class": "value",
-            "observation": "host.cap.word.0",
-            "set": "host"
+            "observation": "reference.cap.word.2",
+            "set": "reference"
           },
           {
-            "authority": "0x7ed8320b",
+            "authority": "0x00000000",
             "candidate": "n/a",
             "class": "value",
-            "observation": "host.cap.word.1",
-            "set": "host"
-          },
-          {
-            "authority": "0xf1bf97ab",
-            "candidate": "n/a",
-            "class": "value",
-            "observation": "host.cap.word.2",
-            "set": "host"
-          },
-          {
-            "authority": "0x19405fde",
-            "candidate": "n/a",
-            "class": "value",
-            "observation": "host.cap.word.3",
-            "set": "host"
+            "observation": "reference.cap.word.3",
+            "set": "reference"
           },
           {
             "authority": "1",
             "candidate": "0",
             "class": "value",
-            "observation": "host.probe.cpuid.called",
-            "set": "host"
-          },
-          {
-            "authority": "0x7ed8320b078bfbff",
-            "candidate": "n/a",
-            "class": "value",
-            "observation": "host.probe.cpuid.ret",
-            "set": "host"
+            "observation": "reference.probe.cpuid.called",
+            "set": "reference"
           },
           {
             "authority": "1",
             "candidate": "0",
             "class": "value",
-            "observation": "host.probe.reachable.cpuid_setup",
-            "set": "host"
+            "observation": "reference.probe.reachable.cpuid_setup",
+            "set": "reference"
           },
           {
             "authority": "1",
             "candidate": "0",
             "class": "value",
-            "observation": "host.probe.reachable.ia32_cpuid",
-            "set": "host"
+            "observation": "reference.probe.reachable.ia32_cpuid",
+            "set": "reference"
           },
           {
             "authority": "1",
             "candidate": "0",
             "class": "value",
-            "observation": "host.probe.reachable.ia32cap_p",
-            "set": "host"
+            "observation": "reference.probe.reachable.ia32cap_p",
+            "set": "reference"
           },
           {
             "authority": "1",
             "candidate": "0",
             "class": "value",
-            "observation": "host.probe.setup.called",
-            "set": "host"
+            "observation": "reference.probe.setup.called",
+            "set": "reference"
           },
           {
             "authority": "1",
             "candidate": "-1",
             "class": "value",
-            "observation": "host.probe.setup.stable",
-            "set": "host"
+            "observation": "reference.probe.setup.stable",
+            "set": "reference"
           },
           {
-            "authority": "OPENSSL_ia32cap=0x7cd8320b078bffff:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:~0x0200000000000000",
+            "authority": "OPENSSL_ia32cap=0x0000000100000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:0x0000000100000000",
             "candidate": "",
             "class": "value",
             "observation": "aesni-off.api.cpu_settings",
@@ -203,21 +182,21 @@
             "set": "aesni-off"
           },
           {
-            "authority": "CPUINFO: OPENSSL_ia32cap=0x7cd8320b078bffff:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:~0x0200000000000000",
+            "authority": "CPUINFO: OPENSSL_ia32cap=0x0000000100000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:0x0000000100000000",
             "candidate": "CPUINFO: N/A",
             "class": "value",
             "observation": "aesni-off.api.cpuinfo",
             "set": "aesni-off"
           },
           {
-            "authority": "0x078bffff",
+            "authority": "0x00000400",
             "candidate": "n/a",
             "class": "value",
             "observation": "aesni-off.cap.after_setup.0",
             "set": "aesni-off"
           },
           {
-            "authority": "0x7cd8320b",
+            "authority": "0x00000001",
             "candidate": "n/a",
             "class": "value",
             "observation": "aesni-off.cap.after_setup.1",
@@ -238,28 +217,14 @@
             "set": "aesni-off"
           },
           {
-            "authority": "0xf1bf97ab",
-            "candidate": "n/a",
-            "class": "value",
-            "observation": "aesni-off.cap.raw.word.2",
-            "set": "aesni-off"
-          },
-          {
-            "authority": "0x19405fde",
-            "candidate": "n/a",
-            "class": "value",
-            "observation": "aesni-off.cap.raw.word.3",
-            "set": "aesni-off"
-          },
-          {
-            "authority": "0x078bffff",
+            "authority": "0x00000400",
             "candidate": "n/a",
             "class": "value",
             "observation": "aesni-off.cap.word.0",
             "set": "aesni-off"
           },
           {
-            "authority": "0x7cd8320b",
+            "authority": "0x00000001",
             "candidate": "n/a",
             "class": "value",
             "observation": "aesni-off.cap.word.1",
@@ -284,13 +249,6 @@
             "candidate": "0",
             "class": "value",
             "observation": "aesni-off.probe.cpuid.called",
-            "set": "aesni-off"
-          },
-          {
-            "authority": "0x7ed8320b078bfbff",
-            "candidate": "n/a",
-            "class": "value",
-            "observation": "aesni-off.probe.cpuid.ret",
             "set": "aesni-off"
           },
           {
@@ -357,7 +315,7 @@
             "set": "aesni-off"
           },
           {
-            "authority": "OPENSSL_ia32cap=0x0000000000000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:~0xffffffffffffffff",
+            "authority": "OPENSSL_ia32cap=0x0000000000000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:0x0000000000000000",
             "candidate": "",
             "class": "value",
             "observation": "cleared.api.cpu_settings",
@@ -371,7 +329,7 @@
             "set": "cleared"
           },
           {
-            "authority": "CPUINFO: OPENSSL_ia32cap=0x0000000000000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:~0xffffffffffffffff",
+            "authority": "CPUINFO: OPENSSL_ia32cap=0x0000000000000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:0x0000000000000000",
             "candidate": "CPUINFO: N/A",
             "class": "value",
             "observation": "cleared.api.cpuinfo",
@@ -403,20 +361,6 @@
             "candidate": "n/a",
             "class": "value",
             "observation": "cleared.cap.after_setup.3",
-            "set": "cleared"
-          },
-          {
-            "authority": "0xf1bf97ab",
-            "candidate": "n/a",
-            "class": "value",
-            "observation": "cleared.cap.raw.word.2",
-            "set": "cleared"
-          },
-          {
-            "authority": "0x19405fde",
-            "candidate": "n/a",
-            "class": "value",
-            "observation": "cleared.cap.raw.word.3",
             "set": "cleared"
           },
           {
@@ -452,13 +396,6 @@
             "candidate": "0",
             "class": "value",
             "observation": "cleared.probe.cpuid.called",
-            "set": "cleared"
-          },
-          {
-            "authority": "0x7ed8320b078bfbff",
-            "candidate": "n/a",
-            "class": "value",
-            "observation": "cleared.probe.cpuid.ret",
             "set": "cleared"
           },
           {
@@ -525,10 +462,10 @@
             "set": "cleared"
           }
         ],
-        "method": "the probe is compiled twice and its `key=value` transcript compared. It is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade (the host set, an AES-NI-cleared set and a fully cleared set). The authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so the hidden `OPENSSL_ia32cap_P` and the archive-only `OPENSSL_cpuid_setup` / `OPENSSL_ia32_cpuid` are reachable; the candidate probe links its distribution shell, where the weak references resolve to NULL. No address, clock or duration is observed.",
+        "method": "the probe is compiled twice and its `key=value` transcript compared. It is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade (a synthetic reference set, an AES-NI-cleared set and a fully cleared set), each an explicit literal so the recorded vector is never the runner's own CPUID. The authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so the hidden `OPENSSL_ia32cap_P` and the archive-only `OPENSSL_cpuid_setup` / `OPENSSL_ia32_cpuid` are reachable; the candidate probe links its distribution shell, where the weak references resolve to NULL. No address, clock or duration is observed.",
         "observations_recorded": {
-          "authority": 81,
-          "candidate": 81
+          "authority": 72,
+          "candidate": 72
         },
         "probe": "courts/phase19/rt_cpu_capability_probe.c",
         "problems": [],
@@ -556,16 +493,16 @@
         "candidate_stderr_tail": [],
         "capability_sets": [
           {
-            "OPENSSL_ia32cap": "(unset)",
+            "OPENSSL_ia32cap": "0x0200000100000000",
             "authority_exit_code": 0,
             "authority_observations": 259,
             "candidate_exit_code": 0,
             "candidate_observations": 259,
             "divergence_count": 0,
-            "set": "host"
+            "set": "reference"
           },
           {
-            "OPENSSL_ia32cap": "~0x0200000000000000",
+            "OPENSSL_ia32cap": "0x0000000100000000",
             "authority_exit_code": 0,
             "authority_observations": 259,
             "candidate_exit_code": 0,
@@ -574,7 +511,7 @@
             "set": "aesni-off"
           },
           {
-            "OPENSSL_ia32cap": "~0xffffffffffffffff",
+            "OPENSSL_ia32cap": "0x0000000000000000",
             "authority_exit_code": 0,
             "authority_observations": 259,
             "candidate_exit_code": 0,
@@ -587,51 +524,51 @@
           "aes_cbc_hmac_selection": {
             "fetch.aes-128-cbc-hmac-sha1.null": {
               "aesni_off": "1",
-              "host": "0"
+              "reference": "0"
             },
             "fetch.aes-128-cbc-hmac-sha256.null": {
               "aesni_off": "1",
-              "host": "0"
+              "reference": "0"
             },
             "fetch.aes-256-cbc-hmac-sha1.null": {
               "aesni_off": "1",
-              "host": "0"
+              "reference": "0"
             },
             "fetch.aes-256-cbc-hmac-sha256.null": {
               "aesni_off": "1",
-              "host": "0"
+              "reference": "0"
             },
             "legacy.aes-128-cbc-hmac-sha1.null": {
               "aesni_off": "1",
-              "host": "0"
+              "reference": "0"
             },
             "legacy.aes-128-cbc-hmac-sha256.null": {
               "aesni_off": "1",
-              "host": "0"
+              "reference": "0"
             },
             "legacy.aes-256-cbc-hmac-sha1.null": {
               "aesni_off": "1",
-              "host": "0"
+              "reference": "0"
             },
             "legacy.aes-256-cbc-hmac-sha256.null": {
               "aesni_off": "1",
-              "host": "0"
+              "reference": "0"
             },
             "lookup.aes-128-cbc-hmac-sha1.null": {
               "aesni_off": "1",
-              "host": "0"
+              "reference": "0"
             },
             "lookup.aes-128-cbc-hmac-sha256.null": {
               "aesni_off": "1",
-              "host": "0"
+              "reference": "0"
             },
             "lookup.aes-256-cbc-hmac-sha1.null": {
               "aesni_off": "1",
-              "host": "0"
+              "reference": "0"
             },
             "lookup.aes-256-cbc-hmac-sha256.null": {
               "aesni_off": "1",
-              "host": "0"
+              "reference": "0"
             }
           },
           "authority_selection_driven": true,
@@ -639,26 +576,26 @@
             {
               "aesni_off": "1",
               "expected_aesni_off": "1",
-              "expected_host": "0",
-              "host": "0",
+              "expected_reference": "0",
               "key": "fetch.aes-128-cbc-hmac-sha1.null",
-              "moved": true
+              "moved": true,
+              "reference": "0"
             },
             {
               "aesni_off": "1",
               "expected_aesni_off": "1",
-              "expected_host": "0",
-              "host": "0",
+              "expected_reference": "0",
               "key": "legacy.aes-256-cbc-hmac-sha256.null",
-              "moved": true
+              "moved": true,
+              "reference": "0"
             },
             {
               "aesni_off": "1",
               "expected_aesni_off": "1",
-              "expected_host": "0",
-              "host": "0",
+              "expected_reference": "0",
               "key": "lookup.aes-128-cbc-hmac-sha1.null",
-              "moved": true
+              "moved": true,
+              "reference": "0"
             }
           ],
           "facade_moved_selection": true
@@ -1899,7 +1836,7 @@
             "set": "cleared"
           }
         ],
-        "method": "the probe is compiled twice and its `key=value` transcript compared. It reports, for a fixed operation set, which implementation each path selects -- the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context -- as the selected method's name/NID/type/flags/sizes and, for a fetch, its provider name. It is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade (the host set, an AES-NI-cleared set and a fully cleared set), exactly as `RT-CPU-CAPABILITY`. The authority probe links its static `libcrypto.a`; the candidate probe links its distribution shell. No address, clock or duration is observed.",
+        "method": "the probe is compiled twice and its `key=value` transcript compared. It reports, for a fixed operation set, which implementation each path selects -- the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context -- as the selected method's name/NID/type/flags/sizes and, for a fetch, its provider name. It is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade (a synthetic reference set, an AES-NI-cleared set and a fully cleared set), exactly as `RT-CPU-CAPABILITY`. The authority probe links its static `libcrypto.a`; the candidate probe links its distribution shell. No address, clock or duration is observed.",
         "observations_recorded": {
           "authority": 777,
           "candidate": 777
@@ -2333,7 +2270,7 @@
           },
           "path": "artifacts/phase19/performance-boundary-register.json",
           "schema": "openssl-rs/performance-boundary-register/v1",
-          "sha256": "a67e570267f707d96c96765e5d366ccd40e417ba13f5770e78556d19a91d962b",
+          "sha256": "357f2ef865e09df33f3f6868e83ea84e5ef5483c465b9e02eaef2471905d272d",
           "total": 14
         },
         "surfaces": [
@@ -2358,9 +2295,9 @@
           {
             "classification": "measured",
             "court": "RT-EVP-DISPATCH",
-            "id": "evp-host-agreement",
+            "id": "evp-reference-agreement",
             "surface_keys": [
-              "evp.host"
+              "evp.reference"
             ]
           },
           {
@@ -2473,12 +2410,12 @@
     {
       "name": "phase-19-plan",
       "path": "docs/PHASE-19-SUBPHASES.md",
-      "sha256": "c6342ad8a9ec8636c02710f5fc12ccaee6781672699fb9c2ffab90c61721011e"
+      "sha256": "c9ba16f46b9e2686d503c7d5234e337b5f6935d0eac82e7dc2e81ebfe7c79348"
     },
     {
       "name": "cpu-capability-probe",
       "path": "courts/phase19/rt_cpu_capability_probe.c",
-      "sha256": "b456168e877543a0586710fbb4d1ae888b3fd74b1ca7d5d09151a94e4d4f3867"
+      "sha256": "163a09501d76a1d1b53965ff0a64ba4c9544d0246bd09541164fa47655e337ab"
     },
     {
       "name": "evp-dispatch-probe",
@@ -2498,7 +2435,7 @@
     {
       "name": "performance-boundary-register",
       "path": "artifacts/phase19/performance-boundary-register.json",
-      "sha256": "a67e570267f707d96c96765e5d366ccd40e417ba13f5770e78556d19a91d962b"
+      "sha256": "357f2ef865e09df33f3f6868e83ea84e5ef5483c465b9e02eaef2471905d272d"
     },
     {
       "name": "performance-work-fixture",
