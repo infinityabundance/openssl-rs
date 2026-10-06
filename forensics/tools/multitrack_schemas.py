@@ -399,7 +399,17 @@ def validate_authority_node(rec: dict) -> list[str]:
 
 
 def validate_lineage_edge(rec: dict) -> list[str]:
-    """A lineage edge: a typed relationship between two nodes, never a compatibility claim."""
+    """A lineage edge: a typed, directed relationship between two nodes, never a compatibility claim.
+
+    `direction` is the **sense the edge is read in**, and it is load-bearing: `forward` means the
+    relationship is read from `from_id` to `to_id`, `reverse` means it is read from `to_id` to
+    `from_id`. Every edge carries both endpoints, its kind, its sense and the provenance it was read
+    from, so the relationship cannot be re-read in the opposite direction silently.
+
+    A `declared_abi_compatibility` edge is a **declaration** -- upstream's ABI promise -- and must be
+    marked `declared: true`; it is never candidate evidence (the stratum's non-claim
+    "upstream's ABI promise is not candidate evidence").
+    """
     fields = ("edge_id", "kind", "from_id", "to_id", "direction", "evidence",
               "metadata_provenance")
     problems = _missing(rec, fields)
@@ -409,10 +419,19 @@ def validate_lineage_edge(rec: dict) -> list[str]:
     problems += _enum(rec, "direction", ("forward", "reverse"))
     if "evidence" in rec and not rec["evidence"]:
         problems.append("evidence must be non-empty (a lineage edge is not self-evident)")
+    prov = rec.get("metadata_provenance")
+    if "metadata_provenance" in rec and not (
+        (isinstance(prov, str) and prov) or (isinstance(prov, list) and prov)
+    ):
+        problems.append("metadata_provenance must be a non-empty string or list (a lineage edge "
+                        "with no provenance is an assertion)")
     if rec.get("kind") == "security_backport" and not rec.get("security_reference"):
         problems.append("a security_backport edge must name the security_reference it backports")
     if rec.get("kind") in ("declared_abi_compatibility", "observed_compatibility"):
         problems += _enum(rec, "dimension", COMPAT_DIMENSIONS)
+    if rec.get("kind") == "declared_abi_compatibility" and rec.get("declared") is not True:
+        problems.append("a declared_abi_compatibility edge must be marked `declared: true`: it "
+                        "records upstream's ABI promise, never a candidate measurement")
     return problems
 
 
@@ -968,6 +987,15 @@ def self_test() -> int:
         failures.append("validate_compatibility_edge accepted a `version_order` evidence kind")
     if "numeric ordering" not in " ".join(validate_compatibility_edge(_bad("compatibility_edge"))):
         failures.append("the version_order refusal does not say why ordering is not compatibility")
+
+    # A declared ABI edge is a declaration, and every lineage edge carries provenance.
+    unmarked = dict(_GOOD["lineage_edge"], kind="declared_abi_compatibility", dimension="abi")
+    if not validate_lineage_edge(unmarked):
+        failures.append("validate_lineage_edge accepted a declared_abi_compatibility edge with no "
+                        "`declared` marker")
+    unprovenanced = dict(_GOOD["lineage_edge"], metadata_provenance=[])
+    if not validate_lineage_edge(unprovenanced):
+        failures.append("validate_lineage_edge accepted a lineage edge with no provenance")
 
     # --- every validator, both directions -----------------------------------------------
     for kind in sorted(SCHEMAS):

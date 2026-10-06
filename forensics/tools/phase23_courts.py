@@ -16,9 +16,10 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**Three courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
-lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, and 23.3 lands
-`RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court; the other fourteen courts are named in
+**Four courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, 23.3 lands
+`RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court, and 23.4 lands `RT-LINEAGE-EDGES`, the
+typed-lineage-edge court; the other thirteen courts are named in
 `PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
 reproduced, so a court silently dropped is a finding rather than a smaller green run. This is
@@ -35,7 +36,7 @@ The seventeen courts, and the subphase that lands each
   * `RT-AUTHORITY-NODES` -- 23.2, the authority-node registry (registered).
   * `RT-ATLAS-PARAMETERIZATION` -- 23.3, the parameterized atlases and the byte-identical proof
     (registered).
-  * `RT-LINEAGE-EDGES` -- 23.4, the lineage edges.
+  * `RT-LINEAGE-EDGES` -- 23.4, the lineage edges (registered).
   * `RT-ENTITY-LINEAGE` -- 23.5, the entity lineage.
   * `RT-DELTA-ENGINE` -- 23.6, the delta engine.
   * `RT-ABI-HISTORY-FACADES` -- 23.7, the ABI / history façades.
@@ -50,7 +51,8 @@ The seventeen courts, and the subphase that lands each
   * `RT-COMPATIBILITY-MATRIX` -- 23.16, the compatibility matrix.
   * `MULTITRACK-SEAL` -- 23.17, the full matrix, the FRF/Gemel chain and the seal.
 
-Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES` and `RT-ATLAS-PARAMETERIZATION` is
+Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZATION` and
+`RT-LINEAGE-EDGES` is
 `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
@@ -95,6 +97,9 @@ import multitrack_schemas  # noqa: E402
 # The Phase-23.3 parameterized generator, imported so the court re-derives the census in-process
 # through the same code path the receipt was produced by (never a second, drifting predicate).
 import atlas_authority  # noqa: E402
+# The Phase-23.1 catalogue generator, imported for the lineage hash keys the sensitivity control
+# re-seals a mutated body with, so the control isolates the semantic check rather than the hash.
+import authority_catalog  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase23" / "COURTS.json"
 GENERATOR = "forensics/tools/phase23_courts.py"
@@ -136,9 +141,23 @@ _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 RELEASE_CATALOG = "RT-RELEASE-CATALOG"
 AUTHORITY_NODES_COURT = "RT-AUTHORITY-NODES"
 ATLAS_PARAMETERIZATION_COURT = "RT-ATLAS-PARAMETERIZATION"
+LINEAGE_EDGES_COURT = "RT-LINEAGE-EDGES"
 ROOT_RELEASE = "openssl-0.9.1c"
 CANONICAL_KINDS = ("branch_fork", "chronological_successor", "maintenance_successor")
 PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
+
+# 23.4's subject. The kinds whose reading is **defined** to run forward in time (the
+# reference/predecessor precedes the subject/successor), so a `direction` that reads a later release
+# into an earlier one is refused. `branch_fork` and `git_ancestry` are excluded: a fork base is the
+# predecessor series' current final (which can post-date the branch's own first pre-release) and a
+# git ancestor is the commit graph's ancestor, not a date order.
+DATED_READING_KINDS = (
+    "chronological_successor", "maintenance_successor", "declared_abi_compatibility",
+    "security_backport", "observed_compatibility",
+)
+# The parallel supported lines the plan names (`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 0),
+# each of which must begin with a typed branch_fork rather than be linearised onto its predecessor.
+PARALLEL_SUPPORTED_LINES = ("1.0.2", "1.1.1", "3.", "4.")
 
 # The courts this stratum will stage. 23.1 registers `RT-RELEASE-CATALOG`; each later subphase
 # appends its court here in the commit that lands its instrument, and a court removed from the
@@ -147,12 +166,12 @@ COURTS: list[tuple[str, str]] = [
     (RELEASE_CATALOG, "_release_catalog_court"),
     (AUTHORITY_NODES_COURT, "_authority_nodes_court"),
     (ATLAS_PARAMETERIZATION_COURT, "_atlas_parameterization_court"),
+    (LINEAGE_EDGES_COURT, "_lineage_edges_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-LINEAGE-EDGES": "23.4 -- the lineage edges",
     "RT-ENTITY-LINEAGE": "23.5 -- the entity lineage",
     "RT-DELTA-ENGINE": "23.6 -- the delta engine",
     "RT-ABI-HISTORY-FACADES": "23.7 -- the ABI / history façades",
@@ -1097,6 +1116,366 @@ def _atlas_parameterization_court(name: str) -> dict:
     }
 
 
+def _edge_read_pair(edge: dict) -> tuple[str, str]:
+    """The edge's endpoints in the sense it is read: `(predecessor/reference, successor/subject)`.
+
+    `direction` is the sense the edge is read in and is load-bearing: `forward` reads
+    `from_id -> to_id`, `reverse` reads `to_id -> from_id`. A reader that ignored it could silently
+    reverse a relationship, which is the mutation the court's control seeds.
+    """
+    if edge.get("direction", "forward") == "reverse":
+        return edge["to_id"], edge["from_id"]
+    return edge["from_id"], edge["to_id"]
+
+
+def _release_order(catalog: dict) -> dict[str, tuple]:
+    """Each release's chronology key: `(date, version order, release_id)`.
+
+    The same key `forensics/tools/authority_catalog.py` orders each series by, so the court's
+    family base and the generator's agree rather than being two drifting predicates. An unknown
+    date sorts first and is never used to claim a chronology.
+    """
+    out: dict[str, tuple] = {}
+    for n in catalog.get("nodes", []):
+        date = n["release_date"]
+        version = multitrack_schemas.parse_version(n["display_version"]).order_key()
+        out[n["release_id"]] = ((date == "unknown", date), version, n["release_id"])
+    return out
+
+
+def _lineage_dag(ids: set[str], edges: list[dict]) -> tuple[list[str], list[str]]:
+    """The edges' topological order over `ids`, and the cyclic nodes (empty when it is a DAG).
+
+    Recomputed here from the edges rather than read from the committed `dag` field, so a cycle
+    introduced into the edge list is caught on the graph itself.
+    """
+    adj: dict[str, list[str]] = {i: [] for i in ids}
+    indeg: dict[str, int] = {i: 0 for i in ids}
+    for e in edges:
+        a, b = e.get("from_id"), e.get("to_id")
+        if a in adj and b in adj:
+            adj[a].append(b)
+            indeg[b] += 1
+    queue = sorted(i for i in ids if indeg[i] == 0)
+    order: list[str] = []
+    while queue:
+        x = queue.pop(0)
+        order.append(x)
+        for y in sorted(adj[x]):
+            indeg[y] -= 1
+            if indeg[y] == 0:
+                queue.append(y)
+        queue.sort()
+    return order, sorted(i for i in ids if i not in set(order))
+
+
+def lineage_edge_findings(catalog: dict, lineage: dict) -> list[str]:
+    """Every way the typed lineage edges fail this court's subject.
+
+    A pure function of the two committed bodies, so the sensitivity control can mutate them and
+    re-check. It establishes that every edge is schema-valid, **typed**, **directed** (its stated
+    sense follows the evidence's chronology) and provenance-backed; that the graph is a DAG whose
+    parallel supported branches are typed `branch_fork` edges rather than a false linear mainline;
+    that a date-order (`chronological_successor`) edge is never presented as an ABI-compatibility
+    proof; that the one compatibility-ish kind the evidence supports, `declared_abi_compatibility`,
+    is marked as a **declaration** and scoped to its declared family; and that every stated absence
+    of a kind carries its reason.
+    """
+    findings: list[str] = []
+    nodes = {n["release_id"]: n for n in catalog.get("nodes", [])}
+    ids = set(nodes)
+    edges = lineage.get("edges", [])
+    order = _release_order(catalog)
+
+    # 1. every edge is schema-valid, typed and directed, with a unique id and known endpoints.
+    seen_ids: set[str] = set()
+    for e in edges:
+        eid = e.get("edge_id")
+        findings += [f"lineage edge {eid}: {p}" for p in multitrack_schemas.validate_lineage_edge(e)]
+        if eid in seen_ids:
+            findings.append(f"lineage edge {eid} is duplicated")
+        seen_ids.add(eid)
+        for field, value in (("from_id", e.get("from_id")), ("to_id", e.get("to_id"))):
+            if value is not None and value not in ids:
+                findings.append(f"lineage edge {eid}: {field} {value!r} is not a release node")
+
+    # 2. the stated sense follows the evidence's chronology: an edge whose reading is a date order
+    #    (a successor or a declared ABI reference) always runs from the earlier release to the later
+    #    one. A reversed direction is a relationship read backwards.
+    for e in edges:
+        if e["kind"] not in DATED_READING_KINDS:
+            continue
+        pred, succ = _edge_read_pair(e)
+        if pred not in order or succ not in order:
+            continue
+        if order[pred] > order[succ]:
+            findings.append(
+                f"lineage edge {e.get('edge_id')} reads [{e.get('direction')}] {pred} -> {succ}, "
+                f"but {pred} is later than {succ}; the direction does not follow the evidence"
+            )
+
+    # 3. the graph is a DAG, recomputed from the edges rather than read from the committed field.
+    _, cyclic = _lineage_dag(ids, edges)
+    if cyclic:
+        findings.append(f"the lineage is not a DAG: cyclic nodes {sorted(cyclic)[:6]}")
+    if not (lineage.get("dag") or {}).get("is_dag"):
+        findings.append("the committed lineage does not record itself as a DAG")
+
+    # 4. parallel supported branches are typed forks, not a linearised mainline.
+    canonical = [e for e in edges if e["kind"] in CANONICAL_KINDS]
+    forks = [e for e in edges if e["kind"] == "branch_fork"]
+    if not forks:
+        findings.append("the lineage types no branch_fork edge, so parallel branches are "
+                        "linearised onto their predecessors")
+    children: dict[str, set[str]] = defaultdict(set)
+    fork_parents: set[str] = set()
+    fork_targets: set[str] = set()
+    for e in canonical:
+        pred, succ = _edge_read_pair(e)
+        children[pred].add(succ)
+    for e in forks:
+        pred, succ = _edge_read_pair(e)
+        fork_parents.add(pred)
+        fork_targets.add(succ)
+    branch_points = [k for k, v in children.items() if len(v) > 1]
+    if not branch_points:
+        findings.append("no node has two canonical children, so the lineage is one chain, not a DAG")
+    elif not any(k in fork_parents for k in branch_points):
+        findings.append("no branch point carries a typed branch_fork edge, so the parallel branches "
+                        "are linearised")
+    fork_target_versions = {nodes[t]["display_version"] for t in fork_targets if t in nodes}
+    for line in PARALLEL_SUPPORTED_LINES:
+        if not any(v.startswith(line) for v in fork_target_versions):
+            findings.append(f"the {line} supported line has no typed branch_fork head, so it is "
+                            f"linearised onto its predecessor rather than forked")
+
+    # 5. a date-order edge is not presented as an ABI-compatibility proof.
+    if not lineage.get("date_order_is_not_abi"):
+        findings.append("the lineage does not state that a date order is not an ABI proof")
+    for e in edges:
+        if e["kind"] == "chronological_successor" and (e.get("declared") or e.get("dimension")):
+            findings.append(f"chronological_successor edge {e.get('edge_id')} carries a "
+                            f"compatibility dimension or declaration, presenting a date order as "
+                            f"an ABI proof")
+    declared = [e for e in edges if e["kind"] == "declared_abi_compatibility"]
+    if not declared:
+        findings.append("the lineage types no declared_abi_compatibility edge")
+    families: dict[str, list[dict]] = defaultdict(list)
+    for n in catalog.get("nodes", []):
+        if n["release_channel"] == "final" and n["mainline_or_auxiliary"] == "mainline":
+            families[n["declared_compatibility_family"]].append(n)
+    bases = {fam: min(members, key=lambda n: order[n["release_id"]])["release_id"]
+             for fam, members in families.items()}
+    for e in declared:
+        ep, es = nodes.get(e.get("from_id")), nodes.get(e.get("to_id"))
+        if e.get("declared") is not True:
+            findings.append(f"declared_abi_compatibility edge {e.get('edge_id')} is not marked "
+                            f"`declared`; a declaration must not read as a measurement")
+        if e.get("dimension") != "abi":
+            findings.append(f"declared_abi_compatibility edge {e.get('edge_id')} is not on the "
+                            f"`abi` dimension")
+        if ep is None or es is None:
+            continue
+        if not (ep["release_channel"] == es["release_channel"] == "final"
+                and ep["mainline_or_auxiliary"] == es["mainline_or_auxiliary"] == "mainline"):
+            findings.append(f"declared_abi_compatibility edge {e.get('edge_id')} binds a release "
+                            f"that is not a mainline final")
+        if ep["declared_compatibility_family"] != es["declared_compatibility_family"]:
+            findings.append(f"declared_abi_compatibility edge {e.get('edge_id')} spans two declared "
+                            f"compatibility families")
+        elif e["from_id"] != bases.get(ep["declared_compatibility_family"]):
+            findings.append(f"declared_abi_compatibility edge {e.get('edge_id')} does not take the "
+                            f"family base {bases.get(ep['declared_compatibility_family'])} as its "
+                            f"ABI reference")
+
+    # 6. every edge's provenance resolves: a repo-relative path exists, an http(s) URL is a URL.
+    for e in edges:
+        prov = e.get("metadata_provenance") or []
+        for entry in ([prov] if isinstance(prov, str) else prov):
+            if entry.startswith(("http://", "https://")):
+                continue
+            if not (REPO_ROOT / entry).is_file():
+                findings.append(f"lineage edge {e.get('edge_id')}: provenance {entry!r} does not "
+                                f"resolve")
+
+    # 7. every kind in the vocabulary is either present or recorded absent with a reason.
+    present = {e["kind"] for e in edges}
+    absent = lineage.get("absent_kinds") or {}
+    for kind in multitrack_schemas.LINEAGE_EDGE_KINDS:
+        if kind not in present and kind not in absent:
+            findings.append(f"edge kind {kind!r} is neither present nor recorded absent")
+    for kind, reason in absent.items():
+        if kind in present:
+            findings.append(f"edge kind {kind!r} is recorded absent but is present")
+        if not reason:
+            findings.append(f"absent edge kind {kind!r} carries no reason")
+
+    # 8. the content hash is a function of the committed body.
+    recomputed = content_hash({k: lineage.get(k) for k in authority_catalog.LINEAGE_HASH_KEYS})
+    if recomputed != lineage.get("content_hash"):
+        findings.append("the lineage content_hash does not reproduce from its body")
+    return findings
+
+
+def lineage_edges_sensitivity_control(catalog: dict, lineage: dict) -> dict:
+    """Prove the court can fail: seed four mutations and require each to be caught.
+
+    The honest lineage must yield **zero** findings (specificity), and each seeded mutation -- a
+    reversed edge direction, a date-order edge relabelled `declared_abi_compatibility`, an
+    introduced cycle and an edge stripped of its provenance -- must be caught. Each mutated body is
+    re-sealed with the generator's own hash keys first, so the detection is the semantic check and
+    never the content-hash check firing on an un-recomputed digest.
+    """
+    base = lineage_edge_findings(catalog, lineage)
+    specificity = not base
+
+    def reseal(body: dict) -> dict:
+        out = copy.deepcopy(body)
+        out["content_hash"] = content_hash(
+            {k: out.get(k) for k in authority_catalog.LINEAGE_HASH_KEYS})
+        return out
+
+    # (a) reverse an edge's direction without moving its endpoints: the relationship is now read
+    #     from the later release into the earlier one.
+    reversed_body = copy.deepcopy(lineage)
+    reversed_edge = next((e for e in reversed_body["edges"]
+                          if e["kind"] == "chronological_successor"), None)
+    if reversed_edge is not None:
+        reversed_edge["direction"] = "reverse"
+    reversed_body = reseal(reversed_body)
+    reversed_findings = lineage_edge_findings(catalog, reversed_body)
+    caught_reversed = any("does not follow the evidence" in f for f in reversed_findings)
+
+    # (b) relabel a date-order edge as a declared ABI compatibility edge: a chronology dressed as
+    #     an ABI promise.
+    relabel_body = copy.deepcopy(lineage)
+    relabelled = next((e for e in relabel_body["edges"]
+                       if e["kind"] == "chronological_successor"), None)
+    if relabelled is not None:
+        relabelled["kind"] = "declared_abi_compatibility"
+        relabelled["declared"] = True
+        relabelled["dimension"] = "abi"
+    relabel_body = reseal(relabel_body)
+    relabel_findings = lineage_edge_findings(catalog, relabel_body)
+    caught_relabel = any("declared_abi_compatibility" in f and "spans two declared" in f
+                         for f in relabel_findings)
+
+    # (c) introduce a cycle: a canonical edge from the newest mainline final back to the root.
+    newest = max((n for n in catalog["nodes"]
+                  if n["release_channel"] == "final" and n["mainline_or_auxiliary"] == "mainline"),
+                 key=lambda n: _release_order(catalog)[n["release_id"]])["release_id"]
+    cycle_body = copy.deepcopy(lineage)
+    cycle_body["edges"].append({
+        "edge_id": f"L-maintenance_successor-{newest}-{lineage['root']}",
+        "kind": "maintenance_successor",
+        "from_id": newest,
+        "to_id": lineage["root"],
+        "direction": "forward",
+        "evidence": ["seeded cycle"],
+        "metadata_provenance": [rel(LINEAGE)],
+    })
+    cycle_body = reseal(cycle_body)
+    cycle_findings = lineage_edge_findings(catalog, cycle_body)
+    caught_cycle = any("not a DAG" in f for f in cycle_findings)
+
+    # (d) drop an edge's provenance: a relationship asserted with nothing to read it from.
+    stripped_body = copy.deepcopy(lineage)
+    stripped = next((e for e in stripped_body["edges"] if e["kind"] == "maintenance_successor"),
+                    None)
+    if stripped is not None:
+        stripped["metadata_provenance"] = []
+    stripped_body = reseal(stripped_body)
+    stripped_findings = lineage_edge_findings(catalog, stripped_body)
+    caught_stripped = any("metadata_provenance" in f for f in stripped_findings)
+
+    return {
+        "baseline_findings": len(base),
+        "injected_reversed_direction": (reversed_edge or {}).get("edge_id"),
+        "injected_reversed_direction_findings": len(reversed_findings),
+        "injected_relabelled_date_order_edge": (relabelled or {}).get("edge_id"),
+        "injected_relabelled_date_order_findings": len(relabel_findings),
+        "injected_cycle_edge": f"L-maintenance_successor-{newest}-{lineage['root']}",
+        "injected_cycle_findings": len(cycle_findings),
+        "injected_provenance_drop": (stripped or {}).get("edge_id"),
+        "injected_provenance_drop_findings": len(stripped_findings),
+        "specificity_holds": specificity,
+        "caught_reversed_direction": caught_reversed,
+        "caught_relabelled_date_order": caught_relabel,
+        "caught_cycle": caught_cycle,
+        "caught_provenance_drop": caught_stripped,
+        "honest": bool(specificity and caught_reversed and caught_relabel and caught_cycle
+                       and caught_stripped),
+    }
+
+
+def _lineage_edges_court(name: str) -> dict:
+    """`RT-LINEAGE-EDGES`: 23.4's court, the typed lineage edges.
+
+    Stages no probe. It reads `forensics/release-catalog.json` and `forensics/authority-lineage.json`
+    and establishes that every edge is schema-valid, typed and directed, with the stated sense
+    following the evidence's chronology and provenance that resolves; that the graph is a DAG whose
+    parallel supported branches (1.0.2, 1.1.1, the 3.x series and the 4.x line) are typed
+    `branch_fork` edges rather than a false linear mainline; that a date-order
+    (`chronological_successor`) edge is never dressed as an ABI-compatibility proof; that the one
+    compatibility-ish kind the evidence supports, `declared_abi_compatibility`, is marked as a
+    declaration and scoped to its declared family; and that every kind the vocabulary names but the
+    evidence cannot yet settle is recorded absent with its reason. Four seeded mutations are each
+    caught with specificity holding. A passing edge set is an **instrument**: it types relationships
+    between releases and says nothing about whether any release is compatible with any other.
+    """
+    problems: list[str] = []
+    for path, label in ((CATALOG, "release catalogue"), (LINEAGE, "authority lineage")):
+        if not path.is_file():
+            problems.append(f"the {label} {rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    catalog = read_json(CATALOG)
+    lineage = read_json(LINEAGE)
+    findings = lineage_edge_findings(catalog, lineage)
+    control = lineage_edges_sensitivity_control(catalog, lineage)
+
+    kinds = (lineage.get("counts") or {}).get("kinds", {})
+    edges = lineage.get("edges", [])
+    verdict = "pass" if (not findings and not problems and control["honest"]) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/release-catalog.json and "
+            "forensics/authority-lineage.json and establishes that every edge is schema-valid, "
+            "typed and directed, with its stated sense following the evidence's chronology and its "
+            "provenance resolving; that the graph is a DAG whose parallel supported branches "
+            "(1.0.2, 1.1.1, 3.x, 4.x) are typed branch_fork edges rather than a false linear "
+            "mainline; that a date-order chronological_successor edge is never presented as an ABI "
+            "proof; that the declared_abi_compatibility edges are marked declarations scoped to "
+            "their declared family; and that every kind the vocabulary names but the evidence "
+            "cannot settle is recorded absent with a reason. A reversed edge direction, a "
+            "date-order edge relabelled declared_abi_compatibility, an introduced cycle and an "
+            "edge stripped of provenance are each detected with specificity holding "
+            "(docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 0, 3.1 and 4.3)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the lineage-edge court reads committed release records and stages no "
+            "artifacts/phase23/probes/ pair, so it takes no transcript to diff and carries no FRF "
+            "declaration"
+        ),
+        "edges": len(edges),
+        "kinds": kinds,
+        "declared_edges": sum(1 for e in edges if e.get("declared") is True),
+        "absent_kinds": lineage.get("absent_kinds"),
+        "direction_model": lineage.get("direction_model"),
+        "dag": lineage.get("dag"),
+        "content_hash": lineage.get("content_hash"),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1165,15 +1544,28 @@ def main(argv: list[str]) -> int:
             "(openssl-4.0.3); swapping the authority argument changes the produced census, so a "
             "hidden production fallback is caught, and a measured absence with no provenance or "
             "a nonzero count is refused. The one pre-existing, disclosed drift "
-            "(parity-obligations.json) is measured live and undone, never applied. Phase 23 owns "
+            "(parity-obligations.json) is measured live and undone, never applied. "
+            "`RT-LINEAGE-EDGES` is 23.4's court: the typed lineage edges. It stages no probe and "
+            "reads forensics/release-catalog.json and forensics/authority-lineage.json, and "
+            "establishes that every edge is schema-valid, typed and directed, with its stated "
+            "sense following the evidence's chronology and its provenance resolving; that the "
+            "graph is a DAG whose parallel supported branches (1.0.2, 1.1.1, 3.x, 4.x) are typed "
+            "branch_fork edges rather than a false linear mainline; that a date-order "
+            "chronological_successor edge is never presented as an ABI proof; that the "
+            "declared_abi_compatibility edges are marked declarations scoped to their declared "
+            "family; and that every kind the vocabulary names but the evidence cannot settle is "
+            "recorded absent with a reason. A reversed edge direction, a date-order edge "
+            "relabelled declared_abi_compatibility, an introduced cycle and an edge stripped of "
+            "provenance are each detected with specificity holding. A passing edge set is a set "
+            "of relationships, not a compatibility claim. Phase 23 owns "
             "no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining fourteen courts -- "
-            "RT-LINEAGE-EDGES, RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, "
+            "over a symbol set is its evidence, and its remaining thirteen courts -- "
+            "RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, "
             "RT-ABI-HISTORY-FACADES, RT-SEMANTIC-COURTS, RT-COMPATIBILITY-VIEWS, "
             "RT-HISTORICAL-POPULATION, RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, "
             "RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, "
             "RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
-            "the subphases that land them (23.4 through 23.17). The one thing the model forbids "
+            "the subphases that land them (23.5 through 23.17). The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "
@@ -1197,6 +1589,7 @@ def main(argv: list[str]) -> int:
         InputRef(name="default-authority", path=DEFAULT_AUTHORITY_ALIAS),
         InputRef(name="historical-plane-census",
                  path=REPO_ROOT / "forensics" / "atlas" / PARAM_HISTORICAL / "plane-census.json"),
+        InputRef(name="abi-policy", path=REPO_ROOT / "docs" / "ABI_POLICY.md"),
     ]
     doc = envelope(kind="phase23-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
@@ -1255,6 +1648,21 @@ def main(argv: list[str]) -> int:
                 print(f"      authority {aid:<32} produced={r['produced'][aid]}/"
                       f"{r['planes']} measured_absence={len(absent)}"
                       + (f" [{', '.join(absent)}]" if absent else ""))
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == LINEAGE_EDGES_COURT:
+            c = r["control"]
+            print(f"  {r['court']:<32} pass   (no probe, {r['edges']} edge(s) "
+                  f"{r['kinds']}; {r['declared_edges']} declared; dag={r['dag']['is_dag']}; "
+                  f"absent={sorted(r['absent_kinds'])}; content_hash={r['content_hash'][:16]}...; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"reversed->{c['injected_reversed_direction_findings']} "
+                  f"relabelled->{c['injected_relabelled_date_order_findings']} "
+                  f"cycle->{c['injected_cycle_findings']} "
+                  f"no-provenance->{c['injected_provenance_drop_findings']} finding(s))")
+            for kind in sorted(r["kinds"]):
+                print(f"      kind {kind:<28} {r['kinds'][kind]}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

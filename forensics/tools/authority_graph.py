@@ -8,13 +8,20 @@ authoritative output, `--json`) and a concise human form.
 
 It never sorts versions to answer a question and it never invents an edge. The lineage it reads
 is a DAG (`docs/PHASE-23-MULTITRACK-SUBPHASES.md` sections 0 and 4.3): parallel maintained
-branches -- the 0.9.8, 1.0.0, 1.0.1, 1.0.2, 1.1.0, 1.1.1 and 3.x lines -- are typed edges, not a
-false linear mainline. Three edge families are carried:
+branches -- the 1.0.2 LTS, 1.1.1 LTS, the 3.x series and the 4.x line -- are typed edges, not a
+false linear mainline. Every edge records the **sense it is read in** (`direction`): `forward`
+reads from `from_id` to `to_id`, `reverse` reads from `to_id` to `from_id`. The query tool
+resolves a canonical parent/child by that sense, so an edge cannot be read backwards silently.
+
+The edge families are carried:
 
   * the **canonical** lineage (`branch_fork`, `chronological_successor`, `maintenance_successor`),
-    which is the parent relation `parents` and `path` read; and
+    which is the parent relation `parents` and `path` read;
   * **`git_ancestry`**, the commit graph's own nearest release ancestor, corroborating the
-    canonical relation without replacing it.
+    canonical relation without replacing it; and
+  * **`declared_abi_compatibility`**, upstream's own ABI promise for a declared compatibility
+    family -- a **declaration**, marked `declared`, never candidate evidence and never a proof
+    that a date-order edge implies ABI compatibility.
 
 `latest-stable` reads the catalogue's alias, which points at a **final** release only: a
 pre-release that sorts above the stable release is never returned.
@@ -25,6 +32,8 @@ Commands
   show <release>                                   one node, its parents, children and ancestors
   parents <release>                                the canonical parent edge(s)
   path <a> <b>                                     the lineage path between two releases
+  edges [--kind K] [--from R] [--to R]             the typed edges, filtered by kind/endpoint
+  kinds                                            the edge-kind counts
   latest-stable                                    the stable alias
   unresolved                                       the labels the version model could not decode
 
@@ -92,22 +101,49 @@ def resolve(catalog: dict, name: str) -> dict:
     return node
 
 
+def _read_pair(edge: dict) -> tuple[str, str]:
+    """The edge's endpoints in the sense it is read: `(predecessor/reference, successor/subject)`.
+
+    `direction` is load-bearing: `forward` reads `from_id -> to_id`, `reverse` reads
+    `to_id -> from_id`. A reader that ignored it would silently reverse a relationship.
+    """
+    if edge.get("direction", "forward") == "reverse":
+        return edge["to_id"], edge["from_id"]
+    return edge["from_id"], edge["to_id"]
+
+
 def _canonical_edges(catalog: dict, lineage: dict) -> list[dict]:
     kinds = set(canonical_kinds(lineage))
     return [e for e in lineage["edges"] if e["kind"] in kinds]
 
 
 def parents(catalog: dict, lineage: dict, release_id: str) -> list[dict]:
-    return [e for e in _canonical_edges(catalog, lineage) if e["to_id"] == release_id]
+    return [e for e in _canonical_edges(catalog, lineage) if _read_pair(e)[1] == release_id]
 
 
 def children(catalog: dict, lineage: dict, release_id: str) -> list[dict]:
-    return [e for e in _canonical_edges(catalog, lineage) if e["from_id"] == release_id]
+    return [e for e in _canonical_edges(catalog, lineage) if _read_pair(e)[0] == release_id]
 
 
 def git_ancestors(lineage: dict, release_id: str) -> list[dict]:
     return [e for e in lineage["edges"]
-            if e["kind"] == "git_ancestry" and e["to_id"] == release_id]
+            if e["kind"] == "git_ancestry" and _read_pair(e)[1] == release_id]
+
+
+def selected_edges(lineage: dict, kind: str | None, from_id: str | None,
+                   to_id: str | None) -> list[dict]:
+    """The edges matching a kind and/or an endpoint, matched in the sense the edge is read."""
+    out = []
+    for e in lineage["edges"]:
+        if kind is not None and e["kind"] != kind:
+            continue
+        pred, succ = _read_pair(e)
+        if from_id is not None and pred != from_id:
+            continue
+        if to_id is not None and succ != to_id:
+            continue
+        out.append(e)
+    return out
 
 
 def path_between(catalog: dict, lineage: dict, a: str, b: str) -> dict:
@@ -120,8 +156,9 @@ def path_between(catalog: dict, lineage: dict, a: str, b: str) -> dict:
     edges = _canonical_edges(catalog, lineage)
     adj: dict[str, list[tuple[str, dict, str]]] = {}
     for e in edges:
-        adj.setdefault(e["from_id"], []).append((e["to_id"], e, "forward"))
-        adj.setdefault(e["to_id"], []).append((e["from_id"], e, "reverse"))
+        pred, succ = _read_pair(e)
+        adj.setdefault(pred, []).append((succ, e, "forward"))
+        adj.setdefault(succ, []).append((pred, e, "reverse"))
     start, goal = a, b
     if start == goal:
         return {"found": True, "from": a, "to": b, "steps": []}
@@ -132,7 +169,8 @@ def path_between(catalog: dict, lineage: dict, a: str, b: str) -> dict:
         for nxt, edge, direction in sorted(adj.get(current, []), key=lambda t: t[0]):
             if nxt in seen:
                 continue
-            step = {"from_id": edge["from_id"], "to_id": edge["to_id"], "kind": edge["kind"],
+            pred, succ = _read_pair(edge)
+            step = {"from_id": pred, "to_id": succ, "kind": edge["kind"],
                     "read": direction}
             if nxt == goal:
                 return {"found": True, "from": start, "to": goal, "steps": steps + [step]}
@@ -204,6 +242,16 @@ def _print_human(command: str, payload: dict) -> None:
     elif command == "latest-stable":
         print(f"latest-stable = {payload['release_id']} ({payload['release_channel']}, "
               f"{payload['release_date']})")
+    elif command == "edges":
+        for e in payload["edges"]:
+            print(f"{e['edge_id']:<64} [{e['kind']}] "
+                  f"{e['from_id']} -> {e['to_id']} ({e['direction']})")
+        print(f"-- {payload['count']} edge(s)")
+    elif command == "kinds":
+        for kind, count in sorted(payload["kinds"].items()):
+            print(f"{kind:<28} {count}")
+        print(f"-- {payload['total']} edge(s) over {len(payload['kinds'])} kind(s); "
+              f"declared={payload['declared']}")
     elif command == "unresolved":
         for r in payload["unresolved"]:
             print(f"{r['tag']:<28} {r['date']}  {r['upstream_label']!r}  -- {r['reason']}")
@@ -229,6 +277,12 @@ def main(argv: list[str]) -> int:
     p_path.add_argument("a")
     p_path.add_argument("b")
 
+    p_edges = sub.add_parser("edges")
+    p_edges.add_argument("--kind", default=None)
+    p_edges.add_argument("--from", dest="from_id", default=None)
+    p_edges.add_argument("--to", dest="to_id", default=None)
+
+    sub.add_parser("kinds")
     sub.add_parser("latest-stable")
     sub.add_parser("unresolved")
     args = ap.parse_args(argv)
@@ -252,7 +306,25 @@ def main(argv: list[str]) -> int:
         payload = {"command": "parents", "release_id": node["release_id"],
                    "parents": _sum_edges(parents(catalog, lineage, node["release_id"]))}
     elif command == "path":
-        payload = {"command": "path", **path_between(catalog, lineage, args.a, args.b)}
+        a_id = resolve(catalog, args.a)["release_id"]
+        b_id = resolve(catalog, args.b)["release_id"]
+        payload = {"command": "path", **path_between(catalog, lineage, a_id, b_id)}
+    elif command == "edges":
+        if args.kind is not None and args.kind not in lineage["edge_kinds"]:
+            raise SystemExit(f"authority-graph: no such edge kind {args.kind!r}; "
+                             f"known: {', '.join(lineage['edge_kinds'])}")
+        for name, value in (("--from", args.from_id), ("--to", args.to_id)):
+            if value is not None:
+                resolve(catalog, value)
+        found = selected_edges(lineage, args.kind, args.from_id, args.to_id)
+        payload = {"command": "edges", "count": len(found), "kind": args.kind,
+                   "edges": found}
+    elif command == "kinds":
+        kinds = lineage.get("counts", {}).get("kinds", {})
+        payload = {"command": "kinds", "kinds": kinds,
+                   "total": sum(kinds.values()),
+                   "declared": sum(1 for e in lineage["edges"] if e.get("declared") is True),
+                   "absent": lineage.get("absent_kinds", {})}
     elif command == "latest-stable":
         payload = {"command": "latest-stable", **latest_stable(catalog)}
     else:

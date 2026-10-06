@@ -1,16 +1,21 @@
 {
   "body": {
+    "absent_kinds": {
+      "observed_compatibility": "no candidate-to-authority measurement exists at 23.4; the compatibility courts and views land at 23.9 and 23.12, so no observed relationship is asserted",
+      "security_backport": "the security lineage lands at 23.14; until a vulnerability observation names a fixed-in release there is no backport to assert, so the kind is absent rather than guessed"
+    },
     "canonical_kinds": [
       "branch_fork",
       "chronological_successor",
       "maintenance_successor"
     ],
-    "content_hash": "537094039294a0a09b0b12456ced209a2ac195b0d607b41f6ae4798b97e331e6",
+    "content_hash": "3d2678d470cc2d4371584f7150446f05e3b397304121f1f4596c687777cc94a4",
     "counts": {
-      "edges": 738,
+      "edges": 964,
       "kinds": {
         "branch_fork": 19,
         "chronological_successor": 129,
+        "declared_abi_compatibility": 226,
         "git_ancestry": 367,
         "maintenance_successor": 223
       },
@@ -21,6 +26,18 @@
       "is_dag": true,
       "nodes": 372
     },
+    "date_order_is_not_abi": true,
+    "declared_abi_family_field": "declared_compatibility_family",
+    "direction_model": "forward: the edge is read from `from_id` to `to_id`; reverse: it is read from `to_id` to `from_id`",
+    "edge_kinds": [
+      "chronological_successor",
+      "git_ancestry",
+      "branch_fork",
+      "maintenance_successor",
+      "security_backport",
+      "declared_abi_compatibility",
+      "observed_compatibility"
+    ],
     "edges": [
       {
         "direction": "forward",
@@ -11058,6 +11075,4300 @@
           "https://openssl-library.org/news/timeline/"
         ],
         "to_id": "openssl-fips-2.0.9"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.3-openssl-0.9.3a",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.3: openssl-0.9.3 (1999-05-24) is the declared ABI reference for openssl-0.9.3a",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.3",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.3a"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.5a-openssl-0.9.5",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.5: openssl-0.9.5a (2000-04-01) is the declared ABI reference for openssl-0.9.5",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.5a",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.5"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.6-openssl-0.9.6a",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.6: openssl-0.9.6 (2000-10-10) is the declared ABI reference for openssl-0.9.6a",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.6",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.6a"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.6-openssl-0.9.6b",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.6: openssl-0.9.6 (2000-10-10) is the declared ABI reference for openssl-0.9.6b",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.6",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.6b"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.6-openssl-0.9.6c",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.6: openssl-0.9.6 (2000-10-10) is the declared ABI reference for openssl-0.9.6c",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.6",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.6c"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.6-openssl-0.9.6d",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.6: openssl-0.9.6 (2000-10-10) is the declared ABI reference for openssl-0.9.6d",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.6",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.6d"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.6-openssl-0.9.6e",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.6: openssl-0.9.6 (2000-10-10) is the declared ABI reference for openssl-0.9.6e",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.6",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.6e"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.6-openssl-0.9.6f",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.6: openssl-0.9.6 (2000-10-10) is the declared ABI reference for openssl-0.9.6f",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.6",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.6f"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.6-openssl-0.9.6g",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.6: openssl-0.9.6 (2000-10-10) is the declared ABI reference for openssl-0.9.6g",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.6",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.6g"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.6-openssl-0.9.6h",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.6: openssl-0.9.6 (2000-10-10) is the declared ABI reference for openssl-0.9.6h",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.6",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.6h"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.6-openssl-0.9.6i",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.6: openssl-0.9.6 (2000-10-10) is the declared ABI reference for openssl-0.9.6i",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.6",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.6i"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.6-openssl-0.9.6j",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.6: openssl-0.9.6 (2000-10-10) is the declared ABI reference for openssl-0.9.6j",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.6",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.6j"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.6-openssl-0.9.6k",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.6: openssl-0.9.6 (2000-10-10) is the declared ABI reference for openssl-0.9.6k",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.6",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.6k"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.6-openssl-0.9.6l",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.6: openssl-0.9.6 (2000-10-10) is the declared ABI reference for openssl-0.9.6l",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.6",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.6l"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.6-openssl-0.9.6m",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.6: openssl-0.9.6 (2000-10-10) is the declared ABI reference for openssl-0.9.6m",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.6",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.6m"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.7-openssl-0.9.7a",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.7: openssl-0.9.7 (2002-12-30) is the declared ABI reference for openssl-0.9.7a",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.7",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.7a"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.7-openssl-0.9.7b",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.7: openssl-0.9.7 (2002-12-30) is the declared ABI reference for openssl-0.9.7b",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.7",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.7b"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.7-openssl-0.9.7c",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.7: openssl-0.9.7 (2002-12-30) is the declared ABI reference for openssl-0.9.7c",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.7",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.7c"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.7-openssl-0.9.7d",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.7: openssl-0.9.7 (2002-12-30) is the declared ABI reference for openssl-0.9.7d",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.7",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.7d"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.7-openssl-0.9.7e",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.7: openssl-0.9.7 (2002-12-30) is the declared ABI reference for openssl-0.9.7e",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.7",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.7e"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.7-openssl-0.9.7f",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.7: openssl-0.9.7 (2002-12-30) is the declared ABI reference for openssl-0.9.7f",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.7",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.7f"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.7-openssl-0.9.7g",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.7: openssl-0.9.7 (2002-12-30) is the declared ABI reference for openssl-0.9.7g",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.7",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.7g"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.7-openssl-0.9.7h",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.7: openssl-0.9.7 (2002-12-30) is the declared ABI reference for openssl-0.9.7h",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.7",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.7h"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.7-openssl-0.9.7i",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.7: openssl-0.9.7 (2002-12-30) is the declared ABI reference for openssl-0.9.7i",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.7",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.7i"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.7-openssl-0.9.7j",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.7: openssl-0.9.7 (2002-12-30) is the declared ABI reference for openssl-0.9.7j",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.7",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.7j"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.7-openssl-0.9.7k",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.7: openssl-0.9.7 (2002-12-30) is the declared ABI reference for openssl-0.9.7k",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.7",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.7k"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.7-openssl-0.9.7l",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.7: openssl-0.9.7 (2002-12-30) is the declared ABI reference for openssl-0.9.7l",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.7",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.7l"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.7-openssl-0.9.7m",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.7: openssl-0.9.7 (2002-12-30) is the declared ABI reference for openssl-0.9.7m",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.7",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.7m"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8a",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8a",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8a"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8b",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8b",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8b"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8c",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8c",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8c"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8d",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8d",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8d"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8e",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8e",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8e"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8f",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8f",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8f"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8g",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8g",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8g"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8h",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8h",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8h"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8i",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8i",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8i"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8j",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8j",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8j"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8k",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8k",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8k"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8l",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8l",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8l"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8m",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8m",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8m"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8n",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8n",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8n"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8o",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8o",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8o"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8p",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8p",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8p"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8q",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8q",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8q"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8r",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8r",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8r"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8s",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8s",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8s"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8t",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8t",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8t"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8u",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8u",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8u"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8v",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8v",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8v"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8w",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8w",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8w"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8x",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8x",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8x"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8y",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8y",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8y"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8za",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8za",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8za"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8zb",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8zb",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8zb"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8zc",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8zc",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8zc"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8zd",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8zd",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8zd"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8ze",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8ze",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8ze"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8zf",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8zf",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8zf"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8zg",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8zg",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8zg"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-0.9.8-openssl-0.9.8zh",
+        "evidence": [
+          "upstream's declared compatibility family openssl-0.9.8: openssl-0.9.8 (2005-07-05) is the declared ABI reference for openssl-0.9.8zh",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-0.9.8",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-0.9.8zh"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0a",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0a",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0a"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0b",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0b",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0b"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0c",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0c",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0c"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0d",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0d",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0d"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0e",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0e",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0e"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0f",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0f",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0f"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0g",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0g",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0g"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0h",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0h",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0h"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0i",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0i",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0i"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0j",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0j",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0j"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0k",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0k",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0k"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0l",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0l",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0l"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0m",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0m",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0m"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0n",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0n",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0n"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0o",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0o",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0o"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0p",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0p",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0p"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0q",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0q",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0q"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0r",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0r",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0r"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0s",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0s",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0s"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.0-openssl-1.0.0t",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.0: openssl-1.0.0 (2010-03-29) is the declared ABI reference for openssl-1.0.0t",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.0t"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1a",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1a",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1a"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1b",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1b",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1b"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1c",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1c",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1c"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1d",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1d",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1d"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1e",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1e",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1e"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1f",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1f",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1f"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1g",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1g",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1g"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1h",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1h",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1h"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1i",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1i",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1i"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1j",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1j",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1j"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1k",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1k",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1k"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1l",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1l",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1l"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1m",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1m",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1m"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1n",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1n",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1n"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1o",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1o",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1o"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1p",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1p",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1p"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1q",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1q",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1q"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1r",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1r",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1r"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1s",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1s",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1s"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1t",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1t",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1t"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.1-openssl-1.0.1u",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.1: openssl-1.0.1 (2012-03-14) is the declared ABI reference for openssl-1.0.1u",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.1u"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2a",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2a",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2a"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2b",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2b",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2b"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2c",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2c",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2c"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2d",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2d",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2d"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2e",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2e",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2e"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2f",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2f",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2f"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2g",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2g",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2g"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2h",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2h",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2h"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2i",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2i",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2i"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2j",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2j",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2j"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2k",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2k",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2k"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2l",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2l",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2l"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2m",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2m",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2m"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2n",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2n",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2n"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2o",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2o",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2o"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2p",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2p",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2p"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2q",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2q",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2q"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2r",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2r",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2r"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2s",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2s",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2s"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2t",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2t",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2t"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.0.2-openssl-1.0.2u",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.0.2: openssl-1.0.2 (2015-01-22) is the declared ABI reference for openssl-1.0.2u",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.0.2",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.0.2u"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.0-openssl-1.1.0a",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.0: openssl-1.1.0 (2016-08-25) is the declared ABI reference for openssl-1.1.0a",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.0a"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.0-openssl-1.1.0b",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.0: openssl-1.1.0 (2016-08-25) is the declared ABI reference for openssl-1.1.0b",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.0b"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.0-openssl-1.1.0c",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.0: openssl-1.1.0 (2016-08-25) is the declared ABI reference for openssl-1.1.0c",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.0c"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.0-openssl-1.1.0d",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.0: openssl-1.1.0 (2016-08-25) is the declared ABI reference for openssl-1.1.0d",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.0d"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.0-openssl-1.1.0e",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.0: openssl-1.1.0 (2016-08-25) is the declared ABI reference for openssl-1.1.0e",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.0e"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.0-openssl-1.1.0f",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.0: openssl-1.1.0 (2016-08-25) is the declared ABI reference for openssl-1.1.0f",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.0f"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.0-openssl-1.1.0g",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.0: openssl-1.1.0 (2016-08-25) is the declared ABI reference for openssl-1.1.0g",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.0g"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.0-openssl-1.1.0h",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.0: openssl-1.1.0 (2016-08-25) is the declared ABI reference for openssl-1.1.0h",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.0h"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.0-openssl-1.1.0i",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.0: openssl-1.1.0 (2016-08-25) is the declared ABI reference for openssl-1.1.0i",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.0i"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.0-openssl-1.1.0j",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.0: openssl-1.1.0 (2016-08-25) is the declared ABI reference for openssl-1.1.0j",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.0j"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.0-openssl-1.1.0k",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.0: openssl-1.1.0 (2016-08-25) is the declared ABI reference for openssl-1.1.0k",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.0k"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.0-openssl-1.1.0l",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.0: openssl-1.1.0 (2016-08-25) is the declared ABI reference for openssl-1.1.0l",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.0l"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1a",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1a",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1a"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1b",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1b",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1b"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1c",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1c",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1c"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1d",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1d",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1d"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1e",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1e",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1e"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1f",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1f",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1f"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1g",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1g",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1g"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1h",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1h",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1h"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1i",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1i",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1i"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1j",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1j",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1j"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1k",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1k",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1k"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1l",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1l",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1l"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1m",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1m",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1m"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1n",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1n",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1n"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1o",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1o",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1o"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1p",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1p",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1p"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1q",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1q",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1q"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1r",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1r",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1r"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1s",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1s",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1s"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1t",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1t",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1t"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1u",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1u",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1u"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1v",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1v",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1v"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-1.1.1-openssl-1.1.1w",
+        "evidence": [
+          "upstream's declared compatibility family openssl-1.1.1: openssl-1.1.1 (2018-09-11) is the declared ABI reference for openssl-1.1.1w",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-1.1.1",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-1.1.1w"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.1",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.1",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.1"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.2",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.2",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.2"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.3",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.3",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.3"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.4",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.4",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.4"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.5",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.5",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.5"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.6",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.6",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.6"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.7",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.7",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.7"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.8",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.8",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.8"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.9",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.9",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.9"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.10",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.10",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.10"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.11",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.11",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.11"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.12",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.12",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.12"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.13",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.13",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.13"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.14",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.14",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.14"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.15",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.15",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.15"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.16",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.16",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.16"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.17",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.17",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.17"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.18",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.18",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.18"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.19",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.19",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.19"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.20",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.20",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.20"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.21",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.21",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.21"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.0.0-openssl-3.0.22",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.0: openssl-3.0.0 (2021-09-07) is the declared ABI reference for openssl-3.0.22",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.0.22"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.1.0-openssl-3.1.1",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.1: openssl-3.1.0 (2023-03-14) is the declared ABI reference for openssl-3.1.1",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.1.1"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.1.0-openssl-3.1.2",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.1: openssl-3.1.0 (2023-03-14) is the declared ABI reference for openssl-3.1.2",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.1.2"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.1.0-openssl-3.1.3",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.1: openssl-3.1.0 (2023-03-14) is the declared ABI reference for openssl-3.1.3",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.1.3"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.1.0-openssl-3.1.4",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.1: openssl-3.1.0 (2023-03-14) is the declared ABI reference for openssl-3.1.4",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.1.4"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.1.0-openssl-3.1.5",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.1: openssl-3.1.0 (2023-03-14) is the declared ABI reference for openssl-3.1.5",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.1.5"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.1.0-openssl-3.1.6",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.1: openssl-3.1.0 (2023-03-14) is the declared ABI reference for openssl-3.1.6",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.1.6"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.1.0-openssl-3.1.7",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.1: openssl-3.1.0 (2023-03-14) is the declared ABI reference for openssl-3.1.7",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.1.7"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.1.0-openssl-3.1.8",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.1: openssl-3.1.0 (2023-03-14) is the declared ABI reference for openssl-3.1.8",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.1.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.1.8"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.2.0-openssl-3.2.1",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.2: openssl-3.2.0 (2023-11-23) is the declared ABI reference for openssl-3.2.1",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.2.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.2.1"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.2.0-openssl-3.2.2",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.2: openssl-3.2.0 (2023-11-23) is the declared ABI reference for openssl-3.2.2",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.2.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.2.2"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.2.0-openssl-3.2.3",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.2: openssl-3.2.0 (2023-11-23) is the declared ABI reference for openssl-3.2.3",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.2.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.2.3"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.2.0-openssl-3.2.4",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.2: openssl-3.2.0 (2023-11-23) is the declared ABI reference for openssl-3.2.4",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.2.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.2.4"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.2.0-openssl-3.2.5",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.2: openssl-3.2.0 (2023-11-23) is the declared ABI reference for openssl-3.2.5",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.2.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.2.5"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.2.0-openssl-3.2.6",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.2: openssl-3.2.0 (2023-11-23) is the declared ABI reference for openssl-3.2.6",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.2.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.2.6"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.3.0-openssl-3.3.1",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.3: openssl-3.3.0 (2024-04-09) is the declared ABI reference for openssl-3.3.1",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.3.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.3.1"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.3.0-openssl-3.3.2",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.3: openssl-3.3.0 (2024-04-09) is the declared ABI reference for openssl-3.3.2",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.3.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.3.2"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.3.0-openssl-3.3.3",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.3: openssl-3.3.0 (2024-04-09) is the declared ABI reference for openssl-3.3.3",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.3.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.3.3"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.3.0-openssl-3.3.4",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.3: openssl-3.3.0 (2024-04-09) is the declared ABI reference for openssl-3.3.4",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.3.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.3.4"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.3.0-openssl-3.3.5",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.3: openssl-3.3.0 (2024-04-09) is the declared ABI reference for openssl-3.3.5",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.3.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.3.5"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.3.0-openssl-3.3.6",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.3: openssl-3.3.0 (2024-04-09) is the declared ABI reference for openssl-3.3.6",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.3.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.3.6"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.3.0-openssl-3.3.7",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.3: openssl-3.3.0 (2024-04-09) is the declared ABI reference for openssl-3.3.7",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.3.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.3.7"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.4.0-openssl-3.4.1",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.4: openssl-3.4.0 (2024-10-22) is the declared ABI reference for openssl-3.4.1",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.4.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.4.1"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.4.0-openssl-3.4.2",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.4: openssl-3.4.0 (2024-10-22) is the declared ABI reference for openssl-3.4.2",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.4.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.4.2"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.4.0-openssl-3.4.3",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.4: openssl-3.4.0 (2024-10-22) is the declared ABI reference for openssl-3.4.3",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.4.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.4.3"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.4.0-openssl-3.4.4",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.4: openssl-3.4.0 (2024-10-22) is the declared ABI reference for openssl-3.4.4",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.4.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.4.4"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.4.0-openssl-3.4.5",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.4: openssl-3.4.0 (2024-10-22) is the declared ABI reference for openssl-3.4.5",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.4.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.4.5"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.4.0-openssl-3.4.6",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.4: openssl-3.4.0 (2024-10-22) is the declared ABI reference for openssl-3.4.6",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.4.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.4.6"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.4.0-openssl-3.4.7",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.4: openssl-3.4.0 (2024-10-22) is the declared ABI reference for openssl-3.4.7",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.4.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.4.7"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.4.0-openssl-3.4.8",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.4: openssl-3.4.0 (2024-10-22) is the declared ABI reference for openssl-3.4.8",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.4.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.4.8"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.5.0-openssl-3.5.1",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.5: openssl-3.5.0 (2025-04-08) is the declared ABI reference for openssl-3.5.1",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.5.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.5.1"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.5.0-openssl-3.5.2",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.5: openssl-3.5.0 (2025-04-08) is the declared ABI reference for openssl-3.5.2",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.5.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.5.2"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.5.0-openssl-3.5.3",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.5: openssl-3.5.0 (2025-04-08) is the declared ABI reference for openssl-3.5.3",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.5.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.5.3"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.5.0-openssl-3.5.4",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.5: openssl-3.5.0 (2025-04-08) is the declared ABI reference for openssl-3.5.4",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.5.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.5.4"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.5.0-openssl-3.5.5",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.5: openssl-3.5.0 (2025-04-08) is the declared ABI reference for openssl-3.5.5",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.5.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.5.5"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.5.0-openssl-3.5.6",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.5: openssl-3.5.0 (2025-04-08) is the declared ABI reference for openssl-3.5.6",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.5.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.5.6"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.5.0-openssl-3.5.7",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.5: openssl-3.5.0 (2025-04-08) is the declared ABI reference for openssl-3.5.7",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.5.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.5.7"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.5.0-openssl-3.5.8",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.5: openssl-3.5.0 (2025-04-08) is the declared ABI reference for openssl-3.5.8",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.5.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.5.8"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.5.0-openssl-3.5.9",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.5: openssl-3.5.0 (2025-04-08) is the declared ABI reference for openssl-3.5.9",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.5.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.5.9"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.6.0-openssl-3.6.1",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.6: openssl-3.6.0 (2025-10-01) is the declared ABI reference for openssl-3.6.1",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.6.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.6.1"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.6.0-openssl-3.6.2",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.6: openssl-3.6.0 (2025-10-01) is the declared ABI reference for openssl-3.6.2",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.6.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.6.2"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.6.0-openssl-3.6.3",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.6: openssl-3.6.0 (2025-10-01) is the declared ABI reference for openssl-3.6.3",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.6.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.6.3"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.6.0-openssl-3.6.4",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.6: openssl-3.6.0 (2025-10-01) is the declared ABI reference for openssl-3.6.4",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.6.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.6.4"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-3.6.0-openssl-3.6.5",
+        "evidence": [
+          "upstream's declared compatibility family openssl-3.6: openssl-3.6.0 (2025-10-01) is the declared ABI reference for openssl-3.6.5",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-3.6.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-3.6.5"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-4.0.0-openssl-4.0.1",
+        "evidence": [
+          "upstream's declared compatibility family openssl-4.0: openssl-4.0.0 (2026-04-14) is the declared ABI reference for openssl-4.0.1",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-4.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-4.0.1"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-4.0.0-openssl-4.0.2",
+        "evidence": [
+          "upstream's declared compatibility family openssl-4.0: openssl-4.0.0 (2026-04-14) is the declared ABI reference for openssl-4.0.2",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-4.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-4.0.2"
+      },
+      {
+        "declared": true,
+        "dimension": "abi",
+        "direction": "forward",
+        "edge_id": "L-declared_abi_compatibility-openssl-4.0.0-openssl-4.0.3",
+        "evidence": [
+          "upstream's declared compatibility family openssl-4.0: openssl-4.0.0 (2026-04-14) is the declared ABI reference for openssl-4.0.3",
+          "a declared relationship (upstream's ABI promise), never a candidate measurement"
+        ],
+        "from_id": "openssl-4.0.0",
+        "kind": "declared_abi_compatibility",
+        "metadata_provenance": [
+          "forensics/multitrack/release-archaeology.json",
+          "https://openssl-library.org/news/timeline/",
+          "https://openssl-library.org/policies/releasestrat/",
+          "docs/ABI_POLICY.md"
+        ],
+        "to_id": "openssl-4.0.3"
       }
     ],
     "root": "openssl-0.9.1c",
