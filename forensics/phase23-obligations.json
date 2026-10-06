@@ -30,10 +30,10 @@
         "closure": "the `RT-ATLAS-PARAMETERIZATION` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-ATLAS-PARAMETERIZATION is pending",
+        "measurement_state": "complete",
+        "observation": "RT-ATLAS-PARAMETERIZATION is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "atlas-parameterization",
         "what": "the Phase 1 / Phase 22 archaeology generators generalized to be parameterized by authority identity -- one parameterized generator rather than a `phase1_old.py` per version -- with the current 3.6.4 atlas proved byte-identical under the parameterization"
@@ -212,8 +212,8 @@
       "contract_units": 17,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 2,
-      "open_in_this_stratum": 15,
+      "implemented": 3,
+      "open_in_this_stratum": 14,
       "owned": 17,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -249,12 +249,12 @@
     {
       "name": "phase-23-plan",
       "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
-      "sha256": "52289dc0d9aa8a60b624a40042533adf440edf9cc148cb4fcb73156f1131f5df"
+      "sha256": "82b5343c3d850d57bed5d1f61ce3553dd7cb3826c7a67fa58183b3dccc69f60b"
     },
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "9c836800694f09d6057acf52072058cc2d1fc5ffefa77821b542035a57cc13dd"
+      "sha256": "839748b37301c0b0644207b3c21fdd4e60c0596c40bee15441c27326dc5c33fc"
     }
   ],
   "kind": "phase23-obligations",

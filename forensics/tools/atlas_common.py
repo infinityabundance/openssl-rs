@@ -40,7 +40,9 @@ CUSTOMER_ROOT = FORENSICS
 REGISTRY = AUTH_ROOT / "AUTHORITIES.json"
 BUILD_RECORDS = ATLAS / "BUILD_RECORDS.json"
 
-PRODUCTION_AUTHORITY = "openssl-3.6.4-production"
+# The Phase-23 multitrack plane: the committed default-authority alias and the historical
+# acquisition / build registries live here.
+MULTITRACK = FORENSICS / "multitrack"
 
 # A ledger whose obligations are not exports declares its `body.unit` here, and the tools that
 # partition the *export* universe (`court_coverage.py`, `ownership_audit.py`) skip it. Phase 22
@@ -143,6 +145,52 @@ class EvidenceError(AtlasError):
     evidence says two different things", which are different failures with different
     repairs.
     """
+
+
+# ---------------------------------------------------------------------------
+# the default-authority alias (Phase 23.3)
+# ---------------------------------------------------------------------------
+#
+# The Phase 1 / Phase 22 archaeology generators are parameterized by authority identity -- there
+# is one generator per plane, not a `phase1_old.py` per version -- and a generator invoked with no
+# `--authority` selects the **maintained** authority through this committed alias. The default is
+# therefore a file a reader can review, and it is deliberately **not** the catalogue's
+# `latest-stable` alias (`openssl-4.0.3`, a newer compatibility profile the candidate does not
+# target) and not "the newest admitted build". See forensics/multitrack/default-authority.json.
+#
+# `PRODUCTION_AUTHORITY` is derived from the alias rather than typed a second time, so the
+# thirty-nine or so call sites that default to it cannot drift from the one committed choice.
+DEFAULT_AUTHORITY_FILE = MULTITRACK / "default-authority.json"
+
+
+def load_default_authority() -> dict:
+    """The committed default-authority alias, or a fail-closed error.
+
+    An absent or malformed alias is fatal rather than defaulted to a literal: a missing file
+    would otherwise silently re-introduce the very second source of truth this file removes.
+    """
+    if not DEFAULT_AUTHORITY_FILE.is_file():
+        raise AtlasError(
+            f"the default-authority alias {rel(DEFAULT_AUTHORITY_FILE)} is absent; the "
+            f"parameterized generators have no explicit default"
+        )
+    doc = json.loads(DEFAULT_AUTHORITY_FILE.read_text(encoding="utf-8"))
+    body = doc.get("body", doc)
+    authority_id = body.get("authority_id")
+    if not isinstance(authority_id, str) or not authority_id:
+        raise AtlasError(
+            f"the default-authority alias {rel(DEFAULT_AUTHORITY_FILE)} names no authority_id"
+        )
+    return body
+
+
+def default_authority_id() -> str:
+    """The authority id the parameterized generators default to, read from the committed alias."""
+    return str(load_default_authority()["authority_id"])
+
+
+# The maintained authority. Derived from the committed alias, never typed twice (D538).
+PRODUCTION_AUTHORITY = default_authority_id()
 
 
 # ---------------------------------------------------------------------------
@@ -380,21 +428,96 @@ def authority_source(authority_id: str) -> Path:
     for a in reg["authorities"]:
         if a["id"] == authority_id:
             return REPO_ROOT / a["source_tree"]["path"]
+    hist = historical_authority(authority_id)
+    if hist is not None:
+        return hist.source
     raise AtlasError(f"authority not admitted: {authority_id}")
 
 
 def authority_prefix(authority_id: str) -> Path:
     builds = load_build_records()
-    if authority_id not in builds:
-        raise AtlasError(f"authority not built: {authority_id}")
-    return REPO_ROOT / builds[authority_id]["prefix"]
+    if authority_id in builds:
+        return REPO_ROOT / builds[authority_id]["prefix"]
+    hist = historical_authority(authority_id)
+    if hist is not None:
+        return hist.prefix
+    raise AtlasError(f"authority not built: {authority_id}")
 
 
 def authority_build_dir(authority_id: str) -> Path:
     builds = load_build_records()
-    if authority_id not in builds:
-        raise AtlasError(f"authority not built: {authority_id}")
-    return REPO_ROOT / builds[authority_id]["build_dir"]
+    if authority_id in builds:
+        return REPO_ROOT / builds[authority_id]["build_dir"]
+    # A historical authority is built by `historical_build.py`, which installs under
+    # authorities/build/<id> and records only the prefix; the build directory follows the
+    # venue's own convention, and is present whenever the historical build is present.
+    hist = historical_authority(authority_id)
+    if hist is not None:
+        return AUTH_ROOT / "build" / hist.id
+    raise AtlasError(f"authority not built: {authority_id}")
+
+
+# ---------------------------------------------------------------------------
+# historical authorities (the separately pinned venue)
+# ---------------------------------------------------------------------------
+#
+# Phase 23.2 admits historical releases as archaeology in a separate venue; their acquisition and
+# build records are committed (`historical-acquisition.json`, `historical-build-receipts.json`)
+# while the source tree and prefix they describe are local build products, exactly as for the
+# court authorities. `resolve_authority` therefore reads both registries, so the same parameterized
+# generator serves an admitted court authority and a built historical authority without a bespoke
+# script. `all_authority_ids` keeps its old court-only default so the atlas `--all` walk is
+# unchanged; `all_known_authority_ids` is the merged set.
+HISTORICAL_ACQUISITION = MULTITRACK / "historical-acquisition.json"
+HISTORICAL_BUILD_RECEIPTS = MULTITRACK / "historical-build-receipts.json"
+
+
+def _load_json_or_empty(path: Path) -> dict:
+    if not path.is_file():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def historical_authority(authority_id: str) -> "Optional[HistoricalAuthority]":
+    """The historical authority for an id, or `None` when the registries do not name it.
+
+    A release is an authority only once it is both acquired and built: an acquisition with no
+    build receipt has no prefix for a court to be run against, so it is not resolved.
+    """
+    acq_doc = _load_json_or_empty(HISTORICAL_ACQUISITION)
+    receipts_doc = _load_json_or_empty(HISTORICAL_BUILD_RECEIPTS)
+    rec = next((a for a in acq_doc.get("acquisitions", []) if a.get("id") == authority_id),
+               None)
+    if rec is None:
+        return None
+    receipt = next((r for r in receipts_doc.get("receipts", []) if r.get("id") == authority_id),
+                   None)
+    if receipt is None or receipt.get("outcome") != "built":
+        return None
+    return HistoricalAuthority(
+        id=rec["id"],
+        release_id=rec["release_id"],
+        version=rec["version"],
+        source=REPO_ROOT / rec["source_tree"]["path"],
+        prefix=REPO_ROOT / "forensics" / "authorities" / "prefix" / rec["id"],
+    )
+
+
+@dataclass
+class HistoricalAuthority:
+    """A historical authority resolved from its committed acquisition + build receipts."""
+
+    id: str
+    release_id: str
+    version: str
+    source: Path
+    prefix: Path
+
+
+def historical_authority_ids() -> list[str]:
+    """The historical authorities that are both acquired and built."""
+    acq_doc = _load_json_or_empty(HISTORICAL_ACQUISITION)
+    return sorted(a["id"] for a in acq_doc.get("acquisitions", []) if a.get("id"))
 
 
 @dataclass
@@ -416,10 +539,14 @@ class Authority:
 
     def dso(self, name: str) -> Path:
         # Prefer the versioned runtime object (libcrypto.so.3), falling back to
-        # the linker name (libcrypto.so).
+        # the linker name (libcrypto.so). A historical authority's soname carries its own era
+        # (`libcrypto.so.0.9.8`), so the glob is the last resort rather than a typed list.
         for cand in (f"{name}.so.3", f"{name}.so"):
             p = self.libdir / cand
             if p.exists() or p.is_symlink():
+                return p
+        for p in sorted(self.libdir.glob(f"{name}.so.*")):
+            if not p.is_symlink():
                 return p
         raise AtlasError(f"{self.id}: {name} not found under {self.libdir}")
 
@@ -427,20 +554,81 @@ class Authority:
 def resolve_authority(authority_id: str) -> Authority:
     reg = load_registry()
     rec = next((a for a in reg["authorities"] if a["id"] == authority_id), None)
-    if rec is None:
-        raise AtlasError(f"authority not admitted: {authority_id}")
-    return Authority(
-        id=rec["id"],
-        version=rec["version"],
-        role=rec["role"],
-        source=REPO_ROOT / rec["source_tree"]["path"],
-        prefix=authority_prefix(authority_id),
-    )
+    if rec is not None:
+        return Authority(
+            id=rec["id"],
+            version=rec["version"],
+            role=rec["role"],
+            source=REPO_ROOT / rec["source_tree"]["path"],
+            prefix=authority_prefix(authority_id),
+        )
+    hist = historical_authority(authority_id)
+    if hist is not None:
+        return Authority(
+            id=hist.id,
+            version=hist.version,
+            role="historical",
+            source=hist.source,
+            prefix=hist.prefix,
+        )
+    raise AtlasError(f"authority not admitted: {authority_id}")
 
 
-def all_authority_ids() -> list[str]:
+def all_authority_ids(include_historical: bool = False) -> list[str]:
+    """The authority ids a generator's `--all` walk covers.
+
+    The default is the admitted court authorities, so `--all` in the Phase 1 / Phase 22 pipeline
+    keeps its contract and does not silently acquire a historical release. `include_historical`
+    merges the built historical authorities in, which is what the Phase-23 parameterization proof
+    reads.
+    """
     reg = load_registry()
-    return sorted(a["id"] for a in reg["authorities"])
+    ids = {a["id"] for a in reg["authorities"]}
+    if include_historical:
+        ids |= set(historical_authority_ids())
+    return sorted(ids)
+
+
+def all_known_authority_ids() -> list[str]:
+    """Every authority a court can be run against: the court-admitted set plus the historical."""
+    return all_authority_ids(include_historical=True)
+
+
+# ---------------------------------------------------------------------------
+# one place for a generator's authority selection
+# ---------------------------------------------------------------------------
+
+def add_authority_selector(parser: "Any", *, multi: bool = False) -> None:
+    """Add the standard authority selection to an `argparse` parser.
+
+    A single-authority generator adds `--authority` (defaulting through the committed alias); a
+    multi-authority generator additionally adds `--all`. Centralised here so the default is the
+    alias everywhere, and a generator cannot quietly choose "the newest".
+    """
+    if multi:
+        parser.add_argument("--authority", action="append", default=[],
+                            help="authority id to process (repeatable)")
+        parser.add_argument("--all", action="store_true",
+                            help="process every admitted court authority")
+    else:
+        parser.add_argument("--authority", default=None,
+                            help="authority id (default: the committed default-authority alias)")
+
+
+def selected_authority(args: "Any") -> str:
+    """The one authority a single-authority generator was asked for."""
+    aid = getattr(args, "authority", None)
+    return str(aid) if aid else default_authority_id()
+
+
+def selected_authorities(args: "Any") -> list[str]:
+    """The authorities a multi-authority generator was asked for."""
+    ids = list(getattr(args, "authority", []) or [])
+    if getattr(args, "all", False):
+        ids = all_authority_ids()
+    if not ids:
+        return [default_authority_id()]
+    return sorted(set(ids))
 
 
 # ---------------------------------------------------------------------------

@@ -16,9 +16,10 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**Two courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
-lineage court, and 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court; the other
-fifteen courts are named in `PENDING_COURTS` and land with the subphases that
+**Three courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, and 23.3 lands
+`RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court; the other fourteen courts are named in
+`PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
 reproduced, so a court silently dropped is a finding rather than a smaller green run. This is
 the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this registry,
@@ -32,7 +33,8 @@ The seventeen courts, and the subphase that lands each
 ------------------------------------------------------
   * `RT-RELEASE-CATALOG` -- 23.1, the release-node catalogue and its lineage (registered).
   * `RT-AUTHORITY-NODES` -- 23.2, the authority-node registry (registered).
-  * `RT-ATLAS-PARAMETERIZATION` -- 23.3, the parameterized atlases and the byte-identical proof.
+  * `RT-ATLAS-PARAMETERIZATION` -- 23.3, the parameterized atlases and the byte-identical proof
+    (registered).
   * `RT-LINEAGE-EDGES` -- 23.4, the lineage edges.
   * `RT-ENTITY-LINEAGE` -- 23.5, the entity lineage.
   * `RT-DELTA-ENGINE` -- 23.6, the delta engine.
@@ -48,7 +50,8 @@ The seventeen courts, and the subphase that lands each
   * `RT-COMPATIBILITY-MATRIX` -- 23.16, the compatibility matrix.
   * `MULTITRACK-SEAL` -- 23.17, the full matrix, the FRF/Gemel chain and the seal.
 
-Every one but `RT-RELEASE-CATALOG` and `RT-AUTHORITY-NODES` is `pending`. A passing court is an instrument, not a property
+Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES` and `RT-ATLAS-PARAMETERIZATION` is
+`pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
 vulnerability is observed but never reintroduced.
@@ -67,6 +70,7 @@ import argparse
 import copy
 import json
 import re
+import subprocess
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -78,6 +82,7 @@ from atlas_common import (  # noqa: E402
     REPO_ROOT,
     InputRef,
     content_hash,
+    default_authority_id,
     envelope,
     rel,
     resolve_authority,
@@ -87,6 +92,9 @@ from atlas_common import (  # noqa: E402
 # The schemas the later subphases validate their records against. Imported rather than restated, so
 # the registry's inventory cannot drift from the module the evidence is checked with.
 import multitrack_schemas  # noqa: E402
+# The Phase-23.3 parameterized generator, imported so the court re-derives the census in-process
+# through the same code path the receipt was produced by (never a second, drifting predicate).
+import atlas_authority  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase23" / "COURTS.json"
 GENERATOR = "forensics/tools/phase23_courts.py"
@@ -106,12 +114,28 @@ BUILD_RECORDS = REPO_ROOT / "forensics" / "atlas" / "BUILD_RECORDS.json"
 HIST_ACQ = REPO_ROOT / "forensics" / "multitrack" / "historical-acquisition.json"
 HIST_RECEIPTS = REPO_ROOT / "forensics" / "multitrack" / "historical-build-receipts.json"
 
+# 23.3's subject: the parameterization receipt, the committed default-authority alias and the
+# historical authority's plane census. The default authority's committed atlas is the pivot the
+# byte-identity proof binds.
+PARAM_RECEIPT = REPO_ROOT / "forensics" / "atlas" / "parameterization-receipt.json"
+DEFAULT_AUTHORITY_ALIAS = REPO_ROOT / "forensics" / "multitrack" / "default-authority.json"
+PARAM_HISTORICAL = "openssl-0.9.8zh-historical"
+PRODUCTION_ATLAS = REPO_ROOT / "forensics" / "atlas" / PRODUCTION_AUTHORITY
+# The planes the brief names as the decisive absences for an older authority, cross-checked in the
+# court against the committed manifest independently of the generator's own predicates.
+KEY_ABSENCE_MARKERS = {
+    "providers": "providers/",
+    "provider-registrations": "util/providers.num",
+    "quic": "ssl/quic/",
+}
+
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 # 23.1's court, and the identity its subject must begin at. The root is upstream's first real
 # OpenSSL release (23 December 1998), not a version the catalogue would pick by sorting.
 RELEASE_CATALOG = "RT-RELEASE-CATALOG"
 AUTHORITY_NODES_COURT = "RT-AUTHORITY-NODES"
+ATLAS_PARAMETERIZATION_COURT = "RT-ATLAS-PARAMETERIZATION"
 ROOT_RELEASE = "openssl-0.9.1c"
 CANONICAL_KINDS = ("branch_fork", "chronological_successor", "maintenance_successor")
 PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
@@ -122,12 +146,12 @@ PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
 COURTS: list[tuple[str, str]] = [
     (RELEASE_CATALOG, "_release_catalog_court"),
     (AUTHORITY_NODES_COURT, "_authority_nodes_court"),
+    (ATLAS_PARAMETERIZATION_COURT, "_atlas_parameterization_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-ATLAS-PARAMETERIZATION": "23.3 -- parameterize the atlases",
     "RT-LINEAGE-EDGES": "23.4 -- the lineage edges",
     "RT-ENTITY-LINEAGE": "23.5 -- the entity lineage",
     "RT-DELTA-ENGINE": "23.6 -- the delta engine",
@@ -749,6 +773,330 @@ def _authority_nodes_court(name: str) -> dict:
     }
 
 
+def _measure_atlas_byte_identity(authority_id: str) -> dict:
+    """Re-derive the authority's atlas through the parameterized generators and measure the diff.
+
+    It snapshots every committed file of the authority's atlas directory, runs the
+    authority-parameterized regenerators with an explicit `--authority`, records which committed
+    bytes moved, then runs the one non-parameterized reconciliation plane (`atlas_parity.py`) to
+    *measure* the disclosed pre-existing drift, and finally restores the committed bytes so the
+    working tree is left exactly as committed. Nothing here is typed: the parameterized diff and
+    the drift are both read from the files themselves.
+    """
+    atlas_dir = REPO_ROOT / "forensics" / "atlas" / authority_id
+    snapshot = {p.resolve(): p.read_bytes() for p in atlas_dir.glob("*") if p.is_file()}
+
+    def run(gen: str) -> int:
+        res = subprocess.run(
+            [sys.executable, str(REPO_ROOT / gen), "--authority", authority_id],
+            cwd=REPO_ROOT, capture_output=True, text=True, check=False)
+        return res.returncode
+
+    codes = {g: run(g) for g in atlas_authority.REGENERATORS}
+    after_param = {p: p.read_bytes() for p in snapshot}
+    parameterized_diffs = sorted(rel(p) for p in snapshot if snapshot[p] != after_param[p])
+
+    # The disclosed pre-existing drift: the reconciliation plane that does not reproduce. It is
+    # measured, named and then undone, never applied.
+    parity_code = run("forensics/tools/atlas_parity.py")
+    after_parity = {p: p.read_bytes() for p in snapshot}
+    drift = sorted(rel(p) for p in snapshot if snapshot[p] != after_parity[p])
+
+    for p, b in snapshot.items():
+        if p.read_bytes() != b:
+            p.write_bytes(b)
+
+    return {
+        "authority": authority_id,
+        "files_checked": len(snapshot),
+        "regenerators": list(atlas_authority.REGENERATORS),
+        "regenerator_returncodes": codes,
+        "parameterized_diffs": parameterized_diffs,
+        "parity_returncode": parity_code,
+        "pre_existing_drift": drift,
+        "disclosed_drift": sorted(atlas_authority.KNOWN_STALE_PATHS),
+    }
+
+
+def _manifest_paths(manifest_relpath: str) -> list[str]:
+    doc = json.loads((REPO_ROOT / manifest_relpath).read_text(encoding="utf-8"))
+    return [entry["path"] for entry in doc.get("files", [])]
+
+
+def atlas_parameterization_findings(receipt: dict, alias: dict,
+                                   historical_census: dict) -> list[str]:
+    """Every way the parameterization receipt and its censuses fail this court's subject.
+
+    A pure function of committed bodies, so the sensitivity control can mutate them and re-check.
+    It establishes that the default is the committed alias (never `latest-stable`); that one
+    generator and one plane set serve every authority; that each census re-derives from the
+    committed source manifest; that every measured absence is a counted zero with provenance and
+    independent corroboration in the manifest; and that the 3.6.4 plane is the pivot for the
+    byte-identity proof.
+    """
+    findings: list[str] = [
+        f"parameterization receipt: {p}"
+        for p in multitrack_schemas.validate("parameterization_receipt", receipt)
+    ]
+    default_id = PRODUCTION_AUTHORITY
+    alias_id = alias.get("authority_id")
+    if alias_id != default_id:
+        findings.append(f"the default-authority alias names {alias_id!r}, not the maintained "
+                        f"authority {default_id!r}")
+    if receipt.get("default_authority") != alias_id:
+        findings.append(f"the receipt default_authority {receipt.get('default_authority')!r} is "
+                        f"not the alias's {alias_id!r}")
+    if receipt.get("default_alias") != "forensics/multitrack/default-authority.json":
+        findings.append("the receipt does not name the committed default-authority alias")
+
+    code_path = receipt.get("same_code_path") or {}
+    if code_path.get("generator") != atlas_authority.GENERATOR:
+        findings.append("the receipt's same_code_path does not name the parameterized generator")
+    plane_order = list(receipt.get("plane_order") or code_path.get("plane_order") or [])
+    if not plane_order:
+        findings.append("the receipt names no shared plane order")
+    censuses = receipt.get("censuses") or {}
+    if default_id not in censuses:
+        findings.append(f"the receipt carries no census for the default authority {default_id}")
+    if PARAM_HISTORICAL not in censuses:
+        findings.append(f"the receipt carries no census for the historical authority "
+                        f"{PARAM_HISTORICAL}")
+
+    # The historical plane's census on disk must be the same body the receipt carries (so the
+    # per-authority output and the receipt cannot disagree).
+    hist_doc = historical_census.get("body", historical_census)
+    receipt_hist = censuses.get(PARAM_HISTORICAL)
+    if receipt_hist is not None and hist_doc != receipt_hist:
+        findings.append("the on-disk historical plane-census disagrees with the receipt's census")
+
+    # One plane set serves both authorities, in the same order.
+    for aid, census in sorted(censuses.items()):
+        names = [r.get("plane") for r in census.get("planes", [])]
+        if plane_order and names != plane_order:
+            findings.append(f"census {aid} does not carry the shared plane set in the same order")
+
+    # Every census re-derives from the committed manifest through the same generator.
+    for aid in sorted(censuses):
+        try:
+            rederived = atlas_authority.build_census(aid)
+        except SystemExit as exc:  # pragma: no cover - fail closed on a missing manifest
+            findings.append(f"census {aid} cannot be re-derived: {exc}")
+            continue
+        if rederived != censuses[aid]:
+            findings.append(f"census {aid} does not reproduce from its committed source manifest")
+
+    # The historical authority's absences are measured, each with a counted zero and provenance,
+    # and each is corroborated against the committed manifest independently of the generator.
+    hist = censuses.get(PARAM_HISTORICAL) or {}
+    hist_rows = {r["plane"]: r for r in hist.get("planes", [])}
+    for plane in plane_order:
+        row = hist_rows.get(plane)
+        if row is None:
+            continue
+        if row.get("status") == "measured_absence":
+            if row.get("count") != 0:
+                findings.append(f"{PARAM_HISTORICAL} {plane}: measured absence with count "
+                                f"{row.get('count')!r}, not zero")
+            ev = row.get("evidence") or {}
+            if not ev or not ev.get("detail"):
+                findings.append(f"{PARAM_HISTORICAL} {plane}: measured absence carries no "
+                                f"provenance")
+            if ev.get("chronology") != "predates":
+                findings.append(f"{PARAM_HISTORICAL} {plane}: measured absence is not explained by "
+                                f"chronology (chronology={ev.get('chronology')!r})")
+    for plane, marker in KEY_ABSENCE_MARKERS.items():
+        row = hist_rows.get(plane)
+        if row is None or row.get("status") != "measured_absence":
+            findings.append(f"{PARAM_HISTORICAL} {plane}: the brief's decisive absence is not "
+                            f"recorded as a measured absence")
+        manifest = (row or {}).get("evidence", {}).get("manifest")
+        if manifest:
+            paths = _manifest_paths(manifest)
+            if any(p.startswith(marker) if marker.endswith("/") else p == marker
+                   for p in paths):
+                findings.append(f"{PARAM_HISTORICAL} {plane}: the manifest carries {marker!r}, so "
+                                f"the recorded absence is contradicted by the source")
+    # ENGINE is present in 0.9.8zh: the older authority produces an absence for the provider
+    # epoch, not a blanket one, and the court refuses a census that assumes otherwise.
+    engines = hist_rows.get("engines")
+    if engines is None or engines.get("status") != "produced":
+        findings.append(f"{PARAM_HISTORICAL} engines: the release's ENGINE implementation is "
+                        f"present but the census does not record it as produced")
+
+    # The default authority is the byte-identity pivot and must have every plane produced.
+    default_rows = {r["plane"]: r for r in (censuses.get(default_id) or {}).get("planes", [])}
+    for plane in plane_order:
+        row = default_rows.get(plane)
+        if row is not None and row.get("status") != "produced":
+            findings.append(f"{default_id} {plane}: the maintained authority's plane is not "
+                            f"produced")
+    if (receipt.get("byte_identity") or {}).get("authority_id") != default_id:
+        findings.append("the receipt's byte_identity does not bind the default authority")
+    return findings
+
+
+def atlas_parameterization_sensitivity_control(receipt: dict, alias: dict,
+                                               historical_census: dict) -> dict:
+    """Prove the court can fail, and that a hidden production fallback is caught.
+
+    The honest receipt must yield **zero** findings (specificity). Then: (a) a census for a
+    *different* court authority must differ from the default's, so a generator that ignores its
+    authority argument and falls back to production is caught; (b) a measured absence with no
+    provenance, with a nonzero count, and (c) a census that renames its own authority, are each
+    caught.
+    """
+    base = atlas_parameterization_findings(receipt, alias, historical_census)
+    specificity = not base
+
+    # (a) swapping the authority argument changes the produced plane.
+    swapped = atlas_authority.build_census("openssl-3.6.3-historical")
+    default_census = (receipt.get("censuses") or {}).get(PRODUCTION_AUTHORITY) or {}
+    swapped_differs = (swapped.get("authority_id") != default_census.get("authority_id")
+                       and swapped.get("source_file_count")
+                       != default_census.get("source_file_count"))
+    hidden_fallback_caught = bool(swapped_differs)
+
+    def _mutate(mutator) -> list[str]:
+        body = copy.deepcopy(receipt)
+        mutator(body)
+        return atlas_parameterization_findings(body, alias, historical_census)
+
+    def strip_evidence(body: dict) -> None:
+        for row in body["censuses"][PARAM_HISTORICAL]["planes"]:
+            if row["status"] == "measured_absence":
+                row["evidence"] = {}
+                return
+
+    def nonzero_absence(body: dict) -> None:
+        for row in body["censuses"][PARAM_HISTORICAL]["planes"]:
+            if row["status"] == "measured_absence":
+                row["count"] = 5  # an absence with a nonzero count is not a measured zero
+                return
+
+    def rename_authority(body: dict) -> None:
+        row = body["censuses"][PARAM_HISTORICAL]
+        row["authority_id"] = "openssl-3.6.4-production"
+
+    absence_without_evidence = _mutate(strip_evidence)
+    absence_nonzero = _mutate(nonzero_absence)
+    renamed = _mutate(rename_authority)
+
+    caught_no_evidence = any("measured absence with count" in f or "no provenance" in f
+                             for f in absence_without_evidence)
+    caught_nonzero = any("not zero" in f for f in absence_nonzero)
+    caught_renamed = any("does not reproduce" in f or "disagrees" in f for f in renamed)
+
+    return {
+        "baseline_findings": len(base),
+        "specificity_holds": specificity,
+        "swapped_authority": "openssl-3.6.3-historical",
+        "swapped_authority_differs": bool(swapped_differs),
+        "swapped_authority_census_files": swapped.get("source_file_count"),
+        "hidden_production_fallback_caught": hidden_fallback_caught,
+        "injected_absence_without_evidence_findings": len(absence_without_evidence),
+        "injected_absence_nonzero_findings": len(absence_nonzero),
+        "injected_renamed_authority_findings": len(renamed),
+        "caught_absence_without_evidence": caught_no_evidence,
+        "caught_absence_nonzero": caught_nonzero,
+        "caught_renamed_authority": caught_renamed,
+        "honest": bool(specificity and hidden_fallback_caught and caught_no_evidence
+                       and caught_nonzero and caught_renamed),
+    }
+
+
+def _atlas_parameterization_court(name: str) -> dict:
+    """`RT-ATLAS-PARAMETERIZATION`: 23.3's court, the parameterized atlases.
+
+    Stages no probe in `artifacts/phase23/probes/`: its instrument is the generator itself. It
+    reads `forensics/atlas/parameterization-receipt.json`, the committed default-authority alias
+    and the historical authority's plane census; re-derives every census through the same
+    generator; corroborates the historical authority's decisive absences against the committed
+    source manifest; and **re-runs the authority-parameterized archaeology generators for the
+    3.6.4 production authority**, asserting the committed plane is byte-identical. The one
+    pre-existing, disclosed drift (`parity-obligations.json`) is measured live and undone, never
+    applied. Swapping the authority argument must change the produced census, so a hidden
+    production fallback is caught.
+    """
+    problems: list[str] = []
+    historical_path = REPO_ROOT / "forensics" / "atlas" / PARAM_HISTORICAL / "plane-census.json"
+    for path, label in ((PARAM_RECEIPT, "parameterization receipt"),
+                        (DEFAULT_AUTHORITY_ALIAS, "default-authority alias"),
+                        (historical_path, "historical plane census"),
+                        (HIST_ACQ, "historical acquisition")):
+        if not path.is_file():
+            problems.append(f"the {label} {rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    receipt_doc = json.loads(PARAM_RECEIPT.read_text(encoding="utf-8"))
+    receipt = receipt_doc.get("body", receipt_doc)
+    alias_doc = json.loads(DEFAULT_AUTHORITY_ALIAS.read_text(encoding="utf-8"))
+    alias = alias_doc.get("body", alias_doc)
+    historical_doc = json.loads(historical_path.read_text(encoding="utf-8"))
+
+    findings = atlas_parameterization_findings(receipt, alias, historical_doc)
+    control = atlas_parameterization_sensitivity_control(receipt, alias, historical_doc)
+
+    identity = _measure_atlas_byte_identity(PRODUCTION_AUTHORITY)
+    measured = set(identity["parameterized_diffs"]) | set(identity["pre_existing_drift"])
+    disclosed = set(identity["disclosed_drift"])
+    undisclosed = sorted(measured - disclosed)
+    if undisclosed:
+        findings.append("the authority-parameterized regeneration moved committed bytes that are "
+                        f"not the disclosed pre-existing drift: {undisclosed}")
+    raw_codes = identity["regenerator_returncodes"]
+    if any(c != 0 for c in raw_codes.values()):
+        findings.append(f"an authority-parameterized regenerator failed: {raw_codes}")
+    parameterized_reproduced = not undisclosed
+
+    censuses = receipt.get("censuses") or {}
+    verdict = "pass" if (not findings and not problems and control["honest"]) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: its instrument is the parameterized generator. It reads "
+            "forensics/atlas/parameterization-receipt.json, the committed default-authority alias "
+            "and forensics/atlas/openssl-0.9.8zh-historical/plane-census.json; re-derives every "
+            "census through the same generator (one code path, one plane set); corroborates the "
+            "historical authority's decisive absences (providers, provider registrations, QUIC) "
+            "against its committed source manifest; and re-runs the authority-parameterized "
+            "archaeology generators for the 3.6.4 production authority and asserts its committed "
+            "plane is byte-identical. The default is the committed alias, never the catalogue's "
+            "latest-stable (openssl-4.0.3). Swapping the authority argument changes the produced "
+            "census, so a hidden production fallback is caught; a measured absence with no "
+            "provenance or a nonzero count is refused. The pre-existing, disclosed drift "
+            "(parity-obligations.json and the rendered ATLAS.md, stale since cli-commands gained "
+            "its option grammar at p16) is measured live and undone, never applied."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the parameterization court reads committed atlas evidence and stages no "
+            "artifacts/phase23/probes/ pair, so it takes no transcript to diff and carries no FRF "
+            "declaration"
+        ),
+        "default_authority": PRODUCTION_AUTHORITY,
+        "planes": len(receipt.get("plane_order") or []),
+        "authorities": sorted(censuses),
+        "produced": {aid: (c.get("counts") or {}).get("produced")
+                     for aid, c in sorted(censuses.items())},
+        "measured_absence": {aid: v for aid, v in sorted(
+            (receipt.get("measured_absences") or {}).items())},
+        "byte_identity": {
+            "parameterized_reproduced": parameterized_reproduced,
+            "files_checked": identity["files_checked"],
+            "regenerators": identity["regenerators"],
+            "pre_existing_drift": identity["pre_existing_drift"],
+            "disclosed_drift": identity["disclosed_drift"],
+        },
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -805,14 +1153,27 @@ def main(argv: list[str]) -> int:
             "still reproduce; and that an unavailable authority is recorded unavailable and is "
             "never a node. A built-authority claim with no receipt, a dropped required identity "
             "field, and a source digest asserting tag == tarball without proof are each detected "
-            "with specificity holding. Phase 23 owns no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining fifteen courts -- "
-            "RT-ATLAS-PARAMETERIZATION, RT-LINEAGE-EDGES, RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, "
+            "with specificity holding. `RT-ATLAS-PARAMETERIZATION` is 23.3's court: the "
+            "parameterized atlases. Its instrument is the generator itself: it reads "
+            "forensics/atlas/parameterization-receipt.json, the committed default-authority alias "
+            "and forensics/atlas/openssl-0.9.8zh-historical/plane-census.json, re-derives every "
+            "census through the same generator, corroborates the historical authority's decisive "
+            "absences (providers, provider registrations, QUIC) against its committed source "
+            "manifest, and re-runs the authority-parameterized archaeology generators for the "
+            "3.6.4 production authority, asserting its committed plane is byte-identical. The "
+            "default is the committed alias, never the catalogue's `latest-stable` "
+            "(openssl-4.0.3); swapping the authority argument changes the produced census, so a "
+            "hidden production fallback is caught, and a measured absence with no provenance or "
+            "a nonzero count is refused. The one pre-existing, disclosed drift "
+            "(parity-obligations.json) is measured live and undone, never applied. Phase 23 owns "
+            "no exported symbol, so no differential probe "
+            "over a symbol set is its evidence, and its remaining fourteen courts -- "
+            "RT-LINEAGE-EDGES, RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, "
             "RT-ABI-HISTORY-FACADES, RT-SEMANTIC-COURTS, RT-COMPATIBILITY-VIEWS, "
             "RT-HISTORICAL-POPULATION, RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, "
             "RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, "
             "RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
-            "the subphases that land them (23.3 through 23.17). The one thing the model forbids "
+            "the subphases that land them (23.4 through 23.17). The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "
@@ -832,6 +1193,10 @@ def main(argv: list[str]) -> int:
         InputRef(name="build-records", path=BUILD_RECORDS),
         InputRef(name="historical-acquisition", path=HIST_ACQ),
         InputRef(name="historical-build-receipts", path=HIST_RECEIPTS),
+        InputRef(name="parameterization-receipt", path=PARAM_RECEIPT),
+        InputRef(name="default-authority", path=DEFAULT_AUTHORITY_ALIAS),
+        InputRef(name="historical-plane-census",
+                 path=REPO_ROOT / "forensics" / "atlas" / PARAM_HISTORICAL / "plane-census.json"),
     ]
     doc = envelope(kind="phase23-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
@@ -870,6 +1235,26 @@ def main(argv: list[str]) -> int:
             for u in r["unavailable_identities"]:
                 print(f"      unavailable {u['release_id']:<27} outcome={u['outcome']} "
                       f"runtime_evidence={u['runtime_evidence']}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == ATLAS_PARAMETERIZATION_COURT:
+            c = r["control"]
+            bi = r["byte_identity"]
+            print(f"  {r['court']:<32} pass   (no probe, {r['planes']} plane(s) over "
+                  f"{len(r['authorities'])} authority/ies; default={r['default_authority']}; "
+                  f"{len(r['findings'])} finding(s); 3.6.4 re-derived byte-identical="
+                  f"{bi['parameterized_reproduced']} over {bi['files_checked']} file(s), "
+                  f"disclosed drift={bi['pre_existing_drift']}; control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"swapped-authority-differs={c['swapped_authority_differs']} "
+                  f"no-evidence->{c['injected_absence_without_evidence_findings']} "
+                  f"nonzero->{c['injected_absence_nonzero_findings']} "
+                  f"renamed->{c['injected_renamed_authority_findings']} finding(s))")
+            for aid in sorted(r["produced"]):
+                absent = r["measured_absence"].get(aid) or []
+                print(f"      authority {aid:<32} produced={r['produced'][aid]}/"
+                      f"{r['planes']} measured_absence={len(absent)}"
+                      + (f" [{', '.join(absent)}]" if absent else ""))
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

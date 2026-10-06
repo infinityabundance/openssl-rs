@@ -35582,3 +35582,49 @@ existing plan had is lost, and nothing is weakened.
 
 This is an additive correction: it restores required structure the first draft dropped, and it does
 not commit or push.
+
+## D538 -- the atlases are parameterized by authority identity, and the default is a committed alias
+
+Phase 23.3 lands the Phase 1 / Phase 22 archaeology generators as **one code path parameterized by
+authority identity** rather than a `phase1_old.py` per version, and closes `atlas-parameterization`.
+
+**The default authority is a committed alias, not the newest release, and not a version sort.**
+`forensics/multitrack/default-authority.json` names `openssl-3.6.4-production` as the maintained
+authority; the catalogue's `latest-stable` alias is `openssl-4.0.3`, a newer compatibility profile
+the candidate does not target. `atlas_common.PRODUCTION_AUTHORITY` is now **derived from that
+alias**, so the roughly thirty-nine call sites that default to it cannot drift from the one
+committed choice, and `atlas_common.add_authority_selector`/`selected_authorities` are the single
+selection point. A historical authority (`openssl-0.9.8zh-historical`) resolves through the same
+`atlas_common` path -- `resolve_authority`, `authority_source`, `authority_prefix` read the
+committed historical acquisition and build receipts after the court registries -- so no bespoke
+script serves it. `all_authority_ids()` keeps its court-only default, so the atlas `--all` walk is
+unchanged; `all_known_authority_ids()` is the merged set.
+
+**The generator is `forensics/tools/atlas_authority.py`; its proof is
+`forensics/atlas/parameterization-receipt.json` (record kind `parameterization_receipt`).** Every
+plane is a **counted predicate over the authority's own committed source manifest**, so an absence
+is evidence rather than an assumption: the 3.6.4 production authority produces all seventeen planes
+and `openssl-0.9.8zh-historical` produces seven and records ten **measured absences** (providers,
+provider registrations, provider capabilities, the FIPS provider, the STORE and encoder/decoder
+APIs, QUIC, symbol versioning, the ENGINE registry and the ENGINE-versus-Provider comparison),
+each a counted zero carrying its manifest and the release's own chronology. ENGINE itself is
+**produced** for 0.9.8zh, so the older authority is not handed a blanket absence. The court
+`RT-ATLAS-PARAMETERIZATION` re-derives every census through the same generator and corroborates the
+decisive absences against the committed manifest independently of the generator's own predicates.
+
+**The 3.6.4 plane is the byte-identity pivot and does not move.** The court re-runs the
+authority-parameterized generators (`atlas_symbols.py`, `atlas_api.py`, `atlas_runtime.py`,
+`atlas_abi.py`, `render_atlas.py`) with an explicit `--authority` and asserts they reproduce the
+committed plane. **One pre-existing staleness is disclosed, measured and never applied**: the
+committed `parity-obligations.json` and the rendered `ATLAS.md` predate the CLI option grammar
+`cli-commands.json` gained at p16 (commit 0db42154) and were never regenerated, so re-deriving them
+moves each command's `option_count` from the stale `0` to the measured value. The court measures
+that drift live, restores the committed bytes, and refuses any drift outside the disclosed set. The
+correcting regeneration is a separate change, reported rather than hidden; the refactor itself
+leaves the atlas byte-identical.
+
+The sensitivity control is honest: the same generator over a different court authority
+(`openssl-3.6.3-historical`) produces a different census, so a hidden hard-coded production
+fallback is caught; a measured absence with no provenance, or with a nonzero count, or a census
+that renames its own authority, is each refused. `atlas-parameterization` moves to
+`implemented`/closed and the stratum's `open_in_this_stratum` falls from fifteen to fourteen.

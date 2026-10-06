@@ -1,0 +1,13 @@
+{
+  "schema": "openssl-rs/default-authority/v1",
+  "authority_id": "openssl-3.6.4-production",
+  "maintained_candidate": "openssl-3.6.4",
+  "catalogue_latest_stable": "openssl-4.0.3",
+  "selection_rule": "the default authority of the parameterized archaeology generators is this committed alias and nothing else: never the catalogue's `latest-stable` alias, never a version sort, and never the newest admitted build. A generator that is invoked with no explicit `--authority` reads this file through atlas_common, so every default is explicit and reviewable in one place.",
+  "why": "the maintained candidate authority is openssl-3.6.4-production: the release the candidate crate targets and the behaviour its receipts were measured against. The release catalogue's `latest-stable` alias is openssl-4.0.3, which is a newer compatibility profile that the candidate does not target and whose receipt could not stand in for a 3.6.4 measurement. The alias is therefore pinned to the 3.6.4 production authority rather than to the newest release, and a change to it is a deliberate, reviewable act (docs/AUTHORITY_POLICY.md) rather than a drift of the catalogue.",
+  "non_claims": [
+    "the alias is a selection for archaeology, not a compatibility claim: it does not say any release is compatible with any other",
+    "newest is not default: the alias is not derived from the catalogue's `latest-stable` (4.0.3) and does not follow it",
+    "the alias names one authority for the generators' default; every court still names the authority it is about explicitly"
+  ]
+}
