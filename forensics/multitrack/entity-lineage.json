@@ -18,7 +18,7 @@
       "established",
       "nominated"
     ],
-    "content_hash": "80fd9b3d8a6b265f9de88422e433a07d7896107b385fa7b0bb31795b2d4d3d26",
+    "content_hash": "0fa55a86eb7490d80a976801c975fe6a67593502f53d89e13a445defa77f16aa",
     "counts": {
       "added_not_relations": {
         "openssl-3.6.3->openssl-3.6.4": {
@@ -49,6 +49,30 @@
           "entity_planes": [],
           "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
           "release_id": "openssl-0.9.8zh"
+        },
+        {
+          "authority_id": "openssl-1.0.2u-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-1.0.2u"
+        },
+        {
+          "authority_id": "openssl-1.1.1w-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-1.1.1w"
+        },
+        {
+          "authority_id": "openssl-3.0.0-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-3.0.0"
         },
         {
           "authority_id": "openssl-3.6.3-historical",
@@ -89,6 +113,30 @@
           "from_authority": "openssl-0.9.8zh-historical",
           "from_release": "openssl-0.9.8zh",
           "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.0.2u-historical",
+          "to_release": "openssl-1.0.2u"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.1.1w-historical",
+          "to_release": "openssl-1.1.1w"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.0.0-historical",
+          "to_release": "openssl-3.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
           "to_authority": "openssl-3.6.3-historical",
           "to_release": "openssl-3.6.3"
         },
@@ -96,6 +144,78 @@
           "covered": false,
           "from_authority": "openssl-0.9.8zh-historical",
           "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.4-production",
+          "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.1.1w-historical",
+          "to_release": "openssl-1.1.1w"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.0.0-historical",
+          "to_release": "openssl-3.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.3-historical",
+          "to_release": "openssl-3.6.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.4-production",
+          "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.1w-historical",
+          "from_release": "openssl-1.1.1w",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.0.0-historical",
+          "to_release": "openssl-3.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.1w-historical",
+          "from_release": "openssl-1.1.1w",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.3-historical",
+          "to_release": "openssl-3.6.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.1w-historical",
+          "from_release": "openssl-1.1.1w",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.4-production",
+          "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.0-historical",
+          "from_release": "openssl-3.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.3-historical",
+          "to_release": "openssl-3.6.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.0-historical",
+          "from_release": "openssl-3.0.0",
           "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
           "to_authority": "openssl-3.6.4-production",
           "to_release": "openssl-3.6.4"
@@ -702026,7 +702146,7 @@
     {
       "name": "authority-nodes",
       "path": "forensics/authority-nodes.json",
-      "sha256": "264cf5c061a48c792133a9e8019a19878f2163326b46b32ab824ba126ed2e6a6"
+      "sha256": "bb9d188018293f625e87ef01577b8c7c6ddae967e88ed066d3434f3b74f35486"
     },
     {
       "name": "authority-registry",

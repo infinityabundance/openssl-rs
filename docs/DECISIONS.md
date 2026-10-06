@@ -35799,3 +35799,49 @@ evidence into authority B's view, collapses a view to a boolean, makes a view ci
 and drops a view's reference authority, and requires each caught with specificity holding.
 `compatibility-views` moves to `implemented`/closed and the stratum's `open_in_this_stratum` falls
 from nine to eight.
+
+## D543 -- the historical population records one support status per catalogue node, and the epoch representatives are built rather than assumed
+
+Phase 23.10 lands the historical population
+(`forensics/multitrack/historical-population.json` with the record kind `population_record`, the
+generator `forensics/tools/historical_population.py`, court `RT-HISTORICAL-POPULATION`, unit
+`historical-population`). The measured corrections are recorded in
+`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.13 and checked by the court.
+
+**Every catalogue node carries a status, and an out-of-scope node says so.** The brief's subject is
+the public final-release lineage forward from OpenSSL 0.9.1c, but a release the ladder does not
+track must still be recorded rather than omitted. So all 372 catalogue nodes carry a
+`population_record`: the 247 mainline finals climb the ladder or are recorded unavailable, and the
+125 pre-release and auxiliary nodes are `archaeological-only` with `scope:
+"out-of-population-scope"` and a reason. The `public`/`extended` channel flag is deliberately not a
+lineage boundary -- the LTS branch finals (0.9.8, 1.0.2, 1.1.1, 3.0, 3.5) are `extended`, and they
+are exactly the epoch representatives the population must carry -- so the lineage test is `final`
+mainline.
+
+**A status is the highest rung an evidence plane reached.** `multitrack_schemas.SUPPORT_LADDER` is
+read from the artefact that carries each rung: `admitted-source` from the acquisition or
+admitted-authority registry, `built-authority` from an authority node backed by a receipt,
+`atlas-complete` from a committed atlas, `candidate-view` from a compatible view, `runtime-evidenced`
+from the executed semantic pair, and `maintained` from the committed `default-authority.json` alias
+(openssl-3.6.4). `rungs_attained` names every rung reached and is not filled cumulatively by
+assertion; `downstream-evidenced` has no plane until 23.11 and is named absent rather than invented.
+The validator refuses a ladder `status` that is not the highest attained rung and refuses
+`runtime_compatible` without a `runtime-evidenced` rung, so an unavailable release is never counted
+runtime-compatible.
+
+**The epoch representatives are built, and the epoch set is pre-1.0, 1.0.x, 1.1.x, 3.x and
+3.6+/4.x.** 0.9.8zh, 3.6.3 and 3.6.4 were already built; this subphase acquires and builds 1.0.2u,
+1.1.1w and 3.0.0 in the historical venue, each admitted from the official release asset the
+catalogue's tag names and verified against the upstream-published SHA-256. The historical build tool
+now pins `--libdir=lib` for 3.0-plus releases, whose default install libdir is `lib64`, so every
+historical authority installs under one convention; and it points the loader at the prefix's own
+`lib` when reading the built version banner rather than recording a loader error as the version.
+The court requires each major epoch to hold at least one built representative.
+
+**Acquiring the representatives expands the parameterized atlas and the entity-lineage boundary.**
+`atlas_common.historical_authority_ids()` names every acquired historical authority, so
+`atlas_authority.py` now produces a plane census for 1.0.2u/1.1.1w/3.0.0 beside 0.9.8zh, and
+`entity_lineage.py` names them in its coverage boundary as built-but-not-covered. Both artefacts are
+regenerated in this commit and their courts re-derive them and pass; no committed evidence is
+suppressed to keep an earlier artefact unchanged. `historical-population` moves to
+`implemented`/closed and the stratum's `open_in_this_stratum` falls from eight to seven.

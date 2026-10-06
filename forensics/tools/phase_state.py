@@ -1726,11 +1726,13 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "the historical ABI/history façades, with the historical "
                             "public-layout and prototype adapters), `RT-SEMANTIC-COURTS` "
                             "(23.8, the oracle-to-oracle and candidate-to-authority semantic "
-                            "courts over a shared normalized observation vocabulary) and "
+                            "courts over a shared normalized observation vocabulary), "
                             "`RT-COMPATIBILITY-VIEWS` (23.9, the directional, dimension-specific "
                             "compatibility views whose distribution/ABI shell surface is derived "
-                            "from each authority's own evidence) "
-                            "are registered, and the remaining eight courts are "
+                            "from each authority's own evidence) and `RT-HISTORICAL-POPULATION` "
+                            "(23.10, the historical population -- one support status per "
+                            "catalogue node, with honest unavailability) "
+                            "are registered, and the remaining seven courts are "
                             "`pending` with the subphases that land them. A "
                             "passing court is an **instrument**, not a property claim: the "
                             "property it names may still carry findings, so `measurement_state` "
@@ -1752,7 +1754,8 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "contract-unit states are measured from the courts registry, so the "
                             "runner does not bind the ledger and the edge runs ledger -> courts, "
                             "the reverse of Phase 16's. `docs/PHASE-23-MULTITRACK-SUBPHASES.md` "
-                            "sections 0 and 4 and docs/DECISIONS.md D537 record the measurement"
+                            "sections 0 and 4 and docs/DECISIONS.md D537 through D543 record the "
+                            "measurement"
                         )),
 }
 

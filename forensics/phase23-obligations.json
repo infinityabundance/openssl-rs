@@ -114,10 +114,10 @@
         "closure": "the `RT-HISTORICAL-POPULATION` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-HISTORICAL-POPULATION is pending",
+        "measurement_state": "complete",
+        "observation": "RT-HISTORICAL-POPULATION is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "historical-population",
         "what": "the systematic admission and courting of the public final-release lineage forward from the first release, recording honest unavailability where a release cannot be reproducibly built rather than counting it runtime-compatible"
@@ -212,8 +212,8 @@
       "contract_units": 17,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 9,
-      "open_in_this_stratum": 8,
+      "implemented": 10,
+      "open_in_this_stratum": 7,
       "owned": 17,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -249,12 +249,12 @@
     {
       "name": "phase-23-plan",
       "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
-      "sha256": "5a7fdd987677b0e2deeaf81caac9d478983b6b1552e89e4602d7da3cc94eeb81"
+      "sha256": "ae416d581a411b4d4390857607e3a65b709f92bf1c9cad5513d2257a3851e740"
     },
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "12694e005a9792b3b2d38053ffcaf8b6d610315c11b8849ed363ae34249fab65"
+      "sha256": "87c60cdf8a0751739f2c879c90096cff18db4ad95bff9b6683a2fb02eaec9916"
     }
   ],
   "kind": "phase23-obligations",

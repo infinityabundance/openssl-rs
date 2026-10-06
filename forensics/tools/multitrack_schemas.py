@@ -169,6 +169,23 @@ SUPPORT_LADDER: tuple[str, ...] = (
 SUPPORT_TERMINAL: tuple[str, ...] = ("archaeological-only",)
 SUPPORT_STATUSES: tuple[str, ...] = SUPPORT_LADDER + SUPPORT_TERMINAL
 
+# The population record (added by 23.10). It is the historical-population row for one catalogue
+# node: the support status it has reached over `SUPPORT_LADDER`, the rungs it attained with
+# evidence, and -- where it is not built -- the honest reason it is not. `outcome` is the finer
+# disposition, `scope` says whether the node is on the public final-release lineage the ladder
+# tracks, and `runtime_compatible` is true only when the node attained `runtime-evidenced`, so an
+# unavailable release is never recorded runtime-compatible.
+POPULATION_OUTCOMES: tuple[str, ...] = (
+    "built", "acquired", "catalogued", "unavailable", "out-of-population-scope",
+)
+POPULATION_SCOPES: tuple[str, ...] = ("final-release-lineage", "out-of-population-scope")
+# The major ABI/architecture epochs the population covers, by version shape. `out-of-scope` carries
+# a node outside the public final-release lineage so every record states an epoch rather than a
+# blank; the court requires every other epoch to hold at least one built representative.
+POPULATION_EPOCHS: tuple[str, ...] = (
+    "pre-1.0", "1.0.x", "1.1.x", "3.x", "3.6+/4.x", "out-of-scope",
+)
+
 # The ABI/history façade vocabulary (added by 23.7). A façade record says which *kind* of
 # compatibility object it is, and each kind carries its own closed vocabulary. The public-layout
 # epoch and the engine/provider/init/thread models are the typed compatibility-policy axes, and a
@@ -612,6 +629,60 @@ def validate_support_status(rec: dict) -> list[str]:
     return problems
 
 
+def validate_population_record(rec: dict) -> list[str]:
+    """A historical-population row: a node's support status, the rungs it climbed, and its reason.
+
+    The load-bearing refusal is the one the brief fixes: a node recorded `runtime_compatible` that
+    did not attain `runtime-evidenced` -- in particular an unavailable release -- is refused, so a
+    release that cannot be reproducibly built is never counted runtime-compatible. A ladder
+    `status` must be the highest rung in `rungs_attained`; `archaeological-only` has climbed none,
+    so it carries an empty rung list.
+    """
+    fields = ("release_id", "display_version", "release_channel", "epoch", "scope", "outcome",
+              "status", "rungs_attained", "runtime_compatible", "reason", "evidence")
+    problems = _missing(rec, fields)
+    for f in ("release_id", "display_version", "reason"):
+        problems += _nonempty(rec, f)
+    problems += _enum(rec, "release_channel", RELEASE_CHANNELS)
+    problems += _enum(rec, "epoch", POPULATION_EPOCHS)
+    problems += _enum(rec, "scope", POPULATION_SCOPES)
+    problems += _enum(rec, "outcome", POPULATION_OUTCOMES)
+    problems += _enum(rec, "status", SUPPORT_STATUSES)
+    if "evidence" in rec and not rec["evidence"]:
+        problems.append("evidence must be non-empty")
+    rungs = rec.get("rungs_attained")
+    if "rungs_attained" in rec and not isinstance(rungs, list):
+        problems.append("rungs_attained must be a list")
+        return problems
+    if isinstance(rungs, list):
+        status = rec.get("status")
+        if any(r not in SUPPORT_LADDER for r in rungs):
+            problems.append(f"rungs_attained contains a name outside {list(SUPPORT_LADDER)}")
+        elif len(set(rungs)) != len(rungs):
+            problems.append("rungs_attained names a rung twice")
+        if status in SUPPORT_LADDER:
+            if not rungs:
+                problems.append(f"status {status!r} is a ladder rung but rungs_attained is empty")
+            elif max(rungs, key=SUPPORT_LADDER.index) != status:
+                problems.append(
+                    f"status {status!r} is not the highest rung of rungs_attained {rungs!r}: a "
+                    f"population status is the highest rung an evidence plane reached"
+                )
+        if status == "archaeological-only" and rungs:
+            problems.append("an archaeological-only node has climbed no rung, so rungs_attained "
+                            "must be empty")
+    compatible = rec.get("runtime_compatible")
+    if "runtime_compatible" in rec and not isinstance(compatible, bool):
+        problems.append("runtime_compatible must be a boolean")
+    if compatible is True and not (isinstance(rungs, list) and "runtime-evidenced" in rungs):
+        problems.append(
+            "runtime_compatible is true but the node did not attain `runtime-evidenced`: a "
+            "release is never counted runtime-compatible without runtime evidence, and an "
+            "unavailable release never is"
+        )
+    return problems
+
+
 def validate_delta_receipt(rec: dict) -> list[str]:
     """A delta-engine record: the added / removed / changed surface between two nodes."""
     fields = ("receipt_id", "from_id", "to_id", "dimension", "direction", "added", "removed",
@@ -905,6 +976,9 @@ REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
     "security_observation": ("observation_id", "release_id", "affected", "fixed_in", "reference",
                              "evidence", "reintroduced"),
     "support_status": ("subject_id", "status", "rungs_attained", "evidence"),
+    "population_record": ("release_id", "display_version", "release_channel", "epoch", "scope",
+                          "outcome", "status", "rungs_attained", "runtime_compatible", "reason",
+                          "evidence"),
     "compatibility_matrix": ("matrix_id", "rows", "generated_from"),
     "parameterization_receipt": ("receipt_id", "default_authority", "plane_order", "censuses",
                                  "measured_absences", "byte_identity"),
@@ -926,6 +1000,7 @@ SCHEMAS = {
     "negative_obligation": validate_negative_obligation,
     "security_observation": validate_security_observation,
     "support_status": validate_support_status,
+    "population_record": validate_population_record,
     "compatibility_matrix": validate_compatibility_matrix,
     "parameterization_receipt": validate_parameterization_receipt,
     "abi_facade": validate_abi_facade,
@@ -1058,6 +1133,19 @@ _GOOD: dict[str, dict] = {
         "rungs_attained": ["catalogued", "admitted-source", "built-authority"],
         "evidence": ["forensics/atlas/BUILD_RECORDS.json"],
     },
+    "population_record": {
+        "release_id": "openssl-1.0.2u",
+        "display_version": "1.0.2u",
+        "release_channel": "final",
+        "epoch": "1.0.x",
+        "scope": "final-release-lineage",
+        "outcome": "built",
+        "status": "built-authority",
+        "rungs_attained": ["catalogued", "admitted-source", "built-authority"],
+        "runtime_compatible": False,
+        "reason": "built in the historical venue; no committed atlas exists for this authority",
+        "evidence": ["forensics/multitrack/historical-build-receipts.json"],
+    },
     "compatibility_matrix": {
         "matrix_id": "M-2026-10-06",
         "rows": [{
@@ -1165,6 +1253,12 @@ def _bad(kind: str) -> dict:
         rec["reintroduced"] = True  # a reintroduced vulnerability
     elif kind == "support_status":
         rec["rungs_attained"] = ["catalogued", "built-authority"]  # a skipped rung
+    elif kind == "population_record":
+        # an unavailable node recorded runtime-compatible is the exact over-claim the brief
+        # refuses: the ladder rung it did not reach would be read as a runtime claim
+        rec["status"] = "archaeological-only"
+        rec["rungs_attained"] = []
+        rec["runtime_compatible"] = True
     elif kind == "compatibility_matrix":
         rec["rows"] = [{"dimension": "source_api"}]  # a cell with no direction
     elif kind == "parameterization_receipt":
@@ -1247,6 +1341,15 @@ def self_test() -> int:
     if "numeric ordering" not in " ".join(validate_compatibility_view(ordering_view)):
         failures.append("the view's version_order refusal does not say why ordering is not "
                         "compatibility")
+
+    # A population row is never runtime-compatible without runtime evidence: the validator must
+    # refuse the over-claim that would count an unavailable release as runtime-compatible.
+    overclaim = dict(_GOOD["population_record"], runtime_compatible=True)
+    if not validate_population_record(overclaim):
+        failures.append("validate_population_record accepted runtime_compatible with no "
+                        "runtime-evidenced rung")
+    if "runtime-compatible" not in " ".join(validate_population_record(overclaim)):
+        failures.append("the population runtime-compatible refusal does not say why")
 
     # A declared ABI edge is a declaration, and every lineage edge carries provenance.
     unmarked = dict(_GOOD["lineage_edge"], kind="declared_abi_compatibility", dimension="abi")

@@ -70,9 +70,18 @@ VENUE_BASE = "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a
 # The historical configure profile. Pre-1.1.0 OpenSSL does not build out-of-tree and its
 # Makefile.org races under `make -j`, so the build is **serial**; the profile is one named,
 # recorded choice, and the sonames carry the release's own `0.9.8`/`1.0.0`-era ABI version.
+# OpenSSL 3.0+ defaults its install libdir to `lib64` on 64-bit Linux; the profile pins
+# `--libdir=lib` for those releases (a 1.1.0+ option) so every historical authority installs
+# under one convention -- the one the pre-3.0 builds use -- and the prefix layout is a
+# property of the profile rather than of the release's own default.
 HISTORICAL_TARGET = "linux-x86_64"
 HISTORICAL_PROFILE = "linux-x86_64-historical-shared"
 HISTORICAL_PROFILE_ARGS = ["shared"]
+
+
+def _major(version: str) -> int:
+    """The major number a release's display version begins with (`3.0.0` -> 3)."""
+    return int(str(version).split(".", 1)[0])
 
 # The installed public headers whose hashes bind the installed surface.
 INSTALLED_HEADERS = ("include/openssl/ssl.h", "include/openssl/crypto.h", "include/openssl/evp.h")
@@ -139,6 +148,10 @@ def build_release(acq: dict, *, force: bool) -> dict:
         "perl", "Configure", HISTORICAL_TARGET,
         f"--prefix={prefix}",
         f"--openssldir={prefix}/ssl",
+        # 3.0+ only: pin the libdir the profile installs under, so `libcrypto.so.*` is under
+        # `prefix/lib` for every authority. `--libdir` is a 1.1.0+ option, so no pre-3.0
+        # release receives it and their configure argv is unchanged.
+        *(["--libdir=lib"] if _major(version) >= 3 else []),
         *HISTORICAL_PROFILE_ARGS,
     ]
     print("  configure ...")
@@ -177,7 +190,11 @@ def build_release(acq: dict, *, force: bool) -> dict:
     banner = ""
     openssl_bin = prefix / "bin" / "openssl"
     if openssl_bin.exists():
-        res = run_tool([str(openssl_bin), "version"], cwd=prefix)
+        # The built CLI links the prefix's own shared objects and 3.0+ sets no rpath, so point the
+        # loader at the installed libdir explicitly rather than recording a loader error as the
+        # version banner.
+        res = run_tool([str(openssl_bin), "version"], cwd=prefix,
+                       env={**env, "LD_LIBRARY_PATH": str(prefix / "lib")})
         banner = (res.stdout or res.stderr).strip()
         (capture / "built-openssl-version.txt").write_text(banner + "\n", encoding="utf-8")
 
