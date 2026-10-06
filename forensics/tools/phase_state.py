@@ -1202,15 +1202,17 @@ PHASE22_SEAL = "docs/PHASE-22-ATLAS-SEAL.md"
 # unit is not a symbol. `forensics/phase23-obligations.json` records its unit as `multitrack
 # authority contract` (in `atlas_common.NON_EXPORT_UNITS`, so the export-partitioning tools skip it,
 # as they skip Phase 16's `cli-config contract` through Phase 21's `maintenance delta contract`), and
-# its working set is twelve contract units -- one per subphase 23.1 through 23.12: the release-node
-# catalogue, the authority-node registry, the lineage edges, the entity lineage, the delta engine,
-# the compatibility views, the directional compatibility edges, the negative obligations, the
-# security lineage, the support-status ladder, the compatibility matrix and the multitrack seal.
+# its working set is seventeen contract units -- one per subphase 23.1 through 23.17: the release-node
+# catalogue, the authority-node registry, the parameterized atlases, the lineage edges, the entity
+# lineage, the delta engine, the ABI/history façades, the semantic multitrack courts, the
+# compatibility views, the historical population, the downstream multitrack court, the directional
+# compatibility edges, the negative obligations, the security lineage, the support-status ladder, the
+# compatibility matrix and the multitrack seal.
 # Like Phases 18 through 21 it hands nothing forward and receives nothing: it owns no provider
 # registration row, no symbol deferral and no prerequisite unit, because it emits compatibility
 # *views* over releases and authorities that are already admitted rather than adding library surface.
 # It registers no coverage-reference probe, because it owns no symbol to take an address of, so its
-# runner's registry is empty at activation and its twelve courts are `pending` with the subphase that
+# runner's registry is empty at activation and its seventeen courts are `pending` with the subphase that
 # lands each. The ledger measures its contract-unit states from the courts registry, so the runner
 # does not bind the ledger (the edge runs ledger -> courts, the reverse of Phase 16's). A passing
 # court is an *instrument*: the property it names may still carry findings. The stratum makes no
@@ -1227,11 +1229,11 @@ PHASE23_MODULES = [
     # runner binds them as an input, so the stratum's record types are a file the evidence
     # points at rather than prose this module would have to restate.
     "forensics/tools/multitrack_schemas.py",
-    # Phase 23 owns no FRF-declarable court -- its twelve courts stage no probe and read committed
+    # Phase 23 owns no FRF-declarable court -- its seventeen courts stage no probe and read committed
     # evidence, exactly as Phase 21's delta courts do -- so the FRF/Gemel chain rule is correctly
     # vacuous for it and cannot be the stratum's closing evidence. Its seal document is, exactly as
     # it is for Phases 3 through 7 and for Phases 20 and 21: the stratum stays `in-progress` until
-    # 23.12 writes this file, so a passing matrix at 23.11 cannot be read as the finished multitrack
+    # 23.17 writes this file, so a passing matrix at 23.16 cannot be read as the finished multitrack
     # authority.
     "docs/PHASE-23-MULTITRACK-SEAL.md",
 ]
@@ -1700,9 +1702,11 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "not a symbol: `forensics/phase23-obligations.json` publishes "
                             "`unit: multitrack authority contract` and its `implemented`/`open` "
                             "*export* lists are empty by measurement, while "
-                            "`open_in_this_stratum` counts the twelve contract units "
-                            "(`release-nodes`, `authority-nodes`, `lineage-edges`, "
-                            "`entity-lineage`, `delta-engine`, `compatibility-views`, "
+                            "`open_in_this_stratum` counts the seventeen contract units "
+                            "(`release-nodes`, `authority-nodes`, `atlas-parameterization`, "
+                            "`lineage-edges`, `entity-lineage`, `delta-engine`, "
+                            "`abi-history-facades`, `semantic-courts`, `compatibility-views`, "
+                            "`historical-population`, `downstream-multitrack`, "
                             "`directional-compatibility-edges`, `negative-obligations`, "
                             "`security-lineage`, `support-status`, `compatibility-matrix` and "
                             "`multitrack-seal`). It owns no provider registration row, no symbol "
@@ -1712,7 +1716,7 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "no probe, because it owns no symbol for a differential probe to "
                             "observe: `RT-RELEASE-CATALOG` (23.1, the release catalogue and its "
                             "lineage) and `RT-AUTHORITY-NODES` (23.2, the authority-node registry) "
-                            "are registered, and the remaining ten courts are "
+                            "are registered, and the remaining fifteen courts are "
                             "`pending` with the subphases that land them. A "
                             "passing court is an **instrument**, not a property claim: the "
                             "property it names may still carry findings, so `measurement_state` "
@@ -1734,7 +1738,7 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "contract-unit states are measured from the courts registry, so the "
                             "runner does not bind the ledger and the edge runs ledger -> courts, "
                             "the reverse of Phase 16's. `docs/PHASE-23-MULTITRACK-SUBPHASES.md` "
-                            "sections 0 and 4 record the measurement"
+                            "sections 0 and 4 and docs/DECISIONS.md D537 record the measurement"
                         )),
 }
 

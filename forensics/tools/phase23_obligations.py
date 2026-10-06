@@ -15,12 +15,14 @@ it hands no new library surface forward and receives none. The universe is there
 atlas-derived row kind plus a fail-closed reading of the machinery that would be wrong if it
 silently acquired work:
 
-  * **the multitrack authority contract units** — twelve authored policy rows naming the surfaces
-    `docs/PHASE-23-MULTITRACK-SUBPHASES.md` records, each state derived from the atlas that
-    measures it: the release-node catalogue, the authority-node registry, the lineage edges, the
-    entity lineage, the delta engine, the compatibility views, the directional compatibility
-    edges, the negative obligations, the security lineage, the support-status ladder, the
-    compatibility matrix and the multitrack seal (twelve courts in `artifacts/phase23/COURTS.json`);
+  * **the multitrack authority contract units** — seventeen authored policy rows naming the
+    surfaces `docs/PHASE-23-MULTITRACK-SUBPHASES.md` records, each state derived from the atlas
+    that measures it: the release-node catalogue, the authority-node registry, the parameterized
+    atlases, the lineage edges, the entity lineage, the delta engine, the ABI/history façades, the
+    semantic multitrack courts, the compatibility views, the historical population, the downstream
+    multitrack court, the directional compatibility edges, the negative obligations, the security
+    lineage, the support-status ladder, the compatibility matrix and the multitrack seal (seventeen
+    courts in `artifacts/phase23/COURTS.json`);
   * **nothing else.** The ownership atlas assigns this stratum no export, the provider census
     assigns it no registration row, and `forensics/prerequisites.json` records no deferral or
     translation unit owned by phase 23. `main` fails closed if any of those ever stops being true,
@@ -112,10 +114,11 @@ COURTS = "artifacts/phase23/COURTS.json"
 # number those tools know.
 UNIT = "multitrack authority contract"
 
-# The twelve contract units whose closure is measured by a court this stratum stages. Each unit is
-# a surface the stratum owes multitrack-authority evidence over, and each is closed only when its
-# court passes; none of them is a symbol, because the model emits views over releases and
-# authorities that are already admitted. `(unit, court, closure, what)`.
+# The seventeen contract units whose closure is measured by a court this stratum stages. Each unit
+# is a surface the stratum owes multitrack-authority evidence over, and each is closed only when
+# its court passes; none of them is a symbol, because the model emits views over releases and
+# authorities that are already admitted. The order is the subphase order of
+# `docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 2. `(unit, court, closure, what)`.
 COURT_UNITS: tuple[tuple[str, str, str, str], ...] = (
     ("release-nodes", "RT-RELEASE-CATALOG",
      "the `RT-RELEASE-CATALOG` court passes",
@@ -128,6 +131,11 @@ COURT_UNITS: tuple[tuple[str, str, str, str], ...] = (
      "one authority node per built authority, recording platform, arch, build profile, toolchain, "
      "build environment and binary/installed hashes, so a view is always bounded to a named, "
      "content-addressed build"),
+    ("atlas-parameterization", "RT-ATLAS-PARAMETERIZATION",
+     "the `RT-ATLAS-PARAMETERIZATION` court passes",
+     "the Phase 1 / Phase 22 archaeology generators generalized to be parameterized by authority "
+     "identity -- one parameterized generator rather than a `phase1_old.py` per version -- with the "
+     "current 3.6.4 atlas proved byte-identical under the parameterization"),
     ("lineage-edges", "RT-LINEAGE-EDGES",
      "the `RT-LINEAGE-EDGES` court passes",
      "the typed chronological / git-ancestry / branch-fork / maintenance-successor / "
@@ -142,11 +150,30 @@ COURT_UNITS: tuple[tuple[str, str, str, str], ...] = (
      "the `RT-DELTA-ENGINE` court passes",
      "the added / removed / changed surface between two nodes, computed mechanically from the "
      "atlas and the entity lineage in the direction the lineage edge names, never hand-listed"),
+    ("abi-history-facades", "RT-ABI-HISTORY-FACADES",
+     "the `RT-ABI-HISTORY-FACADES` court passes",
+     "the historical public-layout (`#[repr(C)]`) façades, the prototype wrappers, the "
+     "initialization / threading epochs and the ENGINE -> Provider -> no-ENGINE architecture model, "
+     "as narrow adapters over the shared implementation rather than a per-version fork"),
+    ("semantic-courts", "RT-SEMANTIC-COURTS",
+     "the `RT-SEMANTIC-COURTS` court passes",
+     "the oracle-to-oracle (authority A vs authority B) and candidate-to-authority courts, with "
+     "side-specific adapters that emit the same normalized observation vocabulary, so the two sides "
+     "of a comparison are read the same way"),
     ("compatibility-views", "RT-COMPATIBILITY-VIEWS",
      "the `RT-COMPATIBILITY-VIEWS` court passes",
      "a directional, dimension-specific view per support status, each naming its reference release "
      "and the release-specific evidence it was derived from -- never a boolean, and never "
      "inheriting a receipt across a version"),
+    ("historical-population", "RT-HISTORICAL-POPULATION",
+     "the `RT-HISTORICAL-POPULATION` court passes",
+     "the systematic admission and courting of the public final-release lineage forward from the "
+     "first release, recording honest unavailability where a release cannot be reproducibly built "
+     "rather than counting it runtime-compatible"),
+    ("downstream-multitrack", "RT-DOWNSTREAM-MULTITRACK",
+     "the `RT-DOWNSTREAM-MULTITRACK` court passes",
+     "at least one meaningful unmodified real downstream consumer per major compatibility epoch, "
+     "exercised as this stratum's own multitrack court"),
     ("directional-compatibility-edges", "RT-COMPATIBILITY-EDGES",
      "the `RT-COMPATIBILITY-EDGES` court passes",
      "the directional compatibility edges between releases or authorities on one dimension each, "
@@ -405,14 +432,18 @@ def main(argv: list[str]) -> int:
             "`open_in_this_stratum` is the live count. Phase 23 owns no provider registration row "
             "and no export: it activates no provider and adds no library surface, because it emits "
             "compatibility views over releases and authorities that are already admitted. Its "
-            "twelve contract units are the multitrack authority contract "
+            "seventeen contract units are the multitrack authority contract "
             "docs/PHASE-23-MULTITRACK-SUBPHASES.md section 1 names -- the release-node catalogue, "
-            "the authority-node registry, the lineage edges, the entity lineage, the delta engine, "
-            "the compatibility views, the directional compatibility edges, the negative "
-            "obligations, the security lineage, the support-status ladder, the compatibility "
-            "matrix and the multitrack seal -- and its `counts` block is the live record of which "
+            "the authority-node registry, the parameterized atlases, the lineage edges, the entity "
+            "lineage, the delta engine, the ABI/history façades, the semantic multitrack courts, "
+            "the compatibility views, the historical population, the downstream multitrack "
+            "court, the directional compatibility edges, the negative obligations, the security "
+            "lineage, the support-status ladder, the compatibility matrix and the multitrack "
+            "seal -- and its `counts` block is the live record of which "
             "of them are implemented: at activation none has a court, so `open_in_this_stratum` "
-            "is twelve. Nothing here is a one-boolean compatibility claim: compatibility is "
+            "was seventeen, and the five brief-required slices the plan's first draft dropped "
+            "were restored by the reconciliation docs/DECISIONS.md D537. Nothing here is a "
+            "one-boolean compatibility claim: compatibility is "
             "directional and dimension-specific (docs/PARITY_MODEL.md sections 3 and 4), a "
             "cross-version receipt is never inherited (docs/RELEASE_GATES.md section 8, D533), an "
             "authority is named explicitly and singularly rather than selected by a Cargo feature "

@@ -27,6 +27,18 @@
         "what": "one authority node per built authority, recording platform, arch, build profile, toolchain, build environment and binary/installed hashes, so a view is always bounded to a named, content-addressed build"
       },
       {
+        "closure": "the `RT-ATLAS-PARAMETERIZATION` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-ATLAS-PARAMETERIZATION is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase23/COURTS.json",
+        "unit": "atlas-parameterization",
+        "what": "the Phase 1 / Phase 22 archaeology generators generalized to be parameterized by authority identity -- one parameterized generator rather than a `phase1_old.py` per version -- with the current 3.6.4 atlas proved byte-identical under the parameterization"
+      },
+      {
         "closure": "the `RT-LINEAGE-EDGES` court passes",
         "findings": [],
         "findings_present": false,
@@ -63,6 +75,30 @@
         "what": "the added / removed / changed surface between two nodes, computed mechanically from the atlas and the entity lineage in the direction the lineage edge names, never hand-listed"
       },
       {
+        "closure": "the `RT-ABI-HISTORY-FACADES` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-ABI-HISTORY-FACADES is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase23/COURTS.json",
+        "unit": "abi-history-facades",
+        "what": "the historical public-layout (`#[repr(C)]`) façades, the prototype wrappers, the initialization / threading epochs and the ENGINE -> Provider -> no-ENGINE architecture model, as narrow adapters over the shared implementation rather than a per-version fork"
+      },
+      {
+        "closure": "the `RT-SEMANTIC-COURTS` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-SEMANTIC-COURTS is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase23/COURTS.json",
+        "unit": "semantic-courts",
+        "what": "the oracle-to-oracle (authority A vs authority B) and candidate-to-authority courts, with side-specific adapters that emit the same normalized observation vocabulary, so the two sides of a comparison are read the same way"
+      },
+      {
         "closure": "the `RT-COMPATIBILITY-VIEWS` court passes",
         "findings": [],
         "findings_present": false,
@@ -73,6 +109,30 @@
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "compatibility-views",
         "what": "a directional, dimension-specific view per support status, each naming its reference release and the release-specific evidence it was derived from -- never a boolean, and never inheriting a receipt across a version"
+      },
+      {
+        "closure": "the `RT-HISTORICAL-POPULATION` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-HISTORICAL-POPULATION is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase23/COURTS.json",
+        "unit": "historical-population",
+        "what": "the systematic admission and courting of the public final-release lineage forward from the first release, recording honest unavailability where a release cannot be reproducibly built rather than counting it runtime-compatible"
+      },
+      {
+        "closure": "the `RT-DOWNSTREAM-MULTITRACK` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-DOWNSTREAM-MULTITRACK is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase23/COURTS.json",
+        "unit": "downstream-multitrack",
+        "what": "at least one meaningful unmodified real downstream consumer per major compatibility epoch, exercised as this stratum's own multitrack court"
       },
       {
         "closure": "the `RT-COMPATIBILITY-EDGES` court passes",
@@ -149,12 +209,12 @@
     ],
     "counts": {
       "atlas_owned": 0,
-      "contract_units": 12,
+      "contract_units": 17,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
       "implemented": 2,
-      "open_in_this_stratum": 10,
-      "owned": 12,
+      "open_in_this_stratum": 15,
+      "owned": 17,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
       "unit_deferrals_received": 0
@@ -162,7 +222,7 @@
     "deferrals": [],
     "deferred": [],
     "implemented": [],
-    "note": "`open` is the only list that blocks this stratum, and its count is over the multitrack authority contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. Phase 23 owns no provider registration row and no export: it activates no provider and adds no library surface, because it emits compatibility views over releases and authorities that are already admitted. Its twelve contract units are the multitrack authority contract docs/PHASE-23-MULTITRACK-SUBPHASES.md section 1 names -- the release-node catalogue, the authority-node registry, the lineage edges, the entity lineage, the delta engine, the compatibility views, the directional compatibility edges, the negative obligations, the security lineage, the support-status ladder, the compatibility matrix and the multitrack seal -- and its `counts` block is the live record of which of them are implemented: at activation none has a court, so `open_in_this_stratum` is twelve. Nothing here is a one-boolean compatibility claim: compatibility is directional and dimension-specific (docs/PARITY_MODEL.md sections 3 and 4), a cross-version receipt is never inherited (docs/RELEASE_GATES.md section 8, D533), an authority is named explicitly and singularly rather than selected by a Cargo feature (D534), and a historical vulnerability is observed but never reintroduced (docs/SECURITY_DIVERGENCE_POLICY.md section 1). The stratum's explicit non-claims are: historical API compatibility is not security approval; reproducing an old algorithm is not recommending it; OpenSSL compatibility is not FIPS validation; one platform/profile is not every platform/profile; an archaeological source node is not runtime parity; and upstream's ABI promise is not candidate evidence. Each contract unit records its two axes separately: `measurement_state` says the instrument completed, and `property_status`/`findings` say what is claimed. The `security-lineage` unit's property is `NOT_CLAIMED` with every unbound observation named as a finding, so a passing `RT-SECURITY-LINEAGE` is an instrument plus an observation record and must never be read as 'the lineage is secure'.",
+    "note": "`open` is the only list that blocks this stratum, and its count is over the multitrack authority contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. Phase 23 owns no provider registration row and no export: it activates no provider and adds no library surface, because it emits compatibility views over releases and authorities that are already admitted. Its seventeen contract units are the multitrack authority contract docs/PHASE-23-MULTITRACK-SUBPHASES.md section 1 names -- the release-node catalogue, the authority-node registry, the parameterized atlases, the lineage edges, the entity lineage, the delta engine, the ABI/history façades, the semantic multitrack courts, the compatibility views, the historical population, the downstream multitrack court, the directional compatibility edges, the negative obligations, the security lineage, the support-status ladder, the compatibility matrix and the multitrack seal -- and its `counts` block is the live record of which of them are implemented: at activation none has a court, so `open_in_this_stratum` was seventeen, and the five brief-required slices the plan's first draft dropped were restored by the reconciliation docs/DECISIONS.md D537. Nothing here is a one-boolean compatibility claim: compatibility is directional and dimension-specific (docs/PARITY_MODEL.md sections 3 and 4), a cross-version receipt is never inherited (docs/RELEASE_GATES.md section 8, D533), an authority is named explicitly and singularly rather than selected by a Cargo feature (D534), and a historical vulnerability is observed but never reintroduced (docs/SECURITY_DIVERGENCE_POLICY.md section 1). The stratum's explicit non-claims are: historical API compatibility is not security approval; reproducing an old algorithm is not recommending it; OpenSSL compatibility is not FIPS validation; one platform/profile is not every platform/profile; an archaeological source node is not runtime parity; and upstream's ABI promise is not candidate evidence. Each contract unit records its two axes separately: `measurement_state` says the instrument completed, and `property_status`/`findings` say what is claimed. The `security-lineage` unit's property is `NOT_CLAIMED` with every unbound observation named as a finding, so a passing `RT-SECURITY-LINEAGE` is an instrument plus an observation record and must never be read as 'the lineage is secure'.",
     "open": [],
     "provider_rows": [],
     "rule": "this stratum's working set is not a set of exported symbols: Phase 23 owns no export, no provider registration row and no prerequisite deferral, so its working set is exactly the multitrack authority contract units docs/PHASE-23-MULTITRACK-SUBPHASES.md names, each measured by the Phase-23 courts registry. Every row is read from those atlases; the ledger types none of them, and `main` fails closed if the ownership atlas assigns this stratum an export, the provider census assigns it a row, or the prerequisite plane assigns it a deferral or unit",
@@ -189,12 +249,12 @@
     {
       "name": "phase-23-plan",
       "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
-      "sha256": "4f0a085a68f8b793eb8024bc7fcdd247f8ec560ceee9efc3194b66f156024a04"
+      "sha256": "52289dc0d9aa8a60b624a40042533adf440edf9cc148cb4fcb73156f1131f5df"
     },
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "6514f6b28a0f8c8fa77cf853b4a298d439c0ee1f6e23294ad90b1f7136ab919c"
+      "sha256": "9c836800694f09d6057acf52072058cc2d1fc5ffefa77821b542035a57cc13dd"
     }
   ],
   "kind": "phase23-obligations",

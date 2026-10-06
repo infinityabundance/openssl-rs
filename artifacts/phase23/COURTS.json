@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-RELEASE-CATALOG` is 23.1's court: the release catalogue and its lineage. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, both derived from forensics/multitrack/release-archaeology.json -- the official OpenSSL release timeline, the git tag each release names and the commit it peels to, and the nearest release ancestor the git graph gives it. It establishes that the graph begins at OpenSSL 0.9.1c (23 December 1998), that every upstream mainline final is present with no unexplained gap, that a pre-release is classified and never promoted to final or to the `latest-stable` alias merely by sorting higher, that the lineage is a typed DAG whose parallel branches are branch_fork edges rather than a false linear mainline, that every node is schema-valid with provenance, and that SSLeay is provenance ancestry only. A deleted release, a `final` flipped to `beta`, a repointed parent edge and a `latest-stable` pointed at a beta are each detected with specificity holding on the honest catalogue. A passing catalogue is a catalogue, not a compatibility claim: no edge says any release is compatible with any other. `RT-AUTHORITY-NODES` is 23.2's court: the authority-node registry. It stages no probe and reads forensics/authority-nodes.json and the records it is derived from -- the release catalogue, the admitted-authority registry, the build records and the historical acquisition and build receipts -- and establishes that every node is schema-valid, content-addressed and backed by an actual build receipt; that release identity (release_id, git) is proven against the catalogue and kept separate from platform/profile identity; that the admitted pair's source manifests still reproduce; and that an unavailable authority is recorded unavailable and is never a node. A built-authority claim with no receipt, a dropped required identity field, and a source digest asserting tag == tarball without proof are each detected with specificity holding. Phase 23 owns no exported symbol, so no differential probe over a symbol set is its evidence, and its remaining ten courts -- RT-LINEAGE-EDGES, RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, RT-COMPATIBILITY-VIEWS, RT-COMPATIBILITY-EDGES, RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with the subphases that land them (23.3 through 23.12). The one thing the model forbids everywhere is a single boolean: compatibility is directional and dimension-specific, a cross-version receipt is never inherited, an authority is named explicitly and singularly, and a historical vulnerability is observed but never reintroduced. docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "`RT-RELEASE-CATALOG` is 23.1's court: the release catalogue and its lineage. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, both derived from forensics/multitrack/release-archaeology.json -- the official OpenSSL release timeline, the git tag each release names and the commit it peels to, and the nearest release ancestor the git graph gives it. It establishes that the graph begins at OpenSSL 0.9.1c (23 December 1998), that every upstream mainline final is present with no unexplained gap, that a pre-release is classified and never promoted to final or to the `latest-stable` alias merely by sorting higher, that the lineage is a typed DAG whose parallel branches are branch_fork edges rather than a false linear mainline, that every node is schema-valid with provenance, and that SSLeay is provenance ancestry only. A deleted release, a `final` flipped to `beta`, a repointed parent edge and a `latest-stable` pointed at a beta are each detected with specificity holding on the honest catalogue. A passing catalogue is a catalogue, not a compatibility claim: no edge says any release is compatible with any other. `RT-AUTHORITY-NODES` is 23.2's court: the authority-node registry. It stages no probe and reads forensics/authority-nodes.json and the records it is derived from -- the release catalogue, the admitted-authority registry, the build records and the historical acquisition and build receipts -- and establishes that every node is schema-valid, content-addressed and backed by an actual build receipt; that release identity (release_id, git) is proven against the catalogue and kept separate from platform/profile identity; that the admitted pair's source manifests still reproduce; and that an unavailable authority is recorded unavailable and is never a node. A built-authority claim with no receipt, a dropped required identity field, and a source digest asserting tag == tarball without proof are each detected with specificity holding. Phase 23 owns no exported symbol, so no differential probe over a symbol set is its evidence, and its remaining fifteen courts -- RT-ATLAS-PARAMETERIZATION, RT-LINEAGE-EDGES, RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, RT-ABI-HISTORY-FACADES, RT-SEMANTIC-COURTS, RT-COMPATIBILITY-VIEWS, RT-HISTORICAL-POPULATION, RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with the subphases that land them (23.3 through 23.17). The one thing the model forbids everywhere is a single boolean: compatibility is directional and dimension-specific, a cross-version receipt is never inherited, an authority is named explicitly and singularly, and a historical vulnerability is observed but never reintroduced. docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "catalog_counts": {
@@ -130,16 +130,21 @@
       }
     ],
     "pending_courts": {
-      "MULTITRACK-SEAL": "23.12 -- the full matrix, the FRF/Gemel chain and the seal",
-      "RT-COMPATIBILITY-EDGES": "23.7 -- the directional compatibility edges",
-      "RT-COMPATIBILITY-MATRIX": "23.11 -- the compatibility matrix",
-      "RT-COMPATIBILITY-VIEWS": "23.6 -- the compatibility views",
-      "RT-DELTA-ENGINE": "23.5 -- the delta engine",
-      "RT-ENTITY-LINEAGE": "23.4 -- the entity lineage",
-      "RT-LINEAGE-EDGES": "23.3 -- the lineage edges",
-      "RT-NEGATIVE-OBLIGATIONS": "23.8 -- the negative obligations",
-      "RT-SECURITY-LINEAGE": "23.9 -- the security lineage",
-      "RT-SUPPORT-STATUS": "23.10 -- the support-status ladder"
+      "MULTITRACK-SEAL": "23.17 -- the full matrix, the FRF/Gemel chain and the seal",
+      "RT-ABI-HISTORY-FACADES": "23.7 -- the ABI / history façades",
+      "RT-ATLAS-PARAMETERIZATION": "23.3 -- parameterize the atlases",
+      "RT-COMPATIBILITY-EDGES": "23.12 -- the directional compatibility edges",
+      "RT-COMPATIBILITY-MATRIX": "23.16 -- the compatibility matrix",
+      "RT-COMPATIBILITY-VIEWS": "23.9 -- the compatibility views",
+      "RT-DELTA-ENGINE": "23.6 -- the delta engine",
+      "RT-DOWNSTREAM-MULTITRACK": "23.11 -- the downstream multitrack court",
+      "RT-ENTITY-LINEAGE": "23.5 -- the entity lineage",
+      "RT-HISTORICAL-POPULATION": "23.10 -- the historical population",
+      "RT-LINEAGE-EDGES": "23.4 -- the lineage edges",
+      "RT-NEGATIVE-OBLIGATIONS": "23.13 -- the negative obligations",
+      "RT-SECURITY-LINEAGE": "23.14 -- the security lineage",
+      "RT-SEMANTIC-COURTS": "23.8 -- the semantic multitrack courts",
+      "RT-SUPPORT-STATUS": "23.15 -- the support-status ladder"
     },
     "schemas": {
       "authority_node": {
@@ -294,7 +299,7 @@
     {
       "name": "phase-23-plan",
       "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
-      "sha256": "4f0a085a68f8b793eb8024bc7fcdd247f8ec560ceee9efc3194b66f156024a04"
+      "sha256": "52289dc0d9aa8a60b624a40042533adf440edf9cc148cb4fcb73156f1131f5df"
     },
     {
       "name": "multitrack-schemas",

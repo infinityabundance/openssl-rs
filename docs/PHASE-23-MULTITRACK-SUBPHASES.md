@@ -106,12 +106,18 @@ for `owner_phase == 23`: no `deferrals` row and no `units` row. The plane's reco
 are all owned by earlier strata, so this stratum's working set is entirely its own authored
 contract.
 
-**The multitrack authority contract is twelve units**, each derived from the court that measures
-it: `release-nodes`, `authority-nodes`, `lineage-edges`, `entity-lineage`, `delta-engine`,
-`compatibility-views`, `directional-compatibility-edges`, `negative-obligations`,
-`security-lineage`, `support-status`, `compatibility-matrix` and `multitrack-seal`. At activation
-the runner registers none of them: its registry is empty, its twelve courts are `pending`, and all
-twelve units are open, so `open_in_this_stratum` opens at the whole working set (twelve).
+**The multitrack authority contract is seventeen units**, each derived from the court that
+measures it, and each court lands with the subphase that builds its instrument:
+`release-nodes`, `authority-nodes`, `atlas-parameterization`, `lineage-edges`, `entity-lineage`,
+`delta-engine`, `abi-history-facades`, `semantic-courts`, `compatibility-views`,
+`historical-population`, `downstream-multitrack`, `directional-compatibility-edges`,
+`negative-obligations`, `security-lineage`, `support-status`, `compatibility-matrix` and
+`multitrack-seal`. Two of the seventeen have closed -- `release-nodes` (23.1) and `authority-nodes`
+(23.2) -- and the ledger's live `counts` is the record of that: `open_in_this_stratum` is the
+number of still-open units, not the whole working set. The five units this plan's first draft
+omitted -- `atlas-parameterization`, `abi-history-facades`, `semantic-courts`,
+`historical-population` and `downstream-multitrack` -- are the brief §52 slices §4.8 restores,
+and the corrected activation measurement is seventeen `pending` courts over seventeen units.
 
 **The multitrack evidence plane already has its schema.** 23.0 lands
 `forensics/tools/multitrack_schemas.py`, which defines and validates the record kinds the later
@@ -126,9 +132,9 @@ comparison, and `multitrack_schemas.validate_compatibility_edge` rejects a `vers
 evidence kind. The version parser exists to establish *chronology* and to name a scheme, never to
 infer compatibility (`docs/PARITY_MODEL.md` §4).
 
-**Phase 23 begins on nothing of its own.** No multitrack court exists at activation, so
-`open_in_this_stratum` opens at the whole working set (twelve) and moves only as the subphases
-below land. **That split moves as the stratum lands its own units: the ledger's `counts` is the
+**Phase 23 begins on nothing of its own.** No multitrack court exists at activation, so the
+corrected `open_in_this_stratum` opens at the whole working set (seventeen) and moves only as the
+subphases below land. **That split moves as the stratum lands its own units: the ledger's `counts` is the
 live record and this section is the activation measurement.**
 
 ## 2. The subphases
@@ -138,20 +144,68 @@ live record and this section is the activation measurement.**
 | 23.0 | **The plan, the schemas, the ledger and the runner** | `docs/PHASE-23-MULTITRACK-SUBPHASES.md`, `forensics/tools/multitrack_schemas.py` and the measurement in §1. The ledger (`forensics/phase23-obligations.json`) and its generator land with it, together with the runner `forensics/tools/phase23_courts.py` and the registry it writes. **The runner cannot be deferred**: `run_courts.py` refuses a stratum in `in-progress` with no runner, and this stratum's obligations are not exports, so its first runnable court is a later subphase's. | 21 | — |
 | 23.1 | **The release catalogue and lineage query tooling** | one release node per upstream release, from OpenSSL 0.9.1c forward, read from the committed archaeology snapshot and the upstream lineage rather than typed, with the version parser and scheme model in `forensics/tools/multitrack_schemas.py`; the typed lineage between them (`forensics/authority-lineage.json`) and the query tool `forensics/tools/authority_graph.py`. | 23.0 | `RT-RELEASE-CATALOG` |
 | 23.2 | **The authority-node registry** | one authority node per built authority, over the releases an authority has been admitted for, recording platform, arch, build profile, toolchain, build environment and binary/installed hashes. | 23.1 | `RT-AUTHORITY-NODES` |
-| 23.3 | **The lineage edges** | the typed chronological / git-ancestry / branch-fork / maintenance-successor / security-backport edges between release nodes, each stating the direction it is read in. | 23.1 | `RT-LINEAGE-EDGES` |
-| 23.4 | **The entity lineage** | what became of each public entity across releases, with the relation vocabulary of §0 and `unknown_relationship` where the evidence does not settle it. | 23.1, 23.3 | `RT-ENTITY-LINEAGE` |
-| 23.5 | **The delta engine** | the added / removed / changed surface between two nodes, computed mechanically from the atlas and the entity lineage, never hand-listed, in the direction the lineage edge names. | 23.3, 23.4 | `RT-DELTA-ENGINE` |
-| 23.6 | **The compatibility views** | a directional, dimension-specific view per support status, each naming its reference release, its dimension and the release-specific evidence it was derived from -- never a boolean, and never inheriting a receipt across a version. | 23.5 | `RT-COMPATIBILITY-VIEWS` |
-| 23.7 | **The directional compatibility edges** | the directional compatibility edges between releases or authorities on one dimension each, with an evidence kind that is never numeric ordering. | 23.6 | `RT-COMPATIBILITY-EDGES` |
-| 23.8 | **The negative obligations** | the `must_not_exist` / `must_be_opaque` / `must_not_be_exported` obligations (beside the positive `must_exist` / `must_be_public` / `must_be_exported`), each with evidence and a state, so an absence is a checkable claim rather than an omission. | 23.1 | `RT-NEGATIVE-OBLIGATIONS` |
-| 23.9 | **The security lineage** | the historical vulnerabilities of the lineage, observed and never reintroduced, with the observation and the non-reintroduction each recorded so a view can never re-adopt a fixed behaviour. | 23.3, 23.6 | `RT-SECURITY-LINEAGE` |
-| 23.10 | **The support-status ladder** | the derived support status of each release node, over `catalogued`, `admitted-source`, `built-authority`, `atlas-complete`, `candidate-view`, `runtime-evidenced`, `downstream-evidenced` and `maintained`, with `archaeological-only` where the node is studied and not supported. | 23.1, 23.2 | `RT-SUPPORT-STATUS` |
-| 23.11 | **The compatibility matrix** | the assembled matrix that joins the views, the edges, the negative obligations and the security lineage over the lineage, with every cell a directional, dimension-specific record and no cell a single boolean. | 23.1–23.10 | `RT-COMPATIBILITY-MATRIX` |
-| 23.12 | **The full matrix, the FRF/Gemel chain and the seal** | the closure of the matrix as the stratum's claim, the FRF/Gemel chain rule where the stratum stages a declarable court, and the seal. Evidence: `docs/PHASE-23-MULTITRACK-SEAL.md` (at the seal). | 23.0–23.11 | `MULTITRACK-SEAL` |
+| 23.3 | **Parameterize the atlases** | the Phase 1 / Phase 22 archaeology generators generalized to be **parameterized by authority identity** -- one parameterized generator rather than a `phase1_old.py` per version -- with a court that regenerates the current 3.6.4 atlas through the parameterized generator and proves it **byte-identical** to the committed one, so the refactor never moves the evidence it exists to make reusable. | 23.0, 23.1, 23.2 | `RT-ATLAS-PARAMETERIZATION` |
+| 23.4 | **The lineage edges** | the typed chronological / git-ancestry / branch-fork / maintenance-successor / security-backport edges between release nodes, each stating the direction it is read in. | 23.1 | `RT-LINEAGE-EDGES` |
+| 23.5 | **The entity lineage** | what became of each public entity across releases, with the relation vocabulary of §0 and `unknown_relationship` where the evidence does not settle it. | 23.1, 23.4 | `RT-ENTITY-LINEAGE` |
+| 23.6 | **The delta engine** | the added / removed / changed surface between two nodes, computed mechanically from the atlas and the entity lineage, never hand-listed, in the direction the lineage edge names. | 23.4, 23.5 | `RT-DELTA-ENGINE` |
+| 23.7 | **The ABI / history façades** | the historical public-layout (`#[repr(C)]`) façades, the prototype wrappers, the initialization / threading epochs, and the ENGINE -> Provider -> no-ENGINE architecture model, each a **narrow adapter over the shared implementation** rather than a per-version fork. | 23.2, 23.6 | `RT-ABI-HISTORY-FACADES` |
+| 23.8 | **The semantic multitrack courts** | the **oracle-to-oracle** (authority A vs authority B) and **candidate-to-authority** courts, with side-specific adapters that emit the same **normalized observation vocabulary**, so the candidate and the oracle are read the same way and a comparison is a comparison rather than a translation. | 23.2, 23.6, 23.7 | `RT-SEMANTIC-COURTS` |
+| 23.9 | **The compatibility views** | a directional, dimension-specific view per support status, each naming its reference release, its dimension and the release-specific evidence it was derived from -- never a boolean, and never inheriting a receipt across a version. | 23.6, 23.8 | `RT-COMPATIBILITY-VIEWS` |
+| 23.10 | **The historical population** | the systematic **admission and courting of the public final-release lineage forward from the first release** (OpenSSL 0.9.1c), recording **honest unavailability** where a release cannot be reproducibly built rather than counting it runtime-compatible. | 23.2, 23.3, 23.9 | `RT-HISTORICAL-POPULATION` |
+| 23.11 | **The downstream multitrack court** | at least **one meaningful unmodified real downstream consumer per major compatibility epoch**, exercised as this stratum's own multitrack court rather than as Phase 17's replacement corpus. | 23.9, 23.10 | `RT-DOWNSTREAM-MULTITRACK` |
+| 23.12 | **The directional compatibility edges** | the directional compatibility edges between releases or authorities on one dimension each, with an evidence kind that is never numeric ordering. | 23.9 | `RT-COMPATIBILITY-EDGES` |
+| 23.13 | **The negative obligations** | the `must_not_exist` / `must_be_opaque` / `must_not_be_exported` obligations (beside the positive `must_exist` / `must_be_public` / `must_be_exported`), each with evidence and a state, so an absence is a checkable claim rather than an omission. | 23.1 | `RT-NEGATIVE-OBLIGATIONS` |
+| 23.14 | **The security lineage** | the historical vulnerabilities of the lineage, observed and never reintroduced, with the observation and the non-reintroduction each recorded so a view can never re-adopt a fixed behaviour. | 23.4, 23.9 | `RT-SECURITY-LINEAGE` |
+| 23.15 | **The support-status ladder** | the derived support status of each release node, over `catalogued`, `admitted-source`, `built-authority`, `atlas-complete`, `candidate-view`, `runtime-evidenced`, `downstream-evidenced` and `maintained`, with `archaeological-only` where the node is studied and not supported. | 23.1, 23.2, 23.11 | `RT-SUPPORT-STATUS` |
+| 23.16 | **The compatibility matrix** | the assembled matrix that joins the views, the edges, the negative obligations and the security lineage over the lineage, with every cell a directional, dimension-specific record and no cell a single boolean. | 23.9, 23.11-23.15 | `RT-COMPATIBILITY-MATRIX` |
+| 23.17 | **The full matrix, the FRF/Gemel chain and the seal** | the closure of the matrix as the stratum's claim, the FRF/Gemel chain rule where the stratum stages a declarable court, and the seal. Evidence: `docs/PHASE-23-MULTITRACK-SEAL.md` (at the seal). | 23.0-23.16 | `MULTITRACK-SEAL` |
 
 The rows above the seal partition the working set by source: each subphase row lands the instrument
-for exactly one of the twelve contract units. The partition is derived from
+for exactly one of the seventeen contract units. The partition is derived from
 `forensics/phase23-obligations.json` joined to `artifacts/phase23/COURTS.json`, not typed.
+
+**The brief §52 slice -> subphase -> court/unit map, so no slice can be silently dropped.** The
+brief's execution order (§52) has seventeen contract slices plus the plan/schema/runner slice. The
+repository's first draft of this table covered only twelve of them: it omitted five and renumbered
+the capabilities that followed the omissions down to fill the gap. This table maps every brief
+slice to the subphase that lands it and the court/unit that closes it, and records where the
+repository's numbers differed before the reconciliation of §4.8.
+
+| brief §52 slice | subphase | court / unit | what changed |
+|---|---|---|---|
+| 23.0 plan / schemas / ledger / runner | 23.0 | — (the runner itself) | unchanged |
+| 23.1 release catalogue | 23.1 | `RT-RELEASE-CATALOG` / `release-nodes` | unchanged (closed) |
+| 23.2 authority-node registry | 23.2 | `RT-AUTHORITY-NODES` / `authority-nodes` | unchanged (closed) |
+| 23.3 **parameterize the atlases** | 23.3 | `RT-ATLAS-PARAMETERIZATION` / `atlas-parameterization` | **restored** -- was omitted; `lineage-edges` had been numbered 23.3 |
+| 23.4 lineage edges | 23.4 | `RT-LINEAGE-EDGES` / `lineage-edges` | renumbered from 23.3 |
+| 23.5 entity lineage | 23.5 | `RT-ENTITY-LINEAGE` / `entity-lineage` | renumbered from 23.4 |
+| 23.6 delta engine | 23.6 | `RT-DELTA-ENGINE` / `delta-engine` | renumbered from 23.5 |
+| 23.7 **ABI / history façades** | 23.7 | `RT-ABI-HISTORY-FACADES` / `abi-history-facades` | **restored** -- was omitted; `directional-compatibility-edges` had been numbered 23.7 |
+| 23.8 **semantic multitrack courts** | 23.8 | `RT-SEMANTIC-COURTS` / `semantic-courts` | **restored** -- was omitted; `negative-obligations` had been numbered 23.8 |
+| 23.9 compatibility views | 23.9 | `RT-COMPATIBILITY-VIEWS` / `compatibility-views` | renumbered from 23.6 |
+| 23.10 **historical population** | 23.10 | `RT-HISTORICAL-POPULATION` / `historical-population` | **restored** -- was omitted; `support-status` had been numbered 23.10 |
+| 23.11 **downstream multitrack court** | 23.11 | `RT-DOWNSTREAM-MULTITRACK` / `downstream-multitrack` | **restored** -- was omitted; `compatibility-matrix` had been numbered 23.11 |
+| 23.12 directional compatibility edges | 23.12 | `RT-COMPATIBILITY-EDGES` / `directional-compatibility-edges` | renumbered from 23.7 |
+| 23.13 negative obligations | 23.13 | `RT-NEGATIVE-OBLIGATIONS` / `negative-obligations` | renumbered from 23.8 |
+| 23.14 security lineage | 23.14 | `RT-SECURITY-LINEAGE` / `security-lineage` | renumbered from 23.9 |
+| 23.15 support status | 23.15 | `RT-SUPPORT-STATUS` / `support-status` | renumbered from 23.10 |
+| 23.16 compatibility matrix | 23.16 | `RT-COMPATIBILITY-MATRIX` / `compatibility-matrix` | renumbered from 23.11 |
+| 23.17 seal | 23.17 | `MULTITRACK-SEAL` / `multitrack-seal` | renumbered from 23.12 |
+
+**The brief §49 seal requirements, and where each is discharged.** §49 fixes what the seal must
+state rather than bury; every requirement is carried by a subphase below, and the seal (23.17)
+closes over all of them. A requirement whose evidence is not yet measured reads `NOT_CLAIMED` with
+the gap named, never as satisfied.
+
+| brief §49 seal requirement | discharged by |
+|---|---|
+| the full compatibility matrix closed as the stratum's claim, every cell directional and dimension-specific, no cell a boolean | 23.16, sealed by 23.17 |
+| the FRF/Gemel chain rule where the stratum stages a declarable court | 23.17 |
+| the six explicit non-claims of §0 recorded in the ledger note, `docs/NON_CLAIMS.md` and the seal | 23.0 (the ledger note), 23.17 (the seal) |
+| honest unavailability: a release that cannot be reproducibly built is recorded `unavailable` and is never counted runtime-compatible | 23.10 |
+| the historical security lineage observed and never reintroduced | 23.14 |
+| reproducibility: a regenerated atlas is byte-identical, and the seal defers its counts to the generated census rather than typing them | 23.3, 23.17 |
+| the seal document `docs/PHASE-23-MULTITRACK-SEAL.md` and the `phase_state.py` closure rule that keeps the stratum `in-progress` until it exists | 23.17 |
 
 **The evidence artefacts this stratum produces (§38 of the brief).** The later subphases populate
 the **multitrack evidence plane**, each artefact validated against a record kind in
@@ -170,11 +224,19 @@ the **multitrack evidence plane**, each artefact validated against a record kind
 | `forensics/multitrack/security-lineage.json` | security-lineage observations | `security_observation` |
 | `forensics/multitrack/support-status.json` | support-status rows | `support_status` |
 | `forensics/multitrack/compatibility-matrix.json` | the assembled matrix | `compatibility_matrix` |
+| `forensics/atlas/parameterization-receipt.json` | the parameterization proof: the 3.6.4 atlas regenerated through the parameterized generator, byte-identical | `parameterization_receipt` (added by 23.3) |
+| `forensics/multitrack/abi-facades.json` | the historical public-layout and prototype façade records | `abi_facade` (added by 23.7) |
+| `forensics/multitrack/semantic-courts.json` | the normalized oracle-to-oracle and candidate-to-authority observations | `semantic_observation` (added by 23.8) |
+| `forensics/multitrack/historical-population.json` | the admitted / courted final-release records and their honest unavailability | `population_record` (added by 23.10) |
+| `forensics/multitrack/downstream-multitrack.json` | the per-epoch unmodified downstream consumer results | `downstream_epoch` (added by 23.11) |
 | `docs/PHASE-23-MULTITRACK-SEAL.md` | the seal | — |
 
-23.0 invents none of these artefacts: it defines and self-tests the schemas they will be validated
-against, and the runner records the schema inventory so the record kinds are a file the evidence
-points at rather than prose.
+23.0 invents none of these artefacts: it defines and self-tests the schemas the original
+subphases will be validated against, and the runner records the schema inventory so the record
+kinds are a file the evidence points at rather than prose. The five corrected subphases add the
+record kinds their rows name to `forensics/tools/multitrack_schemas.py` in the commit that lands
+each, exactly as §4.5 permits; a corrected subphase that finds a record kind needs a different
+split records the correction in §4 and in the seal rather than folding it into this prose.
 
 ## 3. What each subphase must honour
 
@@ -219,8 +281,8 @@ lineage records is an observation, and no view, edge or matrix cell may re-adopt
 fixed release moved away from (`docs/SECURITY_DIVERGENCE_POLICY.md` §1 and §3). A row whose
 disposition would reintroduce it is a `finding`, and the stratum fails rather than record it.
 
-**3.8 The twelve units land in one ordered chain behind the runner.** 23.1 through 23.11 land the
-eleven instruments; 23.12 lands the FRF/Gemel chain rule where the stratum stages a declarable
+**3.8 The seventeen units land in one ordered chain behind the runner.** 23.1 through 23.16 land
+the sixteen instruments; 23.17 lands the FRF/Gemel chain rule where the stratum stages a declarable
 court and the seal that closes the matrix; each lands its code, its court and its regenerated
 artefacts in one commit, and the ledger's `open_in_this_stratum` moves only when a court in
 `artifacts/phase23/COURTS.json` passes.
@@ -239,7 +301,7 @@ because then the non-export unit would be the wrong shape.
 **4.2 The precondition this plan places on 23.0, and it is not optional.** `run_courts.py` refuses
 a stratum that is not `not-started` and has no runner, so this stratum lands
 `forensics/tools/phase23_courts.py` with **no runnable court**: its obligations are not exports, so
-no differential probe over a symbol set is its evidence, and its twelve courts are named in
+no differential probe over a symbol set is its evidence, and its seventeen courts are named in
 `PENDING_COURTS` and land with the subphases that build the instruments they drive. **The direction
 of the `phase23_courts.py` ↔ `phase23_obligations.py` edge is the reverse of Phase 16's**: the
 ledger's contract-unit states are measured from the courts registry, so the registry is generated
@@ -272,7 +334,7 @@ is not in the schema, it records the correction here and in the seal rather than
 the prose it corrects. The correction is checked by the subphase's court rather than asserted.
 
 **4.6 A historical vulnerability is an observation, and the security lineage is the record.**
-23.9's subject is the lineage's own security history: each observation names the release the
+23.14's subject is the lineage's own security history: each observation names the release the
 vulnerability affected, the release that fixed it and the evidence; the stratum records them so the
 matrix can never re-adopt the fixed behaviour. This is the direction `docs/SECURITY_DIVERGENCE_POLICY.md`
 §1 fixes, generalised from the 3.6.3-versus-3.6.4 delta Phase 21 computed to the whole lineage.
@@ -300,6 +362,43 @@ rather than asserted here.
   because it provably stays inside the tree, and the build runs in a copy so the pristine tree keeps
   the root hash its source manifest records.
 
+**4.8 The stratum's first plan dropped five brief-required slices, and this reconciliation restores
+them (measured).** The plan's first §2 table read the stratum into **twelve** units. The phase brief's
+execution order (§52) requires **seventeen**: the same twelve and five more that the first draft
+never numbered. A capability the brief requires must never be silently dropped, so this correction
+is made by measurement -- the brief's slice list against the ledger's unit set and the runner's
+registry -- and not by preference. The five restored slices are:
+
+  * **23.3 parameterize the atlases** (brief §52 23.3, §8) -- one parameterized archaeology generator
+    rather than a `phase1_old.py` per version, with the current 3.6.4 atlas proved byte-identical;
+    the repository had put `lineage-edges` at 23.3.
+  * **23.7 ABI / history façades** (brief §52 23.7, §18/§19/§21/§22) -- the historical public-layout
+    `#[repr(C)]` façades, prototype wrappers, initialization/threading epochs and the
+    ENGINE -> Provider -> no-ENGINE model, as narrow adapters over the shared implementation; the
+    repository had put `directional-compatibility-edges` at 23.7.
+  * **23.8 semantic multitrack courts** (brief §52 23.8, §12) -- oracle-to-oracle and
+    candidate-to-authority courts over a shared normalized observation vocabulary; the repository had
+    put `negative-obligations` at 23.8.
+  * **23.10 historical population** (brief §52 23.10, §31) -- the systematic admission and courting of
+    the public final-release lineage forward from the first release, with honest unavailability; the
+    repository had put `support-status` at 23.10.
+  * **23.11 downstream multitrack court** (brief §52 23.11, §34) -- at least one meaningful unmodified
+    real downstream consumer per major compatibility epoch; the repository had put
+    `compatibility-matrix` at 23.11.
+
+The correction keeps `release-nodes` (23.1) and `authority-nodes` (23.2) exactly where they were and
+renumbers only phase 23's own remaining capabilities: `lineage-edges` 23.3 -> 23.4, `entity-lineage`
+23.4 -> 23.5, `delta-engine` 23.5 -> 23.6, `compatibility-views` 23.6 -> 23.9,
+`directional-compatibility-edges` 23.7 -> 23.12, `negative-obligations` 23.8 -> 23.13,
+`security-lineage` 23.9 -> 23.14, `support-status` 23.10 -> 23.15, `compatibility-matrix`
+23.11 -> 23.16 and `multitrack-seal` 23.12 -> 23.17. The brief's slice numbers and the
+repository's subphase numbers now coincide; they did not before, and the `what changed` column of
+§2's brief-slice map is the record. No phase outside 23 is renumbered, and the corrected unit set is
+seventeen units with `release-nodes` and `authority-nodes` implemented, `open_in_this_stratum`
+fifteen, and fifteen `pending` courts. The correction is recorded in `docs/DECISIONS.md` D537 and is
+checked by the ledger (which counts the seventeen units) and the runner (whose registry names a
+court and a landing subphase for each), not asserted here.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 21's process unchanged: a subphase lands its code, its court
@@ -308,7 +407,7 @@ where it has one; and an artefact that a source change moves is regenerated in t
 `docs/DECISIONS.md` is append-only and this document is not a decision record.
 
 **This plan's own boundaries are the evidence plane's, and it will correct them.** The subphase
-table above was written from the twelve-unit measurement in §1. A subphase that discovers its unit
+table above was written from the seventeen-unit measurement in §1. A subphase that discovers its unit
 is elsewhere records that rather than forcing the row. The activation is recorded in
 `docs/PHASE-23-MULTITRACK-SUBPHASES.md` itself and in `forensics/phase-state.json`.
 
@@ -319,5 +418,5 @@ ledger's implemented list is empty by measurement, not by omission.
 
 **Open exports (checked against the ledger):**
 
-None. This stratum owns no export, so its obligations are the twelve multitrack authority contract
-units, recorded in the ledger's contract-unit block rather than as open exports.
+None. This stratum owns no export, so its obligations are the seventeen multitrack authority
+contract units, recorded in the ledger's contract-unit block rather than as open exports.
