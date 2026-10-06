@@ -90,6 +90,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "CUSTODIAN-BOUNDARY-REGISTER": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "HOSTILE-BOUNDARY-REGISTER": {
       "observations": 0,
       "verdict": "pass"
@@ -831,7 +835,7 @@
     "phase17": 0,
     "phase18": 0,
     "phase19": 0,
-    "phase20": 1,
+    "phase20": 0,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
