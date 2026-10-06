@@ -134,20 +134,37 @@ caught: a selection with a court a delta row reaches **omitted**, and a selectio
 derives with **zero problems** (specificity) *and* both injections are caught; otherwise a court
 that could not tell a reached court from an unreached one would pass vacuously.
 
-The pending court
------------------
-One of the five courts the plan names is not runnable yet. `PENDING_COURTS` names it with the
-subphase that lands its instrument:
+`MAINTENANCE-BOUNDARY-REGISTER`, and what it binds
+--------------------------------------------------
+21.5's court, and the stratum's own answer to `docs/NON_CLAIMS.md`. It stages no probe: its subject
+is `artifacts/phase21/maintenance-boundary-register.json`, the authored register that records, per
+surface, whether it is **claimed** (a passing court covers it) or **bounded** (explicitly outside
+this stratum). The court re-reads both sides and fails the stratum if a recorded boundary has
+drifted from the evidence that establishes it:
 
-  * `MAINTENANCE-BOUNDARY-REGISTER` (21.5) — the register that records the explicit non-claims
-    (OpenSSL 4.x is a new compatibility profile, a 3.x receipt is never silently reinterpreted as
-    evidence for 4, only the exercised delta is claimed, unknown stays unknown), and that fails the
-    stratum if a recorded boundary drifts from its evidence.
+  * the **claimed side** is the four passing delta courts' own records computed above it in this one
+    run -- `RT-AUTHORITY-ADMISSION`, `RT-ATLAS-DELTA`, `RT-DELTA-DISPOSITION` and
+    `RT-AFFECTED-COURT-SELECTION` -- so a claimed row whose court no longer passes, or no longer
+    covers the surface its `surface_keys` name, or whose cited evidence no longer equals what the
+    court reports, is a finding; and
+  * the **bounded side** is the constitution/limitations artefacts: `docs/RELEASE_GATES.md` section
+    8 (OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted
+    as evidence for 4), `docs/NON_CLAIMS.md` (no version universality; unknown is stated),
+    `docs/PARITY_MODEL.md` section 1 (unknown is distinct from fail),
+    `docs/SECURITY_DIVERGENCE_POLICY.md` (a security regression is never reintroduced) and the two
+    planes `RT-ATLAS-DELTA` recorded `not-measured` (the provider registration rows and the
+    prerequisite units), which are bounded, not motionless, with what would make each measurable.
 
-There is no version-universality claim anywhere in this stratum; a passing court is an instrument
-and a bounded measurement of the movement between the two authorities it names, and the property it
-names may still carry findings. `docs/NON_CLAIMS.md` and `docs/SECURITY_DIVERGENCE_POLICY.md` are
-the authorities on the explicit non-claims and on the fixed direction of the trajectory.
+The court is mechanical: each row names its `surface`, its `verdict` (`claimed`/`bounded`), the
+evidence that establishes it, and -- for a bounded row -- what would make the surface measurable,
+and the court re-derives that evidence and compares it exactly. The instrument-sensitivity control
+injects a claimed row whose court is not passing and a bounded row whose cited evidence has drifted,
+and requires each to be detected; beside them a real view with no defect yields **zero findings**
+(specificity), because a control that cannot fail is not evidence. This is the last of the five
+units, so no court is `pending`. There is no version-universality claim anywhere in this stratum; a
+passing court is an instrument and a bounded measurement of the movement between the two authorities
+it names, and the property it names may still carry findings. `docs/NON_CLAIMS.md` is the authority
+on the explicit non-claims.
 
 The runner reads no obligations ledger: the ledger's contract-unit states are measured from this
 registry, so the edge runs ledger -> courts and binding it back would form a digest cycle neither
@@ -178,6 +195,7 @@ from atlas_common import (  # noqa: E402
     envelope,
     rel,
     resolve_authority,
+    sha256_file,
     write_json,
 )
 
@@ -251,34 +269,51 @@ CONTROL_UNDISPOSITIONED_ROW = "RT-DELTA-DISPOSITION-SYNTHETIC-UNDISPOSITIONED-RO
 CONTROL_REINTRODUCED_ROW = "RT-DELTA-DISPOSITION-SYNTHETIC-REINTRODUCED-ROW"
 CONTROL_BENIGN_ADDED_ROW = "RT-DELTA-DISPOSITION-SYNTHETIC-BENIGN-ADDED-ROW"
 
+# `MAINTENANCE-BOUNDARY-REGISTER` (21.5) and the constitution/limitations artefacts it binds. The
+# register is authored rather than derived -- the court re-reads it and the artefacts it cites -- so
+# it is an input to the runner, not an output of it. `docs/RELEASE_GATES.md` section 8 fixes the
+# version policy, `docs/NON_CLAIMS.md` is the explicit non-claim list, `docs/PARITY_MODEL.md`
+# section 1 defines `UNKNOWN` and `docs/SECURITY_DIVERGENCE_POLICY.md` fixes the security direction.
+BOUNDARY_REGISTER_DOC = REPO_ROOT / "artifacts" / "phase21" / "maintenance-boundary-register.json"
+BOUNDARY_REGISTER_SCHEMA = "openssl-rs/maintenance-boundary-register/v1"
+RELEASE_GATES_DOC = REPO_ROOT / "docs" / "RELEASE_GATES.md"
+NON_CLAIMS_DOC = REPO_ROOT / "docs" / "NON_CLAIMS.md"
+PARITY_MODEL_DOC = REPO_ROOT / "docs" / "PARITY_MODEL.md"
+
+# The register's two verdicts. `claimed` needs a passing court that covers the surface; `bounded`
+# is explicitly outside this stratum and names no court.
+REGISTER_VERDICTS: tuple[str, ...] = ("claimed", "bounded")
+
+# The two atlas-delta planes the register records bounded rather than motionless. A plane that
+# becomes measured is a drift: the register's `bounded` row would no longer describe the evidence.
+NOT_MEASURED_PROVIDER_PLANE = "provider-registration-rows"
+NOT_MEASURED_PREREQUISITE_PLANE = "prerequisite-units"
+
 AUTHORITY_ADMISSION = "RT-AUTHORITY-ADMISSION"
 ATLAS_DELTA = "RT-ATLAS-DELTA"
 DELTA_DISPOSITION = "RT-DELTA-DISPOSITION"
 AFFECTED_COURT_SELECTION = "RT-AFFECTED-COURT-SELECTION"
+BOUNDARY_REGISTER = "MAINTENANCE-BOUNDARY-REGISTER"
 
 # The courts, in the order they land. `(name, probe filename)`, and the probe is declared in the
 # same commit as the entry, so a runner that names a probe which does not exist cannot be
-# committed. A court that stages no probe names `""`: `RT-AUTHORITY-ADMISSION`, `RT-ATLAS-DELTA`
-# and `RT-DELTA-DISPOSITION` derive their evidence from committed records, so they have no staged
-# transcript to read back.
+# committed. A court that stages no probe names `""`: `RT-AUTHORITY-ADMISSION`, `RT-ATLAS-DELTA`,
+# `RT-DELTA-DISPOSITION`, `RT-AFFECTED-COURT-SELECTION` and `MAINTENANCE-BOUNDARY-REGISTER` derive
+# their evidence from committed records, so they have no staged transcript to read back. **Complete
+# at 21.5**: all five maintenance-delta courts are registered and passing.
 COURTS: list[tuple[str, str]] = [
     (AUTHORITY_ADMISSION, ""),
     (ATLAS_DELTA, ""),
     (DELTA_DISPOSITION, ""),
     (AFFECTED_COURT_SELECTION, ""),
+    (BOUNDARY_REGISTER, ""),
 ]
 
-# A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
-# the instrument and what the court will drive, so "nothing registered" is a stated distance rather
-# than a court quietly dropped.
-PENDING_COURTS: dict[str, str] = {
-    "MAINTENANCE-BOUNDARY-REGISTER": (
-        "21.5 lands the register; it records the explicit non-claims — OpenSSL 4.x is a new "
-        "compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for "
-        "4, only the exercised delta is claimed, and unknown stays unknown — and checks that every "
-        "recorded boundary still matches the evidence that establishes it"
-    ),
-}
+# A court the plan names and this stratum cannot run yet. It is empty: `RT-AUTHORITY-ADMISSION`
+# left this table when 21.1 landed its admission, `RT-ATLAS-DELTA` when 21.2 landed its derivation,
+# `RT-DELTA-DISPOSITION` when 21.3 landed its disposition, `RT-AFFECTED-COURT-SELECTION` when 21.4
+# landed its selection, and `MAINTENANCE-BOUNDARY-REGISTER` when 21.5 landed its register.
+PENDING_COURTS: dict[str, str] = {}
 
 
 # --------------------------------------------------------------------------------------------
@@ -1606,6 +1641,368 @@ def affected_court_selection_court(name: str) -> dict:
     }
 
 
+# --------------------------------------------------------------------------------------------
+# the maintenance-boundary register: the stratum's own non-claims, bound to the courts
+# --------------------------------------------------------------------------------------------
+
+def read_doc(path: Path) -> str:
+    """A committed document's text, or `""` when it is absent.
+
+    The bounded side of the register is read as text and interrogated for the non-claim it states;
+    a missing document is `""`, so the row that cites it drifts rather than the court aborting.
+    """
+    return path.read_text(encoding="utf-8") if path.is_file() else ""
+
+
+def _plane(record: dict, plane: str) -> dict:
+    """One plane row of the atlas-delta court's record, or an empty row when it names none."""
+    for row in record.get("planes") or []:
+        if row.get("plane") == plane:
+            return row
+    return {}
+
+
+def court_coverage(record: dict) -> set[str]:
+    """The surface keys a court covers, from its own record -- and only when it passed.
+
+    A non-`pass` court covers nothing: its row is still in the registry but no surface may lean on
+    it, so "a claimed row whose court no longer covers it" is detectable -- the coverage set for
+    that court goes empty. Each delta court covers exactly the subject the plan names, and never the
+    planes it recorded `not-measured`: those are the register's bounded rows, not a claimed surface.
+    """
+    if record.get("verdict") != "pass":
+        return set()
+    court = record.get("court")
+    if court == AUTHORITY_ADMISSION:
+        return {"delta.authority.pair"} if (record.get("pair") or {}).get("identity") else set()
+    if court == ATLAS_DELTA:
+        return ({"delta.atlas.export-plane"}
+                if (record.get("counts") or {}).get("planes_measured") else set())
+    if court == DELTA_DISPOSITION:
+        return ({"delta.disposition.every-row"}
+                if (record.get("counts") or {}).get("targets") else set())
+    if court == AFFECTED_COURT_SELECTION:
+        return ({"delta.affected-court.selection"}
+                if (record.get("counts") or {}).get("delta_rows") else set())
+    return set()
+
+
+def register_evidence(record: dict) -> dict:
+    """The court record's classification evidence, as the flat vocabulary the register cites.
+
+    The register's `evidence` block is a dict of `{key: expected}` over this view, and the court
+    compares them exactly, so a stated identity, count or axis that moves is a failure rather than a
+    register that silently describes the previous generation.
+    """
+    court = record.get("court")
+    counts = record.get("counts") or {}
+    ev: dict = {"verdict": record.get("verdict")}
+    if court == AUTHORITY_ADMISSION:
+        pair = record.get("pair") or {}
+        identity = pair.get("identity") or {}
+        ev["from_authority"] = identity.get("from_authority")
+        ev["to_authority"] = identity.get("to_authority")
+        ev["direction"] = identity.get("direction")
+        ev["from_version"] = (pair.get("from") or {}).get("version")
+        ev["to_version"] = (pair.get("to") or {}).get("version")
+        ev["from_profile"] = (pair.get("from") or {}).get("profile")
+        ev["to_profile"] = (pair.get("to") or {}).get("profile")
+        ev["findings_count"] = len(record.get("findings") or [])
+    elif court == ATLAS_DELTA:
+        ev["planes_measured"] = counts.get("planes_measured")
+        ev["planes_not_measured"] = counts.get("planes_not_measured")
+        ev["added"] = counts.get("added")
+        ev["removed"] = counts.get("removed")
+        ev["changed"] = counts.get("changed")
+        ev["findings_count"] = len(record.get("findings") or [])
+    elif court == DELTA_DISPOSITION:
+        ev["targets"] = counts.get("targets")
+        ev["measured"] = counts.get("measured")
+        ev["not_measured"] = counts.get("not_measured")
+        ev["implemented"] = counts.get("implemented")
+        ev["boundary"] = counts.get("boundary")
+        ev["unexplained"] = counts.get("unexplained")
+        ev["prohibited"] = counts.get("prohibited")
+        ev["findings_count"] = len(record.get("findings") or [])
+    elif court == AFFECTED_COURT_SELECTION:
+        ev["delta_rows"] = counts.get("delta_rows")
+        ev["moving_rows"] = counts.get("moving_rows")
+        ev["boundary_rows"] = counts.get("boundary_rows")
+        ev["selected_courts"] = counts.get("selected_courts")
+        ev["selected_strata"] = counts.get("selected_strata")
+        ev["uncovered_rows"] = counts.get("uncovered_rows")
+        ev["reexecuted_courts"] = counts.get("reexecuted_courts")
+        ev["findings_count"] = len(record.get("findings") or [])
+    return ev
+
+
+def bounded_evidence(records: list[dict]) -> dict:
+    """The bounded side's evidence, read from the constitution/limitations artefacts.
+
+    Every value is a fact about a committed artefact or a court record -- a stated non-claim, the
+    named plane's recorded state, or the absence of the historical counterpart that would make the
+    plane measurable -- so the register's `bounded` rows are compared exactly and a document that
+    stopped stating its non-claim, or a plane that became measurable, is a drift rather than a
+    register that silently describes the previous generation. The two `not-measured` plane rows
+    additionally name the remedy in their `would_make_measurable` field; the evidence here binds the
+    facts that make them bounded rather than motionless.
+    """
+    non_claims = read_doc(NON_CLAIMS_DOC)
+    release_gates = read_doc(RELEASE_GATES_DOC)
+    parity_model = read_doc(PARITY_MODEL_DOC)
+    security = read_doc(SECURITY_POLICY_DOC)
+    plan = read_doc(PLAN)
+    atlas_delta = next((r for r in records if r.get("court") == ATLAS_DELTA), {})
+    provider = _plane(atlas_delta, NOT_MEASURED_PROVIDER_PLANE)
+    prerequisite = _plane(atlas_delta, NOT_MEASURED_PREREQUISITE_PLANE)
+    provider_reason = str(provider.get("reason") or "")
+    prerequisite_reason = str(prerequisite.get("reason") or "")
+    return {
+        "release_gates_present": RELEASE_GATES_DOC.is_file(),
+        "release_gates_new_profile": "OpenSSL 4.x is a major-family transition" in release_gates,
+        "release_gates_never_reinterpreted":
+            "never silently reinterpreted as evidence for" in release_gates,
+        "non_claims_present": NON_CLAIMS_DOC.is_file(),
+        "non_claims_version_universality": "No version universality" in non_claims,
+        "non_claims_unknown_stated": "Unknown is a research result" in non_claims,
+        "parity_model_present": PARITY_MODEL_DOC.is_file(),
+        "parity_model_unknown_distinct": "UNKNOWN` is distinct from `FAIL`" in parity_model,
+        "security_policy_present": SECURITY_POLICY_DOC.is_file(),
+        "security_prohibits_reintroduction":
+            "Reintroducing a security regression" in security,
+        "security_trajectory_fixed":
+            HISTORICAL_AUTHORITY in security and PRODUCTION_AUTHORITY in security,
+        "plan_present": PLAN.is_file(),
+        "plan_names_exercised_delta": "only the exercised delta is claimed" in plan,
+        "provider_census_present": PROVIDER_CENSUS.is_file(),
+        "historical_provider_census_present":
+            (ATLAS / HISTORICAL_AUTHORITY / "provider-algorithms.json").is_file(),
+        "provider_plane_state": provider.get("state"),
+        "provider_reason_names_counterpart": "historical counterpart" in provider_reason,
+        "prerequisites_present": PREREQUISITES.is_file(),
+        "prerequisite_plane_state": prerequisite.get("state"),
+        "prerequisite_reason_names_counterpart": "historical counterpart" in prerequisite_reason,
+    }
+
+
+def verify_register_surface(row: dict, registry: dict[str, dict], coverage: dict[str, set[str]],
+                            covered_any: set[str], bounded: dict) -> list[str]:
+    """Every way one register row drifts from the evidence that establishes it.
+
+    A `claimed` row whose court is not registered or no longer passes, or that no longer covers a
+    surface key it names, is a drift. A `bounded` row that names a court, or that a passing court
+    now covers, is a drift; and a `bounded` row that does not name what would make its surface
+    measurable is a drift, because a boundary that does not say how it could close is motionless
+    rather than a stated distance. And a row -- either verdict -- whose cited evidence no longer
+    equals the value the artefact shows is a drift; for a `claimed` row the artefact is the court
+    record, for a `bounded` row it is the constitution/limitations view. This is the register's
+    whole subject.
+    """
+    findings: list[str] = []
+    sid = row.get("id", "<unnamed>")
+    verdict = row.get("verdict")
+    keys = row.get("surface_keys") or []
+    court = row.get("court")
+    if verdict not in REGISTER_VERDICTS:
+        findings.append(f"{sid}: verdict {verdict!r} is not one of {list(REGISTER_VERDICTS)}")
+        return findings
+    if verdict == "bounded":
+        if court is not None:
+            findings.append(f"{sid}: a bounded row must name no court (got {court!r})")
+        for key in keys:
+            if key in covered_any:
+                findings.append(
+                    f"{sid}: recorded bounded but a passing court now covers {key!r}")
+        if not str(row.get("would_make_measurable") or "").strip():
+            findings.append(
+                f"{sid}: recorded bounded but names nothing that would make the surface "
+                f"measurable, so the boundary is motionless rather than a stated distance"
+            )
+        for key, expected in (row.get("evidence") or {}).items():
+            if key not in bounded:
+                findings.append(f"{sid}: evidence key {key!r} has no value in the bounded view")
+            elif bounded[key] != expected:
+                findings.append(
+                    f"{sid}: evidence {key} = {expected!r} but the bounded view shows "
+                    f"{bounded[key]!r}")
+        return findings
+    rec = registry.get(court)
+    if rec is None:
+        findings.append(f"{sid}: cites court {court!r} which is not registered")
+        return findings
+    if rec.get("verdict") != "pass":
+        findings.append(f"{sid}: recorded claimed but its court {court} is {rec.get('verdict')}")
+    not_covered = sorted(k for k in keys if k not in coverage.get(court, set()))
+    if not_covered:
+        findings.append(f"{sid}: recorded claimed but {court} does not cover {not_covered}")
+    evidence = register_evidence(rec)
+    for key, expected in (row.get("evidence") or {}).items():
+        if key not in evidence:
+            findings.append(f"{sid}: evidence key {key!r} has no value in the {court} record")
+        elif evidence[key] != expected:
+            findings.append(
+                f"{sid}: evidence {key} = {expected!r} but {court} shows {evidence[key]!r}")
+    return findings
+
+
+def register_findings(doc: dict, records: list[dict], bounded: dict) -> list[str]:
+    """Every drift finding a register document shows against a court registry and the bounded view.
+
+    A pure function of its three inputs, so the sensitivity control can mutate a copy and re-run it
+    without touching the tree.
+    """
+    registry = {r.get("court"): r for r in records}
+    coverage = {r.get("court"): court_coverage(r) for r in records}
+    covered_any: set[str] = set()
+    for keys in coverage.values():
+        covered_any |= keys
+    findings: list[str] = []
+    for row in doc.get("surfaces") or []:
+        findings += verify_register_surface(row, registry, coverage, covered_any, bounded)
+    return findings
+
+
+def register_sensitivity_control(doc: dict, records: list[dict], bounded: dict) -> dict:
+    """Prove the register can fail: inject a non-passing court and a drifted boundary.
+
+    Two synthetic views are derived beside the real one -- a claimed row's court turned non-passing,
+    and a bounded row's cited evidence moved off the value its artefact shows -- and each must be
+    detected. The control is honest only when the real register shows **zero findings** (specificity)
+    *and* both injections are caught; otherwise a court that cannot tell a passing court from a
+    failed one, or evidence from its absence, would pass vacuously.
+    """
+    base = register_findings(doc, records, bounded)
+    specificity = not base
+
+    claimed = next((r for r in doc.get("surfaces") or [] if r.get("verdict") == "claimed"), None)
+    injected_records = copy.deepcopy(records)
+    for rec in injected_records:
+        if claimed is not None and rec.get("court") == claimed.get("court"):
+            rec["verdict"] = "fail"
+    caught_claimed = any("is fail" in f or "does not cover" in f
+                         for f in register_findings(doc, injected_records, bounded))
+
+    drifted = copy.deepcopy(doc)
+    bounded_row = next(
+        (r for r in drifted.get("surfaces") or []
+         if r.get("verdict") == "bounded" and r.get("evidence")),
+        None,
+    )
+    if bounded_row is not None:
+        key = next(iter(bounded_row["evidence"]))
+        value = bounded_row["evidence"][key]
+        if isinstance(value, bool):
+            bounded_row["evidence"][key] = not value
+        elif isinstance(value, int):
+            bounded_row["evidence"][key] = value + 1
+        else:
+            bounded_row["evidence"][key] = f"{value}-drifted"
+    caught_bounded = any("bounded view shows" in f
+                         for f in register_findings(drifted, records, bounded))
+
+    return {
+        "baseline_findings": len(base),
+        "injected_claimed_court": None if claimed is None else claimed.get("court"),
+        "injected_claimed_findings": len(register_findings(doc, injected_records, bounded)),
+        "injected_bounded_row": None if bounded_row is None else bounded_row.get("id"),
+        "injected_bounded_findings": len(register_findings(drifted, records, bounded)),
+        "specificity_holds": specificity,
+        "caught_claimed_court": caught_claimed,
+        "caught_bounded_drift": caught_bounded,
+        "honest": bool(specificity and caught_claimed and caught_bounded),
+    }
+
+
+def register_court(name: str, records: list[dict]) -> dict:
+    """`MAINTENANCE-BOUNDARY-REGISTER`: bind the authored register to the live courts registry.
+
+    Reads the four already-computed delta-court records, the authored register and the
+    constitution/limitations artefacts, re-derives each row's expected evidence and reports every
+    drift. A non-empty `findings` or `problems` is `fail`.
+    """
+    if not BOUNDARY_REGISTER_DOC.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "register-missing",
+                "frf_declarable": False,
+                "frf_exclusion": "the register court re-reads the courts registry; it stages no "
+                                  "probe pair",
+                "detail": rel(BOUNDARY_REGISTER_DOC)}
+    doc = json.loads(BOUNDARY_REGISTER_DOC.read_text(encoding="utf-8"))
+    surfaces = doc.get("surfaces") or []
+    bounded = bounded_evidence(records)
+    findings = register_findings(doc, records, bounded)
+    problems: list[str] = []
+    if doc.get("schema") != BOUNDARY_REGISTER_SCHEMA:
+        problems.append(
+            f"schema {doc.get('schema')!r} != {BOUNDARY_REGISTER_SCHEMA!r}")
+    coverage = {r.get("court"): court_coverage(r) for r in records}
+    cited = {r.get("court") for r in surfaces if r.get("verdict") == "claimed"}
+    for court, keys in coverage.items():
+        if keys and court not in cited:
+            problems.append(
+                f"court {court} passes and covers {len(keys)} surface(s) but no claimed "
+                f"register row cites it")
+    counts = {verdict: 0 for verdict in REGISTER_VERDICTS}
+    for row in surfaces:
+        if row.get("verdict") in counts:
+            counts[row["verdict"]] += 1
+    declared = doc.get("verdicts") or {}
+    for verdict in REGISTER_VERDICTS:
+        if declared.get(verdict) != counts[verdict]:
+            problems.append(
+                f"declared {verdict} count {declared.get(verdict)!r} but the register has "
+                f"{counts[verdict]} row(s)")
+    if declared.get("total") != len(surfaces):
+        problems.append(f"declared total {declared.get('total')!r} but the register has "
+                        f"{len(surfaces)} row(s)")
+    control = register_sensitivity_control(doc, records, bounded)
+    verdict = "pass" if (not problems and not findings and control["honest"]) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it re-reads the live courts registry (the four delta courts above) "
+            "and the authored register artifacts/phase21/maintenance-boundary-register.json, and "
+            "fails the stratum if any recorded claimed/bounded verdict, surface key or cited "
+            "evidence value has drifted from what the courts and the constitution/limitations "
+            "artefacts show (docs/PHASE-21-SUBPHASES.md section 3.6). A claimed row whose court no "
+            "longer passes or no longer covers the surface, a bounded row a passing court now "
+            "covers, and a bounded row whose cited evidence no longer matches docs/RELEASE_GATES.md "
+            "section 8, docs/NON_CLAIMS.md, docs/PARITY_MODEL.md section 1, "
+            "docs/SECURITY_DIVERGENCE_POLICY.md or the two `not-measured` planes RT-ATLAS-DELTA "
+            "recorded are all findings. A bounded row that names nothing that would make its "
+            "surface measurable is motionless rather than a stated distance, and is a finding. The "
+            "instrument sensitivity control injects a claimed row whose court is not passing and a "
+            "bounded row whose cited evidence has drifted, and requires both detected while the "
+            "real register shows zero findings (docs/PHASE-21-SUBPHASES.md sections 2, 3.3 and "
+            "3.6). It is the stratum's own answer to docs/NON_CLAIMS.md: no version universality "
+            "from a 3.x receipt, only the exercised delta claimed, unknown stays unknown, and a "
+            "3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the register re-reads the courts registry and the constitution/limitations artefacts "
+            "and stages no artifacts/phase21/probes/ pair, so it takes no transcript to diff and "
+            "carries no FRF declaration"
+        ),
+        "register": {
+            "path": rel(BOUNDARY_REGISTER_DOC),
+            "schema": doc.get("schema"),
+            "sha256": sha256_file(BOUNDARY_REGISTER_DOC),
+            "counts": counts,
+            "total": len(surfaces),
+        },
+        "surfaces": [
+            {"id": r.get("id"), "verdict": r.get("verdict"), "court": r.get("court"),
+             "surface_keys": r.get("surface_keys") or []}
+            for r in surfaces
+        ],
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1618,11 +2015,13 @@ def main(argv: list[str]) -> int:
 
     records: list[dict] = []
     for name, filename in COURTS:
-        # 21.1's, 21.2's, 21.3's and 21.4's courts stage no probe: their subjects are the pair's
-        # committed identity, the movement between the two admitted authorities, the disposition of
-        # that movement, and the courts that movement reaches, so each is computed here rather than
-        # read back from disk and no digest cycle forms. This stratum owns no export, so no
-        # differential probe over a symbol set is its evidence.
+        # 21.1's, 21.2's, 21.3's, 21.4's and 21.5's courts stage no probe: their subjects are the
+        # pair's committed identity, the movement between the two admitted authorities, the
+        # disposition of that movement, the courts that movement reaches, and the register that
+        # binds the stratum's non-claims, so each is computed here rather than read back from disk
+        # and no digest cycle forms. The register is handed the four records computed above it in
+        # this one run, so it re-reads the claimed side without the registry embedding itself. This
+        # stratum owns no export, so no differential probe over a symbol set is its evidence.
         if name == AUTHORITY_ADMISSION:
             records.append(authority_admission_court(name))
             continue
@@ -1634,6 +2033,9 @@ def main(argv: list[str]) -> int:
             continue
         if name == AFFECTED_COURT_SELECTION:
             records.append(affected_court_selection_court(name))
+            continue
+        if name == BOUNDARY_REGISTER:
+            records.append(register_court(name, records))
             continue
         src = REPO_ROOT / "courts" / "phase21" / str(filename)
         records.append({"court": name, "verdict": "fail", "stage": "probe-missing",
@@ -1684,14 +2086,27 @@ def main(argv: list[str]) -> int:
             "are not re-executed, so the mode is honestly `re-derived`), and a selection with a "
             "reached court omitted and one with a spurious court no row reaches are both detected. "
             "`MAINTENANCE-BOUNDARY-REGISTER` is "
-            "21.5's: the register of the explicit non-claims. This stratum owns no exported "
+            "21.5's: the register of the explicit non-claims. It stages no probe and binds the "
+            "authored register artifacts/phase21/maintenance-boundary-register.json, which "
+            "records, per surface, whether it is `claimed` (a passing court covers it) or "
+            "`bounded` (explicitly outside this stratum). It re-reads the four delta courts' "
+            "records (the claimed side) and the constitution/limitations artefacts -- "
+            "docs/RELEASE_GATES.md section 8, docs/NON_CLAIMS.md, docs/PARITY_MODEL.md section 1, "
+            "docs/SECURITY_DIVERGENCE_POLICY.md and the two planes RT-ATLAS-DELTA recorded "
+            "`not-measured`, the provider registration rows and prerequisite units -- and fails "
+            "the stratum if a recorded boundary has drifted from its evidence. The load-bearing "
+            "non-claims are carried as bounded rows: OpenSSL 4.x is a new compatibility profile "
+            "and a 3.x receipt is never silently reinterpreted as evidence for 4, only the "
+            "exercised delta is claimed, unknown stays unknown, the provider registration-row and "
+            "prerequisite-unit planes are bounded rather than motionless with what would make each "
+            "measurable, and a 3.6.3 behaviour that corresponds to an upstream security fix is "
+            "not reintroduced. On the current tree the register records zero findings "
+            "(specificity), and a synthetic view with a claimed row's court turned non-passing "
+            "and one with a bounded row's cited evidence drifted are both detected. This is the "
+            "last of the five units, so no court is `pending`. This stratum owns no exported "
             "symbol, so no differential probe over a symbol set is its evidence: the subject is "
-            "the delta between two admitted authorities, with no version-universality claim — "
-            "OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently "
-            "reinterpreted as evidence for 4 — only the exercised delta claimed, and unknown left "
-            "unknown. A 3.6.3 behaviour that corresponds to an upstream security fix is not "
-            "reintroduced. docs/PHASE-21-SUBPHASES.md sections 1, 3 and 4 record the measurement "
-            "and the courts."
+            "the delta between two admitted authorities, with no version-universality claim. "
+            "docs/PHASE-21-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts."
         ),
     }
 
@@ -1755,6 +2170,14 @@ def main(argv: list[str]) -> int:
                 if r.get("stratum") is not None
             })
         ],
+        # The 21.5 maintenance-boundary-register court's inputs: the authored register it binds and
+        # the constitution/limitations documents it re-reads, so the evidence binds the exact bytes
+        # that establish each bounded row. The `not-measured` plane facts are read from the
+        # atlas-delta record computed above, not as separate inputs.
+        InputRef(name="maintenance-boundary-register", path=BOUNDARY_REGISTER_DOC),
+        InputRef(name="release-gates", path=RELEASE_GATES_DOC),
+        InputRef(name="non-claims", path=NON_CLAIMS_DOC),
+        InputRef(name="parity-model", path=PARITY_MODEL_DOC),
     ]
     doc = envelope(kind="phase21-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
@@ -1835,6 +2258,20 @@ def main(argv: list[str]) -> int:
                 print(f"      court {court['court']:<28} stratum={court['stratum']} "
                       f"{court['mode']:<10} {court['observation']}  "
                       f"(selected by {len(court['selected_by'])} row(s))")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == BOUNDARY_REGISTER:
+            c = r["control"]
+            counts = r["register"]["counts"]
+            print(f"  {r['court']:<32} pass   (no probe, register: "
+                  f"{counts['claimed']} claimed + {counts['bounded']} bounded = "
+                  f"{r['register']['total']} surface(s), {len(r['findings'])} finding(s); "
+                  f"control honest={c['honest']} specificity={c['specificity_holds']} "
+                  f"injected-claimed-court->{c['injected_claimed_findings']} finding(s) "
+                  f"injected-bounded-drift->{c['injected_bounded_findings']} finding(s))")
+            for row in r["surfaces"]:
+                tag = row["verdict"] + (f" -> {row['court']}" if row["court"] else "")
+                print(f"      surface {row['id']:<44} {tag}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

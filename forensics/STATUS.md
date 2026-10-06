@@ -41,7 +41,7 @@ renderer does not know any phase status.
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` |  |
 | 19 | Performance / CPU dispatch | `complete` |  |
 | 20 | 3.6.4 custodian seal | `complete` |  |
-| 21 | Maintenance delta machinery | `in-progress` | 1 open obligation(s) of this stratum recorded in forensics/phase21-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase21-obligations.json` publishes `unit: maintenance delta contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`authority-admission`, `atlas-delta`, `delta-disposition`, `affected-court-selection` and `maintenance-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it computes the delta between two authorities that are already admitted. Its `artifacts/phase21/COURTS.json` registers the courts that have landed and names the rest `pending` with the subphases that land them: `RT-AUTHORITY-ADMISSION` (21.1) passes and records the delta's input pair, `RT-ATLAS-DELTA` (21.2) passes and recomputes the added / removed / changed delta across the atlas planes the procedure names -- the exports plane measured, the provider registration-row and prerequisite-unit planes named `not-measured` with their reasons rather than counted motionless -- and `RT-DELTA-DISPOSITION` (21.3) passes and dispositions every delta row against the candidate's own installed surface, a measured row `implemented` only when that surface carries it, a `not-measured` plane or axis `boundary`, and a `removed`/`changed` row the candidate carries a finding rather than a disposition -- and `RT-AFFECTED-COURT-SELECTION` (21.4) passes and derives, mechanically from the dispositioned delta and the coverage atlas's export -> court edge, which courts each moving row reaches, re-deriving exactly those courts -- while `MAINTENANCE-BOUNDARY-REGISTER` remains `pending`. A passing court is an **instrument**, not a property claim: the property it names may still carry findings, so `measurement_state` says the instrument completed while `property_status`/`findings` say what is claimed. The stratum makes no version-universality claim: OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4 (`docs/RELEASE_GATES.md` section 8, `docs/NON_CLAIMS.md` section 3), only the exercised delta is claimed, and unknown stays unknown (`docs/PARITY_MODEL.md` section 1); a 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced (`docs/SECURITY_DIVERGENCE_POLICY.md` section 1). The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-21-SUBPHASES.md` sections 1 and 4 record the measurement |
+| 21 | Maintenance delta machinery | `in-progress` | 1 required evidence file(s) absent, the first being docs/PHASE-21-MAINTENANCE-SEAL.md |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 
 No stratum is `not-started`.
@@ -387,9 +387,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 21 working set: 5
-* implemented: 4
+* implemented: 5
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 1
+* open in this stratum: 0
 
 Contract units (measurement vs property):
 
@@ -399,7 +399,7 @@ Contract units (measurement vs property):
 | atlas-delta | `complete` | `not_claimed` | — |
 | delta-disposition | `complete` | `not_claimed` | — |
 | affected-court-selection | `complete` | `not_claimed` | — |
-| maintenance-boundary-register | `not_measured` | `not_claimed` | — |
+| maintenance-boundary-register | `complete` | `not_claimed` | — |
 
 A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
 ### Phase 22 obligation ledger

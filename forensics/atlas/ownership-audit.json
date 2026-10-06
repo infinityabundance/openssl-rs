@@ -1402,37 +1402,37 @@
     {
       "name": "ledger-7",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "16d4b73c6ebf4b877e67834ed930a4b8c8f33e6eda02418df2b58cf6e16bc6d4"
+      "sha256": "19fa30b4a5458d0b5c029e2201443737349e12008887bed01f556da26118447b"
     },
     {
       "name": "ledger-8",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "c47c246c9dbaee9b7eb433736d85f2263b83f45b98776ce70d4de81ad1974b6c"
+      "sha256": "74cf5ecddec5a5be7d2f0673b4e63099b6c2a363bf9ec2707712635b8fdbdf86"
     },
     {
       "name": "ledger-9",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "541b0d5c02e20f388510aa8fdfbb75307c7dc97d2a8a99bb59f76666d0aa9e88"
+      "sha256": "cf07cc09ebdd47196ad8906596c560d1172988184eeec9e5ef4ec42d70e272f8"
     },
     {
       "name": "ledger-10",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "8e0c80d626bf9f9425985af96e06320ac81c6322cb1bc07188c4284c3df712c0"
+      "sha256": "194a219374ca6b515bd18285b072429282bc948836d9e8db9bb70b5d03247932"
     },
     {
       "name": "ledger-11",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "559ee771242d00152fa45505f18350ae1c764dc166df59db00cfab1b07f96930"
+      "sha256": "0f71e32aa8962443be3814ad709f76b2f985fefd8fbac4fa93945d44b4c55606"
     },
     {
       "name": "ledger-12",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "79155e3f96cdc9c1e03a01712ece18437d7dd1fe22df71feae9656b59d46a86b"
+      "sha256": "0d2cf37d97dc88f36c66d1047e1625fb5fe0cbacb1ba285d9cfaf1f3f75a66a3"
     },
     {
       "name": "ledger-13",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "3ec4bce18776f05fbc2a1ff6b4676d1f3fcb9c24f0209832cedb6c2980595951"
+      "sha256": "8a086fa486b0ea654c2fbf8886f2c01170541836c81438bc48051ee4aa96d420"
     },
     {
       "name": "ledger-14",
