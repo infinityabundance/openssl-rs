@@ -1144,6 +1144,39 @@ PHASE20_MODULES = [
     "docs/PHASE-20-CUSTODIAN-SEAL.md",
 ]
 
+# Phase 21 is the maintenance delta machinery stratum, and **it owns no exported symbol**: reading
+# `forensics/atlas/symbol-ownership.json` for `owner_phase == 21` yields no record, so its ledger's
+# unit is not a symbol. `forensics/phase21-obligations.json` records its unit as `maintenance delta
+# contract` (in `atlas_common.NON_EXPORT_UNITS`, so the export-partitioning tools skip it, as they
+# skip Phase 16's `cli-config contract`, Phase 17's `downstream replacement contract`, Phase 18's
+# `hostile hardening contract`, Phase 19's `performance dispatch contract` and Phase 20's `custodian
+# seal contract`), and its working set is five contract units -- the authority admission, the atlas
+# delta, the delta disposition, the affected-court selection and the maintenance-boundary register.
+# Like Phases 18 through 20 it hands nothing forward and receives nothing: it owns no provider
+# registration row, no symbol deferral and no prerequisite unit, because it computes the delta
+# between two authorities that are already admitted rather than adding library surface. It registers
+# no coverage-reference probe, because it owns no symbol to take an address of, so its runner's
+# registry is empty at activation and its five courts are `pending` with the subphase that lands
+# each. The ledger measures its contract-unit states from the courts registry, so the runner does not
+# bind the ledger (the edge runs ledger -> courts, the reverse of Phase 16's). A passing court is an
+# *instrument*: the property it names may still carry findings, and the stratum makes no
+# version-universality claim -- OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never
+# silently reinterpreted as evidence for 4, only the exercised delta is claimed, and unknown stays
+# unknown. `docs/PHASE-21-SUBPHASES.md` section 4 records the activation measurement and the
+# precondition it places on the runner.
+PHASE21_COURTS = "artifacts/phase21/COURTS.json"
+PHASE21_OBLIGATIONS = "forensics/phase21-obligations.json"
+PHASE21_MODULES = [
+    "docs/PHASE-21-SUBPHASES.md",
+    "forensics/tools/phase21_obligations.py",
+    # Phase 21 owns no FRF-declarable court -- its five delta courts stage no probe and read
+    # committed evidence -- so the FRF/Gemel chain rule is correctly vacuous for it and cannot be the
+    # stratum's closing evidence. Its seal document is, exactly as it is for Phases 3 through 7 and
+    # for Phase 20: the stratum stays `in-progress` until 21.6 writes this file, so a passing
+    # register at 21.5 cannot be read as the finished maintenance delta machinery.
+    "docs/PHASE-21-MAINTENANCE-SEAL.md",
+]
+
 # Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
 # every other stratum's: no export universe, no ownership projection and no provider row. What it
 # owes instead is the plan, the residual ledger its closure produces, the atlas's own courts and
@@ -1538,6 +1571,40 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "the runner does not bind the ledger and the edge runs ledger -> "
                             "courts, the reverse of Phase 16's. `docs/PHASE-20-SUBPHASES.md` "
                             "sections 1 and 4 record the measurement"
+                        )),
+    21: StratumEvidence(PHASE21_MODULES, PHASE21_OBLIGATIONS, PHASE21_COURTS,
+                        ledger_note=(
+                            "This stratum owns **no exported symbol**, so its ledger's unit is "
+                            "not a symbol: `forensics/phase21-obligations.json` publishes "
+                            "`unit: maintenance delta contract` and its `implemented`/`open` "
+                            "*export* lists are empty by measurement, while "
+                            "`open_in_this_stratum` counts the five contract units "
+                            "(`authority-admission`, `atlas-delta`, `delta-disposition`, "
+                            "`affected-court-selection` and `maintenance-boundary-register`). It "
+                            "owns no provider registration row, no symbol deferral and no "
+                            "prerequisite unit: it activates no provider and adds no library "
+                            "surface, because it computes the delta between two authorities that "
+                            "are already admitted. Its `artifacts/phase21/COURTS.json` registered "
+                            "no court at activation because it owns no symbol for a differential "
+                            "probe to observe; the five courts (`RT-AUTHORITY-ADMISSION`, "
+                            "`RT-ATLAS-DELTA`, `RT-DELTA-DISPOSITION`, "
+                            "`RT-AFFECTED-COURT-SELECTION` and "
+                            "`MAINTENANCE-BOUNDARY-REGISTER`) are `pending` with the subphases "
+                            "that land them. A passing court is an **instrument**, not a "
+                            "property claim: the property it names may still carry findings, so "
+                            "`measurement_state` says the instrument completed while "
+                            "`property_status`/`findings` say what is claimed. The stratum "
+                            "makes no version-universality claim: OpenSSL 4.x is a new "
+                            "compatibility profile and a 3.x receipt is never silently "
+                            "reinterpreted as evidence for 4 (`docs/RELEASE_GATES.md` section 8, "
+                            "`docs/NON_CLAIMS.md` section 3), only the exercised delta is claimed, "
+                            "and unknown stays unknown (`docs/PARITY_MODEL.md` section 1); a "
+                            "3.6.3 behaviour that corresponds to an upstream security fix is not "
+                            "reintroduced (`docs/SECURITY_DIVERGENCE_POLICY.md` section 1). The "
+                            "ledger's contract-unit states are measured from the courts "
+                            "registry, so the runner does not bind the ledger and the edge runs "
+                            "ledger -> courts, the reverse of Phase 16's. "
+                            "`docs/PHASE-21-SUBPHASES.md` sections 1 and 4 record the measurement"
                         )),
     # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
     # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no
