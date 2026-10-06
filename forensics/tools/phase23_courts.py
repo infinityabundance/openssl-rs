@@ -16,7 +16,7 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**Fourteen courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+**Fifteen courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
 lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, 23.3 lands
 `RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court, 23.4 lands `RT-LINEAGE-EDGES`, the
 typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage court, 23.6 lands
@@ -28,7 +28,8 @@ typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage cou
 `RT-DOWNSTREAM-MULTITRACK`, the unmodified-downstream-consumer court, and 23.12 lands
 `RT-COMPATIBILITY-EDGES`, the directional compatibility-edge court, and 23.13 lands
 `RT-NEGATIVE-OBLIGATIONS`, the negative/positive-obligation court, and 23.14 lands
-`RT-SECURITY-LINEAGE`, the security-lineage court; the other three courts are
+`RT-SECURITY-LINEAGE`, the security-lineage court, and 23.15 lands `RT-SUPPORT-STATUS`, the
+support-status-ladder court; the other two courts are
 named in
 `PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
@@ -57,7 +58,7 @@ The seventeen courts, and the subphase that lands each
   * `RT-COMPATIBILITY-EDGES` -- 23.12, the directional compatibility edges (registered).
   * `RT-NEGATIVE-OBLIGATIONS` -- 23.13, the negative obligations (registered).
   * `RT-SECURITY-LINEAGE` -- 23.14, the security lineage (registered).
-  * `RT-SUPPORT-STATUS` -- 23.15, the support-status ladder.
+  * `RT-SUPPORT-STATUS` -- 23.15, the support-status ladder (registered).
   * `RT-COMPATIBILITY-MATRIX` -- 23.16, the compatibility matrix.
   * `MULTITRACK-SEAL` -- 23.17, the full matrix, the FRF/Gemel chain and the seal.
 
@@ -65,7 +66,7 @@ Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZA
 `RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE`, `RT-DELTA-ENGINE`, `RT-ABI-HISTORY-FACADES`,
 `RT-SEMANTIC-COURTS`, `RT-COMPATIBILITY-VIEWS`, `RT-HISTORICAL-POPULATION`,
 `RT-DOWNSTREAM-MULTITRACK`, `RT-COMPATIBILITY-EDGES`,
-`RT-NEGATIVE-OBLIGATIONS` and `RT-SECURITY-LINEAGE` is
+`RT-NEGATIVE-OBLIGATIONS`, `RT-SECURITY-LINEAGE` and `RT-SUPPORT-STATUS` is
 `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
@@ -149,6 +150,10 @@ import negative_obligations  # noqa: E402
 # status from the committed catalogue, authority nodes and receipts through the same code path the
 # artefact was produced by (never a hand-listed status) and re-derives a mutated epoch's coverage.
 import historical_population  # noqa: E402
+# The Phase-23.15 support-status generator, imported so the court re-derives the whole ladder plane
+# from the 23.10 population through the same code path the artefact was produced by (never a typed
+# status) and reconciles every row with its population record rung for rung.
+import support_status  # noqa: E402
 # The Phase-23.11 downstream-multitrack generator, imported so the court re-derives every consumer
 # record from the raw build/run outputs the artefact carries through the same code path the artefact
 # was produced by (never a hand-typed outcome) and re-derives the epoch coverage a mutation moves.
@@ -237,6 +242,11 @@ HISTORICAL_POPULATION = REPO_ROOT / "forensics" / "multitrack" / "historical-pop
 SEMANTIC_COURTS = REPO_ROOT / "forensics" / "multitrack" / "semantic-courts.json"
 ATLAS_ROOT = REPO_ROOT / "forensics" / "atlas"
 
+# 23.15's subject: the schema-validated support-status ladder plane, one derived row per catalogue
+# node. It is derived from the 23.10 population and reconciled with it, so there is one derivation of
+# a status rather than a second hand-maintained truth.
+SUPPORT_STATUS = REPO_ROOT / "forensics" / "multitrack" / "support-status.json"
+
 # 23.11's subject: the per-epoch unmodified downstream consumer records, the authority nodes they
 # are bounded to, and the Phase-17 candidate corpus they must stay distinct from (a candidate
 # result is never relabelled as authority evidence).
@@ -268,6 +278,7 @@ COMPATIBILITY_VIEWS_COURT = "RT-COMPATIBILITY-VIEWS"
 COMPATIBILITY_EDGES_COURT = "RT-COMPATIBILITY-EDGES"
 NEGATIVE_OBLIGATIONS_COURT = "RT-NEGATIVE-OBLIGATIONS"
 SECURITY_LINEAGE_COURT = "RT-SECURITY-LINEAGE"
+SUPPORT_STATUS_COURT = "RT-SUPPORT-STATUS"
 HISTORICAL_POPULATION_COURT = "RT-HISTORICAL-POPULATION"
 DOWNSTREAM_MULTITRACK_COURT = "RT-DOWNSTREAM-MULTITRACK"
 ROOT_RELEASE = "openssl-0.9.1c"
@@ -304,13 +315,13 @@ COURTS: list[tuple[str, str]] = [
     (NEGATIVE_OBLIGATIONS_COURT, "_negative_obligations_court"),
     (SECURITY_LINEAGE_COURT, "_security_lineage_court"),
     (HISTORICAL_POPULATION_COURT, "_historical_population_court"),
+    (SUPPORT_STATUS_COURT, "_support_status_court"),
     (DOWNSTREAM_MULTITRACK_COURT, "_downstream_multitrack_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-SUPPORT-STATUS": "23.15 -- the support-status ladder",
     "RT-COMPATIBILITY-MATRIX": "23.16 -- the compatibility matrix",
     "MULTITRACK-SEAL": "23.17 -- the full matrix, the FRF/Gemel chain and the seal",
 }
@@ -4507,6 +4518,451 @@ def _historical_population_court(name: str) -> dict:
     }
 
 
+def _support_status_reseal(body: dict) -> dict:
+    """`body` with its content hash recomputed, so a mutation is caught on substance alone."""
+    out = copy.deepcopy(body)
+    out["content_hash"] = support_status.body_hash(out.get("records") or [])
+    return out
+
+
+def _support_status_counts(records: list[dict]) -> dict:
+    """The support-status counts, recomputed from the rows (never read from the body)."""
+    by_status: dict[str, int] = {}
+    by_rung: dict[str, int] = {}
+    by_role: dict[str, int] = {}
+    by_scope: dict[str, int] = {}
+    for r in records:
+        status = r.get("status", "<none>")
+        role = r.get("support_role", "<none>")
+        scope = r.get("scope", "<none>")
+        by_status[status] = by_status.get(status, 0) + 1
+        by_role[role] = by_role.get(role, 0) + 1
+        by_scope[scope] = by_scope.get(scope, 0) + 1
+        for rung in r.get("rungs_attained") or []:
+            by_rung[rung] = by_rung.get(rung, 0) + 1
+    return {
+        "nodes": len(records),
+        "by_status": {k: by_status[k] for k in sorted(by_status)},
+        "by_rung": {k: by_rung[k] for k in sorted(by_rung)},
+        "by_support_role": {k: by_role[k] for k in sorted(by_role)},
+        "by_scope": {k: by_scope[k] for k in sorted(by_scope)},
+        "support_targets": by_role.get("support-target", 0),
+        "archaeology": by_role.get("archaeology", 0),
+        "runtime_compatible": sum(1 for r in records if r.get("runtime_compatible")),
+    }
+
+
+def support_status_findings(body: dict, population: dict, catalog: dict, authority_nodes: dict,
+                            authorities: dict, build_records: dict, hist_acq: dict,
+                            hist_receipts: dict, views: dict, semantic: dict, downstream: dict,
+                            default_alias: dict) -> list[str]:
+    """Every way the support-status plane and its backing evidence fail this court.
+
+    A pure function of the committed bodies, so the sensitivity control can mutate them and
+    re-check. It establishes that one schema-valid row names every catalogue node; that every row
+    reconciles node-for-node and rung-for-rung with its 23.10 population record; that each rung a
+    node attained is backed by the evidence that establishes it (a `built-authority` by an actual
+    receipt, a `downstream-evidenced` by a passing consumer, ...); that each rung not attained
+    carries a reason; that `archaeological-only` is never counted a support target; that the
+    statuses are derived and carry no competing `PARITY_VERIFIED`; and that the counts and content
+    hash reproduce and every evidence path is content-addressed.
+    """
+    findings: list[str] = []
+    records = body.get("records") or []
+    catalog_nodes = {n["release_id"]: n for n in catalog.get("nodes", [])}
+    auth_nodes = {n["release_id"]: n for n in authority_nodes.get("nodes", [])}
+    builds = {b["id"] for b in build_records.get("builds", [])}
+    acquisitions = {r["release_id"] for r in hist_acq.get("acquisitions", [])}
+    admitted = {f"openssl-{a['version']}" for a in authorities.get("authorities", [])}
+    receipts = {r["release_id"] for r in hist_receipts.get("receipts", [])}
+    compatible = {v.get("reference_id") for v in views.get("views", [])
+                  if v.get("status") == "compatible"}
+    runtime = {semantic.get("authority_a"), semantic.get("authority_b")} - {None}
+    passed = {r.get("authority_id") for r in downstream.get("records", [])
+              if r.get("outcome") == "passed"}
+    maintained = str(default_alias.get("maintained_candidate") or "")
+    receipt_rel, build_records_rel = rel(HIST_RECEIPTS), rel(BUILD_RECORDS)
+
+    def rung_problem(rung: str, rid: str, aid: str | None, rungs: list[str]) -> str | None:
+        """Why the named rung is not established by the evidence, or `None` when it is."""
+        if rung == "catalogued":
+            return None if rid in catalog_nodes else "it names no catalogue release"
+        if rung == "admitted-source":
+            return None if (rid in acquisitions or rid in admitted) \
+                else "no acquisition record and no admitted-authority record names it"
+        if rung == "built-authority":
+            node = auth_nodes.get(rid)
+            if node is None or node.get("claim") != "built-authority":
+                return "no authority node backs it with a built-authority claim"
+            receipt = node.get("build_receipt")
+            if not receipt or not (REPO_ROOT / receipt).is_file():
+                return "its build receipt is absent"
+            if receipt == receipt_rel and rid not in receipts:
+                return "no historical build receipt names it"
+            if receipt == build_records_rel and node["authority_id"] not in builds:
+                return "no build record names its authority"
+            return None
+        if rung == "atlas-complete":
+            return None if (aid and historical_population.atlas_anchor(aid)) \
+                else "the authority carries no committed atlas"
+        if rung == "candidate-view":
+            return None if (aid and aid in compatible) \
+                else "no compatible candidate-to-reference view names the authority"
+        if rung == "runtime-evidenced":
+            return None if (aid and aid in runtime) \
+                else "the authority is not one side of the executed semantic pair"
+        if rung == "downstream-evidenced":
+            return None if (aid and aid in passed) \
+                else "no passing unmodified downstream consumer exercised the authority"
+        if rung == "maintained":
+            return None if (rid == maintained and "built-authority" in rungs) \
+                else "it is not the maintained candidate the default-authority alias names"
+        return f"{rung!r} is not a ladder rung"
+
+    # 1. schema validity -- ordering, no duplicate, no skipped core rung, highest-rung status.
+    for r in records:
+        rid = r.get("subject_id", "<none>")
+        findings += [f"support-status row {rid}: {p}" for p in
+                     multitrack_schemas.validate_support_status(r)]
+
+    # 2. exactly one row per catalogue node, and no row is extra.
+    ids = [r.get("subject_id") for r in records]
+    if len(set(ids)) != len(ids):
+        findings.append(f"the support-status plane has {len(ids) - len(set(ids))} duplicate row "
+                        f"id(s)")
+    for rid in sorted(set(catalog_nodes) - set(ids)):
+        findings.append(f"catalogue release {rid} has no support-status row, so it is silently "
+                        f"omitted")
+    for rid in sorted(set(ids) - set(catalog_nodes)):
+        findings.append(f"support-status row {rid} names no catalogue release")
+
+    # 3. every row reconciles with its 23.10 population record -- the anti-duplication proof.
+    pop = {r["release_id"]: r for r in population.get("records") or []}
+    for r in records:
+        rid = r.get("subject_id")
+        p = pop.get(rid)
+        if p is None:
+            findings.append(f"support-status row {rid} has no population record to reconcile with")
+            continue
+        if r.get("status") != p.get("status"):
+            findings.append(f"support-status row {rid}: status {r.get('status')!r} does not "
+                            f"reconcile with the population's {p.get('status')!r}")
+        if list(r.get("rungs_attained") or []) != list(p.get("rungs_attained") or []):
+            findings.append(f"support-status row {rid}: rungs_attained {r.get('rungs_attained')!r} "
+                            f"do not reconcile with the population's "
+                            f"{p.get('rungs_attained')!r}")
+        if r.get("scope") != p.get("scope"):
+            findings.append(f"support-status row {rid}: scope does not reconcile with the "
+                            f"population")
+        if bool(r.get("runtime_compatible")) != bool(p.get("runtime_compatible")):
+            findings.append(f"support-status row {rid}: runtime_compatible does not reconcile with "
+                            f"the population")
+    if (body.get("counts") or {}).get("by_status") \
+            != (population.get("counts") or {}).get("by_status"):
+        findings.append("the support-status by_status histogram does not reconcile with the "
+                        "population's")
+
+    # 4. each attained rung is backed by the evidence that establishes it, and cited in the row.
+    for r in records:
+        rid = r.get("subject_id")
+        rungs = r.get("rungs_attained") or []
+        node = auth_nodes.get(rid)
+        aid = node.get("authority_id") if node else None
+        by_rung = r.get("evidence_by_rung") or {}
+        row_paths = {e.get("path") for e in (r.get("evidence") or [])}
+        for rung in rungs:
+            why = rung_problem(rung, rid, aid, rungs)
+            if why is not None:
+                findings.append(f"support-status row {rid}: attained {rung} but {why}")
+            entry = by_rung.get(rung)
+            if entry is None:
+                findings.append(f"support-status row {rid}: attained {rung} with no "
+                                f"evidence_by_rung entry")
+            elif entry.get("path") not in row_paths:
+                findings.append(f"support-status row {rid}: evidence_by_rung[{rung}] cites "
+                                f"{entry.get('path')!r}, which is not in the row's evidence")
+
+    # 4b. each rung not attained carries a reason, and the set is exactly the ladder minus attained.
+    for r in records:
+        rid = r.get("subject_id")
+        not_attained = r.get("not_attained") or {}
+        expected = {rung for rung in multitrack_schemas.SUPPORT_LADDER
+                    if rung not in (r.get("rungs_attained") or [])}
+        if set(not_attained) != expected:
+            findings.append(f"support-status row {rid}: not_attained {sorted(not_attained)} is not "
+                            f"exactly the ladder rungs not attained {sorted(expected)}")
+        for rung, reason in not_attained.items():
+            if not isinstance(reason, str) or not reason.strip():
+                findings.append(f"support-status row {rid}: not_attained[{rung}] carries no reason")
+
+    # 5. archaeological-only is archaeology, climbs no rung, and is never counted a support target.
+    for r in records:
+        rid = r.get("subject_id")
+        archaeology = r.get("status") == "archaeological-only"
+        role = r.get("support_role")
+        if role not in ("support-target", "archaeology"):
+            findings.append(f"support-status row {rid}: support_role {role!r} is not one of "
+                            f"support-target/archaeology")
+        elif archaeology != (role == "archaeology"):
+            findings.append(f"support-status row {rid}: support_role {role!r} disagrees with status "
+                            f"{r.get('status')!r}")
+        if archaeology and (r.get("rungs_attained") or []):
+            findings.append(f"support-status row {rid}: an archaeological-only node has climbed a "
+                            f"rung")
+
+    # 5b. the counts reproduce, and the support/archaeology split is exact.
+    recomputed = _support_status_counts(records)
+    if body.get("counts") != recomputed:
+        findings.append("the support-status counts do not reproduce from its rows")
+    elif recomputed["support_targets"] + recomputed["archaeology"] != recomputed["nodes"]:
+        findings.append("the support-target and archaeology counts do not account for every node")
+
+    # 6. the statuses do not compete with the parity dimensions: no PARITY_VERIFIED, no boolean.
+    for r in records:
+        rid = r.get("subject_id")
+        for key in r:
+            if key in ("compatible", "parity", "parity_verified"):
+                findings.append(f"support-status row {rid} carries a competing {key!r} field")
+        if r.get("status") not in multitrack_schemas.SUPPORT_STATUSES:
+            findings.append(f"support-status row {rid}: status {r.get('status')!r} is not a ladder "
+                            f"status")
+
+    # 7. the content hash is a function of the committed rows.
+    if support_status.body_hash(records) != body.get("content_hash"):
+        findings.append("the support-status content_hash does not reproduce from its rows")
+
+    # 8. every evidence path is present and content-addressed.
+    for r in records:
+        for entry in r.get("evidence") or []:
+            path, digest = entry.get("path"), entry.get("sha256")
+            p = REPO_ROOT / str(path or "")
+            if not p.is_file():
+                findings.append(f"support-status row {r.get('subject_id')}: evidence path {path!r} "
+                                f"is absent")
+            elif digest != sha256_file(p):
+                findings.append(f"support-status row {r.get('subject_id')}: evidence {path!r} is "
+                                f"not content-addressed")
+    return findings
+
+
+def support_status_sensitivity_control(body: dict, population: dict, catalog: dict,
+                                       authority_nodes: dict, authorities: dict,
+                                       build_records: dict, hist_acq: dict, hist_receipts: dict,
+                                       views: dict, semantic: dict, downstream: dict,
+                                       default_alias: dict) -> dict:
+    """Prove the court can fail: seed four mutations and require each caught.
+
+    The honest plane must yield **zero** findings (specificity), and each seeded mutation -- a node
+    claiming a higher rung with no evidence, a node skipping a core rung, an archaeological-only node
+    counted a support target, and a status typed rather than derived -- must be caught. Each mutated
+    body is re-sealed first, so the detection is a semantic check and never the content-hash check
+    firing on an un-recomputed digest.
+    """
+    def findings_of(b, p=population):
+        return support_status_findings(b, p, catalog, authority_nodes, authorities, build_records,
+                                       hist_acq, hist_receipts, views, semantic, downstream,
+                                       default_alias)
+
+    base = findings_of(body)
+    specificity = not base
+
+    def ladder_prefix(n: int) -> list[str]:
+        return list(multitrack_schemas.SUPPORT_LADDER[:n])
+
+    def reasons_for(rungs: list[str], archaeology: bool, reason: str) -> dict[str, str]:
+        if archaeology:
+            return {rung: reason for rung in multitrack_schemas.SUPPORT_LADDER}
+        return {rung: support_status.NON_ATTAINMENT[rung] for rung in multitrack_schemas.SUPPORT_LADDER
+                if rung not in rungs}
+
+    # (a) a node claiming a higher rung with no evidence: 1.0.0 claims runtime-evidenced.
+    higher = copy.deepcopy(body)
+    for r in higher["records"]:
+        if r["subject_id"] == "openssl-1.0.0":
+            r["status"] = "runtime-evidenced"
+            r["rungs_attained"] = ladder_prefix(6)
+            r["not_attained"] = reasons_for(r["rungs_attained"], False, r["reason"])
+    higher = _support_status_reseal(higher)
+    higher_findings = findings_of(higher)
+    caught_higher = any("attained runtime-evidenced but" in f for f in higher_findings)
+
+    # (b) a node skipping a core rung: 3.6.4 attains built-authority without admitted-source.
+    skipped = copy.deepcopy(body)
+    for r in skipped["records"]:
+        if r["subject_id"] == "openssl-3.6.4":
+            r["rungs_attained"] = ["catalogued", "built-authority"]
+            r["status"] = "built-authority"
+            r["not_attained"] = reasons_for(r["rungs_attained"], False, r["reason"])
+    skipped = _support_status_reseal(skipped)
+    skipped_findings = findings_of(skipped)
+    caught_skipped = any("skip a core rung" in f for f in skipped_findings)
+
+    # (c) an archaeological-only node counted a support target.
+    archaeology = copy.deepcopy(body)
+    for r in archaeology["records"]:
+        if r["support_role"] == "archaeology":
+            r["support_role"] = "support-target"
+            break
+    archaeology = _support_status_reseal(archaeology)
+    archaeology_findings = findings_of(archaeology)
+    caught_archaeology = any("support_role" in f and "disagrees with status" in f
+                             for f in archaeology_findings)
+
+    # (d) a status typed rather than derived: 3.6.4 lowered to downstream-evidenced, internally
+    # consistent, so only the reconciliation and re-derivation checks can catch it.
+    typed = copy.deepcopy(body)
+    typed_rid = None
+    for r in typed["records"]:
+        if r["subject_id"] == "openssl-3.6.4":
+            typed_rid = r["subject_id"]
+            r["status"] = "downstream-evidenced"
+            r["rungs_attained"] = ["catalogued", "admitted-source", "built-authority",
+                                   "atlas-complete", "downstream-evidenced"]
+            r["evidence_by_rung"] = {k: v for k, v in r["evidence_by_rung"].items()
+                                     if k in r["rungs_attained"]}
+            r["not_attained"] = reasons_for(r["rungs_attained"], False, r["reason"])
+    typed = _support_status_reseal(typed)
+    typed_findings = findings_of(typed)
+    caught_typed = any("does not reconcile with the population" in f for f in typed_findings)
+    caught_typed = caught_typed and (support_status.derive_body() != typed)
+
+    return {
+        "baseline_findings": len(base),
+        "injected_higher_rung_without_evidence": "openssl-1.0.0 -> runtime-evidenced",
+        "injected_higher_rung_without_evidence_findings": len(higher_findings),
+        "injected_skipped_rung": "openssl-3.6.4 -> [catalogued, built-authority]",
+        "injected_skipped_rung_findings": len(skipped_findings),
+        "injected_archaeology_counted_supported": "openssl-0.9.1c (support_role flipped)",
+        "injected_archaeology_counted_supported_findings": len(archaeology_findings),
+        "injected_typed_status": typed_rid,
+        "injected_typed_status_findings": len(typed_findings),
+        "specificity_holds": specificity,
+        "caught_higher_rung_without_evidence": caught_higher,
+        "caught_skipped_rung": caught_skipped,
+        "caught_archaeology_counted_supported": caught_archaeology,
+        "caught_typed_status": caught_typed,
+        "honest": bool(specificity and caught_higher and caught_skipped and caught_archaeology
+                       and caught_typed),
+    }
+
+
+def _support_status_court(name: str) -> dict:
+    """`RT-SUPPORT-STATUS`: 23.15's court, the support-status ladder.
+
+    Stages no probe. It reads `forensics/multitrack/support-status.json` and re-derives the whole
+    ladder plane from the 23.10 historical population through the same generator, and establishes
+    that every catalogue node has exactly one schema-valid row; that every row reconciles node-for-
+    node and rung-for-rung with its population record; that each rung a node attained is backed by
+    the evidence that establishes it (a `built-authority` by a receipt, a `downstream-evidenced` by
+    a passing consumer, ...); that each rung not attained carries a reason; that `archaeological-
+    only` climbs no rung and is never counted a support target; that the statuses are derived rather
+    than typed and carry no competing `PARITY_VERIFIED`; and that the counts and content hash
+    reproduce and every evidence path is content-addressed. Four seeded mutations -- a node claiming
+    a higher rung with no evidence, a node skipping a core rung, an archaeological-only node counted
+    a support target, and a status typed rather than derived -- are each caught with specificity
+    holding. A passing ladder is an **instrument**: it records how far each release node reached and
+    is not a compatibility claim about any release.
+    """
+    problems: list[str] = []
+    for path, label in ((SUPPORT_STATUS, "support-status plane"),
+                        (HISTORICAL_POPULATION, "historical-population record"),
+                        (CATALOG, "release catalogue"),
+                        (AUTHORITY_NODES, "authority-node registry"),
+                        (AUTHORITY_REGISTRY, "authority registry"),
+                        (BUILD_RECORDS, "build records"),
+                        (HIST_ACQ, "historical acquisition"),
+                        (HIST_RECEIPTS, "historical build receipts"),
+                        (COMPATIBILITY_VIEWS, "compatibility-views plane"),
+                        (SEMANTIC_COURTS, "semantic-courts plane"),
+                        (DOWNSTREAM_MULTITRACK, "downstream-multitrack plane"),
+                        (DEFAULT_AUTHORITY_ALIAS, "default-authority alias")):
+        if not path.is_file():
+            problems.append(f"the {label} {rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    body = read_json(SUPPORT_STATUS)
+    catalog = read_json(CATALOG)
+    authority_nodes = read_json(AUTHORITY_NODES)
+    authorities = read_json(AUTHORITY_REGISTRY)
+    build_records = read_json(BUILD_RECORDS)
+    hist_acq = read_json(HIST_ACQ)
+    hist_receipts = read_json(HIST_RECEIPTS)
+    views = read_json(COMPATIBILITY_VIEWS)
+    semantic = read_json(SEMANTIC_COURTS)
+    downstream = read_json(DOWNSTREAM_MULTITRACK)
+    default_alias = read_json(DEFAULT_AUTHORITY_ALIAS)
+    population = read_json(HISTORICAL_POPULATION)
+
+    findings = support_status_findings(body, population, catalog, authority_nodes, authorities,
+                                       build_records, hist_acq, hist_receipts, views, semantic,
+                                       downstream, default_alias)
+
+    # No status is typed: the committed plane must reproduce from the 23.10 population through the
+    # same generator, and that population must itself reproduce from the committed evidence.
+    try:
+        derived = support_status.derive_body()
+    except SystemExit as exc:
+        findings.append(f"the support-status plane could not be re-derived: {exc}")
+        derived = None
+    if derived is not None and derived != body:
+        findings.append(
+            "the committed support-status plane does not reproduce from the 23.10 population "
+            "through the same generator: a status was typed rather than derived"
+        )
+    try:
+        if historical_population.derive_body() != population:
+            findings.append("the committed historical population does not reproduce from its "
+                            "evidence, so the ladder it feeds cannot be trusted")
+    except SystemExit as exc:
+        findings.append(f"the historical population could not be re-derived: {exc}")
+
+    control = support_status_sensitivity_control(body, population, catalog, authority_nodes,
+                                                 authorities, build_records, hist_acq,
+                                                 hist_receipts, views, semantic, downstream,
+                                                 default_alias)
+    counts = body.get("counts", {})
+    verdict = "pass" if (not findings and not problems and control["honest"]) else "fail"
+    records = body.get("records") or []
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/multitrack/support-status.json and re-derives the "
+            "whole ladder plane from the 23.10 historical population through the same generator. It "
+            "establishes that every catalogue node has exactly one schema-valid support-status row; "
+            "that every row reconciles node-for-node and rung-for-rung with its population record, "
+            "so there is one derivation rather than two; that each rung a node attained is backed by "
+            "the evidence that establishes it (a built-authority by a receipt, a downstream-"
+            "evidenced by a passing consumer, a candidate-view by a compatible view, ...); that each "
+            "rung not attained carries its reason; that archaeological-only climbs no rung and is "
+            "never counted a support target; that the statuses are derived rather than typed and "
+            "carry no competing PARITY_VERIFIED; and that the counts and content hash reproduce and "
+            "every evidence path is content-addressed. A node claiming a higher rung with no "
+            "evidence, a node skipping a core rung, an archaeological-only node counted a support "
+            "target and a status typed rather than derived are each detected with specificity "
+            "holding (docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 2, 3.2 and 4)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the support-status court reads a committed evidence record and writes no "
+            "artifacts/phase23/probes/<probe>.{authority,candidate} pair, so it stages no "
+            "transcript to diff and carries no FRF declaration"
+        ),
+        "counts": counts,
+        "status_histogram": counts.get("by_status"),
+        "support_targets": counts.get("support_targets"),
+        "archaeological_only": [r.get("subject_id") for r in records
+                                if r.get("support_role") == "archaeology"],
+        "content_hash": body.get("content_hash"),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def _downstream_reseal(body: dict) -> dict:
     """`body` with its content hash recomputed, so a mutation is caught on substance alone."""
     out = copy.deepcopy(body)
@@ -5175,11 +5631,28 @@ def main(argv: list[str]) -> int:
             "lineage observed and bound -- is NOT_CLAIMED and the unobserved source records are "
             "named as property findings, so a passing RT-SECURITY-LINEAGE is an instrument, never "
             "a statement that the lineage is secure. Phase 23 "
+            "lineage is secure. `RT-SUPPORT-STATUS` is 23.15's court: the support-status "
+            "ladder. It stages no probe and reads forensics/multitrack/support-status.json, "
+            "re-deriving the whole ladder plane from the 23.10 historical population through the "
+            "same generator. It establishes that every catalogue node has exactly one schema-valid "
+            "row; that every row reconciles node-for-node and rung-for-rung with its population "
+            "record, so there is one derivation of a status rather than two; that each rung a node "
+            "attained is backed by the evidence that establishes it (a built-authority by a "
+            "receipt, a downstream-evidenced by a passing consumer, a candidate-view by a "
+            "compatible view, ...); that each rung not attained carries its reason; that "
+            "archaeological-only climbs no rung and is never counted a support target; that the "
+            "statuses are derived rather than typed and carry no competing PARITY_VERIFIED; that "
+            "the core rungs are a prefix while the additive rungs are independent evidence planes; "
+            "and that the counts and content hash reproduce and every evidence path is "
+            "content-addressed. A node claiming a higher rung with no evidence, a node skipping a "
+            "core rung, an archaeological-only node counted a support target and a status typed "
+            "rather than derived are each detected with specificity holding. A passing ladder is an "
+            "instrument: it records how far each release node reached and is not a compatibility "
+            "claim about any release. Phase 23 "
             "owns no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining three courts -- "
-            "RT-SUPPORT-STATUS, "
+            "over a symbol set is its evidence, and its remaining two courts -- "
             "RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
-            "the subphases that land them (23.15 through 23.17). The one thing the model forbids "
+            "the subphases that land them (23.16 and 23.17). The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "
@@ -5221,6 +5694,7 @@ def main(argv: list[str]) -> int:
         InputRef(name="security-divergence-register", path=SECURITY_DIVERGENCE),
         InputRef(name="security-divergence-policy", path=SECURITY_POLICY),
         InputRef(name="historical-population", path=HISTORICAL_POPULATION),
+        InputRef(name="support-status", path=SUPPORT_STATUS),
         InputRef(name="downstream-multitrack", path=DOWNSTREAM_MULTITRACK),
         InputRef(name="phase17-downstream-corpus", path=PHASE17_CORPUS),
         InputRef(name="semantic-courts", path=SEMANTIC_COURTS),
@@ -5476,6 +5950,22 @@ def main(argv: list[str]) -> int:
             for u in r["unavailable"] or []:
                 print(f"      unavailable {u['release_id']:<27} runtime_compatible=false")
             print(f"      runtime-compatible: {', '.join(r['runtime_compatible']) or '-'}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == SUPPORT_STATUS_COURT:
+            c = r["control"]
+            counts = r["counts"] or {}
+            print(f"  {r['court']:<32} pass   (no probe, {counts.get('nodes')} node(s); "
+                  f"status={counts.get('by_status')}; role={counts.get('by_support_role')}; "
+                  f"runtime_compatible={counts.get('runtime_compatible')}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"higher-rung-no-evidence->"
+                  f"{c['injected_higher_rung_without_evidence_findings']} "
+                  f"skipped-core-rung->{c['injected_skipped_rung_findings']} "
+                  f"archaeology-supported->"
+                  f"{c['injected_archaeology_counted_supported_findings']} "
+                  f"typed-status->{c['injected_typed_status_findings']} finding(s))")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] == "pass" and r["court"] == DOWNSTREAM_MULTITRACK_COURT:

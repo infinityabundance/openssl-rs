@@ -187,6 +187,14 @@ SUPPORT_LADDER: tuple[str, ...] = (
 SUPPORT_TERMINAL: tuple[str, ...] = ("archaeological-only",)
 SUPPORT_STATUSES: tuple[str, ...] = SUPPORT_LADDER + SUPPORT_TERMINAL
 
+# The ladder's **core** is the contiguous climb every supported node makes: a release must be
+# catalogued before it is admitted, admitted before it is built, and built before its atlas can be
+# complete. The rungs above the core (`candidate-view`, `runtime-evidenced`, `downstream-evidenced`,
+# `maintained`) are each read from an **independent evidence plane** (23.10), so a node may attain
+# them without the intermediate additive rungs -- 0.9.8zh is `downstream-evidenced` from a real
+# consumer with no `candidate-view`/`runtime-evidenced` -- while a skipped core rung is refused.
+SUPPORT_CORE: tuple[str, ...] = SUPPORT_LADDER[:4]
+
 # The population record (added by 23.10). It is the historical-population row for one catalogue
 # node: the support status it has reached over `SUPPORT_LADDER`, the rungs it attained with
 # evidence, and -- where it is not built -- the honest reason it is not. `outcome` is the finer
@@ -623,10 +631,14 @@ def validate_negative_obligation(rec: dict) -> list[str]:
 
 
 def validate_support_status(rec: dict) -> list[str]:
-    """A support-status row: the ladder rungs a node has climbed, as a prefix.
+    """A support-status row: the ladder rungs a node has climbed, ordered.
 
-    `rungs_attained` must be a prefix of `SUPPORT_LADDER`, and `status` must be consistent with it:
-    a ladder status is exactly the highest rung, and `archaeological-only` has climbed no rung.
+    `rungs_attained` must be an ordered subsequence of `SUPPORT_LADDER` with no duplicates, and the
+    rungs `SUPPORT_CORE` names must form a **prefix** -- a node cannot skip a core rung. The rungs
+    above the core are each read from an independent evidence plane (23.10), so a node may attain
+    them without the intermediate additive rungs; `status` is the highest rung attained, and
+    `archaeological-only` has climbed none. Every rung a node claims is backed by evidence, which is
+    the court's check rather than the schema's (the schema sees the shape, not the artefact).
     """
     fields = ("subject_id", "status", "rungs_attained", "evidence")
     problems = _missing(rec, fields)
@@ -641,21 +653,31 @@ def validate_support_status(rec: dict) -> list[str]:
     if isinstance(rungs, list):
         if any(r not in SUPPORT_LADDER for r in rungs):
             problems.append(f"rungs_attained contains a name outside {list(SUPPORT_LADDER)}")
-        elif list(rungs) != list(SUPPORT_LADDER[: len(rungs)]):
-            problems.append(
-                "rungs_attained must be a prefix of the ladder "
-                f"{list(SUPPORT_LADDER)}, so rungs cannot be skipped"
-            )
+        elif len(set(rungs)) != len(rungs):
+            problems.append("rungs_attained names a rung twice")
+        else:
+            indices = [SUPPORT_LADDER.index(r) for r in rungs]
+            if indices != sorted(indices):
+                problems.append(
+                    f"rungs_attained must be ordered along the ladder {list(SUPPORT_LADDER)}, so "
+                    f"a rung cannot be attained out of order"
+                )
+            core = [r for r in rungs if r in SUPPORT_CORE]
+            if core != list(SUPPORT_CORE[: len(core)]):
+                problems.append(
+                    f"the core rungs {list(SUPPORT_CORE)} must be climbed as a prefix, so a node "
+                    f"cannot skip a core rung it did not evidence"
+                )
     status = rec.get("status")
-    if status in SUPPORT_LADDER and isinstance(rungs, list):
-        expected = SUPPORT_LADDER.index(status) + 1
-        if len(rungs) != expected:
+    if status in SUPPORT_LADDER and isinstance(rungs, list) and rungs:
+        if max(rungs, key=SUPPORT_LADDER.index) != status:
             problems.append(
-                f"status {status!r} is the rung at index {expected - 1}, so rungs_attained must "
-                f"hold exactly {expected} rung(s)"
+                f"status {status!r} is not the highest rung of rungs_attained {rungs!r}: a "
+                f"support status is the highest rung an evidence plane reached"
             )
-    if status == "archaeological-only" and isinstance(rungs, list) and "maintained" in rungs:
-        problems.append("an archaeological-only node has not climbed to `maintained`")
+    if status == "archaeological-only" and isinstance(rungs, list) and rungs:
+        problems.append("an archaeological-only node has climbed no rung, so rungs_attained must "
+                        "be empty")
     return problems
 
 
@@ -1534,6 +1556,25 @@ def self_test() -> int:
                         "runtime-evidenced rung")
     if "runtime-compatible" not in " ".join(validate_population_record(overclaim)):
         failures.append("the population runtime-compatible refusal does not say why")
+
+    # The ladder's core is a prefix, but its additive rungs are independent evidence planes (23.10):
+    # the validator must accept the documented independent-rung form and refuse a skipped core rung.
+    independent = {
+        "subject_id": "openssl-0.9.8zh",
+        "status": "downstream-evidenced",
+        "rungs_attained": ["catalogued", "admitted-source", "built-authority", "atlas-complete",
+                           "downstream-evidenced"],
+        "evidence": ["forensics/multitrack/downstream-multitrack.json"],
+    }
+    if validate_support_status(independent):
+        failures.append("validate_support_status refused the documented independent-rung form: "
+                        f"{validate_support_status(independent)}")
+    core_skip = dict(_GOOD["support_status"], rungs_attained=["catalogued", "built-authority"])
+    if not validate_support_status(core_skip):
+        failures.append("validate_support_status accepted a node that skipped the core rung "
+                        "`admitted-source`")
+    if "skip" not in " ".join(validate_support_status(core_skip)):
+        failures.append("the support-status core-skip refusal does not say a rung was skipped")
 
     # A security observation never re-adopts a fixed behaviour: the validator must refuse both a
     # `reintroduced` true and a `preserve_vulnerable_behaviour` disposition (23.14).

@@ -35899,3 +35899,47 @@ observed set -- retiring 23.4's absent-with-reason for the kind. `security-linea
 `implemented`/closed and the stratum's `open_in_this_stratum` falls from four to three. The
 court's property is `NOT_CLAIMED` with the unobserved source records named as findings, so a
 passing `RT-SECURITY-LINEAGE` must never be read as "the lineage is secure".
+
+## D545 -- the support-status ladder is the reconciled projection of the historical population
+
+Phase 23.15 lands the support-status ladder
+(`forensics/multitrack/support-status.json` with the record kind `support_status`, the kind 23.0
+already defined), the generator `forensics/tools/support_status.py` and the court
+`RT-SUPPORT-STATUS`, unit `support-status`. The measured corrections are recorded in
+`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.15 and checked by the court.
+
+**One derivation, two views.** 23.10's `historical-population.json` already records a support
+status per catalogue node, so a second hand-maintained ladder would be a parallel truth. The
+subphase chooses the option the plan allows: the generator calls
+`historical_population.derive_body()` -- the one derivation of a status -- and re-expresses each
+record in the schema-validated `support_status` shape, adding the per-rung evidence
+(`evidence_by_rung`) and the reason for each rung not attained (`not_attained`) the subphase row
+asks for. `RT-SUPPORT-STATUS` reconciles every row with its population record node-for-node and
+rung-for-rung and re-derives both planes through their own generators, so the two artefacts
+cannot drift, neither is typed, and the same fact is recorded once.
+
+**The ladder's ordering rule is corrected to match the committed evidence.** 23.0's
+`validate_support_status` required `rungs_attained` to be a strict prefix of `SUPPORT_LADDER`, but
+the committed population is deliberately not a strict prefix: the four historical epoch
+representatives are `downstream-evidenced` from a real consumer with no `candidate-view` and no
+`runtime-evidenced`, because a downstream consumer build is not gated on the oracle-to-oracle
+measurement (D543). The correction splits the ladder into `SUPPORT_CORE` -- the contiguous climb
+`catalogued` -> `admitted-source` -> `built-authority` -> `atlas-complete`, which must be a prefix
+so a core rung cannot be skipped -- and the additive rungs (`candidate-view`, `runtime-evidenced`,
+`downstream-evidenced`, `maintained`), each read from its own independent evidence plane. The
+validator still refuses an out-of-order rung, a duplicate, a lower-than-highest status and an
+`archaeological-only` node with a rung; its documented-good set gains 0.9.8zh's independent-rung
+form and its documented-bad set still refuses a node that skips `admitted-source`.
+
+**A status is a release/authority state, not a parity dimension, and every rung is backed by its
+evidence.** Each row carries `support_role` (`support-target` or `archaeology`) and the plane
+names no `PARITY_VERIFIED` and no one-boolean compatibility claim; a row carrying a competing
+`compatible`/`parity` field is a finding. The court re-reads each attained rung against the raw
+plane -- a `built-authority` against the authority's actual receipt, a `downstream-evidenced`
+against a passing consumer, a `candidate-view` against a compatible view, and so on -- and
+requires an `archaeological-only` node to climb no rung and never be counted a support target. The
+measured ladder is 245 support targets and 127 archaeological-only nodes, with no status typed.
+The control seeds a higher rung with no evidence, a skipped core rung, an archaeological-only node
+counted supported and a typed status, and each is caught with specificity holding.
+`support-status` moves to `implemented`/closed and the stratum's `open_in_this_stratum` falls from
+three to two.
