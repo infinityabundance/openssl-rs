@@ -114,6 +114,12 @@ COMPAT_DIRECTIONS: tuple[str, ...] = ("candidate_to_reference", "reference_to_ca
 COMPAT_STATUSES: tuple[str, ...] = ("compatible", "incompatible", "partial", "unknown",
                                     "not_measured")
 
+# The compatibility-matrix cell verdict vocabulary (added by 23.16). A cell's verdict is the join
+# of the readings it references from the five planes, never a boolean rollup; `NOT_MEASURED` is a
+# cell that joins no reading at all, so a dimension with no evidence is recorded honestly rather
+# than defaulting to a pass.
+MATRIX_VERDICTS: tuple[str, ...] = ("PASS", "FAIL", "UNKNOWN", "NOT_MEASURED")
+
 # The evidence kinds a compatibility edge may rest on. **`version_order` is deliberately absent**:
 # numeric ordering is a chronology, not a compatibility measurement.
 EVIDENCE_KINDS: tuple[str, ...] = (
@@ -1087,7 +1093,16 @@ def validate_semantic_observation(rec: dict) -> list[str]:
 
 
 def validate_compatibility_matrix(rec: dict) -> list[str]:
-    """The assembled matrix: cells that are each directional and dimension-specific."""
+    """The assembled matrix: cells that are each directional and dimension-specific.
+
+    (Extended by 23.16.) Every cell is a directional, dimension-specific record: it must name a
+    `dimension` from the schema's closed `COMPAT_DIMENSIONS`, a `direction` from
+    `COMPAT_DIRECTIONS`, and a `verdict` from `MATRIX_VERDICTS`. A cell that carries a bare
+    `compatible` boolean is refused by name: the matrix has no single-boolean cell, because a
+    compatibility claim is directional and dimension-specific (D535, `docs/PARITY_MODEL.md`
+    section 4). The schema checks the shape; the court re-reads each cell's joined source records
+    and re-derives its verdict.
+    """
     fields = ("matrix_id", "rows", "generated_from")
     problems = _missing(rec, fields)
     problems += _nonempty(rec, "matrix_id")
@@ -1105,8 +1120,19 @@ def validate_compatibility_matrix(rec: dict) -> list[str]:
             problems.append(f"rows[{i}] carries a bare `compatible` boolean; cells are directional")
         if not cell.get("dimension"):
             problems.append(f"rows[{i}] must name its dimension")
+        elif cell["dimension"] not in COMPAT_DIMENSIONS:
+            problems.append(f"rows[{i}] dimension {cell['dimension']!r} is not one of "
+                            f"COMPAT_DIMENSIONS")
         if not cell.get("direction"):
             problems.append(f"rows[{i}] must name its direction")
+        elif cell["direction"] not in COMPAT_DIRECTIONS:
+            problems.append(f"rows[{i}] direction {cell['direction']!r} is not one of "
+                            f"COMPAT_DIRECTIONS")
+        verdict = cell.get("verdict")
+        if verdict is None:
+            problems.append(f"rows[{i}] must carry a verdict, not a boolean")
+        elif verdict not in MATRIX_VERDICTS:
+            problems.append(f"rows[{i}] verdict {verdict!r} is not one of MATRIX_VERDICTS")
     return problems
 
 
@@ -1328,7 +1354,7 @@ _GOOD: dict[str, dict] = {
             "reference_id": "openssl-3.6.4",
             "dimension": "source_api",
             "direction": "candidate_to_reference",
-            "status": "compatible",
+            "verdict": "PASS",
         }],
         "generated_from": ["forensics/multitrack/compatibility-views.json"],
     },

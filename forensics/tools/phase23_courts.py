@@ -16,7 +16,7 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**Fifteen courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+**Sixteen courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
 lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, 23.3 lands
 `RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court, 23.4 lands `RT-LINEAGE-EDGES`, the
 typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage court, 23.6 lands
@@ -29,10 +29,11 @@ typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage cou
 `RT-COMPATIBILITY-EDGES`, the directional compatibility-edge court, and 23.13 lands
 `RT-NEGATIVE-OBLIGATIONS`, the negative/positive-obligation court, and 23.14 lands
 `RT-SECURITY-LINEAGE`, the security-lineage court, and 23.15 lands `RT-SUPPORT-STATUS`, the
-support-status-ladder court; the other two courts are
+support-status-ladder court, and 23.16 lands `RT-COMPATIBILITY-MATRIX`, the assembled-matrix
+court; the remaining court is
 named in
-`PENDING_COURTS` and land with the subphases that
-build the instruments they drive. The registry is the file `run_courts.py` checks is
+`PENDING_COURTS` and lands with the subphase that
+builds the instrument it drives. The registry is the file `run_courts.py` checks is
 reproduced, so a court silently dropped is a finding rather than a smaller green run. This is
 the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this registry,
 so this runner does **not** bind the obligations ledger as an input.
@@ -59,14 +60,15 @@ The seventeen courts, and the subphase that lands each
   * `RT-NEGATIVE-OBLIGATIONS` -- 23.13, the negative obligations (registered).
   * `RT-SECURITY-LINEAGE` -- 23.14, the security lineage (registered).
   * `RT-SUPPORT-STATUS` -- 23.15, the support-status ladder (registered).
-  * `RT-COMPATIBILITY-MATRIX` -- 23.16, the compatibility matrix.
+  * `RT-COMPATIBILITY-MATRIX` -- 23.16, the compatibility matrix (registered).
   * `MULTITRACK-SEAL` -- 23.17, the full matrix, the FRF/Gemel chain and the seal.
 
 Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZATION`,
 `RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE`, `RT-DELTA-ENGINE`, `RT-ABI-HISTORY-FACADES`,
 `RT-SEMANTIC-COURTS`, `RT-COMPATIBILITY-VIEWS`, `RT-HISTORICAL-POPULATION`,
 `RT-DOWNSTREAM-MULTITRACK`, `RT-COMPATIBILITY-EDGES`,
-`RT-NEGATIVE-OBLIGATIONS`, `RT-SECURITY-LINEAGE` and `RT-SUPPORT-STATUS` is
+`RT-NEGATIVE-OBLIGATIONS`, `RT-SECURITY-LINEAGE`, `RT-SUPPORT-STATUS` and
+`RT-COMPATIBILITY-MATRIX` is
 `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
@@ -154,6 +156,10 @@ import historical_population  # noqa: E402
 # from the 23.10 population through the same code path the artefact was produced by (never a typed
 # status) and reconciles every row with its population record rung for rung.
 import support_status  # noqa: E402
+# The Phase-23.16 compatibility-matrix generator, imported so the court re-derives the whole
+# matrix from the five committed planes through the same code path the artefact was produced by
+# (never a second, drifting join) and re-reads every source record a cell references.
+import compat_matrix  # noqa: E402
 # The Phase-23.11 downstream-multitrack generator, imported so the court re-derives every consumer
 # record from the raw build/run outputs the artefact carries through the same code path the artefact
 # was produced by (never a hand-typed outcome) and re-derives the epoch coverage a mutation moves.
@@ -247,6 +253,10 @@ ATLAS_ROOT = REPO_ROOT / "forensics" / "atlas"
 # a status rather than a second hand-maintained truth.
 SUPPORT_STATUS = REPO_ROOT / "forensics" / "multitrack" / "support-status.json"
 
+# 23.16's subject: the assembled compatibility matrix, and the five planes it joins. The court
+# reads it, re-derives it through the same generator, and re-reads every source record it cites.
+COMPATIBILITY_MATRIX = REPO_ROOT / "forensics" / "multitrack" / "compatibility-matrix.json"
+
 # 23.11's subject: the per-epoch unmodified downstream consumer records, the authority nodes they
 # are bounded to, and the Phase-17 candidate corpus they must stay distinct from (a candidate
 # result is never relabelled as authority evidence).
@@ -279,6 +289,7 @@ COMPATIBILITY_EDGES_COURT = "RT-COMPATIBILITY-EDGES"
 NEGATIVE_OBLIGATIONS_COURT = "RT-NEGATIVE-OBLIGATIONS"
 SECURITY_LINEAGE_COURT = "RT-SECURITY-LINEAGE"
 SUPPORT_STATUS_COURT = "RT-SUPPORT-STATUS"
+COMPATIBILITY_MATRIX_COURT = "RT-COMPATIBILITY-MATRIX"
 HISTORICAL_POPULATION_COURT = "RT-HISTORICAL-POPULATION"
 DOWNSTREAM_MULTITRACK_COURT = "RT-DOWNSTREAM-MULTITRACK"
 ROOT_RELEASE = "openssl-0.9.1c"
@@ -316,13 +327,13 @@ COURTS: list[tuple[str, str]] = [
     (SECURITY_LINEAGE_COURT, "_security_lineage_court"),
     (HISTORICAL_POPULATION_COURT, "_historical_population_court"),
     (SUPPORT_STATUS_COURT, "_support_status_court"),
+    (COMPATIBILITY_MATRIX_COURT, "_compatibility_matrix_court"),
     (DOWNSTREAM_MULTITRACK_COURT, "_downstream_multitrack_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-COMPATIBILITY-MATRIX": "23.16 -- the compatibility matrix",
     "MULTITRACK-SEAL": "23.17 -- the full matrix, the FRF/Gemel chain and the seal",
 }
 
@@ -5384,6 +5395,369 @@ def _delta_engine_court(name: str) -> dict:
     }
 
 
+def _matrix_plane_data() -> dict[str, dict]:
+    """Every plane the matrix joins: its records by id, and its content-addressed digest."""
+    data: dict[str, dict] = {}
+    for name, spec in compat_matrix.PLANES.items():
+        path = spec["path"]
+        loaded = read_json(path)
+        loaded = loaded.get("body", loaded)
+        records = loaded.get(spec["list_key"]) or []
+        data[name] = {
+            "path": path,
+            "id_key": spec["id_key"],
+            "records": records,
+            "by_id": {str(r.get(spec["id_key"])): r for r in records},
+            "sha256": sha256_file(path),
+        }
+    return data
+
+
+def _matrix_reading(plane: str, record: dict) -> str | None:
+    """The verdict a source record's own value projects onto, or `None` for a context record."""
+    if plane == "compatibility_edges":
+        return record.get("verdict")
+    if plane == "compatibility_views":
+        return compat_matrix.VIEW_STATUS_TO_VERDICT.get(str(record.get("status")))
+    if plane == "negative_obligations":
+        return compat_matrix.OBLIGATION_STATE_TO_VERDICT.get(str(record.get("state")))
+    if plane == "security_lineage":
+        return compat_matrix.SECURITY_DISPOSITION_TO_VERDICT.get(
+            str(record.get("candidate_disposition")))
+    return None
+
+
+def compatibility_matrix_findings(body: dict, planes: dict[str, dict]) -> list[str]:
+    """Every way the committed compatibility matrix fails this court's subject.
+
+    A pure function of the committed matrix and the five planes it joins, so the sensitivity
+    control mutates one and re-checks. It establishes that the matrix is schema-valid; that every
+    cell is directional, dimension-specific and carries a `PASS`/`FAIL`/`UNKNOWN`/`NOT_MEASURED`
+    verdict and never a boolean; that every cell references real source records from the five
+    planes and its recorded reading **equals the source record's own value** (so the cell cannot
+    contradict the plane it joins); that the cell's verdict reproduces from those readings; that a
+    cell with no reading is never `PASS`; that one cell covers every declared relation and
+    dimension and none is outside them; that all five planes are joined; and that the counts, the
+    content hash and the plane block reproduce and are content-addressed.
+    """
+    findings: list[str] = []
+    rows = body.get("rows") or []
+    if not rows:
+        findings.append("the compatibility matrix carries no cell")
+
+    # 1. schema validity: a directional, dimension-specific record with a verdict, never a boolean.
+    findings += multitrack_schemas.validate_compatibility_matrix(body)
+
+    # 2. every cell joins real records from the five planes, and its verdict reproduces from them.
+    by_cell: dict[str, dict] = {}
+    joined: set[str] = set()
+    for cell in rows:
+        cid = str(cell.get("cell_id") or "<no cell_id>")
+        if cid in by_cell:
+            findings.append(f"two cells share the id {cid}")
+        by_cell[cid] = cell
+        for flag in ("compatible", "overall", "is_compatible", "compatible_overall"):
+            if flag in cell:
+                findings.append(f"{cid}: carries a `{flag}` flag; compatibility is not a single "
+                                f"boolean")
+        dimension = cell.get("dimension")
+        if dimension not in multitrack_schemas.COMPAT_DIMENSIONS:
+            findings.append(f"{cid}: dimension {dimension!r} is not one of COMPAT_DIMENSIONS")
+        direction = cell.get("direction")
+        if direction not in multitrack_schemas.COMPAT_DIRECTIONS:
+            findings.append(f"{cid}: direction {direction!r} is not one of COMPAT_DIRECTIONS")
+        verdict = cell.get("verdict")
+        if verdict not in multitrack_schemas.MATRIX_VERDICTS:
+            findings.append(f"{cid}: verdict {verdict!r} is not one of MATRIX_VERDICTS")
+
+        readings: list[str] = []
+        sources = cell.get("sources") or []
+        if not sources:
+            findings.append(f"{cid}: joins no source record from any of the five planes")
+        for source in sources:
+            plane = str(source.get("plane"))
+            rid = str(source.get("record_id"))
+            role = source.get("role")
+            joined.add(plane)
+            if plane not in planes:
+                findings.append(f"{cid}: source plane {plane!r} is not one of the five planes")
+                continue
+            record = planes[plane]["by_id"].get(rid)
+            if record is None:
+                findings.append(f"{cid}: source {plane}:{rid} is not a record in that plane")
+                continue
+            if role == "reading":
+                expected = _matrix_reading(plane, record)
+                if expected is None:
+                    findings.append(f"{cid}: {plane}:{rid} carries no reading to join")
+                elif source.get("reading") != expected:
+                    findings.append(
+                        f"{cid}: reading {source.get('reading')!r} contradicts its source "
+                        f"{plane}:{rid}, which reads {expected!r}")
+                else:
+                    readings.append(expected)
+            elif role == "context":
+                if plane == "support_status":
+                    if source.get("status") != record.get("status"):
+                        findings.append(f"{cid}: context status does not match support-status row "
+                                        f"{rid}")
+                    if source.get("support_role") != record.get("support_role"):
+                        findings.append(f"{cid}: context support_role does not match "
+                                        f"support-status row {rid}")
+            else:
+                findings.append(f"{cid}: source {plane}:{rid} has role {role!r}")
+
+        want = compat_matrix._verdict([{"reading": r} for r in readings])
+        if verdict in multitrack_schemas.MATRIX_VERDICTS and verdict != want:
+            findings.append(f"{cid}: verdict {verdict} does not reproduce from its joined readings "
+                            f"(the join is {want}), so the cell contradicts its source plane(s)")
+        if not readings and verdict == "PASS":
+            findings.append(f"{cid}: is PASS with no reading evidence, so it passes by default")
+        reason = str(cell.get("reason") or "").strip()
+        if verdict != "PASS" and not reason:
+            findings.append(f"{cid}: is {verdict} with no reason")
+        if verdict == "PASS" and "reason" in cell:
+            findings.append(f"{cid}: is PASS and yet carries a reason")
+
+    # 3. one cell per declared relation and dimension, and no cell outside them.
+    relations = body.get("relations") or []
+    declared = {str(r.get("relation_id")) for r in relations}
+    for relation in sorted(declared):
+        for dimension in multitrack_schemas.COMPAT_DIMENSIONS:
+            if f"CM/{relation}/{dimension}" not in by_cell:
+                findings.append(f"relation {relation} has no {dimension} cell")
+    for cid, cell in by_cell.items():
+        rid = str(cell.get("relation_id"))
+        if rid not in declared:
+            findings.append(f"{cid}: names relation {rid!r} which the matrix does not declare")
+        if cell.get("dimension") in multitrack_schemas.COMPAT_DIMENSIONS \
+                and cid != f"CM/{rid}/{cell.get('dimension')}":
+            findings.append(f"{cid}: cell_id does not encode its relation and dimension")
+
+    # 4. all five planes are joined by at least one cell.
+    for name in sorted(compat_matrix.PLANES):
+        if name not in joined:
+            findings.append(f"the matrix joins no record from the {name} plane")
+
+    # 5. the counts, the content hash and the plane block reproduce and are content-addressed.
+    by_verdict: dict[str, int] = {}
+    by_dimension: dict[str, int] = {}
+    by_relation: dict[str, int] = {}
+    for cell in rows:
+        by_verdict[cell.get("verdict")] = by_verdict.get(cell.get("verdict"), 0) + 1
+        by_dimension[cell.get("dimension")] = by_dimension.get(cell.get("dimension"), 0) + 1
+        by_relation[cell.get("relation_id")] = by_relation.get(cell.get("relation_id"), 0) + 1
+    recomputed_counts = {
+        "cells": len(rows),
+        "relations": len(declared),
+        "dimensions": len(multitrack_schemas.COMPAT_DIMENSIONS),
+        "by_verdict": {k: by_verdict[k] for k in sorted(by_verdict)},
+        "by_dimension": {k: by_dimension[k] for k in sorted(by_dimension)},
+        "by_relation": {k: by_relation[k] for k in sorted(by_relation)},
+        "planes_joined": len(joined),
+    }
+    if body.get("counts") != recomputed_counts:
+        findings.append("the compatibility-matrix counts do not reproduce from its cells")
+    if compat_matrix.body_hash(rows) != body.get("content_hash"):
+        findings.append("the compatibility-matrix content_hash does not reproduce from its cells")
+    for entry in body.get("planes") or []:
+        name = str(entry.get("name"))
+        spec = compat_matrix.PLANES.get(name)
+        if spec is None:
+            findings.append(f"the plane block names an unknown plane {name!r}")
+            continue
+        if entry.get("path") != rel(spec["path"]):
+            findings.append(f"the {name} plane block names the wrong path")
+        else:
+            path = spec["path"]
+            if not path.is_file():
+                findings.append(f"the {name} plane {rel(path)} is absent")
+            elif entry.get("sha256") != sha256_file(path):
+                findings.append(f"the {name} plane is not content-addressed")
+        if entry.get("record_count") != len(planes[name]["records"]):
+            findings.append(f"the {name} plane block records the wrong record count")
+    return findings
+
+
+def _matrix_reseal(body: dict) -> dict:
+    """`body` with its content hash recomputed, so a mutation is caught on substance alone."""
+    out = copy.deepcopy(body)
+    out["content_hash"] = compat_matrix.body_hash(out.get("rows") or [])
+    return out
+
+
+def compatibility_matrix_sensitivity_control(body: dict, planes: dict[str, dict]) -> dict:
+    """Prove the court can fail: seed four mutations and require each caught.
+
+    The honest matrix must yield **zero** findings (specificity), and each seeded mutation -- a
+    cell whose reading contradicts the plane it names, a cell collapsed to one boolean, a cell
+    that joins no source record, and a `PASS` with no evidence where the readings do not establish
+    it -- must be caught. Each mutated body is re-sealed first, so the detection is a semantic
+    check and never the content-hash check firing on an un-recomputed digest.
+    """
+    base = compatibility_matrix_findings(body, planes)
+    specificity = not base
+
+    def findings_of(b: dict) -> list[str]:
+        return compatibility_matrix_findings(b, planes)
+
+    # (a) a cell contradicted by the plane it names: flip a measured reading away from its record.
+    contradicted = copy.deepcopy(body)
+    target = next((c for c in contradicted["rows"]
+                   if any(s.get("role") == "reading" for s in c["sources"])), None)
+    if target is None:
+        return {"honest": False, "reason": "the matrix has no measured cell to contradict"}
+    entry = next(s for s in target["sources"] if s.get("role") == "reading")
+    entry["reading"] = "FAIL" if entry.get("reading") != "FAIL" else "PASS"
+    contradicted_id = str(target.get("cell_id"))
+    contradicted = _matrix_reseal(contradicted)
+    contradicted_findings = findings_of(contradicted)
+    caught_contradicted = any("contradicts its source" in f for f in contradicted_findings)
+
+    # (b) a cell collapsed to the one boolean the model forbids.
+    boolean = copy.deepcopy(body)
+    boolean["rows"][0]["compatible"] = True
+    boolean_id = str(boolean["rows"][0].get("cell_id"))
+    boolean = _matrix_reseal(boolean)
+    boolean_findings = findings_of(boolean)
+    caught_boolean = any("boolean" in f for f in boolean_findings)
+
+    # (c) a cell that joins no source record at all.
+    orphan = copy.deepcopy(body)
+    orphan["rows"][0]["sources"] = []
+    orphan_id = str(orphan["rows"][0].get("cell_id"))
+    orphan = _matrix_reseal(orphan)
+    orphan_findings = findings_of(orphan)
+    caught_orphan = any("joins no source record" in f for f in orphan_findings)
+
+    # (d) a PASS with no evidence: a NOT_MEASURED cell promoted to PASS, its reason dropped.
+    default_pass = copy.deepcopy(body)
+    unmeasured = next((c for c in default_pass["rows"] if c.get("verdict") == "NOT_MEASURED"),
+                      None)
+    if unmeasured is None:
+        return {"honest": False, "reason": "the matrix has no NOT_MEASURED cell to promote"}
+    unmeasured["verdict"] = "PASS"
+    unmeasured.pop("reason", None)
+    default_id = str(unmeasured.get("cell_id"))
+    default_pass = _matrix_reseal(default_pass)
+    default_findings = findings_of(default_pass)
+    caught_default = any("PASS with no reading evidence" in f for f in default_findings) \
+        or any("does not reproduce from its joined readings" in f for f in default_findings)
+
+    return {
+        "baseline_findings": len(base),
+        "injected_contradicted_cell": contradicted_id,
+        "injected_contradicted_cell_findings": len(contradicted_findings),
+        "injected_collapsed_boolean": boolean_id,
+        "injected_collapsed_boolean_findings": len(boolean_findings),
+        "injected_no_source_record": orphan_id,
+        "injected_no_source_record_findings": len(orphan_findings),
+        "injected_pass_without_evidence": default_id,
+        "injected_pass_without_evidence_findings": len(default_findings),
+        "specificity_holds": specificity,
+        "caught_contradicted_cell": caught_contradicted,
+        "caught_collapsed_boolean": caught_boolean,
+        "caught_no_source_record": caught_orphan,
+        "caught_pass_without_evidence": caught_default,
+        "honest": bool(specificity and caught_contradicted and caught_boolean and caught_orphan
+                       and caught_default),
+    }
+
+
+def _compatibility_matrix_court(name: str) -> dict:
+    """`RT-COMPATIBILITY-MATRIX`: 23.16's court, the assembled compatibility matrix.
+
+    Stages no probe. It reads `forensics/multitrack/compatibility-matrix.json` and re-derives the
+    whole matrix from the five committed planes through the same generator, and establishes that
+    every cell is a schema-valid, directional, dimension-specific record with a
+    `PASS`/`FAIL`/`UNKNOWN`/`NOT_MEASURED` verdict and never a boolean; that every cell references
+    real source records from the five planes and its reading equals the source record's own value,
+    so it cannot contradict the plane it joins; that the verdict reproduces from the joined
+    readings; that a cell with no reading is `NOT_MEASURED` with its reason, never `PASS`; that
+    one cell covers every declared relation and dimension; that all five planes are joined; and
+    that the counts, content hash and plane block reproduce and are content-addressed. Four
+    seeded mutations -- a reading that contradicts its plane, a boolean cell, a cell with no
+    source record, and a `PASS` with no evidence -- are each caught with specificity holding. A
+    passing matrix is an **instrument**: it assembles the directions and dimensions the planes
+    measured, it is not a one-boolean compatibility claim about any release.
+    """
+    problems: list[str] = []
+    if not COMPATIBILITY_MATRIX.is_file():
+        problems.append(f"the compatibility matrix {rel(COMPATIBILITY_MATRIX)} is absent")
+    for plane in sorted(compat_matrix.PLANES):
+        if not compat_matrix.PLANES[plane]["path"].is_file():
+            problems.append(f"the {plane} plane {rel(compat_matrix.PLANES[plane]['path'])} is "
+                            f"absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    body = read_json(COMPATIBILITY_MATRIX)
+    planes = _matrix_plane_data()
+    findings = compatibility_matrix_findings(body, planes)
+
+    # The matrix must reproduce from the five committed planes through the same generator: a
+    # hand-edited verdict, a relayed record or a dropped cell stops reproducing.
+    try:
+        derived = compat_matrix.derive_body()
+    except SystemExit as exc:
+        findings.append(f"the compatibility matrix could not be re-derived: {exc}")
+        derived = None
+    if derived is not None and derived != body:
+        findings.append(
+            "the committed compatibility matrix does not reproduce from the five committed planes "
+            "through the same generator: a verdict was typed rather than joined"
+        )
+
+    control = compatibility_matrix_sensitivity_control(body, planes)
+    verdict = "pass" if (not findings and not problems and control.get("honest")) else "fail"
+
+    counts = body.get("counts") or {}
+    unmeasured = [{"cell_id": c.get("cell_id"), "verdict": c.get("verdict"),
+                   "reason": c.get("reason")}
+                  for c in body.get("rows") or []
+                  if c.get("verdict") in ("UNKNOWN", "NOT_MEASURED")]
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/multitrack/compatibility-matrix.json and "
+            "re-derives the whole matrix from the five committed planes through the same "
+            "generator. It establishes that every cell is a schema-valid, directional, "
+            "dimension-specific record whose verdict is PASS, FAIL, UNKNOWN or NOT_MEASURED and "
+            "never a single boolean; that every cell references real source records from the five "
+            "planes and its recorded reading equals the source record's own value, so the cell "
+            "cannot contradict the plane it joins; that the verdict reproduces from the joined "
+            "readings; that a cell with no reading is NOT_MEASURED with its reason, never PASS by "
+            "default; that one cell covers every declared relation and dimension; that all five "
+            "planes are joined; and that the counts, content hash and plane block reproduce and "
+            "are content-addressed. A reading that contradicts its plane, a cell collapsed to one "
+            "boolean, a cell with no source record and a PASS with no evidence are each detected "
+            "with specificity holding (docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 2, 3.1, 3.3 "
+            "and 4)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the compatibility-matrix court reads the five committed evidence planes and writes "
+            "no artifacts/phase23/probes/<probe>.{authority,candidate} pair, so it stages no "
+            "transcript to diff and carries no FRF declaration"
+        ),
+        "counts": counts,
+        "verdicts": counts.get("by_verdict"),
+        "dimensions": counts.get("by_dimension"),
+        "relations": body.get("relations"),
+        "planes": [{"name": p.get("name"), "record_count": p.get("record_count"),
+                    "sha256": p.get("sha256")} for p in body.get("planes") or []],
+        "unmeasured": unmeasured,
+        "content_hash": body.get("content_hash"),
+        "boundary": body.get("boundary"),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -5648,11 +6022,30 @@ def main(argv: list[str]) -> int:
             "core rung, an archaeological-only node counted a support target and a status typed "
             "rather than derived are each detected with specificity holding. A passing ladder is an "
             "instrument: it records how far each release node reached and is not a compatibility "
-            "claim about any release. Phase 23 "
+            "claim about any release. `RT-COMPATIBILITY-MATRIX` is 23.16's court: the assembled "
+            "compatibility matrix. It stages no probe and reads "
+            "forensics/multitrack/compatibility-matrix.json, re-deriving the whole matrix from the "
+            "five committed planes -- the compatibility views, the directional edges, the negative "
+            "obligations, the security lineage and the support-status ladder -- through the same "
+            "generator. It establishes that every cell is a schema-valid, directional, "
+            "dimension-specific record with a PASS/FAIL/UNKNOWN/NOT_MEASURED verdict and never a "
+            "single boolean; that every cell references real source records from the five planes "
+            "and its reading equals the source record's own value, so the matrix cannot drift from "
+            "its inputs or contradict the plane it joins; that a cell with no reading is "
+            "NOT_MEASURED with its reason, never PASS by default; that one cell covers every "
+            "declared relation and dimension; and that all five planes are joined. The matrix is "
+            "O(relations x dimensions), never the pairwise release product: the 3.6.3 <-> 3.6.4 "
+            "pair is joined in both directions, the candidate is joined to its reference authority "
+            "and to each authority the planes name, and the security lineage joins the "
+            "candidate-to-reference relation on the behavioural dimension. A reading that "
+            "contradicts its plane, a cell collapsed to one boolean, a cell with no source record "
+            "and a PASS with no evidence are each detected with specificity holding. A passing "
+            "matrix is an instrument: it assembles the directions and dimensions the planes "
+            "measured, it is not a one-boolean compatibility claim about any release. Phase 23 "
             "owns no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining two courts -- "
-            "RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
-            "the subphases that land them (23.16 and 23.17). The one thing the model forbids "
+            "over a symbol set is its evidence, and its remaining court -- "
+            "MULTITRACK-SEAL -- is pending with "
+            "the subphase that lands it (23.17). The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "
@@ -5695,6 +6088,7 @@ def main(argv: list[str]) -> int:
         InputRef(name="security-divergence-policy", path=SECURITY_POLICY),
         InputRef(name="historical-population", path=HISTORICAL_POPULATION),
         InputRef(name="support-status", path=SUPPORT_STATUS),
+        InputRef(name="compatibility-matrix", path=COMPATIBILITY_MATRIX),
         InputRef(name="downstream-multitrack", path=DOWNSTREAM_MULTITRACK),
         InputRef(name="phase17-downstream-corpus", path=PHASE17_CORPUS),
         InputRef(name="semantic-courts", path=SEMANTIC_COURTS),
@@ -5966,6 +6360,26 @@ def main(argv: list[str]) -> int:
                   f"archaeology-supported->"
                   f"{c['injected_archaeology_counted_supported_findings']} "
                   f"typed-status->{c['injected_typed_status_findings']} finding(s))")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == COMPATIBILITY_MATRIX_COURT:
+            c = r["control"]
+            counts = r["counts"] or {}
+            print(f"  {r['court']:<32} pass   (no probe, {counts.get('cells')} cell(s) over "
+                  f"{counts.get('relations')} relation(s) x {counts.get('dimensions')} "
+                  f"dimension(s); {counts.get('by_verdict')}; "
+                  f"{counts.get('planes_joined')} plane(s) joined; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"contradicted->{c['injected_contradicted_cell_findings']} "
+                  f"boolean->{c['injected_collapsed_boolean_findings']} "
+                  f"no-source->{c['injected_no_source_record_findings']} "
+                  f"pass-no-evidence->{c['injected_pass_without_evidence_findings']} finding(s))")
+            for relation in r["relations"] or []:
+                print(f"      relation {relation['relation_id']:<64} "
+                      f"{relation['direction']:<22} by {','.join(relation['established_by'])}")
+            for u in r["unmeasured"] or []:
+                print(f"      {u['verdict']:<13} {u['cell_id']}: {u['reason']}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] == "pass" and r["court"] == DOWNSTREAM_MULTITRACK_COURT:

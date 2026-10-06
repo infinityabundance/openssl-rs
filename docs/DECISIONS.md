@@ -35943,3 +35943,58 @@ The control seeds a higher rung with no evidence, a skipped core rung, an archae
 counted supported and a typed status, and each is caught with specificity holding.
 `support-status` moves to `implemented`/closed and the stratum's `open_in_this_stratum` falls from
 three to two.
+
+## D546 -- the compatibility matrix is assembled from five planes, and no cell is a boolean
+
+Phase 23.16 lands the assembled compatibility matrix
+(`forensics/multitrack/compatibility-matrix.json`, the record kind `compatibility_matrix` 23.0
+defined and this subphase extends), the generator `forensics/tools/compat_matrix.py` and the court
+`RT-COMPATIBILITY-MATRIX`, unit `compatibility-matrix`. The measured corrections are recorded in
+`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.16 and checked by the court.
+
+**The matrix joins, it does not restate.** A cell names the source records it joins as
+`(plane, record_id)` references and carries only the reading the join took from each, so the
+committed matrix cannot drift from its inputs: the court re-reads every source record from the
+plane it names and re-derives every reading and every cell verdict. The five planes are the
+compatibility views (23.9), the directional compatibility edges (23.12), the negative and positive
+obligations (23.13), the security lineage (23.14) and the support-status ladder (23.15), and they
+are content-addressed once in the matrix's `planes` block.
+
+**The matrix is `O(relations x dimensions)`, never the pairwise release product.** The relations
+are read from the planes that establish them -- the edge plane's declared pair-directions, the
+view plane's candidate-to-authority relations and the obligation plane's authority/release scopes
+-- so 23.16 joins over the lineage edges and the planes that exist. The measured matrix is 10
+relations x 10 dimensions = 100 cells; the 3.6.3 <-> 3.6.4 pair is joined in both directions, the
+candidate is joined to its reference authority 3.6.4-production in both directions, and to each
+authority (and the one release) the planes scope obligations to (0.9.8zh, 1.0.2u, 1.1.1w, 3.0.0,
+3.6.3, 3.6.4 and 4.0.3).
+
+**Every cell is directional and dimension-specific with a join verdict, never a boolean.**
+`multitrack_schemas.validate_compatibility_matrix` now requires the cell's `dimension` and
+`direction` from the closed vocabularies and a `verdict` from `MATRIX_VERDICTS`
+(`PASS`/`FAIL`/`UNKNOWN`/`NOT_MEASURED`), and still refuses a bare `compatible` flag. A cell is
+`PASS` only when every joined reading passes, `FAIL` when any reading fails, `UNKNOWN` when a
+reading is unknown or unmeasured, and `NOT_MEASURED` (`with its reason`) when the cell joins no
+reading at all. The measured verdicts are 21 `PASS`, 1 `FAIL`, 6 `UNKNOWN` and 72 `NOT_MEASURED`:
+the `FAIL` is the 3.6.4 -> 3.6.3 `source_api` cell, whose backward reading of the committed delta
+removes the two macros 3.6.4 added; the six `UNKNOWN` cells are the 0.9.8zh `abi` cell (a
+`not_measured` view joins a satisfied obligation), the 4.0.3 `provider_registration` cell (its one
+obligation, the 4.x ENGINE absence, is `unknown` because no 4.x authority or view is admitted), the
+candidate-to-reference-authority `semantic` cells in both directions (the edge plane's semantic
+facet is `UNKNOWN`) and the candidate-to-reference-authority `behavioural` cells in both directions
+(the security lineage's one `unresolved` disposition -- `CVE-2026-84782`, fixed in 3.6.5 -- joins
+them); the 72 `NOT_MEASURED` cells are the dimensions no plane measured for a relation.
+
+**The security lineage guards the behavioural dimension, and support status is context.** The
+security plane joins the candidate-to-reference-authority relation on the `behavioural` dimension
+(`never_contained`/`safe_divergence` -> `PASS`, `unresolved` -> `UNKNOWN`,
+`preserve_vulnerable_behaviour` -> `FAIL`), so a cell can never re-adopt a fixed behaviour; the
+support-status plane joins the endpoints' ladder rows as **context**, and never turns an unmeasured
+reading into a pass. The court establishes that every cell references real records from the five
+planes, that its reading equals the source record's own value, that the verdict reproduces from the
+joined readings, that one cell covers every declared relation and dimension, that all five planes
+are joined, and that the counts, content hash and plane block reproduce and are content-addressed.
+The control seeds a reading that contradicts its plane, a boolean cell, a cell with no source record
+and a `PASS` with no evidence, and each is caught with specificity holding. `compatibility-matrix`
+moves to `implemented`/closed and the stratum's `open_in_this_stratum` falls from two to one,
+leaving only the `multitrack-seal` (23.17).
