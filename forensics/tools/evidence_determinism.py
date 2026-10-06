@@ -153,6 +153,11 @@ GENERATORS_BEFORE_LEDGERS = [
     # divergence. The RT-ATLAS-PARAMETERIZATION court reads the two artefacts it writes and
     # re-derives every census through the same generator.
     "forensics/tools/atlas_authority.py",
+    # Phase 23.5's entity lineage (D538's second identity plane). It is a pure function of the
+    # committed per-authority atlases -- the declaration and public-symbol planes -- so a stale
+    # committed plane is a failure rather than a silent divergence. The RT-ENTITY-LINEAGE court
+    # reads the artefact it writes and re-derives every relation through the same identity shapes.
+    "forensics/tools/entity_lineage.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -316,6 +321,10 @@ COMPARED = [
     # stale copy is a failure and not a silent divergence.
     "forensics/atlas/parameterization-receipt.json",
     "forensics/atlas/openssl-0.9.8zh-historical/plane-census.json",
+    # Phase 23.5's entity lineage: what became of each public entity across the covered release
+    # pair, a pure function of the committed declaration and symbol planes, so a stale copy is a
+    # failure and not a silent divergence.
+    "forensics/multitrack/entity-lineage.json",
 ]
 
 # ---------------------------------------------------------------------------

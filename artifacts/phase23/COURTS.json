@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-RELEASE-CATALOG` is 23.1's court: the release catalogue and its lineage. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, both derived from forensics/multitrack/release-archaeology.json -- the official OpenSSL release timeline, the git tag each release names and the commit it peels to, and the nearest release ancestor the git graph gives it. It establishes that the graph begins at OpenSSL 0.9.1c (23 December 1998), that every upstream mainline final is present with no unexplained gap, that a pre-release is classified and never promoted to final or to the `latest-stable` alias merely by sorting higher, that the lineage is a typed DAG whose parallel branches are branch_fork edges rather than a false linear mainline, that every node is schema-valid with provenance, and that SSLeay is provenance ancestry only. A deleted release, a `final` flipped to `beta`, a repointed parent edge and a `latest-stable` pointed at a beta are each detected with specificity holding on the honest catalogue. A passing catalogue is a catalogue, not a compatibility claim: no edge says any release is compatible with any other. `RT-AUTHORITY-NODES` is 23.2's court: the authority-node registry. It stages no probe and reads forensics/authority-nodes.json and the records it is derived from -- the release catalogue, the admitted-authority registry, the build records and the historical acquisition and build receipts -- and establishes that every node is schema-valid, content-addressed and backed by an actual build receipt; that release identity (release_id, git) is proven against the catalogue and kept separate from platform/profile identity; that the admitted pair's source manifests still reproduce; and that an unavailable authority is recorded unavailable and is never a node. A built-authority claim with no receipt, a dropped required identity field, and a source digest asserting tag == tarball without proof are each detected with specificity holding. `RT-ATLAS-PARAMETERIZATION` is 23.3's court: the parameterized atlases. Its instrument is the generator itself: it reads forensics/atlas/parameterization-receipt.json, the committed default-authority alias and forensics/atlas/openssl-0.9.8zh-historical/plane-census.json, re-derives every census through the same generator, corroborates the historical authority's decisive absences (providers, provider registrations, QUIC) against its committed source manifest, and re-runs the authority-parameterized archaeology generators for the 3.6.4 production authority, asserting its committed plane is byte-identical. The default is the committed alias, never the catalogue's `latest-stable` (openssl-4.0.3); swapping the authority argument changes the produced census, so a hidden production fallback is caught, and a measured absence with no provenance or a nonzero count is refused. The one pre-existing, disclosed drift (parity-obligations.json) is measured live and undone, never applied. `RT-LINEAGE-EDGES` is 23.4's court: the typed lineage edges. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, and establishes that every edge is schema-valid, typed and directed, with its stated sense following the evidence's chronology and its provenance resolving; that the graph is a DAG whose parallel supported branches (1.0.2, 1.1.1, 3.x, 4.x) are typed branch_fork edges rather than a false linear mainline; that a date-order chronological_successor edge is never presented as an ABI proof; that the declared_abi_compatibility edges are marked declarations scoped to their declared family; and that every kind the vocabulary names but the evidence cannot settle is recorded absent with a reason. A reversed edge direction, a date-order edge relabelled declared_abi_compatibility, an introduced cycle and an edge stripped of provenance are each detected with specificity holding. A passing edge set is a set of relationships, not a compatibility claim. Phase 23 owns no exported symbol, so no differential probe over a symbol set is its evidence, and its remaining thirteen courts -- RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, RT-ABI-HISTORY-FACADES, RT-SEMANTIC-COURTS, RT-COMPATIBILITY-VIEWS, RT-HISTORICAL-POPULATION, RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with the subphases that land them (23.5 through 23.17). The one thing the model forbids everywhere is a single boolean: compatibility is directional and dimension-specific, a cross-version receipt is never inherited, an authority is named explicitly and singularly, and a historical vulnerability is observed but never reintroduced. docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "`RT-RELEASE-CATALOG` is 23.1's court: the release catalogue and its lineage. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, both derived from forensics/multitrack/release-archaeology.json -- the official OpenSSL release timeline, the git tag each release names and the commit it peels to, and the nearest release ancestor the git graph gives it. It establishes that the graph begins at OpenSSL 0.9.1c (23 December 1998), that every upstream mainline final is present with no unexplained gap, that a pre-release is classified and never promoted to final or to the `latest-stable` alias merely by sorting higher, that the lineage is a typed DAG whose parallel branches are branch_fork edges rather than a false linear mainline, that every node is schema-valid with provenance, and that SSLeay is provenance ancestry only. A deleted release, a `final` flipped to `beta`, a repointed parent edge and a `latest-stable` pointed at a beta are each detected with specificity holding on the honest catalogue. A passing catalogue is a catalogue, not a compatibility claim: no edge says any release is compatible with any other. `RT-AUTHORITY-NODES` is 23.2's court: the authority-node registry. It stages no probe and reads forensics/authority-nodes.json and the records it is derived from -- the release catalogue, the admitted-authority registry, the build records and the historical acquisition and build receipts -- and establishes that every node is schema-valid, content-addressed and backed by an actual build receipt; that release identity (release_id, git) is proven against the catalogue and kept separate from platform/profile identity; that the admitted pair's source manifests still reproduce; and that an unavailable authority is recorded unavailable and is never a node. A built-authority claim with no receipt, a dropped required identity field, and a source digest asserting tag == tarball without proof are each detected with specificity holding. `RT-ATLAS-PARAMETERIZATION` is 23.3's court: the parameterized atlases. Its instrument is the generator itself: it reads forensics/atlas/parameterization-receipt.json, the committed default-authority alias and forensics/atlas/openssl-0.9.8zh-historical/plane-census.json, re-derives every census through the same generator, corroborates the historical authority's decisive absences (providers, provider registrations, QUIC) against its committed source manifest, and re-runs the authority-parameterized archaeology generators for the 3.6.4 production authority, asserting its committed plane is byte-identical. The default is the committed alias, never the catalogue's `latest-stable` (openssl-4.0.3); swapping the authority argument changes the produced census, so a hidden production fallback is caught, and a measured absence with no provenance or a nonzero count is refused. The one pre-existing, disclosed drift (parity-obligations.json) is measured live and undone, never applied. `RT-LINEAGE-EDGES` is 23.4's court: the typed lineage edges. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, and establishes that every edge is schema-valid, typed and directed, with its stated sense following the evidence's chronology and its provenance resolving; that the graph is a DAG whose parallel supported branches (1.0.2, 1.1.1, 3.x, 4.x) are typed branch_fork edges rather than a false linear mainline; that a date-order chronological_successor edge is never presented as an ABI proof; that the declared_abi_compatibility edges are marked declarations scoped to their declared family; and that every kind the vocabulary names but the evidence cannot settle is recorded absent with a reason. A reversed edge direction, a date-order edge relabelled declared_abi_compatibility, an introduced cycle and an edge stripped of provenance are each detected with specificity holding. A passing edge set is a set of relationships, not a compatibility claim. `RT-ENTITY-LINEAGE` is 23.5's court: the entity lineage. It stages no probe and reads forensics/multitrack/entity-lineage.json and the committed atlases it derives from, and establishes that every row is schema-valid, provenanced and names the two releases, both entities, the strong signals and a confidence; that a settled relation rests on a strong signal and never on a fuzzy nomination; that same_entity rows are the same entity and reproduce as such from the atlases; that no relation is settled on the authority-scoped install prefix moving; that no entity is dropped, silently merged or both renamed and split; and that the plane names its coverage boundary and its absent relations. The committed differential atlas corroborates the per-plane counts independently. A same_entity off name-only similarity, a renamed_to that is really a split, a settled relation with no strong signal and a silent merge are each detected with specificity holding. A passing entity plane records what became of each entity and says nothing about compatibility. Phase 23 owns no exported symbol, so no differential probe over a symbol set is its evidence, and its remaining twelve courts -- RT-DELTA-ENGINE, RT-ABI-HISTORY-FACADES, RT-SEMANTIC-COURTS, RT-COMPATIBILITY-VIEWS, RT-HISTORICAL-POPULATION, RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with the subphases that land them (23.5 through 23.17). The one thing the model forbids everywhere is a single boolean: compatibility is directional and dimension-specific, a cross-version receipt is never inherited, an authority is named explicitly and singularly, and a historical vulnerability is observed but never reintroduced. docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "catalog_counts": {
@@ -244,6 +244,71 @@
         "probe": "",
         "problems": [],
         "verdict": "pass"
+      },
+      {
+        "absent_relations": {
+          "deprecated": "no common entity's deprecation state changes across the covered pair",
+          "kind_changed": "no common entity changes kind across the covered pair",
+          "layout_changed": "every common struct and enum carries an identical member layout: the struct plane's byte-differences are the instrument's own authority-scoped install prefix embedded in anonymous-union type strings, which this generator normalises out rather than reading as a layout change",
+          "merged_from": "no entity in one authority is the join of two or more entities in the other; the court refuses a silent merge without this relation",
+          "moved_to": "no common entity's declaration moves header across the covered pair: every common entity is declared in the same public header in both authorities",
+          "reintroduced": "a reintroduction needs an entity removed and later restored across three releases; the covered pair is adjacent and has no removal",
+          "removed": "no public entity present in the earlier authority is absent from the later one",
+          "renamed_to": "no common entity's declaration identity is carried to a different name across the covered pair: the functions, variables, structs, typedefs and enums planes coincide by name, and the two macros the later release adds are additions rather than renames",
+          "semantic_successor": "no entity's name changes while its declaration identity is carried across, so no entity is a semantic successor of another",
+          "signature_changed": "every common function, variable and typedef carries an identical prototype or declared type in both authorities",
+          "split_into": "no entity in one authority is carried by two or more entities in the other",
+          "unknown_relationship": "every entity present in both authorities is matched by exact declaration or public symbol identity, so no relationship had to be left ambiguous; a fuzzy nomination would be recorded here as unknown_relationship rather than settled"
+        },
+        "added_not_relations": {
+          "openssl-3.6.3->openssl-3.6.4": {
+            "macro": 2
+          }
+        },
+        "boundary": "This plane covers the release pair(s) whose two authorities both carry committed declaration and public-symbol planes: openssl-3.6.3 -> openssl-3.6.4. It does not cover a pair with an authority that carries only a source manifest and a source-plane census (openssl-0.9.8zh-historical): no declaration identity exists for that authority, so no entity relation touching it is settled or nominated, and the pair is recorded not covered rather than guessed at.",
+        "content_hash": "80fd9b3d8a6b265f9de88422e433a07d7896107b385fa7b0bb31795b2d4d3d26",
+        "control": {
+          "baseline_findings": 0,
+          "caught_fuzzy_same_entity": true,
+          "caught_rename_that_is_a_split": true,
+          "caught_settled_without_strong_signal": true,
+          "caught_silent_merge": true,
+          "honest": true,
+          "injected_fuzzy_same_entity": "macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+          "injected_fuzzy_same_entity_findings": 5,
+          "injected_rename_that_is_a_split": "function:ACCESS_DESCRIPTION_free",
+          "injected_rename_that_is_a_split_findings": 9,
+          "injected_settled_without_strong_signal": "enum:BIO_hostserv_priorities",
+          "injected_settled_without_strong_signal_findings": 1,
+          "injected_silent_merge": [
+            "function:ACCESS_DESCRIPTION_free",
+            "function:ACCESS_DESCRIPTION_it"
+          ],
+          "injected_silent_merge_findings": 8,
+          "specificity_holds": true
+        },
+        "court": "RT-ENTITY-LINEAGE",
+        "covered_pairs": 1,
+        "entity_kinds": {
+          "enum": 4,
+          "function": 7485,
+          "macro": 16803,
+          "struct": 465,
+          "symbol": 80,
+          "typedef": 1162,
+          "variable": 2
+        },
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the entity-lineage court reads committed atlas records and stages no artifacts/phase23/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it reads forensics/multitrack/entity-lineage.json and the committed atlases it derives from, and establishes that every row is schema-valid, provenanced and names the two releases, both entities, the strong signals and a confidence; that a settled relation rests on a strong signal and never on a fuzzy nomination; that same_entity rows are the same entity and reproduce as such; that no relation is settled on the authority-scoped install prefix moving; that no entity is dropped, silently merged or both renamed and split; and that the plane names its coverage boundary and its absent relations. The committed differential atlas corroborates the per-plane counts. A same_entity off name-only similarity, a renamed_to that is really a split, a settled relation with no strong signal and a silent merge are each detected with specificity holding (docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 3.2 and 4.5).",
+        "probe": "",
+        "problems": [],
+        "relations": {
+          "same_entity": 26001
+        },
+        "rows": 26001,
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
@@ -254,7 +319,6 @@
       "RT-COMPATIBILITY-VIEWS": "23.9 -- the compatibility views",
       "RT-DELTA-ENGINE": "23.6 -- the delta engine",
       "RT-DOWNSTREAM-MULTITRACK": "23.11 -- the downstream multitrack court",
-      "RT-ENTITY-LINEAGE": "23.5 -- the entity lineage",
       "RT-HISTORICAL-POPULATION": "23.10 -- the historical population",
       "RT-NEGATIVE-OBLIGATIONS": "23.13 -- the negative obligations",
       "RT-SECURITY-LINEAGE": "23.14 -- the security lineage",
@@ -416,8 +480,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 4,
-      "total": 4
+      "pass": 5,
+      "total": 5
     }
   },
   "generator": "forensics/tools/phase23_courts.py",
@@ -441,6 +505,11 @@
       "name": "authority-lineage",
       "path": "forensics/authority-lineage.json",
       "sha256": "e415af5a24cd54f0be2b41bacf80da2ac500c9cddf0b4bd3dcbba13dfd5d8d61"
+    },
+    {
+      "name": "entity-lineage",
+      "path": "forensics/multitrack/entity-lineage.json",
+      "sha256": "c0d34f534c7d646b46b5b9560a65ddf518c2bfc037e7e921224b8fb31483d7dd"
     },
     {
       "name": "release-archaeology",

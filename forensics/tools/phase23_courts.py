@@ -16,10 +16,11 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**Four courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+**Five courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
 lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, 23.3 lands
-`RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court, and 23.4 lands `RT-LINEAGE-EDGES`, the
-typed-lineage-edge court; the other thirteen courts are named in
+`RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court, 23.4 lands `RT-LINEAGE-EDGES`, the
+typed-lineage-edge court, and 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage court; the other
+twelve courts are named in
 `PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
 reproduced, so a court silently dropped is a finding rather than a smaller green run. This is
@@ -51,8 +52,8 @@ The seventeen courts, and the subphase that lands each
   * `RT-COMPATIBILITY-MATRIX` -- 23.16, the compatibility matrix.
   * `MULTITRACK-SEAL` -- 23.17, the full matrix, the FRF/Gemel chain and the seal.
 
-Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZATION` and
-`RT-LINEAGE-EDGES` is
+Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZATION`,
+`RT-LINEAGE-EDGES` and `RT-ENTITY-LINEAGE` is
 `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
@@ -100,6 +101,10 @@ import atlas_authority  # noqa: E402
 # The Phase-23.1 catalogue generator, imported for the lineage hash keys the sensitivity control
 # re-seals a mutated body with, so the control isolates the semantic check rather than the hash.
 import authority_catalog  # noqa: E402
+# The Phase-23.5 entity-lineage generator, imported so the court re-derives every entity relation
+# from the same identity shapes the committed plane was produced by (never a second, drifting
+# predicate), and re-seals a mutated body with the generator's own hash keys.
+import entity_lineage  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase23" / "COURTS.json"
 GENERATOR = "forensics/tools/phase23_courts.py"
@@ -107,6 +112,8 @@ PLAN = REPO_ROOT / "docs" / "PHASE-23-MULTITRACK-SUBPHASES.md"
 SCHEMAS = REPO_ROOT / "forensics" / "tools" / "multitrack_schemas.py"
 CATALOG = REPO_ROOT / "forensics" / "release-catalog.json"
 LINEAGE = REPO_ROOT / "forensics" / "authority-lineage.json"
+ENTITY_LINEAGE = REPO_ROOT / "forensics" / "multitrack" / "entity-lineage.json"
+DIFFERENTIAL_DIR = REPO_ROOT / "forensics" / "atlas" / "differential"
 SNAPSHOT = REPO_ROOT / "forensics" / "multitrack" / "release-archaeology.json"
 
 # 23.2's subject: the authority-node registry and the records it is derived from. The registry
@@ -142,6 +149,7 @@ RELEASE_CATALOG = "RT-RELEASE-CATALOG"
 AUTHORITY_NODES_COURT = "RT-AUTHORITY-NODES"
 ATLAS_PARAMETERIZATION_COURT = "RT-ATLAS-PARAMETERIZATION"
 LINEAGE_EDGES_COURT = "RT-LINEAGE-EDGES"
+ENTITY_LINEAGE_COURT = "RT-ENTITY-LINEAGE"
 ROOT_RELEASE = "openssl-0.9.1c"
 CANONICAL_KINDS = ("branch_fork", "chronological_successor", "maintenance_successor")
 PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
@@ -167,12 +175,12 @@ COURTS: list[tuple[str, str]] = [
     (AUTHORITY_NODES_COURT, "_authority_nodes_court"),
     (ATLAS_PARAMETERIZATION_COURT, "_atlas_parameterization_court"),
     (LINEAGE_EDGES_COURT, "_lineage_edges_court"),
+    (ENTITY_LINEAGE_COURT, "_entity_lineage_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-ENTITY-LINEAGE": "23.5 -- the entity lineage",
     "RT-DELTA-ENGINE": "23.6 -- the delta engine",
     "RT-ABI-HISTORY-FACADES": "23.7 -- the ABI / history façades",
     "RT-SEMANTIC-COURTS": "23.8 -- the semantic multitrack courts",
@@ -1476,6 +1484,464 @@ def _lineage_edges_court(name: str) -> dict:
     }
 
 
+# The declaration planes the committed differential atlas publishes a `common` count for, and the
+# `entity_lineage` kind each corroborates. The differential is produced by a different generator
+# from the entity plane, so agreement is corroboration rather than a restatement.
+ENTITY_DIFFERENTIAL_PLANES: dict[str, str] = {
+    "functions": "function",
+    "variables": "variable",
+    "structs": "struct",
+    "typedefs": "typedef",
+    "enums": "enum",
+    "macros": "macro",
+}
+
+# The relations whose successor is a single entity, so a group of them landing on the same
+# successor without a `merged_from` is a silent merge.
+RENAME_LIKE: tuple[str, ...] = ("renamed_to", "moved_to", "semantic_successor")
+
+
+# The extended fields every entity-lineage row must carry beside the base schema's fields, so a row
+# names the two releases, both entities, the signals, the provenance and the confidence.
+ENTITY_ROW_FIELDS: tuple[str, ...] = (
+    "from_release", "to_release", "from_entity", "to_entity", "strong_signals",
+    "metadata_provenance", "confidence",
+)
+
+
+def _entity_differential_findings(body: dict) -> list[str]:
+    """Corroborate the entity plane against the committed differential atlas.
+
+    The differential is a second, independently generated projection of the same two authorities,
+    so its per-plane `common`/`removed`/`added` counts are a check the entity plane cannot pass by
+    agreeing with itself. It is what catches an entity *split* by an instrument artefact: a struct
+    whose raw shape moved only because the authority-scoped install prefix moved would leave the
+    plane's present-in-both count short of the differential's `common`.
+    """
+    findings: list[str] = []
+    pairs = [p for p in (body.get("coverage") or {}).get("pairs") or [] if p.get("covered")]
+    if len(pairs) != 1:
+        findings.append(f"the plane covers {len(pairs)} pair(s); the differential corroboration is "
+                        f"defined for exactly one, so the plane cannot be corroborated")
+        return findings
+    pair = pairs[0]
+    path = DIFFERENTIAL_DIR / f"{pair['from_authority']}-vs-{pair['to_authority']}.json"
+    if not path.is_file():
+        findings.append(f"the differential atlas {rel(path)} is absent, so the entity plane cannot "
+                        f"be corroborated independently")
+        return findings
+    planes = read_json(path).get("planes") or {}
+    relations = body.get("relations") or []
+    kind_rows = Counter(r.get("entity_kind") for r in relations)
+    kind_removed = Counter(r.get("entity_kind") for r in relations if r.get("relation") == "removed")
+    added_kind: Counter = Counter()
+    for kinds in ((body.get("counts") or {}).get("added_not_relations") or {}).values():
+        added_kind.update(kinds)
+    for plane, kind in ENTITY_DIFFERENTIAL_PLANES.items():
+        info = planes.get(plane) or {}
+        if info.get("common") is None:
+            continue
+        present = kind_rows.get(kind, 0) - kind_removed.get(kind, 0)
+        if present != info["common"]:
+            findings.append(f"the {plane} plane: the entity lineage carries {present} "
+                            f"present-in-both row(s) but the committed differential counts "
+                            f"{info['common']} common; an entity was dropped or split")
+        if info.get("removed_count") is not None \
+                and kind_removed.get(kind, 0) != info["removed_count"]:
+            findings.append(f"the {plane} plane: {kind_removed.get(kind, 0)} removed row(s) but "
+                            f"the differential counts {info['removed_count']}")
+        if info.get("added_count") is not None \
+                and added_kind.get(kind, 0) != info["added_count"]:
+            findings.append(f"the {plane} plane: {added_kind.get(kind, 0)} addition(s) recorded "
+                            f"but the differential counts {info['added_count']}")
+    return findings
+
+
+def _entity_coverage_findings(body: dict) -> list[str]:
+    """The plane must name its coverage boundary: which authorities and pairs it does and does
+    not cover, and why."""
+    findings: list[str] = []
+    coverage = body.get("coverage") or {}
+    authorities = {a.get("authority_id"): a for a in coverage.get("authorities") or []}
+    built = entity_lineage.built_authorities()
+    for node in built:
+        aid = node["authority_id"]
+        entry = authorities.get(aid)
+        if entry is None:
+            findings.append(f"the coverage boundary silently omits the built authority {aid}")
+            continue
+        if entry.get("covered"):
+            if not entry.get("declaration_planes"):
+                findings.append(f"{aid} is marked covered but carries no declaration plane")
+        elif not entry.get("reason"):
+            findings.append(f"{aid} is not covered but names no reason")
+        if entry.get("covered") != bool(entry.get("declaration_planes")):
+            findings.append(f"{aid}: `covered` disagrees with `declaration_planes`")
+    pairs = coverage.get("pairs") or []
+    for p in pairs:
+        if not p.get("reason"):
+            findings.append(f"pair {p.get('from_authority')} -> {p.get('to_authority')} states no "
+                            f"reason for its coverage")
+    have = {(p.get("from_authority"), p.get("to_authority")) for p in pairs}
+    ids = [node["authority_id"] for node in built]
+    for i, a in enumerate(ids):
+        for b in ids[i + 1:]:
+            if (a, b) not in have and (b, a) not in have:
+                findings.append(f"the coverage boundary omits the authority pair {a} / {b}")
+    if not coverage.get("boundary"):
+        findings.append("the plane names no coverage boundary")
+    if coverage.get("covered_pairs") != len([p for p in pairs if p.get("covered")]):
+        findings.append("the coverage summary's covered_pairs count does not match its pair list")
+    return findings
+
+
+def _entity_absent_findings(body: dict) -> list[str]:
+    """Every relation the vocabulary names is either present or recorded absent with a reason."""
+    findings: list[str] = []
+    present = {r.get("relation") for r in body.get("relations") or []}
+    absent = body.get("absent_relations") or {}
+    for relation in multitrack_schemas.ENTITY_RELATIONS:
+        if relation not in present and relation not in absent:
+            findings.append(f"relation {relation!r} is neither present nor recorded absent")
+    for relation, reason in absent.items():
+        if relation in present:
+            findings.append(f"relation {relation!r} is recorded absent but is present")
+        if not reason:
+            findings.append(f"absent relation {relation!r} carries no reason")
+    return findings
+
+
+def entity_lineage_findings(body: dict, recomputed: dict | None = None,
+                           prefix_only: set[str] | None = None) -> list[str]:
+    """Every way the entity lineage fails this court's subject.
+
+    A pure function of the committed body and the committed atlases, so the sensitivity control can
+    mutate the body and re-check. It establishes that every row is schema-valid, provenanced and
+    carries the extended fields; that a **settled** relation (anything but `unknown_relationship`)
+    rests on a **strong** signal and never on a fuzzy nomination; that `same_entity` rows really are
+    the same entity and reproduce as such from the atlases; that a relation is never settled on a
+    struct whose raw difference is only the authority-scoped install prefix moving; that no two
+    entities silently merge into one successor and no entity is both renamed and split; that every
+    entity the atlases carry in the earlier release has exactly one row; and that the plane names
+    its coverage boundary and its absent relations with reasons. A second, committed projection --
+    the differential atlas -- corroborates the per-plane counts independently.
+    """
+    findings: list[str] = []
+    if recomputed is None:
+        recomputed = entity_lineage.recompute()
+    if prefix_only is None:
+        prefix_only = entity_lineage.prefix_only_structs()
+    strong = set(entity_lineage.STRONG_SIGNALS)
+    nomination = set(entity_lineage.NOMINATION_SIGNALS)
+    covered = {(p.get("from_release"), p.get("to_release"))
+               for p in (body.get("coverage") or {}).get("pairs") or [] if p.get("covered")}
+    relations = body.get("relations") or []
+
+    seen: set[tuple] = set()
+    for r in relations:
+        eid = r.get("entity_id")
+        findings += [f"entity row {eid}: {p}"
+                     for p in multitrack_schemas.validate_entity_lineage(r)]
+        for f in ENTITY_ROW_FIELDS:
+            if f not in r:
+                findings.append(f"entity row {eid}: missing required field {f!r}")
+        key = (r.get("from_release"), eid)
+        if key in seen:
+            findings.append(f"entity row {eid}: duplicated for pair {r.get('from_release')}")
+        seen.add(key)
+        prov = r.get("metadata_provenance") or []
+        for entry in ([prov] if isinstance(prov, str) else prov):
+            if entry.startswith(("http://", "https://")):
+                continue
+            if not (REPO_ROOT / entry).is_file():
+                findings.append(f"entity row {eid}: provenance {entry!r} does not resolve")
+        pair = (r.get("from_release"), r.get("to_release"))
+        if pair not in covered:
+            findings.append(f"entity row {eid}: names pair {pair[0]} -> {pair[1]}, which the "
+                            f"coverage boundary does not declare covered")
+        relation = r.get("relation")
+        signals = set(r.get("strong_signals") or [])
+        if relation == "unknown_relationship":
+            if r.get("confidence") != "nominated":
+                findings.append(f"entity row {eid}: unknown_relationship must read `nominated`")
+            if not (signals & nomination):
+                findings.append(f"entity row {eid}: unknown_relationship records no nomination")
+        else:
+            if r.get("confidence") != "established":
+                findings.append(f"entity row {eid}: settled relation {relation!r} must read "
+                                f"`established`")
+            if not signals:
+                findings.append(f"entity row {eid}: settled relation {relation!r} carries no "
+                                f"strong signal, so a resemblance would read as a relation")
+            bad = sorted(signals & nomination)
+            if bad:
+                findings.append(f"entity row {eid}: settled relation {relation!r} rests on the "
+                                f"nomination signal(s) {bad}; it must be unknown_relationship")
+            unknown = sorted(signals - strong - nomination)
+            if unknown:
+                findings.append(f"entity row {eid}: strong signal(s) {unknown} are not in the "
+                                f"published vocabulary")
+        if relation == "same_entity" and r.get("from_entity") != r.get("to_entity"):
+            findings.append(f"entity row {eid}: same_entity claims two different entities "
+                            f"{r.get('from_entity')!r} and {r.get('to_entity')!r}")
+        expected = recomputed.get((r.get("from_release"), eid))
+        if relation == "unknown_relationship":
+            if expected is not None:
+                findings.append(f"entity row {eid}: recorded unknown_relationship, but the atlases "
+                                f"settle it as {expected!r}")
+        elif expected is None:
+            findings.append(f"entity row {eid}: relation {relation!r} is claimed for an entity the "
+                            f"atlases do not carry in the earlier release")
+        elif expected != relation:
+            findings.append(f"entity row {eid}: relation {relation!r} does not reproduce from the "
+                            f"atlases (they say {expected!r})")
+        if eid in prefix_only and relation != "same_entity":
+            findings.append(f"entity row {eid}: relation {relation!r} rests only on the "
+                            f"authority-scoped install prefix moving, not on a real change")
+
+    row_keys = {(r.get("from_release"), r.get("entity_id")) for r in relations}
+    missing = sorted(set(recomputed) - row_keys)
+    if missing:
+        findings.append(f"{len(missing)} entity/ies present in the earlier release have no row, "
+                        f"the first being {missing[0]}")
+    extra = sorted(row_keys - set(recomputed))
+    if extra:
+        findings.append(f"{len(extra)} row(s) name an entity the atlases do not carry in the "
+                        f"earlier release, the first being {extra[0]}")
+
+    to_one: dict[tuple, set] = defaultdict(set)
+    merged: dict[tuple, set] = defaultdict(set)
+    for r in relations:
+        if r.get("relation") in RENAME_LIKE:
+            to_one[(r.get("from_release"), r.get("to_release"), r.get("to_entity"))].add(
+                r.get("entity_id"))
+        if r.get("relation") == "merged_from":
+            merged[(r.get("from_release"), r.get("to_release"), r.get("entity_id"))] |= set(
+                r.get("predecessors") or [])
+    for key, sources in sorted(to_one.items(), key=lambda kv: repr(kv[0])):
+        if len(sources) >= 2 and key not in merged:
+            findings.append(f"entities {sorted(sources)} silently merge into {key[2]!r} without a "
+                            f"merged_from row")
+    renamed = {(r.get("from_release"), r.get("entity_id")) for r in relations
+               if r.get("relation") == "renamed_to"}
+    split = {(r.get("from_release"), r.get("entity_id")) for r in relations
+             if r.get("relation") == "split_into"}
+    for key in sorted(renamed & split, key=repr):
+        findings.append(f"entity {key[1]} is recorded both renamed_to and split_into")
+
+    findings += _entity_coverage_findings(body)
+    findings += _entity_absent_findings(body)
+    findings += _entity_differential_findings(body)
+    recomputed_hash = content_hash({k: body.get(k) for k in entity_lineage.HASH_KEYS})
+    if recomputed_hash != body.get("content_hash"):
+        findings.append("the entity-lineage content_hash does not reproduce from its body")
+    if (body.get("counts") or {}).get("rows") != len(relations):
+        findings.append("the counts.rows does not match the relation list length")
+    return findings
+
+
+def entity_lineage_sensitivity_control(body: dict, recomputed: dict | None = None,
+                                       prefix_only: set[str] | None = None) -> dict:
+    """Prove the court can fail: seed four mutations and require each to be caught.
+
+    The honest plane must yield **zero** findings (specificity), and each seeded mutation -- a
+    `same_entity` claimed off name-only fuzzy similarity, a `renamed_to` that is really a split, a
+    settled relation with no strong signal, and two entities silently merged into one successor --
+    must be caught. Each mutated body is re-sealed with the generator's own hash keys first, so the
+    detection is the semantic check and never the content-hash check firing on an un-recomputed
+    digest.
+    """
+    if recomputed is None:
+        recomputed = entity_lineage.recompute()
+    if prefix_only is None:
+        prefix_only = entity_lineage.prefix_only_structs()
+    base = entity_lineage_findings(body, recomputed, prefix_only)
+    specificity = not base
+
+    def reseal(mutated: dict) -> dict:
+        out = copy.deepcopy(mutated)
+        out["content_hash"] = content_hash({k: out.get(k) for k in entity_lineage.HASH_KEYS})
+        return out
+
+    functions = [r for r in body.get("relations") or []
+                 if r.get("entity_kind") == "function" and r.get("relation") == "same_entity"]
+    if len(functions) < 3:
+        return {"honest": False, "reason": "too few function rows for the seeded mutations"}
+    x, y, z = functions[0], functions[1], functions[2]
+    pair = [x["from_release"], x["to_release"]]
+    prov = list(x["metadata_provenance"])
+
+    # (a) a `same_entity` claimed off name-only fuzzy similarity: the added macro is present only
+    #     in the later release, so a settled `same_entity` for it rests on resemblance alone.
+    fuzzy = copy.deepcopy(body)
+    fuzzy["relations"].append({
+        "entity_id": "macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+        "entity_kind": "macro",
+        "relation": "same_entity",
+        "present_in": pair,
+        "from_release": pair[0],
+        "to_release": pair[1],
+        "from_entity": "SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+        "to_entity": "SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+        "strong_signals": ["name-similarity"],
+        "evidence": ["seeded: the two names resemble one another"],
+        "metadata_provenance": prov,
+        "confidence": "established",
+    })
+    fuzzy_findings = entity_lineage_findings(reseal(fuzzy), recomputed, prefix_only)
+    caught_fuzzy = any("nomination signal" in f for f in fuzzy_findings)
+
+    # (b) a `renamed_to` that is actually a split: the same common entity is both renamed to one
+    #     successor and split into two.
+    split = copy.deepcopy(body)
+    split["relations"].append({
+        "entity_id": x["entity_id"],
+        "entity_kind": "function",
+        "relation": "renamed_to",
+        "present_in": pair,
+        "from_release": pair[0],
+        "to_release": pair[1],
+        "from_entity": x["from_entity"],
+        "to_entity": y["from_entity"],
+        "successor": y["from_entity"],
+        "strong_signals": ["declaration-name-identity", "declaration-header-identity"],
+        "evidence": ["seeded rename"],
+        "metadata_provenance": prov,
+        "confidence": "established",
+    })
+    split["relations"].append({
+        "entity_id": x["entity_id"],
+        "entity_kind": "function",
+        "relation": "split_into",
+        "present_in": pair,
+        "from_release": pair[0],
+        "to_release": pair[1],
+        "from_entity": x["from_entity"],
+        "to_entity": None,
+        "successors": [y["from_entity"], z["from_entity"]],
+        "strong_signals": ["declaration-name-identity", "declaration-header-identity"],
+        "evidence": ["seeded split"],
+        "metadata_provenance": prov,
+        "confidence": "established",
+    })
+    split_findings = entity_lineage_findings(reseal(split), recomputed, prefix_only)
+    caught_split = any("both renamed_to and split_into" in f for f in split_findings)
+
+    # (c) a settled relation with no strong signal at all.
+    nostrong = copy.deepcopy(body)
+    nostrong["relations"][0]["strong_signals"] = []
+    nostrong_findings = entity_lineage_findings(reseal(nostrong), recomputed, prefix_only)
+    caught_nostrong = any("carries no strong signal" in f for f in nostrong_findings)
+
+    # (d) a silent merge: two entities both become the same successor without a merged_from.
+    merged = copy.deepcopy(body)
+    for src in (x, y):
+        merged["relations"].append({
+            "entity_id": src["entity_id"],
+            "entity_kind": "function",
+            "relation": "renamed_to",
+            "present_in": pair,
+            "from_release": pair[0],
+            "to_release": pair[1],
+            "from_entity": src["from_entity"],
+            "to_entity": z["from_entity"],
+            "successor": z["from_entity"],
+            "strong_signals": ["declaration-name-identity", "declaration-header-identity"],
+            "evidence": ["seeded merge"],
+            "metadata_provenance": prov,
+            "confidence": "established",
+        })
+    merged_findings = entity_lineage_findings(reseal(merged), recomputed, prefix_only)
+    caught_merge = any("silently merge" in f for f in merged_findings)
+
+    return {
+        "baseline_findings": len(base),
+        "injected_fuzzy_same_entity": "macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+        "injected_fuzzy_same_entity_findings": len(fuzzy_findings),
+        "injected_rename_that_is_a_split": x["entity_id"],
+        "injected_rename_that_is_a_split_findings": len(split_findings),
+        "injected_settled_without_strong_signal": (body["relations"][0]["entity_id"]),
+        "injected_settled_without_strong_signal_findings": len(nostrong_findings),
+        "injected_silent_merge": [x["entity_id"], y["entity_id"]],
+        "injected_silent_merge_findings": len(merged_findings),
+        "specificity_holds": specificity,
+        "caught_fuzzy_same_entity": caught_fuzzy,
+        "caught_rename_that_is_a_split": caught_split,
+        "caught_settled_without_strong_signal": caught_nostrong,
+        "caught_silent_merge": caught_merge,
+        "honest": bool(specificity and caught_fuzzy and caught_split and caught_nostrong
+                       and caught_merge),
+    }
+
+
+def _entity_lineage_court(name: str) -> dict:
+    """`RT-ENTITY-LINEAGE`: 23.5's court, the entity lineage.
+
+    Stages no probe. It reads `forensics/multitrack/entity-lineage.json` and the committed atlases
+    it derives from and establishes that every row is schema-valid, provenanced and carries the two
+    releases, both entities, the signals and a confidence; that a settled relation rests on a strong
+    signal and never on a fuzzy nomination; that `same_entity` rows are the same entity and
+    reproduce as such; that no relation is settled on the install prefix moving; that no entity is
+    dropped, silently merged or both renamed and split; and that the plane names its coverage
+    boundary and its absent relations. The committed differential atlas corroborates the per-plane
+    counts independently. Four seeded mutations are each caught with specificity holding. A passing
+    entity plane is an **instrument**: it records what became of each entity, not whether any
+    release is compatible with any other.
+    """
+    problems: list[str] = []
+    if not ENTITY_LINEAGE.is_file():
+        problems.append(f"the entity lineage {rel(ENTITY_LINEAGE)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    body = read_json(ENTITY_LINEAGE)
+    recomputed = entity_lineage.recompute()
+    prefix_only = entity_lineage.prefix_only_structs()
+    findings = entity_lineage_findings(body, recomputed, prefix_only)
+    control = entity_lineage_sensitivity_control(body, recomputed, prefix_only)
+
+    counts = body.get("counts") or {}
+    coverage = body.get("coverage") or {}
+    verdict = "pass" if (not findings and not problems and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/multitrack/entity-lineage.json and the committed "
+            "atlases it derives from, and establishes that every row is schema-valid, provenanced "
+            "and names the two releases, both entities, the strong signals and a confidence; that "
+            "a settled relation rests on a strong signal and never on a fuzzy nomination; that "
+            "same_entity rows are the same entity and reproduce as such; that no relation is "
+            "settled on the authority-scoped install prefix moving; that no entity is dropped, "
+            "silently merged or both renamed and split; and that the plane names its coverage "
+            "boundary and its absent relations. The committed differential atlas corroborates the "
+            "per-plane counts. A same_entity off name-only similarity, a renamed_to that is "
+            "really a split, a settled relation with no strong signal and a silent merge are each "
+            "detected with specificity holding "
+            "(docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 3.2 and 4.5)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the entity-lineage court reads committed atlas records and stages no "
+            "artifacts/phase23/probes/ pair, so it takes no transcript to diff and carries no FRF "
+            "declaration"
+        ),
+        "rows": counts.get("rows"),
+        "relations": counts.get("relations"),
+        "entity_kinds": counts.get("entity_kinds"),
+        "added_not_relations": counts.get("added_not_relations"),
+        "covered_pairs": coverage.get("covered_pairs"),
+        "boundary": coverage.get("boundary"),
+        "absent_relations": body.get("absent_relations"),
+        "content_hash": body.get("content_hash"),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1557,10 +2023,23 @@ def main(argv: list[str]) -> int:
             "recorded absent with a reason. A reversed edge direction, a date-order edge "
             "relabelled declared_abi_compatibility, an introduced cycle and an edge stripped of "
             "provenance are each detected with specificity holding. A passing edge set is a set "
-            "of relationships, not a compatibility claim. Phase 23 owns "
+            "of relationships, not a compatibility claim. `RT-ENTITY-LINEAGE` is 23.5's court: "
+            "the entity lineage. It stages no probe and reads "
+            "forensics/multitrack/entity-lineage.json and the committed atlases it derives from, "
+            "and establishes that every row is schema-valid, provenanced and names the two "
+            "releases, both entities, the strong signals and a confidence; that a settled relation "
+            "rests on a strong signal and never on a fuzzy nomination; that same_entity rows are "
+            "the same entity and reproduce as such from the atlases; that no relation is settled "
+            "on the authority-scoped install prefix moving; that no entity is dropped, silently "
+            "merged or both renamed and split; and that the plane names its coverage boundary and "
+            "its absent relations. The committed differential atlas corroborates the per-plane "
+            "counts independently. A same_entity off name-only similarity, a renamed_to that is "
+            "really a split, a settled relation with no strong signal and a silent merge are each "
+            "detected with specificity holding. A passing entity plane records what became of "
+            "each entity and says nothing about compatibility. Phase 23 owns "
             "no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining thirteen courts -- "
-            "RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, "
+            "over a symbol set is its evidence, and its remaining twelve courts -- "
+            "RT-DELTA-ENGINE, "
             "RT-ABI-HISTORY-FACADES, RT-SEMANTIC-COURTS, RT-COMPATIBILITY-VIEWS, "
             "RT-HISTORICAL-POPULATION, RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, "
             "RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, "
@@ -1579,6 +2058,7 @@ def main(argv: list[str]) -> int:
         InputRef(name="multitrack-schemas", path=SCHEMAS),
         InputRef(name="release-catalog", path=CATALOG),
         InputRef(name="authority-lineage", path=LINEAGE),
+        InputRef(name="entity-lineage", path=ENTITY_LINEAGE),
         InputRef(name="release-archaeology", path=SNAPSHOT),
         InputRef(name="authority-nodes", path=AUTHORITY_NODES),
         InputRef(name="authority-registry", path=AUTHORITY_REGISTRY),
@@ -1663,6 +2143,23 @@ def main(argv: list[str]) -> int:
                   f"no-provenance->{c['injected_provenance_drop_findings']} finding(s))")
             for kind in sorted(r["kinds"]):
                 print(f"      kind {kind:<28} {r['kinds'][kind]}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == ENTITY_LINEAGE_COURT:
+            c = r["control"]
+            print(f"  {r['court']:<32} pass   (no probe, {r['rows']} relation(s) "
+                  f"{r['relations']}; {r['covered_pairs']} covered pair(s); "
+                  f"absent={sorted(r['absent_relations'])}; "
+                  f"content_hash={r['content_hash'][:16]}...; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"fuzzy-same-entity->{c['injected_fuzzy_same_entity_findings']} "
+                  f"rename-as-split->{c['injected_rename_that_is_a_split_findings']} "
+                  f"no-strong-signal->{c['injected_settled_without_strong_signal_findings']} "
+                  f"silent-merge->{c['injected_silent_merge_findings']} finding(s))")
+            for kind in sorted(r["entity_kinds"]):
+                print(f"      kind {kind:<12} {r['entity_kinds'][kind]}")
+            print(f"      boundary: {r['boundary']}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":
