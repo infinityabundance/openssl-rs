@@ -372,6 +372,10 @@
       "observations": 76,
       "verdict": "pass"
     },
+    "RT-ENTITY-LINEAGE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-ERR": {
       "observations": 3857,
       "verdict": "pass"
@@ -878,7 +882,7 @@
     "phase20": 0,
     "phase21": 0,
     "phase22": 0,
-    "phase23": 13,
+    "phase23": 12,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

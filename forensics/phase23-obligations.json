@@ -54,10 +54,10 @@
         "closure": "the `RT-ENTITY-LINEAGE` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-ENTITY-LINEAGE is pending",
+        "measurement_state": "complete",
+        "observation": "RT-ENTITY-LINEAGE is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "entity-lineage",
         "what": "what became of each public entity across releases, with the relation vocabulary of the plan -- renamed, moved, signature-changed, layout-changed, kind-changed, split, merged, deprecated, removed, reintroduced, semantic-successor -- and `unknown_relationship` where the evidence does not settle it"
@@ -212,8 +212,8 @@
       "contract_units": 17,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 4,
-      "open_in_this_stratum": 13,
+      "implemented": 5,
+      "open_in_this_stratum": 12,
       "owned": 17,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -254,7 +254,7 @@
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "16c74924ddcf6fd70cbf3462cfec014d0708bfe0b77479e7de75fa7e62fac0af"
+      "sha256": "b7ab2e212285eea6d4e8a51da09cfd6bd9ec484e76a8d536523dcb31e6790050"
     }
   ],
   "kind": "phase23-obligations",
