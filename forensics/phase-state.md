@@ -28,7 +28,7 @@ enforced here:
 | 17 | Downstream replacement court | `complete` |  |
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` |  |
 | 19 | Performance / CPU dispatch | `complete` |  |
-| 20 | 3.6.4 custodian seal | `not-started` | not started |
+| 20 | 3.6.4 custodian seal | `complete` |  |
 | 21 | Maintenance delta machinery | `not-started` | not started |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 

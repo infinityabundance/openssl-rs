@@ -11,6 +11,7 @@
     "phase18",
     "phase19",
     "phase2",
+    "phase20",
     "phase22",
     "phase3",
     "phase4",
@@ -86,6 +87,10 @@
       "verdict": "pass"
     },
     "CT-PRIMITIVES": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "CUSTODIAN-BOUNDARY-REGISTER": {
       "observations": 0,
       "verdict": "pass"
     },
@@ -267,6 +272,14 @@
     },
     "RT-CROSS-DSO-STATE": {
       "observations": 18,
+      "verdict": "pass"
+    },
+    "RT-CUSTODIAN-MATURITY": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-CUSTODIAN-RESIDUALS": {
+      "observations": 0,
       "verdict": "pass"
     },
     "RT-DEFAULTS": {
@@ -633,6 +646,10 @@
       "observations": 111,
       "verdict": "pass"
     },
+    "RT-RECEIPT-CLOSURE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-RECORD": {
       "observations": 38,
       "verdict": "pass"
@@ -707,6 +724,10 @@
     },
     "RT-STORE": {
       "observations": 1038,
+      "verdict": "pass"
+    },
+    "RT-SUBSTITUTION-WITNESS": {
+      "observations": 0,
       "verdict": "pass"
     },
     "RT-THREAD": {
@@ -789,6 +810,7 @@
     "phase17": 0,
     "phase18": 0,
     "phase19": 0,
+    "phase20": 0,
     "phase22": 0,
     "phase3": 43,
     "phase4": 23,
@@ -813,6 +835,7 @@
     "phase17": 0,
     "phase18": 0,
     "phase19": 0,
+    "phase20": 0,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -833,6 +856,7 @@
     "phase17": 5,
     "phase18": 5,
     "phase19": 5,
+    "phase20": 5,
     "phase22": 18,
     "phase3": 294,
     "phase4": 272,
@@ -856,7 +880,7 @@
     "18": "complete",
     "19": "complete",
     "2": "complete",
-    "20": "not-started",
+    "20": "complete",
     "21": "not-started",
     "22": "complete",
     "3": "complete",

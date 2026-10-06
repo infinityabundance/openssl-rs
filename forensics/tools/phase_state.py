@@ -1112,6 +1112,38 @@ PHASE19_MODULES = [
     "forensics/tools/phase19_obligations.py",
 ]
 
+# Phase 20 is the 3.6.4 custodian seal stratum, and **it owns no exported symbol**: reading
+# `forensics/atlas/symbol-ownership.json` for `owner_phase == 20` yields no record, so its ledger's
+# unit is not a symbol. `forensics/phase20-obligations.json` records its unit as `custodian seal
+# contract` (in `atlas_common.NON_EXPORT_UNITS`, so the export-partitioning tools skip it, as they
+# skip Phase 16's `cli-config contract`, Phase 17's `downstream replacement contract`, Phase 18's
+# `hostile hardening contract` and Phase 19's `performance dispatch contract`), and its working set
+# is five contract units -- the maturity derivation, the receipt closure, the residual disposition,
+# the substitution witness and the custodian-boundary register. Like Phases 18 and 19 it hands
+# nothing forward and receives nothing: it owns no provider registration row, no symbol deferral
+# and no prerequisite unit, because it compiles the custodian claim over the implementation the
+# strata before it completed rather than adding library surface. It registers no coverage-reference
+# probe, because it owns no symbol to take an address of, so its runner's registry is empty at
+# activation and its five courts are `pending` with the subphase that lands each. The ledger
+# measures its contract-unit states from the courts registry, so the runner does not bind the
+# ledger (the edge runs ledger -> courts, the reverse of Phase 16's). A passing court is an
+# *instrument*: the property it names may still carry findings, and the stratum makes no claim
+# stronger than `docs/CUSTODIAN_CONTRACT.md` section 6's -- no FIPS validation, no universal parity
+# from finite evidence and no claim that memory safety is established. `docs/PHASE-20-SUBPHASES.md`
+# section 4 records the activation measurement and the precondition it places on the runner.
+PHASE20_COURTS = "artifacts/phase20/COURTS.json"
+PHASE20_OBLIGATIONS = "forensics/phase20-obligations.json"
+PHASE20_MODULES = [
+    "docs/PHASE-20-SUBPHASES.md",
+    "forensics/tools/phase20_obligations.py",
+    # Phase 20 owns no FRF-declarable court -- its five custodian courts stage no probe and validate
+    # committed evidence -- so the FRF/Gemel chain rule is correctly vacuous for it and cannot be the
+    # stratum's closing evidence. Its seal document is, exactly as it is for Phases 3 through 7: the
+    # stratum stays `in-progress` until 20.6 writes this file, so a passing register at 20.5 cannot
+    # be read as the finished custodian seal.
+    "docs/PHASE-20-CUSTODIAN-SEAL.md",
+]
+
 # Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
 # every other stratum's: no export universe, no ownership projection and no provider row. What it
 # owes instead is the plan, the residual ledger its closure produces, the atlas's own courts and
@@ -1434,6 +1466,78 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "declarable (D13, D201). `docs/PHASE-19-SUBPHASES.md` sections 1 and 4 "
                             "and `docs/PHASE-19-PERFORMANCE-SEAL.md` record the measurement and "
                             "the chain"
+                        )),
+    20: StratumEvidence(PHASE20_MODULES, PHASE20_OBLIGATIONS, PHASE20_COURTS,
+                        ledger_note=(
+                            "This stratum owns **no exported symbol**, so its ledger's unit is "
+                            "not a symbol: `forensics/phase20-obligations.json` publishes "
+                            "`unit: custodian seal contract` and its `implemented`/`open` "
+                            "*export* lists are empty by measurement, while "
+                            "`open_in_this_stratum` counts the five contract units "
+                            "(`custodian-maturity`, `receipt-closure`, `custodian-residuals`, "
+                            "`substitution-witness` and `custodian-boundary-register`). It "
+                            "owns no provider registration row, no symbol deferral and no "
+                            "prerequisite unit: it activates no provider and adds no library "
+                            "surface, because it compiles the custodian claim over the "
+                            "implementation the strata before it completed. Its "
+                            "`artifacts/phase20/COURTS.json` lands its five courts with the "
+                            "subphases that build their instruments: 20.1's "
+                            "`RT-CUSTODIAN-MATURITY` is registered and passing -- it derives the "
+                            "L0-L9 maturity ladder from committed evidence and records the L9 gap "
+                            "as a finding, so its property reads NOT_CLAIMED -- and 20.2's "
+                            "`RT-RECEIPT-CLOSURE` is registered and passing: it joins every "
+                            "obligation the in-scope strata recorded `implemented` or closed to "
+                            "the FRF receipt that proves it and requires the covering "
+                            "`sensitivity-backed` claim in the FRF store to carry zero blockers, "
+                            "recording zero findings because the closure is complete -- and 20.3's "
+                            "`RT-CUSTODIAN-RESIDUALS` is registered and passing: it dispositions "
+                            "every residual the earlier strata and the FRF store record, requiring a "
+                            "disposition for each and no `UNKNOWN` residual to intersect the claimed "
+                            "production profile. On the current tree there are 334 `UNKNOWN` "
+                            "residual records -- the 167 POD_NAME_NOT_IN_ATLAS names the pod-contract "
+                            "plane carries, re-projected by two registers (the Phase-22 cross-plane "
+                            "census and the checkpoint's named `UNKNOWN` sets) -- and the closure "
+                            "records that zero of them intersect a declared compatibility root, so the "
+                            "residual court records zero findings too -- and 20.4's "
+                            "`RT-SUBSTITUTION-WITNESS` is registered and passing: it records the "
+                            "ABI-substitution witness chain (the Phase-2 ABI-SUBSTITUTION, ABI-LOAD "
+                            "and ABI-LINK courts) and the machine-owned downstream corpus witness "
+                            "chain (the six Phase-17 programs curl, git, haproxy, nginx, openssh and "
+                            "python), re-establishing the corpus as current and functional rather "
+                            "than assuming it and recording, per witness, the binary it was built "
+                            "against, the run that exercised it and the observation it produced. The "
+                            "Phase-17 driver has no cheap verify/currency mode, so the court "
+                            "re-derives currency (candidate 0.0.24) and functional status from the "
+                            "machine-owned records rather than re-running the harnesses, and "
+                            "records zero findings -- and 20.5's `CUSTODIAN-BOUNDARY-REGISTER` is "
+                            "registered and passing: it binds the authored register "
+                            "artifacts/phase20/custodian-boundary-register.json, recording, per "
+                            "surface, whether it is `claimed` (a passing court covers it) or "
+                            "`bounded` (explicitly outside this stratum). It re-reads the four "
+                            "custodian courts' records and the constitution/limitations artefacts "
+                            "-- `docs/NON_CLAIMS.md`, `docs/FIPS_CLAIMS.md`, `docs/UNSAFE.md` and the "
+                            "unsafe-footprint growth ceiling -- and fails the stratum if a recorded "
+                            "boundary has drifted from its evidence, carrying the three "
+                            "load-bearing non-claims as bounded rows: no FIPS validation, no "
+                            "universal parity from finite evidence, and memory safety measured "
+                            "rather than established. So all five contract units are `implemented` "
+                            "and `open_in_this_stratum` is zero. 20.6's seal "
+                            "docs/PHASE-20-CUSTODIAN-SEAL.md is the stratum's closure: it owns no "
+                            "FRF-declarable court, so the FRF/Gemel chain rule is correctly vacuous "
+                            "for it and its seal document is the required evidence, which has landed "
+                            "-- exactly as for Phases 3 through 7. A passing court is an **instrument**, not a "
+                            "property claim: the property it names may still carry findings, so "
+                            "`measurement_state` says the instrument completed while "
+                            "`property_status`/`findings` say what is claimed. The stratum "
+                            "makes no claim stronger than `docs/CUSTODIAN_CONTRACT.md` section "
+                            "6's -- in particular no FIPS validation, no universal parity from "
+                            "finite evidence and no claim that memory safety is established "
+                            "(`docs/NON_CLAIMS.md`) -- and a passing `RT-CUSTODIAN-MATURITY` "
+                            "must never be read as 'L9 custodian seal achieved'. The ledger's "
+                            "contract-unit states are measured from the courts registry, so "
+                            "the runner does not bind the ledger and the edge runs ledger -> "
+                            "courts, the reverse of Phase 16's. `docs/PHASE-20-SUBPHASES.md` "
+                            "sections 1 and 4 record the measurement"
                         )),
     # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
     # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no
