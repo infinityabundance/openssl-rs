@@ -555,6 +555,47 @@ kind `compatibility_view`), the generator `forensics/tools/compat_views.py` and 
   `compatibility-views` moves to `implemented`/closed and the stratum's `open_in_this_stratum`
   falls from nine to eight.
 
+**4.13 The historical population is one status per catalogue node, and the epoch representatives are
+built rather than assumed (23.10, D543).** 23.10 lands the population record
+`forensics/multitrack/historical-population.json` (record kind `population_record`, added to
+`forensics/tools/multitrack_schemas.py`), the generator `forensics/tools/historical_population.py`
+and the court `RT-HISTORICAL-POPULATION`. Five measured corrections, each checked by the court
+rather than asserted here.
+
+* **The population covers every catalogue node, not only the final-release lineage.** The brief's
+  subject is the public final-release lineage, but a release the ladder does not track must still be
+  recorded rather than omitted, so every one of the catalogue's 372 nodes carries a record: the 247
+  mainline finals climb the ladder (or are unavailable), and the 125 pre-release and auxiliary nodes
+  are `archaeological-only` with their reason. The `scope` field says which, so an out-of-scope node
+  is named rather than blank.
+* **A status is the highest rung an evidence plane reached, and it is never cumulative by
+  assertion.** `catalogued`, `admitted-source`, `built-authority`, `atlas-complete`,
+  `candidate-view`, `runtime-evidenced`, `downstream-evidenced` and `maintained` are read from the
+  artefact that carries each; `rungs_attained` names every rung reached, and a rung with no evidence
+  is simply absent. `downstream-evidenced` has no plane yet (23.11), and the record says so rather
+  than inventing it. `maintained` is the release the committed `default-authority.json` alias names
+  as the maintained candidate (openssl-3.6.4), once built.
+* **The epoch representatives are built, and the epoch set is pre-1.0, 1.0.x, 1.1.x, 3.x and
+  3.6+/4.x.** 0.9.8zh, 3.6.3 and 3.6.4 were already built; this subphase acquires and builds
+  1.0.2u, 1.1.1w and 3.0.0 in the historical venue, so every major epoch has at least one built
+  representative and the court fails if one does not. The historical build tool now pins
+  `--libdir=lib` for 3.0-plus releases (their default is `lib64`), so every historical authority
+  installs under one convention and the prefix layout is a property of the profile rather than of
+  the release's own default.
+* **Honest unavailability is the unavailable disposition, never a runtime claim.** 0.9.1c and
+  0.9.6m remain the only releases with no upstream-published digest; each is `archaeological-only`
+  with `runtime_compatible: false`, and the court refuses any record whose `runtime_compatible` is
+  true without a `runtime-evidenced` rung. The other 239 finals are `catalogued` with a reason
+  (not attempted), so an unbuilt release is a stated status rather than a silence.
+* **Acquiring the representatives expands the parameterized atlas and the entity-lineage boundary,
+  and both are regenerated rather than suppressed.** `historical_authority_ids()` names every
+  acquired historical authority, so `atlas_authority.py` now produces a plane census for
+  1.0.2u/1.1.1w/3.0.0 beside 0.9.8zh and the entity lineage names them in its coverage boundary as
+  built-but-not-covered. The RT-ATLAS-PARAMETERIZATION and RT-ENTITY-LINEAGE courts re-derive both
+  and pass; no evidence is dropped to keep an earlier artefact unchanged.
+  `historical-population` moves to `implemented`/closed and the stratum's `open_in_this_stratum`
+  falls from eight to seven.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 21's process unchanged: a subphase lands its code, its court

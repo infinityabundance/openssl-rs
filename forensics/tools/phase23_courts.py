@@ -16,14 +16,15 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**Nine courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+**Ten courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
 lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, 23.3 lands
 `RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court, 23.4 lands `RT-LINEAGE-EDGES`, the
 typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage court, 23.6 lands
 `RT-DELTA-ENGINE`, the semantic compatibility-delta court, 23.7 lands
 `RT-ABI-HISTORY-FACADES`, the ABI/history-façade court, 23.8 lands
-`RT-SEMANTIC-COURTS`, the oracle-to-oracle and candidate-to-authority semantic court and 23.9 lands
-`RT-COMPATIBILITY-VIEWS`, the directional compatibility-view court; the other eight courts are named
+`RT-SEMANTIC-COURTS`, the oracle-to-oracle and candidate-to-authority semantic court, 23.9 lands
+`RT-COMPATIBILITY-VIEWS`, the directional compatibility-view court and 23.10 lands
+`RT-HISTORICAL-POPULATION`, the historical-population court; the other seven courts are named
 in
 `PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
@@ -58,7 +59,7 @@ The seventeen courts, and the subphase that lands each
 
 Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZATION`,
 `RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE`, `RT-DELTA-ENGINE`, `RT-ABI-HISTORY-FACADES`,
-`RT-SEMANTIC-COURTS` and `RT-COMPATIBILITY-VIEWS` is
+`RT-SEMANTIC-COURTS`, `RT-COMPATIBILITY-VIEWS` and `RT-HISTORICAL-POPULATION` is
 `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
@@ -128,6 +129,10 @@ import gen_semantic_courts  # noqa: E402
 # the committed evidence through the same code path the artefact was produced by (never a second,
 # drifting predicate) and checks each view's evidence provenance against the authority it names.
 import compat_views  # noqa: E402
+# The Phase-23.10 historical-population generator, imported so the court re-derives every support
+# status from the committed catalogue, authority nodes and receipts through the same code path the
+# artefact was produced by (never a hand-listed status) and re-derives a mutated epoch's coverage.
+import historical_population  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase23" / "COURTS.json"
 GENERATOR = "forensics/tools/phase23_courts.py"
@@ -186,6 +191,13 @@ SEMANTIC_PROBE = REPO_ROOT / "courts" / "phase23" / "semantic_probe.c"
 # and re-derives every view from the authorities' own committed evidence through the same generator.
 COMPATIBILITY_VIEWS = REPO_ROOT / "forensics" / "multitrack" / "compatibility-views.json"
 
+# 23.10's subject: the historical-population record over the release catalogue, and the records it
+# is derived from -- the authority nodes, the acquisition and build receipts, the committed atlases
+# and the semantic pair the runtime rung is read from.
+HISTORICAL_POPULATION = REPO_ROOT / "forensics" / "multitrack" / "historical-population.json"
+SEMANTIC_COURTS = REPO_ROOT / "forensics" / "multitrack" / "semantic-courts.json"
+ATLAS_ROOT = REPO_ROOT / "forensics" / "atlas"
+
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 # 23.1's court, and the identity its subject must begin at. The root is upstream's first real
@@ -199,6 +211,7 @@ DELTA_ENGINE_COURT = "RT-DELTA-ENGINE"
 ABI_HISTORY_FACADES_COURT = "RT-ABI-HISTORY-FACADES"
 SEMANTIC_COURTS_COURT = "RT-SEMANTIC-COURTS"
 COMPATIBILITY_VIEWS_COURT = "RT-COMPATIBILITY-VIEWS"
+HISTORICAL_POPULATION_COURT = "RT-HISTORICAL-POPULATION"
 ROOT_RELEASE = "openssl-0.9.1c"
 CANONICAL_KINDS = ("branch_fork", "chronological_successor", "maintenance_successor")
 PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
@@ -229,12 +242,12 @@ COURTS: list[tuple[str, str]] = [
     (ABI_HISTORY_FACADES_COURT, "_abi_history_facades_court"),
     (SEMANTIC_COURTS_COURT, "_semantic_courts_court"),
     (COMPATIBILITY_VIEWS_COURT, "_compatibility_views_court"),
+    (HISTORICAL_POPULATION_COURT, "_historical_population_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-HISTORICAL-POPULATION": "23.10 -- the historical population",
     "RT-DOWNSTREAM-MULTITRACK": "23.11 -- the downstream multitrack court",
     "RT-COMPATIBILITY-EDGES": "23.12 -- the directional compatibility edges",
     "RT-NEGATIVE-OBLIGATIONS": "23.13 -- the negative obligations",
@@ -3048,6 +3061,363 @@ def _compatibility_views_court(name: str) -> dict:
     }
 
 
+def _reseal_population(body: dict) -> dict:
+    """`body` with its content hash recomputed, so a mutation is caught on substance alone."""
+    out = copy.deepcopy(body)
+    out["content_hash"] = historical_population.body_hash(
+        out.get("records") or [], out.get("epochs") or [], out.get("unavailable") or [])
+    return out
+
+
+def population_findings(body: dict, catalog: dict, authority_nodes: dict, authorities: dict,
+                        build_records: dict, hist_acq: dict, hist_receipts: dict,
+                        views: dict, semantic: dict, default_alias: dict) -> list[str]:
+    """Every way the historical-population record and its backing evidence fail this court.
+
+    A pure function of the committed bodies, so the sensitivity control can mutate them and
+    re-check. It establishes that every catalogue node has exactly one schema-valid record; that a
+    `built-authority` rung is backed by an actual receipt; that an unavailable release is never
+    counted runtime-compatible; that `runtime_compatible` holds only where the rung says; that each
+    major ABI epoch has a built representative; that the counts and content hash reproduce; and
+    that every evidence path is content-addressed.
+    """
+    findings: list[str] = []
+    records = body.get("records") or []
+    epochs = body.get("epochs") or []
+    unavailable = body.get("unavailable") or []
+    catalog_nodes = {n["release_id"]: n for n in catalog.get("nodes", [])}
+    auth_nodes = {n["release_id"]: n for n in authority_nodes.get("nodes", [])}
+    builds = {b["id"]: b for b in build_records.get("builds", [])}
+    acq_unavail = {r["release_id"]: r for r in hist_acq.get("unavailable", [])}
+    receipts = {r["release_id"]: r for r in hist_receipts.get("receipts", [])}
+    receipt_rel = rel(HIST_RECEIPTS)
+    build_records_rel = rel(BUILD_RECORDS)
+
+    # 1. schema validity, including the load-bearing `runtime_compatible` refusal.
+    for r in records:
+        rid = r.get("release_id", "<none>")
+        findings += [f"population record {rid}: {p}" for p in
+                     multitrack_schemas.validate_population_record(r)]
+
+    # 2. every catalogue node has exactly one record, and no record is extra.
+    ids = [r.get("release_id") for r in records]
+    if len(set(ids)) != len(ids):
+        findings.append(f"the population has {len(ids) - len(set(ids))} duplicate record id(s)")
+    for rid in sorted(set(catalog_nodes) - set(ids)):
+        findings.append(f"catalogue release {rid} has no population record, so it is silently "
+                        f"omitted")
+    for rid in sorted(set(ids) - set(catalog_nodes)):
+        findings.append(f"population record {rid} names no catalogue release")
+
+    # 3. a `built-authority` rung is backed by an actual receipt that names the release.
+    for r in records:
+        rid = r.get("release_id")
+        rungs = r.get("rungs_attained") or []
+        if "built-authority" not in rungs:
+            continue
+        node = auth_nodes.get(rid)
+        if node is None or node.get("claim") != "built-authority":
+            findings.append(f"population record {rid} attained built-authority but no authority "
+                            f"node backs it with a receipt")
+            continue
+        receipt = node.get("build_receipt")
+        if not receipt or not (REPO_ROOT / receipt).is_file():
+            findings.append(f"population record {rid}: built-authority but its build receipt "
+                            f"{receipt!r} is absent")
+        elif receipt == receipt_rel and rid not in receipts:
+            findings.append(f"population record {rid}: no historical build receipt names it")
+        elif receipt == build_records_rel and node["authority_id"] not in builds:
+            findings.append(f"population record {rid}: no build record names its authority")
+        cited = {e.get("path") for e in (r.get("evidence") or [])}
+        if not (cited & {receipt_rel, build_records_rel}):
+            findings.append(f"population record {rid}: its evidence cites no build receipt, so "
+                            f"built-authority is asserted without proof")
+
+    # 4. an unavailable release is studied and never counted runtime-compatible.
+    for u in unavailable:
+        rid = u.get("release_id")
+        if u.get("runtime_compatible") is not False:
+            findings.append(f"unavailable entry {rid}: is not recorded runtime-incompatible")
+        if not u.get("reason"):
+            findings.append(f"unavailable entry {rid}: carries no reason")
+        if rid not in acq_unavail:
+            findings.append(f"unavailable entry {rid}: is not in the acquisition registry")
+    for rid in sorted(acq_unavail):
+        if rid not in catalog_nodes:
+            continue
+        rec = next((r for r in records if r.get("release_id") == rid), None)
+        if rec is None:
+            findings.append(f"acquisition records {rid} unavailable but the population omits it")
+            continue
+        if rec.get("runtime_compatible") is not False:
+            findings.append(f"unavailable release {rid} is counted runtime-compatible")
+        if rec.get("status") != "archaeological-only":
+            findings.append(f"unavailable release {rid} is not archaeological-only")
+        if not any(u.get("release_id") == rid for u in unavailable):
+            findings.append(f"unavailable release {rid} is not carried in the unavailable list")
+
+    # 5. `runtime_compatible` holds exactly where the runtime rung does.
+    for r in records:
+        rungs = r.get("rungs_attained") or []
+        if bool(r.get("runtime_compatible")) != ("runtime-evidenced" in rungs):
+            findings.append(f"population record {r.get('release_id')}: runtime_compatible disagrees "
+                            f"with its rungs_attained")
+
+    # 6. each epoch is consistent with the records, and every major epoch has a representative.
+    epoch_names = {e.get("epoch") for e in epochs}
+    for name in historical_population.MAJOR_EPOCHS:
+        if name not in epoch_names:
+            findings.append(f"major ABI epoch {name} is not carried in the population")
+    for e in epochs:
+        members = [r for r in records if r.get("epoch") == e.get("epoch")]
+        if e.get("members") != len(members):
+            findings.append(f"epoch {e.get('epoch')}: member count does not reproduce from the "
+                            f"records")
+        built = sorted(r.get("release_id") for r in members
+                       if "built-authority" in (r.get("rungs_attained") or []))
+        if sorted(e.get("built_representatives") or []) != built:
+            findings.append(f"epoch {e.get('epoch')}: built_representatives does not reproduce "
+                            f"from the records")
+        if e.get("epoch") in historical_population.MAJOR_EPOCHS and not e.get("covered"):
+            findings.append(f"major ABI epoch {e.get('epoch')} has no built representative")
+    for r in records:
+        if r.get("epoch") not in epoch_names:
+            findings.append(f"population record {r.get('release_id')} names an epoch no row carries")
+
+    # 7. the counts reproduce from the records.
+    recomputed = _population_counts(records, epochs, unavailable)
+    if body.get("counts") != recomputed:
+        findings.append("the population counts do not reproduce from its records")
+
+    # 8. the content hash is a function of the committed records.
+    if historical_population.body_hash(records, epochs, unavailable) != body.get("content_hash"):
+        findings.append("the population content_hash does not reproduce from its body")
+
+    # 9. every evidence path is present and content-addressed.
+    for r in records:
+        for entry in r.get("evidence") or []:
+            path, digest = entry.get("path"), entry.get("sha256")
+            p = REPO_ROOT / str(path or "")
+            if not p.is_file():
+                findings.append(f"population record {r.get('release_id')}: evidence path {path!r} "
+                                f"is absent")
+            elif digest != sha256_file(p):
+                findings.append(f"population record {r.get('release_id')}: evidence {path!r} is "
+                                f"not content-addressed")
+    return findings
+
+
+def _population_counts(records: list[dict], epochs: list[dict], unavailable: list[dict]) -> dict:
+    """The population counts, recomputed from the records (never read from the body)."""
+    by_status: dict[str, int] = {}
+    by_rung: dict[str, int] = {}
+    by_epoch: dict[str, int] = {}
+    for r in records:
+        status = r.get("status", "<none>")
+        epoch = r.get("epoch", "<none>")
+        by_status[status] = by_status.get(status, 0) + 1
+        by_epoch[epoch] = by_epoch.get(epoch, 0) + 1
+        for rung in r.get("rungs_attained") or []:
+            by_rung[rung] = by_rung.get(rung, 0) + 1
+    return {
+        "nodes": len(records),
+        "by_status": {k: by_status[k] for k in sorted(by_status)},
+        "by_rung": {k: by_rung[k] for k in sorted(by_rung)},
+        "by_epoch": {k: by_epoch[k] for k in sorted(by_epoch)},
+        "built": sum(1 for r in records if "built-authority" in (r.get("rungs_attained") or [])),
+        "unavailable": len(unavailable),
+        "runtime_compatible": sum(1 for r in records if r.get("runtime_compatible")),
+        "epochs": len(historical_population.MAJOR_EPOCHS),
+        "epochs_covered": sum(1 for e in epochs
+                              if e.get("epoch") in historical_population.MAJOR_EPOCHS
+                              and e.get("covered")),
+    }
+
+
+def population_sensitivity_control(body: dict, catalog: dict, authority_nodes: dict,
+                                  authorities: dict, build_records: dict, hist_acq: dict,
+                                  hist_receipts: dict, views: dict, semantic: dict,
+                                  default_alias: dict) -> dict:
+    """Prove the court can fail: seed four mutations and require each caught.
+
+    The honest record must yield **zero** findings (specificity), and each seeded mutation -- a
+    release marked built with no receipt, an unavailable release marked runtime-compatible, a
+    release with no status, and an epoch with no representative -- must be caught. Each mutated
+    body is re-sealed first, so the detection is a semantic check and never the content-hash check
+    firing on an un-recomputed digest.
+    """
+    def findings_of(b, an=authority_nodes):
+        return population_findings(b, catalog, an, authorities, build_records, hist_acq,
+                                   hist_receipts, views, semantic, default_alias)
+
+    base = findings_of(body)
+    specificity = not base
+
+    # (a) a built record with no receipt: drop the backing authority node from the inputs.
+    no_receipt_inputs = copy.deepcopy(authority_nodes)
+    no_receipt_inputs["nodes"] = [n for n in no_receipt_inputs["nodes"]
+                                  if n["release_id"] != "openssl-1.0.2u"]
+    no_receipt = _reseal_population(body)
+    no_receipt_findings = findings_of(no_receipt, no_receipt_inputs)
+    caught_no_receipt = any("built-authority" in f and "receipt" in f
+                            for f in no_receipt_findings)
+
+    # (b) an unavailable release marked runtime-compatible.
+    overclaim = copy.deepcopy(body)
+    for r in overclaim["records"]:
+        if r["release_id"] == "openssl-0.9.1c":
+            r["status"] = "runtime-evidenced"
+            r["rungs_attained"] = ["catalogued", "admitted-source", "built-authority",
+                                   "atlas-complete", "candidate-view", "runtime-evidenced"]
+            r["runtime_compatible"] = True
+    overclaim = _reseal_population(overclaim)
+    overclaim_findings = findings_of(overclaim)
+    caught_overclaim = any("runtime-compatible" in f for f in overclaim_findings)
+
+    # (c) a release with no status.
+    naked = copy.deepcopy(body)
+    naked["records"][0].pop("status", None)
+    naked = _reseal_population(naked)
+    naked_findings = findings_of(naked)
+    caught_naked = any("missing required field 'status'" in f for f in naked_findings)
+
+    # (d) an epoch with no representative: clear the 1.0.x epoch and its only built record.
+    empty_epoch = copy.deepcopy(body)
+    for e in empty_epoch["epochs"]:
+        if e["epoch"] == "1.0.x":
+            e["built_representatives"] = []
+            e["covered"] = False
+    for r in empty_epoch["records"]:
+        if r["release_id"] == "openssl-1.0.2u":
+            r["rungs_attained"] = ["catalogued", "admitted-source"]
+            r["status"] = "admitted-source"
+            r["outcome"] = "acquired"
+    empty_epoch = _reseal_population(empty_epoch)
+    empty_epoch_findings = findings_of(empty_epoch)
+    caught_empty_epoch = any("no built representative" in f for f in empty_epoch_findings)
+
+    return {
+        "baseline_findings": len(base),
+        "injected_built_without_receipt": "openssl-1.0.2u (authority node dropped)",
+        "injected_built_without_receipt_findings": len(no_receipt_findings),
+        "injected_unavailable_runtime_compatible": "openssl-0.9.1c",
+        "injected_unavailable_runtime_compatible_findings": len(overclaim_findings),
+        "injected_missing_status": naked["records"][0].get("release_id"),
+        "injected_missing_status_findings": len(naked_findings),
+        "injected_epoch_without_representative": "1.0.x",
+        "injected_epoch_without_representative_findings": len(empty_epoch_findings),
+        "specificity_holds": specificity,
+        "caught_built_without_receipt": caught_no_receipt,
+        "caught_unavailable_runtime_compatible": caught_overclaim,
+        "caught_missing_status": caught_naked,
+        "caught_epoch_without_representative": caught_empty_epoch,
+        "honest": bool(specificity and caught_no_receipt and caught_overclaim and caught_naked
+                       and caught_empty_epoch),
+    }
+
+
+def _historical_population_court(name: str) -> dict:
+    """`RT-HISTORICAL-POPULATION`: 23.10's court, the historical population.
+
+    Stages no probe. It reads `forensics/multitrack/historical-population.json` and re-derives the
+    whole record from the committed catalogue, authority nodes and receipts through the same
+    generator, and establishes that every catalogue node has exactly one schema-valid status; that
+    a `built-authority` rung is backed by an actual receipt; that an unavailable release is never
+    counted runtime-compatible; that `runtime_compatible` holds only where the runtime rung does;
+    that each major ABI epoch has at least one built representative; that the counts and content
+    hash reproduce; and that every evidence path is content-addressed. Four seeded mutations -- a
+    release marked built with no receipt, an unavailable release marked runtime-compatible, a
+    release with no status, and an epoch with no representative -- are each caught with specificity
+    holding. A passing population is an **instrument**: it records how far each node reached and is
+    not a compatibility claim about any release.
+    """
+    problems: list[str] = []
+    for path, label in ((HISTORICAL_POPULATION, "historical-population record"),
+                        (CATALOG, "release catalogue"),
+                        (AUTHORITY_NODES, "authority-node registry"),
+                        (AUTHORITY_REGISTRY, "authority registry"),
+                        (BUILD_RECORDS, "build records"),
+                        (HIST_ACQ, "historical acquisition"),
+                        (HIST_RECEIPTS, "historical build receipts"),
+                        (COMPATIBILITY_VIEWS, "compatibility-views plane"),
+                        (SEMANTIC_COURTS, "semantic-courts plane"),
+                        (DEFAULT_AUTHORITY_ALIAS, "default-authority alias")):
+        if not path.is_file():
+            problems.append(f"the {label} {rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    body = read_json(HISTORICAL_POPULATION)
+    catalog = read_json(CATALOG)
+    authority_nodes = read_json(AUTHORITY_NODES)
+    authorities = read_json(AUTHORITY_REGISTRY)
+    build_records = read_json(BUILD_RECORDS)
+    hist_acq = read_json(HIST_ACQ)
+    hist_receipts = read_json(HIST_RECEIPTS)
+    views = read_json(COMPATIBILITY_VIEWS)
+    semantic = read_json(SEMANTIC_COURTS)
+    default_alias = read_json(DEFAULT_AUTHORITY_ALIAS)
+
+    findings = population_findings(body, catalog, authority_nodes, authorities, build_records,
+                                   hist_acq, hist_receipts, views, semantic, default_alias)
+
+    # No status is typed: the committed record must reproduce from the committed evidence through
+    # the same generator, so a hand-edited status stops reproducing.
+    try:
+        derived = historical_population.derive_body()
+    except SystemExit as exc:
+        findings.append(f"the historical population could not be re-derived: {exc}")
+        derived = None
+    if derived is not None and derived != body:
+        findings.append(
+            "the committed population does not reproduce from the committed evidence through the "
+            "same generator: a status was typed rather than derived"
+        )
+
+    control = population_sensitivity_control(body, catalog, authority_nodes, authorities,
+                                             build_records, hist_acq, hist_receipts, views,
+                                             semantic, default_alias)
+    counts = body.get("counts", {})
+    verdict = "pass" if (not findings and not problems and control["honest"]) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/multitrack/historical-population.json and "
+            "re-derives the whole record from the committed release catalogue, authority nodes, "
+            "acquisition and build receipts, atlases, compatibility views and semantic pair "
+            "through the same generator. It establishes that every catalogue node has exactly one "
+            "schema-valid support status; that a built-authority rung is backed by an actual "
+            "receipt; that an unavailable release is recorded unavailable and is never counted "
+            "runtime-compatible; that runtime_compatible holds only where the runtime rung does; "
+            "that each major ABI epoch has at least one built representative; that no status was "
+            "typed; that the counts and content hash reproduce; and that every evidence path is "
+            "content-addressed. A release marked built with no receipt, an unavailable release "
+            "marked runtime-compatible, a release with no status and an epoch with no "
+            "representative are each detected with specificity holding "
+            "(docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 2, 3.2 and 4)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the historical-population court reads a committed evidence record and writes no "
+            "artifacts/phase23/probes/<probe>.{authority,candidate} pair, so it stages no "
+            "transcript to diff and carries no FRF declaration"
+        ),
+        "counts": counts,
+        "epochs": body.get("epochs"),
+        "unavailable": [{"release_id": r.get("release_id"), "reason": r.get("reason")}
+                        for r in body.get("unavailable") or []],
+        "runtime_compatible": [r.get("release_id") for r in body.get("records") or []
+                               if r.get("runtime_compatible")],
+        "content_hash": body.get("content_hash"),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def _delta_engine_court(name: str) -> dict:
     """`RT-DELTA-ENGINE`: 23.6's court, the semantic compatibility delta.
 
@@ -3278,13 +3648,29 @@ def main(argv: list[str]) -> int:
             "because the epoch has no candidate build in this venue. Relaying authority A's "
             "evidence into authority B's view, a view collapsed to a boolean, a view citing "
             "numeric ordering and a view with no reference authority are each detected with "
-            "specificity holding. Phase 23 owns "
+            "specificity holding. `RT-HISTORICAL-POPULATION` is 23.10's court: the historical "
+            "population. It stages no probe and reads "
+            "forensics/multitrack/historical-population.json, re-deriving the whole record from "
+            "the committed catalogue, authority nodes, acquisition and build receipts, atlases, "
+            "compatibility views and semantic pair through the same generator. It establishes "
+            "that every catalogue node has exactly one schema-valid support status over the "
+            "ladder catalogued, admitted-source, built-authority, atlas-complete, candidate-view, "
+            "runtime-evidenced, downstream-evidenced and maintained, with archaeological-only "
+            "where a node is studied and not supported; that a built-authority rung is backed by "
+            "an actual receipt; that an unavailable release is recorded unavailable and is never "
+            "counted runtime-compatible; that runtime_compatible holds only where the runtime "
+            "rung does; that each major ABI epoch -- pre-1.0, 1.0.x, 1.1.x, 3.x and 3.6+/4.x -- "
+            "has at least one built representative (0.9.8zh, 1.0.2u, 1.1.1w, 3.0.0 and "
+            "3.6.3/3.6.4); that no status was typed; and that every evidence path is "
+            "content-addressed. A release marked built with no receipt, an unavailable release "
+            "marked runtime-compatible, a release with no status and an epoch with no "
+            "representative are each detected with specificity holding. Phase 23 owns "
             "no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining eight courts -- "
-            "RT-HISTORICAL-POPULATION, RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, "
+            "over a symbol set is its evidence, and its remaining seven courts -- "
+            "RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, "
             "RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, "
             "RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
-            "the subphases that land them (23.9 through 23.17). The one thing the model forbids "
+            "the subphases that land them (23.10 through 23.17). The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "
@@ -3319,6 +3705,8 @@ def main(argv: list[str]) -> int:
         InputRef(name="semantic-courts", path=SEMANTIC_COURTS),
         InputRef(name="semantic-probe", path=SEMANTIC_PROBE),
         InputRef(name="compatibility-views", path=COMPATIBILITY_VIEWS),
+        InputRef(name="historical-population", path=HISTORICAL_POPULATION),
+        InputRef(name="semantic-courts", path=SEMANTIC_COURTS),
     ]
     for path in sorted(DELTAS.glob("*.json")):
         inputs.append(InputRef(name=f"delta/{path.stem}", path=path))
@@ -3503,6 +3891,32 @@ def main(argv: list[str]) -> int:
                 for v in a["views"]:
                     print(f"        {v['facet']:<34} {v['dimension']:<14} {v['status']}")
                 print(f"        not-derivable: {', '.join(a['not_derivable'])}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == HISTORICAL_POPULATION_COURT:
+            c = r["control"]
+            counts = r["counts"] or {}
+            print(f"  {r['court']:<32} pass   (no probe, {counts.get('nodes')} node(s); "
+                  f"{counts.get('by_status')}; built={counts.get('built')} "
+                  f"unavailable={counts.get('unavailable')} "
+                  f"runtime_compatible={counts.get('runtime_compatible')}; "
+                  f"epochs covered={counts.get('epochs_covered')}/{counts.get('epochs')}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"no-receipt->{c['injected_built_without_receipt_findings']} "
+                  f"unavailable-compatible->"
+                  f"{c['injected_unavailable_runtime_compatible_findings']} "
+                  f"no-status->{c['injected_missing_status_findings']} "
+                  f"empty-epoch->"
+                  f"{c['injected_epoch_without_representative_findings']} finding(s))")
+            for e in r["epochs"] or []:
+                reps = ", ".join(e["built_representatives"]) or "-"
+                mark = "ok" if e["covered"] else "NO REPRESENTATIVE"
+                print(f"      epoch {e['epoch']:<10} members={e['members']:<4} "
+                      f"built={reps:<30} {mark}")
+            for u in r["unavailable"] or []:
+                print(f"      unavailable {u['release_id']:<27} runtime_compatible=false")
+            print(f"      runtime-compatible: {', '.join(r['runtime_compatible']) or '-'}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

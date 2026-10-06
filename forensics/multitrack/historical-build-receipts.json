@@ -1,5 +1,5 @@
 {
-  "content_hash": "58e1ccdb2d186a2b30d53e972317f6234169296b3e2b675c3ea79672ddec37f2",
+  "content_hash": "dac7e2fd09f772e65828064d4f428e080300865dc60d921c734a70071961622c",
   "receipts": [
     {
       "artifacts": [
@@ -85,6 +85,262 @@
         "python": "3.9.2"
       },
       "version": "0.9.8zh"
+    },
+    {
+      "artifacts": [
+        {
+          "name": "libcrypto.so.1.0.0",
+          "path": "forensics/authorities/prefix/openssl-1.0.2u-historical/lib/libcrypto.so.1.0.0",
+          "sha256": "fae70428bb61ddfe1c2dae7594b697541189380796239c7786b62561245645d7",
+          "size_bytes": 2698328
+        },
+        {
+          "name": "libssl.so.1.0.0",
+          "path": "forensics/authorities/prefix/openssl-1.0.2u-historical/lib/libssl.so.1.0.0",
+          "sha256": "7facd8a045eb8279283a86d6ead51706bbbff3cf17ee745d644846ec78ca147f",
+          "size_bytes": 521552
+        }
+      ],
+      "banner": "OpenSSL 1.0.2u  20 Dec 2019",
+      "binary_hashes": {
+        "libcrypto.so.1.0.0": "fae70428bb61ddfe1c2dae7594b697541189380796239c7786b62561245645d7",
+        "libssl.so.1.0.0": "7facd8a045eb8279283a86d6ead51706bbbff3cf17ee745d644846ec78ca147f"
+      },
+      "build_argv": [
+        "make"
+      ],
+      "build_environment": {
+        "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+        "image": "openssl-rs-historical:1",
+        "locale": "C.UTF-8",
+        "parallel_jobs": 1,
+        "venue": "openssl-rs-historical"
+      },
+      "configure_argv": [
+        "perl",
+        "Configure",
+        "linux-x86_64",
+        "--prefix=/work/forensics/authorities/prefix/openssl-1.0.2u-historical",
+        "--openssldir=/work/forensics/authorities/prefix/openssl-1.0.2u-historical/ssl",
+        "shared"
+      ],
+      "git": {
+        "commit": "e818b74be2170fbe957a07b0da4401c2b694b3b8",
+        "tag": "OpenSSL_1_0_2u"
+      },
+      "id": "openssl-1.0.2u-historical",
+      "install_argv": [
+        "make",
+        "install"
+      ],
+      "installed_hashes": {
+        "include/openssl/crypto.h": "3d485196352c1bd81550b37754546a0749606ce0673e00578067b519bcf7f0f5",
+        "include/openssl/evp.h": "5f21bf1901ab5f22ed206c4211f9b91ba39246729d51ead539756b4214776fbe",
+        "include/openssl/ssl.h": "d600230d6d76aaa6db143ca847519d293ebd27b4707e0e87c9af1c52f2e21acb"
+      },
+      "outcome": "built",
+      "platform": {
+        "machine": "x86_64",
+        "system": "Linux"
+      },
+      "profile": "linux-x86_64-historical-shared",
+      "profile_args": [
+        "shared"
+      ],
+      "release_id": "openssl-1.0.2u",
+      "source_manifest": {
+        "file_count": 2289,
+        "path": "forensics/authorities/SOURCE_MANIFEST.1.0.2u.json",
+        "root_hash": "a8f7cfb29abae204de07cec904fa74d00c2bcdd4461d81c6c143ee0016b38110"
+      },
+      "source_package": {
+        "artifact": "openssl-1.0.2u.tar.gz",
+        "checksum_verified": true,
+        "published_sha256": "ecd0c6ffb493dd06707d38b14bb4d8c2288bb7033735606569d8f90f89669d16",
+        "sha256": "ecd0c6ffb493dd06707d38b14bb4d8c2288bb7033735606569d8f90f89669d16",
+        "source_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_1_0_2u/openssl-1.0.2u.tar.gz"
+      },
+      "source_tree_pristine": "forensics/authorities/src/openssl-1.0.2u",
+      "toolchain": {
+        "cc": "cc (Debian 10.2.1-6) 10.2.1 20210110",
+        "gcc": "gcc (Debian 10.2.1-6) 10.2.1 20210110",
+        "ld": "GNU ld (GNU Binutils for Debian) 2.35.2",
+        "make": "GNU Make 4.3",
+        "perl": "5.032001",
+        "python": "3.9.2"
+      },
+      "version": "1.0.2u"
+    },
+    {
+      "artifacts": [
+        {
+          "name": "libcrypto.so.1.1",
+          "path": "forensics/authorities/prefix/openssl-1.1.1w-historical/lib/libcrypto.so.1.1",
+          "sha256": "8ea32f818387eba1b6fc647dac56aea8b89620a5ddc44d8adcdc9c934460f01c",
+          "size_bytes": 3348728
+        },
+        {
+          "name": "libssl.so.1.1",
+          "path": "forensics/authorities/prefix/openssl-1.1.1w-historical/lib/libssl.so.1.1",
+          "sha256": "48306651e4386c285b620b6c7151e05c17b5d036eeaa1e9e0f18846ee1851798",
+          "size_bytes": 689192
+        }
+      ],
+      "banner": "OpenSSL 1.1.1w  11 Sep 2023",
+      "binary_hashes": {
+        "libcrypto.so.1.1": "8ea32f818387eba1b6fc647dac56aea8b89620a5ddc44d8adcdc9c934460f01c",
+        "libssl.so.1.1": "48306651e4386c285b620b6c7151e05c17b5d036eeaa1e9e0f18846ee1851798"
+      },
+      "build_argv": [
+        "make"
+      ],
+      "build_environment": {
+        "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+        "image": "openssl-rs-historical:1",
+        "locale": "C.UTF-8",
+        "parallel_jobs": 1,
+        "venue": "openssl-rs-historical"
+      },
+      "configure_argv": [
+        "perl",
+        "Configure",
+        "linux-x86_64",
+        "--prefix=/work/forensics/authorities/prefix/openssl-1.1.1w-historical",
+        "--openssldir=/work/forensics/authorities/prefix/openssl-1.1.1w-historical/ssl",
+        "shared"
+      ],
+      "git": {
+        "commit": "e04bd3433fd84e1861bf258ea37928d9845e6a86",
+        "tag": "OpenSSL_1_1_1w"
+      },
+      "id": "openssl-1.1.1w-historical",
+      "install_argv": [
+        "make",
+        "install"
+      ],
+      "installed_hashes": {
+        "include/openssl/crypto.h": "d2cd84e695e68051fe67fa7cf901ccba4fadccc71a6b30090df20a01b91d3ec7",
+        "include/openssl/evp.h": "9d963bdda81802988170663ccfcef437aea69042f42aef3a11ab4a217b800aef",
+        "include/openssl/ssl.h": "67e8553fa3a5a723f3b0f29f7f6dd51ff75b4a3d4e799eb1d98ef5d1af609e52"
+      },
+      "outcome": "built",
+      "platform": {
+        "machine": "x86_64",
+        "system": "Linux"
+      },
+      "profile": "linux-x86_64-historical-shared",
+      "profile_args": [
+        "shared"
+      ],
+      "release_id": "openssl-1.1.1w",
+      "source_manifest": {
+        "file_count": 3104,
+        "path": "forensics/authorities/SOURCE_MANIFEST.1.1.1w.json",
+        "root_hash": "03f5c9b23bf972f3731c76d212c3521c2150f75ee444f93b3560804f01a2421a"
+      },
+      "source_package": {
+        "artifact": "openssl-1.1.1w.tar.gz",
+        "checksum_verified": true,
+        "published_sha256": "cf3098950cb4d853ad95c0841f1f9c6d3dc102dccfcacd521d93925208b76ac8",
+        "sha256": "cf3098950cb4d853ad95c0841f1f9c6d3dc102dccfcacd521d93925208b76ac8",
+        "source_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_1_1_1w/openssl-1.1.1w.tar.gz"
+      },
+      "source_tree_pristine": "forensics/authorities/src/openssl-1.1.1w",
+      "toolchain": {
+        "cc": "cc (Debian 10.2.1-6) 10.2.1 20210110",
+        "gcc": "gcc (Debian 10.2.1-6) 10.2.1 20210110",
+        "ld": "GNU ld (GNU Binutils for Debian) 2.35.2",
+        "make": "GNU Make 4.3",
+        "perl": "5.032001",
+        "python": "3.9.2"
+      },
+      "version": "1.1.1w"
+    },
+    {
+      "artifacts": [
+        {
+          "name": "libcrypto.so.3",
+          "path": "forensics/authorities/prefix/openssl-3.0.0-historical/lib/libcrypto.so.3",
+          "sha256": "7892f3e6ad51a3553e2d47e8f231aa1af970e8acb8bde744147fc8c44de2c251",
+          "size_bytes": 5226008
+        },
+        {
+          "name": "libssl.so.3",
+          "path": "forensics/authorities/prefix/openssl-3.0.0-historical/lib/libssl.so.3",
+          "sha256": "fe48798d5d63b20a901ef8cd2e4cb5e567516c706f3c6af5c3120baf1f2f2590",
+          "size_bytes": 793144
+        }
+      ],
+      "banner": "OpenSSL 3.0.0 7 sep 2021 (Library: OpenSSL 3.0.0 7 sep 2021)",
+      "binary_hashes": {
+        "libcrypto.so.3": "7892f3e6ad51a3553e2d47e8f231aa1af970e8acb8bde744147fc8c44de2c251",
+        "libssl.so.3": "fe48798d5d63b20a901ef8cd2e4cb5e567516c706f3c6af5c3120baf1f2f2590"
+      },
+      "build_argv": [
+        "make"
+      ],
+      "build_environment": {
+        "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+        "image": "openssl-rs-historical:1",
+        "locale": "C.UTF-8",
+        "parallel_jobs": 1,
+        "venue": "openssl-rs-historical"
+      },
+      "configure_argv": [
+        "perl",
+        "Configure",
+        "linux-x86_64",
+        "--prefix=/work/forensics/authorities/prefix/openssl-3.0.0-historical",
+        "--openssldir=/work/forensics/authorities/prefix/openssl-3.0.0-historical/ssl",
+        "--libdir=lib",
+        "shared"
+      ],
+      "git": {
+        "commit": "89cd17a031e022211684eb7eb41190cf1910f9fa",
+        "tag": "openssl-3.0.0"
+      },
+      "id": "openssl-3.0.0-historical",
+      "install_argv": [
+        "make",
+        "install"
+      ],
+      "installed_hashes": {
+        "include/openssl/crypto.h": "e9c98498443dd14b92222b80d3c431c5f9283bb39d86af4241636e91516e5a10",
+        "include/openssl/evp.h": "a6f738dabf4780a3fe392c4b244ef679d2a56b3ad198a3a47a01b8a47f41796d",
+        "include/openssl/ssl.h": "3271931f1f63a9f71eee72839ad9bd4075aaca4fc87772c0b99d88821de205fd"
+      },
+      "outcome": "built",
+      "platform": {
+        "machine": "x86_64",
+        "system": "Linux"
+      },
+      "profile": "linux-x86_64-historical-shared",
+      "profile_args": [
+        "shared"
+      ],
+      "release_id": "openssl-3.0.0",
+      "source_manifest": {
+        "file_count": 4518,
+        "path": "forensics/authorities/SOURCE_MANIFEST.3.0.0.json",
+        "root_hash": "7c14a6fe562f814793aaee6e23322427e4662bb2f0846bb67f61f5ff4e9c8136"
+      },
+      "source_package": {
+        "artifact": "openssl-3.0.0.tar.gz",
+        "checksum_verified": true,
+        "published_sha256": "59eedfcb46c25214c9bd37ed6078297b4df01d012267fe9e9eee31f61bc70536",
+        "sha256": "59eedfcb46c25214c9bd37ed6078297b4df01d012267fe9e9eee31f61bc70536",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-3.0.0/openssl-3.0.0.tar.gz"
+      },
+      "source_tree_pristine": "forensics/authorities/src/openssl-3.0.0",
+      "toolchain": {
+        "cc": "cc (Debian 10.2.1-6) 10.2.1 20210110",
+        "gcc": "gcc (Debian 10.2.1-6) 10.2.1 20210110",
+        "ld": "GNU ld (GNU Binutils for Debian) 2.35.2",
+        "make": "GNU Make 4.3",
+        "perl": "5.032001",
+        "python": "3.9.2"
+      },
+      "version": "3.0.0"
     }
   ],
   "schema": "openssl-rs/historical-build-receipts/v1"

@@ -720,7 +720,7 @@
     {
       "name": "delta-engine",
       "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
-      "sha256": "ab3818c3cc36dbf0aef63290161937748e99424aa69a8f082f3f7a1d9708635e"
+      "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842"
     },
     {
       "name": "build-records",

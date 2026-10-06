@@ -480,6 +480,10 @@
       "observations": 30,
       "verdict": "pass"
     },
+    "RT-HISTORICAL-POPULATION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-HMAC": {
       "observations": 32,
       "verdict": "pass"
@@ -898,7 +902,7 @@
     "phase20": 0,
     "phase21": 0,
     "phase22": 0,
-    "phase23": 8,
+    "phase23": 7,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

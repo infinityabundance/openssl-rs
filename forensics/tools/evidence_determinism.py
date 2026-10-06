@@ -185,6 +185,12 @@ GENERATORS_BEFORE_LEDGERS = [
     # The RT-COMPATIBILITY-VIEWS court re-derives the whole plane through the same generator and
     # refuses a view relayed from another authority.
     "forensics/tools/compat_views.py",
+    # Phase 23.10's historical population. It is a pure function of the committed catalogue, the
+    # authority-node registry, the acquisition and build receipts, the committed atlases, the
+    # compatibility views and the semantic pair, so a stale committed record -- or a hand-typed
+    # status -- is a failure rather than a silent divergence. The RT-HISTORICAL-POPULATION court
+    # re-derives the whole record through the same generator and refuses a typed status.
+    "forensics/tools/historical_population.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -343,11 +349,12 @@ COMPARED = [
     # is defeated by a generator nothing re-runs.
     "forensics/release-catalog.json",
     "forensics/authority-lineage.json",
-    # Phase 23.3's parameterization receipt and the historical authority's plane census: pure
+    # Phase 23.3's parameterization receipt and the historical authorities' plane censuses: pure
     # functions of the committed default-authority alias and the committed source manifests, so a
     # stale copy is a failure and not a silent divergence.
     "forensics/atlas/parameterization-receipt.json",
-    "forensics/atlas/openssl-0.9.8zh-historical/plane-census.json",
+    *[rel(p) for p in sorted((REPO_ROOT / "forensics" / "atlas").glob(
+        "openssl-*-historical/plane-census.json"))],
     # Phase 23.5's entity lineage: what became of each public entity across the covered release
     # pair, a pure function of the committed declaration and symbol planes, so a stale copy is a
     # failure and not a silent divergence.
@@ -372,6 +379,10 @@ COMPARED = [
     # so a stale committed plane -- or a view relayed from another authority -- is a failure rather
     # than a silent divergence.
     "forensics/multitrack/compatibility-views.json",
+    # Phase 23.10's historical population: a pure function of the committed catalogue, authority
+    # nodes, receipts, atlases, compatibility views and semantic pair, so a stale record or a typed
+    # status is a failure rather than a silent divergence.
+    "forensics/multitrack/historical-population.json",
 ]
 
 # ---------------------------------------------------------------------------
