@@ -2204,12 +2204,12 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "9524e5ef361308882c182228f016b718a81fbd2c06ec7619a227f2504603816c"
+      "sha256": "3a1e88f267481c13ae1036882d87b012d8d2d9255c6cd607361c85bd77ac05f7"
     },
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "e62c7bb75b041a746342ee5625a0d9c78f8fc255377da4ba2790707803e8d908"
+      "sha256": "c16df61902bc200ee9502344fd1f3882c1b35dd9cd569dabb6671e32a8768c35"
     }
   ],
   "kind": "phase13-obligations",

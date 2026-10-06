@@ -66,10 +66,10 @@
         "closure": "the `RT-DELTA-ENGINE` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-DELTA-ENGINE is pending",
+        "measurement_state": "complete",
+        "observation": "RT-DELTA-ENGINE is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "delta-engine",
         "what": "the added / removed / changed surface between two nodes, computed mechanically from the atlas and the entity lineage in the direction the lineage edge names, never hand-listed"
@@ -212,8 +212,8 @@
       "contract_units": 17,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 5,
-      "open_in_this_stratum": 12,
+      "implemented": 6,
+      "open_in_this_stratum": 11,
       "owned": 17,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -249,12 +249,12 @@
     {
       "name": "phase-23-plan",
       "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
-      "sha256": "82b5343c3d850d57bed5d1f61ce3553dd7cb3826c7a67fa58183b3dccc69f60b"
+      "sha256": "25aabfa8185c3f11084c4b7966ac2d6b173504bee672c0d7f5b3ee5681dea52a"
     },
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "b7ab2e212285eea6d4e8a51da09cfd6bd9ec484e76a8d536523dcb31e6790050"
+      "sha256": "5c473f402672217f742de1006118b5e18024c06429f8d34a002a692641a11e31"
     }
   ],
   "kind": "phase23-obligations",

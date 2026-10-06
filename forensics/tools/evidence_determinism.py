@@ -158,6 +158,12 @@ GENERATORS_BEFORE_LEDGERS = [
     # committed plane is a failure rather than a silent divergence. The RT-ENTITY-LINEAGE court
     # reads the artefact it writes and re-derives every relation through the same identity shapes.
     "forensics/tools/entity_lineage.py",
+    # Phase 23.6's delta engine. It is a pure function of the committed atlases and the entity
+    # lineage -- the semantic compatibility delta over the canonical release-graph edges -- so a
+    # stale committed edge delta is a failure rather than a silent divergence, and no pairwise
+    # combination beyond the canonical edges is written. The RT-DELTA-ENGINE court reads the
+    # artefacts it writes and re-derives every row through the same engine.
+    "forensics/tools/authority_delta.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -325,6 +331,11 @@ COMPARED = [
     # pair, a pure function of the committed declaration and symbol planes, so a stale copy is a
     # failure and not a silent divergence.
     "forensics/multitrack/entity-lineage.json",
+    # Phase 23.6's canonical edge deltas: the semantic compatibility delta over the release-graph
+    # edges, a pure function of the committed atlases and the entity lineage. Every committed edge
+    # delta is compared -- the artefact set is the canonical edges, never their pairwise product --
+    # so a stale copy is a failure and not a silent divergence.
+    *[rel(p) for p in sorted((REPO_ROOT / "forensics" / "deltas").glob("*.json"))],
 ]
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,903 @@
+{
+  "body": {
+    "absent_dimensions": {
+      "default_behavior": "no structured per-authority runtime-default plane is committed; a default is a runtime observation, not a declaration, and the behavioural probes that would measure it are a later subphase's (23.8)",
+      "documentation_claims": "no structured per-authority documentation plane is committed; the atlases' prose is not compared as a delta",
+      "environment": "no per-authority environment-variable plane is committed, so the two authorities are not compared on the environment they read",
+      "error_behavior": "no per-authority error-code or raise-site plane is committed; the error plane is crate-side (forensics/atlas/err-raise-sites.json), so the two authorities are not compared on it here",
+      "filesystem_distribution": "no per-authority installed-tree / distribution plane beyond the authority node's build hashes is committed; a build-product hash is not a compatibility delta",
+      "initialization_behavior": "no per-authority initialization / epoch observation plane is committed, so the two authorities are not compared on their initialization behaviour",
+      "protocol_behavior": "no per-authority protocol-behaviour plane is committed; the corpus plane records test inputs, not behaviour, so the two authorities are not compared on TLS/DTLS/QUIC behaviour",
+      "security_policy": "no per-authority security-policy plane is committed; the security history is the separate observation record 23.14 lands, not a declaration plane",
+      "threading_behavior": "no per-authority threading / locking observation plane is committed, so the two authorities are not compared on their threading behaviour"
+    },
+    "content_hash": "88711a33c974a8e369aca0a113fea96430a1f33ea4740dc1f61438d1c68b361f",
+    "counts": {
+      "added": 2,
+      "by_dimension": {
+        "abi_symbol_presence": {
+          "added": 0,
+          "changed": 20,
+          "removed": 0
+        },
+        "api_presence": {
+          "added": 2,
+          "changed": 0,
+          "removed": 0
+        },
+        "macro_value": {
+          "added": 0,
+          "changed": 5,
+          "removed": 0
+        }
+      },
+      "changed": 25,
+      "removed": 0
+    },
+    "covered": true,
+    "dimensions": [
+      "api_presence",
+      "api_declaration",
+      "abi_symbol_presence",
+      "abi_symbol_version",
+      "prototype",
+      "public_layout",
+      "macro_value",
+      "enum_value",
+      "typedef",
+      "ownership_contract",
+      "error_behavior",
+      "initialization_behavior",
+      "threading_behavior",
+      "provider_engine_architecture",
+      "algorithm_availability",
+      "default_behavior",
+      "configuration",
+      "cli",
+      "environment",
+      "filesystem_distribution",
+      "protocol_behavior",
+      "security_policy",
+      "deprecation_state",
+      "documentation_claims"
+    ],
+    "direction": "reference_to_candidate",
+    "edge": {
+      "direction": "forward",
+      "edge_id": "L-maintenance_successor-openssl-3.6.3-openssl-3.6.4",
+      "from_id": "openssl-3.6.3",
+      "from_release": "openssl-3.6.3",
+      "kind": "maintenance_successor",
+      "requested_from": "openssl-3.6.3",
+      "requested_to": "openssl-3.6.4",
+      "to_id": "openssl-3.6.4",
+      "to_release": "openssl-3.6.4"
+    },
+    "from_authority": "openssl-3.6.3-historical",
+    "from_id": "openssl-3.6.3-historical",
+    "from_release": "openssl-3.6.3",
+    "measured_dimensions": [
+      "abi_symbol_presence",
+      "abi_symbol_version",
+      "algorithm_availability",
+      "api_declaration",
+      "api_presence",
+      "cli",
+      "configuration",
+      "deprecation_state",
+      "enum_value",
+      "macro_value",
+      "ownership_contract",
+      "prototype",
+      "provider_engine_architecture",
+      "public_layout",
+      "typedef"
+    ],
+    "receipts": [
+      {
+        "added": [],
+        "changed": [
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "3377",
+            "before": "3368",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:ASN1_mbstring_ncopy",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:ASN1_mbstring_ncopy-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "164",
+            "before": "298",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:BN_consttime_swap",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:BN_consttime_swap-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "225",
+            "before": "198",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:BN_uadd",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:BN_uadd-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "450",
+            "before": "258",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:BN_ucmp",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:BN_ucmp-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "305",
+            "before": "289",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:BN_usub",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:BN_usub-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "1611",
+            "before": "1585",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:CMS_RecipientInfo_decrypt",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:CMS_RecipientInfo_decrypt-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "618",
+            "before": "594",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:DH_check",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:DH_check-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "359",
+            "before": "297",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:DH_check_params",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:DH_check_params-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "184",
+            "before": "158",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:DH_check_pub_key",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:DH_check_pub_key-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "602",
+            "before": "586",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:OPENSSL_uni2utf8",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:OPENSSL_uni2utf8-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "2075",
+            "before": "2109",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:OSSL_CMP_validate_msg",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:OSSL_CMP_validate_msg-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "2364",
+            "before": "2284",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:OSSL_parse_url",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:OSSL_parse_url-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "303",
+            "before": "295",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:PKCS12_unpack_authsafes",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:PKCS12_unpack_authsafes-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "213",
+            "before": "215",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:PKCS7_set_digest",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:PKCS7_set_digest-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "426",
+            "before": "271",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:PKCS7_stream",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:PKCS7_stream-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "914",
+            "before": "963",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:SSL_CTX_add_session",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:SSL_CTX_add_session-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "1051",
+            "before": "421",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:SSL_CTX_flush_sessions_ex",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:SSL_CTX_flush_sessions_ex-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "349",
+            "before": "370",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:SSL_CTX_remove_session",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:SSL_CTX_remove_session-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "1375",
+            "before": "1135",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "function:SSL_dup",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:SSL_dup-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "recorded: the exported symbol's ELF symbol-table size changed; an implementation-size observation carried by the ABI symbol plane, not an ABI contract change",
+            "after": "1583",
+            "before": "1556",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "abi_symbol_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "symbol:asn1_d2i_read_bio",
+            "entity_kind": "symbol",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+            ],
+            "facet": "st_size",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-symbol:asn1_d2i_read_bio-abi_symbol_presence-st_size",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          }
+        ],
+        "dimension": "abi",
+        "direction": "reference_to_candidate",
+        "evidence": [
+          "forensics/atlas/openssl-3.6.3-historical/abi-layout.json",
+          "forensics/atlas/openssl-3.6.3-historical/enums.json",
+          "forensics/atlas/openssl-3.6.3-historical/structs.json",
+          "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+          "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+          "forensics/atlas/openssl-3.6.4-production/abi-layout.json",
+          "forensics/atlas/openssl-3.6.4-production/enums.json",
+          "forensics/atlas/openssl-3.6.4-production/structs.json",
+          "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+          "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json"
+        ],
+        "from_id": "openssl-3.6.3-historical",
+        "receipt_id": "D-openssl-3.6.3-historical-openssl-3.6.4-production-abi",
+        "removed": [],
+        "sense": "forward",
+        "to_id": "openssl-3.6.4-production"
+      },
+      {
+        "added": [],
+        "changed": [],
+        "dimension": "cli_config",
+        "direction": "reference_to_candidate",
+        "evidence": [
+          "forensics/atlas/openssl-3.6.3-historical/cli-commands.json",
+          "forensics/atlas/openssl-3.6.3-historical/configs.json",
+          "forensics/atlas/openssl-3.6.4-production/cli-commands.json",
+          "forensics/atlas/openssl-3.6.4-production/configs.json"
+        ],
+        "from_id": "openssl-3.6.3-historical",
+        "receipt_id": "D-openssl-3.6.3-historical-openssl-3.6.4-production-cli_config",
+        "removed": [],
+        "sense": "forward",
+        "to_id": "openssl-3.6.4-production"
+      },
+      {
+        "added": [],
+        "changed": [],
+        "dimension": "ownership",
+        "direction": "reference_to_candidate",
+        "evidence": [
+          "forensics/atlas/openssl-3.6.3-historical/ownership-obligations.json",
+          "forensics/atlas/openssl-3.6.4-production/ownership-obligations.json"
+        ],
+        "from_id": "openssl-3.6.3-historical",
+        "receipt_id": "D-openssl-3.6.3-historical-openssl-3.6.4-production-ownership",
+        "removed": [],
+        "sense": "forward",
+        "to_id": "openssl-3.6.4-production"
+      },
+      {
+        "added": [],
+        "changed": [],
+        "dimension": "provider_registration",
+        "direction": "reference_to_candidate",
+        "evidence": [
+          "forensics/atlas/openssl-3.6.3-historical/provider-inventory.json",
+          "forensics/atlas/openssl-3.6.4-production/provider-inventory.json"
+        ],
+        "from_id": "openssl-3.6.3-historical",
+        "receipt_id": "D-openssl-3.6.3-historical-openssl-3.6.4-production-provider_registration",
+        "removed": [],
+        "sense": "forward",
+        "to_id": "openssl-3.6.4-production"
+      },
+      {
+        "added": [],
+        "changed": [],
+        "dimension": "semantic",
+        "direction": "reference_to_candidate",
+        "evidence": [
+          "forensics/atlas/openssl-3.6.3-historical/functions.json",
+          "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+          "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+          "forensics/atlas/openssl-3.6.4-production/functions.json",
+          "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+          "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json"
+        ],
+        "from_id": "openssl-3.6.3-historical",
+        "receipt_id": "D-openssl-3.6.3-historical-openssl-3.6.4-production-semantic",
+        "removed": [],
+        "sense": "forward",
+        "to_id": "openssl-3.6.4-production"
+      },
+      {
+        "added": [
+          {
+            "adjudication": "`SSL_VALUE_QUIC_MAX_PENDING_CONNS` is public in the subject and absent from the reference",
+            "after": "SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+            "before": null,
+            "classification": "added",
+            "confidence": "established",
+            "dimension": "api_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+            "entity_kind": "macro",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.4-production/macros.json"
+            ],
+            "facet": "entity",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS-api_presence-entity",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "`X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH` is public in the subject and absent from the reference",
+            "after": "X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+            "before": null,
+            "classification": "added",
+            "confidence": "established",
+            "dimension": "api_presence",
+            "direction": "reference_to_candidate",
+            "entity_id": "macro:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+            "entity_kind": "macro",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.4-production/macros.json"
+            ],
+            "facet": "entity",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-macro:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH-api_presence-entity",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          }
+        ],
+        "changed": [
+          {
+            "adjudication": "the macro's public value changed",
+            "after": "\"3.6.4\"",
+            "before": "\"3.6.3\"",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "macro_value",
+            "direction": "reference_to_candidate",
+            "entity_id": "macro:OPENSSL_FULL_VERSION_STR",
+            "entity_kind": "macro",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/macros.json",
+              "forensics/atlas/openssl-3.6.4-production/macros.json"
+            ],
+            "facet": "value",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-macro:OPENSSL_FULL_VERSION_STR-macro_value-value",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "the macro's public value changed",
+            "after": "\"25 Aug 2026\"",
+            "before": "\"9 Jun 2026\"",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "macro_value",
+            "direction": "reference_to_candidate",
+            "entity_id": "macro:OPENSSL_RELEASE_DATE",
+            "entity_kind": "macro",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/macros.json",
+              "forensics/atlas/openssl-3.6.4-production/macros.json"
+            ],
+            "facet": "value",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-macro:OPENSSL_RELEASE_DATE-macro_value-value",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "the macro's public value changed",
+            "after": "4",
+            "before": "3",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "macro_value",
+            "direction": "reference_to_candidate",
+            "entity_id": "macro:OPENSSL_VERSION_PATCH",
+            "entity_kind": "macro",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/macros.json",
+              "forensics/atlas/openssl-3.6.4-production/macros.json"
+            ],
+            "facet": "value",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-macro:OPENSSL_VERSION_PATCH-macro_value-value",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "the macro's public value changed",
+            "after": "\"3.6.4\"",
+            "before": "\"3.6.3\"",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "macro_value",
+            "direction": "reference_to_candidate",
+            "entity_id": "macro:OPENSSL_VERSION_STR",
+            "entity_kind": "macro",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/macros.json",
+              "forensics/atlas/openssl-3.6.4-production/macros.json"
+            ],
+            "facet": "value",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-macro:OPENSSL_VERSION_STR-macro_value-value",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          },
+          {
+            "adjudication": "the macro's public value changed",
+            "after": "\"OpenSSL 3.6.4 25 Aug 2026\"",
+            "before": "\"OpenSSL 3.6.3 9 Jun 2026\"",
+            "classification": "changed",
+            "confidence": "established",
+            "dimension": "macro_value",
+            "direction": "reference_to_candidate",
+            "entity_id": "macro:OPENSSL_VERSION_TEXT",
+            "entity_kind": "macro",
+            "evidence": [
+              "forensics/atlas/openssl-3.6.3-historical/macros.json",
+              "forensics/atlas/openssl-3.6.4-production/macros.json"
+            ],
+            "facet": "value",
+            "from_id": "openssl-3.6.3-historical",
+            "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-macro:OPENSSL_VERSION_TEXT-macro_value-value",
+            "sense": "forward",
+            "to_id": "openssl-3.6.4-production"
+          }
+        ],
+        "dimension": "source_api",
+        "direction": "reference_to_candidate",
+        "evidence": [
+          "forensics/atlas/openssl-3.6.3-historical/enums.json",
+          "forensics/atlas/openssl-3.6.3-historical/functions.json",
+          "forensics/atlas/openssl-3.6.3-historical/macros.json",
+          "forensics/atlas/openssl-3.6.3-historical/structs.json",
+          "forensics/atlas/openssl-3.6.3-historical/typedefs.json",
+          "forensics/atlas/openssl-3.6.3-historical/variables.json",
+          "forensics/atlas/openssl-3.6.4-production/enums.json",
+          "forensics/atlas/openssl-3.6.4-production/functions.json",
+          "forensics/atlas/openssl-3.6.4-production/macros.json",
+          "forensics/atlas/openssl-3.6.4-production/structs.json",
+          "forensics/atlas/openssl-3.6.4-production/typedefs.json",
+          "forensics/atlas/openssl-3.6.4-production/variables.json"
+        ],
+        "from_id": "openssl-3.6.3-historical",
+        "receipt_id": "D-openssl-3.6.3-historical-openssl-3.6.4-production-source_api",
+        "removed": [],
+        "sense": "forward",
+        "to_id": "openssl-3.6.4-production"
+      }
+    ],
+    "sense": "forward",
+    "to_authority": "openssl-3.6.4-production",
+    "to_id": "openssl-3.6.4-production",
+    "to_release": "openssl-3.6.4"
+  },
+  "generator": "forensics/tools/authority_delta.py",
+  "inputs": [
+    {
+      "name": "release-catalog",
+      "path": "forensics/release-catalog.json",
+      "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b"
+    },
+    {
+      "name": "authority-lineage",
+      "path": "forensics/authority-lineage.json",
+      "sha256": "e415af5a24cd54f0be2b41bacf80da2ac500c9cddf0b4bd3dcbba13dfd5d8d61"
+    },
+    {
+      "name": "authority-nodes",
+      "path": "forensics/authority-nodes.json",
+      "sha256": "264cf5c061a48c792133a9e8019a19878f2163326b46b32ab824ba126ed2e6a6"
+    },
+    {
+      "name": "entity-lineage",
+      "path": "forensics/multitrack/entity-lineage.json",
+      "sha256": "c0d34f534c7d646b46b5b9560a65ddf518c2bfc037e7e921224b8fb31483d7dd"
+    },
+    {
+      "name": "openssl-3.6.3-historical/functions",
+      "path": "forensics/atlas/openssl-3.6.3-historical/functions.json",
+      "sha256": "c4c31aa8889527b1e934224070f8a12855885397dfdef414c9dcb92224f006a8"
+    },
+    {
+      "name": "openssl-3.6.4-production/functions",
+      "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+      "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0"
+    },
+    {
+      "name": "openssl-3.6.3-historical/variables",
+      "path": "forensics/atlas/openssl-3.6.3-historical/variables.json",
+      "sha256": "00d480cfffdd667d475184e8f765a14fa65d59676727a3da7b953c269e55021a"
+    },
+    {
+      "name": "openssl-3.6.4-production/variables",
+      "path": "forensics/atlas/openssl-3.6.4-production/variables.json",
+      "sha256": "5133de801f35c4825ef7a03a06fa1decf5203061df9456abe2046b2b8c45dd2c"
+    },
+    {
+      "name": "openssl-3.6.3-historical/structs",
+      "path": "forensics/atlas/openssl-3.6.3-historical/structs.json",
+      "sha256": "fdbb2546bb1701fece94a3c4114d44df175d3d72ef7157761ab1c816d8c9f1cd"
+    },
+    {
+      "name": "openssl-3.6.4-production/structs",
+      "path": "forensics/atlas/openssl-3.6.4-production/structs.json",
+      "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893"
+    },
+    {
+      "name": "openssl-3.6.3-historical/typedefs",
+      "path": "forensics/atlas/openssl-3.6.3-historical/typedefs.json",
+      "sha256": "b41eff262261c146a056a2ab265cdaba482381cabe29f1f15cad8422379f1497"
+    },
+    {
+      "name": "openssl-3.6.4-production/typedefs",
+      "path": "forensics/atlas/openssl-3.6.4-production/typedefs.json",
+      "sha256": "af99118d026274d21e18b3c499ec6853eaf463f7491d56e05e934124d1458d83"
+    },
+    {
+      "name": "openssl-3.6.3-historical/enums",
+      "path": "forensics/atlas/openssl-3.6.3-historical/enums.json",
+      "sha256": "1ae4bab8dd4a3619d92a5b98f26f19f93f57fc5af0a9a1b83fde04ea905982b7"
+    },
+    {
+      "name": "openssl-3.6.4-production/enums",
+      "path": "forensics/atlas/openssl-3.6.4-production/enums.json",
+      "sha256": "a95111482a96ab687db8abe9c9ef485f3bee26ef6cb87089dea80c0c4c7574a1"
+    },
+    {
+      "name": "openssl-3.6.3-historical/macros",
+      "path": "forensics/atlas/openssl-3.6.3-historical/macros.json",
+      "sha256": "e300e9b5bcc783b0d5385090bd5bb0a7062cf368bc2d3f7cc192efe6f9a54e70"
+    },
+    {
+      "name": "openssl-3.6.4-production/macros",
+      "path": "forensics/atlas/openssl-3.6.4-production/macros.json",
+      "sha256": "99e595fad544d1cff98c5495519db7abe68a34b32e6e97fd29735f9686c846da"
+    },
+    {
+      "name": "openssl-3.6.3-historical/symbols-libcrypto",
+      "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+      "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6"
+    },
+    {
+      "name": "openssl-3.6.4-production/symbols-libcrypto",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "openssl-3.6.3-historical/symbols-libssl",
+      "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+      "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b"
+    },
+    {
+      "name": "openssl-3.6.4-production/symbols-libssl",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+      "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634"
+    },
+    {
+      "name": "openssl-3.6.3-historical/ownership-obligations",
+      "path": "forensics/atlas/openssl-3.6.3-historical/ownership-obligations.json",
+      "sha256": "eb51614abe1a3e81ea0be22991b32d1feb195cecb72ebce0a8795b0fb3696fe6"
+    },
+    {
+      "name": "openssl-3.6.4-production/ownership-obligations",
+      "path": "forensics/atlas/openssl-3.6.4-production/ownership-obligations.json",
+      "sha256": "ca100c09c7a29673aeeca036402465923a9e90dc7d311630af763081f87d673e"
+    },
+    {
+      "name": "openssl-3.6.3-historical/provider-inventory",
+      "path": "forensics/atlas/openssl-3.6.3-historical/provider-inventory.json",
+      "sha256": "0ea1e0bbbd34713c4a3a1cf8678061b3ece0790da4ca737939bf7dcfbfc9d127"
+    },
+    {
+      "name": "openssl-3.6.4-production/provider-inventory",
+      "path": "forensics/atlas/openssl-3.6.4-production/provider-inventory.json",
+      "sha256": "62763c6bd86ed55cb509ac3bb3675fff5b26bfd78f4dc9a3c75f7d29abb0c522"
+    },
+    {
+      "name": "openssl-3.6.3-historical/configs",
+      "path": "forensics/atlas/openssl-3.6.3-historical/configs.json",
+      "sha256": "231aef9b1b3afa5e0fc6444aa8d24368699a15cc7ad41e49993ad3867c182131"
+    },
+    {
+      "name": "openssl-3.6.4-production/configs",
+      "path": "forensics/atlas/openssl-3.6.4-production/configs.json",
+      "sha256": "d111158e5bf80d41f382886e429776c7642fc6b468cf86c6f093d824fb2a51ae"
+    },
+    {
+      "name": "openssl-3.6.3-historical/cli-commands",
+      "path": "forensics/atlas/openssl-3.6.3-historical/cli-commands.json",
+      "sha256": "36bd07aaf8dd775ce9dede13d8a317bd8e601c8b779f3b850201cf4a6ae69716"
+    },
+    {
+      "name": "openssl-3.6.4-production/cli-commands",
+      "path": "forensics/atlas/openssl-3.6.4-production/cli-commands.json",
+      "sha256": "874e4ef400b33871c7d282fac76210394de39e465f5c6b5d276cd88d9b05149d"
+    }
+  ],
+  "kind": "delta-receipts",
+  "schema": "openssl-rs/atlas/delta-receipts/v1"
+}

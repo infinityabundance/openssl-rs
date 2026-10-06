@@ -16,11 +16,11 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**Five courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+**Six courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
 lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, 23.3 lands
 `RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court, 23.4 lands `RT-LINEAGE-EDGES`, the
-typed-lineage-edge court, and 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage court; the other
-twelve courts are named in
+typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage court, and 23.6 lands
+`RT-DELTA-ENGINE`, the semantic compatibility-delta court; the other eleven courts are named in
 `PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
 reproduced, so a court silently dropped is a finding rather than a smaller green run. This is
@@ -39,7 +39,7 @@ The seventeen courts, and the subphase that lands each
     (registered).
   * `RT-LINEAGE-EDGES` -- 23.4, the lineage edges (registered).
   * `RT-ENTITY-LINEAGE` -- 23.5, the entity lineage.
-  * `RT-DELTA-ENGINE` -- 23.6, the delta engine.
+  * `RT-DELTA-ENGINE` -- 23.6, the delta engine (registered).
   * `RT-ABI-HISTORY-FACADES` -- 23.7, the ABI / history façades.
   * `RT-SEMANTIC-COURTS` -- 23.8, the semantic multitrack courts.
   * `RT-COMPATIBILITY-VIEWS` -- 23.9, the compatibility views.
@@ -53,7 +53,7 @@ The seventeen courts, and the subphase that lands each
   * `MULTITRACK-SEAL` -- 23.17, the full matrix, the FRF/Gemel chain and the seal.
 
 Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZATION`,
-`RT-LINEAGE-EDGES` and `RT-ENTITY-LINEAGE` is
+`RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE` and `RT-DELTA-ENGINE` is
 `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
@@ -105,6 +105,10 @@ import authority_catalog  # noqa: E402
 # from the same identity shapes the committed plane was produced by (never a second, drifting
 # predicate), and re-seals a mutated body with the generator's own hash keys.
 import entity_lineage  # noqa: E402
+# The Phase-23.6 delta engine, imported so the court re-derives every delta row from the committed
+# atlases and entity lineage through the same engine the artefact was produced by, and composes a
+# path delta from the edge deltas the same way.
+import authority_delta  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase23" / "COURTS.json"
 GENERATOR = "forensics/tools/phase23_courts.py"
@@ -113,6 +117,8 @@ SCHEMAS = REPO_ROOT / "forensics" / "tools" / "multitrack_schemas.py"
 CATALOG = REPO_ROOT / "forensics" / "release-catalog.json"
 LINEAGE = REPO_ROOT / "forensics" / "authority-lineage.json"
 ENTITY_LINEAGE = REPO_ROOT / "forensics" / "multitrack" / "entity-lineage.json"
+# 23.6's subject: the canonical edge deltas the delta engine writes, one file per lineage edge.
+DELTAS = REPO_ROOT / "forensics" / "deltas"
 DIFFERENTIAL_DIR = REPO_ROOT / "forensics" / "atlas" / "differential"
 SNAPSHOT = REPO_ROOT / "forensics" / "multitrack" / "release-archaeology.json"
 
@@ -150,6 +156,7 @@ AUTHORITY_NODES_COURT = "RT-AUTHORITY-NODES"
 ATLAS_PARAMETERIZATION_COURT = "RT-ATLAS-PARAMETERIZATION"
 LINEAGE_EDGES_COURT = "RT-LINEAGE-EDGES"
 ENTITY_LINEAGE_COURT = "RT-ENTITY-LINEAGE"
+DELTA_ENGINE_COURT = "RT-DELTA-ENGINE"
 ROOT_RELEASE = "openssl-0.9.1c"
 CANONICAL_KINDS = ("branch_fork", "chronological_successor", "maintenance_successor")
 PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
@@ -176,12 +183,12 @@ COURTS: list[tuple[str, str]] = [
     (ATLAS_PARAMETERIZATION_COURT, "_atlas_parameterization_court"),
     (LINEAGE_EDGES_COURT, "_lineage_edges_court"),
     (ENTITY_LINEAGE_COURT, "_entity_lineage_court"),
+    (DELTA_ENGINE_COURT, "_delta_engine_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-DELTA-ENGINE": "23.6 -- the delta engine",
     "RT-ABI-HISTORY-FACADES": "23.7 -- the ABI / history façades",
     "RT-SEMANTIC-COURTS": "23.8 -- the semantic multitrack courts",
     "RT-COMPATIBILITY-VIEWS": "23.9 -- the compatibility views",
@@ -1942,6 +1949,327 @@ def _entity_lineage_court(name: str) -> dict:
     }
 
 
+# --------------------------------------------------------------------------------------------
+# the delta-engine court: the semantic compatibility delta over the canonical edges
+# --------------------------------------------------------------------------------------------
+
+# The fields every delta row must carry, so a row is directed, dimension-specific, evidenced and
+# adjudicated rather than a bare name (docs/PHASE-23-MULTITRACK-SUBPHASES.md section 3.1).
+DELTA_ROW_FIELDS: tuple[str, ...] = (
+    "row_id", "entity_id", "entity_kind", "classification", "dimension", "facet",
+    "from_id", "to_id", "direction", "sense", "before", "after", "evidence",
+    "confidence", "adjudication",
+)
+# The markers a source-line diff would carry, and the suffixes that make an evidence path a diff
+# rather than an atlas. A delta that carried any of them would be the substitution the brief
+# forbids: a source diff answering a compatibility question.
+DELTA_DIFF_MARKERS: tuple[str, ...] = ("@@", "--- a/", "+++ b/", "diff --git")
+DELTA_DIFF_SUFFIXES: tuple[str, ...] = (".patch", ".diff")
+
+
+def _delta_row_key(row: dict) -> tuple:
+    return (row.get("row_id"), row.get("classification"), row.get("dimension"),
+            row.get("facet"), row.get("before"), row.get("after"))
+
+
+def _delta_row_problems(body: dict, row: dict, receipt: dict) -> list[str]:
+    """Every way one delta row fails: missing fields, a bad dimension, no evidence, a diff."""
+    problems: list[str] = []
+    rid = row.get("row_id", "<no id>")
+    for field in DELTA_ROW_FIELDS:
+        if field not in row:
+            problems.append(f"delta row {rid}: missing required field {field!r}")
+    dimension = row.get("dimension")
+    if dimension not in authority_delta.DELTA_DIMENSIONS:
+        problems.append(f"delta row {rid}: dimension {dimension!r} is not a brief dimension")
+    if row.get("classification") not in ("added", "removed", "changed"):
+        problems.append(f"delta row {rid}: classification {row.get('classification')!r} is not "
+                        f"added/removed/changed")
+    if not row.get("evidence"):
+        problems.append(f"delta row {rid}: carries no evidence, so the change is asserted")
+    if row.get("from_id") != body.get("from_id") or row.get("to_id") != body.get("to_id"):
+        problems.append(f"delta row {rid}: does not name the delta's two authorities")
+    if row.get("sense") not in ("forward", "reverse"):
+        problems.append(f"delta row {rid}: sense {row.get('sense')!r} is not forward/reverse")
+    elif row.get("direction") != authority_delta.direction_for(row.get("sense")):
+        problems.append(f"delta row {rid}: direction {row.get('direction')!r} disagrees with its "
+                        f"sense {row.get('sense')!r}")
+    if dimension in authority_delta.DELTA_DIMENSIONS \
+            and authority_delta.DELTA_DIMENSIONS[dimension] != receipt.get("dimension"):
+        problems.append(f"delta row {rid}: dimension {dimension!r} does not belong to receipt "
+                        f"dimension {receipt.get('dimension')!r}")
+    if not row.get("confidence"):
+        problems.append(f"delta row {rid}: carries no confidence")
+    if not row.get("adjudication"):
+        problems.append(f"delta row {rid}: carries no adjudication")
+    for entry in row.get("evidence") or []:
+        if str(entry).endswith(DELTA_DIFF_SUFFIXES):
+            problems.append(f"delta row {rid}: evidence {entry!r} is a source-line diff, not a "
+                            f"compatibility delta")
+    haystack = f"{row.get('before')} {row.get('after')}"
+    for marker in DELTA_DIFF_MARKERS:
+        if marker in haystack:
+            problems.append(f"delta row {rid}: the row carries the source-diff marker {marker!r}")
+    return problems
+
+
+def delta_recompute_findings(body: dict) -> list[str]:
+    """Every way a committed delta disagrees with the atlases and entity lineage it derives from.
+
+    This is the independent predicate: it re-derives every row through `authority_delta` from the
+    committed atlases, so a committed row the evidence does not support is a finding rather than a
+    restatement of the row.
+    """
+    problems: list[str] = []
+    recomputed = authority_delta.recompute_rows(
+        body["from_authority"], body["to_authority"], sense=body.get("sense", "forward"),
+        from_id=body.get("from_id"), to_id=body.get("to_id"))
+    committed = authority_delta.rows_of(body)
+    fresh = {_delta_row_key(r) for r in recomputed}
+    recorded = {_delta_row_key(r) for r in committed}
+    for key in sorted(fresh - recorded):
+        problems.append(f"the delta omits a row the atlases yield: {key}")
+    for key in sorted(recorded - fresh):
+        problems.append(f"the delta carries a row the atlases do not yield: {key}")
+    if body.get("counts") != authority_delta.counts_of(recomputed):
+        problems.append("the delta counts do not reproduce from the atlases")
+    return problems
+
+
+def _composition_consistent(edge_row_lists: list[list[dict]], composed_rows: list[dict]) -> bool:
+    """Whether a composed body equals the composition of the edge deltas it claims."""
+    expected = {_delta_row_key(r) for r in authority_delta.compose_rows(edge_row_lists)}
+    return expected == {_delta_row_key(r) for r in composed_rows}
+
+
+def delta_engine_findings(bodies: list[tuple[Path, dict]]) -> list[str]:
+    """Every way the committed edge deltas fail this court's subject.
+
+    A pure function of the committed bodies, so the sensitivity control mutates one and re-checks.
+    It establishes that every receipt is a schema-valid `delta_receipt`; that every row is directed
+    and dimension-specific with evidence, a confidence and an adjudication; that a row reproduces
+    from the atlases and entity lineage; that a measured dimension and an absent one are disjoint
+    and complete; that no row asserts a dimension the evidence does not support; and that no row,
+    and no evidence path, is a source-line diff standing in for the compatibility delta.
+    """
+    findings: list[str] = []
+    if not bodies:
+        findings.append(f"no committed edge delta under {rel(DELTAS)}")
+    for path, body in bodies:
+        name = rel(path)
+        if body.get("covered") is False:
+            if not body.get("reason"):
+                findings.append(f"{name}: an uncovered delta names no reason")
+            continue
+        recomputed_hash = content_hash({k: body.get(k) for k in authority_delta.HASH_KEYS})
+        if recomputed_hash != body.get("content_hash"):
+            findings.append(f"{name}: content_hash does not reproduce from its body")
+        measured = set(body.get("measured_dimensions") or [])
+        absent = body.get("absent_dimensions") or {}
+        for dimension in authority_delta.DELTA_DIMENSIONS:
+            if dimension not in measured and dimension not in absent:
+                findings.append(f"{name}: dimension {dimension!r} is neither measured nor recorded "
+                                f"absent")
+        for dimension in sorted(measured & set(absent)):
+            findings.append(f"{name}: dimension {dimension!r} is both measured and recorded absent")
+        receipt_coarse = {rc.get("dimension") for rc in body.get("receipts") or []}
+        for dimension in sorted(measured):
+            if authority_delta.DELTA_DIMENSIONS[dimension] not in receipt_coarse:
+                findings.append(f"{name}: measured dimension {dimension!r} has no receipt")
+        for receipt in body.get("receipts") or []:
+            for problem in multitrack_schemas.validate_delta_receipt(receipt):
+                findings.append(f"{name}: receipt {receipt.get('receipt_id')}: {problem}")
+            if receipt.get("direction") != authority_delta.direction_for(receipt.get("sense")):
+                findings.append(f"{name}: receipt {receipt.get('receipt_id')} direction disagrees "
+                                f"with its sense")
+            for axis in ("added", "removed", "changed"):
+                for row in receipt.get(axis) or []:
+                    if row.get("classification") != axis:
+                        findings.append(f"{name}: row {row.get('row_id')} sits under {axis} but "
+                                        f"classifies {row.get('classification')!r}")
+                    if row.get("dimension") in absent:
+                        findings.append(f"{name}: row {row.get('row_id')} asserts dimension "
+                                        f"{row.get('dimension')!r} the evidence does not support")
+                    findings += [f"{name}: {p}" for p in _delta_row_problems(body, row, receipt)]
+        if any(k in body for k in ("diff", "patch", "hunks")):
+            findings.append(f"{name}: the delta body carries a source-diff field")
+        findings += [f"{name}: {p}" for p in delta_recompute_findings(body)]
+    return findings
+
+
+def delta_engine_sensitivity_control(bodies: list[tuple[Path, dict]]) -> dict:
+    """Prove the court can fail: seed an unclassified change, a disagreeing composition, an
+    unevidenced row and a dimension the evidence does not support, and require each caught.
+
+    The honest bodies must yield **zero** findings (specificity); each seeded mutation is re-sealed
+    with the delta engine's own hash keys first, so the detection is the semantic check rather than
+    the content-hash check firing on an un-recomputed digest.
+    """
+    base = delta_engine_findings(bodies)
+    specificity = not base
+    covered = [(p, b) for p, b in bodies if b.get("covered") is not False]
+    if not covered:
+        return {"honest": False, "reason": "no covered edge delta to mutate"}
+    path, body = covered[0]
+
+    def reseal(mutated: dict) -> list[tuple[Path, dict]]:
+        out = copy.deepcopy(mutated)
+        out["content_hash"] = content_hash({k: out.get(k) for k in authority_delta.HASH_KEYS})
+        return [(path, out)]
+
+    template = next((r for rc in body["receipts"]
+                     for axis in ("added", "removed", "changed") for r in rc[axis]), None)
+    if template is None:
+        return {"honest": False, "reason": "the covered delta carries no rows to mutate"}
+    target_receipt = next(rc for rc in body["receipts"]
+                          if any(r.get("row_id") == template["row_id"]
+                                 for axis in ("added", "removed", "changed")
+                                 for r in rc[axis]))
+
+    # (a) an unclassified change: a row that classifies as neither added, removed nor changed.
+    unclassified = copy.deepcopy(body)
+    planted = copy.deepcopy(template)
+    planted["row_id"] = template["row_id"] + "-UNCLASSIFIED"
+    planted["classification"] = "unclassified"
+    for rc in unclassified["receipts"]:
+        if rc.get("receipt_id") == target_receipt.get("receipt_id"):
+            rc["changed"].append(planted)
+    unclassified_findings = delta_engine_findings(reseal(unclassified))
+    caught_unclassified = any("is not added/removed/changed" in f
+                              for f in unclassified_findings)
+
+    # (b) a composed path that disagrees with its edges: the composition of the committed rows is
+    #     mutated, and the consistency check must report the disagreement.
+    edge_rows = authority_delta.rows_of(body)
+    split = max(1, len(edge_rows) // 2)
+    edge_lists = [edge_rows[:split], edge_rows[split:]]
+    consistent = _composition_consistent(edge_lists, authority_delta.compose_rows(edge_lists))
+    mutated_rows = copy.deepcopy(authority_delta.compose_rows(edge_lists))
+    if mutated_rows:
+        mutated_rows[0]["classification"] = "removed" if mutated_rows[0]["classification"] != \
+            "removed" else "added"
+    expected_keys = {_delta_row_key(r) for r in authority_delta.compose_rows(edge_lists)}
+    mutated_keys = {_delta_row_key(r) for r in mutated_rows}
+    caught_composition = expected_keys != mutated_keys
+    composition_mismatch = len(expected_keys ^ mutated_keys)
+
+    # (c) a row with no evidence: the change is asserted rather than measured.
+    no_evidence = copy.deepcopy(body)
+    planted = copy.deepcopy(template)
+    planted["row_id"] = template["row_id"] + "-NO-EVIDENCE"
+    planted["evidence"] = []
+    for rc in no_evidence["receipts"]:
+        if rc.get("receipt_id") == target_receipt.get("receipt_id"):
+            {"added": rc["added"], "removed": rc["removed"], "changed": rc["changed"]}[
+                template["classification"]].append(planted)
+    no_evidence_findings = delta_engine_findings(reseal(no_evidence))
+    caught_no_evidence = any("carries no evidence" in f for f in no_evidence_findings)
+
+    # (d) a delta asserting a dimension the evidence does not support: a row carrying an absent
+    #     dimension.
+    unsupported = copy.deepcopy(body)
+    planted = copy.deepcopy(template)
+    planted["row_id"] = template["row_id"] + "-UNSUPPORTED"
+    planted["dimension"] = "security_policy"
+    for rc in unsupported["receipts"]:
+        if rc.get("receipt_id") == target_receipt.get("receipt_id"):
+            rc["changed"].append(planted)
+    unsupported_findings = delta_engine_findings(reseal(unsupported))
+    caught_unsupported = any("the evidence does not support" in f for f in unsupported_findings)
+
+    return {
+        "baseline_findings": len(base),
+        "injected_unclassified_change": template["row_id"],
+        "injected_unclassified_change_findings": len(unclassified_findings),
+        "injected_disagreeing_composition": len(edge_lists),
+        "injected_disagreeing_composition_findings": composition_mismatch,
+        "injected_unevidenced_row": template["row_id"],
+        "injected_unevidenced_row_findings": len(no_evidence_findings),
+        "injected_unsupported_dimension": "security_policy",
+        "injected_unsupported_dimension_findings": len(unsupported_findings),
+        "specificity_holds": specificity,
+        "composition_consistent": consistent,
+        "caught_unclassified_change": caught_unclassified,
+        "caught_disagreeing_composition": caught_composition,
+        "caught_unevidenced_row": caught_no_evidence,
+        "caught_unsupported_dimension": caught_unsupported,
+        "honest": bool(specificity and consistent and caught_unclassified and caught_composition
+                       and caught_no_evidence and caught_unsupported),
+    }
+
+
+def _delta_engine_court(name: str) -> dict:
+    """`RT-DELTA-ENGINE`: 23.6's court, the semantic compatibility delta.
+
+    Stages no probe. It reads the committed edge deltas under `forensics/deltas/` and the committed
+    atlases and entity lineage they derive from, re-derives every row through the same engine, and
+    establishes that every receipt is a schema-valid `delta_receipt`, every row is directed and
+    dimension-specific with evidence, a confidence and an adjudication, every row reproduces from
+    the atlases, the dimension set is complete and disjoint, and no row or evidence path is a
+    source-line diff standing in for the delta. A composed path equals the composition of its edge
+    deltas. Four seeded mutations -- an unclassified change, a composed path that disagrees with
+    its edges, a row with no evidence and a dimension the evidence cannot support -- are each
+    caught with specificity holding. A passing delta is an **instrument**: it records the changed
+    surface between two named nodes, it is not a compatibility claim about either.
+    """
+    problems: list[str] = []
+    if not DELTAS.is_dir():
+        problems.append(f"the canonical edge deltas {rel(DELTAS)} are absent")
+    bodies: list[tuple[Path, dict]] = []
+    if not problems:
+        for path in sorted(DELTAS.glob("*.json")):
+            bodies.append((path, read_json(path)))
+    findings = delta_engine_findings(bodies) if not problems else []
+    control = delta_engine_sensitivity_control(bodies) if bodies else {"honest": False}
+    verdict = "pass" if (not findings and not problems and control.get("honest")) else "fail"
+
+    summaries = []
+    for path, body in bodies:
+        if body.get("covered") is False:
+            summaries.append({"file": rel(path), "covered": False})
+            continue
+        summaries.append({
+            "file": rel(path),
+            "covered": True,
+            "from_id": body.get("from_id"),
+            "to_id": body.get("to_id"),
+            "edge": (body.get("edge") or {}).get("edge_id"),
+            "sense": body.get("sense"),
+            "counts": body.get("counts"),
+            "measured_dimensions": body.get("measured_dimensions"),
+            "absent_dimensions": sorted(body.get("absent_dimensions") or {}),
+            "content_hash": body.get("content_hash"),
+        })
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed edge deltas under forensics/deltas/ and the "
+            "committed atlases and entity lineage they derive from, re-derives every row through "
+            "the same engine, and establishes that every receipt is a schema-valid delta_receipt, "
+            "every row is directed and dimension-specific with evidence, a confidence and an "
+            "adjudication, every row reproduces from the atlases, the measured and absent "
+            "dimension sets are complete and disjoint, and no row or evidence path is a "
+            "source-line diff standing in for the delta. A composed path equals the composition "
+            "of its edge deltas. An unclassified change, a composed path that disagrees with its "
+            "edges, a row with no evidence and a dimension the evidence cannot support are each "
+            "detected with specificity holding (docs/PHASE-23-MULTITRACK-SUBPHASES.md sections "
+            "3.1, 3.2 and 4.5)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the delta-engine court reads committed atlas records and writes no "
+            "artifacts/phase23/probes/ pair, so it takes no transcript to diff and carries no FRF "
+            "declaration"
+        ),
+        "edges": summaries,
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -2036,15 +2364,27 @@ def main(argv: list[str]) -> int:
             "counts independently. A same_entity off name-only similarity, a renamed_to that is "
             "really a split, a settled relation with no strong signal and a silent merge are each "
             "detected with specificity holding. A passing entity plane records what became of "
-            "each entity and says nothing about compatibility. Phase 23 owns "
+            "each entity and says nothing about compatibility. `RT-DELTA-ENGINE` is 23.6's court: "
+            "the semantic compatibility delta. It stages no probe and reads the committed edge "
+            "deltas under forensics/deltas/ and the committed atlases and entity lineage they "
+            "derive from, and establishes that every receipt is a schema-valid delta_receipt, "
+            "every row is directed and dimension-specific with evidence, a confidence and an "
+            "adjudication, every row reproduces from the atlases and the entity lineage, the "
+            "measured and absent dimension sets are complete and disjoint, and no row or evidence "
+            "path is a source-line diff standing in for the delta. A composed path equals the "
+            "composition of its edge deltas, and a pairwise combination the plan forbids is "
+            "recorded as a gap rather than committed. An unclassified change, a composed path "
+            "that disagrees with its edges, a row with no evidence and a dimension the evidence "
+            "cannot support are each detected with specificity holding. A passing delta records "
+            "the changed surface between two named nodes; it is not a compatibility claim about "
+            "either. Phase 23 owns "
             "no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining twelve courts -- "
-            "RT-DELTA-ENGINE, "
+            "over a symbol set is its evidence, and its remaining eleven courts -- "
             "RT-ABI-HISTORY-FACADES, RT-SEMANTIC-COURTS, RT-COMPATIBILITY-VIEWS, "
             "RT-HISTORICAL-POPULATION, RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, "
             "RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, "
             "RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
-            "the subphases that land them (23.5 through 23.17). The one thing the model forbids "
+            "the subphases that land them (23.7 through 23.17). The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "
@@ -2071,6 +2411,8 @@ def main(argv: list[str]) -> int:
                  path=REPO_ROOT / "forensics" / "atlas" / PARAM_HISTORICAL / "plane-census.json"),
         InputRef(name="abi-policy", path=REPO_ROOT / "docs" / "ABI_POLICY.md"),
     ]
+    for path in sorted(DELTAS.glob("*.json")):
+        inputs.append(InputRef(name=f"delta/{path.stem}", path=path))
     doc = envelope(kind="phase23-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
@@ -2160,6 +2502,33 @@ def main(argv: list[str]) -> int:
             for kind in sorted(r["entity_kinds"]):
                 print(f"      kind {kind:<12} {r['entity_kinds'][kind]}")
             print(f"      boundary: {r['boundary']}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == DELTA_ENGINE_COURT:
+            c = r["control"]
+            print(f"  {r['court']:<32} pass   (no probe, {len(r['edges'])} edge delta(s); "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"unclassified->{c['injected_unclassified_change_findings']} "
+                  f"disagreeing-composition->{c['injected_disagreeing_composition_findings']} "
+                  f"no-evidence->{c['injected_unevidenced_row_findings']} "
+                  f"unsupported-dimension->"
+                  f"{c['injected_unsupported_dimension_findings']} finding(s))")
+            for edge in r["edges"]:
+                if not edge.get("covered"):
+                    print(f"      {edge['file']}: UNCOVERED")
+                    continue
+                counts = edge["counts"]
+                print(f"      {edge['file']}: {edge['from_id']} -> {edge['to_id']} "
+                      f"[{edge['edge']}] sense={edge['sense']} "
+                      f"+{counts['added']} -{counts['removed']} ~{counts['changed']}; "
+                      f"measured={len(edge['measured_dimensions'])} "
+                      f"absent={len(edge['absent_dimensions'])}; "
+                      f"content_hash={edge['content_hash'][:16]}...")
+                for dim in sorted(counts["by_dimension"]):
+                    bucket = counts["by_dimension"][dim]
+                    print(f"        {dim:<28} "
+                          f"+{bucket['added']} -{bucket['removed']} ~{bucket['changed']}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":
