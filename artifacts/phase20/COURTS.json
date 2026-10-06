@@ -385,7 +385,7 @@
           "19": "complete",
           "2": "complete",
           "20": "complete",
-          "21": "not-started",
+          "21": "complete",
           "22": "complete",
           "3": "complete",
           "4": "complete",
@@ -3910,7 +3910,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "3d53af2845e13fa3c7b97bae6b773e657d7ccca2a7dbbcaa15d0698d29bfbf3c"
+      "sha256": "d2145033bc308cdeeb6855bf2e4afb86c492e53cc7b577df098899f2df66d3f8"
     },
     {
       "name": "court-coverage-rows",
@@ -3920,7 +3920,7 @@
     {
       "name": "divergence-obligations",
       "path": "forensics/divergence-obligations.json",
-      "sha256": "23aed520ca22fa5021448638ccc8f4e7bdbf2fedd81cdf9adec85c0ca82f8c0b"
+      "sha256": "3228be41b996177b9d78f044abf3a82ce56ed0f394e35bb156320e17102d99ff"
     },
     {
       "name": "prerequisites",
@@ -4010,7 +4010,7 @@
     {
       "name": "gemel-trajectory",
       "path": "forensics/GEMEL_TRAJECTORY.md",
-      "sha256": "92ede47742acce498f25ce95553446bdca147fd4bb96bce8372bac6fa2e1f05d"
+      "sha256": "e49dca0a84d7ca136c305207fbef8b1606e59825c2271b2f262ee20900d56203"
     }
   ],
   "kind": "phase20-courts",
