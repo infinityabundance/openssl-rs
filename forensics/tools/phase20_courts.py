@@ -232,17 +232,31 @@ a non-functional finding. The control is honest only when the real view is close
 current and functional) *and* all three injections are detected; otherwise a court that cannot tell
 a current, functional witness from a stale or failed one would pass vacuously.
 
-The pending court
-------------------
-The one other court the plan names is not runnable yet; it is registered in `PENDING_COURTS` with
-the subphase that lands its instrument and what it will drive, so "nothing registered" is a stated
-distance rather than a court quietly dropped:
+`CUSTODIAN-BOUNDARY-REGISTER`, and what it binds
+-----------------------------------------------
+20.5's court, and the stratum's own answer to `docs/NON_CLAIMS.md`. It stages no probe: its subject
+is `artifacts/phase20/custodian-boundary-register.json`, the authored register that records, per
+surface, whether it is **claimed** (a passing court covers it) or **bounded** (explicitly outside
+this stratum -- including **no FIPS validation**, **no universal parity from finite evidence** and
+**memory safety measured, not established**). The court re-reads both sides and fails the stratum if
+a recorded boundary has drifted from the evidence that establishes it:
 
-  * `CUSTODIAN-BOUNDARY-REGISTER` (20.5) — the register that records what is claimed, what is
-    bounded, and the explicit non-claims (no FIPS validation, no universal parity from finite
-    evidence, memory safety measured-not-established), and that fails the stratum if a recorded
-    boundary drifts from its evidence.
+  * the **claimed side** is the four passing custodian courts' own records computed above it in this
+    one run -- `RT-CUSTODIAN-MATURITY`, `RT-RECEIPT-CLOSURE`, `RT-CUSTODIAN-RESIDUALS` and
+    `RT-SUBSTITUTION-WITNESS` -- so a claimed row whose court no longer passes, or no longer covers
+    the surface its `surface_keys` name, is a finding; and
+  * the **bounded side** is the constitution/limitations artefacts: `docs/NON_CLAIMS.md` (the
+    no-universal-parity and scope rules), `docs/FIPS_CLAIMS.md` (the `NOT FIPS VALIDATED` label and
+    the formal/external separation), `docs/UNSAFE.md` (unsafe measured, not asserted, and not a
+    memory-safety claim), and the `forensics/atlas/unsafe-footprint.json` measurement against its
+    `artifacts/phase18/unsafe-bounds.json` growth ceiling. A bounded row whose cited evidence no
+    longer supports it -- a missing non-claim, a moved footprint or a moved ceiling -- is a finding.
 
+The court is mechanical: each row names its `surface`, its `verdict` (`claimed`/`bounded`) and the
+evidence that establishes it, and the court re-derives that evidence and compares it exactly. The
+instrument-sensitivity control injects a claimed row whose court is not passing and a bounded row
+whose cited evidence has drifted, and requires each to be detected; beside them a real view with no
+defect yields **zero findings** (specificity), because a control that cannot fail is not evidence.
 There is no claim stronger than `docs/CUSTODIAN_CONTRACT.md` section 6's anywhere in this stratum; a
 passing court is an instrument and a bounded measurement, and the property it names may still carry
 findings. `docs/NON_CLAIMS.md` is the authority on the explicit non-claims.
@@ -331,6 +345,16 @@ PREREQUISITES = REPO_ROOT / "forensics" / "prerequisites.json"
 HOSTILE_BOUNDARY_REGISTER = REPO_ROOT / "artifacts" / "phase18" / "hostile-boundary-register.json"
 PERFORMANCE_BOUNDARY_REGISTER = (REPO_ROOT / "artifacts" / "phase19"
                                  / "performance-boundary-register.json")
+# 20.5's authored register and the constitution/limitations artefacts it binds. The register is
+# authored rather than derived; the court re-reads it and the artefacts it cites, so it is an input
+# to the runner rather than an output of it.
+CUSTODIAN_BOUNDARY_REGISTER = (REPO_ROOT / "artifacts" / "phase20"
+                               / "custodian-boundary-register.json")
+CUSTODIAN_BOUNDARY_REGISTER_SCHEMA = "openssl-rs/custodian-boundary-register/v1"
+NON_CLAIMS_DOC = REPO_ROOT / "docs" / "NON_CLAIMS.md"
+FIPS_CLAIMS_DOC = REPO_ROOT / "docs" / "FIPS_CLAIMS.md"
+UNSAFE_DOC = REPO_ROOT / "docs" / "UNSAFE.md"
+CUSTODIAN_SEAL_DOC = REPO_ROOT / "docs" / "PHASE-20-CUSTODIAN-SEAL.md"
 PHASE18_COURTS = REPO_ROOT / "artifacts" / "phase18" / "COURTS.json"
 ASAN_CLOSURE = REPO_ROOT / "artifacts" / "phase18" / "asan.json"
 MIRI_TCB = REPO_ROOT / "artifacts" / "phase18" / "miri-tcb.json"
@@ -392,33 +416,31 @@ CUSTODIAN_MATURITY = "RT-CUSTODIAN-MATURITY"
 RECEIPT_CLOSURE = "RT-RECEIPT-CLOSURE"
 CUSTODIAN_RESIDUALS = "RT-CUSTODIAN-RESIDUALS"
 SUBSTITUTION_WITNESS = "RT-SUBSTITUTION-WITNESS"
+BOUNDARY_REGISTER = "CUSTODIAN-BOUNDARY-REGISTER"
+
+# The register's two verdicts. `claimed` needs a passing court that covers the surface; `bounded`
+# is explicitly outside this stratum and names no court.
+REGISTER_VERDICTS: tuple[str, ...] = ("claimed", "bounded")
 
 # The courts, in the order they land. `(name, probe filename)`, and the probe is declared in the
 # same commit as the entry, so a runner that names a probe which does not exist cannot be
-# committed. `RT-CUSTODIAN-MATURITY`, `RT-RECEIPT-CLOSURE`, `RT-CUSTODIAN-RESIDUALS` and
-# `RT-SUBSTITUTION-WITNESS` stage no probe -- their subjects are committed evidence, not transcript
-# pairs -- so their probes are `None`, exactly as Phase 19's register court is. **Empty of later
-# courts at 20.4**: 20.5 lands the last instrument and adds its row.
+# committed. `RT-CUSTODIAN-MATURITY`, `RT-RECEIPT-CLOSURE`, `RT-CUSTODIAN-RESIDUALS`,
+# `RT-SUBSTITUTION-WITNESS` and `CUSTODIAN-BOUNDARY-REGISTER` stage no probe -- their subjects are
+# committed evidence, not transcript pairs -- so their probes are `None`, exactly as Phase 19's
+# register court is. **Complete at 20.5**: all five custodian courts are registered and passing.
 COURTS: list[tuple[str, str | None]] = [
     (CUSTODIAN_MATURITY, None),
     (RECEIPT_CLOSURE, None),
     (CUSTODIAN_RESIDUALS, None),
     (SUBSTITUTION_WITNESS, None),
+    (BOUNDARY_REGISTER, None),
 ]
 
-# A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
-# the instrument and what the court will drive, so "nothing registered" is a stated distance rather
-# than a court quietly dropped. `RT-CUSTODIAN-MATURITY` left this table when 20.1 landed its
-# derivation, `RT-RECEIPT-CLOSURE` when 20.2 landed its join, `RT-CUSTODIAN-RESIDUALS` when 20.3
-# landed its disposition, and `RT-SUBSTITUTION-WITNESS` when 20.4 landed its witness chain.
-PENDING_COURTS: dict[str, str] = {
-    "CUSTODIAN-BOUNDARY-REGISTER": (
-        "20.5 lands the register; it records what is claimed, what is bounded, and the explicit "
-        "non-claims (no FIPS validation, no universal parity from finite evidence, memory safety "
-        "measured-not-established), and checks that every recorded boundary still matches the "
-        "evidence that establishes it"
-    ),
-}
+# A court the plan names and this stratum cannot run yet. It is empty: `RT-CUSTODIAN-MATURITY` left
+# this table when 20.1 landed its derivation, `RT-RECEIPT-CLOSURE` when 20.2 landed its join,
+# `RT-CUSTODIAN-RESIDUALS` when 20.3 landed its disposition, `RT-SUBSTITUTION-WITNESS` when 20.4
+# landed its witness chain, and `CUSTODIAN-BOUNDARY-REGISTER` when 20.5 landed its register.
+PENDING_COURTS: dict[str, str] = {}
 
 # The libraries the ladder is derived for. Both are built from the one crate the strata before this
 # completed, so a level's evidence is a property of the distribution; each level records which
@@ -2726,6 +2748,337 @@ def substitution_witness_court(name: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# `CUSTODIAN-BOUNDARY-REGISTER` -- the stratum's own non-claims, bound to the courts
+# ---------------------------------------------------------------------------
+
+def read_doc(path: Path) -> str:
+    """A committed document's text, or `""` when it is absent.
+
+    The bounded side of the register is read as text and interrogated for the non-claim it states;
+    a missing document is `""`, so the row that cites it drifts rather than the court aborting.
+    """
+    return path.read_text(encoding="utf-8") if path.is_file() else ""
+
+
+def _l9_present(record: dict) -> bool | None:
+    """Whether the maturity record's libcrypto ladder records the seal target present."""
+    library = (record.get("libraries") or {}).get(LIBCRYPTO) or {}
+    for row in library.get("levels") or []:
+        if row.get("level") == SEAL_TARGET:
+            return row.get("evidence_present")
+    return None
+
+
+def bounded_evidence() -> dict:
+    """The bounded side's evidence, read from the constitution/limitations artefacts.
+
+    Every value is a fact about a committed artefact -- a stated non-claim, the measured unsafe
+    footprint, the growth-ceiling schema or the seal document's presence -- so the register's
+    `bounded` rows can be compared exactly and a document that stopped stating its non-claim, or a
+    footprint that moved, is a drift rather than a register that silently describes the previous
+    generation.
+    """
+    non_claims = read_doc(NON_CLAIMS_DOC)
+    fips = read_doc(FIPS_CLAIMS_DOC)
+    unsafe = read_doc(UNSAFE_DOC)
+    plan = read_doc(PLAN)
+    footprint = read_json("forensics/atlas/unsafe-footprint.json") or {}
+    totals = (footprint.get("body") or {}).get("totals") or {}
+    by_class = totals.get("by_class") or {}
+    bounds = read_json("artifacts/phase18/unsafe-bounds.json") or {}
+    return {
+        "non_claims_present": NON_CLAIMS_DOC.is_file(),
+        "non_claims_universal_section": "No universal claims from finite evidence" in non_claims,
+        "non_claims_scope_adjacent":
+            "authority / version / build profile / platform scope" in non_claims,
+        "fips_claims_present": FIPS_CLAIMS_DOC.is_file(),
+        "fips_label_present": "NOT FIPS VALIDATED" in fips,
+        "fips_validation_external": "external certification process" in fips,
+        "unsafe_doc_present": UNSAFE_DOC.is_file(),
+        "unsafe_measured_not_asserted": "measured, not asserted" in unsafe,
+        "unsafe_not_a_memory_safety_claim": "not a memory-safety claim" in unsafe,
+        "unsafe_footprint_present": UNSAFE_FOOTPRINT.is_file(),
+        "unsafe_footprint_sites": totals.get("unsafe_sites"),
+        "unsafe_footprint_extern_c": totals.get("extern_c_fns"),
+        "unsafe_core_sites": (by_class.get("core") or {}).get("unsafe_sites"),
+        "unsafe_boundary_sites": (by_class.get("boundary") or {}).get("unsafe_sites"),
+        "unsafe_bounds_present": UNSAFE_BOUNDS.is_file(),
+        "unsafe_bounds_schema": bounds.get("schema"),
+        "unsafe_bounds_core_modules": len(bounds.get("bounds") or {}),
+        "plan_present": PLAN.is_file(),
+        "plan_names_l9_seal": "L9 high-assurance custodian seal" in plan,
+        "seal_doc_present": CUSTODIAN_SEAL_DOC.is_file(),
+    }
+
+
+def court_coverage(record: dict) -> set[str]:
+    """The surface keys a court covers, from its own record -- and only when it passed.
+
+    A non-`pass` court covers nothing: its row is still in the registry but no surface may lean on
+    it. That is what makes "a claimed row whose court no longer covers it" detectable -- the
+    coverage set for that court goes empty (or loses the key).
+    """
+    if record.get("verdict") != "pass":
+        return set()
+    court = record.get("court")
+    if court == CUSTODIAN_MATURITY:
+        return {"custodian.maturity.ladder"} if record.get("highest_present") else set()
+    if court == RECEIPT_CLOSURE:
+        return {"custodian.closure.join"}
+    if court == CUSTODIAN_RESIDUALS:
+        return {"custodian.residuals.disposition"}
+    if court == SUBSTITUTION_WITNESS:
+        keys: set[str] = set()
+        totals = record.get("totals") or {}
+        if totals.get("abi"):
+            keys.add("custodian.witness.abi")
+        if totals.get("downstream"):
+            keys.add("custodian.witness.downstream")
+        return keys
+    return set()
+
+
+def register_evidence(record: dict) -> dict:
+    """The court record's classification evidence, as the flat vocabulary the register cites.
+
+    The register's `evidence` block is a dict of `{key: expected}` over this view, and the court
+    compares them exactly, so a stated count or evidence value that moves is a failure rather than a
+    register that silently describes the previous generation.
+    """
+    court = record.get("court")
+    ev: dict = {"verdict": record.get("verdict")}
+    if court == CUSTODIAN_MATURITY:
+        ev["highest_present"] = record.get("highest_present")
+        ev["seal_target_level"] = record.get("seal_target_level")
+        ev["seal_target_present"] = _l9_present(record)
+        ev["findings_count"] = len(record.get("findings") or [])
+    elif court == RECEIPT_CLOSURE:
+        totals = record.get("totals") or {}
+        ev["obligations"] = totals.get("obligations")
+        ev["obligations_joined"] = totals.get("obligations_joined")
+        ev["gaps"] = totals.get("gaps")
+        ev["blockers"] = totals.get("blockers")
+        ev["findings_count"] = len(record.get("findings") or [])
+    elif court == CUSTODIAN_RESIDUALS:
+        totals = record.get("totals") or {}
+        ev["residuals"] = totals.get("residuals")
+        ev["un_dispositioned"] = totals.get("un_dispositioned")
+        ev["unknown_intersecting"] = totals.get("unknown_intersecting")
+        ev["findings_count"] = len(record.get("findings") or [])
+    elif court == SUBSTITUTION_WITNESS:
+        totals = record.get("totals") or {}
+        ev["witnesses"] = totals.get("witnesses")
+        ev["functional"] = totals.get("functional")
+        ev["current"] = totals.get("current")
+        ev["findings_count"] = len(record.get("findings") or [])
+    return ev
+
+
+def verify_register_surface(row: dict, registry: dict[str, dict], coverage: dict[str, set[str]],
+                            covered_any: set[str], bounded: dict) -> list[str]:
+    """Every way one register row drifts from the evidence that establishes it.
+
+    A `claimed` row whose court is not registered or no longer passes, or that no longer covers a
+    surface key it names, is a drift. A `bounded` row that names a court, or that a passing court
+    now covers, is a drift. And a row -- either verdict -- whose cited evidence no longer equals the
+    value the artefact shows is a drift; for a `claimed` row the artefact is the court record, for
+    a `bounded` row it is the constitution/limitations view. This is the register's whole subject.
+    """
+    findings: list[str] = []
+    sid = row.get("id", "<unnamed>")
+    verdict = row.get("verdict")
+    keys = row.get("surface_keys") or []
+    court = row.get("court")
+    if verdict not in REGISTER_VERDICTS:
+        findings.append(f"{sid}: verdict {verdict!r} is not one of {list(REGISTER_VERDICTS)}")
+        return findings
+    if verdict == "bounded":
+        if court is not None:
+            findings.append(f"{sid}: a bounded row must name no court (got {court!r})")
+        for key in keys:
+            if key in covered_any:
+                findings.append(
+                    f"{sid}: recorded bounded but a passing court now covers {key!r}")
+        for key, expected in (row.get("evidence") or {}).items():
+            if key not in bounded:
+                findings.append(f"{sid}: evidence key {key!r} has no value in the bounded view")
+            elif bounded[key] != expected:
+                findings.append(
+                    f"{sid}: evidence {key} = {expected!r} but the bounded view shows "
+                    f"{bounded[key]!r}")
+        return findings
+    rec = registry.get(court)
+    if rec is None:
+        findings.append(f"{sid}: cites court {court!r} which is not registered")
+        return findings
+    if rec.get("verdict") != "pass":
+        findings.append(f"{sid}: recorded claimed but its court {court} is {rec.get('verdict')}")
+    not_covered = sorted(k for k in keys if k not in coverage.get(court, set()))
+    if not_covered:
+        findings.append(f"{sid}: recorded claimed but {court} does not cover {not_covered}")
+    evidence = register_evidence(rec)
+    for key, expected in (row.get("evidence") or {}).items():
+        if key not in evidence:
+            findings.append(f"{sid}: evidence key {key!r} has no value in the {court} record")
+        elif evidence[key] != expected:
+            findings.append(
+                f"{sid}: evidence {key} = {expected!r} but {court} shows {evidence[key]!r}")
+    return findings
+
+
+def register_findings(doc: dict, records: list[dict], bounded: dict) -> list[str]:
+    """Every drift finding a register document shows against a court registry and the bounded view.
+
+    A pure function of its three inputs, so the sensitivity control can mutate a copy and re-run it
+    without touching the tree.
+    """
+    registry = {r.get("court"): r for r in records}
+    coverage = {r.get("court"): court_coverage(r) for r in records}
+    covered_any: set[str] = set()
+    for keys in coverage.values():
+        covered_any |= keys
+    findings: list[str] = []
+    for row in doc.get("surfaces") or []:
+        findings += verify_register_surface(row, registry, coverage, covered_any, bounded)
+    return findings
+
+
+def register_sensitivity_control(doc: dict, records: list[dict], bounded: dict) -> dict:
+    """Prove the register can fail: inject a non-passing court and a drifted boundary.
+
+    Two synthetic views are derived beside the real one -- a claimed row's court turned non-passing,
+    and a bounded row's cited evidence moved off the value its artefact shows -- and each must be
+    detected. The control is honest only when the real register shows **zero findings** (specificity)
+    *and* both injections are caught; otherwise a court that cannot tell a passing court from a
+    failed one, or evidence from its absence, would pass vacuously.
+    """
+    base = register_findings(doc, records, bounded)
+    specificity = not base
+
+    claimed = next((r for r in doc.get("surfaces") or [] if r.get("verdict") == "claimed"), None)
+    injected_records = copy.deepcopy(records)
+    for rec in injected_records:
+        if claimed is not None and rec.get("court") == claimed.get("court"):
+            rec["verdict"] = "fail"
+    caught_claimed = any("is fail" in f or "does not cover" in f
+                         for f in register_findings(doc, injected_records, bounded))
+
+    drifted = copy.deepcopy(doc)
+    bounded_row = next(
+        (r for r in drifted.get("surfaces") or []
+         if r.get("verdict") == "bounded" and r.get("evidence")),
+        None,
+    )
+    if bounded_row is not None:
+        key = next(iter(bounded_row["evidence"]))
+        value = bounded_row["evidence"][key]
+        if isinstance(value, bool):
+            bounded_row["evidence"][key] = not value
+        elif isinstance(value, int):
+            bounded_row["evidence"][key] = value + 1
+        else:
+            bounded_row["evidence"][key] = f"{value}-drifted"
+    caught_bounded = any("bounded view shows" in f
+                         for f in register_findings(drifted, records, bounded))
+
+    return {
+        "baseline_findings": len(base),
+        "injected_claimed_court": None if claimed is None else claimed.get("court"),
+        "injected_claimed_findings": len(register_findings(doc, injected_records, bounded)),
+        "injected_bounded_row": None if bounded_row is None else bounded_row.get("id"),
+        "injected_bounded_findings": len(register_findings(drifted, records, bounded)),
+        "specificity_holds": specificity,
+        "caught_claimed_court": caught_claimed,
+        "caught_bounded_drift": caught_bounded,
+        "honest": bool(specificity and caught_claimed and caught_bounded),
+    }
+
+
+def register_court(name: str, records: list[dict]) -> dict:
+    """`CUSTODIAN-BOUNDARY-REGISTER`: bind the authored register to the live courts registry.
+
+    Reads the four already-computed probe-court records, the authored register and the
+    constitution/limitations artefacts, re-derives each row's expected evidence and reports every
+    drift. A non-empty `findings` or `problems` is `fail`.
+    """
+    if not CUSTODIAN_BOUNDARY_REGISTER.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "register-missing",
+                "frf_declarable": False,
+                "frf_exclusion": "the register court re-reads the courts registry; it stages no "
+                                  "probe pair",
+                "detail": rel(CUSTODIAN_BOUNDARY_REGISTER)}
+    doc = json.loads(CUSTODIAN_BOUNDARY_REGISTER.read_text(encoding="utf-8"))
+    surfaces = doc.get("surfaces") or []
+    bounded = bounded_evidence()
+    findings = register_findings(doc, records, bounded)
+    problems: list[str] = []
+    if doc.get("schema") != CUSTODIAN_BOUNDARY_REGISTER_SCHEMA:
+        problems.append(
+            f"schema {doc.get('schema')!r} != {CUSTODIAN_BOUNDARY_REGISTER_SCHEMA!r}")
+    coverage = {r.get("court"): court_coverage(r) for r in records}
+    cited = {r.get("court") for r in surfaces if r.get("verdict") == "claimed"}
+    for court, keys in coverage.items():
+        if keys and court not in cited:
+            problems.append(
+                f"court {court} passes and covers {len(keys)} surface(s) but no claimed "
+                f"register row cites it")
+    counts = {verdict: 0 for verdict in REGISTER_VERDICTS}
+    for row in surfaces:
+        if row.get("verdict") in counts:
+            counts[row["verdict"]] += 1
+    declared = doc.get("verdicts") or {}
+    for verdict in REGISTER_VERDICTS:
+        if declared.get(verdict) != counts[verdict]:
+            problems.append(
+                f"declared {verdict} count {declared.get(verdict)!r} but the register has "
+                f"{counts[verdict]} row(s)")
+    if declared.get("total") != len(surfaces):
+        problems.append(f"declared total {declared.get('total')!r} but the register has "
+                        f"{len(surfaces)} row(s)")
+    control = register_sensitivity_control(doc, records, bounded)
+    verdict = "pass" if (not problems and not findings and control["honest"]) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it re-reads the live courts registry (the four custodian courts "
+            "above) and the authored register artifacts/phase20/custodian-boundary-register.json, "
+            "and fails the stratum if any recorded claimed/bounded verdict, surface key or cited "
+            "evidence value has drifted from what the courts and the constitution/limitations "
+            "artefacts show (docs/PHASE-20-SUBPHASES.md section 3.6). A claimed row whose court no "
+            "longer passes or no longer covers the surface, a bounded row a passing court now "
+            "covers, and a bounded row whose cited evidence no longer matches docs/NON_CLAIMS.md, "
+            "docs/FIPS_CLAIMS.md, docs/UNSAFE.md or the unsafe-footprint growth ceiling are all "
+            "findings. It is the stratum's own answer to docs/NON_CLAIMS.md: no FIPS validation, "
+            "no universal parity from finite evidence, and memory safety measured rather than "
+            "established."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the register re-reads the courts registry and the constitution/limitations artefacts "
+            "and stages no artifacts/phase20/probes/ pair, so it takes no transcript to diff and "
+            "carries no FRF declaration"
+        ),
+        "register": {
+            "path": rel(CUSTODIAN_BOUNDARY_REGISTER),
+            "schema": doc.get("schema"),
+            "sha256": sha256_file(CUSTODIAN_BOUNDARY_REGISTER),
+            "counts": counts,
+            "total": len(surfaces),
+        },
+        "surfaces": [
+            {"id": r.get("id"), "verdict": r.get("verdict"), "court": r.get("court"),
+             "surface_keys": r.get("surface_keys") or []}
+            for r in surfaces
+        ],
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -2738,9 +3091,11 @@ def main(argv: list[str]) -> int:
 
     records: list[dict] = []
     for name, filename in COURTS:
-        # 20.1's maturity court, 20.2's receipt-closure court, 20.3's residual-disposition court and
-        # 20.4's substitution-witness court stage no probe: their subjects are committed evidence,
-        # so they are computed here rather than read back from disk, and no digest cycle forms.
+        # 20.1's maturity court, 20.2's receipt-closure court, 20.3's residual-disposition court,
+        # 20.4's substitution-witness court and 20.5's boundary register stage no probe: their
+        # subjects are committed evidence, so they are computed here rather than read back from
+        # disk, and no digest cycle forms. The register is handed the four records computed above it
+        # in this one run, so it re-reads the claimed side without the registry embedding itself.
         # Phase 20 owns no export, so no differential probe over a symbol set is its evidence.
         if name == CUSTODIAN_MATURITY:
             records.append(custodian_maturity_court(name))
@@ -2753,6 +3108,9 @@ def main(argv: list[str]) -> int:
             continue
         if name == SUBSTITUTION_WITNESS:
             records.append(substitution_witness_court(name))
+            continue
+        if name == BOUNDARY_REGISTER:
+            records.append(register_court(name, records))
             continue
         src = REPO_ROOT / "courts" / "phase20" / str(filename)
         records.append({"court": name, "verdict": "fail", "stage": "probe-missing",
@@ -2819,7 +3177,19 @@ def main(argv: list[str]) -> int:
             "re-running the harnesses, and says exactly that in its `reestablishment` block; a "
             "stale or non-functional witness would be a finding and a `fail`, and synthetic views "
             "with a stale witness and with non-functional downstream and ABI witnesses are all "
-            "detected. The other court (`CUSTODIAN-BOUNDARY-REGISTER` 20.5) is named and `pending`. "
+            "detected. `CUSTODIAN-BOUNDARY-REGISTER` is 20.5's court: it stages no probe and binds "
+            "the authored register artifacts/phase20/custodian-boundary-register.json, which "
+            "records, per surface, whether it is `claimed` (a passing court covers it) or `bounded` "
+            "(explicitly outside this stratum). It re-reads the four custodian courts' records (the "
+            "claimed side) and the constitution/limitations artefacts -- docs/NON_CLAIMS.md, "
+            "docs/FIPS_CLAIMS.md, docs/UNSAFE.md and the unsafe-footprint growth ceiling (the "
+            "bounded side) -- and fails the stratum if a recorded boundary has drifted from its "
+            "evidence. The three load-bearing non-claims are carried as bounded rows: no FIPS "
+            "validation, no universal parity from finite evidence, and memory safety measured "
+            "rather than established. On the current tree the register records zero findings "
+            "(specificity), and a synthetic view with a claimed row's court turned non-passing and "
+            "one with a bounded row's cited evidence drifted are both detected. This is the last of "
+            "the five units, so no court is `pending`. "
             "This stratum owns no "
             "exported symbol, so no differential probe over a symbol set is its evidence: the "
             "subject is the custodian claim over a finished implementation, with no FIPS "
@@ -2856,6 +3226,10 @@ def main(argv: list[str]) -> int:
         InputRef(name="surface-reconciliation", path=SURFACE_RECONCILIATION),
         InputRef(name="hostile-boundary-register", path=HOSTILE_BOUNDARY_REGISTER),
         InputRef(name="performance-boundary-register", path=PERFORMANCE_BOUNDARY_REGISTER),
+        InputRef(name="custodian-boundary-register", path=CUSTODIAN_BOUNDARY_REGISTER),
+        InputRef(name="non-claims", path=NON_CLAIMS_DOC),
+        InputRef(name="fips-claims", path=FIPS_CLAIMS_DOC),
+        InputRef(name="unsafe-policy", path=UNSAFE_DOC),
         InputRef(name="asan-closure", path=ASAN_CLOSURE),
         InputRef(name="miri-tcb", path=MIRI_TCB),
         InputRef(name="unsafe-footprint", path=UNSAFE_FOOTPRINT),
@@ -2919,6 +3293,17 @@ def main(argv: list[str]) -> int:
                   f"injected-stale->{c['injected_stale_findings']} finding(s) "
                   f"injected-nonfunctional->{c['injected_nonfunctional_findings']} finding(s) "
                   f"injected-abi-fail->{c['injected_abi_fail_findings']} finding(s))")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == BOUNDARY_REGISTER:
+            c = r["control"]
+            counts = r["register"]["counts"]
+            print(f"  {r['court']:<32} pass   (no probe, register: "
+                  f"{counts['claimed']} claimed + {counts['bounded']} bounded = "
+                  f"{r['register']['total']} surface(s), {len(r['findings'])} finding(s); "
+                  f"control honest={c['honest']} specificity={c['specificity_holds']} "
+                  f"injected-claimed-court->{c['injected_claimed_findings']} finding(s) "
+                  f"injected-bounded-drift->{c['injected_bounded_findings']} finding(s))")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

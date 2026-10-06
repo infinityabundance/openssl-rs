@@ -56,10 +56,10 @@
         "closure": "the `CUSTODIAN-BOUNDARY-REGISTER` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "CUSTODIAN-BOUNDARY-REGISTER is pending",
+        "measurement_state": "complete",
+        "observation": "CUSTODIAN-BOUNDARY-REGISTER is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase20/COURTS.json",
         "unit": "custodian-boundary-register",
         "what": "the register that records what is claimed, what is bounded, and the explicit non-claims (no FIPS validation, no universal parity from finite evidence, memory safety measured-not-established), and that fails the stratum if a recorded boundary drifts from its evidence"
@@ -70,8 +70,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 4,
-      "open_in_this_stratum": 1,
+      "implemented": 5,
+      "open_in_this_stratum": 0,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -80,7 +80,7 @@
     "deferrals": [],
     "deferred": [],
     "implemented": [],
-    "note": "`open` is the only list that blocks this stratum, and its count is over the custodian seal contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. Phase 20 owns no provider registration row and no export: it activates no provider and adds no library surface, because it compiles the custodian claim over the implementation the strata before it completed. Its five contract units are the custodian seal contract docs/PHASE-20-SUBPHASES.md section 1 names -- the maturity derivation, the receipt closure, the residual disposition, the substitution witness and the custodian-boundary register -- and its `counts` block is the live record of which of them are implemented: 20.1 landed the maturity derivation, 20.2 the receipt closure, 20.3 the residual disposition and 20.4 the substitution witness, so `custodian-maturity`, `receipt-closure`, `custodian-residuals` and `substitution-witness` are implemented while the custodian-boundary register is open. Nothing here is a claim stronger than docs/CUSTODIAN_CONTRACT.md section 6's: a passing custodian court is an instrument and a bounded measurement, not a universal-parity claim, and there is no FIPS-validation claim, no claim of universal parity from finite evidence, and no claim that memory safety is established. Each contract unit records its two axes separately: `measurement_state` says the instrument completed, and `property_status`/`findings` say what is claimed about a custodian property. The `custodian-maturity` unit's property is `NOT_CLAIMED` with the gap between the evidence-supported level and the level the seal might name recorded as a finding, so a passing `RT-CUSTODIAN-MATURITY` is an instrument plus a derived measurement and must never be read as 'L9 custodian seal achieved'.",
+    "note": "`open` is the only list that blocks this stratum, and its count is over the custodian seal contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. Phase 20 owns no provider registration row and no export: it activates no provider and adds no library surface, because it compiles the custodian claim over the implementation the strata before it completed. Its five contract units are the custodian seal contract docs/PHASE-20-SUBPHASES.md section 1 names -- the maturity derivation, the receipt closure, the residual disposition, the substitution witness and the custodian-boundary register -- and its `counts` block is the live record of which of them are implemented: 20.1 landed the maturity derivation, 20.2 the receipt closure, 20.3 the residual disposition, 20.4 the substitution witness and 20.5 the custodian-boundary register, so all five contract units are implemented and `open_in_this_stratum` is zero; the stratum stays `in-progress` until 20.6's seal lands, because Phase 20 owns no FRF-declarable court and its seal document is the required evidence it still owes. Nothing here is a claim stronger than docs/CUSTODIAN_CONTRACT.md section 6's: a passing custodian court is an instrument and a bounded measurement, not a universal-parity claim, and there is no FIPS-validation claim, no claim of universal parity from finite evidence, and no claim that memory safety is established. Each contract unit records its two axes separately: `measurement_state` says the instrument completed, and `property_status`/`findings` say what is claimed about a custodian property. The `custodian-maturity` unit's property is `NOT_CLAIMED` with the gap between the evidence-supported level and the level the seal might name recorded as a finding, so a passing `RT-CUSTODIAN-MATURITY` is an instrument plus a derived measurement and must never be read as 'L9 custodian seal achieved'.",
     "open": [],
     "provider_rows": [],
     "rule": "this stratum's working set is not a set of exported symbols: Phase 20 owns no export, no provider registration row and no prerequisite deferral, so its working set is exactly the custodian seal contract units docs/PHASE-20-SUBPHASES.md names, each measured by the Phase-20 courts registry. Every row is read from those atlases; the ledger types none of them, and `main` fails closed if the ownership atlas assigns this stratum an export, the provider census assigns it a row, or the prerequisite plane assigns it a deferral or unit",
@@ -112,7 +112,7 @@
     {
       "name": "phase-20-courts",
       "path": "artifacts/phase20/COURTS.json",
-      "sha256": "8f39ad78a0a4d186e7d8f00b880d085399c3255df11c0b93772edb97e44d79e5"
+      "sha256": "082b27b767d509c91fac433ee7bf5384b9baeb60ac36ee385fb059c1f310d36a"
     }
   ],
   "kind": "phase20-obligations",

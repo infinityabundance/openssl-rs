@@ -1136,6 +1136,12 @@ PHASE20_OBLIGATIONS = "forensics/phase20-obligations.json"
 PHASE20_MODULES = [
     "docs/PHASE-20-SUBPHASES.md",
     "forensics/tools/phase20_obligations.py",
+    # Phase 20 owns no FRF-declarable court -- its five custodian courts stage no probe and validate
+    # committed evidence -- so the FRF/Gemel chain rule is correctly vacuous for it and cannot be the
+    # stratum's closing evidence. Its seal document is, exactly as it is for Phases 3 through 7: the
+    # stratum stays `in-progress` until 20.6 writes this file, so a passing register at 20.5 cannot
+    # be read as the finished custodian seal.
+    "docs/PHASE-20-CUSTODIAN-SEAL.md",
 ]
 
 # Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
@@ -1501,8 +1507,23 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "Phase-17 driver has no cheap verify/currency mode, so the court "
                             "re-derives currency (candidate 0.0.24) and functional status from the "
                             "machine-owned records rather than re-running the harnesses, and "
-                            "records zero findings. `CUSTODIAN-BOUNDARY-REGISTER` is "
-                            "`pending`. A passing court is an **instrument**, not a "
+                            "records zero findings -- and 20.5's `CUSTODIAN-BOUNDARY-REGISTER` is "
+                            "registered and passing: it binds the authored register "
+                            "artifacts/phase20/custodian-boundary-register.json, recording, per "
+                            "surface, whether it is `claimed` (a passing court covers it) or "
+                            "`bounded` (explicitly outside this stratum). It re-reads the four "
+                            "custodian courts' records and the constitution/limitations artefacts "
+                            "-- `docs/NON_CLAIMS.md`, `docs/FIPS_CLAIMS.md`, `docs/UNSAFE.md` and the "
+                            "unsafe-footprint growth ceiling -- and fails the stratum if a recorded "
+                            "boundary has drifted from its evidence, carrying the three "
+                            "load-bearing non-claims as bounded rows: no FIPS validation, no "
+                            "universal parity from finite evidence, and memory safety measured "
+                            "rather than established. So all five contract units are `implemented` "
+                            "and `open_in_this_stratum` is zero. The stratum stays `in-progress` "
+                            "until 20.6's seal lands: it owns no FRF-declarable court, so the "
+                            "FRF/Gemel chain rule is correctly vacuous for it and its seal document "
+                            "is the required evidence it still owes, exactly as for Phases 3 "
+                            "through 7. A passing court is an **instrument**, not a "
                             "property claim: the property it names may still carry findings, so "
                             "`measurement_state` says the instrument completed while "
                             "`property_status`/`findings` say what is claimed. The stratum "
