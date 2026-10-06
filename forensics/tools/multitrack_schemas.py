@@ -50,6 +50,7 @@ SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import argparse
+import copy
 import re
 import sys
 from dataclasses import dataclass
@@ -185,6 +186,18 @@ POPULATION_SCOPES: tuple[str, ...] = ("final-release-lineage", "out-of-populatio
 POPULATION_EPOCHS: tuple[str, ...] = (
     "pre-1.0", "1.0.x", "1.1.x", "3.x", "3.6+/4.x", "out-of-scope",
 )
+
+# The downstream-multitrack record (added by 23.11). It is one **unmodified real downstream
+# consumer** exercised against one **built authority**: the consumer and its version, the authority
+# it was built against (release plus the build profile and platform the authority node records),
+# the build result, the workload it ran and the observation that workload produced. `outcome` is
+# `passed` only when the consumer genuinely built and ran against that authority; `not_run` is an
+# honest unavailability (a pair whose consumer cannot be built against the epoch, recorded with the
+# reason and the raw configure evidence) and is never a pass. `role` keeps the **primary** consumer
+# -- the one contemporary with the epoch that covers it -- apart from a **maintained** consumer
+# attempted against an epoch it does not reach.
+DOWNSTREAM_ROLES: tuple[str, ...] = ("primary", "maintained")
+DOWNSTREAM_OUTCOMES: tuple[str, ...] = ("passed", "not_run", "failed")
 
 # The ABI/history façade vocabulary (added by 23.7). A façade record says which *kind* of
 # compatibility object it is, and each kind carries its own closed vocabulary. The public-layout
@@ -683,6 +696,66 @@ def validate_population_record(rec: dict) -> list[str]:
     return problems
 
 
+def validate_downstream_epoch(rec: dict) -> list[str]:
+    """A downstream-multitrack record: one unmodified consumer against one built authority.
+
+    The load-bearing refusals are the ones the brief fixes (docs/PHASE-23-MULTITRACK-SUBPHASES.md
+    row 23.11, brief section 40): a `passed` consumer must carry a genuine build and a genuine run
+    -- a claim of a pass with `build.ok` or `run.ok` false is refused, so a consumer that was not
+    actually built and exercised is never read as passing -- and a `not_run` / `failed` record must
+    carry the reason it did not run and must not claim a passing build or run. Every record names
+    the authority (release, build profile and platform), so a result is never relayed across
+    authorities, and every record names the consumer and its version, so a pass names what actually
+    consumed the authority.
+    """
+    fields = ("trial_id", "epoch", "role", "consumer", "consumer_version", "source",
+              "authority_id", "release_id", "authority", "outcome", "build", "run",
+              "observation", "reason", "evidence")
+    problems = _missing(rec, fields)
+    for f in ("trial_id", "consumer", "consumer_version", "authority_id", "release_id"):
+        problems += _nonempty(rec, f)
+    problems += _enum(rec, "epoch", POPULATION_EPOCHS)
+    problems += _enum(rec, "role", DOWNSTREAM_ROLES)
+    problems += _enum(rec, "outcome", DOWNSTREAM_OUTCOMES)
+    if "evidence" in rec and not rec["evidence"]:
+        problems.append("evidence must be non-empty")
+    authority = rec.get("authority")
+    if "authority" in rec and not isinstance(authority, dict):
+        problems.append("authority must be an object naming the release, build profile and platform")
+    elif isinstance(authority, dict):
+        for f in ("authority_id", "release_id", "build_profile", "platform"):
+            if not authority.get(f):
+                problems.append(f"authority.{f} must be present and non-empty")
+    build = rec.get("build")
+    run = rec.get("run")
+    if "build" in rec and not isinstance(build, dict):
+        problems.append("build must be an object")
+    if "run" in rec and not isinstance(run, dict):
+        problems.append("run must be an object")
+    outcome = rec.get("outcome")
+    if outcome == "passed":
+        if isinstance(build, dict) and build.get("ok") is not True:
+            problems.append(
+                "a passing consumer must have build.ok true: a pass is the built artifact, not "
+                "the claim"
+            )
+        if isinstance(run, dict) and run.get("ok") is not True:
+            problems.append(
+                "a passing consumer must have run.ok true: a built consumer that ran no workload "
+                "is not a pass"
+            )
+        if not rec.get("observation"):
+            problems.append("a passing consumer must state the observation its workload made")
+    elif outcome in ("not_run", "failed"):
+        if not rec.get("reason"):
+            problems.append(f"an {outcome} record must carry the reason it did not pass")
+        if isinstance(build, dict) and build.get("ok") is True:
+            problems.append(f"an {outcome} record must not claim a passing build")
+        if isinstance(run, dict) and run.get("ok") is True:
+            problems.append(f"an {outcome} record must not claim a passing run")
+    return problems
+
+
 def validate_delta_receipt(rec: dict) -> list[str]:
     """A delta-engine record: the added / removed / changed surface between two nodes."""
     fields = ("receipt_id", "from_id", "to_id", "dimension", "direction", "added", "removed",
@@ -987,6 +1060,9 @@ REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
     "semantic_observation": ("observation_id", "vocabulary", "dimension", "authority_a",
                              "authority_b", "observed_a", "observed_b", "agreement",
                              "classification", "release_delta", "evidence"),
+    "downstream_epoch": ("trial_id", "epoch", "role", "consumer", "consumer_version", "source",
+                         "authority_id", "release_id", "authority", "outcome", "build", "run",
+                         "observation", "reason", "evidence"),
 }
 
 SCHEMAS = {
@@ -1005,6 +1081,7 @@ SCHEMAS = {
     "parameterization_receipt": validate_parameterization_receipt,
     "abi_facade": validate_abi_facade,
     "semantic_observation": validate_semantic_observation,
+    "downstream_epoch": validate_downstream_epoch,
 }
 
 
@@ -1223,13 +1300,40 @@ _GOOD: dict[str, dict] = {
                            "entity_id": "macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS"},
         "evidence": ["forensics/multitrack/semantic-courts.json#raw_transcripts"],
     },
+    "downstream_epoch": {
+        "trial_id": "pre-1.0--curl-7.46.0",
+        "epoch": "pre-1.0",
+        "role": "primary",
+        "consumer": "curl",
+        "consumer_version": "7.46.0",
+        "source": {"url": "https://curl.se/download/curl-7.46.0.tar.gz", "sha256": _DIGEST,
+                   "artifact": "curl-7.46.0.tar.gz"},
+        "authority_id": "openssl-0.9.8zh-historical",
+        "release_id": "openssl-0.9.8zh",
+        "authority": {"authority_id": "openssl-0.9.8zh-historical",
+                      "release_id": "openssl-0.9.8zh",
+                      "build_profile": "linux-x86_64-historical-shared",
+                      "platform": "linux", "arch": "x86_64", "venue": "openssl-rs-historical"},
+        "outcome": "passed",
+        "build": {"ok": True, "configure_argv": ["./configure", "--with-ssl=..."],
+                  "configure_exit": 0, "make_exit": 0,
+                  "linked": ["libssl.so.0.9.8", "libcrypto.so.0.9.8"],
+                  "version_line": "curl 7.46.0 (x86_64-pc-linux-gnu) libcurl/7.46.0 "
+                                  "OpenSSL/0.9.8zh"},
+        "run": {"ok": True, "http_code": 200, "tls": "TLSv1.2", "exit_code": 0,
+                "server": "authority bin/openssl s_server",
+                "command": "curl -skv -m 15 -o /dev/null https://127.0.0.1:PORT/"},
+        "observation": "curl 7.46.0 linked the OpenSSL 0.9.8zh authority and completed a "
+                       "TLSv1.2 HTTPS GET (HTTP 200).",
+        "reason": "built unmodified against the authority's headers and libraries and run",
+        "evidence": ["forensics/multitrack/downstream-multitrack.json#records/"
+                     "pre-1.0--curl-7.46.0/raw"],
+    },
 }
 
 
 def _bad(kind: str) -> dict:
     """A documented-bad record for each kind: the mutation and why it must be refused."""
-    import copy
-
     rec = copy.deepcopy(_GOOD[kind])
     if kind == "release_node":
         rec["version_scheme"] = SCHEME_3_0_PLUS  # contradicts the pre-3.0 display_version
@@ -1270,6 +1374,10 @@ def _bad(kind: str) -> dict:
     elif kind == "semantic_observation":
         # a divergent reading classified as agreement would let a difference be read as sameness
         rec["classification"] = "agreed"
+    elif kind == "downstream_epoch":
+        # a pass claimed with no built artifact is exactly the false pass brief section 40 refuses:
+        # the consumer was never built against the authority, so `passed` is a claim, not evidence
+        rec["build"]["ok"] = False
     else:
         raise AssertionError(f"no bad case for {kind}")
     return rec
@@ -1397,6 +1505,20 @@ def self_test() -> int:
     no_adapter = {k: v for k, v in _GOOD["abi_facade"].items() if k != "adapter"}
     if not validate_abi_facade(no_adapter):
         failures.append("validate_abi_facade accepted a façade with no canonical adapter")
+
+    # A downstream pass is the built artifact and the run, not the claim: the validator must refuse
+    # a `passed` consumer with no build and a `not_run` consumer with no reason.
+    no_build = copy.deepcopy(_GOOD["downstream_epoch"])
+    no_build["build"]["ok"] = False
+    if not validate_downstream_epoch(no_build):
+        failures.append("validate_downstream_epoch accepted a passed consumer with build.ok false")
+    no_reason = copy.deepcopy(_GOOD["downstream_epoch"])
+    no_reason["outcome"] = "not_run"
+    no_reason["reason"] = ""
+    no_reason["build"]["ok"] = False
+    no_reason["run"]["ok"] = False
+    if not validate_downstream_epoch(no_reason):
+        failures.append("validate_downstream_epoch accepted a not_run consumer with no reason")
 
     # --- every validator, both directions -----------------------------------------------
     for kind in sorted(SCHEMAS):
