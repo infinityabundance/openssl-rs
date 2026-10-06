@@ -434,6 +434,49 @@ changed (`macro_value`) and twenty exported symbols whose machine-code size chan
 nine dimensions the committed atlases carry no structured evidence for are recorded absent with
 their reason.
 
+**4.10 The ABI/history façades establish one small historical generation, and name the boundary
+(23.7, D540).** 23.7 lands the compatibility-policy layer as `src/compat/` and the historical
+façade plane as `forensics/multitrack/abi-facades.json` (record kind `abi_facade`, added to
+`forensics/tools/multitrack_schemas.py`), and its court `RT-ABI-HISTORY-FACADES` checks it against
+the authority's own evidence rather than restating it. Four measured corrections:
+
+* **The generation proved is 0.9.8zh, and the 1.0.x epoch is recorded not established.** The
+  façade layouts are measured by compiling a probe against the acquired 0.9.8zh release's own
+  configured headers in the historical venue (`gen_abi_facades.py --measure`), and each record
+  cites its header and that header's SHA-256 in the committed `SOURCE_MANIFEST.0.9.8zh.json`. No
+  1.0.x authority is admitted with an acquired source tree in this subphase, so the 1.0.x layouts
+  and the pre-1.1.0 aggregates the subphase does not name (`BIO`, `RSA`, `X509`, `SSL`, ...) are
+  recorded in the plane's `not_established` with their reason rather than inferred from a sibling.
+  The court fails if the boundary is not named.
+* **The public-layout façade is the pre-1.1.0 side of a real opacity transition.** In 0.9.8zh
+  `struct env_md_ctx_st` and `struct hmac_ctx_st` are defined in full in installed headers; in the
+  3.6.4 production authority both are opaque (`complete: false`, forward-declared in `types.h`).
+  The court requires the production authority to mark each façade's canonical tag opaque, and
+  records the cross-era tag rename (`env_md_ctx_st` in 0.9.8zh, `evp_md_ctx_st` from 1.1.0).
+  `HMAC_CTX` embeds three `EVP_MD_CTX` by value at 0.9.8zh — which is exactly why a blind cast of
+  the old representation to the canonical `EvpMdCtx`/`HmacCtx` is impossible, and why the adapters
+  are explicit field copies.
+* **The prototype wrappers are the era-specific declaration, not a per-version fork.** A C symbol
+  has no runtime signature, so the same exported name carries a different declaration across eras
+  (`HMAC_Init_ex`/`HMAC_Update`/`HMAC_Final` return `void` in 0.9.8zh and `int` from 1.1.0;
+  `EVP_MD_CTX_init`/`_create`/`_destroy` are functions in 0.9.8zh and macros in 3.6.4;
+  `CRYPTO_set_locking_callback` is a function in 0.9.8zh and a no-op macro in 3.6.4). Each record
+  names both declarations and the safe wrapper over the shared implementation; the court requires
+  the eras to differ and the canonical declaration to be the production atlas's own. The
+  ENGINE -> Provider -> no-ENGINE architecture and the init/thread epochs (explicit global init and
+  application locking callbacks for 0.9.8zh; automatic init, `OPENSSL_cleanup` and internal thread
+  support for 3.6.4) are cross-checked against the historical plane census and the production
+  atlas.
+* **The compatibility selection is a build parameter, and the default compiles no façade.**
+  `build.rs` reads `OPENSSL_RS_COMPAT`, resolves an unset value through the committed alias
+  `forensics/multitrack/default-authority.json` (never the catalogue's newest release), refuses any
+  other value, and sets the `openssl_rs_compat_facades` cfg only for the historical selection. So
+  the default 3.6.4 production candidate compiles none of the façades, and there is no Cargo feature
+  per authority (D534). The court re-derives the generated `src/compat/layout_generated.rs` — the
+  `#[repr(C)]` structs and their compile-time `sizeof`/`alignof`/`offsetof`/field-width assertions —
+  from the committed measurement and fails if it drifts, and it checks that every façade module is
+  cfg-gated behind the non-default selection.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 21's process unchanged: a subphase lands its code, its court

@@ -271,6 +271,7 @@
       "src/cms/cms_kem.rs",
       "src/cms/cms_rsa.rs",
       "src/cms/mod.rs",
+      "src/compat/layout_generated.rs",
       "src/context/dispatch.rs",
       "src/crmf/mod.rs",
       "src/ct/ct_sct_ctx.rs",

@@ -16,11 +16,12 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**Six courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+**Seven courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
 lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, 23.3 lands
 `RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court, 23.4 lands `RT-LINEAGE-EDGES`, the
-typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage court, and 23.6 lands
-`RT-DELTA-ENGINE`, the semantic compatibility-delta court; the other eleven courts are named in
+typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage court, 23.6 lands
+`RT-DELTA-ENGINE`, the semantic compatibility-delta court, and 23.7 lands
+`RT-ABI-HISTORY-FACADES`, the ABI/history-façade court; the other ten courts are named in
 `PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
 reproduced, so a court silently dropped is a finding rather than a smaller green run. This is
@@ -53,7 +54,7 @@ The seventeen courts, and the subphase that lands each
   * `MULTITRACK-SEAL` -- 23.17, the full matrix, the FRF/Gemel chain and the seal.
 
 Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZATION`,
-`RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE` and `RT-DELTA-ENGINE` is
+`RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE`, `RT-DELTA-ENGINE` and `RT-ABI-HISTORY-FACADES` is
 `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
@@ -109,6 +110,10 @@ import entity_lineage  # noqa: E402
 # atlases and entity lineage through the same engine the artefact was produced by, and composes a
 # path delta from the edge deltas the same way.
 import authority_delta  # noqa: E402
+# The Phase-23.7 ABI/history-façade generator, imported so the court re-renders the generated
+# `src/compat/layout_generated.rs` from the committed measurement through the same code path the
+# file was produced by (never a second, drifting predicate), and re-checks its provenance.
+import gen_abi_facades  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase23" / "COURTS.json"
 GENERATOR = "forensics/tools/phase23_courts.py"
@@ -139,6 +144,17 @@ PARAM_RECEIPT = REPO_ROOT / "forensics" / "atlas" / "parameterization-receipt.js
 DEFAULT_AUTHORITY_ALIAS = REPO_ROOT / "forensics" / "multitrack" / "default-authority.json"
 PARAM_HISTORICAL = "openssl-0.9.8zh-historical"
 PRODUCTION_ATLAS = REPO_ROOT / "forensics" / "atlas" / PRODUCTION_AUTHORITY
+
+# 23.7's subject: the ABI/history façade plane, the generated repr(C) assertions it materialises,
+# and the compat sources whose cfg gating keeps the default build clean. The historical plane
+# census and the production atlas are the epoch evidence the court cross-checks against.
+ABI_FACADES = REPO_ROOT / "forensics" / "multitrack" / "abi-facades.json"
+ABI_FACADE_RUST = REPO_ROOT / "src" / "compat" / "layout_generated.rs"
+COMPAT_MOD = REPO_ROOT / "src" / "compat" / "mod.rs"
+COMPAT_POLICY = REPO_ROOT / "src" / "compat" / "policy.rs"
+BUILD_SCRIPT = REPO_ROOT / "build.rs"
+HISTORICAL_ATLAS = REPO_ROOT / "forensics" / "atlas" / PARAM_HISTORICAL
+HISTORICAL_MANIFEST = REPO_ROOT / "forensics" / "authorities" / "SOURCE_MANIFEST.0.9.8zh.json"
 # The planes the brief names as the decisive absences for an older authority, cross-checked in the
 # court against the committed manifest independently of the generator's own predicates.
 KEY_ABSENCE_MARKERS = {
@@ -157,6 +173,7 @@ ATLAS_PARAMETERIZATION_COURT = "RT-ATLAS-PARAMETERIZATION"
 LINEAGE_EDGES_COURT = "RT-LINEAGE-EDGES"
 ENTITY_LINEAGE_COURT = "RT-ENTITY-LINEAGE"
 DELTA_ENGINE_COURT = "RT-DELTA-ENGINE"
+ABI_HISTORY_FACADES_COURT = "RT-ABI-HISTORY-FACADES"
 ROOT_RELEASE = "openssl-0.9.1c"
 CANONICAL_KINDS = ("branch_fork", "chronological_successor", "maintenance_successor")
 PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
@@ -184,12 +201,12 @@ COURTS: list[tuple[str, str]] = [
     (LINEAGE_EDGES_COURT, "_lineage_edges_court"),
     (ENTITY_LINEAGE_COURT, "_entity_lineage_court"),
     (DELTA_ENGINE_COURT, "_delta_engine_court"),
+    (ABI_HISTORY_FACADES_COURT, "_abi_history_facades_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-ABI-HISTORY-FACADES": "23.7 -- the ABI / history façades",
     "RT-SEMANTIC-COURTS": "23.8 -- the semantic multitrack courts",
     "RT-COMPATIBILITY-VIEWS": "23.9 -- the compatibility views",
     "RT-HISTORICAL-POPULATION": "23.10 -- the historical population",
@@ -2198,6 +2215,322 @@ def delta_engine_sensitivity_control(bodies: list[tuple[Path, dict]]) -> dict:
     }
 
 
+def _atlas_records(path: Path, key: str = "records") -> list[dict]:
+    """The records list of a committed atlas document, or an empty list."""
+    if not path.is_file():
+        return []
+    return (read_json(path) or {}).get(key) or []
+
+
+def _abi_facade_provenance(rec: dict, manifest: dict[str, str]) -> list[str]:
+    """The provenance links of one public-layout record against the committed source manifest."""
+    fid = rec.get("facade_id")
+    out: list[str] = []
+    header = rec.get("header")
+    if header not in manifest:
+        out.append(f"{fid}: header {header!r} is not in the committed source manifest")
+    elif manifest[header] != rec.get("header_sha256"):
+        out.append(f"{fid}: the cited header hash does not match the committed source manifest")
+    return out
+
+
+def abi_facade_findings(body: dict) -> list[str]:
+    """Every way the committed ABI/history façade plane fails this court's subject.
+
+    A pure function of the committed plane, so the sensitivity control mutates one and re-checks.
+    It establishes that every record is schema-valid; that every record names an **explicit**
+    adapter and never a blind cast; that every historical layout's header resolves in the committed
+    source manifest with the measured hash; that a historical façade is the transparent pre-1.1.0
+    layout its canonical counterpart does **not** define (the opacity transition); that the
+    canonical prototype declaration is the production atlas's own; that the ENGINE/Provider and
+    init/thread epochs agree with the plane census and the production atlas; that the generated
+    `repr(C)` assertions are exactly what the measurement yields; and that the default build is
+    unaffected (the façades are cfg-gated behind the non-default compatibility selection, and the
+    production surface carries no façade name).
+    """
+    findings: list[str] = []
+    facades = body.get("facades") or []
+    if not facades:
+        findings.append("the ABI/history façade plane carries no record")
+
+    for rec in facades:
+        fid = rec.get("facade_id")
+        findings += [f"{fid}: {p}" for p in multitrack_schemas.validate_abi_facade(rec)]
+        adapter = str(rec.get("adapter") or "")
+        if not adapter or "transmute" in adapter or adapter.strip() in ("cast", "as"):
+            findings.append(
+                f"{fid}: adapter {adapter!r} is a blind cast, not an explicit adapter over the "
+                f"shared implementation"
+            )
+
+    # Provenance and the opacity transition, against the historical manifest and the production
+    # atlas. A historical layout is transparent; the production authority must mark the same tag
+    # opaque, or the record is not a transition this stratum can establish.
+    manifest: dict[str, str] = {}
+    if HISTORICAL_MANIFEST.is_file():
+        manifest = {f["path"]: f["sha256"] for f in read_json(HISTORICAL_MANIFEST)["files"]}
+    else:
+        findings.append(f"the historical source manifest {rel(HISTORICAL_MANIFEST)} is absent")
+    production_structs = {r["name"]: r for r in _atlas_records(PRODUCTION_ATLAS / "structs.json")}
+    layouts = [r for r in facades if r.get("facade_kind") == "public_layout"]
+    for rec in layouts:
+        fid = rec.get("facade_id")
+        findings += _abi_facade_provenance(rec, manifest)
+        if rec.get("public_layout_epoch") != "transparent_pre_1_1_0":
+            findings.append(f"{fid}: a historical façade must be the transparent pre-1.1.0 layout")
+        if rec.get("canonical_public_layout_epoch") != "opaque_post_1_1_0":
+            findings.append(f"{fid}: the canonical type must be the opaque post-1.1.0 layout")
+        tag = rec.get("canonical_c_tag")
+        canonical = production_structs.get(tag)
+        if canonical is None or canonical.get("complete") is not False:
+            findings.append(
+                f"{fid}: the production authority does not mark struct {tag!r} opaque, so there "
+                f"is no opacity transition to establish"
+            )
+
+    # Prototype records: the eras must genuinely differ, and the canonical declaration must be the
+    # production atlas's own rather than a restatement.
+    functions = {r["name"]: r for r in _atlas_records(PRODUCTION_ATLAS / "functions.json")}
+    macros = {r["name"]: r for r in _atlas_records(PRODUCTION_ATLAS / "macros.json")}
+    for rec in facades:
+        if rec.get("facade_kind") != "prototype":
+            continue
+        fid = rec.get("facade_id")
+        symbol = rec.get("symbol")
+        eras = rec.get("eras") or []
+        signatures = {(e.get("era"), e.get("declaration"), e.get("kind")) for e in eras}
+        if len(signatures) < 2:
+            findings.append(f"{fid}: the eras do not declare {symbol} differently")
+        canonical = next((e for e in eras if e.get("authority_id") == PRODUCTION_AUTHORITY), None)
+        if canonical is None:
+            findings.append(f"{fid}: the prototype names no canonical declaration")
+        elif canonical.get("kind") == "function":
+            atlas = functions.get(symbol)
+            if atlas is None:
+                findings.append(f"{fid}: {symbol} is not a function in the production atlas")
+            elif atlas.get("type", "").split("(")[0].strip() != \
+                    str(canonical.get("declaration")).split("(")[0].strip():
+                findings.append(
+                    f"{fid}: the canonical declaration of {symbol} disagrees with the production "
+                    f"atlas ({atlas.get('type')!r})"
+                )
+        elif symbol not in macros:
+            findings.append(f"{fid}: {symbol} is not a macro in the production atlas")
+
+    # The architecture epochs, against the historical plane census.
+    census = {r["plane"]: r for r in _atlas_records(HISTORICAL_ATLAS / "plane-census.json",
+                                                    "planes")}
+    for rec in facades:
+        if rec.get("facade_kind") != "architecture":
+            continue
+        fid = rec.get("facade_id")
+        if rec.get("authority_id") == PARAM_HISTORICAL:
+            if rec.get("engine_model") != "engine" or rec.get("provider_model") != "no_provider":
+                findings.append(f"{fid}: the historical architecture model is not engine/no-provider")
+            if census.get("providers", {}).get("status") != "measured_absence":
+                findings.append(f"{fid}: the census does not measure providers absent, so a "
+                                f"no-provider epoch is not established")
+            if census.get("engines", {}).get("status") != "produced":
+                findings.append(f"{fid}: the census does not measure engines present")
+        elif rec.get("authority_id") == PRODUCTION_AUTHORITY:
+            if rec.get("provider_model") != "provider_store":
+                findings.append(f"{fid}: the production architecture model is not a provider store")
+
+    # The init/thread epochs.
+    for rec in facades:
+        if rec.get("facade_kind") != "init_thread":
+            continue
+        fid = rec.get("facade_id")
+        if rec.get("authority_id") == PARAM_HISTORICAL:
+            if rec.get("init_model") != "explicit_global_init":
+                findings.append(f"{fid}: the historical epoch is not explicit global init")
+            if rec.get("thread_model") != "application_locking_callbacks":
+                findings.append(f"{fid}: the historical epoch does not use application locking")
+            if "CRYPTO_set_locking_callback" not in (rec.get("callbacks") or []):
+                findings.append(f"{fid}: the historical epoch does not name its locking callback")
+        elif rec.get("authority_id") == PRODUCTION_AUTHORITY:
+            if rec.get("init_model") != "automatic_init":
+                findings.append(f"{fid}: the production epoch is not automatic init")
+            if rec.get("thread_model") != "internal_thread_support":
+                findings.append(f"{fid}: the production epoch is not internal thread support")
+
+    # The generated repr(C) assertions must be exactly what the measurement yields.
+    try:
+        expected = gen_abi_facades.render_rust(body)
+    except SystemExit as exc:
+        findings.append(f"the generated layout assertions could not be rendered: {exc}")
+        expected = None
+    if expected is not None:
+        committed = ABI_FACADE_RUST.read_text(encoding="utf-8") if ABI_FACADE_RUST.is_file() \
+            else ""
+        if committed != expected:
+            findings.append(
+                "the generated layout assertions do not match the measurement (a field offset, "
+                "width or the struct size has drifted from forensics/multitrack/abi-facades.json)"
+            )
+
+    # The default build is unaffected: every façade module is behind the compatibility-selection
+    # cfg, and the cfg itself is guarded by the non-default selection; the production surface
+    # carries no façade name.
+    if not COMPAT_MOD.is_file():
+        findings.append(f"{rel(COMPAT_MOD)} is absent")
+    else:
+        mod_text = COMPAT_MOD.read_text(encoding="utf-8")
+        for module in ("adapters", "arch", "layout_generated", "prototypes"):
+            marker = (f"#[cfg(any(test, openssl_rs_compat_facades))]\npub mod {module};".replace(
+                "\n", "\n"))
+            if marker not in mod_text:
+                findings.append(
+                    f"the {module} façade module is not gated behind the compatibility-selection "
+                    f"cfg, so the default build would carry it"
+                )
+    if not BUILD_SCRIPT.is_file():
+        findings.append(f"{rel(BUILD_SCRIPT)} is absent")
+    else:
+        build_text = BUILD_SCRIPT.read_text(encoding="utf-8")
+        if "default-authority.json" not in build_text:
+            findings.append("build.rs does not read the committed default-authority alias")
+        guard = build_text.find("if selection != default_authority {")
+        cfg = build_text.find("rustc-cfg=openssl_rs_compat_facades")
+        if cfg == -1 or guard == -1 or cfg < guard:
+            findings.append(
+                "build.rs does not guard the façade cfg behind the non-default selection, so "
+                "the default build could compile a façade"
+            )
+    for name in ("symbols-libcrypto.json", "symbols-libssl.json", "functions.json"):
+        path = PRODUCTION_ATLAS / name
+        if path.is_file() and "Facade" in path.read_text(encoding="utf-8"):
+            findings.append(f"the production atlas {name} carries a façade name")
+
+    if not str(body.get("boundary") or "").strip():
+        findings.append("the plane names no coverage boundary")
+    not_established = body.get("not_established")
+    if not isinstance(not_established, list) or not not_established:
+        findings.append("partial coverage is not named in not_established with a reason")
+    return findings
+
+
+def abi_facade_sensitivity_control(body: dict) -> dict:
+    """Prove the court can fail: perturb a struct layout, put a provider in a pre-provider epoch,
+    and blind-cast a façade, and require each caught with specificity holding."""
+    base = abi_facade_findings(body)
+    specificity = not base
+    layouts = [r for r in body.get("facades") or [] if r.get("facade_kind") == "public_layout"]
+    architectures = [r for r in body.get("facades") or []
+                     if r.get("facade_kind") == "architecture"
+                     and r.get("authority_id") == PARAM_HISTORICAL]
+    if not layouts or not architectures:
+        return {"honest": False, "reason": "the plane lacks a layout or an architecture record"}
+
+    # (a) a perturbed struct offset: the generated assertion set no longer matches the measurement.
+    perturbed = copy.deepcopy(body)
+    target = next(r for r in perturbed["facades"] if r.get("facade_kind") == "public_layout")
+    field = target["fields"][-1]
+    field["offset"] = field["offset"] + target.get("alignof", 8)
+    perturbed_findings = abi_facade_findings(perturbed)
+    caught_offset = any("do not match the measurement" in f or "overlaps" in f
+                        or "past sizeof" in f for f in perturbed_findings)
+
+    # (b) a provider symbol in a pre-provider selection: the architecture epoch becomes a lie.
+    provider = copy.deepcopy(body)
+    arch = next(r for r in provider["facades"] if r.get("facade_kind") == "architecture"
+                and r.get("authority_id") == PARAM_HISTORICAL)
+    arch["provider_model"] = "provider_store"
+    provider_findings = abi_facade_findings(provider)
+    caught_provider = any("provider" in f for f in provider_findings)
+
+    # (c) a blind cast: the record no longer names an explicit adapter.
+    blind = copy.deepcopy(body)
+    layout = next(r for r in blind["facades"] if r.get("facade_kind") == "public_layout")
+    layout["adapter"] = "transmute"
+    blind_findings = abi_facade_findings(blind)
+    caught_blind = any("blind cast" in f for f in blind_findings)
+
+    return {
+        "baseline_findings": len(base),
+        "injected_struct_offset": target.get("facade_id"),
+        "injected_struct_offset_findings": len(perturbed_findings),
+        "injected_provider_in_pre_provider_epoch": arch.get("facade_id"),
+        "injected_provider_findings": len(provider_findings),
+        "injected_blind_cast": layout.get("facade_id"),
+        "injected_blind_cast_findings": len(blind_findings),
+        "specificity_holds": specificity,
+        "caught_struct_offset": caught_offset,
+        "caught_provider_in_pre_provider_epoch": caught_provider,
+        "caught_blind_cast": caught_blind,
+        "honest": bool(specificity and caught_offset and caught_provider and caught_blind),
+    }
+
+
+def _abi_history_facades_court(name: str) -> dict:
+    """`RT-ABI-HISTORY-FACADES`: 23.7's court, the ABI / history façades.
+
+    Stages no probe. It reads `forensics/multitrack/abi-facades.json`, the generated
+    `src/compat/layout_generated.rs`, the compat sources the build gating lives in, the historical
+    plane census and the production atlas, and establishes the record's schema, its explicit
+    adapters, its provenance in the committed source manifest, the opacity transition, the
+    prototype, architecture and init/thread epoch facts, and that the generated assertions are
+    exactly what the measurement yields. Three seeded mutations -- a perturbed struct offset, a
+    provider in a pre-provider epoch and a blind-cast façade -- are each caught with specificity
+    holding. A passing façade plane is an **instrument**: it establishes a small historical epoch
+    and names the boundary of what is not established; it is not a source or binary compatibility
+    claim about any release.
+    """
+    problems: list[str] = []
+    if not ABI_FACADES.is_file():
+        problems.append(f"the ABI/history façade plane {rel(ABI_FACADES)} is absent")
+    body: dict = {}
+    if not problems:
+        body = read_json(ABI_FACADES)
+    findings = abi_facade_findings(body) if body else []
+    control = abi_facade_sensitivity_control(body) if body else {"honest": False}
+    verdict = "pass" if (not findings and not problems and control.get("honest")) else "fail"
+
+    facades = body.get("facades") or []
+    summaries = []
+    for rec in facades:
+        row = {"facade_id": rec.get("facade_id"), "facade_kind": rec.get("facade_kind"),
+               "authority_id": rec.get("authority_id"), "epoch": rec.get("epoch"),
+               "adapter": rec.get("adapter")}
+        for key in ("struct_name", "sizeof", "alignof", "symbol", "engine_model",
+                    "provider_model", "init_model", "thread_model"):
+            if key in rec:
+                row[key] = rec[key]
+        summaries.append(row)
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/multitrack/abi-facades.json, the generated "
+            "src/compat/layout_generated.rs and the compat sources the build gating lives in, "
+            "re-derives the generated assertions through the same generator, and establishes that "
+            "every record is a schema-valid abi_facade naming an explicit adapter; that every "
+            "historical layout's header resolves in the committed 0.9.8zh source manifest with the "
+            "measured hash; that the production authority marks the same struct opaque (the "
+            "opacity transition); that a prototype's eras genuinely differ and its canonical "
+            "declaration is the production atlas's own; that the ENGINE/Provider and init/thread "
+            "epochs agree with the census; and that the default 3.6.4 production build compiles no "
+            "façade (the modules are cfg-gated behind the non-default compatibility selection). A "
+            "perturbed struct offset, a provider in a pre-provider epoch and a blind-cast façade "
+            "are each detected with specificity holding (docs/PHASE-23-MULTITRACK-SUBPHASES.md "
+            "sections 2, 3.4 and 4.10)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the ABI/history-façade court reads committed façade records and generated Rust and "
+            "writes no artifacts/phase23/probes/ pair, so it takes no transcript to diff and "
+            "carries no FRF declaration"
+        ),
+        "facades": summaries,
+        "boundary": body.get("boundary"),
+        "not_established": body.get("not_established"),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def _delta_engine_court(name: str) -> dict:
     """`RT-DELTA-ENGINE`: 23.6's court, the semantic compatibility delta.
 
@@ -2377,14 +2710,32 @@ def main(argv: list[str]) -> int:
             "that disagrees with its edges, a row with no evidence and a dimension the evidence "
             "cannot support are each detected with specificity holding. A passing delta records "
             "the changed surface between two named nodes; it is not a compatibility claim about "
-            "either. Phase 23 owns "
+            "either. `RT-ABI-HISTORY-FACADES` is 23.7's court: the compatibility-policy layer and "
+            "the historical ABI/history façades. It stages no probe and reads "
+            "forensics/multitrack/abi-facades.json, the generated src/compat/layout_generated.rs "
+            "and the compat sources the build gating lives in, and establishes that every record "
+            "is a schema-valid abi_facade naming an explicit adapter rather than a blind cast; "
+            "that every historical layout is measured from the 0.9.8zh headers and its header "
+            "hash resolves in the committed source manifest while the production authority marks "
+            "the same struct opaque (the 1.1.0 opacity transition); that a prototype's eras "
+            "genuinely differ and its canonical declaration is the production atlas's own; that "
+            "the ENGINE -> Provider -> no-ENGINE architecture and the init/thread epochs are the "
+            "census's own; and that the generated repr(C) size/alignment/offset assertions are "
+            "exactly what the measurement yields. The default 3.6.4 production build is "
+            "unaffected: every façade module is cfg-gated behind the non-default compatibility "
+            "selection, which build.rs resolves through the committed default-authority alias. A "
+            "perturbed struct offset, a provider in a pre-provider epoch and a blind-cast façade "
+            "are each detected with specificity holding, and the plane names the boundary of what "
+            "is not established (the 1.0.x epoch and the pre-1.1.0 aggregates it does not cover). "
+            "A passing façade plane establishes a small historical epoch; it is not a source or "
+            "binary compatibility claim about any release. Phase 23 owns "
             "no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining eleven courts -- "
-            "RT-ABI-HISTORY-FACADES, RT-SEMANTIC-COURTS, RT-COMPATIBILITY-VIEWS, "
+            "over a symbol set is its evidence, and its remaining ten courts -- "
+            "RT-SEMANTIC-COURTS, RT-COMPATIBILITY-VIEWS, "
             "RT-HISTORICAL-POPULATION, RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, "
             "RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, "
             "RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
-            "the subphases that land them (23.7 through 23.17). The one thing the model forbids "
+            "the subphases that land them (23.8 through 23.17). The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "
@@ -2410,6 +2761,12 @@ def main(argv: list[str]) -> int:
         InputRef(name="historical-plane-census",
                  path=REPO_ROOT / "forensics" / "atlas" / PARAM_HISTORICAL / "plane-census.json"),
         InputRef(name="abi-policy", path=REPO_ROOT / "docs" / "ABI_POLICY.md"),
+        InputRef(name="abi-facades", path=ABI_FACADES),
+        InputRef(name="abi-facade-rust", path=ABI_FACADE_RUST),
+        InputRef(name="compat-mod", path=COMPAT_MOD),
+        InputRef(name="compat-policy", path=COMPAT_POLICY),
+        InputRef(name="build-script", path=BUILD_SCRIPT),
+        InputRef(name="historical-source-manifest", path=HISTORICAL_MANIFEST),
     ]
     for path in sorted(DELTAS.glob("*.json")):
         inputs.append(InputRef(name=f"delta/{path.stem}", path=path))
@@ -2529,6 +2886,29 @@ def main(argv: list[str]) -> int:
                     bucket = counts["by_dimension"][dim]
                     print(f"        {dim:<28} "
                           f"+{bucket['added']} -{bucket['removed']} ~{bucket['changed']}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == ABI_HISTORY_FACADES_COURT:
+            c = r["control"]
+            print(f"  {r['court']:<32} pass   (no probe, {len(r['facades'])} façade record(s); "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"struct-offset->{c['injected_struct_offset_findings']} "
+                  f"pre-provider->{c['injected_provider_findings']} "
+                  f"blind-cast->{c['injected_blind_cast_findings']} finding(s))")
+            for f in r["facades"]:
+                detail = f.get("struct_name") or f.get("symbol") or ""
+                layout = (f"sizeof={f['sizeof']} align={f['alignof']}"
+                          if "sizeof" in f else
+                          f"engine={f.get('engine_model')} provider={f.get('provider_model')}"
+                          if "engine_model" in f else
+                          f"init={f.get('init_model')} thread={f.get('thread_model')}"
+                          if "init_model" in f else "")
+                print(f"      {f['facade_id']:<28} {f['facade_kind']:<13} "
+                      f"{detail:<20} {layout}")
+            print(f"      boundary: {r['boundary']}")
+            for n in r["not_established"] or []:
+                print(f"      not established: {n['claim']} ({n['reason'][:60]}...)")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

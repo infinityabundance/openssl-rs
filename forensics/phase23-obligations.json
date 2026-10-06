@@ -78,10 +78,10 @@
         "closure": "the `RT-ABI-HISTORY-FACADES` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-ABI-HISTORY-FACADES is pending",
+        "measurement_state": "complete",
+        "observation": "RT-ABI-HISTORY-FACADES is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "abi-history-facades",
         "what": "the historical public-layout (`#[repr(C)]`) façades, the prototype wrappers, the initialization / threading epochs and the ENGINE -> Provider -> no-ENGINE architecture model, as narrow adapters over the shared implementation rather than a per-version fork"
@@ -212,8 +212,8 @@
       "contract_units": 17,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 6,
-      "open_in_this_stratum": 11,
+      "implemented": 7,
+      "open_in_this_stratum": 10,
       "owned": 17,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -249,12 +249,12 @@
     {
       "name": "phase-23-plan",
       "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
-      "sha256": "25aabfa8185c3f11084c4b7966ac2d6b173504bee672c0d7f5b3ee5681dea52a"
+      "sha256": "5ddeb500c799d76995782355fb0188c2aba2b084af7480afb84215e9d3a05e04"
     },
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "5c473f402672217f742de1006118b5e18024c06429f8d34a002a692641a11e31"
+      "sha256": "e5b949ecd58481b7882b3f6fece8c05ce64d03217c1ace6f289e84c9a49ea75c"
     }
   ],
   "kind": "phase23-obligations",

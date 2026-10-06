@@ -164,6 +164,13 @@ GENERATORS_BEFORE_LEDGERS = [
     # combination beyond the canonical edges is written. The RT-DELTA-ENGINE court reads the
     # artefacts it writes and re-derives every row through the same engine.
     "forensics/tools/authority_delta.py",
+    # Phase 23.7's ABI/history façades. In the court container it is a pure function of the
+    # committed measurement `forensics/multitrack/abi-facades.json`: it re-checks each layout's
+    # provenance against the committed source manifest and regenerates
+    # `src/compat/layout_generated.rs`, the repr(C) façades and their compile-time assertions, so
+    # a cargo-visible generated file cannot drift from the measurement. (`--measure` runs only in
+    # the historical venue and writes the measurement itself; the court never needs a compiler.)
+    "forensics/tools/gen_abi_facades.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -336,6 +343,12 @@ COMPARED = [
     # delta is compared -- the artefact set is the canonical edges, never their pairwise product --
     # so a stale copy is a failure and not a silent divergence.
     *[rel(p) for p in sorted((REPO_ROOT / "forensics" / "deltas").glob("*.json"))],
+    # Phase 23.7's generated repr(C) façades and their compile-time layout assertions. A
+    # cargo-visible generated file regenerated from the committed measurement, so a hand edit or a
+    # measurement drift is a failure rather than a silent divergence. The measurement itself
+    # (`forensics/multitrack/abi-facades.json`) is a historical-venue measurement, compared by the
+    # RT-ABI-HISTORY-FACADES court against its provenance rather than regenerated here.
+    "src/compat/layout_generated.rs",
 ]
 
 # ---------------------------------------------------------------------------
