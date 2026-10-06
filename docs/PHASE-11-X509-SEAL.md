@@ -58,7 +58,7 @@ parity (`docs/PARITY_MODEL.md:22`) — exactly as `docs/SEAL-CENSUS.md:21` and
   `forensics/frf/courts/openssl-rs-rt-x509{,-ref,-store,-verify-surface,-verify-engine,-v3,-pem,-acert,-req}`,
   `--check` reads `ok: 190 file(s) match the table (95 courts)`, and `.frf` now carries nine receipts,
   eighteen challenges, twenty-seven captures and one compiled claim
-  (`5c0e9ad457477be4b99e135c56ee010fad2cf19c97f9972d6e630f1c6d447f92`; 100 receipts and 200
+  (`3b980b7ddb94896fd062aab1a73505bfc650fbb6fa889ff4ab74321cf294d133`; 100 receipts and 200
   challenges, from the 91 and 182 Phase 10's head change `C95` left). §8 states what that is
 - Gemel checkpoint: **present, and it is this stratum's.** `forensics/GEMEL_TRAJECTORY.md`'s head
   change is Phase 11's `C97` (`forensics/GEMEL_TRAJECTORY.md:13`) and its `current:` is `K50` —
@@ -497,7 +497,7 @@ divergence, and none is smoothed.
     exceptions are §3's per-court table and the head matter's court and coverage figures, each of
     which names the artefact it was read from.
 11. **The FRF and Gemel evidence is a bounded `sensitivity-backed` claim over nine courts, and it
-    is not a parity claim.** The nine differential courts' compiled claim (`5c0e9ad4…`, §8) binds
+    is not a parity claim.** The nine differential courts' compiled claim (`3b980b7d…`, §8) binds
     the authority's first stdout line and its exit class for the nine courts' fixture families only,
     with `blockers: []` and `excluded_evidence: []`; this stratum registers no `CT-*` court, and a
     `referenced`-basis name in `RT-X509-REF` remains a proof of reference only, not a driven arm.
@@ -585,14 +585,14 @@ capture to compare and not a reference basis with nothing to diff (D199).
   captured per court — the real run and the two challenged runs. They are in `.frf/receipts/`,
   `.frf/challenges/` and `.frf/captures/` under the `openssl-rs-rt-x509…` names.
 - **One `sensitivity-backed` claim.**
-  `5c0e9ad457477be4b99e135c56ee010fad2cf19c97f9972d6e630f1c6d447f92` binds authority
-  `openssl-rt-3.6.4-r2` to candidate `openssl-rs 0.0.25` (`identity_hash e4f60d8b…`) in environment
+  `3b980b7ddb94896fd062aab1a73505bfc650fbb6fa889ff4ab74321cf294d133` binds authority
+  `openssl-rt-3.6.4-r2` to candidate `openssl-rs 0.0.26` (`identity_hash e4f60d8b…`) in environment
   `x86_64-linux (77b5d08d)` over the nine differential courts, with `blockers: []` and
-  `excluded_evidence: []` (`.frf/claims/5c0e9ad4….json`). Every one of its nine premises carries both
+  `excluded_evidence: []` (`.frf/claims/3b980b7d….json`). Every one of its nine premises carries both
   axes — `observable_scope [stdout, exit]`, relation `eq(stdout-first-line), eq(exit-code)` — so no
   cell is narrowed, and its eighteen `capability` entries are the two challenged axes per court.
-  **The identity moved with the 0.0.25 release.** The store was recreated from clean at candidate
-  0.0.25 — FRF run identities are content-addressed on the declaration, which carries the candidate
+  **The identity moved with the 0.0.26 release.** The store was recreated from clean at candidate
+  0.0.26 — FRF run identities are content-addressed on the declaration, which carries the candidate
   version, so every claim identity moves with a release — and the id quoted here supersedes the
   previous generation's `fd6683bc…`, the 0.0.19 claim.
 - **One Gemel checkpoint, `K50`.** `forensics/GEMEL_TRAJECTORY.md`'s head change is `C97` — "Phase 11
@@ -627,7 +627,7 @@ owns is implemented, and the 12 it *received* are discharged rather than passed 
 
 - **The FRF chain entry has landed.** §8's subject: nine declarations, the nine receipts, eighteen
   challenges and twenty-seven captures they produced, the compiled `sensitivity-backed` claim
-  `5c0e9ad4…`, and the `K50` checkpoint the chain leaves. This stratum registers no `CT-*` court, so
+  `3b980b7d…`, and the `K50` checkpoint the chain leaves. This stratum registers no `CT-*` court, so
   the entry covers all nine differential courts and nothing is recorded as not declarable. No object
   of the entry is still owed.
 - **This seal's §7 and §8 are corrected, and its bytes moved with the correction.** The receipts,

@@ -1,1 +1,0 @@
-{"authority":"openssl-rt-3.6.4-r2","blocks_claims":["rt-bio-addr exit parity"],"disposition":"open","kind":"exit","magnitude":"class-change","next_court":"cli-exit-minimize","residual_id":"a4255c7f2ff8abd70c6b6ab0a6b3c849835b1051e66aca4ed62f060d17631403","schema_version":"frf-token-v1","scope":"rt-bio-addr","surface":"exit-class","token":"exit/exit-class/class-change/open"}

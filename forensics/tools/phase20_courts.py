@@ -3191,7 +3191,7 @@ def main(argv: list[str]) -> int:
             "python), which it re-establishes as current and functional rather than assuming. For "
             "each witness it records `{witness, built_against, run_id_or_mode, observation, "
             "functional}`; on the current tree all nine witnesses are current and functional "
-            "(candidate 0.0.25), so the court records zero findings. The Phase-17 driver has no "
+            "(candidate 0.0.26), so the court records zero findings. The Phase-17 driver has no "
             "cheap verify/currency mode, so the court re-derives currency and functional status "
             "from the machine-owned records and proves currency by candidate identity rather than "
             "re-running the harnesses, and says exactly that in its `reestablishment` block; a "

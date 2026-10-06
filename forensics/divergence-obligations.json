@@ -231,19 +231,19 @@
       "name": "phase-9-seal",
       "note": "says which trigger-bearing entries Phase 9 owns and what closed them",
       "path": "docs/PHASE-9-RAND-DRBG-SEAL.md",
-      "sha256": "bfa711c77b6fd04addeb50e54ad24478d118f2c5f89653f10eb396069eaecade"
+      "sha256": "fff4021425f178bc8c36cab00dfa453c72016d14492f25fabc7538c6b19be398"
     },
     {
       "name": "phase-8-obligations",
       "note": "the Phase 8 ledger, whose open_in_this_stratum is what a freeing row would move",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "e576fc56fae358808b882373405a584685576454992f09f05f059fd776fab939"
+      "sha256": "c71a02c250bec3d1d7e7c6989bb623044ba160e6fd2c09bd8d788768c163ee60"
     },
     {
       "name": "phase-9-obligations",
       "note": "the Phase 9 ledger, whose open_in_this_stratum is what a freeing row would move",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "efebe9949c5a24e7ff220877dc272a44644e94cbae1c25d11d5bebd8e633bc3b"
+      "sha256": "905dc6ef86353159c0aa2fac84fdd31f9ce699f1ace499bed49d2825b7b6ecaf"
     },
     {
       "name": "provider-algorithms",
