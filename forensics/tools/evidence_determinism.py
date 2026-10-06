@@ -178,6 +178,13 @@ GENERATORS_BEFORE_LEDGERS = [
     # and runs the probe against both authorities and runs only in the court venue; the court and
     # this re-derivation need neither a compiler nor an authority prefix.)
     "forensics/tools/gen_semantic_courts.py",
+    # Phase 23.9's directional, dimension-specific compatibility views. It is a pure function of the
+    # committed authorities' own evidence -- the authority-node registry, the production atlas, the
+    # historical build receipts and census, the source manifest and the committed Phase-2
+    # distribution shell -- so a stale committed plane is a failure rather than a silent divergence.
+    # The RT-COMPATIBILITY-VIEWS court re-derives the whole plane through the same generator and
+    # refuses a view relayed from another authority.
+    "forensics/tools/compat_views.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -361,6 +368,10 @@ COMPARED = [
     # a hand edit to a normalized reading or a classification is a failure rather than a silent
     # divergence -- which is exactly the erasure the court's sensitivity control injects.
     "forensics/multitrack/semantic-courts.json",
+    # Phase 23.9's compatibility views: a pure function of each authority's own committed evidence,
+    # so a stale committed plane -- or a view relayed from another authority -- is a failure rather
+    # than a silent divergence.
+    "forensics/multitrack/compatibility-views.json",
 ]
 
 # ---------------------------------------------------------------------------

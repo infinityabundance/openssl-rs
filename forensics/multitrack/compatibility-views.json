@@ -1,0 +1,1057 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "authorities": [
+      "openssl-0.9.8zh-historical",
+      "openssl-3.6.4-production"
+    ],
+    "boundary": "23.9 derives the distribution/ABI shell facets -- library filenames, SONAMEs, the exported symbol set and its versions, static archive names, link names, pkg-config metadata, the installed layout and the version-reporting identity -- from each admitted authority's own committed evidence. The source/API, semantic, protocol, error, ownership, concurrency and provider-registration dimensions are recorded not-derivable with their reasons: the source/API declaration surface is carried by the Phase-2 ABI family and the semantic surface by 23.8's oracle-to-oracle court. The 3.6.4 production authority has a committed emitted distribution (`artifacts/phase2/`) and its views compare against it; the 0.9.8zh historical epoch has no candidate build in this venue, so its views are `not_measured` and are never read as runtime parity.",
+    "counts": {
+      "authorities": 2,
+      "by_authority": {
+        "openssl-0.9.8zh-historical": 6,
+        "openssl-3.6.4-production": 8
+      },
+      "by_dimension": {
+        "abi": 9,
+        "behavioural": 2,
+        "cli_config": 3
+      },
+      "by_status": {
+        "compatible": 8,
+        "not_measured": 6
+      },
+      "not_derivable": 16,
+      "views": 14
+    },
+    "direction_model": "every view is read candidate_to_reference: the subject is the emitted distribution (the candidate implementation) and the reference is the authority whose evidence defines the surface",
+    "not_derivable": [
+      {
+        "authority_id": "openssl-0.9.8zh-historical",
+        "dimension": "abi",
+        "evidence": [
+          "forensics/multitrack/historical-build-receipts.json"
+        ],
+        "facet": "distribution_static_archives",
+        "reason": "the 0.9.8zh build receipt records only the shared objects (libcrypto.so.0.9.8, libssl.so.0.9.8); the static archive names are not recorded for this authority, so they are not emittable without inventing them",
+        "release_id": "openssl-0.9.8zh"
+      },
+      {
+        "authority_id": "openssl-0.9.8zh-historical",
+        "dimension": "cli_config",
+        "evidence": [
+          "forensics/atlas/openssl-0.9.8zh-historical/plane-census.json"
+        ],
+        "facet": "distribution_pkg_config",
+        "reason": "the 0.9.8zh authority's committed records declare no pkg-config metadata (the plane census carries no such plane), so its pkg-config metadata cannot be derived from committed evidence",
+        "release_id": "openssl-0.9.8zh"
+      },
+      {
+        "authority_id": "openssl-0.9.8zh-historical",
+        "dimension": "concurrency",
+        "evidence": [
+          "forensics/authority-nodes.json"
+        ],
+        "facet": null,
+        "reason": "no committed concurrency measurement exists for this authority, so no directional concurrency view can be derived from its evidence",
+        "release_id": "openssl-0.9.8zh"
+      },
+      {
+        "authority_id": "openssl-0.9.8zh-historical",
+        "dimension": "error",
+        "evidence": [
+          "forensics/authority-nodes.json"
+        ],
+        "facet": null,
+        "reason": "no committed error-queue measurement exists for this authority, so no directional error view can be derived from its evidence",
+        "release_id": "openssl-0.9.8zh"
+      },
+      {
+        "authority_id": "openssl-0.9.8zh-historical",
+        "dimension": "ownership",
+        "evidence": [
+          "forensics/authority-nodes.json"
+        ],
+        "facet": null,
+        "reason": "no committed ownership/allocation measurement exists for this authority, so no directional ownership view can be derived from its evidence",
+        "release_id": "openssl-0.9.8zh"
+      },
+      {
+        "authority_id": "openssl-0.9.8zh-historical",
+        "dimension": "protocol",
+        "evidence": [
+          "forensics/authority-nodes.json"
+        ],
+        "facet": null,
+        "reason": "no committed protocol-transcript measurement exists for this authority, so no directional protocol view can be derived from its evidence",
+        "release_id": "openssl-0.9.8zh"
+      },
+      {
+        "authority_id": "openssl-0.9.8zh-historical",
+        "dimension": "provider_registration",
+        "evidence": [
+          "forensics/authority-nodes.json"
+        ],
+        "facet": null,
+        "reason": "the distribution shell does not establish provider registration; the authority's provider surface is the Phase-6/23.2 provider census, not a distribution-shell facet of this subphase",
+        "release_id": "openssl-0.9.8zh"
+      },
+      {
+        "authority_id": "openssl-0.9.8zh-historical",
+        "dimension": "semantic",
+        "evidence": [
+          "forensics/authority-nodes.json"
+        ],
+        "facet": null,
+        "reason": "the committed evidence carries no candidate-to-authority semantic measurement for this authority at its support status; 23.8's semantic court is oracle-to-oracle (3.6.3 vs 3.6.4), a relationship rather than this authority's view",
+        "release_id": "openssl-0.9.8zh"
+      },
+      {
+        "authority_id": "openssl-0.9.8zh-historical",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/authority-nodes.json"
+        ],
+        "facet": null,
+        "reason": "23.9 emits the distribution/ABI shell views; the source/API declaration surface is measured against the authority's own headers by the Phase-2 ABI family (ABI-CONSTANTS/ABI-MATRIX/ABI-LAYOUT), not re-derived as a per-authority distribution view",
+        "release_id": "openssl-0.9.8zh"
+      },
+      {
+        "authority_id": "openssl-3.6.4-production",
+        "dimension": "concurrency",
+        "evidence": [
+          "forensics/authority-nodes.json"
+        ],
+        "facet": null,
+        "reason": "no committed concurrency measurement exists for this authority, so no directional concurrency view can be derived from its evidence",
+        "release_id": "openssl-3.6.4"
+      },
+      {
+        "authority_id": "openssl-3.6.4-production",
+        "dimension": "error",
+        "evidence": [
+          "forensics/authority-nodes.json"
+        ],
+        "facet": null,
+        "reason": "no committed error-queue measurement exists for this authority, so no directional error view can be derived from its evidence",
+        "release_id": "openssl-3.6.4"
+      },
+      {
+        "authority_id": "openssl-3.6.4-production",
+        "dimension": "ownership",
+        "evidence": [
+          "forensics/authority-nodes.json"
+        ],
+        "facet": null,
+        "reason": "no committed ownership/allocation measurement exists for this authority, so no directional ownership view can be derived from its evidence",
+        "release_id": "openssl-3.6.4"
+      },
+      {
+        "authority_id": "openssl-3.6.4-production",
+        "dimension": "protocol",
+        "evidence": [
+          "forensics/authority-nodes.json"
+        ],
+        "facet": null,
+        "reason": "no committed protocol-transcript measurement exists for this authority, so no directional protocol view can be derived from its evidence",
+        "release_id": "openssl-3.6.4"
+      },
+      {
+        "authority_id": "openssl-3.6.4-production",
+        "dimension": "provider_registration",
+        "evidence": [
+          "forensics/authority-nodes.json"
+        ],
+        "facet": null,
+        "reason": "the distribution shell does not establish provider registration; the authority's provider surface is the Phase-6/23.2 provider census, not a distribution-shell facet of this subphase",
+        "release_id": "openssl-3.6.4"
+      },
+      {
+        "authority_id": "openssl-3.6.4-production",
+        "dimension": "semantic",
+        "evidence": [
+          "forensics/authority-nodes.json"
+        ],
+        "facet": null,
+        "reason": "the committed evidence carries no candidate-to-authority semantic measurement for this authority at its support status; 23.8's semantic court is oracle-to-oracle (3.6.3 vs 3.6.4), a relationship rather than this authority's view",
+        "release_id": "openssl-3.6.4"
+      },
+      {
+        "authority_id": "openssl-3.6.4-production",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/authority-nodes.json"
+        ],
+        "facet": null,
+        "reason": "23.9 emits the distribution/ABI shell views; the source/API declaration surface is measured against the authority's own headers by the Phase-2 ABI family (ABI-CONSTANTS/ABI-MATRIX/ABI-LAYOUT), not re-derived as a per-authority distribution view",
+        "release_id": "openssl-3.6.4"
+      }
+    ],
+    "rule": "one directional, dimension-specific compatibility view per authority and distribution facet, derived from the authority's own committed evidence and never typed. A view is never a boolean and never inherits a receipt across a version: a view for authority X carries only X's evidence (each reference-role evidence entry names the authority it belongs to and a content-addressed path + sha256). A dimension or facet the evidence cannot support is recorded in `not_derivable` with its reason, never emitted with a plausible value",
+    "subject_id": "openssl-rs",
+    "views": [
+      {
+        "derivation": {
+          "emitted": null,
+          "method": "the authority's exported-symbol ordinal inventory, declared by its own source manifest (util/libeay.num, util/ssleay.num) and counted by the plane census, against the emitted distribution; the committed evidence declares the inventory but does not enumerate its names, and no candidate build exists for the epoch",
+          "reference": {
+            "census_count": 3,
+            "ordinal_inventory": [
+              {
+                "path": "util/libeay.num",
+                "sha256": "adfccc0a350eb82e1fa6177e8527491d50b233619f43d550a779430efd88cc33"
+              },
+              {
+                "path": "util/ssleay.num",
+                "sha256": "54c982415ec2b7b5121a9a5c1bfbe825819e8334b154a12dbb3fa92aa608a4c1"
+              }
+            ]
+          },
+          "relation": "the candidate has no 0.9.8zh build, so the exported-symbol relation is unmeasured"
+        },
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "evidence": [
+          {
+            "authority_id": "openssl-0.9.8zh-historical",
+            "kind": "source_manifest",
+            "note": "the committed source manifest declares the authority's ordinal inventories",
+            "path": "forensics/authorities/SOURCE_MANIFEST.0.9.8zh.json",
+            "role": "reference",
+            "sha256": "c2628f2b50e17a354a2b686c4f23229edbcbfaafdc8a4bc786a8149db3256170"
+          },
+          {
+            "authority_id": "openssl-0.9.8zh-historical",
+            "kind": "source_manifest",
+            "note": "the plane census counts the symbol-ordinal inventories",
+            "path": "forensics/atlas/openssl-0.9.8zh-historical/plane-census.json",
+            "role": "reference",
+            "sha256": "1d429160091840faddc7ac9e99aa4678afa91bc504fd76c60124ed56171c0f18"
+          }
+        ],
+        "evidence_kind": "source_manifest",
+        "facet": "distribution_exported_symbols",
+        "non_claims": [
+          "a distribution-shell view is not a semantic, behavioural or security claim about the authority or the candidate",
+          "one platform/profile is not every platform/profile: a view is bounded to the platform, architecture, profile and toolchain of the authority node it names",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reference_id": "openssl-0.9.8zh-historical",
+        "reference_release": "openssl-0.9.8zh",
+        "status": "not_measured",
+        "subject_id": "openssl-rs",
+        "support_status": "atlas-complete",
+        "view_id": "compat-view/openssl-0.9.8zh-historical/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "emitted": null,
+          "method": "the authority's recorded installed positions (the receipt's installed_hashes and library artifacts) against the emitted distribution",
+          "reference": {
+            "installed_headers": [
+              "include/openssl/crypto.h",
+              "include/openssl/evp.h",
+              "include/openssl/ssl.h"
+            ],
+            "library_positions": [
+              "lib/libcrypto.so.0.9.8",
+              "lib/libssl.so.0.9.8"
+            ]
+          },
+          "relation": "the candidate has no 0.9.8zh build, so the installed-layout relation is unmeasured"
+        },
+        "dimension": "cli_config",
+        "direction": "candidate_to_reference",
+        "evidence": [
+          {
+            "authority_id": "openssl-0.9.8zh-historical",
+            "kind": "build_records",
+            "note": "the historical build receipt records the installed header hashes and artifact positions",
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "role": "reference",
+            "sha256": "6f0e9b8b24bd4c70a85d84bd1239d3b4e4b26b38d34aed3f79cfab0411cd642e"
+          }
+        ],
+        "evidence_kind": "build_records",
+        "facet": "distribution_install_layout",
+        "non_claims": [
+          "a distribution-shell view is not a semantic, behavioural or security claim about the authority or the candidate",
+          "one platform/profile is not every platform/profile: a view is bounded to the platform, architecture, profile and toolchain of the authority node it names",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reference_id": "openssl-0.9.8zh-historical",
+        "reference_release": "openssl-0.9.8zh",
+        "status": "not_measured",
+        "subject_id": "openssl-rs",
+        "support_status": "atlas-complete",
+        "view_id": "compat-view/openssl-0.9.8zh-historical/distribution_install_layout"
+      },
+      {
+        "derivation": {
+          "emitted": null,
+          "method": "the authority's built library filenames (the historical build receipt) against the emitted distribution; the candidate has no 0.9.8zh build",
+          "reference": {
+            "library_names": [
+              "libcrypto.so.0.9.8",
+              "libssl.so.0.9.8"
+            ]
+          },
+          "relation": "no emitted distribution exists for the 0.9.8zh epoch, so the candidate relation is unmeasured, not compatible"
+        },
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "evidence": [
+          {
+            "authority_id": "openssl-0.9.8zh-historical",
+            "kind": "build_records",
+            "note": "the historical build receipt's artifact names are the built library filenames",
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "role": "reference",
+            "sha256": "6f0e9b8b24bd4c70a85d84bd1239d3b4e4b26b38d34aed3f79cfab0411cd642e"
+          }
+        ],
+        "evidence_kind": "build_records",
+        "facet": "distribution_library_names",
+        "non_claims": [
+          "a distribution-shell view is not a semantic, behavioural or security claim about the authority or the candidate",
+          "one platform/profile is not every platform/profile: a view is bounded to the platform, architecture, profile and toolchain of the authority node it names",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reference_id": "openssl-0.9.8zh-historical",
+        "reference_release": "openssl-0.9.8zh",
+        "status": "not_measured",
+        "subject_id": "openssl-rs",
+        "support_status": "atlas-complete",
+        "view_id": "compat-view/openssl-0.9.8zh-historical/distribution_library_names"
+      },
+      {
+        "derivation": {
+          "emitted": null,
+          "method": "the `-l` link names derived from the authority's library base names against the emitted distribution",
+          "reference": {
+            "link_names": [
+              "-lcrypto",
+              "-lssl"
+            ]
+          },
+          "relation": "the candidate has no 0.9.8zh build, so the link-name relation is unmeasured"
+        },
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "evidence": [
+          {
+            "authority_id": "openssl-0.9.8zh-historical",
+            "kind": "build_records",
+            "note": "the link name is derived from the authority's recorded library base name",
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "role": "reference",
+            "sha256": "6f0e9b8b24bd4c70a85d84bd1239d3b4e4b26b38d34aed3f79cfab0411cd642e"
+          }
+        ],
+        "evidence_kind": "build_records",
+        "facet": "distribution_link_names",
+        "non_claims": [
+          "a distribution-shell view is not a semantic, behavioural or security claim about the authority or the candidate",
+          "one platform/profile is not every platform/profile: a view is bounded to the platform, architecture, profile and toolchain of the authority node it names",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reference_id": "openssl-0.9.8zh-historical",
+        "reference_release": "openssl-0.9.8zh",
+        "status": "not_measured",
+        "subject_id": "openssl-rs",
+        "support_status": "atlas-complete",
+        "view_id": "compat-view/openssl-0.9.8zh-historical/distribution_link_names"
+      },
+      {
+        "derivation": {
+          "emitted": null,
+          "method": "the authority's SONAMEs (pre-1.1.0: the artifact name itself, corroborated by the census's measured-absent symbol-versioning plane) against the emitted distribution",
+          "reference": {
+            "sonames": [
+              "libcrypto.so.0.9.8",
+              "libssl.so.0.9.8"
+            ],
+            "symbol_versioning": "measured_absence"
+          },
+          "relation": "the candidate has no 0.9.8zh build, so the SONAME relation is unmeasured"
+        },
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "evidence": [
+          {
+            "authority_id": "openssl-0.9.8zh-historical",
+            "kind": "build_records",
+            "note": "the era's SONAME is the artifact filename: the release predates ELF symbol versioning",
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "role": "reference",
+            "sha256": "6f0e9b8b24bd4c70a85d84bd1239d3b4e4b26b38d34aed3f79cfab0411cd642e"
+          },
+          {
+            "authority_id": "openssl-0.9.8zh-historical",
+            "kind": "source_manifest",
+            "note": "the plane census records symbol-versioning as a measured absence",
+            "path": "forensics/atlas/openssl-0.9.8zh-historical/plane-census.json",
+            "role": "reference",
+            "sha256": "1d429160091840faddc7ac9e99aa4678afa91bc504fd76c60124ed56171c0f18"
+          }
+        ],
+        "evidence_kind": "build_records",
+        "facet": "distribution_sonames",
+        "non_claims": [
+          "a distribution-shell view is not a semantic, behavioural or security claim about the authority or the candidate",
+          "one platform/profile is not every platform/profile: a view is bounded to the platform, architecture, profile and toolchain of the authority node it names",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reference_id": "openssl-0.9.8zh-historical",
+        "reference_release": "openssl-0.9.8zh",
+        "status": "not_measured",
+        "subject_id": "openssl-rs",
+        "support_status": "atlas-complete",
+        "view_id": "compat-view/openssl-0.9.8zh-historical/distribution_sonames"
+      },
+      {
+        "derivation": {
+          "emitted": null,
+          "method": "the authority's reported version identity (the historical build receipt's banner and the release catalogue) against the emitted distribution",
+          "reference": {
+            "banner": "OpenSSL 0.9.8zh 3 Dec 2015",
+            "display_version": "0.9.8zh"
+          },
+          "relation": "the candidate has no 0.9.8zh build, so the version-reporting relation is unmeasured"
+        },
+        "dimension": "behavioural",
+        "direction": "candidate_to_reference",
+        "evidence": [
+          {
+            "authority_id": "openssl-0.9.8zh-historical",
+            "kind": "build_records",
+            "note": "the historical build receipt's banner is the authority's reported version",
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "role": "reference",
+            "sha256": "6f0e9b8b24bd4c70a85d84bd1239d3b4e4b26b38d34aed3f79cfab0411cd642e"
+          },
+          {
+            "authority_id": "openssl-0.9.8zh-historical",
+            "kind": "upstream_declaration",
+            "note": "the release catalogue's display version",
+            "path": "forensics/release-catalog.json",
+            "role": "reference",
+            "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b"
+          }
+        ],
+        "evidence_kind": "build_records",
+        "facet": "version_reporting_identity",
+        "non_claims": [
+          "a distribution-shell view is not a semantic, behavioural or security claim about the authority or the candidate",
+          "one platform/profile is not every platform/profile: a view is bounded to the platform, architecture, profile and toolchain of the authority node it names",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reference_id": "openssl-0.9.8zh-historical",
+        "reference_release": "openssl-0.9.8zh",
+        "status": "not_measured",
+        "subject_id": "openssl-rs",
+        "support_status": "atlas-complete",
+        "view_id": "compat-view/openssl-0.9.8zh-historical/version_reporting_identity"
+      },
+      {
+        "derivation": {
+          "emitted": {
+            "exported_symbols": {
+              "libcrypto": 5896,
+              "libssl": 603
+            },
+            "version_nodes": {
+              "libcrypto": [
+                "OPENSSL_3.0.0",
+                "OPENSSL_3.0.3",
+                "OPENSSL_3.0.8",
+                "OPENSSL_3.0.9",
+                "OPENSSL_3.1.0",
+                "OPENSSL_3.2.0",
+                "OPENSSL_3.3.0",
+                "OPENSSL_3.4.0",
+                "OPENSSL_3.5.0",
+                "OPENSSL_3.6.0"
+              ],
+              "libssl": [
+                "OPENSSL_3.0.0",
+                "OPENSSL_3.2.0",
+                "OPENSSL_3.3.0",
+                "OPENSSL_3.4.0",
+                "OPENSSL_3.5.0"
+              ]
+            }
+          },
+          "method": "the authority's measured exported symbol counts and version namespace (the production atlas) against the Phase-2 ABI-SYMBOL/ABI-VERSION court readings of the emitted DSOs",
+          "reference": {
+            "exported_symbols": {
+              "libcrypto": 5896,
+              "libssl": 603
+            },
+            "version_nodes": {
+              "libcrypto": [
+                "OPENSSL_3.0.0",
+                "OPENSSL_3.0.3",
+                "OPENSSL_3.0.8",
+                "OPENSSL_3.0.9",
+                "OPENSSL_3.1.0",
+                "OPENSSL_3.2.0",
+                "OPENSSL_3.3.0",
+                "OPENSSL_3.4.0",
+                "OPENSSL_3.5.0",
+                "OPENSSL_3.6.0"
+              ],
+              "libssl": [
+                "OPENSSL_3.0.0",
+                "OPENSSL_3.2.0",
+                "OPENSSL_3.3.0",
+                "OPENSSL_3.4.0",
+                "OPENSSL_3.5.0"
+              ]
+            }
+          },
+          "relation": "the emitted DSOs export the same symbol set and carry the same version namespace as the authority"
+        },
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "evidence": [
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "reference",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+            "role": "reference",
+            "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "court_transcript",
+            "path": "artifacts/phase2/courts/ABI-SYMBOL.json",
+            "role": "candidate",
+            "sha256": "0a154557f3f8afcedea986811579c9b19adce8c85c4f160820da49b0839686ed"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "court_transcript",
+            "path": "artifacts/phase2/courts/ABI-VERSION.json",
+            "role": "candidate",
+            "sha256": "98575bf1ef2898ee8f3963fd7f7e2008cc68589dee0c751f01e308755e4e5b34"
+          }
+        ],
+        "evidence_kind": "court_transcript",
+        "facet": "distribution_exported_symbols",
+        "non_claims": [
+          "a distribution-shell view is not a semantic, behavioural or security claim about the authority or the candidate",
+          "one platform/profile is not every platform/profile: a view is bounded to the platform, architecture, profile and toolchain of the authority node it names",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reference_id": "openssl-3.6.4-production",
+        "reference_release": "openssl-3.6.4",
+        "status": "compatible",
+        "subject_id": "openssl-rs",
+        "support_status": "candidate-view",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "emitted": {
+            "required_missing": [],
+            "required_present": [
+              "bin/openssl",
+              "bin/c_rehash",
+              "include/openssl/opensslv.h",
+              "include/openssl/evp.h",
+              "include/openssl/ssl.h",
+              "lib/libcrypto.so.3",
+              "lib/libssl.so.3",
+              "lib/libcrypto.so",
+              "lib/libssl.so",
+              "lib/libcrypto.a",
+              "lib/libssl.a",
+              "lib/ossl-modules/legacy.so",
+              "lib/pkgconfig/libcrypto.pc",
+              "lib/pkgconfig/libssl.pc"
+            ]
+          },
+          "method": "the authority's recorded installed library positions against the Phase-2 install-layout court's required-present set (which must have no required-missing entry)",
+          "reference": {
+            "installed_headers": [
+              "include/openssl/crypto.h",
+              "include/openssl/evp.h",
+              "include/openssl/ssl.h"
+            ],
+            "library_positions": [
+              "lib/libcrypto.so.3",
+              "lib/libssl.so.3"
+            ]
+          },
+          "relation": "the emitted distribution installs every library position the authority records, with no required-missing entry"
+        },
+        "dimension": "cli_config",
+        "direction": "candidate_to_reference",
+        "evidence": [
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "note": "the authority's installed shared-object positions are read from its binary_hashes keys",
+            "path": "forensics/authority-nodes.json",
+            "role": "reference",
+            "sha256": "264cf5c061a48c792133a9e8019a19878f2163326b46b32ab824ba126ed2e6a6"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "court_transcript",
+            "path": "artifacts/phase2/courts/ABI-INSTALL-LAYOUT.json",
+            "role": "candidate",
+            "sha256": "5612fe7bc38cbfcbd4da66a7ac1a412de2a63fcb68053673c5f863eb09e53152"
+          }
+        ],
+        "evidence_kind": "build_records",
+        "facet": "distribution_install_layout",
+        "non_claims": [
+          "a distribution-shell view is not a semantic, behavioural or security claim about the authority or the candidate",
+          "one platform/profile is not every platform/profile: a view is bounded to the platform, architecture, profile and toolchain of the authority node it names",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reference_id": "openssl-3.6.4-production",
+        "reference_release": "openssl-3.6.4",
+        "status": "compatible",
+        "subject_id": "openssl-rs",
+        "support_status": "candidate-view",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_install_layout"
+      },
+      {
+        "derivation": {
+          "emitted": {
+            "library_names": [
+              "libcrypto.so.3",
+              "libssl.so.3"
+            ]
+          },
+          "method": "the authority's built library filenames (authority-node binary_hashes) against the emitted distribution's installed shared objects",
+          "reference": {
+            "library_names": [
+              "libcrypto.so.3",
+              "libssl.so.3"
+            ]
+          },
+          "relation": "the emitted distribution installs every shared library the authority builds"
+        },
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "evidence": [
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "note": "the authority node's binary_hashes keys are its built library names",
+            "path": "forensics/authority-nodes.json",
+            "role": "reference",
+            "sha256": "264cf5c061a48c792133a9e8019a19878f2163326b46b32ab824ba126ed2e6a6"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "court_transcript",
+            "note": "the Phase-2 install-layout court's required present libraries",
+            "path": "artifacts/phase2/courts/ABI-INSTALL-LAYOUT.json",
+            "role": "candidate",
+            "sha256": "5612fe7bc38cbfcbd4da66a7ac1a412de2a63fcb68053673c5f863eb09e53152"
+          }
+        ],
+        "evidence_kind": "build_records",
+        "facet": "distribution_library_names",
+        "non_claims": [
+          "a distribution-shell view is not a semantic, behavioural or security claim about the authority or the candidate",
+          "one platform/profile is not every platform/profile: a view is bounded to the platform, architecture, profile and toolchain of the authority node it names",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reference_id": "openssl-3.6.4-production",
+        "reference_release": "openssl-3.6.4",
+        "status": "compatible",
+        "subject_id": "openssl-rs",
+        "support_status": "candidate-view",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_library_names"
+      },
+      {
+        "derivation": {
+          "emitted": {
+            "link_names": [
+              "-lcrypto",
+              "-lssl"
+            ]
+          },
+          "method": "the `-l` link names derived from the authority's SONAME bases against the emitted pkg-config files' Libs",
+          "reference": {
+            "link_names": [
+              "-lcrypto",
+              "-lssl"
+            ]
+          },
+          "relation": "the emitted distribution links the same -l names the authority's SONAME bases establish"
+        },
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "evidence": [
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "note": "the link name is derived from the authority's recorded SONAME base",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+            "role": "reference",
+            "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "path": "artifacts/phase2/install/lib/pkgconfig/libcrypto.pc",
+            "role": "candidate",
+            "sha256": "e8cc113396cad994778cb73539e8283fb128c3c2026e4948d8801e4e4f257159"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "path": "artifacts/phase2/install/lib/pkgconfig/libssl.pc",
+            "role": "candidate",
+            "sha256": "736b3f97d34faeace5d53228bbeb66f7f647ea47f6827eb8a457e796925dc93f"
+          }
+        ],
+        "evidence_kind": "build_records",
+        "facet": "distribution_link_names",
+        "non_claims": [
+          "a distribution-shell view is not a semantic, behavioural or security claim about the authority or the candidate",
+          "one platform/profile is not every platform/profile: a view is bounded to the platform, architecture, profile and toolchain of the authority node it names",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reference_id": "openssl-3.6.4-production",
+        "reference_release": "openssl-3.6.4",
+        "status": "compatible",
+        "subject_id": "openssl-rs",
+        "support_status": "candidate-view",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_link_names"
+      },
+      {
+        "derivation": {
+          "emitted": {
+            "libcrypto": {
+              "libs": [
+                "-lcrypto"
+              ],
+              "name": "libcrypto",
+              "version": "3.6.4"
+            },
+            "libssl": {
+              "libs": [
+                "-lssl"
+              ],
+              "name": "libssl",
+              "version": "3.6.4"
+            }
+          },
+          "method": "the pkg-config identity (library names and version) derived from the authority's own records against the emitted pkg-config metadata",
+          "reference": {
+            "libs": [
+              "-lcrypto",
+              "-lssl"
+            ],
+            "names": [
+              "libcrypto",
+              "libssl"
+            ],
+            "sources": [
+              "libcrypto.pc",
+              "libssl.pc"
+            ],
+            "version": "3.6.4"
+          },
+          "relation": "the emitted pkg-config metadata names the same libraries at the same version"
+        },
+        "dimension": "cli_config",
+        "direction": "candidate_to_reference",
+        "evidence": [
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "note": "the pkg-config identity is the authority's library base names and version",
+            "path": "forensics/release-catalog.json",
+            "role": "reference",
+            "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "path": "artifacts/phase2/install/lib/pkgconfig/libcrypto.pc",
+            "role": "candidate",
+            "sha256": "e8cc113396cad994778cb73539e8283fb128c3c2026e4948d8801e4e4f257159"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "path": "artifacts/phase2/install/lib/pkgconfig/libssl.pc",
+            "role": "candidate",
+            "sha256": "736b3f97d34faeace5d53228bbeb66f7f647ea47f6827eb8a457e796925dc93f"
+          }
+        ],
+        "evidence_kind": "build_records",
+        "facet": "distribution_pkg_config",
+        "non_claims": [
+          "a distribution-shell view is not a semantic, behavioural or security claim about the authority or the candidate",
+          "one platform/profile is not every platform/profile: a view is bounded to the platform, architecture, profile and toolchain of the authority node it names",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reference_id": "openssl-3.6.4-production",
+        "reference_release": "openssl-3.6.4",
+        "status": "compatible",
+        "subject_id": "openssl-rs",
+        "support_status": "candidate-view",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_pkg_config"
+      },
+      {
+        "derivation": {
+          "emitted": {
+            "sonames": [
+              "libcrypto.so.3",
+              "libssl.so.3"
+            ]
+          },
+          "method": "the authority's measured SONAMEs (the production atlas symbol-versions plane) against the emitted distribution's declared SONAMEs",
+          "reference": {
+            "sonames": [
+              "libcrypto.so.3",
+              "libssl.so.3"
+            ]
+          },
+          "relation": "the emitted distribution's SONAME identity equals the authority's"
+        },
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "evidence": [
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "note": "the authority's own readelf-measured SONAMEs",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+            "role": "reference",
+            "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "note": "the emitted distribution's declared SONAMEs",
+            "path": "artifacts/phase2/SHELL_MANIFEST.json",
+            "role": "candidate",
+            "sha256": "96dba80a026f9a8ee75760fdc7b15697f0f5403760bef682f6ad299372e3cf6d"
+          }
+        ],
+        "evidence_kind": "build_records",
+        "facet": "distribution_sonames",
+        "non_claims": [
+          "a distribution-shell view is not a semantic, behavioural or security claim about the authority or the candidate",
+          "one platform/profile is not every platform/profile: a view is bounded to the platform, architecture, profile and toolchain of the authority node it names",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reference_id": "openssl-3.6.4-production",
+        "reference_release": "openssl-3.6.4",
+        "status": "compatible",
+        "subject_id": "openssl-rs",
+        "support_status": "candidate-view",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_sonames"
+      },
+      {
+        "derivation": {
+          "emitted": {
+            "static_archives": [
+              "libcrypto.a",
+              "libssl.a"
+            ]
+          },
+          "method": "the authority's SONAME base names + the standard static-archive suffix against the emitted distribution's installed archives",
+          "reference": {
+            "static_archives": [
+              "libcrypto.a",
+              "libssl.a"
+            ]
+          },
+          "relation": "the emitted distribution installs a static archive per authority library base"
+        },
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "evidence": [
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "note": "the static archive name is derived from the authority's own recorded SONAME base, which is the one naming derivation this facet shares",
+            "path": "forensics/authority-nodes.json",
+            "role": "reference",
+            "sha256": "264cf5c061a48c792133a9e8019a19878f2163326b46b32ab824ba126ed2e6a6"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "court_transcript",
+            "note": "the Phase-2 install-layout court requires the static archives",
+            "path": "artifacts/phase2/courts/ABI-INSTALL-LAYOUT.json",
+            "role": "candidate",
+            "sha256": "5612fe7bc38cbfcbd4da66a7ac1a412de2a63fcb68053673c5f863eb09e53152"
+          }
+        ],
+        "evidence_kind": "build_records",
+        "facet": "distribution_static_archives",
+        "non_claims": [
+          "a distribution-shell view is not a semantic, behavioural or security claim about the authority or the candidate",
+          "one platform/profile is not every platform/profile: a view is bounded to the platform, architecture, profile and toolchain of the authority node it names",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reference_id": "openssl-3.6.4-production",
+        "reference_release": "openssl-3.6.4",
+        "status": "compatible",
+        "subject_id": "openssl-rs",
+        "support_status": "candidate-view",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_static_archives"
+      },
+      {
+        "derivation": {
+          "emitted": {
+            "authority_version": "3.6.4"
+          },
+          "method": "the authority's release display version against the emitted distribution's declared version identity",
+          "reference": {
+            "display_version": "3.6.4",
+            "release_id": "openssl-3.6.4"
+          },
+          "relation": "the emitted distribution reports the authority's own version identity"
+        },
+        "dimension": "behavioural",
+        "direction": "candidate_to_reference",
+        "evidence": [
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "note": "the authority's release display version",
+            "path": "forensics/release-catalog.json",
+            "role": "reference",
+            "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "note": "the emitted distribution's declared version",
+            "path": "artifacts/phase2/SHELL_MANIFEST.json",
+            "role": "candidate",
+            "sha256": "96dba80a026f9a8ee75760fdc7b15697f0f5403760bef682f6ad299372e3cf6d"
+          }
+        ],
+        "evidence_kind": "upstream_declaration",
+        "facet": "version_reporting_identity",
+        "non_claims": [
+          "a distribution-shell view is not a semantic, behavioural or security claim about the authority or the candidate",
+          "one platform/profile is not every platform/profile: a view is bounded to the platform, architecture, profile and toolchain of the authority node it names",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reference_id": "openssl-3.6.4-production",
+        "reference_release": "openssl-3.6.4",
+        "status": "compatible",
+        "subject_id": "openssl-rs",
+        "support_status": "candidate-view",
+        "view_id": "compat-view/openssl-3.6.4-production/version_reporting_identity"
+      }
+    ]
+  },
+  "generator": "forensics/tools/compat_views.py",
+  "inputs": [
+    {
+      "name": "authority-nodes",
+      "path": "forensics/authority-nodes.json",
+      "sha256": "264cf5c061a48c792133a9e8019a19878f2163326b46b32ab824ba126ed2e6a6"
+    },
+    {
+      "name": "release-catalog",
+      "path": "forensics/release-catalog.json",
+      "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b"
+    },
+    {
+      "name": "build-records",
+      "path": "forensics/atlas/BUILD_RECORDS.json",
+      "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0"
+    },
+    {
+      "name": "production-symbol-versions",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+      "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550"
+    },
+    {
+      "name": "production-symbols-libcrypto",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "production-symbols-libssl",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+      "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634"
+    },
+    {
+      "name": "historical-build-receipts",
+      "path": "forensics/multitrack/historical-build-receipts.json",
+      "sha256": "6f0e9b8b24bd4c70a85d84bd1239d3b4e4b26b38d34aed3f79cfab0411cd642e"
+    },
+    {
+      "name": "historical-plane-census",
+      "path": "forensics/atlas/openssl-0.9.8zh-historical/plane-census.json",
+      "sha256": "1d429160091840faddc7ac9e99aa4678afa91bc504fd76c60124ed56171c0f18"
+    },
+    {
+      "name": "historical-source-manifest",
+      "path": "forensics/authorities/SOURCE_MANIFEST.0.9.8zh.json",
+      "sha256": "c2628f2b50e17a354a2b686c4f23229edbcbfaafdc8a4bc786a8149db3256170"
+    },
+    {
+      "name": "phase2-shell-manifest",
+      "path": "artifacts/phase2/SHELL_MANIFEST.json",
+      "sha256": "96dba80a026f9a8ee75760fdc7b15697f0f5403760bef682f6ad299372e3cf6d"
+    },
+    {
+      "name": "abi-symbol-court",
+      "path": "artifacts/phase2/courts/ABI-SYMBOL.json",
+      "sha256": "0a154557f3f8afcedea986811579c9b19adce8c85c4f160820da49b0839686ed"
+    },
+    {
+      "name": "abi-version-court",
+      "path": "artifacts/phase2/courts/ABI-VERSION.json",
+      "sha256": "98575bf1ef2898ee8f3963fd7f7e2008cc68589dee0c751f01e308755e4e5b34"
+    },
+    {
+      "name": "abi-install-layout-court",
+      "path": "artifacts/phase2/courts/ABI-INSTALL-LAYOUT.json",
+      "sha256": "5612fe7bc38cbfcbd4da66a7ac1a412de2a63fcb68053673c5f863eb09e53152"
+    },
+    {
+      "name": "pkg-config-libcrypto",
+      "path": "artifacts/phase2/install/lib/pkgconfig/libcrypto.pc",
+      "sha256": "e8cc113396cad994778cb73539e8283fb128c3c2026e4948d8801e4e4f257159"
+    },
+    {
+      "name": "pkg-config-libssl",
+      "path": "artifacts/phase2/install/lib/pkgconfig/libssl.pc",
+      "sha256": "736b3f97d34faeace5d53228bbeb66f7f647ea47f6827eb8a457e796925dc93f"
+    }
+  ],
+  "kind": "compatibility-views",
+  "schema": "openssl-rs/atlas/compatibility-views/v1"
+}
