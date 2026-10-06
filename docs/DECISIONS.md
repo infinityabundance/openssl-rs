@@ -35668,3 +35668,45 @@ reason. The court's control seeds an unclassified change, a composed path that d
 edges, a row with no evidence and a dimension the evidence cannot support, and requires each caught
 with specificity holding. `delta-engine` moves to `implemented`/closed and the stratum's
 `open_in_this_stratum` falls from fourteen to thirteen.
+
+## D540 -- the ABI/history façades are typed adapters over the shared implementation, and the default build carries none
+
+Phase 23.7 lands the compatibility-policy layer and the historical ABI/history façades
+(`src/compat/`, the plane `forensics/multitrack/abi-facades.json` with the record kind
+`abi_facade`, the generator `forensics/tools/gen_abi_facades.py`, court `RT-ABI-HISTORY-FACADES`,
+unit `abi-history-facades`), each a narrow adapter over the shared implementation rather than a
+per-version fork. Four measured corrections are recorded in `docs/PHASE-23-MULTITRACK-SUBPHASES.md`
+section 4.10 and checked by the court.
+
+**The generation proved is 0.9.8zh, and the boundary is named.** The façade layouts are measured by
+compiling a probe against the acquired 0.9.8zh release's own headers in the historical venue, and
+each record cites its header and that header's SHA-256 in the committed `SOURCE_MANIFEST.0.9.8zh.json`.
+No 1.0.x authority is admitted with an acquired tree in this subphase, so the 1.0.x layouts and the
+pre-1.1.0 aggregates the subphase does not name are recorded `not established` with their reason
+rather than inferred; the court fails if the boundary is not named. This is the honest partial:
+the subphase establishes a real, small epoch it can prove, not a broad unproven claim.
+
+**The façade is the pre-1.1.0 side of a real opacity transition, and an adapter, never a cast.**
+In 0.9.8zh `struct env_md_ctx_st` and `struct hmac_ctx_st` are transparent; in 3.6.4 production both
+are opaque (`complete: false`). `HMAC_CTX` embeds three `EVP_MD_CTX` by value at 0.9.8zh, so the
+historical and canonical representations differ in size and no cast between them is correct; the
+`#[repr(C)]` structs carry generated compile-time `sizeof`/`alignof`/`offsetof`/field-width
+assertions, and explicit field-copy adapters translate them. The court refuses a record whose
+adapter is a blind cast.
+
+**The prototype wrappers are the era-specific declaration.** A C symbol has no runtime signature,
+so the same name carries a different declaration across eras (`HMAC_Init_ex`/`HMAC_Update`/
+`HMAC_Final` return `void` in 0.9.8zh and `int` from 1.1.0; `EVP_MD_CTX_init`/`_create`/`_destroy`
+are functions in 0.9.8zh and macros in 3.6.4; `CRYPTO_set_locking_callback` is a function in
+0.9.8zh and a no-op macro in 3.6.4). Each record names both declarations and a safe wrapper over the
+shared implementation, and the ENGINE -> Provider -> no-ENGINE architecture and the init/thread
+epochs are cross-checked against the historical plane census and the production atlas.
+
+**The compatibility selection is a build parameter, not a Cargo feature, and the default is clean.**
+`build.rs` reads `OPENSSL_RS_COMPAT`, resolves an unset value through the committed alias
+`forensics/multitrack/default-authority.json` (never the catalogue's newest release), refuses any
+other value, and sets the `openssl_rs_compat_facades` cfg only for the historical selection, so the
+default 3.6.4 production candidate compiles none of the façades (D534). The court rebuilds the
+generated `src/compat/layout_generated.rs` from the committed measurement and checks the cfg gating,
+so the default build's artefacts, symbols, layouts and semantics are unchanged. `abi-history-facades`
+moves to `implemented`/closed and the stratum's `open_in_this_stratum` falls from eleven to ten.

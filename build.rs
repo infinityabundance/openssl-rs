@@ -67,6 +67,10 @@ fn main() -> ExitCode {
 }
 
 fn run() -> Result<(), String> {
+    // The one conditional-configuration name this build may set (Phase 23.7's compatibility
+    // selection). Declaring it keeps `unexpected_cfgs` from firing in the crate that reads it.
+    println!("cargo:rustc-check-cfg=cfg(openssl_rs_compat_facades)");
+
     let manifest_dir =
         PathBuf::from(env::var("CARGO_MANIFEST_DIR").map_err(|_| "CARGO_MANIFEST_DIR is not set")?);
 
@@ -189,6 +193,66 @@ fn run() -> Result<(), String> {
     }
     println!("cargo:rustc-env=OPENSSL_RS_ENGINESDIR={enginesdir}");
     println!("cargo:rerun-if-env-changed=OPENSSL_RS_ENGINESDIR");
+
+    // Phase 23.7 — the compatibility selection (`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 2,
+    // row 23.7; `src/compat/policy.rs`).
+    //
+    // The selection is an **explicit, singular build parameter**, never a Cargo feature per
+    // authority (D534). It is read from `OPENSSL_RS_COMPAT`; an unset variable resolves through
+    // the committed alias `forensics/multitrack/default-authority.json` — never the catalogue's
+    // newest release — and any other value than the committed default or the historical
+    // 0.9.8zh authority is refused rather than guessed. The resolved selection and the committed
+    // default are exposed to the crate as compile-time constants, and the historical ABI façades
+    // are compiled (`openssl_rs_compat_facades`) **only** when the selection is historical, so the
+    // default 3.6.4 production candidate carries none of them.
+    let compat = std::env::var("OPENSSL_RS_COMPAT").unwrap_or_default();
+    let alias_path = manifest_dir.join("forensics/multitrack/default-authority.json");
+    println!("cargo:rerun-if-changed={}", alias_path.display());
+    let alias_text = fs::read_to_string(&alias_path).map_err(|e| {
+        format!(
+            "cannot read the committed default-authority alias at {}: {e}",
+            alias_path.display()
+        )
+    })?;
+    let default_authority = string_field(&alias_text, "authority_id").ok_or_else(|| {
+        format!(
+            "the committed default-authority alias {} names no authority_id",
+            alias_path.display()
+        )
+    })?;
+    // The one non-default compatibility generation the façades exist for, alongside the default.
+    const HISTORICAL_COMPAT_SELECTION: &str = "openssl-0.9.8zh-historical";
+    let selection = if compat.is_empty() {
+        default_authority.clone()
+    } else {
+        compat
+    };
+    if selection != default_authority && selection != HISTORICAL_COMPAT_SELECTION {
+        return Err(format!(
+            "OPENSSL_RS_COMPAT={selection:?} is not a compatibility selection this build \
+             understands; it must be the committed default authority ({default_authority}) or \
+             {HISTORICAL_COMPAT_SELECTION}. Authority selection is explicit and singular \
+             (docs/AUTHORITY_POLICY.md, D534)."
+        ));
+    }
+    println!("cargo:rustc-env=OPENSSL_RS_DEFAULT_AUTHORITY={default_authority}");
+    println!("cargo:rustc-env=OPENSSL_RS_COMPAT_SELECTION={selection}");
+    println!("cargo:rerun-if-env-changed=OPENSSL_RS_COMPAT");
+    if selection != default_authority {
+        println!("cargo:rustc-cfg=openssl_rs_compat_facades");
+    }
+    println!(
+        "cargo:rerun-if-changed={}",
+        manifest_dir
+            .join("forensics/multitrack/abi-facades.json")
+            .display()
+    );
+    println!(
+        "cargo:rerun-if-changed={}",
+        manifest_dir
+            .join("src/compat/layout_generated.rs")
+            .display()
+    );
 
     build_c_adapters(&manifest_dir)?;
 

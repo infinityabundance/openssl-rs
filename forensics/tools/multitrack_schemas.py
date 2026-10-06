@@ -152,6 +152,18 @@ SUPPORT_LADDER: tuple[str, ...] = (
 SUPPORT_TERMINAL: tuple[str, ...] = ("archaeological-only",)
 SUPPORT_STATUSES: tuple[str, ...] = SUPPORT_LADDER + SUPPORT_TERMINAL
 
+# The ABI/history façade vocabulary (added by 23.7). A façade record says which *kind* of
+# compatibility object it is, and each kind carries its own closed vocabulary. The public-layout
+# epoch and the engine/provider/init/thread models are the typed compatibility-policy axes, and a
+# record's value is checked against the axis it belongs to.
+FACADE_KINDS: tuple[str, ...] = ("public_layout", "prototype", "architecture", "init_thread")
+PUBLIC_LAYOUT_EPOCHS: tuple[str, ...] = ("transparent_pre_1_1_0", "opaque_post_1_1_0")
+PROTOTYPE_CONTRACT_KINDS: tuple[str, ...] = ("function", "macro")
+ENGINE_MODELS: tuple[str, ...] = ("engine", "deprecated_engine", "no_engine")
+PROVIDER_MODELS: tuple[str, ...] = ("no_provider", "provider_store")
+INIT_MODELS: tuple[str, ...] = ("explicit_global_init", "automatic_init")
+THREAD_MODELS: tuple[str, ...] = ("application_locking_callbacks", "internal_thread_support")
+
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 _HEX_COMMIT = re.compile(r"^[0-9a-f]{7,40}$")
 _DATE = re.compile(r"^\d{4}(-\d{2}(-\d{2})?)?$")
@@ -666,6 +678,109 @@ def validate_parameterization_receipt(rec: dict) -> list[str]:
     return problems
 
 
+def validate_abi_facade(rec: dict) -> list[str]:
+    """An ABI/history façade record: a public layout, a prototype, or an epoch model.
+
+    The record kind is discriminated by `facade_kind`, and each kind carries its own required
+    fields and closed vocabulary. Every record names the **adapter** that translates it to or from
+    the shared implementation, so a record whose only link to the canonical internals would be a
+    blind cast fails rather than reads plausibly. A public-layout record's fields must be a
+    non-overlapping, increasing-offset partition of a struct at least as large as its last field,
+    and its `header_sha256` must be a real digest or the literal `unknown`.
+    """
+    fields = ("facade_id", "facade_kind", "authority_id", "release_id", "epoch", "adapter",
+              "evidence", "not_established")
+    problems = _missing(rec, fields)
+    for f in ("facade_id", "authority_id", "release_id", "epoch", "adapter"):
+        problems += _nonempty(rec, f)
+    problems += _enum(rec, "facade_kind", FACADE_KINDS)
+    if "evidence" in rec and not rec["evidence"]:
+        problems.append("evidence must be non-empty (a façade cites the authority it was read from)")
+    if "not_established" in rec and not isinstance(rec["not_established"], list):
+        problems.append("not_established must be a list (empty when the record is fully settled)")
+
+    kind = rec.get("facade_kind")
+    if kind == "public_layout":
+        problems += _missing(rec, ("struct_name", "c_tag", "canonical_c_tag", "rust_type",
+                                   "header", "installed_header", "header_sha256",
+                                   "public_layout_epoch", "sizeof", "alignof", "fields",
+                                   "canonical_type", "canonical_authority_id",
+                                   "canonical_public_layout_epoch", "layout_check"))
+        for f in ("struct_name", "c_tag", "canonical_c_tag", "rust_type", "header",
+                  "canonical_type", "canonical_authority_id", "layout_check"):
+            problems += _nonempty(rec, f)
+        problems += _enum(rec, "public_layout_epoch", PUBLIC_LAYOUT_EPOCHS)
+        problems += _enum(rec, "canonical_public_layout_epoch", PUBLIC_LAYOUT_EPOCHS)
+        problems += _unknownable_hash(rec, "header_sha256")
+        size = rec.get("sizeof")
+        align = rec.get("alignof")
+        if not isinstance(size, int) or size <= 0:
+            problems.append("sizeof must be a positive integer")
+        if not isinstance(align, int) or align <= 0:
+            problems.append("alignof must be a positive integer")
+        rows = rec.get("fields")
+        if not isinstance(rows, list) or not rows:
+            problems.append("fields must be a non-empty list")
+        else:
+            previous_end = 0
+            for i, field in enumerate(rows):
+                if not isinstance(field, dict):
+                    problems.append(f"fields[{i}] must be a mapping")
+                    continue
+                for key in ("name", "c_type", "offset", "size"):
+                    if key not in field:
+                        problems.append(f"fields[{i}] is missing {key!r}")
+                offset, width = field.get("offset"), field.get("size")
+                if not isinstance(offset, int) or not isinstance(width, int) or width <= 0:
+                    problems.append(f"fields[{i}] ({field.get('name')!r}) needs integer offset/size")
+                    continue
+                if offset < previous_end:
+                    problems.append(
+                        f"fields[{i}] ({field.get('name')!r}) at {offset} overlaps the previous "
+                        f"field, which ends at {previous_end}"
+                    )
+                previous_end = offset + width
+            if isinstance(size, int) and previous_end > size:
+                problems.append(
+                    f"the last field ends at {previous_end}, past sizeof {size}"
+                )
+    elif kind == "prototype":
+        problems += _missing(rec, ("symbol", "eras", "authority_specific"))
+        problems += _nonempty(rec, "symbol")
+        if rec.get("authority_specific") is not True:
+            problems.append("authority_specific must be the literal true: the point of the record "
+                            "is that the eras declare the symbol differently")
+        eras = rec.get("eras")
+        if not isinstance(eras, list) or len(eras) < 2:
+            problems.append("eras must name at least the historical and canonical declarations")
+        else:
+            for i, era in enumerate(eras):
+                if not isinstance(era, dict):
+                    problems.append(f"eras[{i}] must be a mapping")
+                    continue
+                for key in ("era", "authority_id", "declaration", "kind", "header"):
+                    if key not in era:
+                        problems.append(f"eras[{i}] is missing {key!r}")
+                if era.get("kind") not in PROTOTYPE_CONTRACT_KINDS:
+                    problems.append(
+                        f"eras[{i}].kind={era.get('kind')!r} is not one of "
+                        f"{sorted(PROTOTYPE_CONTRACT_KINDS)}"
+                    )
+    elif kind == "architecture":
+        problems += _missing(rec, ("engine_model", "provider_model"))
+        problems += _enum(rec, "engine_model", ENGINE_MODELS)
+        problems += _enum(rec, "provider_model", PROVIDER_MODELS)
+    elif kind == "init_thread":
+        problems += _missing(rec, ("init_model", "thread_model", "callbacks"))
+        problems += _enum(rec, "init_model", INIT_MODELS)
+        problems += _enum(rec, "thread_model", THREAD_MODELS)
+        cbs = rec.get("callbacks")
+        if "callbacks" in rec and not (isinstance(cbs, list)
+                                       and all(isinstance(c, str) for c in cbs)):
+            problems.append("callbacks must be a list of symbol names")
+    return problems
+
+
 def validate_compatibility_matrix(rec: dict) -> list[str]:
     """The assembled matrix: cells that are each directional and dimension-specific."""
     fields = ("matrix_id", "rows", "generated_from")
@@ -718,6 +833,8 @@ REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
     "compatibility_matrix": ("matrix_id", "rows", "generated_from"),
     "parameterization_receipt": ("receipt_id", "default_authority", "plane_order", "censuses",
                                  "measured_absences", "byte_identity"),
+    "abi_facade": ("facade_id", "facade_kind", "authority_id", "release_id", "epoch", "adapter",
+                   "evidence", "not_established"),
 }
 
 SCHEMAS = {
@@ -733,6 +850,7 @@ SCHEMAS = {
     "support_status": validate_support_status,
     "compatibility_matrix": validate_compatibility_matrix,
     "parameterization_receipt": validate_parameterization_receipt,
+    "abi_facade": validate_abi_facade,
 }
 
 
@@ -893,6 +1011,36 @@ _GOOD: dict[str, dict] = {
                           "files": [{"path": "forensics/atlas/openssl-3.6.4-production/functions.json",
                                      "sha256": _DIGEST}]},
     },
+    "abi_facade": {
+        "facade_id": "F-EVP_MD_CTX-0.9.8zh",
+        "facade_kind": "public_layout",
+        "authority_id": "openssl-0.9.8zh-historical",
+        "release_id": "openssl-0.9.8zh",
+        "epoch": "0.9.8zh",
+        "struct_name": "EVP_MD_CTX",
+        "c_tag": "env_md_ctx_st",
+        "canonical_c_tag": "evp_md_ctx_st",
+        "rust_type": "FacadeEvpMdCtx",
+        "header": "crypto/evp/evp.h",
+        "installed_header": "openssl/evp.h",
+        "header_sha256": _DIGEST,
+        "public_layout_epoch": "transparent_pre_1_1_0",
+        "sizeof": 32,
+        "alignof": 8,
+        "fields": [
+            {"name": "digest", "c_type": "const EVP_MD *", "offset": 0, "size": 8},
+            {"name": "engine", "c_type": "ENGINE *", "offset": 8, "size": 8},
+            {"name": "flags", "c_type": "unsigned long", "offset": 16, "size": 8},
+            {"name": "md_data", "c_type": "void *", "offset": 24, "size": 8},
+        ],
+        "canonical_type": "crate::evp::digest::EvpMdCtx",
+        "canonical_authority_id": "openssl-3.6.4-production",
+        "canonical_public_layout_epoch": "opaque_post_1_1_0",
+        "adapter": "compat::adapters::evp_md_ctx_from_pre_1_1_0",
+        "layout_check": "compat::layout_generated::FacadeEvpMdCtx",
+        "not_established": [],
+        "evidence": ["forensics/authorities/SOURCE_MANIFEST.0.9.8zh.json#crypto/evp/evp.h"],
+    },
 }
 
 
@@ -928,6 +1076,9 @@ def _bad(kind: str) -> dict:
     elif kind == "parameterization_receipt":
         # an absence with no evidence is an omission dressed as a measurement
         rec["censuses"]["openssl-0.9.8zh-historical"]["planes"][0]["evidence"] = {}
+    elif kind == "abi_facade":
+        # a public layout whose fields overlap is not a layout any compiler produces
+        rec["fields"][1]["offset"] = 0
     else:
         raise AssertionError(f"no bad case for {kind}")
     return rec
@@ -996,6 +1147,44 @@ def self_test() -> int:
     unprovenanced = dict(_GOOD["lineage_edge"], metadata_provenance=[])
     if not validate_lineage_edge(unprovenanced):
         failures.append("validate_lineage_edge accepted a lineage edge with no provenance")
+
+    # The ABI/history façade kinds: every kind accepts a documented-good record, and the two
+    # load-bearing refusals (a prototype that claims no era difference, and a façade with no
+    # adapter) are each caught.
+    prototype_good = {
+        "facade_id": "P-HMAC_Init_ex", "facade_kind": "prototype",
+        "authority_id": "openssl-0.9.8zh-historical", "release_id": "openssl-0.9.8zh",
+        "epoch": "0.9.8zh", "symbol": "HMAC_Init_ex", "authority_specific": True,
+        "adapter": "compat::prototypes::hmac_init_ex",
+        "eras": [
+            {"era": "0.9.8zh", "authority_id": "openssl-0.9.8zh-historical",
+             "declaration": "void (HMAC_CTX *, const void *, int, const EVP_MD *, ENGINE *)",
+             "kind": "function", "header": "hmac.h"},
+            {"era": "3.6.4", "authority_id": "openssl-3.6.4-production",
+             "declaration": "int (HMAC_CTX *, const void *, int, const EVP_MD *, ENGINE *)",
+             "kind": "function", "header": "hmac.h"},
+        ],
+        "evidence": ["forensics/multitrack/abi-facades.json"], "not_established": [],
+    }
+    for kind, extra in (
+        ("architecture", {"engine_model": "engine", "provider_model": "no_provider"}),
+        ("init_thread", {"init_model": "explicit_global_init",
+                         "thread_model": "application_locking_callbacks", "callbacks": []}),
+    ):
+        rec = dict(prototype_good, facade_id=f"X-{kind}", facade_kind=kind, **extra)
+        problems_here = validate_abi_facade(rec)
+        if problems_here:
+            failures.append(f"abi_facade ({kind}): a documented-good record was refused: "
+                            f"{problems_here}")
+    if validate_abi_facade(prototype_good):
+        failures.append(f"abi_facade (prototype): a documented-good record was refused: "
+                        f"{validate_abi_facade(prototype_good)}")
+    no_difference = dict(prototype_good, authority_specific=False)
+    if not validate_abi_facade(no_difference):
+        failures.append("validate_abi_facade accepted a prototype claiming no era difference")
+    no_adapter = {k: v for k, v in _GOOD["abi_facade"].items() if k != "adapter"}
+    if not validate_abi_facade(no_adapter):
+        failures.append("validate_abi_facade accepted a façade with no canonical adapter")
 
     # --- every validator, both directions -----------------------------------------------
     for kind in sorted(SCHEMAS):
