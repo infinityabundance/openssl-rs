@@ -1,0 +1,1076 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "`RT-AUTHORITY-ADMISSION` is 21.1's court: it stages no probe and admits the delta's input pair, recording each authority's identity and build profile as `{id, role, version, profile, manifest, checksum, admitted}` from forensics/authorities/AUTHORITIES.json, the two SOURCE_MANIFEST.{3.6.3,3.6.4}.json source identities, the build records and the differential that names the pair — `openssl-3.6.3-historical` versus `openssl-3.6.4-production`. It fails when an authority named as a delta input is not admitted, or when its identity disagrees between the registry and its manifest, and a synthetic view with an unadmitted authority in the pair and one with a manifest root hash drifted from the registry's are both detected. It records the pair's identity, not the delta between them. `RT-ATLAS-DELTA` is 21.2's: it stages no probe and recomputes the added / removed / changed obligation delta between the two authorities across the atlas planes the procedure names, from the per-authority atlases under forensics/atlas/openssl-3.6.3-historical and forensics/atlas/openssl-3.6.4-production keyed exactly as the differential tool keys them, requiring the committed differential to agree with what it recomputes. The exports plane is measured; the provider registration-row and prerequisite-unit planes are named `not-measured` with their reasons, because the artefacts the procedure names are single-authority and no committed differential compares them — an unmeasured plane is never counted motionless. A synthetic view with an injected added and an injected removed declaration row detects both, with the unchanged symbol plane reporting no motion. `RT-DELTA-DISPOSITION` is 21.3's: it dispositions every delta row against the candidate's own installed surface -- a measured row is `implemented` only when that surface carries it, a `not-measured` plane or axis is `boundary`, and a `removed`/`changed` row the candidate carries re-adopts the historical behaviour the fixed authority moved away from and is a finding -- with zero unexplained, so an un-dispositioned row is a `fail`. `RT-AFFECTED-COURT-SELECTION` is 21.4's: it stages no probe and derives which courts a delta touches, mechanically from the dispositioned delta and the coverage atlas's export -> court edge -- a measured, `implemented` row reaches the courts its declaring header's owning stratum stages, a row that is itself an export is covered directly, an error-reason header that owns no stratum is resolved to its sibling public header, and a `not-measured` boundary reaches no court. Each selected court is re-derived (its committed registry verdict and its coverage of the owning stratum re-read; the probes are not re-executed, so the mode is honestly `re-derived`), and a selection with a reached court omitted and one with a spurious court no row reaches are both detected. `MAINTENANCE-BOUNDARY-REGISTER` is 21.5's: the register of the explicit non-claims. It stages no probe and binds the authored register artifacts/phase21/maintenance-boundary-register.json, which records, per surface, whether it is `claimed` (a passing court covers it) or `bounded` (explicitly outside this stratum). It re-reads the four delta courts' records (the claimed side) and the constitution/limitations artefacts -- docs/RELEASE_GATES.md section 8, docs/NON_CLAIMS.md, docs/PARITY_MODEL.md section 1, docs/SECURITY_DIVERGENCE_POLICY.md and the two planes RT-ATLAS-DELTA recorded `not-measured`, the provider registration rows and prerequisite units -- and fails the stratum if a recorded boundary has drifted from its evidence. The load-bearing non-claims are carried as bounded rows: OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4, only the exercised delta is claimed, unknown stays unknown, the provider registration-row and prerequisite-unit planes are bounded rather than motionless with what would make each measurable, and a 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced. On the current tree the register records zero findings (specificity), and a synthetic view with a claimed row's court turned non-passing and one with a bounded row's cited evidence drifted are both detected. This is the last of the five units, so no court is `pending`. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the delta between two admitted authorities, with no version-universality claim. docs/PHASE-21-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "courts": [
+      {
+        "admission_authority": "docs/AUTHORITY_POLICY.md",
+        "control": {
+          "baseline_findings": 0,
+          "caught_identity_drift": true,
+          "caught_unadmitted_authority": true,
+          "honest": true,
+          "injected_identity_authority": "openssl-3.6.4-production",
+          "injected_identity_findings": 2,
+          "injected_unadmitted_authority": "openssl-0.0.0-unadmitted",
+          "injected_unadmitted_findings": 1,
+          "specificity_holds": true
+        },
+        "court": "RT-AUTHORITY-ADMISSION",
+        "divergence_authority": "docs/SECURITY_DIVERGENCE_POLICY.md",
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the admission court reads committed authority records and stages no artifacts/phase21/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it reads the committed authority records -- forensics/authorities/AUTHORITIES.json and the two SOURCE_MANIFEST.{3.6.3,3.6.4}.json source identities -- the build records that carry each authority's profile, and the differential that names the pair, and records `{id, role, version, profile, manifest, checksum, admitted}` per authority in the delta input pair. It fails when an authority the differential names is not admitted, or when its identity disagrees between the registry and its manifest (a manifest name that does not carry the registry's version, a file count, byte count or root hash the registry does not record, per-file digests that do not reproduce the manifest root hash, or an artifact checksum that is not the published one). A synthetic view with an unadmitted authority in the pair and one with a manifest root hash drifted from the registry's are both detected (docs/PHASE-21-SUBPHASES.md section 3.2).",
+        "pair": {
+          "from": {
+            "admitted": true,
+            "checksum": "243a86649cf6f23eeb6a2ff2456e09e5d77dd9018a54d3d96b0c6bdd6ba6c7f1",
+            "id": "openssl-3.6.3-historical",
+            "manifest": "SOURCE_MANIFEST.3.6.3.json",
+            "profile": "linux-x86_64-default-shared-legacy-notests",
+            "role": "historical",
+            "root_hash": "b996e7f0e239da1cafc8fd40c94e15032cc07dc5259303e0e5969e325b16d72d",
+            "version": "3.6.3"
+          },
+          "identity": {
+            "differential": "forensics/atlas/differential/openssl-3.6.3-historical-vs-openssl-3.6.4-production.json",
+            "differential_body_hash": "c67ffb42e29c95100fa3db94df920136c32a33fb3bb12397b28cc2cc5e2fb28a",
+            "direction": "added means present in 'to', absent in 'from'",
+            "from_authority": "openssl-3.6.3-historical",
+            "to_authority": "openssl-3.6.4-production"
+          },
+          "to": {
+            "admitted": true,
+            "checksum": "9bffaa1ad1e07b354c21bd3324ec02fa15579f45a7d0494b3e74bc449b7333ef",
+            "id": "openssl-3.6.4-production",
+            "manifest": "SOURCE_MANIFEST.3.6.4.json",
+            "profile": "linux-x86_64-default-shared-legacy-notests",
+            "role": "production",
+            "root_hash": "27d9917bd7c63d9bb056e674cc08c809b44cde50f9e474cd30041b8b66385432",
+            "version": "3.6.4"
+          }
+        },
+        "probe": "",
+        "problems": [],
+        "verdict": "pass"
+      },
+      {
+        "adjacent_measurements": [
+          {
+            "added": 0,
+            "changed": null,
+            "classes": {},
+            "note": "adjacent, NOT the named provider-registration-rows plane: the differential's provider_algorithms key, computed from the per-authority provider-inventory.json",
+            "plane": "provider-inventory",
+            "removed": 0,
+            "sources": [
+              "forensics/atlas/openssl-3.6.3-historical/provider-inventory.json",
+              "forensics/atlas/openssl-3.6.4-production/provider-inventory.json"
+            ]
+          }
+        ],
+        "control": {
+          "baseline_counts": {
+            "added": 2,
+            "changed": 0,
+            "removed": 0
+          },
+          "caught_added": true,
+          "caught_removed": true,
+          "honest": true,
+          "injected_added_counts": {
+            "added": 3,
+            "changed": 0,
+            "removed": 0
+          },
+          "injected_added_row": "RT-ATLAS-DELTA-SYNTHETIC-ADDED-ROW",
+          "injected_removed_counts": {
+            "added": 2,
+            "changed": 0,
+            "removed": 1
+          },
+          "injected_removed_row": "RT-ATLAS-DELTA-SYNTHETIC-REMOVED-ROW",
+          "specificity_holds": true
+        },
+        "counts": {
+          "added": 2,
+          "changed": 0,
+          "planes_measured": 1,
+          "planes_named": 3,
+          "planes_not_measured": 2,
+          "removed": 0
+        },
+        "court": "RT-ATLAS-DELTA",
+        "divergence_authority": "docs/SECURITY_DIVERGENCE_POLICY.md",
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the atlas-delta court reads committed atlases and stages no artifacts/phase21/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it recomputes the added / removed / changed delta across the atlas planes docs/PHASE-21-SUBPHASES.md section 2 names, from the per-authority atlases under forensics/atlas/openssl-3.6.3-historical and forensics/atlas/openssl-3.6.4-production keyed exactly as forensics/tools/atlas_differential.py keys them, and requires the committed differential to agree with what it recomputes (a differential that no longer matches its authorities is a fail). The exports plane is measured (it is the plane whose two sides are both committed); the provider registration-row plane and the prerequisite unit plane are named `not-measured` with their reasons, because the artefacts the procedure names (forensics/atlas/provider-algorithms.json, forensics/prerequisites.json) are single-authority and no committed differential compares them -- an unmeasured plane is never counted motionless. The adjacent provider-inventory plane the differential does compare is measured and recorded as adjacent, not as the named plane. The instrument sensitivity control injects an added and a removed declaration row into a synthetic view and requires both to be caught with the unchanged symbol plane reporting no motion (docs/PHASE-21-SUBPHASES.md sections 3.2, 3.3 and 3.4)",
+        "planes": [
+          {
+            "added": [
+              {
+                "key": "SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+                "kind": "declaration",
+                "plane": "declarations.macros"
+              },
+              {
+                "key": "X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+                "kind": "declaration",
+                "plane": "declarations.macros"
+              }
+            ],
+            "changed": [],
+            "counts": {
+              "added": 2,
+              "changed": 0,
+              "removed": 0
+            },
+            "named_source": "the per-authority symbol atlases (symbols-libcrypto.json, symbols-libssl.json) and the declared-surface planes (functions, typedefs, structs, enums, variables, macros) under forensics/atlas/openssl-3.6.3-historical and forensics/atlas/openssl-3.6.4-production",
+            "not_measured_axes": [
+              {
+                "axis": "declarations.*.changed",
+                "reason": "the committed differential compares declared-surface membership by key and not declaration bodies, so a declaration whose body changed without its name changing is not detected; `changed` is measured for the ABI symbols (their DSO version) and not for the declared declarations"
+              }
+            ],
+            "plane": "exports",
+            "removed": [],
+            "sources": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+              "forensics/atlas/openssl-3.6.3-historical/functions.json",
+              "forensics/atlas/openssl-3.6.3-historical/typedefs.json",
+              "forensics/atlas/openssl-3.6.3-historical/structs.json",
+              "forensics/atlas/openssl-3.6.3-historical/enums.json",
+              "forensics/atlas/openssl-3.6.3-historical/variables.json",
+              "forensics/atlas/openssl-3.6.3-historical/macros.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+              "forensics/atlas/openssl-3.6.4-production/functions.json",
+              "forensics/atlas/openssl-3.6.4-production/typedefs.json",
+              "forensics/atlas/openssl-3.6.4-production/structs.json",
+              "forensics/atlas/openssl-3.6.4-production/enums.json",
+              "forensics/atlas/openssl-3.6.4-production/variables.json",
+              "forensics/atlas/openssl-3.6.4-production/macros.json"
+            ],
+            "state": "measured",
+            "subplanes": {
+              "declarations.enums": {
+                "added": [],
+                "changed": null,
+                "changed_measured": false,
+                "from_count": 4,
+                "removed": [],
+                "to_count": 4
+              },
+              "declarations.functions": {
+                "added": [],
+                "changed": null,
+                "changed_measured": false,
+                "from_count": 7485,
+                "removed": [],
+                "to_count": 7485
+              },
+              "declarations.macros": {
+                "added": [
+                  "SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+                  "X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+                ],
+                "changed": null,
+                "changed_measured": false,
+                "from_count": 16803,
+                "removed": [],
+                "to_count": 16805
+              },
+              "declarations.structs": {
+                "added": [],
+                "changed": null,
+                "changed_measured": false,
+                "from_count": 465,
+                "removed": [],
+                "to_count": 465
+              },
+              "declarations.typedefs": {
+                "added": [],
+                "changed": null,
+                "changed_measured": false,
+                "from_count": 1162,
+                "removed": [],
+                "to_count": 1162
+              },
+              "declarations.variables": {
+                "added": [],
+                "changed": null,
+                "changed_measured": false,
+                "from_count": 2,
+                "removed": [],
+                "to_count": 2
+              },
+              "symbols.libcrypto": {
+                "added": [],
+                "changed": [],
+                "changed_measured": true,
+                "from_count": 5949,
+                "removed": [],
+                "to_count": 5949
+              },
+              "symbols.libssl": {
+                "added": [],
+                "changed": [],
+                "changed_measured": true,
+                "from_count": 608,
+                "removed": [],
+                "to_count": 608
+              }
+            }
+          },
+          {
+            "named_source": "forensics/atlas/provider-algorithms.json",
+            "plane": "provider-registration-rows",
+            "reason": "the named census forensics/atlas/provider-algorithms.json is generated for the production authority only, so no committed historical counterpart exists and atlas_differential.py does not compare it; the named authority-to-authority registration-row delta therefore cannot be computed from committed data. What would be needed is a second provider-algorithms.json census generated over the historical authority's provider tables. The differential does compare the per-authority provider-inventory.json (the algorithm names the built openssl publishes) under its own provider_algorithms key, and that adjacent plane is measured below -- it is not this named plane, and the not-measured plane carries no counts",
+            "state": "not-measured"
+          },
+          {
+            "named_source": "forensics/prerequisites.json",
+            "named_source_shape": {
+              "deferrals": 1,
+              "divergences": 14,
+              "units": 152
+            },
+            "plane": "prerequisite-units",
+            "reason": "the named plane forensics/prerequisites.json is a single-authority openssl-rs artefact (the prerequisite/divergence units of the implementation, not of an authority), with no committed historical counterpart and no differential tool that compares it; the authority-to-authority prerequisite-unit delta therefore cannot be computed from committed data. The named artefact's shape is recorded for context, but it is not a delta and this plane carries no counts",
+            "state": "not-measured"
+          }
+        ],
+        "probe": "",
+        "problems": [],
+        "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "baseline_targets": 5,
+          "baseline_unexplained": 0,
+          "caught_security_reintroduction": true,
+          "caught_un_dispositioned": true,
+          "honest": true,
+          "injected_benign_added_findings": 0,
+          "injected_benign_added_row": "RT-DELTA-DISPOSITION-SYNTHETIC-BENIGN-ADDED-ROW",
+          "injected_reintroduced_findings": 1,
+          "injected_reintroduced_row": "RT-DELTA-DISPOSITION-SYNTHETIC-REINTRODUCED-ROW",
+          "injected_un_dispositioned_findings": 1,
+          "injected_un_dispositioned_row": "RT-DELTA-DISPOSITION-SYNTHETIC-UNDISPOSITIONED-ROW",
+          "specificity_holds": true
+        },
+        "counts": {
+          "boundary": 3,
+          "deferred": 0,
+          "findings": 0,
+          "implemented": 2,
+          "measured": 2,
+          "not_in_profile": 0,
+          "not_measured": 3,
+          "prohibited": 0,
+          "targets": 5,
+          "unexplained": 0
+        },
+        "court": "RT-DELTA-DISPOSITION",
+        "disposition_authority": [
+          "docs/SECURITY_DIVERGENCE_POLICY.md",
+          "docs/PHASE-21-SUBPHASES.md"
+        ],
+        "dispositions": [
+          {
+            "authority_value": "16",
+            "axis": "added",
+            "candidate_source": "artifacts/phase2/install/include/openssl/ssl.h",
+            "candidate_value": "16",
+            "carried": true,
+            "disposition": "implemented",
+            "id": "declarations.macros:added:SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+            "key": "SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+            "kind": "declaration",
+            "plane": "declarations.macros",
+            "prohibited": false,
+            "state": "measured"
+          },
+          {
+            "authority_value": "147",
+            "axis": "added",
+            "candidate_source": "artifacts/phase2/install/include/openssl/x509err.h",
+            "candidate_value": "147",
+            "carried": true,
+            "disposition": "implemented",
+            "id": "declarations.macros:added:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+            "key": "X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+            "kind": "declaration",
+            "plane": "declarations.macros",
+            "prohibited": false,
+            "state": "measured"
+          },
+          {
+            "axis": "not-measured-axis",
+            "carried": null,
+            "disposition": "boundary",
+            "id": "declarations.*.changed",
+            "key": "declarations.*.changed",
+            "kind": "axis",
+            "plane": "exports",
+            "prohibited": false,
+            "reason": "the committed differential compares declared-surface membership by key and not declaration bodies, so a declaration whose body changed without its name changing is not detected; `changed` is measured for the ABI symbols (their DSO version) and not for the declared declarations",
+            "state": "not-measured"
+          },
+          {
+            "axis": "not-measured-plane",
+            "carried": null,
+            "disposition": "boundary",
+            "id": "provider-registration-rows",
+            "key": "provider-registration-rows",
+            "kind": "plane",
+            "plane": "provider-registration-rows",
+            "prohibited": false,
+            "reason": "the named census forensics/atlas/provider-algorithms.json is generated for the production authority only, so no committed historical counterpart exists and atlas_differential.py does not compare it; the named authority-to-authority registration-row delta therefore cannot be computed from committed data. What would be needed is a second provider-algorithms.json census generated over the historical authority's provider tables. The differential does compare the per-authority provider-inventory.json (the algorithm names the built openssl publishes) under its own provider_algorithms key, and that adjacent plane is measured below -- it is not this named plane, and the not-measured plane carries no counts",
+            "state": "not-measured"
+          },
+          {
+            "axis": "not-measured-plane",
+            "carried": null,
+            "disposition": "boundary",
+            "id": "prerequisite-units",
+            "key": "prerequisite-units",
+            "kind": "plane",
+            "plane": "prerequisite-units",
+            "prohibited": false,
+            "reason": "the named plane forensics/prerequisites.json is a single-authority openssl-rs artefact (the prerequisite/divergence units of the implementation, not of an authority), with no committed historical counterpart and no differential tool that compares it; the authority-to-authority prerequisite-unit delta therefore cannot be computed from committed data. The named artefact's shape is recorded for context, but it is not a delta and this plane carries no counts",
+            "state": "not-measured"
+          }
+        ],
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the delta-disposition court reads committed atlases and the candidate's installed headers and stages no artifacts/phase21/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it dispositions every delta row RT-ATLAS-DELTA computed and every plane or axis it recorded `not-measured`, reading the delta from that court's own record rather than a second list. A measured `added`/`removed`/`changed` row is `implemented` only when the candidate's installed surface (artifacts/phase2/install/include/openssl/) carries the declaration with the authority's value -- verified, not asserted -- and is otherwise un-dispositioned, which is a fail; a `not-measured` plane or axis is dispositioned `boundary`, a recorded boundary rather than motionless. A `removed`/`changed` row the candidate carries would re-adopt the historical behaviour the fixed authority moved away from, which docs/SECURITY_DIVERGENCE_POLICY.md section 3 makes a finding and not a disposition. The instrument sensitivity control injects an un-dispositioned row and a re-adopted `removed` row and requires both caught while an ordinary carried `added` row produces no finding (docs/PHASE-21-SUBPHASES.md sections 2, 3.2 and 3.5)",
+        "probe": "",
+        "problems": [],
+        "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_courts": 20,
+          "baseline_problems": 0,
+          "caught_omitted": true,
+          "caught_spurious": true,
+          "honest": true,
+          "injected_omitted_court": "RT-DTLS",
+          "injected_omitted_problems": 1,
+          "injected_spurious_court": "RT-AFFECTED-COURT-SELECTION-SYNTHETIC-COURT",
+          "injected_spurious_problems": 2,
+          "specificity_holds": true
+        },
+        "counts": {
+          "boundary_rows": 3,
+          "delta_rows": 5,
+          "findings": 0,
+          "moving_rows": 2,
+          "reexecuted_courts": 0,
+          "selected_courts": 20,
+          "selected_strata": 2,
+          "uncovered_rows": 0
+        },
+        "court": "RT-AFFECTED-COURT-SELECTION",
+        "derivation": [
+          {
+            "disposition": "implemented",
+            "expected_courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF",
+              "RT-RECORD",
+              "RT-SESSION-CERT",
+              "RT-SSL-BIO",
+              "RT-SSL-CIPH",
+              "RT-SSL-EXT",
+              "RT-SSL-INIT",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
+            ],
+            "key": "SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+            "origin": [
+              {
+                "header": "ssl.h",
+                "how": "declaring-header",
+                "resolved_header": "ssl.h",
+                "strata": [
+                  14
+                ]
+              }
+            ],
+            "owning_strata": [
+              14
+            ],
+            "plane": "declarations.macros",
+            "row": "declarations.macros:added:SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+            "state": "measured",
+            "why": "the row reaches the courts its declaring header's owning stratum [14] stages, read from artifacts/phase<stratum>/COURTS.json"
+          },
+          {
+            "disposition": "implemented",
+            "expected_courts": [
+              "RT-X509",
+              "RT-X509-ACERT",
+              "RT-X509-PEM",
+              "RT-X509-REF",
+              "RT-X509-REQ",
+              "RT-X509-STORE",
+              "RT-X509-V3",
+              "RT-X509-VERIFY-ENGINE",
+              "RT-X509-VERIFY-SURFACE"
+            ],
+            "key": "X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+            "origin": [
+              {
+                "header": "x509err.h",
+                "how": "error-header-sibling (x509err.h -> x509.h)",
+                "resolved_header": "x509.h",
+                "strata": [
+                  11
+                ]
+              }
+            ],
+            "owning_strata": [
+              11
+            ],
+            "plane": "declarations.macros",
+            "row": "declarations.macros:added:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+            "state": "measured",
+            "why": "the row reaches the courts its declaring header's owning stratum [11] stages, read from artifacts/phase<stratum>/COURTS.json"
+          },
+          {
+            "disposition": "boundary",
+            "expected_courts": [],
+            "key": "declarations.*.changed",
+            "origin": [],
+            "owning_strata": [],
+            "plane": "exports",
+            "row": "declarations.*.changed",
+            "state": "not-measured",
+            "why": "a `not-measured` plane or axis carries no row, so it reaches no court: counting a boundary as motionless would select more than the delta reaches"
+          },
+          {
+            "disposition": "boundary",
+            "expected_courts": [],
+            "key": "provider-registration-rows",
+            "origin": [],
+            "owning_strata": [],
+            "plane": "provider-registration-rows",
+            "row": "provider-registration-rows",
+            "state": "not-measured",
+            "why": "a `not-measured` plane or axis carries no row, so it reaches no court: counting a boundary as motionless would select more than the delta reaches"
+          },
+          {
+            "disposition": "boundary",
+            "expected_courts": [],
+            "key": "prerequisite-units",
+            "origin": [],
+            "owning_strata": [],
+            "plane": "prerequisite-units",
+            "row": "prerequisite-units",
+            "state": "not-measured",
+            "why": "a `not-measured` plane or axis carries no row, so it reaches no court: counting a boundary as motionless would select more than the delta reaches"
+          }
+        ],
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the affected-court-selection court reads committed atlases and registry rows and stages no artifacts/phase21/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it reads the dispositioned delta RT-DELTA-DISPOSITION recorded and derives which courts each measured, `implemented` row reaches, mechanically and from committed artefacts -- the row's declaring header is read from the per-authority declaration atlases, the header's owning stratum from the declaring-header ownership forensics/atlas/symbol-ownership.json records, and the courts from the per-stratum registries artifacts/phase<stratum>/COURTS.json, cross-checked against the export -> court edge forensics/atlas/court-coverage.json carries. A row that is itself an export is covered directly by the atlas's symbol -> court edge; an error-reason header that owns no stratum directly is resolved to its sibling public header by the error-header convention; a `not-measured` boundary carries no row and reaches no court. Each selected court is re-derived -- its committed registry verdict and its coverage of the owning stratum's exports are re-read, and the probes are NOT re-executed here, so the mode is recorded `re-derived`, never `re-run`. The instrument sensitivity control injects a selection with a reached court omitted and a selection with a spurious court no row reaches, and requires both caught while the real selection derives with zero problems (docs/RELEASE_GATES.md section 8, docs/PHASE-21-SUBPHASES.md sections 2, 3.2 and 3.7)",
+        "probe": "",
+        "problems": [],
+        "selected_courts": [
+          {
+            "court": "RT-DTLS",
+            "coverage_basis": "the coverage atlas records RT-DTLS as covering stratum 14's exports",
+            "mode": "re-derived",
+            "observation": "pass (42 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase14/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+            ],
+            "stratum": 14,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-PHASE14-REF",
+            "coverage_basis": "the coverage atlas records RT-PHASE14-REF as covering stratum 14's exports",
+            "mode": "re-derived",
+            "observation": "pass (600 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase14/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+            ],
+            "stratum": 14,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-RECORD",
+            "coverage_basis": "the coverage atlas records RT-RECORD as covering stratum 14's exports",
+            "mode": "re-derived",
+            "observation": "pass (38 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase14/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+            ],
+            "stratum": 14,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-SESSION-CERT",
+            "coverage_basis": "the coverage atlas records RT-SESSION-CERT as covering stratum 14's exports",
+            "mode": "re-derived",
+            "observation": "pass (208 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase14/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+            ],
+            "stratum": 14,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-SSL-BIO",
+            "coverage_basis": "the coverage atlas records RT-SSL-BIO as covering stratum 14's exports",
+            "mode": "re-derived",
+            "observation": "pass (50 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase14/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+            ],
+            "stratum": 14,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-SSL-CIPH",
+            "coverage_basis": "the coverage atlas records RT-SSL-CIPH as covering stratum 14's exports",
+            "mode": "re-derived",
+            "observation": "pass (156 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase14/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+            ],
+            "stratum": 14,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-SSL-EXT",
+            "coverage_basis": "the coverage atlas records RT-SSL-EXT as covering stratum 14's exports",
+            "mode": "re-derived",
+            "observation": "pass (77 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase14/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+            ],
+            "stratum": 14,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-SSL-INIT",
+            "coverage_basis": "the coverage atlas records RT-SSL-INIT as covering stratum 14's exports",
+            "mode": "re-derived",
+            "observation": "pass (26 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase14/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+            ],
+            "stratum": 14,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-SSL-METHODS",
+            "coverage_basis": "the coverage atlas records RT-SSL-METHODS as covering stratum 14's exports",
+            "mode": "re-derived",
+            "observation": "pass (304 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase14/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+            ],
+            "stratum": 14,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-SSL-OBJECT",
+            "coverage_basis": "the coverage atlas records RT-SSL-OBJECT as covering stratum 14's exports",
+            "mode": "re-derived",
+            "observation": "pass (362 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase14/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+            ],
+            "stratum": 14,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-STATEM",
+            "coverage_basis": "the coverage atlas records RT-STATEM as covering stratum 14's exports",
+            "mode": "re-derived",
+            "observation": "pass (68 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase14/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+            ],
+            "stratum": 14,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-X509",
+            "coverage_basis": "the coverage atlas records RT-X509 as covering stratum 11's exports",
+            "mode": "re-derived",
+            "observation": "pass (52 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase11/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+            ],
+            "stratum": 11,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-X509-ACERT",
+            "coverage_basis": "the coverage atlas records RT-X509-ACERT as covering stratum 11's exports",
+            "mode": "re-derived",
+            "observation": "pass (178 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase11/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+            ],
+            "stratum": 11,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-X509-PEM",
+            "coverage_basis": "the coverage atlas records RT-X509-PEM as covering stratum 11's exports",
+            "mode": "re-derived",
+            "observation": "pass (121 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase11/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+            ],
+            "stratum": 11,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-X509-REF",
+            "coverage_basis": "the coverage atlas records RT-X509-REF as covering stratum 11's exports",
+            "mode": "re-derived",
+            "observation": "pass (1007 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase11/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+            ],
+            "stratum": 11,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-X509-REQ",
+            "coverage_basis": "the coverage atlas records RT-X509-REQ as covering stratum 11's exports",
+            "mode": "re-derived",
+            "observation": "pass (76 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase11/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+            ],
+            "stratum": 11,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-X509-STORE",
+            "coverage_basis": "the coverage atlas records RT-X509-STORE as covering stratum 11's exports",
+            "mode": "re-derived",
+            "observation": "pass (525 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase11/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+            ],
+            "stratum": 11,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-X509-V3",
+            "coverage_basis": "the coverage atlas records RT-X509-V3 as covering stratum 11's exports",
+            "mode": "re-derived",
+            "observation": "pass (240 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase11/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+            ],
+            "stratum": 11,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-X509-VERIFY-ENGINE",
+            "coverage_basis": "the coverage atlas records RT-X509-VERIFY-ENGINE as covering stratum 11's exports",
+            "mode": "re-derived",
+            "observation": "pass (242 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase11/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+            ],
+            "stratum": 11,
+            "verdict": "pass"
+          },
+          {
+            "court": "RT-X509-VERIFY-SURFACE",
+            "coverage_basis": "the coverage atlas records RT-X509-VERIFY-SURFACE as covering stratum 11's exports",
+            "mode": "re-derived",
+            "observation": "pass (197 observation(s))",
+            "probes_reexecuted": false,
+            "registry": "artifacts/phase11/COURTS.json",
+            "selected_by": [
+              "declarations.macros:added:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+            ],
+            "stratum": 11,
+            "verdict": "pass"
+          }
+        ],
+        "selection_authority": [
+          "forensics/atlas/court-coverage.json",
+          "forensics/atlas/symbol-ownership.json",
+          "docs/PHASE-21-SUBPHASES.md",
+          "docs/SECURITY_DIVERGENCE_POLICY.md"
+        ],
+        "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught_bounded_drift": true,
+          "caught_claimed_court": true,
+          "honest": true,
+          "injected_bounded_findings": 1,
+          "injected_bounded_row": "nc-openssl-4-new-profile",
+          "injected_claimed_court": "RT-AUTHORITY-ADMISSION",
+          "injected_claimed_findings": 3,
+          "specificity_holds": true
+        },
+        "court": "MAINTENANCE-BOUNDARY-REGISTER",
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the register re-reads the courts registry and the constitution/limitations artefacts and stages no artifacts/phase21/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it re-reads the live courts registry (the four delta courts above) and the authored register artifacts/phase21/maintenance-boundary-register.json, and fails the stratum if any recorded claimed/bounded verdict, surface key or cited evidence value has drifted from what the courts and the constitution/limitations artefacts show (docs/PHASE-21-SUBPHASES.md section 3.6). A claimed row whose court no longer passes or no longer covers the surface, a bounded row a passing court now covers, and a bounded row whose cited evidence no longer matches docs/RELEASE_GATES.md section 8, docs/NON_CLAIMS.md, docs/PARITY_MODEL.md section 1, docs/SECURITY_DIVERGENCE_POLICY.md or the two `not-measured` planes RT-ATLAS-DELTA recorded are all findings. A bounded row that names nothing that would make its surface measurable is motionless rather than a stated distance, and is a finding. The instrument sensitivity control injects a claimed row whose court is not passing and a bounded row whose cited evidence has drifted, and requires both detected while the real register shows zero findings (docs/PHASE-21-SUBPHASES.md sections 2, 3.3 and 3.6). It is the stratum's own answer to docs/NON_CLAIMS.md: no version universality from a 3.x receipt, only the exercised delta claimed, unknown stays unknown, and a 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced.",
+        "probe": "",
+        "problems": [],
+        "register": {
+          "counts": {
+            "bounded": 6,
+            "claimed": 4
+          },
+          "path": "artifacts/phase21/maintenance-boundary-register.json",
+          "schema": "openssl-rs/maintenance-boundary-register/v1",
+          "sha256": "f310632a19f699c1b111d94cebc74901253837afb71b1f78d22d89e242d7be2f",
+          "total": 10
+        },
+        "surfaces": [
+          {
+            "court": "RT-AUTHORITY-ADMISSION",
+            "id": "authority-admission",
+            "surface_keys": [
+              "delta.authority.pair"
+            ],
+            "verdict": "claimed"
+          },
+          {
+            "court": "RT-ATLAS-DELTA",
+            "id": "atlas-delta",
+            "surface_keys": [
+              "delta.atlas.export-plane"
+            ],
+            "verdict": "claimed"
+          },
+          {
+            "court": "RT-DELTA-DISPOSITION",
+            "id": "delta-disposition",
+            "surface_keys": [
+              "delta.disposition.every-row"
+            ],
+            "verdict": "claimed"
+          },
+          {
+            "court": "RT-AFFECTED-COURT-SELECTION",
+            "id": "affected-court-selection",
+            "surface_keys": [
+              "delta.affected-court.selection"
+            ],
+            "verdict": "claimed"
+          },
+          {
+            "court": null,
+            "id": "nc-openssl-4-new-profile",
+            "surface_keys": [
+              "nc.no-version-universality"
+            ],
+            "verdict": "bounded"
+          },
+          {
+            "court": null,
+            "id": "nc-only-exercised-delta",
+            "surface_keys": [
+              "nc.only-exercised-delta"
+            ],
+            "verdict": "bounded"
+          },
+          {
+            "court": null,
+            "id": "nc-unknown-stays-unknown",
+            "surface_keys": [
+              "nc.unknown-stays-unknown"
+            ],
+            "verdict": "bounded"
+          },
+          {
+            "court": null,
+            "id": "nc-no-security-reintroduction",
+            "surface_keys": [
+              "nc.no-security-reintroduction"
+            ],
+            "verdict": "bounded"
+          },
+          {
+            "court": null,
+            "id": "nc-provider-registration-rows-not-measured",
+            "surface_keys": [
+              "nc.provider-registration-rows-not-measured"
+            ],
+            "verdict": "bounded"
+          },
+          {
+            "court": null,
+            "id": "nc-prerequisite-units-not-measured",
+            "surface_keys": [
+              "nc.prerequisite-units-not-measured"
+            ],
+            "verdict": "bounded"
+          }
+        ],
+        "verdict": "pass"
+      }
+    ],
+    "pending_courts": {},
+    "summary": {
+      "fail": 0,
+      "pass": 5,
+      "total": 5
+    }
+  },
+  "generator": "forensics/tools/phase21_courts.py",
+  "inputs": [
+    {
+      "name": "phase-21-plan",
+      "path": "docs/PHASE-21-SUBPHASES.md",
+      "sha256": "034876cc650f41c600fe2e1459c529e04f0f7a95c9774ec51ae82b1898373bcc"
+    },
+    {
+      "name": "authority-registry",
+      "path": "forensics/authorities/AUTHORITIES.json",
+      "sha256": "8885e8ecfe27c308d97ded8db8b197ff1b46177a1b8932535824d8a7d2b18944"
+    },
+    {
+      "name": "build-records",
+      "path": "forensics/atlas/BUILD_RECORDS.json",
+      "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0"
+    },
+    {
+      "name": "source-manifest-3.6.3",
+      "path": "forensics/authorities/SOURCE_MANIFEST.3.6.3.json",
+      "sha256": "2849ce1d61167b1fad510ba4e086903e339a85ecae9b3c61b5a349aac8c5f261"
+    },
+    {
+      "name": "source-manifest-3.6.4",
+      "path": "forensics/authorities/SOURCE_MANIFEST.3.6.4.json",
+      "sha256": "64535af39ae6732322cce6812534d3e13193771b76a0cd4e3cad06126bdd320e"
+    },
+    {
+      "name": "differential",
+      "path": "forensics/atlas/differential/openssl-3.6.3-historical-vs-openssl-3.6.4-production.json",
+      "sha256": "bfe481912c918864b0c7891388e6f0254b5546b15b2d65885c3b6ddecd2a9a88"
+    },
+    {
+      "name": "authority-policy",
+      "path": "docs/AUTHORITY_POLICY.md",
+      "sha256": "0cc6287f83377a1d7f19791d4e63649aa5efa19abe68452c8fb8854022bc50db"
+    },
+    {
+      "name": "security-divergence-policy",
+      "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
+      "sha256": "2c111361650e76f51ce76513dbd3e12effe9c6df05690e0fad90630ffb889026"
+    },
+    {
+      "name": "openssl-3.6.3-historical-symbols-libcrypto.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+      "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6"
+    },
+    {
+      "name": "openssl-3.6.3-historical-symbols-libssl.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+      "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b"
+    },
+    {
+      "name": "openssl-3.6.3-historical-functions.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/functions.json",
+      "sha256": "c4c31aa8889527b1e934224070f8a12855885397dfdef414c9dcb92224f006a8"
+    },
+    {
+      "name": "openssl-3.6.3-historical-typedefs.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/typedefs.json",
+      "sha256": "b41eff262261c146a056a2ab265cdaba482381cabe29f1f15cad8422379f1497"
+    },
+    {
+      "name": "openssl-3.6.3-historical-structs.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/structs.json",
+      "sha256": "fdbb2546bb1701fece94a3c4114d44df175d3d72ef7157761ab1c816d8c9f1cd"
+    },
+    {
+      "name": "openssl-3.6.3-historical-enums.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/enums.json",
+      "sha256": "1ae4bab8dd4a3619d92a5b98f26f19f93f57fc5af0a9a1b83fde04ea905982b7"
+    },
+    {
+      "name": "openssl-3.6.3-historical-variables.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/variables.json",
+      "sha256": "00d480cfffdd667d475184e8f765a14fa65d59676727a3da7b953c269e55021a"
+    },
+    {
+      "name": "openssl-3.6.3-historical-macros.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/macros.json",
+      "sha256": "e300e9b5bcc783b0d5385090bd5bb0a7062cf368bc2d3f7cc192efe6f9a54e70"
+    },
+    {
+      "name": "openssl-3.6.4-production-symbols-libcrypto.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "openssl-3.6.4-production-symbols-libssl.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+      "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634"
+    },
+    {
+      "name": "openssl-3.6.4-production-functions.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+      "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0"
+    },
+    {
+      "name": "openssl-3.6.4-production-typedefs.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/typedefs.json",
+      "sha256": "af99118d026274d21e18b3c499ec6853eaf463f7491d56e05e934124d1458d83"
+    },
+    {
+      "name": "openssl-3.6.4-production-structs.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/structs.json",
+      "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893"
+    },
+    {
+      "name": "openssl-3.6.4-production-enums.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/enums.json",
+      "sha256": "a95111482a96ab687db8abe9c9ef485f3bee26ef6cb87089dea80c0c4c7574a1"
+    },
+    {
+      "name": "openssl-3.6.4-production-variables.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/variables.json",
+      "sha256": "5133de801f35c4825ef7a03a06fa1decf5203061df9456abe2046b2b8c45dd2c"
+    },
+    {
+      "name": "openssl-3.6.4-production-macros.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/macros.json",
+      "sha256": "99e595fad544d1cff98c5495519db7abe68a34b32e6e97fd29735f9686c846da"
+    },
+    {
+      "name": "openssl-3.6.3-historical-provider-inventory",
+      "path": "forensics/atlas/openssl-3.6.3-historical/provider-inventory.json",
+      "sha256": "0ea1e0bbbd34713c4a3a1cf8678061b3ece0790da4ca737939bf7dcfbfc9d127"
+    },
+    {
+      "name": "openssl-3.6.4-production-provider-inventory",
+      "path": "forensics/atlas/openssl-3.6.4-production/provider-inventory.json",
+      "sha256": "62763c6bd86ed55cb509ac3bb3675fff5b26bfd78f4dc9a3c75f7d29abb0c522"
+    },
+    {
+      "name": "provider-algorithms",
+      "path": "forensics/atlas/provider-algorithms.json",
+      "sha256": "8a767c9f5c456e1b3b8e2d01a88f0b17f2184313d421c0a9e513c1dd2d118589"
+    },
+    {
+      "name": "prerequisites",
+      "path": "forensics/prerequisites.json",
+      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+    },
+    {
+      "name": "candidate-ssl.h",
+      "path": "artifacts/phase2/install/include/openssl/ssl.h",
+      "sha256": "cf9c22af93d97870c33715a06f56bb4458de0334b4d3396957c174c3c4928f0d"
+    },
+    {
+      "name": "candidate-x509err.h",
+      "path": "artifacts/phase2/install/include/openssl/x509err.h",
+      "sha256": "be93ee6c9d58aadb5f836d5e293ec93c94ffc603c46a1d8d1c8b31cf83959fb9"
+    },
+    {
+      "name": "court-coverage",
+      "path": "forensics/atlas/court-coverage.json",
+      "sha256": "d2145033bc308cdeeb6855bf2e4afb86c492e53cc7b577df098899f2df66d3f8"
+    },
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "phase11-courts",
+      "path": "artifacts/phase11/COURTS.json",
+      "sha256": "cc91b4c5b47b60ae12764c25642bad45c53c4b77cf26aeea7b89bf18e349681f"
+    },
+    {
+      "name": "phase14-courts",
+      "path": "artifacts/phase14/COURTS.json",
+      "sha256": "be5b6c61bdddb58d3df9220c0b3217b0b5915e463a72b9b57d4c34e9028ad76e"
+    },
+    {
+      "name": "maintenance-boundary-register",
+      "path": "artifacts/phase21/maintenance-boundary-register.json",
+      "sha256": "f310632a19f699c1b111d94cebc74901253837afb71b1f78d22d89e242d7be2f"
+    },
+    {
+      "name": "release-gates",
+      "path": "docs/RELEASE_GATES.md",
+      "sha256": "99c80e1f36abede7ef3425c1f5dcd71ba40e0d0d77317346d3564313f9a4f294"
+    },
+    {
+      "name": "non-claims",
+      "path": "docs/NON_CLAIMS.md",
+      "sha256": "eb554412116f863fdd3840a347b5377ca3232fe0ad9bd2938b2a9576776b6b7e"
+    },
+    {
+      "name": "parity-model",
+      "path": "docs/PARITY_MODEL.md",
+      "sha256": "1f5080bc6d68ae64c693c80422bb0f0dd73bf67fd2cd46090b315a7e60215e2a"
+    }
+  ],
+  "kind": "phase21-courts",
+  "schema": "openssl-rs/atlas/phase21-courts/v1"
+}

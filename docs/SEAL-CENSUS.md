@@ -46,7 +46,7 @@ declared owner; this is that assignment.
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 19 | Performance / CPU dispatch | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 20 | 3.6.4 custodian seal | `complete` | 0 | 5 | 5 | 0 | 0 |
-| 21 | Maintenance delta machinery | `not-started` | 0 | — | — | — | — |
+| 21 | Maintenance delta machinery | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
 
 ## Phase 3 — Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects
@@ -673,6 +673,40 @@ The other 5 compare ELF structure rather than a transcript and observe nothing l
 | RT-CUSTODIAN-RESIDUALS | `pass` | — (structural) |
 | RT-SUBSTITUTION-WITNESS | `pass` | — (structural) |
 | CUSTODIAN-BOUNDARY-REGISTER | `pass` | — (structural) |
+
+## Phase 21 — Maintenance delta machinery
+
+* state: `complete`
+* seal: `docs/PHASE-21-MAINTENANCE-SEAL.md`
+* ledger: `forensics/phase21-obligations.json`
+* atlas-owned: 0
+* owned working set: 5
+* implemented: 5
+* deferred to a later stratum with a stated reason: 0
+* **open in this stratum: 0**
+
+Contract units (measurement vs property):
+
+| unit | measurement_state | property_status | findings |
+|---|---|---|---|
+| authority-admission | `complete` | `not_claimed` | — |
+| atlas-delta | `complete` | `not_claimed` | — |
+| delta-disposition | `complete` | `not_claimed` | — |
+| affected-court-selection | `complete` | `not_claimed` | — |
+| maintenance-boundary-register | `complete` | `not_claimed` | — |
+
+A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
+Courts: `all pass`, 5 court(s), **0** authority observation(s) over 0 transcript court(s).
+
+The other 5 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
+
+| court | verdict | observations |
+|---|---|---|
+| RT-AUTHORITY-ADMISSION | `pass` | — (structural) |
+| RT-ATLAS-DELTA | `pass` | — (structural) |
+| RT-DELTA-DISPOSITION | `pass` | — (structural) |
+| RT-AFFECTED-COURT-SELECTION | `pass` | — (structural) |
+| MAINTENANCE-BOUNDARY-REGISTER | `pass` | — (structural) |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 

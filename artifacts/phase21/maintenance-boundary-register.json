@@ -1,0 +1,209 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "phase": 21,
+  "rule": "This register is the stratum's own answer to docs/NON_CLAIMS.md: it records, per surface, whether it is `claimed` (a passing court covers it) or `bounded` (explicitly outside this stratum -- including version universality, only the exercised delta claimed, unknown staying unknown, the two planes RT-ATLAS-DELTA recorded `not-measured`, and the prohibition on reintroducing a 3.6.3 behaviour that corresponds to an upstream security fix). It is authored, not derived: the `MAINTENANCE-BOUNDARY-REGISTER` court in forensics/tools/phase21_courts.py re-reads the four passing delta courts' own records (the claimed side) and the constitution/limitations artefacts docs/RELEASE_GATES.md section 8, docs/NON_CLAIMS.md, docs/PARITY_MODEL.md section 1 and docs/SECURITY_DIVERGENCE_POLICY.md plus the two `not-measured` planes (the bounded side), and fails the stratum if any recorded boundary has drifted from the evidence that establishes it (docs/PHASE-21-SUBPHASES.md section 3.6). A surface no passing court reaches is `bounded`, never `claimed`, and every bounded row names what would make its surface measurable, so it is a stated distance rather than motionless. Nothing here is a version-universality claim: a passing delta court measures the movement between the two named authorities and nothing beyond them.",
+  "schema": "openssl-rs/maintenance-boundary-register/v1",
+  "subphase": "21.5",
+  "surfaces": [
+    {
+      "court": "RT-AUTHORITY-ADMISSION",
+      "evidence": {
+        "direction": "added means present in 'to', absent in 'from'",
+        "findings_count": 0,
+        "from_authority": "openssl-3.6.3-historical",
+        "from_profile": "linux-x86_64-default-shared-legacy-notests",
+        "from_version": "3.6.3",
+        "to_authority": "openssl-3.6.4-production",
+        "to_profile": "linux-x86_64-default-shared-legacy-notests",
+        "to_version": "3.6.4",
+        "verdict": "pass"
+      },
+      "group": "delta-admission",
+      "id": "authority-admission",
+      "note": "claimed as an instrument: the passing court admitted the delta input pair and recorded each authority's identity and build profile from forensics/authorities/AUTHORITIES.json, the two SOURCE_MANIFEST.{3.6.3,3.6.4}.json source identities, the build records and the differential that names the pair. It records the pair's identity, not the delta between them, and it fixes the direction docs/SECURITY_DIVERGENCE_POLICY.md section 1 makes security-load-bearing (historical -> production, never the reverse).",
+      "surface": "the delta input pair's admission and identity -- `openssl-3.6.3-historical` versus `openssl-3.6.4-production` -- and the fixed trajectory direction",
+      "surface_keys": [
+        "delta.authority.pair"
+      ],
+      "verdict": "claimed",
+      "would_make_measurable": "a different (or newly admitted) authority pair named as the delta's input, with its own source manifest, build record and differential committed before any movement is computed"
+    },
+    {
+      "court": "RT-ATLAS-DELTA",
+      "evidence": {
+        "added": 2,
+        "changed": 0,
+        "findings_count": 0,
+        "planes_measured": 1,
+        "planes_not_measured": 2,
+        "removed": 0,
+        "verdict": "pass"
+      },
+      "group": "delta-atlas",
+      "id": "atlas-delta",
+      "note": "claimed as an instrument, and bounded to the planes it measured: the passing court recomputed the added / removed / changed delta across the atlas planes docs/PHASE-21-SUBPHASES.md section 2 names and required the committed differential to agree. Only the exports plane is measured (its two sides are committed); the provider registration-row and prerequisite-unit planes are `not-measured` and are carried as the two bounded rows below, never counted motionless.",
+      "surface": "the added / removed / changed movement across the exports plane -- the per-authority symbol and declared-surface atlases, keyed exactly as forensics/tools/atlas_differential.py keys them",
+      "surface_keys": [
+        "delta.atlas.export-plane"
+      ],
+      "verdict": "claimed",
+      "would_make_measurable": "a plane whose two authority sides are both committed and compared by a differential tool, which is what makes the exports plane measured and the two named planes not"
+    },
+    {
+      "court": "RT-DELTA-DISPOSITION",
+      "evidence": {
+        "boundary": 3,
+        "findings_count": 0,
+        "implemented": 2,
+        "measured": 2,
+        "not_measured": 3,
+        "prohibited": 0,
+        "targets": 5,
+        "unexplained": 0,
+        "verdict": "pass"
+      },
+      "group": "delta-disposition",
+      "id": "delta-disposition",
+      "note": "claimed as an instrument, not as 'the delta is implemented': the passing court dispositioned every delta row against the candidate's own installed surface (artifacts/phase2/install/include/openssl/), a measured row `implemented` only when that surface carries the declaration with the authority's value, a `not-measured` plane or axis `boundary`, and zero unexplained. It carries zero findings on the current tree; a real un-dispositioned row would be a finding and a `fail`, and an un-dispositioned row is `UNKNOWN`, never a resting state.",
+      "surface": "the disposition of every delta row -- `implemented` / `deferred` / `not-in-profile` / `boundary` -- with zero unexplained",
+      "surface_keys": [
+        "delta.disposition.every-row"
+      ],
+      "verdict": "claimed",
+      "would_make_measurable": "every delta row the atlas-delta court computes being carried by the candidate's surface, so no row is left un-dispositioned"
+    },
+    {
+      "court": "RT-AFFECTED-COURT-SELECTION",
+      "evidence": {
+        "boundary_rows": 3,
+        "delta_rows": 5,
+        "findings_count": 0,
+        "moving_rows": 2,
+        "reexecuted_courts": 0,
+        "selected_courts": 20,
+        "selected_strata": 2,
+        "uncovered_rows": 0,
+        "verdict": "pass"
+      },
+      "group": "delta-court-selection",
+      "id": "affected-court-selection",
+      "note": "claimed as an instrument: the passing court derived, mechanically from the dispositioned delta and the coverage atlas's export -> court edge, which courts each moving row reaches, and re-derived exactly those 20 courts over the two strata the two added macros own. The probes were NOT re-executed (mode `re-derived`, `reexecuted_courts` 0), so it records which courts the re-run step would run rather than implying a re-run that did not happen.",
+      "surface": "the derivation of which courts a delta touches, recorded with the selection derivation, so the delta reaches exactly the courts its obligations do",
+      "surface_keys": [
+        "delta.affected-court.selection"
+      ],
+      "verdict": "claimed",
+      "would_make_measurable": "a delta row whose declaring header owns a stratum whose registry stages courts, so the row reaches a court the selection can re-derive"
+    },
+    {
+      "court": null,
+      "evidence": {
+        "non_claims_present": true,
+        "non_claims_version_universality": true,
+        "release_gates_never_reinterpreted": true,
+        "release_gates_new_profile": true,
+        "release_gates_present": true
+      },
+      "group": "not-claimed",
+      "id": "nc-openssl-4-new-profile",
+      "note": "bounded: docs/RELEASE_GATES.md section 8 makes OpenSSL 4.x a major-family transition that gets a new compatibility profile, and an OpenSSL 3 receipt is never silently reinterpreted as evidence for OpenSSL 4; docs/NON_CLAIMS.md section 3 states the same as 'No version universality. An OpenSSL 3.6.x receipt is not evidence for OpenSSL 4.x.' This stratum's two authorities are both 3.6.x, so the trajectory it measures is a maintenance delta within one compatibility profile and cannot be widened by a passing court.",
+      "surface": "OpenSSL 4.x as a new compatibility profile -- a 3.x receipt reinterpreted as evidence for 4",
+      "surface_keys": [
+        "nc.no-version-universality"
+      ],
+      "verdict": "bounded",
+      "would_make_measurable": "a newly admitted OpenSSL 4.x authority with its own source identity, atlas and oracle differential, and the court families measured under the 4.x profile -- never a 3.x receipt reused"
+    },
+    {
+      "court": null,
+      "evidence": {
+        "plan_names_exercised_delta": true,
+        "plan_present": true
+      },
+      "group": "not-claimed",
+      "id": "nc-only-exercised-delta",
+      "note": "bounded: docs/PHASE-21-SUBPHASES.md section 0 and section 4.3 name 'only the exercised delta is claimed' as a load-bearing non-claim -- the delta this stratum carries is exactly the movement between the two authorities it names (the 3.6.3 -> 3.6.4 trajectory) and no more. The absence of movement elsewhere is not measured, so no court may generalise it.",
+      "surface": "only the exercised delta is claimed -- the movement between the two named authorities, not the absence of movement elsewhere",
+      "surface_keys": [
+        "nc.only-exercised-delta"
+      ],
+      "verdict": "bounded",
+      "would_make_measurable": "the same delta procedure run over another named authority pair, with its own committed differential, so a second trajectory is measured rather than assumed"
+    },
+    {
+      "court": null,
+      "evidence": {
+        "non_claims_present": true,
+        "non_claims_unknown_stated": true,
+        "parity_model_present": true,
+        "parity_model_unknown_distinct": true
+      },
+      "group": "not-claimed",
+      "id": "nc-unknown-stays-unknown",
+      "note": "bounded: docs/PARITY_MODEL.md section 1 makes `UNKNOWN` distinct from `FAIL` and says unknown is a research result, never traded for confidence theatre; docs/NON_CLAIMS.md section 4 states it and requires it reported precisely, not hidden. An un-dispositioned delta row is `UNKNOWN`, so unknown staying unknown bounds every other delta claim -- a passing court does not resolve it.",
+      "surface": "unknown stays unknown -- an un-dispositioned delta row is `UNKNOWN`, a research result, never a resting state",
+      "surface_keys": [
+        "nc.unknown-stays-unknown"
+      ],
+      "verdict": "bounded",
+      "would_make_measurable": "an investigation that dispositions the row against the candidate's surface, which is what makes a delta row measured rather than unknown"
+    },
+    {
+      "court": null,
+      "evidence": {
+        "security_policy_present": true,
+        "security_prohibits_reintroduction": true,
+        "security_trajectory_fixed": true
+      },
+      "group": "not-claimed",
+      "id": "nc-no-security-reintroduction",
+      "note": "bounded: docs/SECURITY_DIVERGENCE_POLICY.md section 3 prohibits reintroducing a security regression to match a historical authority, and section 1 fixes the trajectory from `openssl-3.6.3-historical` to `openssl-3.6.4-production` (the security-fix release). The delta runs historical -> production and follows the fixed authority, so a 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced; the disposition court's `removed`/`changed` axis is where that prohibition is enforced.",
+      "surface": "a 3.6.3 behaviour corresponding to an upstream security fix is not reintroduced",
+      "surface_keys": [
+        "nc.no-security-reintroduction"
+      ],
+      "verdict": "bounded",
+      "would_make_measurable": "the fixed authority itself moving away from the fix, so no security divergence remains to be prohibited"
+    },
+    {
+      "court": null,
+      "evidence": {
+        "historical_provider_census_present": false,
+        "provider_census_present": true,
+        "provider_plane_state": "not-measured",
+        "provider_reason_names_counterpart": true
+      },
+      "group": "not-measured-plane",
+      "id": "nc-provider-registration-rows-not-measured",
+      "note": "bounded, not motionless: RT-ATLAS-DELTA recorded the provider registration-row plane `not-measured` because the named census forensics/atlas/provider-algorithms.json is generated for the production authority only, no committed historical counterpart exists (forensics/atlas/openssl-3.6.3-historical carries only provider-inventory.json), and atlas_differential.py does not compare that census. The differential's adjacent provider-inventory measurement is a different artefact and is never counted as this named plane. What would make it measurable is a second provider-algorithms.json census generated over the historical authority's provider tables, exactly as the court's reason records.",
+      "surface": "the provider registration-row plane RT-ATLAS-DELTA recorded `not-measured` -- bounded, not counted motionless",
+      "surface_keys": [
+        "nc.provider-registration-rows-not-measured"
+      ],
+      "verdict": "bounded",
+      "would_make_measurable": "a second provider-algorithms.json census generated over the historical authority's provider tables, so the two authorities' registration rows can be set-diffed"
+    },
+    {
+      "court": null,
+      "evidence": {
+        "prerequisite_plane_state": "not-measured",
+        "prerequisite_reason_names_counterpart": true,
+        "prerequisites_present": true
+      },
+      "group": "not-measured-plane",
+      "id": "nc-prerequisite-units-not-measured",
+      "note": "bounded, not motionless: RT-ATLAS-DELTA recorded the prerequisite-unit plane `not-measured` because forensics/prerequisites.json is a single-authority openssl-rs artefact (the implementation's prerequisite/divergence units, not an authority's), with no committed historical counterpart and no differential tool that compares it. What would make it measurable is a committed historical counterpart to that plane and a differential tool that compares the two, exactly as the court's reason records.",
+      "surface": "the prerequisite-unit plane RT-ATLAS-DELTA recorded `not-measured` -- bounded, not counted motionless",
+      "surface_keys": [
+        "nc.prerequisite-units-not-measured"
+      ],
+      "verdict": "bounded",
+      "would_make_measurable": "a committed historical counterpart to forensics/prerequisites.json (the authority's own prerequisite/divergence units) and a differential tool that compares it, so the authority-to-authority unit delta can be computed"
+    }
+  ],
+  "verdicts": {
+    "bounded": 6,
+    "claimed": 4,
+    "total": 10
+  }
+}
