@@ -1212,8 +1212,9 @@ PHASE22_SEAL = "docs/PHASE-22-ATLAS-SEAL.md"
 # registration row, no symbol deferral and no prerequisite unit, because it emits compatibility
 # *views* over releases and authorities that are already admitted rather than adding library surface.
 # It registers no coverage-reference probe, because it owns no symbol to take an address of, so its
-# runner's registry is empty at activation and its seventeen courts are `pending` with the subphase that
-# lands each. The ledger measures its contract-unit states from the courts registry, so the runner
+# runner's registry was empty at activation (23.0); each later subphase registers its court in the
+# commit that lands it, and a court still unregistered is `pending` with the subphase that lands it.
+# The ledger measures its contract-unit states from the courts registry, so the runner
 # does not bind the ledger (the edge runs ledger -> courts, the reverse of Phase 16's). A passing
 # court is an *instrument*: the property it names may still carry findings. The stratum makes no
 # one-boolean compatibility claim -- compatibility is directional and dimension-specific, receipt
@@ -1729,10 +1730,12 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "courts over a shared normalized observation vocabulary), "
                             "`RT-COMPATIBILITY-VIEWS` (23.9, the directional, dimension-specific "
                             "compatibility views whose distribution/ABI shell surface is derived "
-                            "from each authority's own evidence) and `RT-HISTORICAL-POPULATION` "
+                            "from each authority's own evidence), `RT-HISTORICAL-POPULATION` "
                             "(23.10, the historical population -- one support status per "
-                            "catalogue node, with honest unavailability) "
-                            "are registered, and the remaining seven courts are "
+                            "catalogue node, with honest unavailability) and `RT-DOWNSTREAM-MULTITRACK` "
+                            "(23.11, the unmodified downstream consumer per major compatibility "
+                            "epoch) "
+                            "are registered, and the remaining six courts are "
                             "`pending` with the subphases that land them. A "
                             "passing court is an **instrument**, not a property claim: the "
                             "property it names may still carry findings, so `measurement_state` "

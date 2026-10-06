@@ -16,16 +16,17 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**Ten courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+**Eleven courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
 lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, 23.3 lands
 `RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court, 23.4 lands `RT-LINEAGE-EDGES`, the
 typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage court, 23.6 lands
 `RT-DELTA-ENGINE`, the semantic compatibility-delta court, 23.7 lands
 `RT-ABI-HISTORY-FACADES`, the ABI/history-façade court, 23.8 lands
 `RT-SEMANTIC-COURTS`, the oracle-to-oracle and candidate-to-authority semantic court, 23.9 lands
-`RT-COMPATIBILITY-VIEWS`, the directional compatibility-view court and 23.10 lands
-`RT-HISTORICAL-POPULATION`, the historical-population court; the other seven courts are named
-in
+`RT-COMPATIBILITY-VIEWS`, the directional compatibility-view court, 23.10 lands
+`RT-HISTORICAL-POPULATION`, the historical-population court, and 23.11 lands
+`RT-DOWNSTREAM-MULTITRACK`, the unmodified-downstream-consumer court; the other six courts are
+named in
 `PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
 reproduced, so a court silently dropped is a finding rather than a smaller green run. This is
@@ -59,7 +60,8 @@ The seventeen courts, and the subphase that lands each
 
 Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZATION`,
 `RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE`, `RT-DELTA-ENGINE`, `RT-ABI-HISTORY-FACADES`,
-`RT-SEMANTIC-COURTS`, `RT-COMPATIBILITY-VIEWS` and `RT-HISTORICAL-POPULATION` is
+`RT-SEMANTIC-COURTS`, `RT-COMPATIBILITY-VIEWS`, `RT-HISTORICAL-POPULATION` and
+`RT-DOWNSTREAM-MULTITRACK` is
 `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
@@ -133,6 +135,13 @@ import compat_views  # noqa: E402
 # status from the committed catalogue, authority nodes and receipts through the same code path the
 # artefact was produced by (never a hand-listed status) and re-derives a mutated epoch's coverage.
 import historical_population  # noqa: E402
+# The Phase-23.11 downstream-multitrack generator, imported so the court re-derives every consumer
+# record from the raw build/run outputs the artefact carries through the same code path the artefact
+# was produced by (never a hand-typed outcome) and re-derives the epoch coverage a mutation moves.
+import downstream_multitrack  # noqa: E402
+# The candidate version the Phase-17 corpus names, read from the one manifest knob so the
+# distinctness check cannot drift from `Cargo.toml`.
+import gen_frf_courts  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase23" / "COURTS.json"
 GENERATOR = "forensics/tools/phase23_courts.py"
@@ -198,6 +207,13 @@ HISTORICAL_POPULATION = REPO_ROOT / "forensics" / "multitrack" / "historical-pop
 SEMANTIC_COURTS = REPO_ROOT / "forensics" / "multitrack" / "semantic-courts.json"
 ATLAS_ROOT = REPO_ROOT / "forensics" / "atlas"
 
+# 23.11's subject: the per-epoch unmodified downstream consumer records, the authority nodes they
+# are bounded to, and the Phase-17 candidate corpus they must stay distinct from (a candidate
+# result is never relabelled as authority evidence).
+DOWNSTREAM_MULTITRACK = REPO_ROOT / "forensics" / "multitrack" / "downstream-multitrack.json"
+PHASE17_CORPUS = REPO_ROOT / "forensics" / "atlas" / "downstream-corpus.json"
+PHASE17_PROGRAMS = ("curl", "git", "haproxy", "nginx", "openssh", "python")
+
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 # 23.1's court, and the identity its subject must begin at. The root is upstream's first real
@@ -212,6 +228,7 @@ ABI_HISTORY_FACADES_COURT = "RT-ABI-HISTORY-FACADES"
 SEMANTIC_COURTS_COURT = "RT-SEMANTIC-COURTS"
 COMPATIBILITY_VIEWS_COURT = "RT-COMPATIBILITY-VIEWS"
 HISTORICAL_POPULATION_COURT = "RT-HISTORICAL-POPULATION"
+DOWNSTREAM_MULTITRACK_COURT = "RT-DOWNSTREAM-MULTITRACK"
 ROOT_RELEASE = "openssl-0.9.1c"
 CANONICAL_KINDS = ("branch_fork", "chronological_successor", "maintenance_successor")
 PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
@@ -243,12 +260,12 @@ COURTS: list[tuple[str, str]] = [
     (SEMANTIC_COURTS_COURT, "_semantic_courts_court"),
     (COMPATIBILITY_VIEWS_COURT, "_compatibility_views_court"),
     (HISTORICAL_POPULATION_COURT, "_historical_population_court"),
+    (DOWNSTREAM_MULTITRACK_COURT, "_downstream_multitrack_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-DOWNSTREAM-MULTITRACK": "23.11 -- the downstream multitrack court",
     "RT-COMPATIBILITY-EDGES": "23.12 -- the directional compatibility edges",
     "RT-NEGATIVE-OBLIGATIONS": "23.13 -- the negative obligations",
     "RT-SECURITY-LINEAGE": "23.14 -- the security lineage",
@@ -3418,6 +3435,355 @@ def _historical_population_court(name: str) -> dict:
     }
 
 
+def _downstream_reseal(body: dict) -> dict:
+    """`body` with its content hash recomputed, so a mutation is caught on substance alone."""
+    out = copy.deepcopy(body)
+    out["content_hash"] = downstream_multitrack.body_hash(
+        out.get("records") or [], out.get("not_run") or [], out.get("failed") or [],
+        out.get("epochs") or [])
+    return out
+
+
+def downstream_multitrack_findings(body: dict, authority_nodes: dict, phase17: dict,
+                                   candidate_version: str, specs: dict[str, dict],
+                                   major_epochs: tuple[str, ...]) -> list[str]:
+    """Every way the downstream-multitrack record and its backing evidence fail this court.
+
+    A pure function of the committed bodies plus the authored trial spec, so the sensitivity
+    control can mutate them and re-check. It establishes that every record is a schema-valid
+    `downstream_epoch`; that every major epoch is covered by exactly one passing primary consumer
+    and the epoch rows reproduce; that a passing consumer actually built and ran against the
+    authority it names (its raw `ldd` output links that authority's prefix and its own SONAMEs and
+    never the candidate shell, and its version banner names the authority's OpenSSL); that a
+    record is never relabelled across authorities (its authority is the one its trial is about and
+    the one in the authority-node registry); that a `not_run` (or `failed`) record carries its
+    reason, claims no passing build or run, and is never counted as covering an epoch; that the
+    counts and content hash reproduce; and that the Phase-17 candidate corpus is still green and is
+    distinct from this authority evidence rather than relabelled into it.
+    """
+    findings: list[str] = []
+    records = body.get("records") or []
+    not_run = body.get("not_run") or []
+    failed = body.get("failed") or []
+    epochs = body.get("epochs") or []
+    all_records = records + not_run + failed
+    nodes = {n["authority_id"]: n for n in authority_nodes.get("nodes") or []}
+
+    # 1. schema validity, including the load-bearing refusal of a pass with no build or run.
+    for r in all_records:
+        tid = r.get("trial_id", "<none>")
+        findings += [f"downstream record {tid}: {p}"
+                     for p in multitrack_schemas.validate_downstream_epoch(r)]
+
+    # 2. a trial id is unique, and a passed record is not also a not-run one.
+    ids = [r.get("trial_id") for r in all_records]
+    if len(set(ids)) != len(ids):
+        findings.append(f"the downstream plane names {len(ids) - len(set(ids))} duplicate trial "
+                        f"id(s)")
+    for r in records:
+        if r.get("outcome") != "passed":
+            findings.append(f"downstream trial {r.get('trial_id')} is in the passed list but its "
+                            f"outcome is {r.get('outcome')!r}")
+    for r in not_run:
+        if r.get("outcome") != "not_run":
+            findings.append(f"downstream trial {r.get('trial_id')} is in the not-run list but its "
+                            f"outcome is {r.get('outcome')!r}")
+    for r in failed:
+        findings.append(f"downstream trial {r.get('trial_id')} is `failed`, which is an instrument "
+                        f"defect rather than a pass or an honest unavailability")
+
+    # 3. every major epoch is covered by exactly one passing primary consumer, and the epoch rows
+    #    reproduce from the records (never typed).
+    if tuple(downstream_multitrack.MAJOR_EPOCHS) != tuple(major_epochs):
+        findings.append("the downstream epoch list and the historical-population epoch list have "
+                        "drifted apart")
+    if {e.get("epoch") for e in epochs} != set(major_epochs):
+        findings.append("the downstream epoch rows do not name exactly the major ABI epochs")
+    for name in major_epochs:
+        primary = [r for r in records if r.get("epoch") == name and r.get("role") == "primary"]
+        if len(primary) != 1:
+            findings.append(f"major ABI epoch {name} has {len(primary)} passing primary consumer(s), "
+                            f"not exactly one")
+    for e in epochs:
+        members = sorted(r.get("trial_id") for r in records if r.get("epoch") == e.get("epoch"))
+        primary = [r for r in records if r.get("epoch") == e.get("epoch")
+                   and r.get("role") == "primary"]
+        covered = len(primary) == 1
+        if bool(e.get("covered")) != covered:
+            findings.append(f"epoch {e.get('epoch')}: covered={e.get('covered')} does not reproduce "
+                            f"from the passed records")
+        if sorted(e.get("records") or []) != members:
+            findings.append(f"epoch {e.get('epoch')}: records do not reproduce from the passed "
+                            f"records")
+        if covered and e.get("authority_id") != primary[0].get("authority_id"):
+            findings.append(f"epoch {e.get('epoch')}: authority does not reproduce from its "
+                            f"passing primary record")
+
+    # 4. a passing consumer is a real artifact against the authority it names, never relabelled.
+    for r in records:
+        tid = r.get("trial_id")
+        spec = specs.get(tid)
+        if spec is None:
+            findings.append(f"downstream record {tid} names no known trial")
+            continue
+        node = nodes.get(r.get("authority_id"))
+        if node is None:
+            findings.append(f"downstream record {tid} names no authority node")
+            continue
+        if r.get("authority_id") != spec["authority_id"]:
+            findings.append(f"downstream record {tid} is relabelled to authority "
+                            f"{r.get('authority_id')} but its trial is about {spec['authority_id']}")
+        if r.get("release_id") != node["release_id"]:
+            findings.append(f"downstream record {tid}: release {r.get('release_id')} does not match "
+                            f"its authority node {node['release_id']}")
+        auth = r.get("authority") or {}
+        for f in ("build_profile", "platform"):
+            if auth.get(f) != node.get(f):
+                findings.append(f"downstream record {tid}: authority.{f} does not match the "
+                                f"authority node")
+        if not r.get("evidence"):
+            findings.append(f"downstream record {tid} passes but cites no evidence")
+        raw = r.get("raw")
+        if not isinstance(raw, dict) or not raw:
+            findings.append(f"downstream record {tid} claims a pass with no raw build/run artifact")
+            continue
+        ldd = raw.get("ldd_output") or ""
+        prefix_frag = f"forensics/authorities/prefix/{node['authority_id']}/"
+        if prefix_frag not in ldd:
+            findings.append(f"downstream record {tid} passes but its `ldd` output does not link "
+                            f"the authority prefix {prefix_frag}")
+        if "artifacts/phase2/install" in ldd:
+            findings.append(f"downstream record {tid} links the candidate distribution shell, so it "
+                            f"is not authority evidence")
+        for soname in (node.get("binary_hashes") or {}):
+            if soname not in ldd:
+                findings.append(f"downstream record {tid} does not link the authority's {soname}")
+        token = node["release_id"].removeprefix("openssl-")
+        if f"OpenSSL/{token}" not in (raw.get("version_output") or ""):
+            findings.append(f"downstream record {tid} version banner does not name the authority's "
+                            f"OpenSSL {token}")
+
+    # 5. a not-run record is honest unavailability: it carries its reason, claims no pass, and is
+    #    never the coverage of an epoch.
+    for r in not_run:
+        tid = r.get("trial_id")
+        if not r.get("reason"):
+            findings.append(f"downstream not_run record {tid} carries no reason")
+        spec = specs.get(tid)
+        if spec is not None and r.get("authority_id") != spec["authority_id"]:
+            findings.append(f"downstream not_run record {tid} is relabelled to authority "
+                            f"{r.get('authority_id')} but its trial is about {spec['authority_id']}")
+        build = r.get("build") or {}
+        run = r.get("run") or {}
+        if build.get("ok") is True or run.get("ok") is True:
+            findings.append(f"downstream not_run record {tid} claims a passing build or run")
+
+    # 6. the counts and the content hash reproduce from the committed records.
+    if body.get("counts") != downstream_multitrack.counts_of(records, not_run, failed, epochs):
+        findings.append("the downstream counts do not reproduce from its records")
+    if downstream_multitrack.body_hash(records, not_run, failed, epochs) != body.get("content_hash"):
+        findings.append("the downstream content_hash does not reproduce from its body")
+
+    # 7. the existing Phase-17 candidate corpus remains green and distinct: it still records the
+    #    six programs against the candidate, and no downstream record is relabelled as candidate or
+    #    as a Phase-17 record.
+    programs = {r.get("program"): r for r in phase17.get("programs") or []}
+    for program in PHASE17_PROGRAMS:
+        p = programs.get(program)
+        if p is None:
+            findings.append(f"the Phase-17 candidate corpus no longer carries {program}")
+            continue
+        if (p.get("functional") or {}).get("ok") is not True:
+            findings.append(f"the Phase-17 candidate corpus records {program} as not functional")
+        if p.get("candidate") != candidate_version:
+            findings.append(f"the Phase-17 candidate corpus records {program} against candidate "
+                            f"{p.get('candidate')}, not the current {candidate_version}")
+    for r in records + not_run:
+        if r.get("consumer") == candidate_version or r.get("authority_id") in (
+                "openssl-rs", candidate_version):
+            findings.append(f"downstream record {r.get('trial_id')} is relabelled as candidate "
+                            f"evidence")
+    return findings
+
+
+def downstream_sensitivity_control(body: dict, authority_nodes: dict, phase17: dict,
+                                   candidate_version: str, specs: dict[str, dict],
+                                   major_epochs: tuple[str, ...]) -> dict:
+    """Prove the court can fail: seed three mutations and require each caught.
+
+    The honest record must yield **zero** findings (specificity), and each seeded mutation -- a
+    consumer claiming a build with no artifact, an epoch counted passing while its consumer is
+    `not_run`, and a result relabelled across authorities -- must be caught. Each mutated body is
+    re-sealed first, so the detection is a semantic check and never the content-hash check firing
+    on an un-recomputed digest.
+    """
+    def findings_of(b: dict) -> list[str]:
+        return downstream_multitrack_findings(b, authority_nodes, phase17, candidate_version,
+                                              specs, major_epochs)
+
+    base = findings_of(body)
+    specificity = not base
+
+    # (a) a consumer claiming a build with no artifact: drop the raw build/run output of a pass.
+    no_artifact = copy.deepcopy(body)
+    stripped = no_artifact["records"][0]
+    stripped["raw"] = {}
+    stripped_tid = stripped["trial_id"]
+    no_artifact = _downstream_reseal(no_artifact)
+    no_artifact_findings = findings_of(no_artifact)
+    caught_no_artifact = any("no raw build/run artifact" in f for f in no_artifact_findings)
+
+    # (b) an epoch counted passing while its consumer is not_run: move the 1.0.x primary record to
+    #     the not-run list while the 1.0.x epoch row still claims coverage.
+    passing_while_not_run = copy.deepcopy(body)
+    moved = next(r for r in passing_while_not_run["records"]
+                 if r["epoch"] == "1.0.x" and r["role"] == "primary")
+    passing_while_not_run["records"] = [r for r in passing_while_not_run["records"]
+                                         if r is not moved]
+    moved["outcome"] = "not_run"
+    moved["reason"] = "simulated: counted passing while the consumer is not_run"
+    passing_while_not_run["not_run"] = passing_while_not_run["not_run"] + [moved]
+    passing_while_not_run = _downstream_reseal(passing_while_not_run)
+    passing_while_not_run_findings = findings_of(passing_while_not_run)
+    caught_passing_while_not_run = any("not exactly one" in f or "does not reproduce" in f
+                                       for f in passing_while_not_run_findings)
+
+    # (c) a result relabelled across authorities: the 3.6.4 pass claimed against 0.9.8zh.
+    relabelled = copy.deepcopy(body)
+    target = next(r for r in relabelled["records"] if r["trial_id"] == "3.6+/4.x--curl-8.22.0")
+    target["authority_id"] = "openssl-0.9.8zh-historical"
+    target["release_id"] = "openssl-0.9.8zh"
+    target["authority"] = dict(target["authority"], authority_id="openssl-0.9.8zh-historical",
+                              release_id="openssl-0.9.8zh")
+    relabelled = _downstream_reseal(relabelled)
+    relabelled_findings = findings_of(relabelled)
+    caught_relabelled = any("relabelled to authority" in f or "does not match" in f
+                            for f in relabelled_findings)
+
+    return {
+        "baseline_findings": len(base),
+        "injected_pass_without_artifact": stripped_tid,
+        "injected_pass_without_artifact_findings": len(no_artifact_findings),
+        "injected_epoch_passing_while_not_run": "1.0.x",
+        "injected_epoch_passing_while_not_run_findings": len(passing_while_not_run_findings),
+        "injected_result_relabelled_across_authorities": "3.6+/4.x--curl-8.22.0",
+        "injected_result_relabelled_across_authorities_findings": len(relabelled_findings),
+        "specificity_holds": specificity,
+        "caught_pass_without_artifact": caught_no_artifact,
+        "caught_epoch_passing_while_not_run": caught_passing_while_not_run,
+        "caught_result_relabelled": caught_relabelled,
+        "honest": bool(specificity and caught_no_artifact and caught_passing_while_not_run
+                       and caught_relabelled),
+    }
+
+
+def _downstream_multitrack_court(name: str) -> dict:
+    """`RT-DOWNSTREAM-MULTITRACK`: 23.11's court, the unmodified downstream consumer per epoch.
+
+    Stages no probe. It reads `forensics/multitrack/downstream-multitrack.json` and re-derives the
+    whole record from the raw build/run outputs it carries through the same generator, and
+    establishes that every major ABI epoch is covered by exactly one unmodified real downstream
+    consumer built against that epoch's built authority; that a passing consumer genuinely built
+    and ran (its raw `ldd` links the authority's prefix and SONAMEs and never the candidate shell,
+    and its banner names the authority); that a record is never relabelled across authorities; that
+    a `not_run` pair is honest unavailability that is never counted as passing; and that the
+    Phase-17 candidate corpus is still green and distinct. Three seeded mutations -- a consumer
+    claiming a build with no artifact, an epoch counted passing while its consumer is `not_run`,
+    and a result relabelled across authorities -- are each caught with specificity holding. A
+    passing downstream plane is an **instrument**: it records what one consumer did against one
+    authority on one platform/profile, and is not a compatibility claim about any other.
+    """
+    problems: list[str] = []
+    for path, label in ((DOWNSTREAM_MULTITRACK, "downstream-multitrack record"),
+                        (AUTHORITY_NODES, "authority-node registry"),
+                        (PHASE17_CORPUS, "Phase-17 candidate downstream corpus")):
+        if not path.is_file():
+            problems.append(f"the {label} {rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    body = read_json(DOWNSTREAM_MULTITRACK)
+    authority_nodes = read_json(AUTHORITY_NODES)
+    phase17 = read_json(PHASE17_CORPUS)
+    candidate_version = gen_frf_courts.CANDIDATE_VERSION
+    specs = {t["trial_id"]: t for t in downstream_multitrack.TRIALS}
+    major_epochs = historical_population.MAJOR_EPOCHS
+
+    findings = downstream_multitrack_findings(body, authority_nodes, phase17, candidate_version,
+                                              specs, major_epochs)
+
+    # No outcome is typed: the committed record must reproduce from its own raw outputs through the
+    # same generator, so a hand-edited outcome stops reproducing.
+    try:
+        fresh = downstream_multitrack.rederive_body(body)
+    except SystemExit as exc:
+        findings.append(f"the downstream record could not be re-derived: {exc}")
+        fresh = None
+    if fresh is not None and fresh != body:
+        findings.append(
+            "the committed downstream record does not reproduce from the raw build/run outputs it "
+            "carries through the same generator: an outcome was typed rather than derived"
+        )
+
+    control = downstream_sensitivity_control(body, authority_nodes, phase17, candidate_version,
+                                             specs, major_epochs)
+    counts = body.get("counts", {})
+    verdict = "pass" if (not findings and not problems and control["honest"]) else "fail"
+
+    def _row(r: dict) -> dict:
+        return {
+            "trial_id": r.get("trial_id"), "epoch": r.get("epoch"), "role": r.get("role"),
+            "consumer": r.get("consumer"), "consumer_version": r.get("consumer_version"),
+            "authority_id": r.get("authority_id"), "release_id": r.get("release_id"),
+            "build_profile": (r.get("authority") or {}).get("build_profile"),
+            "platform": (r.get("authority") or {}).get("platform"),
+            "outcome": r.get("outcome"),
+            "build_ok": (r.get("build") or {}).get("ok"),
+            "run_ok": (r.get("run") or {}).get("ok"),
+            "http_code": (r.get("run") or {}).get("http_code"),
+            "tls": (r.get("run") or {}).get("tls"),
+            "observation": r.get("observation"),
+            "reason": r.get("reason"),
+        }
+
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/multitrack/downstream-multitrack.json and "
+            "re-derives every consumer record from the raw build/run outputs the artefact carries "
+            "through the same generator. It establishes that every major ABI epoch -- pre-1.0, "
+            "1.0.x, 1.1.x, 3.x and 3.6+/4.x -- is covered by exactly one unmodified real downstream "
+            "consumer built against that epoch's built authority and exercised against the "
+            "authority's own s_server; that a passing consumer genuinely built and ran (its raw "
+            "`ldd` output links the authority's prefix and its own SONAMEs and never the candidate "
+            "distribution shell, and its version banner names the authority's OpenSSL); that a "
+            "record is never relabelled across authorities; that a `not_run` pair is honest "
+            "unavailability carrying its measured reason and is never counted as passing; that no "
+            "outcome was typed; and that the Phase-17 candidate corpus is still green and distinct. "
+            "A consumer claiming a build with no artifact, an epoch counted passing while its "
+            "consumer is `not_run`, and a result relabelled across authorities are each detected "
+            "with specificity holding (docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 2, 3.3 and 4)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the downstream-multitrack court reads a committed evidence record and writes no "
+            "artifacts/phase23/probes/<probe>.{authority,candidate} pair, so it stages no "
+            "transcript to diff and carries no FRF declaration"
+        ),
+        "counts": counts,
+        "epochs": body.get("epochs"),
+        "records": [_row(r) for r in body.get("records") or []],
+        "not_run": [_row(r) for r in body.get("not_run") or []],
+        "content_hash": body.get("content_hash"),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def _delta_engine_court(name: str) -> dict:
     """`RT-DELTA-ENGINE`: 23.6's court, the semantic compatibility delta.
 
@@ -3664,13 +4030,28 @@ def main(argv: list[str]) -> int:
             "3.6.3/3.6.4); that no status was typed; and that every evidence path is "
             "content-addressed. A release marked built with no receipt, an unavailable release "
             "marked runtime-compatible, a release with no status and an epoch with no "
-            "representative are each detected with specificity holding. Phase 23 owns "
+            "representative are each detected with specificity holding. `RT-DOWNSTREAM-MULTITRACK` "
+            "is 23.11's court: the unmodified downstream consumer per major compatibility epoch. "
+            "It stages no probe and reads forensics/multitrack/downstream-multitrack.json, "
+            "re-deriving every consumer record from the raw build/run outputs the artefact carries "
+            "through the same generator. It establishes that every major ABI epoch -- pre-1.0, "
+            "1.0.x, 1.1.x, 3.x and 3.6+/4.x -- is covered by exactly one unmodified real "
+            "downstream consumer built against that epoch's built authority and exercised against "
+            "the authority's own s_server; that a passing consumer genuinely built and ran (its "
+            "raw `ldd` output links the authority's prefix and its own SONAMEs and never the "
+            "candidate distribution shell, and its version banner names the authority's OpenSSL); "
+            "that a record is never relabelled across authorities; and that a `not_run` pair is "
+            "honest unavailability carrying its measured reason and is never counted as passing. "
+            "The Phase-17 candidate corpus is checked green and distinct: a candidate result is "
+            "never relabelled as authority evidence. A consumer claiming a build with no artifact, "
+            "an epoch counted passing while its consumer is `not_run`, and a result relabelled "
+            "across authorities are each detected with specificity holding. Phase 23 owns "
             "no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining seven courts -- "
-            "RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, "
+            "over a symbol set is its evidence, and its remaining six courts -- "
+            "RT-COMPATIBILITY-EDGES, "
             "RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, "
             "RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
-            "the subphases that land them (23.10 through 23.17). The one thing the model forbids "
+            "the subphases that land them (23.12 through 23.17). The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "
@@ -3706,6 +4087,8 @@ def main(argv: list[str]) -> int:
         InputRef(name="semantic-probe", path=SEMANTIC_PROBE),
         InputRef(name="compatibility-views", path=COMPATIBILITY_VIEWS),
         InputRef(name="historical-population", path=HISTORICAL_POPULATION),
+        InputRef(name="downstream-multitrack", path=DOWNSTREAM_MULTITRACK),
+        InputRef(name="phase17-downstream-corpus", path=PHASE17_CORPUS),
         InputRef(name="semantic-courts", path=SEMANTIC_COURTS),
     ]
     for path in sorted(DELTAS.glob("*.json")):
@@ -3917,6 +4300,30 @@ def main(argv: list[str]) -> int:
             for u in r["unavailable"] or []:
                 print(f"      unavailable {u['release_id']:<27} runtime_compatible=false")
             print(f"      runtime-compatible: {', '.join(r['runtime_compatible']) or '-'}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == DOWNSTREAM_MULTITRACK_COURT:
+            c = r["control"]
+            counts = r["counts"] or {}
+            print(f"  {r['court']:<32} pass   (no probe, {counts.get('passed')} passing "
+                  f"consumer(s), {counts.get('not_run')} not_run, {counts.get('failed')} failed; "
+                  f"epochs covered={counts.get('epochs_covered')}/{counts.get('epochs')}; "
+                  f"content_hash={r['content_hash'][:16]}...; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"no-artifact->{c['injected_pass_without_artifact_findings']} "
+                  f"passing-while-not_run->"
+                  f"{c['injected_epoch_passing_while_not_run_findings']} "
+                  f"relabelled->{c['injected_result_relabelled_across_authorities_findings']} "
+                  f"finding(s))")
+            for row in r["records"] or []:
+                print(f"      epoch {row['epoch']:<10} {row['consumer']} {row['consumer_version']:<8} "
+                      f"vs {row['authority_id']:<32} build={row['build_ok']} run={row['run_ok']} "
+                      f"http={row['http_code']} tls={row['tls']}")
+            for row in r["not_run"] or []:
+                print(f"      NOT-RUN {row['epoch']:<10} {row['consumer']} "
+                      f"{row['consumer_version']:<8} vs {row['authority_id']:<32} "
+                      f"{row['reason']}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

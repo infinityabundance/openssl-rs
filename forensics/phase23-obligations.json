@@ -126,10 +126,10 @@
         "closure": "the `RT-DOWNSTREAM-MULTITRACK` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-DOWNSTREAM-MULTITRACK is pending",
+        "measurement_state": "complete",
+        "observation": "RT-DOWNSTREAM-MULTITRACK is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "downstream-multitrack",
         "what": "at least one meaningful unmodified real downstream consumer per major compatibility epoch, exercised as this stratum's own multitrack court"
@@ -212,8 +212,8 @@
       "contract_units": 17,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 10,
-      "open_in_this_stratum": 7,
+      "implemented": 11,
+      "open_in_this_stratum": 6,
       "owned": 17,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -254,7 +254,7 @@
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "87c60cdf8a0751739f2c879c90096cff18db4ad95bff9b6683a2fb02eaec9916"
+      "sha256": "9868cc705b4dd23e0d13c3780c2235c85e7c9c6c619d82ee8f28627d1689069d"
     }
   ],
   "kind": "phase23-obligations",

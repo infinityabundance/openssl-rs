@@ -1,8 +1,8 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "boundary": "the population covers the catalogue and records a status per node; it is not a compatibility claim about any release. The `downstream-evidenced` rung has no plane yet (23.11), so no node attains it and it is named here rather than left blank. An unavailable release is archaeology -- studied, catalogued, and never runtime-compatible -- and each major ABI epoch carries at least one built representative: 0.9.8zh (pre-1.0), 1.0.2u (1.0.x), 1.1.1w (1.1.x), 3.0.0 (3.x) and 3.6.3/3.6.4 (3.6+/4.x). The epoch representatives are built in the historical and forensic venues; the profile each was built with is a property of its authority node, not of its release identity",
-    "content_hash": "0d6b8c05ba4d455614faa24eff65761ca137cb0deb1450704fc9f34b5a9c61e1",
+    "boundary": "the population covers the catalogue and records a status per node; it is not a compatibility claim about any release. The `downstream-evidenced` rung is read from forensics/multitrack/downstream-multitrack.json (23.11): a node attains it when an unmodified real downstream consumer was built against its authority and ran a real workload, and it may be attained without the oracle-to-oracle `runtime-evidenced` rung, because the two are independent evidence planes rather than a contiguous prefix. An unavailable release is archaeology -- studied, catalogued, and never runtime-compatible -- and each major ABI epoch carries at least one built representative: 0.9.8zh (pre-1.0), 1.0.2u (1.0.x), 1.1.1w (1.1.x), 3.0.0 (3.x) and 3.6.3/3.6.4 (3.6+/4.x). The epoch representatives are built in the historical and forensic venues; the profile each was built with is a property of its authority node, not of its release identity",
+    "content_hash": "cde69a04d56facb836988040741dc1e2ce499850b2021919de61fd0260db788f",
     "counts": {
       "built": 6,
       "by_epoch": {
@@ -19,13 +19,14 @@
         "built-authority": 6,
         "candidate-view": 1,
         "catalogued": 245,
+        "downstream-evidenced": 5,
         "maintained": 1,
         "runtime-evidenced": 2
       },
       "by_status": {
         "archaeological-only": 127,
-        "atlas-complete": 4,
         "catalogued": 239,
+        "downstream-evidenced": 4,
         "maintained": 1,
         "runtime-evidenced": 1
       },
@@ -1970,21 +1971,27 @@
             "path": "forensics/atlas/openssl-0.9.8zh-historical/plane-census.json",
             "sha256": "1d429160091840faddc7ac9e99aa4678afa91bc504fd76c60124ed56171c0f18",
             "what": "the authority's committed atlas"
+          },
+          {
+            "path": "forensics/multitrack/downstream-multitrack.json",
+            "sha256": "02cd32b83ab97fdb56e8b46ba6ad4b5e84e97796c99e22d34f6427f3711c9f9b",
+            "what": "the downstream consumer that exercised this authority"
           }
         ],
         "outcome": "built",
-        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
+        "reason": "a real downstream consumer exercised the authority",
         "release_channel": "final",
         "release_id": "openssl-0.9.8zh",
         "rungs_attained": [
           "catalogued",
           "admitted-source",
           "built-authority",
-          "atlas-complete"
+          "atlas-complete",
+          "downstream-evidenced"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "atlas-complete"
+        "status": "downstream-evidenced"
       },
       {
         "display_version": "1.0.0",
@@ -3562,21 +3569,27 @@
             "path": "forensics/atlas/openssl-1.0.2u-historical/plane-census.json",
             "sha256": "ee15cea3124b11e3f20e92b9ca3cb862dd7503a64fe3f852ac14bff6e9885734",
             "what": "the authority's committed atlas"
+          },
+          {
+            "path": "forensics/multitrack/downstream-multitrack.json",
+            "sha256": "02cd32b83ab97fdb56e8b46ba6ad4b5e84e97796c99e22d34f6427f3711c9f9b",
+            "what": "the downstream consumer that exercised this authority"
           }
         ],
         "outcome": "built",
-        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
+        "reason": "a real downstream consumer exercised the authority",
         "release_channel": "final",
         "release_id": "openssl-1.0.2u",
         "rungs_attained": [
           "catalogued",
           "admitted-source",
           "built-authority",
-          "atlas-complete"
+          "atlas-complete",
+          "downstream-evidenced"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "atlas-complete"
+        "status": "downstream-evidenced"
       },
       {
         "display_version": "1.1.0",
@@ -4642,21 +4655,27 @@
             "path": "forensics/atlas/openssl-1.1.1w-historical/plane-census.json",
             "sha256": "715bbcc0f27eb82a5cb5af9b2e9f234b67ffdb90c0025aa9279a9acd6cb56889",
             "what": "the authority's committed atlas"
+          },
+          {
+            "path": "forensics/multitrack/downstream-multitrack.json",
+            "sha256": "02cd32b83ab97fdb56e8b46ba6ad4b5e84e97796c99e22d34f6427f3711c9f9b",
+            "what": "the downstream consumer that exercised this authority"
           }
         ],
         "outcome": "built",
-        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
+        "reason": "a real downstream consumer exercised the authority",
         "release_channel": "final",
         "release_id": "openssl-1.1.1w",
         "rungs_attained": [
           "catalogued",
           "admitted-source",
           "built-authority",
-          "atlas-complete"
+          "atlas-complete",
+          "downstream-evidenced"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "atlas-complete"
+        "status": "downstream-evidenced"
       },
       {
         "display_version": "3.0.0",
@@ -4681,21 +4700,27 @@
             "path": "forensics/atlas/openssl-3.0.0-historical/plane-census.json",
             "sha256": "eceaea02e301ef050f30dcc6c255fe83161dd6b158b0c09eefb348ca1fe0dde7",
             "what": "the authority's committed atlas"
+          },
+          {
+            "path": "forensics/multitrack/downstream-multitrack.json",
+            "sha256": "02cd32b83ab97fdb56e8b46ba6ad4b5e84e97796c99e22d34f6427f3711c9f9b",
+            "what": "the downstream consumer that exercised this authority"
           }
         ],
         "outcome": "built",
-        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
+        "reason": "a real downstream consumer exercised the authority",
         "release_channel": "final",
         "release_id": "openssl-3.0.0",
         "rungs_attained": [
           "catalogued",
           "admitted-source",
           "built-authority",
-          "atlas-complete"
+          "atlas-complete",
+          "downstream-evidenced"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "atlas-complete"
+        "status": "downstream-evidenced"
       },
       {
         "display_version": "3.0.0-alpha1",
@@ -6813,6 +6838,11 @@
             "what": "the oracle-to-oracle semantic court that executed this authority"
           },
           {
+            "path": "forensics/multitrack/downstream-multitrack.json",
+            "sha256": "02cd32b83ab97fdb56e8b46ba6ad4b5e84e97796c99e22d34f6427f3711c9f9b",
+            "what": "the downstream consumer that exercised this authority"
+          },
+          {
             "path": "forensics/multitrack/default-authority.json",
             "sha256": "573e3019b5040ff49ddfed09e45587f674a3f17228093d350e8f950d7c4c7cc2",
             "what": "the committed default-authority alias that names the maintained candidate"
@@ -6829,6 +6859,7 @@
           "atlas-complete",
           "candidate-view",
           "runtime-evidenced",
+          "downstream-evidenced",
           "maintained"
         ],
         "runtime_compatible": true,

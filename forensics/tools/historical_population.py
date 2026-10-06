@@ -23,9 +23,11 @@ and never types a status:
 The status is read off the ladder `multitrack_schemas.SUPPORT_LADDER`: a node's `status` is the
 **highest rung an evidence plane reached**, and `rungs_attained` names every rung it reached. A node
 outside the public final-release lineage, or a final release whose official source cannot be
-admitted, is `archaeological-only` and has climbed no rung. `downstream-evidenced` is the one rung
-its plane (`forensics/multitrack/downstream-multitrack.json`) has not landed yet, so no node attains
-it and the record says so rather than inventing it.
+admitted, is `archaeological-only` and has climbed no rung. `downstream-evidenced` is read from
+its plane `forensics/multitrack/downstream-multitrack.json` (23.11): a node attains it when an
+unmodified real downstream consumer was built against its authority and ran a real workload, and it
+may be attained without the oracle-to-oracle `runtime-evidenced` rung, because the two are
+independent evidence planes rather than a contiguous prefix.
 
 Honest unavailability
 ---------------------
@@ -254,10 +256,12 @@ def derive_body() -> dict:
             evidence.append(ev.ref(SEMANTIC_COURTS, "the oracle-to-oracle semantic court that "
                                                     "executed this authority"))
 
-        # downstream-evidenced: its plane has not landed, so no node attains it.
+        # downstream-evidenced: a real consumer was built against this authority and ran (23.11).
+        # Only a `passed` record advances the rung, so a `not_run` pair never does.
         if DOWNSTREAM.is_file():
             downstream = load(DOWNSTREAM)
-            executed = {r.get("authority_id") for r in downstream.get("records", [])}
+            executed = {r.get("authority_id") for r in downstream.get("records", [])
+                        if r.get("outcome") == "passed"}
             if aid and aid in executed:
                 rungs.append("downstream-evidenced")
                 evidence.append(ev.ref(DOWNSTREAM, "the downstream consumer that exercised this "
@@ -373,14 +377,17 @@ def derive_body() -> dict:
         "content_hash": body_hash(records, epochs, unavailable),
         "boundary": (
             "the population covers the catalogue and records a status per node; it is not a "
-            "compatibility claim about any release. The `downstream-evidenced` rung has no plane "
-            "yet (23.11), so no node attains it and it is named here rather than left blank. An "
-            "unavailable release is archaeology -- studied, catalogued, and never runtime-"
-            "compatible -- and each major ABI epoch carries at least one built representative: "
-            "0.9.8zh (pre-1.0), 1.0.2u (1.0.x), 1.1.1w (1.1.x), 3.0.0 (3.x) and 3.6.3/3.6.4 "
-            "(3.6+/4.x). The epoch representatives are built in the historical and forensic "
-            "venues; the profile each was built with is a property of its authority node, not of "
-            "its release identity"
+            "compatibility claim about any release. The `downstream-evidenced` rung is read from "
+            "forensics/multitrack/downstream-multitrack.json (23.11): a node attains it when an "
+            "unmodified real downstream consumer was built against its authority and ran a real "
+            "workload, and it may be attained without the oracle-to-oracle `runtime-evidenced` "
+            "rung, because the two are independent evidence planes rather than a contiguous "
+            "prefix. An unavailable release is archaeology -- studied, catalogued, and never "
+            "runtime-compatible -- and each major ABI epoch carries at least one built "
+            "representative: 0.9.8zh (pre-1.0), 1.0.2u (1.0.x), 1.1.1w (1.1.x), 3.0.0 (3.x) and "
+            "3.6.3/3.6.4 (3.6+/4.x). The epoch representatives are built in the historical and "
+            "forensic venues; the profile each was built with is a property of its authority node, "
+            "not of its release identity"
         ),
     }
     return body
