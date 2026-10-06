@@ -240,16 +240,16 @@ in place, so no plan correction is recorded for it.
 No `.frf` object and no Gemel change or checkpoint was created for Phase 21, because the
 mechanism requires none. The FRF store's chain status is recorded here rather than moved: the
 store carries **21 compiled claims with zero blockers** — the **17** sensitivity-backed claims
-(one per runtime stratum, Phases 3 through 19) each recording candidate `openssl-rs 0.0.25`
+(one per runtime stratum, Phases 3 through 19) each recording candidate `openssl-rs 0.0.26`
 (`identity_hash e4f60d8b`) plus the abi/dgst/inventory/baseline oracle claims — over **147**
-receipts, and `forensics/GEMEL_TRAJECTORY.md`'s `current:` is the **0.0.25** release checkpoint
-`K68` (`checkpoint.0cecb5dbe9a4c5e8cfab3c66c8777e2753b2d0b1bd9c8ad40034bfb73aea693a`), closing
-change `C114`. The store is **re-created at a release, not at a stratum seal**: the `0.0.26`
-release will remove and rebuild it at the new version, fold Phase 21's identity in, and record the
-Gemel change and checkpoint exactly as the `0.0.25` release did for Phase 20 (the `0.0.25`
-release commit `ad6fd709`; the `0.0.24` release commit `1b426a91` did the same for Phase 19's
-three declarable courts). This seal records the division: **the stratum records the chain status;
-the release re-creates the store.**
+receipts, and `forensics/GEMEL_TRAJECTORY.md`'s `current:` is the **0.0.26** release checkpoint
+`K69` (`checkpoint.3c8555fe60fc46b625742b76e310e697db4d7817ee67681b5ca5fc93a02bf8dc`), closing
+change `C115`. The store is **re-created at a release, not at a stratum seal**: the `0.0.26`
+release removed and rebuilt it at the new version, folded the now-complete Phase 21 into the
+release, and recorded the Gemel change and checkpoint exactly as the `0.0.25` release did for
+Phase 20 (the `0.0.25` release commit `ad6fd709`; the `0.0.24` release commit `1b426a91` did the
+same for Phase 19's three declarable courts). This seal records the division: **the stratum records
+the chain status; the release re-creates the store.**
 
 ## 7. Non-claims
 
