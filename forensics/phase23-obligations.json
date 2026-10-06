@@ -150,10 +150,10 @@
         "closure": "the `RT-NEGATIVE-OBLIGATIONS` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-NEGATIVE-OBLIGATIONS is pending",
+        "measurement_state": "complete",
+        "observation": "RT-NEGATIVE-OBLIGATIONS is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "negative-obligations",
         "what": "the `must_not_exist` / `must_be_opaque` / `must_not_be_exported` obligations beside the positive ones, each with evidence and a state, so an absence is a checkable claim rather than an omission"
@@ -212,8 +212,8 @@
       "contract_units": 17,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 12,
-      "open_in_this_stratum": 5,
+      "implemented": 13,
+      "open_in_this_stratum": 4,
       "owned": 17,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -254,7 +254,7 @@
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "d4d1e3455102137bcff4f4bd86a7e991bba484891e9db33764604d2537d580d4"
+      "sha256": "c40f0e75e2ac51ebf6ad737296442b2ed6a70976a8e158eb67e0323b54e33f7f"
     }
   ],
   "kind": "phase23-obligations",

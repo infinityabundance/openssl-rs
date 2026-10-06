@@ -560,6 +560,10 @@
       "observations": 15,
       "verdict": "pass"
     },
+    "RT-NEGATIVE-OBLIGATIONS": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-OBJ-STREAM": {
       "observations": 91,
       "verdict": "pass"
@@ -910,7 +914,7 @@
     "phase20": 0,
     "phase21": 0,
     "phase22": 0,
-    "phase23": 5,
+    "phase23": 4,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

@@ -191,6 +191,12 @@ GENERATORS_BEFORE_LEDGERS = [
     # failure rather than a silent divergence. The RT-COMPATIBILITY-EDGES court re-derives the whole
     # plane through the same generator and refuses a side whose evidence is inherited from the other.
     "forensics/tools/compat_edges.py",
+    # Phase 23.13's negative and positive obligations. It is a pure function of the committed
+    # censuses, ABI/history façades, edge deltas and symbols planes, so a stale committed plane --
+    # or an obligation whose state was typed rather than read from its evidence -- is a failure
+    # rather than a silent divergence. The RT-NEGATIVE-OBLIGATIONS court re-derives the whole plane
+    # through the same generator and re-reads each record's named evidence through `adjudicate`.
+    "forensics/tools/negative_obligations.py",
     # Phase 23.10's historical population. It is a pure function of the committed catalogue, the
     # authority-node registry, the acquisition and build receipts, the committed atlases, the
     # compatibility views and the semantic pair, so a stale committed record -- or a hand-typed
@@ -397,6 +403,10 @@ COMPARED = [
     # whose verdict is not established by its evidence -- is a failure rather than a silent
     # divergence.
     "forensics/multitrack/compatibility-edges.json",
+    # Phase 23.13's negative and positive obligations: a pure function of the committed censuses,
+    # ABI/history façades, edge deltas and symbols planes, so a stale plane -- or an obligation
+    # whose state was not read from its evidence -- is a failure rather than a silent divergence.
+    "forensics/multitrack/negative-obligations.json",
     # Phase 23.10's historical population: a pure function of the committed catalogue, authority
     # nodes, receipts, atlases, compatibility views and semantic pair, so a stale record or a typed
     # status is a failure rather than a silent divergence.
