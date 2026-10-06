@@ -56,16 +56,21 @@ PRODUCTION_AUTHORITY = "openssl-3.6.4-production"
 # contract over five contract units and no deferral, which a symbol-counting ledger would count
 # zero. **Phase 19 owns no export either**: the ownership atlas assigns `owner_phase == 19` no
 # row, and its unit is the performance dispatch contract over five contract units and no
-# deferral, which a symbol-counting ledger would count zero. The marker is a property
+# deferral, which a symbol-counting ledger would count zero. **Phase 20 owns no export either**:
+# the ownership atlas assigns `owner_phase == 20` no row, and its unit is the custodian seal
+# contract over five contract units and no deferral, which a symbol-counting ledger would count
+# zero. The marker is a property
 # of the document rather than a phase number those tools know (`docs/PHASE-22-SUBPHASES.md`, D485;
 # `docs/PHASE-16-SUBPHASES.md`, section 1; `docs/PHASE-17-SUBPHASES.md`, section 1;
-# `docs/PHASE-18-SUBPHASES.md`, section 1; `docs/PHASE-19-SUBPHASES.md`, section 1).
+# `docs/PHASE-18-SUBPHASES.md`, section 1; `docs/PHASE-19-SUBPHASES.md`, section 1;
+# `docs/PHASE-20-SUBPHASES.md`, section 1).
 NON_EXPORT_UNITS = {
     "compatibility plane",
     "cli-config contract",
     "downstream replacement contract",
     "hostile hardening contract",
     "performance dispatch contract",
+    "custodian seal contract",
 }
 HISTORICAL_AUTHORITY = "openssl-3.6.3-historical"
 
@@ -104,6 +109,7 @@ SEAL_DOCS: dict[int, str] = {
     17: "docs/PHASE-17-DOWNSTREAM-SEAL.md",
     18: "docs/PHASE-18-HARDENING-SEAL.md",
     19: "docs/PHASE-19-PERFORMANCE-SEAL.md",
+    20: "docs/PHASE-20-CUSTODIAN-SEAL.md",
     # Phase 22 is an atlas stratum rather than an export stratum, but its seal is the same kind of
     # document and `phase_state.py` records its sha256 the same way. Its `evidence_for` branch is
     # its own because its ledger's unit is a compatibility plane, not a symbol (D485).

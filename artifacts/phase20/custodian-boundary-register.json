@@ -1,0 +1,144 @@
+{
+  "schema": "openssl-rs/custodian-boundary-register/v1",
+  "phase": 20,
+  "subphase": "20.5",
+  "authority": "openssl-3.6.4-production",
+  "rule": "This register is the stratum's own answer to docs/NON_CLAIMS.md: it records, per surface, whether it is `claimed` (a passing court covers it) or `bounded` (explicitly outside this stratum -- including no FIPS validation, no universal parity from finite evidence, and memory safety measured rather than established). It is authored, not derived: the `CUSTODIAN-BOUNDARY-REGISTER` court in forensics/tools/phase20_courts.py re-reads the four passing custodian courts' own records (the claimed side) and the constitution/limitations artefacts docs/NON_CLAIMS.md, docs/FIPS_CLAIMS.md, docs/UNSAFE.md and the unsafe-footprint growth ceiling (the bounded side), and fails the stratum if any recorded boundary has drifted from the evidence that establishes it (docs/PHASE-20-SUBPHASES.md section 3.6). A surface no passing court reaches is `bounded`, never `claimed`, and the register may claim no more than the courts above measured.",
+  "verdicts": {
+    "claimed": 4,
+    "bounded": 4,
+    "total": 8
+  },
+  "surfaces": [
+    {
+      "id": "custodian-maturity",
+      "group": "custodian-maturity",
+      "surface": "the L0-L9 maturity ladder derivation for libcrypto and libssl, and the gap to the L9 high-assurance custodian seal the seal names",
+      "verdict": "claimed",
+      "court": "RT-CUSTODIAN-MATURITY",
+      "surface_keys": ["custodian.maturity.ladder"],
+      "evidence": {
+        "verdict": "pass",
+        "highest_present": "L8",
+        "seal_target_level": "L9",
+        "seal_target_present": false,
+        "findings_count": 1
+      },
+      "note": "claimed, not a property claim: the passing court derived the ladder from committed evidence, so the *derivation* is covered -- but L9 is the level this stratum's own seal establishes, so the court records the gap to it as the finding below and the property reads NOT_CLAIMED. A passing RT-CUSTODIAN-MATURITY must never be read as 'L9 custodian seal achieved' (docs/PHASE-20-SUBPHASES.md sections 1 and 3.2; docs/PHASE-20-CUSTODIAN-SEAL.md resolves the gap as the seal's bounded claim)."
+    },
+    {
+      "id": "custodian-receipt-closure",
+      "group": "custodian-closure",
+      "surface": "the join of every in-scope obligation to its FRF receipt, with the covering sensitivity-backed claim carrying zero blockers",
+      "verdict": "claimed",
+      "court": "RT-RECEIPT-CLOSURE",
+      "surface_keys": ["custodian.closure.join"],
+      "evidence": {
+        "verdict": "pass",
+        "obligations": 6517,
+        "obligations_joined": 6517,
+        "gaps": 0,
+        "blockers": 0,
+        "findings_count": 0
+      },
+      "note": "claimed as an instrument: the passing court executed the join over the finite receipts the store carries. It is not a universal-parity claim -- the join is over the receipts the FRF store records, and the three non-claims below still bound it (docs/CUSTODIAN_CONTRACT.md section 6)."
+    },
+    {
+      "id": "custodian-residuals",
+      "group": "custodian-residuals",
+      "surface": "the disposition of every residual, with no UNKNOWN residual intersecting the claimed production profile",
+      "verdict": "claimed",
+      "court": "RT-CUSTODIAN-RESIDUALS",
+      "surface_keys": ["custodian.residuals.disposition"],
+      "evidence": {
+        "verdict": "pass",
+        "residuals": 63994,
+        "un_dispositioned": 0,
+        "unknown_intersecting": 0,
+        "findings_count": 0
+      },
+      "note": "claimed, not a residual closure beyond the profile: the passing court dispositioned every residual it read and found zero UNKNOWN residuals intersecting a declared compatibility root. An UNKNOWN residual that merely does not intersect is recorded, not resolved -- UNKNOWN remains a result, not a resting state (docs/CUSTODIAN_CONTRACT.md sections 6 and 8, docs/PARITY_MODEL.md section 1)."
+    },
+    {
+      "id": "custodian-witness",
+      "group": "custodian-witness",
+      "surface": "the ABI-substitution witness chain and the machine-owned downstream corpus witness chain, re-established current and functional",
+      "verdict": "claimed",
+      "court": "RT-SUBSTITUTION-WITNESS",
+      "surface_keys": ["custodian.witness.abi", "custodian.witness.downstream"],
+      "evidence": {
+        "verdict": "pass",
+        "witnesses": 9,
+        "functional": 9,
+        "current": 9,
+        "findings_count": 0
+      },
+      "note": "claimed, bounded to the witnesses read: the passing court re-derived the nine witnesses (three ABI-substitution, six downstream) as current and functional from the machine-owned records. It does not re-run the Phase-17 harnesses -- it proves currency by candidate identity -- so it witnesses those binaries over that corpus, not downstream completeness (docs/PHASE-20-SUBPHASES.md section 3.5)."
+    },
+    {
+      "id": "nc-no-fips-validation",
+      "group": "not-claimed",
+      "surface": "FIPS formal validation of the candidate",
+      "verdict": "bounded",
+      "court": null,
+      "surface_keys": ["nc.no-fips-validation"],
+      "evidence": {
+        "non_claims_present": true,
+        "fips_claims_present": true,
+        "fips_label_present": true,
+        "fips_validation_external": true
+      },
+      "note": "bounded: docs/FIPS_CLAIMS.md section 1 separates FIPS behavioural parity (implemented and courted) from FIPS formal validation (an external certification process), and section 3 labels the candidate NOT FIPS VALIDATED. Behavioural parity with the FIPS provider is not validation, and OpenSSL's own certification is never used to imply certification of openssl-rs (docs/NON_CLAIMS.md section 3)."
+    },
+    {
+      "id": "nc-no-universal-parity",
+      "group": "not-claimed",
+      "surface": "a universal-parity or drop-in-replacement claim from finite evidence",
+      "verdict": "bounded",
+      "court": null,
+      "surface_keys": ["nc.no-universal-parity"],
+      "evidence": {
+        "non_claims_present": true,
+        "non_claims_universal_section": true,
+        "non_claims_scope_adjacent": true
+      },
+      "note": "bounded: docs/NON_CLAIMS.md section 1 forbids '100% OpenSSL compatible' or 'drop-in OpenSSL replacement' without the supported authority / version / build profile / platform scope immediately adjacent, and section 2 derives any headline from evidence-bearing obligations rather than typing it. Every claim in this stratum names its authority, profile, platform, court and evidence (docs/CUSTODIAN_CONTRACT.md section 7)."
+    },
+    {
+      "id": "nc-memory-safety-measured-not-established",
+      "group": "not-claimed",
+      "surface": "established memory safety, as distinct from a measured unsafe footprint",
+      "verdict": "bounded",
+      "court": null,
+      "surface_keys": ["nc.memory-safety-measured-not-established"],
+      "evidence": {
+        "unsafe_doc_present": true,
+        "unsafe_measured_not_asserted": true,
+        "unsafe_not_a_memory_safety_claim": true,
+        "unsafe_footprint_present": true,
+        "unsafe_footprint_sites": 58826,
+        "unsafe_footprint_extern_c": 10866,
+        "unsafe_core_sites": 52943,
+        "unsafe_boundary_sites": 5883,
+        "unsafe_bounds_present": true,
+        "unsafe_bounds_schema": "openssl-rs/unsafe-bounds/v1",
+        "unsafe_bounds_core_modules": 69
+      },
+      "note": "bounded: docs/UNSAFE.md section 2 says unsafe is measured, not asserted, and that the measurement is not a memory-safety claim -- a footprint is not a proof, and the crate has had memory-safety defects of exactly the class Rust is meant to remove. forensics/atlas/unsafe-footprint.json records the measured footprint and artifacts/phase18/unsafe-bounds.json records the core-module growth ceiling the HOSTILE-BOUNDARY-REGISTER court enforces; a ceiling is a ratchet, not a proof that any unsafe block is correct (docs/NON_CLAIMS.md section 3)."
+    },
+    {
+      "id": "nc-no-l9-custodian-seal-claim",
+      "group": "not-claimed",
+      "surface": "the L9 high-assurance custodian seal itself",
+      "verdict": "bounded",
+      "court": null,
+      "surface_keys": ["nc.no-l9-custodian-seal-claim"],
+      "evidence": {
+        "plan_present": true,
+        "plan_names_l9_seal": true,
+        "seal_doc_present": true
+      },
+      "note": "bounded: the L9 high-assurance custodian seal is the level Phase 20 itself establishes, and it is the seal's own bounded claim (docs/PHASE-20-CUSTODIAN-SEAL.md) rather than a universal custodian property -- no FIPS validation, no universal parity from finite evidence, memory safety measured not established (docs/PHASE-20-SUBPHASES.md sections 0 and 4.3). The maturity court records the gap to L9 as a finding, so the register does not claim the level; a passing custodian court is an instrument, not the property it names."
+    }
+  ]
+}

@@ -45,7 +45,7 @@ declared owner; this is that assignment.
 | 17 | Downstream replacement court | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 19 | Performance / CPU dispatch | `complete` | 0 | 5 | 5 | 0 | 0 |
-| 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
+| 20 | 3.6.4 custodian seal | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 21 | Maintenance delta machinery | `not-started` | 0 | — | — | — | — |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
 
@@ -639,6 +639,40 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 | RT-PERFORMANCE-WORK | `pass` | 84 |
 | RT-PERFORMANCE-SENSITIVITY | `pass` | — (structural) |
 | PERFORMANCE-BOUNDARY-REGISTER | `pass` | — (structural) |
+
+## Phase 20 — 3.6.4 custodian seal
+
+* state: `complete`
+* seal: `docs/PHASE-20-CUSTODIAN-SEAL.md`
+* ledger: `forensics/phase20-obligations.json`
+* atlas-owned: 0
+* owned working set: 5
+* implemented: 5
+* deferred to a later stratum with a stated reason: 0
+* **open in this stratum: 0**
+
+Contract units (measurement vs property):
+
+| unit | measurement_state | property_status | findings |
+|---|---|---|---|
+| custodian-maturity | `complete` | `NOT_CLAIMED` | `the committed evidence establishes L8 for libcrypto and libssl, not the L9 high-assurance custodian seal the seal names: L9 is this stratum's own claim rather than prior evidence the instrument can certify; its evidence -- the completion of stratum 20 and docs/PHASE-20-CUSTODIAN-SEAL.md -- is the seal this instrument belongs to. L9 is the level Phase 20 itself is establishing (docs/PHASE-20-SUBPHASES.md section 4.2); a passing RT-CUSTODIAN-MATURITY is an instrument plus this derivation and must never be read as 'L9 custodian seal achieved'.` |
+| receipt-closure | `complete` | `not_claimed` | — |
+| custodian-residuals | `complete` | `not_claimed` | — |
+| substitution-witness | `complete` | `not_claimed` | — |
+| custodian-boundary-register | `complete` | `not_claimed` | — |
+
+A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
+Courts: `all pass`, 5 court(s), **0** authority observation(s) over 0 transcript court(s).
+
+The other 5 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
+
+| court | verdict | observations |
+|---|---|---|
+| RT-CUSTODIAN-MATURITY | `pass` | — (structural) |
+| RT-RECEIPT-CLOSURE | `pass` | — (structural) |
+| RT-CUSTODIAN-RESIDUALS | `pass` | — (structural) |
+| RT-SUBSTITUTION-WITNESS | `pass` | — (structural) |
+| CUSTODIAN-BOUNDARY-REGISTER | `pass` | — (structural) |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 
