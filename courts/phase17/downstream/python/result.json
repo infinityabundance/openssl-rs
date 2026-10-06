@@ -4,7 +4,7 @@
     "detail": "CPython 3.12.15, _ssl/hashlib built with OpenSSL 3.6.4",
     "ok": true
   },
-  "candidate": "0.0.25",
+  "candidate": "0.0.26",
   "concurrency": {
     "ok": 16,
     "total": 16
