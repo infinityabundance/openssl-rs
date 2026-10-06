@@ -10,7 +10,7 @@
       "openssl-3.6.4-production"
     ],
     "boundary": "23.13 derives the obligations the committed evidence supports: the provider planes of every censused authority, the public-layout and architecture façades, the 3.6.3 -> 3.6.4 delta's added entities and measured exports, and each authority's `.num` NOEXIST rows. A 4.x release carries no admitted authority or view, so its ENGINE obligation reads `unknown` rather than satisfied. An obligation is bounded to the authority or release it names; no obligation inherits another authority's evidence.",
-    "content_hash": "1262f9f4631869ed455a004cb75ed11605c55444a487201d557cf246d5d761f3",
+    "content_hash": "deab41d3f50582d97666bd2fa65161039c45093277c596bde92cbfce718faad1",
     "counts": {
       "by_authority": {
         "openssl-0.9.8zh-historical": 5,
@@ -543,7 +543,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -592,7 +592,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -641,7 +641,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -690,7 +690,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -739,7 +739,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -788,7 +788,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -837,7 +837,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -886,7 +886,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -935,7 +935,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -984,7 +984,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1033,7 +1033,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1082,7 +1082,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1131,7 +1131,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1180,7 +1180,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1229,7 +1229,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1278,7 +1278,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1327,7 +1327,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1376,7 +1376,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1425,7 +1425,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1474,7 +1474,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1876,7 +1876,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1918,7 +1918,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1967,7 +1967,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2016,7 +2016,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2065,7 +2065,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2114,7 +2114,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2163,7 +2163,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2212,7 +2212,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2261,7 +2261,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2310,7 +2310,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2359,7 +2359,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2408,7 +2408,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2457,7 +2457,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2506,7 +2506,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2555,7 +2555,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2604,7 +2604,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2653,7 +2653,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2702,7 +2702,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2751,7 +2751,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2800,7 +2800,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2849,7 +2849,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2898,7 +2898,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -3079,7 +3079,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -3121,7 +3121,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -3684,7 +3684,7 @@
     {
       "name": "delta-3.6.3-3.6.4",
       "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
-      "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842"
+      "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277"
     }
   ],
   "kind": "negative-obligations",

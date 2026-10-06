@@ -155,6 +155,23 @@ NEGATIVE_OBLIGATION_KINDS: tuple[str, ...] = (
 )
 NEGATIVE_OBLIGATION_STATES: tuple[str, ...] = ("open", "satisfied", "unknown")
 
+# The security-lineage vocabulary (added by 23.14). A security observation is one
+# (vulnerability, maintained-branch fix) row: the identity it is about, the affected range, the
+# fixed release, the branch, the upstream severity, the affected subsystem, the FIPS impact when
+# upstream states one, and the **candidate disposition** -- whether the candidate's view never
+# contained the defect, safely diverges from the vulnerable historical behaviour, cannot yet claim
+# the fix, or (the forbidden value) would preserve the vulnerable behaviour. `preserve` is refused
+# by name: a row whose disposition re-adopts a fixed behaviour is exactly what
+# docs/SECURITY_DIVERGENCE_POLICY.md section 1 forbids.
+SECURITY_SEVERITIES: tuple[str, ...] = ("critical", "high", "moderate", "low", "unknown")
+SECURITY_DISPOSITIONS: tuple[str, ...] = (
+    "never_contained",
+    "safe_divergence",
+    "unresolved",
+    "preserve_vulnerable_behaviour",
+)
+SECURITY_FIPS_IMPACTS: tuple[str, ...] = ("no", "yes", "not_stated", "unknown")
+
 # The support-status ladder. `archaeological-only` is a terminal status *outside* the ladder: a
 # node that is studied and not supported has climbed no rung.
 SUPPORT_LADDER: tuple[str, ...] = (
@@ -774,12 +791,59 @@ def validate_delta_receipt(rec: dict) -> list[str]:
 
 
 def validate_security_observation(rec: dict) -> list[str]:
-    """A security-lineage observation: a historical vulnerability, observed and never reintroduced."""
-    fields = ("observation_id", "release_id", "affected", "fixed_in", "reference", "evidence",
+    """A security-lineage observation: one historical vulnerability, observed and never
+    reintroduced.
+
+    (Extended by 23.14.) One record is one **(vulnerability, maintained-branch fix)** row: it names
+    the vulnerability identity (`vulnerability_id`), the affected range, the fixed release
+    (`fixed_in`, `release_id`), the maintained `branch`, the upstream `severity`, the affected
+    `subsystem`, the `fips_impact` upstream states (or `not_stated`), and the **candidate
+    disposition**. A release whose source is not publicly available is an *external release
+    reference* (`external_release_reference: true`) and is never an authority
+    (`authority_id` must be null); the binding is one vulnerability identity to many branch-fix
+    rows.
+
+    The load-bearing refusal is the one the policy fixes: `reintroduced` must be the literal false,
+    and a `candidate_disposition` of `preserve_vulnerable_behaviour` is refused **by name** -- a
+    view may never re-adopt the behaviour a fixed release moved away from
+    (`docs/SECURITY_DIVERGENCE_POLICY.md` sections 1 and 3).
+    """
+    fields = ("observation_id", "vulnerability_id", "release_id", "affected", "fixed_in",
+              "reference", "branch", "severity", "subsystem", "fips_impact",
+              "candidate_disposition", "external_release_reference", "authority_id", "evidence",
               "reintroduced")
     problems = _missing(rec, fields)
-    for f in ("observation_id", "release_id", "affected", "fixed_in", "reference"):
+    for f in ("observation_id", "vulnerability_id", "release_id", "affected", "fixed_in",
+              "reference", "branch"):
         problems += _nonempty(rec, f)
+    problems += _enum(rec, "severity", SECURITY_SEVERITIES)
+    disposition = rec.get("candidate_disposition")
+    if disposition == "preserve_vulnerable_behaviour":
+        problems.append(
+            "candidate_disposition `preserve_vulnerable_behaviour` is refused: a security view may "
+            "never re-adopt the behaviour a fixed release moved away from "
+            "(docs/SECURITY_DIVERGENCE_POLICY.md sections 1 and 3)"
+        )
+    elif "candidate_disposition" in rec and disposition not in SECURITY_DISPOSITIONS:
+        problems.append(f"candidate_disposition={disposition!r} is not one of "
+                        f"{sorted(SECURITY_DISPOSITIONS)}")
+    if "external_release_reference" in rec and not isinstance(rec["external_release_reference"],
+                                                             bool):
+        problems.append("external_release_reference must be a boolean")
+    subsystem = rec.get("subsystem")
+    if "subsystem" in rec:
+        if not isinstance(subsystem, dict) or not subsystem.get("token"):
+            problems.append("subsystem must be a mapping naming the affected subsystem token")
+    fips = rec.get("fips_impact")
+    if "fips_impact" in rec:
+        if not isinstance(fips, dict):
+            problems.append("fips_impact must be a mapping (upstream's statement, or not_stated)")
+        else:
+            if not isinstance(fips.get("stated"), bool):
+                problems.append("fips_impact.stated must be a boolean")
+            if fips.get("impact") not in SECURITY_FIPS_IMPACTS:
+                problems.append(f"fips_impact.impact={fips.get('impact')!r} is not one of "
+                                f"{sorted(SECURITY_FIPS_IMPACTS)}")
     if "evidence" in rec and not rec["evidence"]:
         problems.append("evidence must be non-empty")
     if rec.get("reintroduced") is not False:
@@ -1046,8 +1110,10 @@ REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
                            "evidence_kind", "evidence"),
     "negative_obligation": ("obligation_id", "kind", "subject", "scope", "rationale", "evidence",
                             "state"),
-    "security_observation": ("observation_id", "release_id", "affected", "fixed_in", "reference",
-                             "evidence", "reintroduced"),
+    "security_observation": ("observation_id", "vulnerability_id", "release_id", "affected",
+                             "fixed_in", "reference", "branch", "severity", "subsystem",
+                             "fips_impact", "candidate_disposition", "external_release_reference",
+                             "authority_id", "evidence", "reintroduced"),
     "support_status": ("subject_id", "status", "rungs_attained", "evidence"),
     "population_record": ("release_id", "display_version", "release_channel", "epoch", "scope",
                           "outcome", "status", "rungs_attained", "runtime_compatible", "reason",
@@ -1196,12 +1262,22 @@ _GOOD: dict[str, dict] = {
         "state": "satisfied",
     },
     "security_observation": {
-        "observation_id": "S-CVE-2016-0777",
-        "release_id": "openssl-1.0.1r",
-        "affected": "openssl-1.0.1 through openssl-1.0.2f",
-        "fixed_in": "openssl-1.0.2g",
+        "observation_id": "SO-CVE-2016-0777-openssl-1.0.2g",
+        "vulnerability_id": "CVE-2016-0777",
+        "release_id": "openssl-1.0.2g",
+        "affected": "from 1.0.2 before 1.0.2g",
+        "fixed_in": "1.0.2g",
         "reference": "CVE-2016-0777",
-        "evidence": ["docs/SECURITY_DIVERGENCE_POLICY.md"],
+        "branch": "1.0.2",
+        "severity": "high",
+        "subsystem": {"token": "crypto/bn", "basis": "advisory keyword BN_mod_sqrt",
+                      "source_quote": "The BN_mod_sqrt() function ..."},
+        "fips_impact": {"stated": False, "impact": "not_stated", "source_quote": ""},
+        "candidate_disposition": "never_contained",
+        "external_release_reference": False,
+        "authority_id": None,
+        "evidence": ["docs/SECURITY_DIVERGENCE_POLICY.md",
+                     "forensics/multitrack/security-source.json"],
         "reintroduced": False,
     },
     "support_status": {
@@ -1458,6 +1534,20 @@ def self_test() -> int:
                         "runtime-evidenced rung")
     if "runtime-compatible" not in " ".join(validate_population_record(overclaim)):
         failures.append("the population runtime-compatible refusal does not say why")
+
+    # A security observation never re-adopts a fixed behaviour: the validator must refuse both a
+    # `reintroduced` true and a `preserve_vulnerable_behaviour` disposition (23.14).
+    reintroduced = dict(_GOOD["security_observation"], reintroduced=True)
+    if not validate_security_observation(reintroduced):
+        failures.append("validate_security_observation accepted reintroduced=true")
+    preserving = dict(_GOOD["security_observation"],
+                      candidate_disposition="preserve_vulnerable_behaviour")
+    if not validate_security_observation(preserving):
+        failures.append("validate_security_observation accepted a preserve_vulnerable_behaviour "
+                        "disposition, which re-adopts a fixed behaviour")
+    if "never re-adopt" not in " ".join(validate_security_observation(preserving)):
+        failures.append("the preserve refusal does not say why a view may not re-adopt the "
+                        "behaviour a fixed release moved away from")
 
     # A declared ABI edge is a declaration, and every lineage edge carries provenance.
     unmarked = dict(_GOOD["lineage_edge"], kind="declared_abi_compatibility", dimension="abi")

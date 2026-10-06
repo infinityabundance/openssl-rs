@@ -765,7 +765,7 @@
     {
       "name": "authority-lineage",
       "path": "forensics/authority-lineage.json",
-      "sha256": "e415af5a24cd54f0be2b41bacf80da2ac500c9cddf0b4bd3dcbba13dfd5d8d61"
+      "sha256": "b14a2f660b9906aa44a12acd1b1ea8691e500774a260c298a23ce3d4a91e8a58"
     },
     {
       "name": "authority-nodes",

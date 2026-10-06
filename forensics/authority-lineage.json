@@ -1,23 +1,23 @@
 {
   "body": {
     "absent_kinds": {
-      "observed_compatibility": "no candidate-to-authority measurement exists at 23.4; the compatibility courts and views land at 23.9 and 23.12, so no observed relationship is asserted",
-      "security_backport": "the security lineage lands at 23.14; until a vulnerability observation names a fixed-in release there is no backport to assert, so the kind is absent rather than guessed"
+      "observed_compatibility": "no candidate-to-authority measurement exists at 23.4; the compatibility courts and views land at 23.9 and 23.12, so no observed relationship is asserted"
     },
     "canonical_kinds": [
       "branch_fork",
       "chronological_successor",
       "maintenance_successor"
     ],
-    "content_hash": "3d2678d470cc2d4371584f7150446f05e3b397304121f1f4596c687777cc94a4",
+    "content_hash": "c88f8bce62b3ea77dfe62d8ebfb9097b288bb6e1aff5206913c055ad326d12cc",
     "counts": {
-      "edges": 964,
+      "edges": 991,
       "kinds": {
         "branch_fork": 19,
         "chronological_successor": 129,
         "declared_abi_compatibility": 226,
         "git_ancestry": 367,
-        "maintenance_successor": 223
+        "maintenance_successor": 223,
+        "security_backport": 27
       },
       "nodes": 372
     },
@@ -15368,6 +15368,438 @@
           "https://openssl-library.org/policies/releasestrat/",
           "docs/ABI_POLICY.md"
         ],
+        "to_id": "openssl-4.0.3"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-1.1.1n-openssl-3.0.2-CVE-2022-0778",
+        "evidence": [
+          "CVE-2022-0778 is fixed in both openssl-1.1.1n and openssl-3.0.2; the later release carries the same correction",
+          "advisory https://www.openssl.org/news/secadv/20220315.txt sha256=97c5904876a905acc4d7f195f7788f52cfa359a5eeadd2582d509cff8719fac6"
+        ],
+        "from_id": "openssl-1.1.1n",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://www.openssl.org/news/secadv/20220315.txt"
+        ],
+        "security_reference": "CVE-2022-0778",
+        "to_id": "openssl-3.0.2"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-1.1.1p-openssl-3.0.4-CVE-2022-2068",
+        "evidence": [
+          "CVE-2022-2068 is fixed in both openssl-1.1.1p and openssl-3.0.4; the later release carries the same correction",
+          "advisory https://www.openssl.org/news/secadv/20220621.txt sha256=a632f42aad9bc1de330d7aef358f76b215a0921218449031cf1f2077b68dff3a"
+        ],
+        "from_id": "openssl-1.1.1p",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://www.openssl.org/news/secadv/20220621.txt"
+        ],
+        "security_reference": "CVE-2022-2068",
+        "to_id": "openssl-3.0.4"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-1.1.1t-openssl-3.0.8-CVE-2023-0286",
+        "evidence": [
+          "CVE-2023-0286 is fixed in both openssl-1.1.1t and openssl-3.0.8; the later release carries the same correction",
+          "advisory https://www.openssl.org/news/secadv/20230207.txt sha256=22c21bb4f051ceea234372770930996bfaaf7ccbc93187ff603098e50d99d243"
+        ],
+        "from_id": "openssl-1.1.1t",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://www.openssl.org/news/secadv/20230207.txt"
+        ],
+        "security_reference": "CVE-2023-0286",
+        "to_id": "openssl-3.0.8"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.0.13-openssl-3.1.5-CVE-2024-0727",
+        "evidence": [
+          "CVE-2024-0727 is fixed in both openssl-3.0.13 and openssl-3.1.5; the later release carries the same correction",
+          "advisory https://www.openssl.org/news/secadv/20240125.txt sha256=8a3f425771f87a13530276e67bb140029a61f91989833368b9da82fc262f20eb"
+        ],
+        "from_id": "openssl-3.0.13",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://www.openssl.org/news/secadv/20240125.txt"
+        ],
+        "security_reference": "CVE-2024-0727",
+        "to_id": "openssl-3.1.5"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.1.5-openssl-3.2.1-CVE-2024-0727",
+        "evidence": [
+          "CVE-2024-0727 is fixed in both openssl-3.1.5 and openssl-3.2.1; the later release carries the same correction",
+          "advisory https://www.openssl.org/news/secadv/20240125.txt sha256=8a3f425771f87a13530276e67bb140029a61f91989833368b9da82fc262f20eb"
+        ],
+        "from_id": "openssl-3.1.5",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://www.openssl.org/news/secadv/20240125.txt"
+        ],
+        "security_reference": "CVE-2024-0727",
+        "to_id": "openssl-3.2.1"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.0.16-openssl-3.1.8-CVE-2024-13176",
+        "evidence": [
+          "CVE-2024-13176 is fixed in both openssl-3.0.16 and openssl-3.1.8; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20250120.txt sha256=2645dfa66371f2bcd7e0831d327ef803826534e5bfedb6fdb308e2a924e28749"
+        ],
+        "from_id": "openssl-3.0.16",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20250120.txt"
+        ],
+        "security_reference": "CVE-2024-13176",
+        "to_id": "openssl-3.1.8"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.1.8-openssl-3.2.4-CVE-2024-13176",
+        "evidence": [
+          "CVE-2024-13176 is fixed in both openssl-3.1.8 and openssl-3.2.4; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20250120.txt sha256=2645dfa66371f2bcd7e0831d327ef803826534e5bfedb6fdb308e2a924e28749"
+        ],
+        "from_id": "openssl-3.1.8",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20250120.txt"
+        ],
+        "security_reference": "CVE-2024-13176",
+        "to_id": "openssl-3.2.4"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.2.4-openssl-3.3.3-CVE-2024-13176",
+        "evidence": [
+          "CVE-2024-13176 is fixed in both openssl-3.2.4 and openssl-3.3.3; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20250120.txt sha256=2645dfa66371f2bcd7e0831d327ef803826534e5bfedb6fdb308e2a924e28749"
+        ],
+        "from_id": "openssl-3.2.4",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20250120.txt"
+        ],
+        "security_reference": "CVE-2024-13176",
+        "to_id": "openssl-3.3.3"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.3.3-openssl-3.4.1-CVE-2024-13176",
+        "evidence": [
+          "CVE-2024-13176 is fixed in both openssl-3.3.3 and openssl-3.4.1; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20250120.txt sha256=2645dfa66371f2bcd7e0831d327ef803826534e5bfedb6fdb308e2a924e28749"
+        ],
+        "from_id": "openssl-3.3.3",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20250120.txt"
+        ],
+        "security_reference": "CVE-2024-13176",
+        "to_id": "openssl-3.4.1"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.0.16-openssl-3.1.8-CVE-2024-9143",
+        "evidence": [
+          "CVE-2024-9143 is fixed in both openssl-3.0.16 and openssl-3.1.8; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20241016.txt sha256=696a341cb8adf22dba1e8c32d6dea3bff2492c5513138017a5d8c889fe3251f5"
+        ],
+        "from_id": "openssl-3.0.16",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20241016.txt"
+        ],
+        "security_reference": "CVE-2024-9143",
+        "to_id": "openssl-3.1.8"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.1.8-openssl-3.2.4-CVE-2024-9143",
+        "evidence": [
+          "CVE-2024-9143 is fixed in both openssl-3.1.8 and openssl-3.2.4; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20241016.txt sha256=696a341cb8adf22dba1e8c32d6dea3bff2492c5513138017a5d8c889fe3251f5"
+        ],
+        "from_id": "openssl-3.1.8",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20241016.txt"
+        ],
+        "security_reference": "CVE-2024-9143",
+        "to_id": "openssl-3.2.4"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.2.4-openssl-3.3.3-CVE-2024-9143",
+        "evidence": [
+          "CVE-2024-9143 is fixed in both openssl-3.2.4 and openssl-3.3.3; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20241016.txt sha256=696a341cb8adf22dba1e8c32d6dea3bff2492c5513138017a5d8c889fe3251f5"
+        ],
+        "from_id": "openssl-3.2.4",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20241016.txt"
+        ],
+        "security_reference": "CVE-2024-9143",
+        "to_id": "openssl-3.3.3"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.0.19-openssl-3.3.6-CVE-2025-15467",
+        "evidence": [
+          "CVE-2025-15467 is fixed in both openssl-3.0.19 and openssl-3.3.6; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260127.txt sha256=2ee434b27a37230570ed5d68b0f204a5baf4afc98cafaba5dad38bfeb7dd18f6"
+        ],
+        "from_id": "openssl-3.0.19",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260127.txt"
+        ],
+        "security_reference": "CVE-2025-15467",
+        "to_id": "openssl-3.3.6"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.3.6-openssl-3.4.4-CVE-2025-15467",
+        "evidence": [
+          "CVE-2025-15467 is fixed in both openssl-3.3.6 and openssl-3.4.4; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260127.txt sha256=2ee434b27a37230570ed5d68b0f204a5baf4afc98cafaba5dad38bfeb7dd18f6"
+        ],
+        "from_id": "openssl-3.3.6",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260127.txt"
+        ],
+        "security_reference": "CVE-2025-15467",
+        "to_id": "openssl-3.4.4"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.4.4-openssl-3.5.5-CVE-2025-15467",
+        "evidence": [
+          "CVE-2025-15467 is fixed in both openssl-3.4.4 and openssl-3.5.5; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260127.txt sha256=2ee434b27a37230570ed5d68b0f204a5baf4afc98cafaba5dad38bfeb7dd18f6"
+        ],
+        "from_id": "openssl-3.4.4",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260127.txt"
+        ],
+        "security_reference": "CVE-2025-15467",
+        "to_id": "openssl-3.5.5"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.5.5-openssl-3.6.1-CVE-2025-15467",
+        "evidence": [
+          "CVE-2025-15467 is fixed in both openssl-3.5.5 and openssl-3.6.1; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260127.txt sha256=2ee434b27a37230570ed5d68b0f204a5baf4afc98cafaba5dad38bfeb7dd18f6"
+        ],
+        "from_id": "openssl-3.5.5",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260127.txt"
+        ],
+        "security_reference": "CVE-2025-15467",
+        "to_id": "openssl-3.6.1"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.0.21-openssl-3.4.6-CVE-2026-34180",
+        "evidence": [
+          "CVE-2026-34180 is fixed in both openssl-3.0.21 and openssl-3.4.6; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260609.txt sha256=1dc76a90158cb7ee22577184df3b5a46d8c1538cd1110df581aa3454b645cb4f"
+        ],
+        "from_id": "openssl-3.0.21",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260609.txt"
+        ],
+        "security_reference": "CVE-2026-34180",
+        "to_id": "openssl-3.4.6"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.4.6-openssl-3.5.7-CVE-2026-34180",
+        "evidence": [
+          "CVE-2026-34180 is fixed in both openssl-3.4.6 and openssl-3.5.7; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260609.txt sha256=1dc76a90158cb7ee22577184df3b5a46d8c1538cd1110df581aa3454b645cb4f"
+        ],
+        "from_id": "openssl-3.4.6",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260609.txt"
+        ],
+        "security_reference": "CVE-2026-34180",
+        "to_id": "openssl-3.5.7"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.5.7-openssl-3.6.3-CVE-2026-34180",
+        "evidence": [
+          "CVE-2026-34180 is fixed in both openssl-3.5.7 and openssl-3.6.3; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260609.txt sha256=1dc76a90158cb7ee22577184df3b5a46d8c1538cd1110df581aa3454b645cb4f"
+        ],
+        "from_id": "openssl-3.5.7",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260609.txt"
+        ],
+        "security_reference": "CVE-2026-34180",
+        "to_id": "openssl-3.6.3"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.6.3-openssl-4.0.1-CVE-2026-34180",
+        "evidence": [
+          "CVE-2026-34180 is fixed in both openssl-3.6.3 and openssl-4.0.1; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260609.txt sha256=1dc76a90158cb7ee22577184df3b5a46d8c1538cd1110df581aa3454b645cb4f"
+        ],
+        "from_id": "openssl-3.6.3",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260609.txt"
+        ],
+        "security_reference": "CVE-2026-34180",
+        "to_id": "openssl-4.0.1"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.0.22-openssl-3.4.7-CVE-2026-63072",
+        "evidence": [
+          "CVE-2026-63072 is fixed in both openssl-3.0.22 and openssl-3.4.7; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260825.txt sha256=eb8914d564766f1cbf1e5a77a4262bc07729c2d3dcb22d272041d6db61e5bd4e"
+        ],
+        "from_id": "openssl-3.0.22",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260825.txt"
+        ],
+        "security_reference": "CVE-2026-63072",
+        "to_id": "openssl-3.4.7"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.4.7-openssl-3.5.8-CVE-2026-63072",
+        "evidence": [
+          "CVE-2026-63072 is fixed in both openssl-3.4.7 and openssl-3.5.8; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260825.txt sha256=eb8914d564766f1cbf1e5a77a4262bc07729c2d3dcb22d272041d6db61e5bd4e"
+        ],
+        "from_id": "openssl-3.4.7",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260825.txt"
+        ],
+        "security_reference": "CVE-2026-63072",
+        "to_id": "openssl-3.5.8"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.5.8-openssl-3.6.4-CVE-2026-63072",
+        "evidence": [
+          "CVE-2026-63072 is fixed in both openssl-3.5.8 and openssl-3.6.4; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260825.txt sha256=eb8914d564766f1cbf1e5a77a4262bc07729c2d3dcb22d272041d6db61e5bd4e"
+        ],
+        "from_id": "openssl-3.5.8",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260825.txt"
+        ],
+        "security_reference": "CVE-2026-63072",
+        "to_id": "openssl-3.6.4"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.6.4-openssl-4.0.2-CVE-2026-63072",
+        "evidence": [
+          "CVE-2026-63072 is fixed in both openssl-3.6.4 and openssl-4.0.2; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260825.txt sha256=eb8914d564766f1cbf1e5a77a4262bc07729c2d3dcb22d272041d6db61e5bd4e"
+        ],
+        "from_id": "openssl-3.6.4",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260825.txt"
+        ],
+        "security_reference": "CVE-2026-63072",
+        "to_id": "openssl-4.0.2"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.4.8-openssl-3.5.9-CVE-2026-84782",
+        "evidence": [
+          "CVE-2026-84782 is fixed in both openssl-3.4.8 and openssl-3.5.9; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260929.txt sha256=2a6766a213b2dac48b4666aa54c39dbe3af96f73444081a4a25c1e3dc496aeb9"
+        ],
+        "from_id": "openssl-3.4.8",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260929.txt"
+        ],
+        "security_reference": "CVE-2026-84782",
+        "to_id": "openssl-3.5.9"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.5.9-openssl-3.6.5-CVE-2026-84782",
+        "evidence": [
+          "CVE-2026-84782 is fixed in both openssl-3.5.9 and openssl-3.6.5; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260929.txt sha256=2a6766a213b2dac48b4666aa54c39dbe3af96f73444081a4a25c1e3dc496aeb9"
+        ],
+        "from_id": "openssl-3.5.9",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260929.txt"
+        ],
+        "security_reference": "CVE-2026-84782",
+        "to_id": "openssl-3.6.5"
+      },
+      {
+        "direction": "forward",
+        "edge_id": "L-security_backport-openssl-3.6.5-openssl-4.0.3-CVE-2026-84782",
+        "evidence": [
+          "CVE-2026-84782 is fixed in both openssl-3.6.5 and openssl-4.0.3; the later release carries the same correction",
+          "advisory https://openssl-library.org/news/secadv/20260929.txt sha256=2a6766a213b2dac48b4666aa54c39dbe3af96f73444081a4a25c1e3dc496aeb9"
+        ],
+        "from_id": "openssl-3.6.5",
+        "kind": "security_backport",
+        "metadata_provenance": [
+          "forensics/multitrack/security-source.json",
+          "https://openssl-library.org/news/secadv/20260929.txt"
+        ],
+        "security_reference": "CVE-2026-84782",
         "to_id": "openssl-4.0.3"
       }
     ],
