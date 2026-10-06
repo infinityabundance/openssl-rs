@@ -42,10 +42,10 @@
         "closure": "the `RT-AFFECTED-COURT-SELECTION` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-AFFECTED-COURT-SELECTION is pending",
+        "measurement_state": "complete",
+        "observation": "RT-AFFECTED-COURT-SELECTION is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase21/COURTS.json",
         "unit": "affected-court-selection",
         "what": "the derivation of which courts a delta touches, recorded with the selection derivation, so the selected courts are re-run or re-derived and a delta reaches exactly the courts its obligations do"
@@ -68,8 +68,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 3,
-      "open_in_this_stratum": 2,
+      "implemented": 4,
+      "open_in_this_stratum": 1,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -105,12 +105,12 @@
     {
       "name": "phase-21-plan",
       "path": "docs/PHASE-21-SUBPHASES.md",
-      "sha256": "1e56a2c730b5aa7cda1d1b2c5685e88624a9518b611d4a85c506654ec0c654f2"
+      "sha256": "034876cc650f41c600fe2e1459c529e04f0f7a95c9774ec51ae82b1898373bcc"
     },
     {
       "name": "phase-21-courts",
       "path": "artifacts/phase21/COURTS.json",
-      "sha256": "e1ccdb504aa97c494dc5d7b604b1ae3e0bed4e39ed1e6503ee5de788c894d3e9"
+      "sha256": "c4a9b284b4021c521ffa1b7d7cffaf7d8bfc535247e09f239db944eed21a9ffa"
     }
   ],
   "kind": "phase21-obligations",

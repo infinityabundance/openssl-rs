@@ -97,13 +97,48 @@ the candidate carries produces no finding. The control is honest only when the r
 carries **zero findings** (specificity) *and* both injections are caught *and* the benign injection
 stays clean.
 
-The pending courts
-------------------
-Two of the five courts the plan names are not runnable yet. `PENDING_COURTS` names each with the
+`RT-AFFECTED-COURT-SELECTION`, and what it selects
+-------------------------------------------------
+21.4's court. Its subject is **which courts a delta touches**, derived mechanically from the
+dispositioned delta `RT-DELTA-DISPOSITION` recorded and the **export -> court edge** the
+court-coverage atlas carries, so a delta reaches exactly the courts its obligations do and no
+more:
+
+  * a **measured, `implemented`** delta row is a moving obligation. Its declaring header is read
+    from the per-authority declaration atlases (`functions`/`typedefs`/`structs`/`enums`/`variables`
+    keyed by `header`, `macros` by `defined_in`), the header's owning stratum is read from the
+    declaring-header ownership `forensics/atlas/symbol-ownership.json` records (the map the coverage
+    atlas's strata are indexed on), and the row reaches the courts the per-stratum registry
+    `artifacts/phase<stratum>/COURTS.json` stages. A row that is itself an export is covered directly
+    by the atlas's symbol -> court edge.
+  * a header that owns no stratum because it declares no export -- an error-reason header such as
+    `x509err.h` -- is resolved through the error-header convention to its sibling public header
+    (`x509err.h` -> `x509.h`), the same surface whose reason codes it carries; a header that still
+    owns no stratum reaches no court and is recorded as such rather than silently dropped.
+  * a **`not-measured`** plane or axis is a boundary, not a movement: it carries no row, so it
+    selects no court. Counting it as reaching one would select more than the delta reaches.
+
+For each selected court the court records the **selection derivation** (which row selected it and
+why) and then **re-derives** it: the court's committed registry row and its coverage of the owning
+stratum's exports are re-read from committed artefacts. Re-executing the probe strata's runners is
+explicitly *not* done here, so the mode is recorded `re-derived` and never implied to be a `re-run`
+(`docs/RELEASE_GATES.md` section 8's "re-run affected courts" is the stratum's procedure; this
+instrument records which courts that step would run, and re-derives their standing from the
+registry each one already published).
+
+The instrument sensitivity control
+----------------------------------
+Section 3.2's rule. Two synthetic selections are derived beside the real one and each must be
+caught: a selection with a court a delta row reaches **omitted**, and a selection with a
+**spurious** court no delta row reaches. The control is honest only when the real selection
+derives with **zero problems** (specificity) *and* both injections are caught; otherwise a court
+that could not tell a reached court from an unreached one would pass vacuously.
+
+The pending court
+-----------------
+One of the five courts the plan names is not runnable yet. `PENDING_COURTS` names it with the
 subphase that lands its instrument:
 
-  * `RT-AFFECTED-COURT-SELECTION` (21.4) — the derivation of which courts a delta touches, recorded
-    with the selection derivation, so the selected courts are re-run or re-derived;
   * `MAINTENANCE-BOUNDARY-REGISTER` (21.5) — the register that records the explicit non-claims
     (OpenSSL 4.x is a new compatibility profile, a 3.x receipt is never silently reinterpreted as
     evidence for 4, only the exercised delta is claimed, unknown stays unknown), and that fails the
@@ -139,6 +174,7 @@ from atlas_common import (  # noqa: E402
     REPO_ROOT,
     InputRef,
     content_hash,
+    court_observations,
     envelope,
     rel,
     resolve_authority,
@@ -189,6 +225,24 @@ CONTROL_REMOVED_ROW = "RT-ATLAS-DELTA-SYNTHETIC-REMOVED-ROW"
 # carrying it says the authority moved, not that the candidate followed.
 INSTALL_INCLUDE = REPO_ROOT / "artifacts" / "phase2" / "install" / "include" / "openssl"
 
+# The export -> court edge the affected-court-selection reads: every export a begun stratum
+# implements, split into the courts that observe it (docs/PHASE-21-SUBPHASES.md section 2, row
+# 21.4). It is the atlas `forensics/tools/court_coverage.py` writes, and the per-stratum registries
+# `artifacts/phase<N>/COURTS.json` name each stratum's own courts.
+COVERAGE = ATLAS / "court-coverage.json"
+
+# The declaring-header -> stratum ownership the coverage atlas's strata are built from: each
+# installed header that declares an export maps to exactly one owning stratum. It resolves a header
+# that declares exports owned by more than one stratum (x509.h declares four phase-12 HTTP exports
+# beside its own) to the stratum that owns the header, so a delta row's obligation is tied to the
+# header's owner rather than to every stratum that happens to declare one function in it.
+SYMBOL_OWNERSHIP = ATLAS / "symbol-ownership.json"
+
+# The synthetic court the affected-court-selection control injects: a name no per-stratum registry
+# registers, so its appearance in a selection is unambiguous evidence the control tests for a
+# spurious court rather than a real one that merely sits outside the delta.
+CONTROL_SPURIOUS_COURT = "RT-AFFECTED-COURT-SELECTION-SYNTHETIC-COURT"
+
 # The synthetic targets the delta-disposition sensitivity control injects: a measured row the
 # candidate carries in no header (un-dispositioned), a `removed` row the candidate carries (a
 # prohibited re-adoption of the historical behaviour), and an ordinary `added` row the candidate
@@ -200,6 +254,7 @@ CONTROL_BENIGN_ADDED_ROW = "RT-DELTA-DISPOSITION-SYNTHETIC-BENIGN-ADDED-ROW"
 AUTHORITY_ADMISSION = "RT-AUTHORITY-ADMISSION"
 ATLAS_DELTA = "RT-ATLAS-DELTA"
 DELTA_DISPOSITION = "RT-DELTA-DISPOSITION"
+AFFECTED_COURT_SELECTION = "RT-AFFECTED-COURT-SELECTION"
 
 # The courts, in the order they land. `(name, probe filename)`, and the probe is declared in the
 # same commit as the entry, so a runner that names a probe which does not exist cannot be
@@ -210,17 +265,13 @@ COURTS: list[tuple[str, str]] = [
     (AUTHORITY_ADMISSION, ""),
     (ATLAS_DELTA, ""),
     (DELTA_DISPOSITION, ""),
+    (AFFECTED_COURT_SELECTION, ""),
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
 # the instrument and what the court will drive, so "nothing registered" is a stated distance rather
 # than a court quietly dropped.
 PENDING_COURTS: dict[str, str] = {
-    "RT-AFFECTED-COURT-SELECTION": (
-        "21.4 lands the affected-court selection; it derives which courts a delta touches, records "
-        "the selection derivation, and re-runs or re-derives exactly those courts, so a delta "
-        "reaches the courts its obligations do and no more"
-    ),
     "MAINTENANCE-BOUNDARY-REGISTER": (
         "21.5 lands the register; it records the explicit non-claims — OpenSSL 4.x is a new "
         "compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for "
@@ -1191,6 +1242,370 @@ def delta_disposition_court(name: str) -> dict:
     }
 
 
+# --------------------------------------------------------------------------------------------
+# the affected-court-selection court: which courts a delta touches, and re-deriving exactly those
+# --------------------------------------------------------------------------------------------
+
+def registry_body(stratum: int) -> dict:
+    """The per-stratum registry body for one stratum, read from its committed `COURTS.json`.
+
+    The registry is the authority for *which courts a stratum stages*, so a delta row that owns a
+    stratum reaches the courts this file names and no others.
+    """
+    path = REPO_ROOT / "artifacts" / f"phase{stratum}" / "COURTS.json"
+    return json.loads(path.read_text(encoding="utf-8")).get("body", {})
+
+
+def registry_courts(stratum: int) -> list[str]:
+    """The court names one stratum stages, in registry order."""
+    return [str(r["court"]) for r in registry_body(stratum).get("courts") or []]
+
+
+def all_registry_courts() -> set[str]:
+    """Every court any begun stratum's registry stages, so a spurious name is detectable."""
+    known: set[str] = set()
+    for path in sorted((REPO_ROOT / "artifacts").glob("phase*/COURTS.json")):
+        body = json.loads(path.read_text(encoding="utf-8")).get("body", {})
+        known.update(str(r["court"]) for r in body.get("courts") or [])
+    return known
+
+
+def coverage_index(coverage: dict) -> tuple[dict[str, set[int]], dict[int, set[str]]]:
+    """The coverage atlas as two edges: symbol -> strata, and stratum -> courts that cover it.
+
+    The first is the direct edge for a delta row that is itself an export; the second records which
+    courts the atlas observes on a stratum's surface (its own staged courts plus every external
+    court that imports one of its exports), so a selected court can be checked against the coverage
+    that justifies it rather than only against its registry.
+    """
+    symbol_to_strata: dict[str, set[int]] = {}
+    courts_by_stratum: dict[int, set[str]] = {}
+    for stratum in coverage.get("strata") or []:
+        phase = int(stratum["phase"])
+        courts = courts_by_stratum.setdefault(phase, set())
+        for row in stratum.get("directly_courted") or []:
+            symbol_to_strata.setdefault(str(row["symbol"]), set()).add(phase)
+            courts.update(str(c) for c in row.get("courts") or [])
+        for row in stratum.get("indirectly_courted") or []:
+            symbol_to_strata.setdefault(str(row["symbol"]), set()).add(phase)
+            if row.get("court"):
+                courts.add(str(row["court"]))
+        for row in stratum.get("non_observable") or []:
+            symbol_to_strata.setdefault(str(row["symbol"]), set()).add(phase)
+            if row.get("court"):
+                courts.add(str(row["court"]))
+    return symbol_to_strata, courts_by_stratum
+
+
+def header_owners() -> dict[str, int]:
+    """The declaring-header -> owning stratum map, read from the ownership atlas.
+
+    Each header that declares an export owns exactly one stratum (`forensics/atlas/
+    symbol-ownership.json`'s `headers`, the declaring-header rule `macro-owners.json` also cites),
+    and that is the stratum whose exports the coverage atlas's strata are keyed on.
+    """
+    body = json.loads(SYMBOL_OWNERSHIP.read_text(encoding="utf-8")).get("body", {})
+    return {str(header): int(phase) for header, phase in (body.get("headers") or {}).items()}
+
+
+def owning_strata(headers: list[str], owners: dict[str, int]) -> list[dict]:
+    """For each declaring header, the stratum that owns it and how that was read.
+
+    A header that declares an export owns its stratum directly. A header with no owning stratum that
+    is an error-reason header (`<stem>err.h`) is resolved through the error-header convention to its
+    sibling public header `<stem>.h` -- the surface whose reason codes it carries -- and the `how`
+    field records that the sibling convention, not the header itself, established the ownership. A
+    header that still owns no stratum reaches no court and is reported as such.
+    """
+    out: list[dict] = []
+    for header in headers:
+        phase = owners.get(header)
+        how = "declaring-header"
+        resolved = header
+        if phase is None:
+            m = re.match(r"^(.+?)err\.h$", header or "")
+            if m:
+                sibling = m.group(1) + ".h"
+                sibling_phase = owners.get(sibling)
+                if sibling_phase is not None:
+                    resolved = sibling
+                    phase = sibling_phase
+                    how = f"error-header-sibling ({header} -> {sibling})"
+        out.append({"header": header, "resolved_header": resolved, "how": how,
+                    "strata": [phase] if phase is not None else []})
+    return out
+
+
+def declaration_headers(plane: str, key: str, view: dict) -> list[str]:
+    """The declaring header(s) of one delta row, read from its own declaration record."""
+    subplane = plane.split(".", 1)[1] if "." in plane else plane
+    sides = (view.get("declarations") or {}).get(subplane) or {}
+    rec = (sides.get("to") or {}).get(key) or (sides.get("from") or {}).get(key) or {}
+    if rec.get("defined_in"):
+        return [str(h) for h in rec["defined_in"]]
+    if rec.get("header"):
+        return [str(rec["header"])]
+    return []
+
+
+def selection_derivation(dispositions: list[dict], view: dict,
+                         symbol_to_strata: dict[str, set[int]],
+                         owners: dict[str, int]) -> list[dict]:
+    """Every dispositioned delta row, and the courts it reaches, with the derivation recorded.
+
+    A measured, `implemented` row is a moving obligation: it reaches the courts its declaring
+    header's owning stratum stages (or, for a row that is itself an export, the courts the coverage
+    atlas edges that symbol to). A `not-measured` boundary carries no row, so it reaches no court --
+    counting it as reaching one would select more than the delta reaches. The `expected_courts` list
+    is the derivation's output; the selection and its control are computed from it.
+    """
+    rows: list[dict] = []
+    for target in dispositions:
+        plane, key = str(target["plane"]), str(target["key"])
+        measured = target.get("state") == "measured" and target.get("disposition") == "implemented"
+        if not measured:
+            if target.get("state") == "not-measured":
+                why = ("a `not-measured` plane or axis carries no row, so it reaches no court: "
+                       "counting a boundary as motionless would select more than the delta reaches")
+            else:
+                why = (f"the row's disposition is {target.get('disposition')!r}, not `implemented`, so "
+                       "it is not a movement and reaches no court")
+            rows.append({
+                "row": target["id"], "plane": plane, "key": key,
+                "state": target.get("state"), "disposition": target.get("disposition"),
+                "origin": [], "owning_strata": [], "expected_courts": [], "why": why,
+            })
+            continue
+        if plane.startswith("symbols."):
+            strata = sorted(symbol_to_strata.get(key, set()))
+            origin = [{"header": None, "resolved_header": None, "how": "coverage-symbol",
+                       "strata": strata}]
+        else:
+            headers = declaration_headers(plane, key, view)
+            origin = owning_strata(headers, owners)
+            strata = sorted({s for o in origin for s in o["strata"]})
+        expected: list[str] = []
+        for stratum in strata:
+            expected += registry_courts(stratum)
+        expected = sorted({str(c) for c in expected})
+        if origin and all(not o["strata"] for o in origin):
+            why = (f"the row's declaring header(s) {[o['header'] for o in origin]} own no stratum, so "
+                   f"no court covers this declaration surface and it reaches no court")
+        else:
+            why = ("the row reaches the courts its declaring header's owning stratum "
+                   f"{strata} stages, read from artifacts/phase<stratum>/COURTS.json")
+        rows.append({
+            "row": target["id"], "plane": plane, "key": key,
+            "state": target.get("state"), "disposition": target.get("disposition"),
+            "origin": origin, "owning_strata": strata, "expected_courts": expected, "why": why,
+        })
+    return rows
+
+
+def selected_court_records(derivation: list[dict],
+                           courts_by_stratum: dict[int, set[str]]) -> dict[str, dict]:
+    """Every court the delta reaches, with its mode and its re-derived observation.
+
+    The mode is `re-derived`: the court's committed registry row and its coverage of the owning
+    stratum's exports are re-read from committed artefacts, and the probes are **not** re-executed
+    here. `re-run` is reserved for a court this instrument actually runs, so the record never
+    implies a re-run that did not happen (`docs/PHASE-21-SUBPHASES.md` section 2; the honest record
+    the task allows when re-running is impractical).
+    """
+    selected: dict[str, dict] = {}
+    for row in derivation:
+        for stratum in row["owning_strata"]:
+            for court in registry_courts(stratum):
+                rec = selected.setdefault(court, {
+                    "court": court, "stratum": stratum, "selected_by": [],
+                    "mode": "re-derived", "probes_reexecuted": False,
+                    "registry": rel(REPO_ROOT / "artifacts" / f"phase{stratum}" / "COURTS.json"),
+                    "coverage_basis": (
+                        f"the coverage atlas records {court} as covering stratum {stratum}'s exports"
+                    ),
+                })
+                if row["row"] not in rec["selected_by"]:
+                    rec["selected_by"].append(row["row"])
+    for court, rec in selected.items():
+        body = registry_body(rec["stratum"])
+        registry_row = next((r for r in body.get("courts") or [] if r.get("court") == court), {})
+        rec["verdict"] = str(registry_row.get("verdict"))
+        rec["observation"] = f"{registry_row.get('verdict')} ({court_observations(registry_row)} observation(s))"
+        rec["selected_by"] = sorted(rec["selected_by"])
+    return selected
+
+
+def selection_problems(derivation: list[dict], selected: dict[str, dict],
+                       known_courts: set[str], courts_by_stratum: dict[int, set[str]]) -> list[str]:
+    """Every way the selection fails to be *exactly* the courts the delta reaches.
+
+    Two directions, and both are wrong: a court a delta row reaches that the selection omits (a
+    delta the courts do not follow), and a selected court no delta row reaches (a court re-run for
+    nothing). A selected name no registry stages, or one the coverage atlas does not record on its
+    stratum, is a defect in the selection itself.
+    """
+    problems: list[str] = []
+    reached: set[str] = set()
+    for row in derivation:
+        if row["state"] != "measured":
+            continue
+        reached.update(row["expected_courts"])
+        for court in row["expected_courts"]:
+            if court not in selected:
+                problems.append(
+                    f"delta row {row['row']} reaches court {court}, but the selection omits it: the "
+                    f"delta would reach a court this selection does not re-derive"
+                )
+    for court in sorted(selected):
+        if court not in reached:
+            problems.append(
+                f"court {court} is selected but no delta row reaches it: a court re-run for nothing, "
+                f"so the selection reaches further than the delta does"
+            )
+        if court not in known_courts:
+            problems.append(
+                f"court {court} is selected but no per-stratum registry stages it: a selected court "
+                f"that is not a court at all"
+            )
+        stratum = selected[court].get("stratum")
+        if stratum is not None and court not in courts_by_stratum.get(stratum, set()):
+            problems.append(
+                f"court {court} is selected for stratum {stratum} but the coverage atlas does not "
+                f"record it as covering that stratum's exports"
+            )
+    return problems
+
+
+def selection_sensitivity_control(derivation: list[dict], selected: dict[str, dict],
+                                  known_courts: set[str],
+                                  courts_by_stratum: dict[int, set[str]]) -> dict:
+    """Prove the selection can fail: omit a reached court, and inject a spurious one.
+
+    Two synthetic selections are derived beside the real one -- the real selection with one court a
+    delta row reaches removed, and the real selection with a court no delta row reaches added -- and
+    each must be caught. The control is honest only when the real selection derives with zero
+    problems (specificity), the omission is caught, and the spurious court is caught; otherwise a
+    court that could not tell a reached court from an unreached one would pass vacuously
+    (`docs/PHASE-21-SUBPHASES.md` section 3.2).
+    """
+    base = selection_problems(derivation, selected, known_courts, courts_by_stratum)
+    specificity = not base
+
+    omitted_court = next((row["expected_courts"][0] for row in derivation
+                          if row["state"] == "measured" and row["expected_courts"]), None)
+    omitted = {c: r for c, r in selected.items() if c != omitted_court}
+    omitted_problems = selection_problems(derivation, omitted, known_courts, courts_by_stratum)
+    caught_omitted = bool(omitted_court) and any("omits it" in p for p in omitted_problems)
+
+    spurious = dict(selected)
+    spurious[CONTROL_SPURIOUS_COURT] = {
+        "court": CONTROL_SPURIOUS_COURT, "stratum": None, "selected_by": [],
+        "mode": "re-derived", "probes_reexecuted": False,
+    }
+    spurious_problems = selection_problems(derivation, spurious, known_courts, courts_by_stratum)
+    caught_spurious = any(CONTROL_SPURIOUS_COURT in p for p in spurious_problems)
+
+    return {
+        "baseline_courts": len(selected),
+        "baseline_problems": len(base),
+        "injected_omitted_court": omitted_court,
+        "injected_omitted_problems": len(omitted_problems),
+        "injected_spurious_court": CONTROL_SPURIOUS_COURT,
+        "injected_spurious_problems": len(spurious_problems),
+        "caught_omitted": bool(caught_omitted),
+        "caught_spurious": bool(caught_spurious),
+        "specificity_holds": bool(specificity),
+        "honest": bool(specificity and caught_omitted and caught_spurious),
+    }
+
+
+def affected_court_selection_court(name: str) -> dict:
+    """`RT-AFFECTED-COURT-SELECTION`: which courts a delta touches, re-derived exactly.
+
+    Stages no probe. It reads the dispositioned delta `RT-DELTA-DISPOSITION` recorded -- its own
+    disposition list, not a second one -- and derives, mechanically, the courts each moving row
+    reaches: a row's declaring header owns a stratum, and that stratum's registry names the courts
+    it stages; a row that is itself an export is covered directly by the coverage atlas's symbol ->
+    court edge. A `not-measured` boundary reaches no court. Each selected court is then re-derived
+    (its committed registry verdict and its coverage of the owning stratum), and the verdict is
+    `pass` only when the selection is exactly the reached set, no selected court is failing, and the
+    omission and spurious injections are both caught.
+    """
+    view = read_delta_view()
+    dispositioned = delta_disposition_court(DELTA_DISPOSITION)
+    coverage_doc = json.loads(COVERAGE.read_text(encoding="utf-8"))
+    coverage = coverage_doc.get("body", coverage_doc)
+    symbol_to_strata, courts_by_stratum = coverage_index(coverage)
+    owners = header_owners()
+
+    derivation = selection_derivation(dispositioned["dispositions"], view,
+                                      symbol_to_strata, owners)
+    selected = selected_court_records(derivation, courts_by_stratum)
+    known_courts = all_registry_courts()
+    problems = selection_problems(derivation, selected, known_courts, courts_by_stratum)
+    control = selection_sensitivity_control(derivation, selected, known_courts, courts_by_stratum)
+
+    findings: list[str] = []
+    for court, rec in sorted(selected.items()):
+        if rec.get("verdict") != "pass":
+            findings.append(
+                f"selected court {court} is {rec.get('verdict')!r} in {rec['registry']}, so the "
+                f"delta reaches a court that is not passing"
+            )
+
+    counts = {
+        "delta_rows": len(derivation),
+        "moving_rows": sum(1 for r in derivation if r["state"] == "measured"),
+        "boundary_rows": sum(1 for r in derivation if r["state"] == "not-measured"),
+        "selected_courts": len(selected),
+        "selected_strata": len({r["stratum"] for r in selected.values() if r.get("stratum") is not None}),
+        "uncovered_rows": sum(1 for r in derivation
+                              if r["state"] == "measured" and not r["expected_courts"]),
+        "reexecuted_courts": sum(1 for r in selected.values() if r.get("probes_reexecuted")),
+        "findings": len(findings),
+    }
+
+    verdict = "pass" if (not problems and not findings and control["honest"]) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the dispositioned delta RT-DELTA-DISPOSITION recorded and "
+            "derives which courts each measured, `implemented` row reaches, mechanically and from "
+            "committed artefacts -- the row's declaring header is read from the per-authority "
+            "declaration atlases, the header's owning stratum from the declaring-header ownership "
+            "forensics/atlas/symbol-ownership.json records, and the courts from the per-stratum "
+            "registries artifacts/phase<stratum>/COURTS.json, cross-checked against the export -> "
+            "court edge forensics/atlas/court-coverage.json carries. A row that is "
+            "itself an export is covered directly by the atlas's symbol -> court edge; an "
+            "error-reason header that owns no stratum directly is resolved to its sibling public "
+            "header by the error-header convention; a `not-measured` boundary carries no row and "
+            "reaches no court. Each selected court is re-derived -- its committed registry verdict "
+            "and its coverage of the owning stratum's exports are re-read, and the probes are NOT "
+            "re-executed here, so the mode is recorded `re-derived`, never `re-run`. The instrument "
+            "sensitivity control injects a selection with a reached court omitted and a selection "
+            "with a spurious court no row reaches, and requires both caught while the real "
+            "selection derives with zero problems (docs/RELEASE_GATES.md section 8, "
+            "docs/PHASE-21-SUBPHASES.md sections 2, 3.2 and 3.7)"
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the affected-court-selection court reads committed atlases and registry rows and "
+            "stages no artifacts/phase21/probes/ pair, so it takes no transcript to diff and "
+            "carries no FRF declaration"
+        ),
+        "selection_authority": [rel(COVERAGE), rel(SYMBOL_OWNERSHIP), rel(PLAN),
+                                rel(SECURITY_POLICY_DOC)],
+        "derivation": derivation,
+        "selected_courts": [selected[c] for c in sorted(selected)],
+        "counts": counts,
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1203,11 +1618,11 @@ def main(argv: list[str]) -> int:
 
     records: list[dict] = []
     for name, filename in COURTS:
-        # 21.1's, 21.2's and 21.3's courts stage no probe: their subjects are the pair's committed
-        # identity, the movement between the two admitted authorities, and the disposition of that
-        # movement, so each is computed here rather than read back from disk and no digest cycle
-        # forms. This stratum owns no export, so no differential probe over a symbol set is its
-        # evidence.
+        # 21.1's, 21.2's, 21.3's and 21.4's courts stage no probe: their subjects are the pair's
+        # committed identity, the movement between the two admitted authorities, the disposition of
+        # that movement, and the courts that movement reaches, so each is computed here rather than
+        # read back from disk and no digest cycle forms. This stratum owns no export, so no
+        # differential probe over a symbol set is its evidence.
         if name == AUTHORITY_ADMISSION:
             records.append(authority_admission_court(name))
             continue
@@ -1216,6 +1631,9 @@ def main(argv: list[str]) -> int:
             continue
         if name == DELTA_DISPOSITION:
             records.append(delta_disposition_court(name))
+            continue
+        if name == AFFECTED_COURT_SELECTION:
+            records.append(affected_court_selection_court(name))
             continue
         src = REPO_ROOT / "courts" / "phase21" / str(filename)
         records.append({"court": name, "verdict": "fail", "stage": "probe-missing",
@@ -1256,8 +1674,16 @@ def main(argv: list[str]) -> int:
             "plane or axis is `boundary`, and a `removed`/`changed` row the candidate carries "
             "re-adopts the historical behaviour the fixed authority moved away from and is a "
             "finding -- with zero unexplained, so an un-dispositioned row is a `fail`. "
-            "`RT-AFFECTED-COURT-SELECTION` is 21.4's: the derivation of which courts a delta "
-            "touches, recorded with the selection derivation. `MAINTENANCE-BOUNDARY-REGISTER` is "
+            "`RT-AFFECTED-COURT-SELECTION` is 21.4's: it stages no probe and derives which courts "
+            "a delta touches, mechanically from the dispositioned delta and the coverage atlas's "
+            "export -> court edge -- a measured, `implemented` row reaches the courts its declaring "
+            "header's owning stratum stages, a row that is itself an export is covered directly, an "
+            "error-reason header that owns no stratum is resolved to its sibling public header, and "
+            "a `not-measured` boundary reaches no court. Each selected court is re-derived (its "
+            "committed registry verdict and its coverage of the owning stratum re-read; the probes "
+            "are not re-executed, so the mode is honestly `re-derived`), and a selection with a "
+            "reached court omitted and one with a spurious court no row reaches are both detected. "
+            "`MAINTENANCE-BOUNDARY-REGISTER` is "
             "21.5's: the register of the explicit non-claims. This stratum owns no exported "
             "symbol, so no differential probe over a symbol set is its evidence: the subject is "
             "the delta between two admitted authorities, with no version-universality claim — "
@@ -1311,6 +1737,22 @@ def main(argv: list[str]) -> int:
                 for rec in records if rec.get("court") == DELTA_DISPOSITION
                 for r in (rec.get("dispositions") or [])
                 if r.get("candidate_source")
+            })
+        ],
+        # The 21.4 affected-court-selection court's inputs: the export -> court edge it derives the
+        # selection from, and the per-stratum registries of the strata whose courts it selected, so
+        # the evidence binds the exact registry rows it re-derived. They are read from the court's
+        # own recorded selections.
+        InputRef(name="court-coverage", path=COVERAGE),
+        InputRef(name="symbol-ownership", path=SYMBOL_OWNERSHIP),
+        *[
+            InputRef(name=f"phase{st}-courts",
+                     path=REPO_ROOT / "artifacts" / f"phase{st}" / "COURTS.json")
+            for st in sorted({
+                int(r["stratum"])
+                for rec in records if rec.get("court") == AFFECTED_COURT_SELECTION
+                for r in (rec.get("selected_courts") or [])
+                if r.get("stratum") is not None
             })
         ],
     ]
@@ -1368,6 +1810,31 @@ def main(argv: list[str]) -> int:
                 source = row.get("candidate_source") or ""
                 print(f"      row {row['id']:<68} {tag}"
                       + (f"  ({source})" if source else ""))
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == AFFECTED_COURT_SELECTION:
+            c = r["control"]
+            counts = r["counts"]
+            print(f"  {r['court']:<32} pass   (no probe, {counts['delta_rows']} delta row(s): "
+                  f"{counts['moving_rows']} moving / {counts['boundary_rows']} boundary; "
+                  f"selected {counts['selected_courts']} court(s) over "
+                  f"{counts['selected_strata']} stratum(s), "
+                  f"{counts['uncovered_rows']} uncovered row(s), "
+                  f"{counts['reexecuted_courts']} re-executed; {counts['findings']} finding(s); "
+                  f"control honest={c['honest']} specificity={c['specificity_holds']} "
+                  f"injected-omitted({c['injected_omitted_court']})->"
+                  f"{c['injected_omitted_problems']} problem(s) "
+                  f"injected-spurious->{c['injected_spurious_problems']} problem(s))")
+            for row in r["derivation"]:
+                if row["state"] != "measured":
+                    continue
+                origin = ", ".join(f"{o['header']}->{o['how']}" for o in row["origin"]) or "—"
+                print(f"      row {row['row']:<62} strata={row['owning_strata']} "
+                      f"courts={len(row['expected_courts'])}  [{origin}]")
+            for court in r["selected_courts"]:
+                print(f"      court {court['court']:<28} stratum={court['stratum']} "
+                      f"{court['mode']:<10} {court['observation']}  "
+                      f"(selected by {len(court['selected_by'])} row(s))")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":
