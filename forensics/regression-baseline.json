@@ -722,6 +722,10 @@
       "observations": 1038,
       "verdict": "pass"
     },
+    "RT-SUBSTITUTION-WITNESS": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-THREAD": {
       "observations": 40,
       "verdict": "pass"
@@ -827,7 +831,7 @@
     "phase17": 0,
     "phase18": 0,
     "phase19": 0,
-    "phase20": 2,
+    "phase20": 1,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,

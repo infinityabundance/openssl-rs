@@ -183,16 +183,61 @@ control is honest only when the real view is closed (zero findings) *and* all th
 as required; otherwise a court that cannot tell a dispositioned residual from an absent one, or an
 intersecting `UNKNOWN` from a harmless one, would pass vacuously.
 
-The pending courts
-------------------
-The other two courts the plan names are not runnable yet; each is registered in `PENDING_COURTS`
-with the subphase that lands its instrument and what it will drive, so "nothing registered" is a
-stated distance rather than a court quietly dropped:
+`RT-SUBSTITUTION-WITNESS`, and what it witnesses
+-----------------------------------------------
+20.4's court. Its subject is the **substitution witness chain**: the ABI-substitution witnesses -- a
+binary built against one library set that runs unmodified against the other -- and the
+**machine-owned downstream corpus witness chain** of the Phase-17 corpus, the six unmodified
+upstream programs built against the candidate distribution shell and exercised by the harness
+`courts/phase17/downstream/run_all.sh`. `docs/PHASE-20-SUBPHASES.md` section 3.5 makes the witness a
+machine-owned chain: the court records, per witness, **the binary it was built against, the run that
+exercised it and the observation it produced**, so a witness that is not reproduced by the run is a
+finding rather than a remembered result. It maintains no list of its own; it reads the artefacts the
+earlier strata wrote:
 
-  * `RT-SUBSTITUTION-WITNESS` (20.4) — the ABI-substitution witness chain and the machine-owned
-    downstream corpus witness chain: binaries built against the admitted authority run unmodified
-    against the candidate, over the Phase-17 corpus the court re-establishes as current and
-    functional;
+  * the **Phase-2 ABI-substitution family** `artifacts/phase2/courts/ABI-SUBSTITUTION.json`,
+    `ABI-LOAD.json` and `ABI-LINK.json`, cross-checked against the sealed registry
+    `artifacts/phase2/COURTS.json`. `ABI-SUBSTITUTION` is the literal witness: one executable,
+    compiled once against the admitted authority's headers and libraries, run against the authority
+    and then run **unmodified** against the candidate install with `LD_LIBRARY_PATH` pointed at
+    `artifacts/phase2/install/lib`; `ABI-LOAD` resolves the authority's declared symbol/version set
+    in the candidate DSO with `dlvsym`; `ABI-LINK` is a consumer linked against the candidate
+    distribution shell. The three are held apart rather than one standing in for the others.
+  * the **Phase-17 machine-owned downstream corpus** `forensics/atlas/downstream-corpus.json`,
+    aggregated from `courts/phase17/downstream/<program>/result.json` (curl, git, haproxy, nginx,
+    openssh, python), which the court re-establishes as current and functional rather than assuming:
+    for each program it re-derives the record's required fields, its `functional` verdict and its
+    `candidate` identity against the current release `Cargo.toml` names, and re-checks that the
+    aggregate entry still equals the per-program record. The six harnesses include multi-minute
+    builds and live TLS servers and `courts/phase17/downstream/run_all.sh` has no cheap
+    verify/currency mode -- it re-runs the programs -- so the court does **not** re-run them in the
+    gate path: it re-derives currency and functional status from the machine-owned records and
+    proves currency by candidate identity, and says exactly that in its `reestablishment` block.
+
+**Honesty.** A witness is a `finding` when it is not functional, when its candidate identity is not
+the current release, when its record is absent or has drifted from the aggregate, or when a required
+field is missing. On the current tree every witness is current and functional, so the court records
+**zero findings**; a stale or non-functional witness is a finding and a `fail`, not a verdict the
+court talks itself out of. A passing `RT-SUBSTITUTION-WITNESS` is an instrument plus this re-derived
+chain: it is not a re-run of the harnesses, and the three non-claims of section 0 still bound it.
+
+The instrument sensitivity control
+----------------------------------
+Section 3.2's rule again: a control that cannot fail is not evidence. Beside the real derivation the
+court derives three **synthetic evidence views** and requires the witness derivation to react to
+each: a downstream witness whose `candidate` identity is moved off the current release must surface
+as a stale finding, a downstream witness whose `functional` verdict is set `FAIL` must surface as a
+non-functional finding, and an ABI-substitution witness whose verdict is set `fail` must surface as
+a non-functional finding. The control is honest only when the real view is closed (every witness
+current and functional) *and* all three injections are detected; otherwise a court that cannot tell
+a current, functional witness from a stale or failed one would pass vacuously.
+
+The pending court
+------------------
+The one other court the plan names is not runnable yet; it is registered in `PENDING_COURTS` with
+the subphase that lands its instrument and what it will drive, so "nothing registered" is a stated
+distance rather than a court quietly dropped:
+
   * `CUSTODIAN-BOUNDARY-REGISTER` (20.5) — the register that records what is claimed, what is
     bounded, and the explicit non-claims (no FIPS validation, no universal parity from finite
     evidence, memory safety measured-not-established), and that fails the stratum if a recorded
@@ -293,6 +338,43 @@ UNSAFE_FOOTPRINT = REPO_ROOT / "forensics" / "atlas" / "unsafe-footprint.json"
 UNSAFE_BOUNDS = REPO_ROOT / "artifacts" / "phase18" / "unsafe-bounds.json"
 FRF_RESIDUALS = REPO_ROOT / ".frf" / "residuals"
 
+# The substitution witnesses. The Phase-2 ABI-substitution family carries the witnesses a binary
+# built against one library set runs unmodified against the other; the Phase-17 machine-owned corpus
+# carries the six unmodified upstream programs. None is a list this court keeps: both are read from
+# the artefacts the earlier strata wrote. `CANDIDATE_INSTALL` is the candidate distribution shell the
+# downstream programs are built against and the ABI-SUBSTITUTION probe is run against.
+PHASE2_COURT_DIR = REPO_ROOT / "artifacts" / "phase2" / "courts"
+DOWNSTREAM_DIR = REPO_ROOT / "courts" / "phase17" / "downstream"
+DOWNSTREAM_RUNNER = DOWNSTREAM_DIR / "run_all.sh"
+DOWNSTREAM_README = DOWNSTREAM_DIR / "README.md"
+CANDIDATE_INSTALL = REPO_ROOT / "artifacts" / "phase2" / "install"
+
+# The Phase-2 ABI-substitution family and what each witness was built against. `ABI-SUBSTITUTION`
+# is compiled against the admitted authority and run unmodified against the candidate install;
+# `ABI-LOAD` resolves the authority's declared symbol/version set in the candidate DSO; `ABI-LINK`
+# is a consumer linked against the candidate distribution shell. `(court, built_against)`.
+ABI_WITNESSES: tuple[tuple[str, str], ...] = (
+    ("ABI-SUBSTITUTION", PRODUCTION_AUTHORITY),
+    ("ABI-LOAD", PRODUCTION_AUTHORITY),
+    ("ABI-LINK", "artifacts/phase2 (the candidate distribution shell)"),
+)
+
+# The six programs of the Phase-17 machine-owned corpus, and the fields `RT-DOWNSTREAM-CORPUS`
+# requires each record to carry. The list is typed because a program dropped from the corpus must be
+# a finding rather than a silent shrink of the witness set; the fields mirror
+# `forensics/tools/phase17_courts.py`'s `DOWNSTREAM_REQUIRED_FIELDS`, which is the register's own
+# requirement.
+WITNESS_PROGRAMS: tuple[str, ...] = ("curl", "git", "haproxy", "nginx", "openssh", "python")
+WITNESS_REQUIRED_FIELDS: tuple[str, ...] = (
+    "program", "version", "source_url", "source_sha256", "candidate", "authority",
+    "build", "link", "start", "functional", "concurrency", "known_residuals",
+    "historical_failures",
+)
+
+# The two witness chains, named so a row can be read without joining its source.
+ABI_CHAIN = "abi-substitution"
+DOWNSTREAM_CHAIN = "downstream-corpus"
+
 # The two axes every runtime court declares and challenges; the same pair the FRF chain rule reads.
 FRF_CHALLENGE_OPERATORS = ("stdout-first-line", "exit-class")
 
@@ -309,31 +391,27 @@ CLOSURE_PHASES: tuple[int, ...] = tuple(range(3, 20))
 CUSTODIAN_MATURITY = "RT-CUSTODIAN-MATURITY"
 RECEIPT_CLOSURE = "RT-RECEIPT-CLOSURE"
 CUSTODIAN_RESIDUALS = "RT-CUSTODIAN-RESIDUALS"
+SUBSTITUTION_WITNESS = "RT-SUBSTITUTION-WITNESS"
 
 # The courts, in the order they land. `(name, probe filename)`, and the probe is declared in the
 # same commit as the entry, so a runner that names a probe which does not exist cannot be
-# committed. `RT-CUSTODIAN-MATURITY`, `RT-RECEIPT-CLOSURE` and `RT-CUSTODIAN-RESIDUALS` stage no
-# probe -- their subjects are committed evidence, not transcript pairs -- so their probes are
-# `None`, exactly as Phase 19's register court is. **Empty of later courts at 20.3**: 20.4 and 20.5
-# land the other two instruments and add their rows.
+# committed. `RT-CUSTODIAN-MATURITY`, `RT-RECEIPT-CLOSURE`, `RT-CUSTODIAN-RESIDUALS` and
+# `RT-SUBSTITUTION-WITNESS` stage no probe -- their subjects are committed evidence, not transcript
+# pairs -- so their probes are `None`, exactly as Phase 19's register court is. **Empty of later
+# courts at 20.4**: 20.5 lands the last instrument and adds its row.
 COURTS: list[tuple[str, str | None]] = [
     (CUSTODIAN_MATURITY, None),
     (RECEIPT_CLOSURE, None),
     (CUSTODIAN_RESIDUALS, None),
+    (SUBSTITUTION_WITNESS, None),
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
 # the instrument and what the court will drive, so "nothing registered" is a stated distance rather
 # than a court quietly dropped. `RT-CUSTODIAN-MATURITY` left this table when 20.1 landed its
-# derivation, `RT-RECEIPT-CLOSURE` when 20.2 landed its join, and `RT-CUSTODIAN-RESIDUALS` when 20.3
-# landed its disposition.
+# derivation, `RT-RECEIPT-CLOSURE` when 20.2 landed its join, `RT-CUSTODIAN-RESIDUALS` when 20.3
+# landed its disposition, and `RT-SUBSTITUTION-WITNESS` when 20.4 landed its witness chain.
 PENDING_COURTS: dict[str, str] = {
-    "RT-SUBSTITUTION-WITNESS": (
-        "20.4 lands the substitution witness; it runs binaries built against the admitted "
-        "authority unmodified against the candidate over the machine-owned Phase-17 downstream "
-        "corpus, which it re-establishes as current and functional, and records each witness's "
-        "build, run and observation"
-    ),
     "CUSTODIAN-BOUNDARY-REGISTER": (
         "20.5 lands the register; it records what is claimed, what is bounded, and the explicit "
         "non-claims (no FIPS validation, no universal parity from finite evidence, memory safety "
@@ -2179,6 +2257,475 @@ def residual_court(name: str) -> dict:
     }
 
 
+# --------------------------------------------------------------------------------------------
+# the substitution-witness court
+# --------------------------------------------------------------------------------------------
+
+
+def read_witness_evidence() -> dict:
+    """The committed witness evidence view the substitution chain is derived from.
+
+    A plain dict so the sensitivity control can deep-copy it and inject a stale or non-functional
+    witness without touching the tree. Every witness is read from a register the earlier strata
+    wrote; none is typed as present. `corpus.present` and `phase2.present` record whether the
+    registers existed, so an absent register is a stated problem rather than a silently empty
+    chain.
+    """
+    corpus = read_json("forensics/atlas/downstream-corpus.json")
+    programs = (corpus or {}).get("programs") or []
+    per_program: dict[str, dict | None] = {
+        prog: read_json(f"courts/phase17/downstream/{prog}/result.json")
+        for prog in WITNESS_PROGRAMS
+    }
+    registry = read_json("artifacts/phase2/COURTS.json")
+    registry_body = (registry or {}).get("body", registry or {})
+    verdicts = {str(c["court"]): str(c["verdict"])
+                for c in registry_body.get("courts", [])}
+    abi: dict[str, dict | None] = {
+        court: read_json(f"artifacts/phase2/courts/{court}.json")
+        for court, _built_against in ABI_WITNESSES
+    }
+    return {
+        "candidate": gen_frf_courts.CANDIDATE_VERSION,
+        "authority": PRODUCTION_AUTHORITY,
+        "install": rel(CANDIDATE_INSTALL),
+        "corpus": {"present": corpus is not None, "programs": programs},
+        "per_program": per_program,
+        "phase2": {"present": registry is not None, "registry": verdicts, "courts": abi},
+    }
+
+
+def witness_abi_functional(court: str, rec: dict) -> bool:
+    """Whether an ABI-substitution witness's recorded run succeeded.
+
+    Read from the court's own recorded fields, per court: `ABI-SUBSTITUTION` requires both runs to
+    exit 0 *and* the substitution to have taken effect (the candidate libraries resolved, not the
+    authority's); `ABI-LOAD` requires every library's `dlvsym` resolution to have exited 0;
+    `ABI-LINK` requires the linked consumer's run to have exited 0.
+    """
+    if not rec:
+        return False
+    if court == "ABI-SUBSTITUTION":
+        return bool(rec.get("verdict") == "pass"
+                    and int(rec.get("authority_run_exit", 1)) == 0
+                    and int(rec.get("candidate_run_exit", 1)) == 0
+                    and rec.get("substitution_took_effect"))
+    if court == "ABI-LOAD":
+        libs = rec.get("libraries") or {}
+        return bool(rec.get("verdict") == "pass" and libs and all(
+            (lib or {}).get("verdict") == "pass" and int((lib or {}).get("exit", 1)) == 0
+            for lib in libs.values()))
+    detail = rec.get("detail") or {}
+    return bool(rec.get("verdict") == "pass" and int(detail.get("exit", 1)) == 0)
+
+
+def witness_abi_observation(court: str, rec: dict) -> str:
+    """The observation an ABI-substitution witness produced, as its own record carries it."""
+    if not rec:
+        return ""
+    if court == "ABI-SUBSTITUTION":
+        run = "; ".join(str(x) for x in (rec.get("candidate_run_output") or []))
+        closure = " -> ".join(
+            str(x) for x in (rec.get("dynamic_closure_under_substitution") or []))
+        return f"candidate run: {run}; closure: {closure}"
+    if court == "ABI-LOAD":
+        libs = rec.get("libraries") or {}
+        return "; ".join(
+            f"{name}: " + "; ".join(str(x) for x in ((libs.get(name) or {}).get("output") or []))
+            for name in sorted(libs))
+    return "; ".join(str(x) for x in ((rec.get("detail") or {}).get("output") or []))
+
+
+def witness_downstream_functional(rec: dict | None) -> bool:
+    """Whether a downstream witness's record says the program built, linked, started and ran.
+
+    The same facts `RT-DOWNSTREAM-CORPUS` reads: `build`, `link`, `start` and `functional` all true
+    and the concurrency shape well formed.
+    """
+    if not rec:
+        return False
+    conc = rec.get("concurrency") or {}
+    return bool((rec.get("functional") or {}).get("ok") is True
+                and (rec.get("build") or {}).get("ok") is True
+                and (rec.get("link") or {}).get("ok") is True
+                and (rec.get("start") or {}).get("ok") is True
+                and isinstance(conc.get("ok"), int) and isinstance(conc.get("total"), int)
+                and conc["total"] >= 1 and conc["ok"] <= conc["total"])
+
+
+def witness_downstream_observation(rec: dict | None) -> str:
+    """The observation a downstream witness produced, as its own record carries it."""
+    if not rec:
+        return ""
+    func = rec.get("functional") or {}
+    detail = str(func.get("detail") or "")
+    evidence = "; ".join(str(x) for x in (func.get("evidence") or []))
+    return f"{detail} [{evidence}]" if evidence else detail
+
+
+def witness_install_prefix(path: str) -> str:
+    """The candidate distribution prefix a witness path names, repository-relative.
+
+    A container path like `/work/artifacts/phase2/install/lib/libssl.so.3` -- and the load address
+    `ldd` prints beside it -- reduces to `artifacts/phase2/install`, so the ABI-substitution
+    witness's closure is joined to the same candidate distribution the corpus links against.
+    """
+    p = path.strip().split(" (", 1)[0].rstrip(":").strip()
+    for soname in ("libssl.so.3", "libcrypto.so.3", "libssl.so", "libcrypto.so"):
+        if p.endswith("/" + soname):
+            p = p[: -(len(soname) + 1)]
+            break
+    if p.endswith("/lib"):
+        p = p[:-4]
+    if p.startswith("/work/"):
+        p = p[len("/work/"):]
+    return p
+
+
+def witness_abi_target(court: str, rec: dict) -> str | None:
+    """The candidate distribution an ABI-substitution witness's record shows it ran against.
+
+    `None` for a witness whose record carries no resolved path (`ABI-LINK` records only that the
+    consumer linked and ran), which is read as authority-anchored rather than asserted current.
+    """
+    if not rec:
+        return None
+    if court == "ABI-SUBSTITUTION":
+        for line in rec.get("dynamic_closure_under_substitution") or []:
+            if "=>" in line:
+                return witness_install_prefix(line.split("=>", 1)[1])
+        return None
+    if court == "ABI-LOAD":
+        for lib in (rec.get("libraries") or {}).values():
+            for line in (lib or {}).get("output") or []:
+                if str(line).startswith("load-probe "):
+                    return witness_install_prefix(str(line).split(" ", 2)[1])
+        return None
+    return None
+
+
+def witness_corpus_prefixes(rows: dict[str, dict]) -> set[str]:
+    """The candidate distribution prefixes the downstream records link against.
+
+    Read from each record's `link.detail` (`libssl.so.3 -> <path>`), so the corpus's own target is
+    the join the ABI-substitution witness's recorded closure is measured against rather than a
+    value typed beside it.
+    """
+    prefixes: set[str] = set()
+    for prog in WITNESS_PROGRAMS:
+        detail = str(((rows.get(prog) or {}).get("link") or {}).get("detail") or "")
+        if "->" in detail:
+            prefixes.add(witness_install_prefix(detail.split("->", 1)[1]))
+    return prefixes
+
+
+def derive_witnesses(ev: dict) -> dict:
+    """The witness chain over an evidence view: per witness, build, run, observation and verdict.
+
+    A pure function of the evidence view, so the sensitivity control can inject a stale or
+    non-functional witness and re-derive. A witness is a `finding` when it is not functional, when
+    its candidate identity is not the current release, or when its record is absent, has drifted
+    from the aggregate or is missing a required field; a non-empty list is a `fail`, not a verdict
+    the court talks itself out of.
+    """
+    current = str(ev.get("candidate") or "")
+    install = str(ev.get("install") or rel(CANDIDATE_INSTALL))
+    witnesses: list[dict] = []
+    findings: list[str] = []
+    totals = {
+        "chains": 2, "witnesses": 0, "abi": 0, "downstream": 0,
+        "functional": 0, "current": 0, "findings": 0,
+    }
+
+    # Chain B's records are read first, so the candidate distribution they link against is the join
+    # chain A's recorded substitution target is measured against rather than a value typed here.
+    corpus = ev.get("corpus") or {}
+    rows = {str(r.get("program")): r for r in (corpus.get("programs") or [])}
+    corpus_prefixes = witness_corpus_prefixes(rows)
+
+    # Chain A -- the Phase-2 ABI-substitution family, read from the committed per-court records and
+    # cross-checked against the sealed registry. A witness is current only when the distribution its
+    # record shows it ran against is the candidate distribution the corpus links against (or the
+    # shell root above it); a witness whose record carries no resolved path is authority-anchored.
+    phase2 = ev.get("phase2") or {}
+    registry = phase2.get("registry") or {}
+    shell_roots = {p.rsplit("/", 1)[0] for p in corpus_prefixes}
+    for court, built_against in ABI_WITNESSES:
+        rec = (phase2.get("courts") or {}).get(court) or {}
+        functional = witness_abi_functional(court, rec)
+        observation = witness_abi_observation(court, rec)
+        target = witness_abi_target(court, rec)
+        is_current = (target is None or target in corpus_prefixes or target in shell_roots
+                      or not corpus_prefixes)
+        if target is None:
+            currency = ("authority-anchored; the record carries no resolved path, and the "
+                        "candidate distribution the corpus links against is "
+                        f"{sorted(corpus_prefixes)}")
+        else:
+            currency = ("current" if is_current
+                        else f"stale: target {target!r} != the corpus candidate distribution "
+                             f"{sorted(corpus_prefixes)}")
+        witnesses.append({
+            "chain": ABI_CHAIN,
+            "witness": court,
+            "built_against": built_against,
+            "run_id_or_mode": f"phase2-courts.py {court} (recorded; re-derived, not re-run)",
+            "observation": observation,
+            "functional": bool(functional),
+            "candidate": None,
+            "target": target,
+            "current": bool(is_current),
+            "currency": currency,
+            "source": f"artifacts/phase2/courts/{court}.json",
+        })
+        totals["abi"] += 1
+        if not rec:
+            findings.append(
+                f"the ABI-substitution witness {court!r} has no committed record under "
+                f"artifacts/phase2/courts/, so its build, run and observation were not read")
+            continue
+        if registry and court in registry and registry[court] != "pass":
+            findings.append(
+                f"the ABI-substitution witness {court!r} is recorded {registry[court]!r} in "
+                f"artifacts/phase2/COURTS.json, not `pass`")
+        if not functional:
+            findings.append(
+                f"the ABI-substitution witness {court!r} is not functional: {observation!r}")
+        if not is_current:
+            findings.append(
+                f"the ABI-substitution witness {court!r} targets {target!r}, not the candidate "
+                f"distribution the corpus links against {sorted(corpus_prefixes)}")
+
+    # Chain B -- the Phase-17 machine-owned downstream corpus, re-established current and functional
+    # from the records rather than assumed.
+    per_program = ev.get("per_program") or {}
+    for prog in WITNESS_PROGRAMS:
+        rec = rows.get(prog)
+        per = per_program.get(prog)
+        candidate = str((rec or {}).get("candidate") or "")
+        is_current = candidate == current
+        functional = witness_downstream_functional(rec)
+        observation = witness_downstream_observation(rec)
+        witnesses.append({
+            "chain": DOWNSTREAM_CHAIN,
+            "witness": prog,
+            "built_against": f"{install} (the candidate distribution shell)",
+            "run_id_or_mode": (f"phase17 downstream harness courts/phase17/downstream/{prog}/ "
+                               f"(recorded; re-derived, not re-run)"),
+            "observation": observation,
+            "functional": bool(functional),
+            "candidate": candidate or None,
+            "current": bool(is_current),
+            "currency": ("current" if is_current
+                         else f"stale: candidate {candidate!r} != current {current!r}"),
+            "source": f"courts/phase17/downstream/{prog}/result.json",
+        })
+        totals["downstream"] += 1
+        if rec is None:
+            findings.append(
+                f"the downstream witness {prog!r} is absent from the Phase-17 corpus, so its "
+                f"build, run and observation were not read")
+        else:
+            for field in WITNESS_REQUIRED_FIELDS:
+                if field not in rec:
+                    findings.append(
+                        f"the downstream witness {prog!r} is missing required field {field!r}")
+            if per is None:
+                findings.append(
+                    f"the downstream witness {prog!r} has no per-program record "
+                    f"courts/phase17/downstream/{prog}/result.json")
+            elif per != rec:
+                findings.append(
+                    f"the downstream witness {prog!r} has drifted from "
+                    f"courts/phase17/downstream/{prog}/result.json")
+            if not functional:
+                findings.append(
+                    f"the downstream witness {prog!r} is not functional: {observation!r}")
+            if not is_current:
+                findings.append(
+                    f"the downstream witness {prog!r} is stale: candidate {candidate!r} != "
+                    f"current {current!r}")
+
+    for row in witnesses:
+        totals["witnesses"] += 1
+        totals["functional"] += 1 if row["functional"] else 0
+        totals["current"] += 1 if row["current"] else 0
+    totals["findings"] = len(findings)
+    return {
+        "candidate": current,
+        "install": install,
+        "witnesses": witnesses,
+        "totals": totals,
+        "findings": findings,
+    }
+
+
+def witnesses_problems(ev: dict, derived: dict) -> list[str]:
+    """Internal consistency of the witness chain itself, distinct from its findings.
+
+    The findings are real stale or non-functional witnesses; these are defects in the derivation or
+    the evidence view, which make the verdict `fail` on their own account rather than letting an
+    incomplete read pass.
+    """
+    problems: list[str] = []
+    if not (ev.get("phase2") or {}).get("present"):
+        problems.append(
+            "the Phase-2 court registry artifacts/phase2/COURTS.json is absent, so the "
+            "ABI-substitution witnesses were not read")
+    if not (ev.get("corpus") or {}).get("present"):
+        problems.append(
+            "the Phase-17 corpus forensics/atlas/downstream-corpus.json is absent, so the "
+            "downstream witnesses were not read")
+    totals = derived["totals"]
+    if totals["witnesses"] != totals["abi"] + totals["downstream"]:
+        problems.append(
+            f"the witness total {totals['witnesses']} is not its ABI and downstream parts: "
+            f"{totals['abi']} + {totals['downstream']}")
+    expected = len(ABI_WITNESSES) + len(WITNESS_PROGRAMS)
+    if totals["witnesses"] != expected:
+        problems.append(
+            f"the witness set is {totals['witnesses']}, not the {expected} the plan names "
+            f"({len(ABI_WITNESSES)} ABI-substitution + {len(WITNESS_PROGRAMS)} downstream)")
+    return problems
+
+
+def witnesses_sensitivity_control(ev: dict) -> dict:
+    """Prove the witness chain can fail: inject a stale and two non-functional witnesses.
+
+    Three synthetic evidence views are derived beside the real one: a downstream witness whose
+    `candidate` identity is moved off the current release, a downstream witness whose `functional`
+    verdict is set `FAIL`, and an ABI-substitution witness whose verdict is set `fail`. The control
+    is honest only when the real view is closed (every witness current and functional) *and* all
+    three injections are detected; otherwise a court that cannot tell a current, functional witness
+    from a stale or failed one cannot pass.
+    """
+    base = derive_witnesses(ev)
+    baseline = (not base["findings"] and base["totals"]["witnesses"] > 0
+                and base["totals"]["functional"] == base["totals"]["witnesses"]
+                and base["totals"]["current"] == base["totals"]["witnesses"])
+
+    def injected_downstream(mutate) -> dict:
+        view = copy.deepcopy(ev)
+        programs = (view.get("corpus") or {}).get("programs") or []
+        victim = next(r for r in programs if r.get("program") in WITNESS_PROGRAMS)
+        mutate(victim)
+        # Mutate the per-program record too, so the injection is exactly the defect the control
+        # means to inject: a targeted change, not a targeted change plus an aggregate drift.
+        per = (view.get("per_program") or {}).get(victim.get("program"))
+        if per is not None:
+            mutate(per)
+        return derive_witnesses(view)
+
+    def injected_abi(mutate) -> dict:
+        view = copy.deepcopy(ev)
+        victim = ((view.get("phase2") or {}).get("courts") or {}).get("ABI-SUBSTITUTION")
+        mutate(victim)
+        return derive_witnesses(view)
+
+    def make_stale(rec: dict) -> None:
+        rec["candidate"] = "0.0.0"
+
+    def break_functional(rec: dict) -> None:
+        rec.setdefault("functional", {})["ok"] = False
+
+    def break_abi(rec: dict) -> None:
+        rec["verdict"] = "fail"
+
+    d_stale = injected_downstream(make_stale)
+    d_nonfunc = injected_downstream(break_functional)
+    d_abi = injected_abi(break_abi)
+    caught_stale = any("is stale" in f for f in d_stale["findings"])
+    caught_nonfunc = any("is not functional" in f for f in d_nonfunc["findings"])
+    caught_abi = any("ABI-substitution" in f and "not functional" in f for f in d_abi["findings"])
+    return {
+        "baseline_witnesses": base["totals"]["witnesses"],
+        "baseline_functional": base["totals"]["functional"],
+        "baseline_current": base["totals"]["current"],
+        "injected_stale_findings": len(d_stale["findings"]),
+        "injected_nonfunctional_findings": len(d_nonfunc["findings"]),
+        "injected_abi_fail_findings": len(d_abi["findings"]),
+        "caught_stale": caught_stale,
+        "caught_nonfunctional": caught_nonfunc,
+        "caught_abi_fail": caught_abi,
+        "baseline_holds": baseline,
+        "honest": bool(baseline and caught_stale and caught_nonfunc and caught_abi),
+    }
+
+
+def substitution_witness_court(name: str) -> dict:
+    """`RT-SUBSTITUTION-WITNESS`: record every witness's build, run and observation.
+
+    Stages no probe. It reads the Phase-2 ABI-substitution family -- the one-binary-two-providers
+    witness, the `dlvsym` resolution of the authority's declared symbol/version set and the linked
+    consumer -- and the Phase-17 machine-owned downstream corpus, re-establishing each program as
+    current and functional from its record rather than assuming it. The verdict is `pass` only when
+    every witness was read, every witness is functional and current, and the control is honest; a
+    stale or non-functional witness is a `finding` and a `fail`.
+    """
+    ev = read_witness_evidence()
+    derived = derive_witnesses(ev)
+    control = witnesses_sensitivity_control(ev)
+    problems = witnesses_problems(ev, derived)
+    findings = list(derived["findings"])
+    totals = derived["totals"]
+    verdict = "pass" if (
+        not problems and control["honest"] and not findings
+        and totals["functional"] == totals["witnesses"]
+        and totals["current"] == totals["witnesses"]
+    ) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it records the ABI-substitution witness chain and the machine-owned "
+            "downstream corpus witness chain. It reads the Phase-2 ABI-substitution family "
+            "(artifacts/phase2/courts/ABI-SUBSTITUTION.json, ABI-LOAD.json and ABI-LINK.json, "
+            "cross-checked against the sealed registry artifacts/phase2/COURTS.json) and the "
+            "Phase-17 machine-owned corpus (forensics/atlas/downstream-corpus.json, aggregated "
+            "from courts/phase17/downstream/<program>/result.json), maintaining no list of its "
+            "own (docs/PHASE-20-SUBPHASES.md section 3.5). For each witness it records "
+            "`{witness, built_against, run_id_or_mode, observation, functional}`; the court "
+            "re-establishes the corpus as current and functional rather than assuming it, "
+            "re-deriving each program's required fields, `functional` verdict and `candidate` "
+            "identity against the current release and re-checking the aggregate against the "
+            "per-program record. The Phase-17 driver has no cheap verify/currency mode -- it "
+            "re-runs multi-minute builds and live TLS servers -- so the court re-derives rather "
+            "than re-runs and proves currency by candidate identity, which it says in its "
+            "`reestablishment` block. The court is pass only when every witness is current and "
+            "functional and a synthetic view with a stale witness and one with a non-functional "
+            "witness are both detected (section 3.2)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the substitution-witness court reads the Phase-2 ABI courts' committed records and "
+            "the Phase-17 machine-owned corpus and stages no artifacts/phase20/probes/ pair, so it "
+            "takes no transcript to diff and carries no FRF declaration"
+        ),
+        "witness_authority": [rel(PLAN), rel(DOWNSTREAM_README)],
+        "candidate_version": derived["candidate"],
+        "candidate_install": derived["install"],
+        "reestablishment": {
+            "mode": "re-derived from the machine-owned records",
+            "re_ran": [],
+            "harness": rel(DOWNSTREAM_RUNNER),
+            "why": (
+                "courts/phase17/downstream/run_all.sh has no cheap verify/currency mode: without "
+                "--build it still drives each program's version, ldd, live-TLS probe and test "
+                "suite, and with --build it also recompiles them. The court therefore does not "
+                "re-run the corpus in the gate path; it re-establishes currency and functional "
+                "status from the machine-owned records and proves currency by candidate "
+                "identity, exactly as docs/PHASE-20-SUBPHASES.md section 3.5 permits."
+            ),
+        },
+        "witnesses": derived["witnesses"],
+        "totals": totals,
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -2191,10 +2738,10 @@ def main(argv: list[str]) -> int:
 
     records: list[dict] = []
     for name, filename in COURTS:
-        # 20.1's maturity court, 20.2's receipt-closure court and 20.3's residual-disposition court
-        # stage no probe: their subjects are committed evidence, so they are computed here rather
-        # than read back from disk, and no digest cycle forms. Phase 20 owns no export, so no
-        # differential probe over a symbol set is its evidence.
+        # 20.1's maturity court, 20.2's receipt-closure court, 20.3's residual-disposition court and
+        # 20.4's substitution-witness court stage no probe: their subjects are committed evidence,
+        # so they are computed here rather than read back from disk, and no digest cycle forms.
+        # Phase 20 owns no export, so no differential probe over a symbol set is its evidence.
         if name == CUSTODIAN_MATURITY:
             records.append(custodian_maturity_court(name))
             continue
@@ -2203,6 +2750,9 @@ def main(argv: list[str]) -> int:
             continue
         if name == CUSTODIAN_RESIDUALS:
             records.append(residual_court(name))
+            continue
+        if name == SUBSTITUTION_WITNESS:
+            records.append(substitution_witness_court(name))
             continue
         src = REPO_ROOT / "courts" / "phase20" / str(filename)
         records.append({"court": name, "verdict": "fail", "stage": "probe-missing",
@@ -2254,9 +2804,23 @@ def main(argv: list[str]) -> int:
             "root, so the court records zero findings and says so precisely; a real un-dispositioned "
             "or `UNKNOWN`-intersecting residual would be a finding and a `fail`, and a synthetic "
             "evidence view with an un-dispositioned residual and one with an `UNKNOWN`-intersecting "
-            "residual detects the gap while an `UNKNOWN` that does not intersect does not. The "
-            "other two courts (`RT-SUBSTITUTION-WITNESS` 20.4 and "
-            "`CUSTODIAN-BOUNDARY-REGISTER` 20.5) are named and `pending`. This stratum owns no "
+            "residual detects the gap while an `UNKNOWN` that does not intersect does not. "
+            "`RT-SUBSTITUTION-WITNESS` is 20.4's court: it stages no probe and records the "
+            "ABI-substitution witness chain and the machine-owned downstream corpus witness chain "
+            "-- the Phase-2 ABI-substitution family (ABI-SUBSTITUTION, ABI-LOAD and ABI-LINK, read "
+            "from artifacts/phase2/courts/ and cross-checked against artifacts/phase2/COURTS.json) "
+            "and the six Phase-17 downstream programs (curl, git, haproxy, nginx, openssh and "
+            "python), which it re-establishes as current and functional rather than assuming. For "
+            "each witness it records `{witness, built_against, run_id_or_mode, observation, "
+            "functional}`; on the current tree all nine witnesses are current and functional "
+            "(candidate 0.0.24), so the court records zero findings. The Phase-17 driver has no "
+            "cheap verify/currency mode, so the court re-derives currency and functional status "
+            "from the machine-owned records and proves currency by candidate identity rather than "
+            "re-running the harnesses, and says exactly that in its `reestablishment` block; a "
+            "stale or non-functional witness would be a finding and a `fail`, and synthetic views "
+            "with a stale witness and with non-functional downstream and ABI witnesses are all "
+            "detected. The other court (`CUSTODIAN-BOUNDARY-REGISTER` 20.5) is named and `pending`. "
+            "This stratum owns no "
             "exported symbol, so no differential probe over a symbol set is its evidence: the "
             "subject is the custodian claim over a finished implementation, with no FIPS "
             "validation, no universal-parity claim from finite evidence and no claim that memory "
@@ -2275,6 +2839,11 @@ def main(argv: list[str]) -> int:
         InputRef(name="phase17-courts", path=PHASE17_COURTS),
         InputRef(name="phase18-courts", path=PHASE18_COURTS),
         InputRef(name="downstream-corpus", path=DOWNSTREAM),
+        InputRef(name="downstream-runner", path=DOWNSTREAM_RUNNER),
+        InputRef(name="downstream-readme", path=DOWNSTREAM_README),
+        InputRef(name="phase2-abi-substitution", path=PHASE2_COURT_DIR / "ABI-SUBSTITUTION.json"),
+        InputRef(name="phase2-abi-load", path=PHASE2_COURT_DIR / "ABI-LOAD.json"),
+        InputRef(name="phase2-abi-link", path=PHASE2_COURT_DIR / "ABI-LINK.json"),
         InputRef(name="provider-algorithms", path=PROVIDERS),
         InputRef(name="provider-court-coverage", path=PROVIDER_COVERAGE),
         InputRef(name="court-coverage", path=COURT_COVERAGE),
@@ -2338,6 +2907,18 @@ def main(argv: list[str]) -> int:
                   f"injected-unknown-intersecting->{c['injected_unknown_intersecting_findings']} "
                   f"finding(s) injected-unknown-clean->"
                   f"{c['injected_unknown_not_intersecting_findings']} finding(s))")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == SUBSTITUTION_WITNESS:
+            c = r["control"]
+            t = r["totals"]
+            print(f"  {r['court']:<32} pass   (no probe, witnesses: "
+                  f"{t['witnesses']} ({t['abi']} ABI-substitution + {t['downstream']} downstream), "
+                  f"{t['functional']} functional, {t['current']} current, "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"injected-stale->{c['injected_stale_findings']} finding(s) "
+                  f"injected-nonfunctional->{c['injected_nonfunctional_findings']} finding(s) "
+                  f"injected-abi-fail->{c['injected_abi_fail_findings']} finding(s))")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":
