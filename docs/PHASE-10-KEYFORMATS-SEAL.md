@@ -54,7 +54,7 @@ exports remain `SCAFFOLDED` and abort when called, exactly as `docs/SEAL-CENSUS.
   (`forensics/tools/gen_frf_courts.py:470-484`, the table closing at `:485`), the declarations are
   under `forensics/frf/courts/openssl-rs-rt-{keyformat-ref,codec,keyformat,pkcs12,store}`, and `.frf`
   now carries five receipts, ten challenges, fifteen captures and one compiled claim
-  (`d6d4f9c242519fdcdc3ee902df24cf918c548ecf79d70149edf0a91bd4ca2488`; 91 receipts and 182
+  (`1fb552c34f68f0ab054459532a89e53b0c9706982dff01face87e63e6a73ea23`; 91 receipts and 182
   challenges, from the 86 and 172 Phase 9's head change `C94` left). §8 states what that is
 - Gemel checkpoint: **present, and it is this stratum's.** `forensics/GEMEL_TRAJECTORY.md`'s head
   change is Phase 10's `C95` (`forensics/GEMEL_TRAJECTORY.md:13`) and its `current:` is `K49` —
@@ -533,7 +533,7 @@ environment divergence above and is not attributed to this stratum's work.
    work (`docs/PHASE-10-SUBPHASES.md:244-248`). A row that cannot be driven is named `pending`
    rather than counted as passing.
 9. **The FRF chain entry is a bounded `sensitivity-backed` claim, not parity.** The five
-   differential courts' compiled claim (`d6d4f9c2…`, §8) binds the authority's first stdout line and
+   differential courts' compiled claim (`1fb552c3…`, §8) binds the authority's first stdout line and
    its exit class for the five courts' fixture families only, with `blockers: []` and
    `excluded_evidence: []`; a `CT-*` pass is construction verification and not OpenSSL parity, and
    the claim's own non-claims are emitted beside it — it does not establish byte-identical stderr,
@@ -624,11 +624,11 @@ could locate (D13, D201). That is why the entry below covers the five differenti
   `.frf/challenges/` and `.frf/captures/` under the
   `openssl-rs-rt-{keyformat-ref,codec,keyformat,pkcs12,store}` names.
 - **One `sensitivity-backed` claim.**
-  `d6d4f9c242519fdcdc3ee902df24cf918c548ecf79d70149edf0a91bd4ca2488` binds authority
-  `openssl-rt-3.6.4-r2` to candidate `openssl-rs 0.0.24` (`identity_hash e4f60d8b…`) over the five
+  `1fb552c34f68f0ab054459532a89e53b0c9706982dff01face87e63e6a73ea23` binds authority
+  `openssl-rt-3.6.4-r2` to candidate `openssl-rs 0.0.25` (`identity_hash e4f60d8b…`) over the five
   differential courts, with `blockers: []` and `excluded_evidence: []`
-  (`.frf/claims/d6d4f9c2….json`). **The identity moved with the 0.0.24 release.** The store was
-  recreated from clean at candidate 0.0.24 — FRF run identities are content-addressed on the
+  (`.frf/claims/1fb552c3….json`). **The identity moved with the 0.0.25 release.** The store was
+  recreated from clean at candidate 0.0.25 — FRF run identities are content-addressed on the
   declaration, which carries the candidate version, so every claim identity moves with a release —
   and the id quoted here supersedes the previous generation's `27857c64…`, the 0.0.19 claim. Every
   one of its five
@@ -666,7 +666,7 @@ projection derives it from `owning_phase` rather than storing it (D295).
 
 - **The FRF chain entry has landed.** §8's subject: five declarations, the five receipts, ten
   challenges and fifteen captures they produced, the compiled `sensitivity-backed` claim
-  `d6d4f9c2…`, and the `K49` checkpoint the chain leaves. `CT-PKCS12` is recorded as not declarable —
+  `1fb552c3…`, and the `K49` checkpoint the chain leaves. `CT-PKCS12` is recorded as not declarable —
   a vector-driven court has no authority transcript to diff and no fixture a challenge could locate
   (D413) — so the entry covers the five differential courts and names that omission with its reason.
   No object of the entry is still owed.
