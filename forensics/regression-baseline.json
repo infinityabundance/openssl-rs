@@ -724,6 +724,10 @@
       "observations": 71,
       "verdict": "pass"
     },
+    "RT-SEMANTIC-COURTS": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-SESSION-CERT": {
       "observations": 208,
       "verdict": "pass"
@@ -890,7 +894,7 @@
     "phase20": 0,
     "phase21": 0,
     "phase22": 0,
-    "phase23": 10,
+    "phase23": 9,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

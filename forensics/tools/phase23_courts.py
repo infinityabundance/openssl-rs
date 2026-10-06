@@ -16,12 +16,14 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**Seven courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+**Eight courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
 lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, 23.3 lands
 `RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court, 23.4 lands `RT-LINEAGE-EDGES`, the
 typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage court, 23.6 lands
-`RT-DELTA-ENGINE`, the semantic compatibility-delta court, and 23.7 lands
-`RT-ABI-HISTORY-FACADES`, the ABI/history-façade court; the other ten courts are named in
+`RT-DELTA-ENGINE`, the semantic compatibility-delta court, 23.7 lands
+`RT-ABI-HISTORY-FACADES`, the ABI/history-façade court, and 23.8 lands
+`RT-SEMANTIC-COURTS`, the oracle-to-oracle and candidate-to-authority semantic court; the other nine
+courts are named in
 `PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
 reproduced, so a court silently dropped is a finding rather than a smaller green run. This is
@@ -39,10 +41,10 @@ The seventeen courts, and the subphase that lands each
   * `RT-ATLAS-PARAMETERIZATION` -- 23.3, the parameterized atlases and the byte-identical proof
     (registered).
   * `RT-LINEAGE-EDGES` -- 23.4, the lineage edges (registered).
-  * `RT-ENTITY-LINEAGE` -- 23.5, the entity lineage.
+  * `RT-ENTITY-LINEAGE` -- 23.5, the entity lineage (registered).
   * `RT-DELTA-ENGINE` -- 23.6, the delta engine (registered).
-  * `RT-ABI-HISTORY-FACADES` -- 23.7, the ABI / history façades.
-  * `RT-SEMANTIC-COURTS` -- 23.8, the semantic multitrack courts.
+  * `RT-ABI-HISTORY-FACADES` -- 23.7, the ABI / history façades (registered).
+  * `RT-SEMANTIC-COURTS` -- 23.8, the semantic multitrack courts (registered).
   * `RT-COMPATIBILITY-VIEWS` -- 23.9, the compatibility views.
   * `RT-HISTORICAL-POPULATION` -- 23.10, the historical population.
   * `RT-DOWNSTREAM-MULTITRACK` -- 23.11, the downstream multitrack court.
@@ -54,7 +56,8 @@ The seventeen courts, and the subphase that lands each
   * `MULTITRACK-SEAL` -- 23.17, the full matrix, the FRF/Gemel chain and the seal.
 
 Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZATION`,
-`RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE`, `RT-DELTA-ENGINE` and `RT-ABI-HISTORY-FACADES` is
+`RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE`, `RT-DELTA-ENGINE`, `RT-ABI-HISTORY-FACADES` and
+`RT-SEMANTIC-COURTS` is
 `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
@@ -114,6 +117,11 @@ import authority_delta  # noqa: E402
 # `src/compat/layout_generated.rs` from the committed measurement through the same code path the
 # file was produced by (never a second, drifting predicate), and re-checks its provenance.
 import gen_abi_facades  # noqa: E402
+# The Phase-23.8 semantic-court generator, imported so the court re-derives every normalized
+# observation from the preserved raw transcripts through the same adapter the artefact was produced
+# by (never a second, drifting vocabulary) and resolves each classified difference against the
+# committed 23.6 delta engine.
+import gen_semantic_courts  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase23" / "COURTS.json"
 GENERATOR = "forensics/tools/phase23_courts.py"
@@ -163,6 +171,11 @@ KEY_ABSENCE_MARKERS = {
     "quic": "ssl/quic/",
 }
 
+# 23.8's subject: the normalized oracle-to-oracle and candidate-to-authority observations, the raw
+# transcripts they were re-derived from, the candidate-to-authority disposition and the not-run list.
+SEMANTIC_COURTS = REPO_ROOT / "forensics" / "multitrack" / "semantic-courts.json"
+SEMANTIC_PROBE = REPO_ROOT / "courts" / "phase23" / "semantic_probe.c"
+
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 # 23.1's court, and the identity its subject must begin at. The root is upstream's first real
@@ -174,6 +187,7 @@ LINEAGE_EDGES_COURT = "RT-LINEAGE-EDGES"
 ENTITY_LINEAGE_COURT = "RT-ENTITY-LINEAGE"
 DELTA_ENGINE_COURT = "RT-DELTA-ENGINE"
 ABI_HISTORY_FACADES_COURT = "RT-ABI-HISTORY-FACADES"
+SEMANTIC_COURTS_COURT = "RT-SEMANTIC-COURTS"
 ROOT_RELEASE = "openssl-0.9.1c"
 CANONICAL_KINDS = ("branch_fork", "chronological_successor", "maintenance_successor")
 PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
@@ -202,12 +216,12 @@ COURTS: list[tuple[str, str]] = [
     (ENTITY_LINEAGE_COURT, "_entity_lineage_court"),
     (DELTA_ENGINE_COURT, "_delta_engine_court"),
     (ABI_HISTORY_FACADES_COURT, "_abi_history_facades_court"),
+    (SEMANTIC_COURTS_COURT, "_semantic_courts_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-SEMANTIC-COURTS": "23.8 -- the semantic multitrack courts",
     "RT-COMPATIBILITY-VIEWS": "23.9 -- the compatibility views",
     "RT-HISTORICAL-POPULATION": "23.10 -- the historical population",
     "RT-DOWNSTREAM-MULTITRACK": "23.11 -- the downstream multitrack court",
@@ -2531,6 +2545,279 @@ def _abi_history_facades_court(name: str) -> dict:
     }
 
 
+def _semantic_delta_body() -> dict:
+    """The committed 23.6 edge delta's body, or an empty mapping when it is absent."""
+    return read_json(gen_semantic_courts.DELTA) if gen_semantic_courts.DELTA.is_file() else {}
+
+
+def semantic_court_findings(body: dict) -> list[str]:
+    """Every way the committed semantic-courts plane fails this court's subject.
+
+    A pure function of the committed plane, so the sensitivity control mutates one and re-checks.
+    It establishes that every observation is a schema-valid `semantic_observation`; that the raw
+    transcripts are present, content-addressed and attributed to the authority they claim; that the
+    committed observations **reproduce** from those raw bytes through the same adapter; that a raw
+    difference and a recorded divergence agree (the adapter neither erases a difference nor invents
+    one); that every divergence is classified and **corroborated** against the committed 23.6 delta
+    engine; that the candidate-to-authority dimension names existing passing courts rather than
+    being silently dropped; and that a pair that could not be run is recorded not-run with a reason
+    and is never also observed.
+    """
+    findings: list[str] = []
+    rows = body.get("observations") or []
+    if not rows:
+        findings.append("the semantic-courts plane carries no observation")
+    raw = body.get("raw_transcripts") or {}
+
+    for rec in rows:
+        oid = rec.get("observation_id")
+        findings += [f"{oid}: {p}" for p in
+                     multitrack_schemas.validate_semantic_observation(rec)]
+
+    # The raw transcripts: present, content-addressed, and attributed to the authority they name.
+    parsed: dict[str, dict[str, str]] = {}
+    for side in ("authority_a", "authority_b"):
+        transcript = raw.get(side)
+        if not isinstance(transcript, dict) or not transcript.get("stdout"):
+            findings.append(f"the {side} raw transcript is absent, so its observations cannot be "
+                            f"re-derived")
+            parsed[side] = {}
+            continue
+        if transcript.get("sha256") != content_hash(transcript["stdout"]):
+            findings.append(f"the {side} raw transcript's recorded sha256 is not the sha256 of its "
+                            f"own bytes")
+        parsed[side] = gen_semantic_courts.parse_transcript(transcript["stdout"])
+        expected = body.get(side)
+        if parsed[side].get("side.authority") != expected:
+            findings.append(
+                f"the {side} raw transcript attributes itself to "
+                f"{parsed[side].get('side.authority')!r}, not {expected!r}: a probe read against "
+                f"the wrong authority"
+            )
+        release = (body.get("authorities") or {}).get(side, {}).get("release_id")
+        if release and parsed[side].get("side.release") != release:
+            findings.append(f"the {side} raw transcript's release "
+                            f"{parsed[side].get('side.release')!r} is not the record's {release!r}")
+
+    # Re-derive every observation from the raw bytes through the same adapter the plane was built by.
+    delta = _semantic_delta_body()
+    if not delta:
+        findings.append(f"the 23.6 delta engine {rel(gen_semantic_courts.DELTA)} is absent, so no "
+                        f"difference can be classified against it")
+    else:
+        try:
+            derived = gen_semantic_courts.derive_observations(raw, delta)
+        except (KeyError, TypeError) as exc:
+            findings.append("the observations could not be re-derived from the raw transcripts: "
+                            f"{exc}")
+            derived = None
+        if derived is not None and derived != rows:
+            findings.append(
+                "the committed observations do not reproduce from the preserved raw transcripts "
+                "through the same adapter: a normalized reading was altered or a difference erased"
+            )
+
+    # A raw difference and a recorded divergence must agree: the adapter may neither erase a
+    # difference the raw bytes carry nor invent one they do not.
+    for rec in rows:
+        key = rec.get("vocabulary")
+        ra, rb = parsed["authority_a"].get(key), parsed["authority_b"].get(key)
+        if ra is None or rb is None:
+            continue
+        if (ra != rb) == bool(rec.get("agreement")):
+            findings.append(
+                f"{rec.get('observation_id')}: the raw transcripts "
+                f"{'differ' if ra != rb else 'agree'} on {key} while the observation records "
+                f"{'agreement' if rec.get('agreement') else 'divergence'}"
+            )
+
+    # Every divergence is a classified release delta, tied to the 23.6 engine's own row or to a
+    # dimension the engine records absent with its reason.
+    index = gen_semantic_courts.delta_index(delta)
+    absent = set(delta.get("absent_dimensions") or {})
+    for rec in rows:
+        if rec.get("agreement"):
+            continue
+        oid = rec.get("observation_id")
+        ref, absent_dim = rec.get("release_delta"), rec.get("absent_dimension")
+        if isinstance(ref, dict) and ref.get("dimension") and ref.get("entity_id"):
+            if (ref["dimension"], ref["entity_id"]) not in index:
+                findings.append(f"{oid}: release_delta {ref['dimension']}:{ref['entity_id']} does not "
+                                f"resolve in the committed 23.6 delta")
+        elif absent_dim:
+            if absent_dim not in absent:
+                findings.append(f"{oid}: absent_dimension {absent_dim!r} is not a dimension the "
+                                f"committed 23.6 delta records absent")
+        else:
+            findings.append(f"{oid}: a divergent observation carries neither a release_delta nor an "
+                            f"absent_dimension, so it is not a classified release delta")
+
+    # The candidate-to-authority dimension: a statement naming existing passing courts, verified.
+    cat = body.get("candidate_to_authority") or {}
+    if not cat.get("statement"):
+        findings.append("the candidate-to-authority disposition names no statement")
+    for entry in cat.get("existing_courts") or []:
+        path = REPO_ROOT / str(entry.get("artefact") or "")
+        if not path.is_file():
+            findings.append(f"the candidate-to-authority artefact {entry.get('artefact')!r} is "
+                            f"absent")
+            continue
+        verdicts = {c.get("court"): c.get("verdict")
+                    for c in (read_json(path).get("courts") or [])}
+        for court in entry.get("courts") or []:
+            if court not in verdicts:
+                findings.append(f"the candidate-to-authority court {court} is not in "
+                                f"{entry.get('artefact')}")
+            elif verdicts[court] != "pass":
+                findings.append(f"the candidate-to-authority court {court} is {verdicts[court]} in "
+                                f"{entry.get('artefact')}")
+
+    # A pair that could not run is recorded with a reason and is never also observed.
+    not_run = body.get("not_run")
+    if not isinstance(not_run, list) or not not_run:
+        findings.append("no not-run pair is recorded; a pair a venue cannot execute must be a stated "
+                        "distance rather than a court quietly counted as passing")
+    else:
+        for entry in not_run:
+            if not str(entry.get("reason") or "").strip():
+                findings.append(f"the not-run pair {entry.get('pair')} carries no reason")
+            pair = set(entry.get("pair") or [])
+            for rec in rows:
+                if {rec.get("authority_a"), rec.get("authority_b")} == pair:
+                    findings.append(f"{sorted(pair)} is both not_run and observed; a skipped pair "
+                                    f"cannot be counted as evidence")
+
+    if not str(body.get("boundary") or "").strip():
+        findings.append("the plane names no coverage boundary")
+    return findings
+
+
+def semantic_courts_sensitivity_control(body: dict) -> dict:
+    """Prove the court can fail: erase a difference, swap the authorities, and leave a difference
+    unclassified, and require each caught with specificity holding."""
+    base = semantic_court_findings(body)
+    specificity = not base
+
+    # (a) the adapter normalizes away a real difference: the raw bytes still differ, but the
+    # observation now records agreement. The re-derivation must notice.
+    erase = copy.deepcopy(body)
+    target = next((r for r in erase.get("observations") or []
+                   if not r.get("agreement") and r.get("release_delta")), None)
+    if target is None:
+        return {"honest": False, "reason": "the plane has no divergent observation to erase"}
+    target["observed_b"] = target["observed_a"]
+    target["agreement"] = True
+    target["classification"] = "agreed"
+    erase_findings = semantic_court_findings(erase)
+    caught_erase = any("erased" in f or "reproduce" in f for f in erase_findings)
+
+    # (b) a probe read against the wrong authority: the two raw transcripts are swapped, so each
+    # side's bytes belong to the other authority the record names.
+    swap = copy.deepcopy(body)
+    transcripts = swap.get("raw_transcripts") or {}
+    transcripts["authority_a"], transcripts["authority_b"] = \
+        transcripts["authority_b"], transcripts["authority_a"]
+    swap_findings = semantic_court_findings(swap)
+    caught_wrong_authority = any("wrong authority" in f for f in swap_findings)
+
+    # (c) a difference left unclassified: its classification is emptied, which the schema refuses.
+    unclassified = copy.deepcopy(body)
+    row = next(r for r in unclassified["observations"] if not r.get("agreement"))
+    row["classification"] = ""
+    unclassified_findings = semantic_court_findings(unclassified)
+    caught_unclassified = any("classification" in f for f in unclassified_findings)
+
+    return {
+        "baseline_findings": len(base),
+        "injected_erased": target.get("observation_id"),
+        "injected_erased_findings": len(erase_findings),
+        "injected_swapped_authorities": [body.get("authority_a"), body.get("authority_b")],
+        "injected_wrong_authority_findings": len(swap_findings),
+        "injected_unclassified": row.get("observation_id"),
+        "injected_unclassified_findings": len(unclassified_findings),
+        "specificity_holds": specificity,
+        "caught_erased_difference": caught_erase,
+        "caught_wrong_authority": caught_wrong_authority,
+        "caught_unclassified_difference": caught_unclassified,
+        "honest": bool(specificity and caught_erase and caught_wrong_authority
+                       and caught_unclassified),
+    }
+
+
+def _semantic_courts_court(name: str) -> dict:
+    """`RT-SEMANTIC-COURTS`: 23.8's court, the semantic multitrack courts.
+
+    Stages no probe at court time: the probes were executed in the court venue by
+    `gen_semantic_courts.py --measure`, which preserved both raw transcripts in the artefact. The
+    court reads `forensics/multitrack/semantic-courts.json` and **re-runs the authority-to-authority
+    comparison** from those preserved raw bytes through the same adapter, classifies every observed
+    difference as a release delta against the committed 23.6 engine, and proves the side-specific
+    adapters do not erase the difference under investigation. Three seeded mutations -- an adapter
+    that normalizes away a real difference, a probe that would pass against the wrong authority, and
+    a difference left unclassified -- are each caught with specificity holding. A passing semantic
+    court is an **instrument**: it records the movement between two named authorities and is not a
+    compatibility claim about either.
+    """
+    problems: list[str] = []
+    if not SEMANTIC_COURTS.is_file():
+        problems.append(f"the semantic-courts plane {rel(SEMANTIC_COURTS)} is absent")
+    body: dict = {}
+    if not problems:
+        body = read_json(SEMANTIC_COURTS)
+    findings = semantic_court_findings(body) if body else []
+    control = semantic_courts_sensitivity_control(body) if body else {"honest": False}
+    verdict = "pass" if (not findings and not problems and control.get("honest")) else "fail"
+
+    summaries = [
+        {"observation_id": r.get("observation_id"), "vocabulary": r.get("vocabulary"),
+         "dimension": r.get("dimension"), "classification": r.get("classification"),
+         "agreement": r.get("agreement"), "observed_a": r.get("observed_a"),
+         "observed_b": r.get("observed_b"), "release_delta": r.get("release_delta")}
+        for r in body.get("observations") or []
+    ]
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe at court time: the shared probe courts/phase23/semantic_probe.c was "
+            "compiled and run against both authorities in the court venue by "
+            "gen_semantic_courts.py --measure, and the court re-runs the authority-to-authority "
+            "comparison from the raw transcripts the artefact preserves. It establishes that every "
+            "observation is a schema-valid semantic_observation over the shared normalized "
+            "vocabulary; that the raw transcripts are content-addressed and attributed to the "
+            "authority they name; that the committed observations reproduce from those raw bytes "
+            "through the same adapter; that the side-specific adapters for the declarations that "
+            "differ across the pair preserve the difference rather than erasing it; that every "
+            "divergence is a classified release delta resolving in the committed 23.6 delta engine "
+            "(or in a dimension it records absent); that the candidate-to-authority dimension is "
+            "discharged by named, passing existing courts rather than duplicated; and that a pair "
+            "the venue cannot execute is recorded not-run with its reason. An adapter that erases a "
+            "real difference, a probe read against the wrong authority and an unclassified "
+            "difference are each detected with specificity holding "
+            "(docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 2, 3.2 and 4.11)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the semantic court compares an authority against an authority (oracle-to-oracle) and "
+            "re-runs the comparison from raw transcripts preserved in the committed artefact, so it "
+            "stages no artifacts/phase23/probes/<probe>.{authority,candidate} pair a challenge could "
+            "locate and diffs no authority-versus-candidate transcript; the candidate-to-authority "
+            "dimension is discharged by the existing Phase-2 and Phase-17 courts this plane names"
+        ),
+        "observations": summaries,
+        "classified_differences": body.get("classified_differences"),
+        "differs": body.get("differs"),
+        "agrees": body.get("agrees"),
+        "not_run": body.get("not_run"),
+        "candidate_to_authority": body.get("candidate_to_authority"),
+        "boundary": body.get("boundary"),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def _delta_engine_court(name: str) -> dict:
     """`RT-DELTA-ENGINE`: 23.6's court, the semantic compatibility delta.
 
@@ -2728,14 +3015,30 @@ def main(argv: list[str]) -> int:
             "are each detected with specificity holding, and the plane names the boundary of what "
             "is not established (the 1.0.x epoch and the pre-1.1.0 aggregates it does not cover). "
             "A passing façade plane establishes a small historical epoch; it is not a source or "
-            "binary compatibility claim about any release. Phase 23 owns "
+            "binary compatibility claim about any release. `RT-SEMANTIC-COURTS` is 23.8's court: "
+            "the semantic multitrack courts. It stages no probe at court time: the shared probe "
+            "courts/phase23/semantic_probe.c is compiled and run against both authorities in the "
+            "court venue, and the court re-runs the authority-to-authority comparison from the raw "
+            "transcripts the committed plane preserves. It establishes that both sides emit the "
+            "same normalized observation vocabulary; that the side-specific adapters for the "
+            "declarations that differ across the pair preserve the difference rather than erasing "
+            "it; that the committed observations reproduce from the raw bytes through the same "
+            "adapter; that every observed difference is a classified release delta resolving in "
+            "the committed 23.6 delta engine (or in a dimension it records absent with its reason); "
+            "that the candidate-to-authority dimension is discharged by named, passing existing "
+            "Phase-2 and Phase-17 courts rather than duplicated; and that a pair the venue cannot "
+            "execute is recorded not-run with its reason. An adapter that normalizes away a real "
+            "difference, a probe read against the wrong authority and a difference left "
+            "unclassified are each detected with specificity holding. A passing semantic court is "
+            "an instrument: it records the movement between two named authorities and is not a "
+            "compatibility claim about either. Phase 23 owns "
             "no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining ten courts -- "
-            "RT-SEMANTIC-COURTS, RT-COMPATIBILITY-VIEWS, "
+            "over a symbol set is its evidence, and its remaining nine courts -- "
+            "RT-COMPATIBILITY-VIEWS, "
             "RT-HISTORICAL-POPULATION, RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, "
             "RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, "
             "RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
-            "the subphases that land them (23.8 through 23.17). The one thing the model forbids "
+            "the subphases that land them (23.9 through 23.17). The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "
@@ -2767,6 +3070,8 @@ def main(argv: list[str]) -> int:
         InputRef(name="compat-policy", path=COMPAT_POLICY),
         InputRef(name="build-script", path=BUILD_SCRIPT),
         InputRef(name="historical-source-manifest", path=HISTORICAL_MANIFEST),
+        InputRef(name="semantic-courts", path=SEMANTIC_COURTS),
+        InputRef(name="semantic-probe", path=SEMANTIC_PROBE),
     ]
     for path in sorted(DELTAS.glob("*.json")):
         inputs.append(InputRef(name=f"delta/{path.stem}", path=path))
@@ -2909,6 +3214,29 @@ def main(argv: list[str]) -> int:
             print(f"      boundary: {r['boundary']}")
             for n in r["not_established"] or []:
                 print(f"      not established: {n['claim']} ({n['reason'][:60]}...)")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == SEMANTIC_COURTS_COURT:
+            c = r["control"]
+            print(f"  {r['court']:<32} pass   (no probe at court time; {r['differs']} classified "
+                  f"difference(s), {r['agrees']} agreeing observation(s), "
+                  f"{len(r['not_run'] or [])} not-run pair(s); "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"erased->{c['injected_erased_findings']} "
+                  f"wrong-authority->{c['injected_wrong_authority_findings']} "
+                  f"unclassified->{c['injected_unclassified_findings']} finding(s))")
+            for obs in r["observations"]:
+                if obs["agreement"]:
+                    continue
+                ref = obs.get("release_delta") or {}
+                tie = (f" [{ref.get('dimension')}:{ref.get('entity_id')}]"
+                       if ref else " [error_behavior: absent]")
+                print(f"      DELTA {obs['classification']:<20} {obs['vocabulary']:<50} "
+                      f"{obs['observed_a']!r} -> {obs['observed_b']!r}{tie}")
+            for entry in r["not_run"] or []:
+                print(f"      NOT-RUN {entry['pair'][0]} vs {entry['pair'][1]}")
+            print(f"      boundary: {r['boundary']}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

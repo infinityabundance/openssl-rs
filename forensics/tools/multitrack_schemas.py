@@ -127,6 +127,23 @@ EVIDENCE_KINDS: tuple[str, ...] = (
     "manual_adjudication",
 )
 
+# The semantic observation vocabulary (added by 23.8). A semantic observation is one normalized
+# reading of an authority-to-authority (or candidate-to-authority) probe, and its classification is
+# the *release-delta* kind it is: `agreed` when both sides read the same, `release_identity` for a
+# version-stamp movement the release is defined by, `declaration_added` / `declaration_removed` for a
+# declaration present on one side only, `behaviour_changed` for a measured behavioural movement, and
+# `implementation_size_only` for a delta the 23.6 engine records as a machine-code size movement
+# whose behaviour agrees. There is deliberately no `unclassified` member: a difference that cannot
+# be classified is refused by the validator rather than read plausibly.
+SEMANTIC_CLASSIFICATIONS: tuple[str, ...] = (
+    "agreed",
+    "release_identity",
+    "declaration_added",
+    "declaration_removed",
+    "behaviour_changed",
+    "implementation_size_only",
+)
+
 NEGATIVE_OBLIGATION_KINDS: tuple[str, ...] = (
     "must_exist",
     "must_not_exist",
@@ -781,6 +798,54 @@ def validate_abi_facade(rec: dict) -> list[str]:
     return problems
 
 
+def validate_semantic_observation(rec: dict) -> list[str]:
+    """A semantic observation: one normalized reading of one probe, on two named authorities.
+
+    (Added by 23.8.) The record is the *shared normalized observation vocabulary*: the same
+    `vocabulary` key and the same `observed_a` / `observed_b` fields on both sides, so the two runs
+    are read the same way and a comparison is a comparison rather than a translation. A value that
+    could not be observed is the literal `<absent>` rather than a missing field, so an equal reading
+    can never be confused with an unobserved one. The `classification` is the release-delta kind and
+    is checked against the closed vocabulary; an `agreed` reading and a `release_identity` reading
+    that disagree with `agreement` are both refused, because either would let a difference be read as
+    sameness or sameness be read as a difference. Where a delta row carries the reading, `release_delta`
+    names the fine dimension and the entity the 23.6 engine keys the row by, so the observation is
+    tied to the delta engine rather than restated beside it.
+    """
+    fields = ("observation_id", "vocabulary", "dimension", "authority_a", "authority_b",
+              "observed_a", "observed_b", "agreement", "classification", "release_delta",
+              "evidence")
+    problems = _missing(rec, fields)
+    for f in ("observation_id", "vocabulary", "authority_a", "authority_b", "classification"):
+        problems += _nonempty(rec, f)
+    problems += _enum(rec, "dimension", COMPAT_DIMENSIONS)
+    problems += _enum(rec, "classification", SEMANTIC_CLASSIFICATIONS)
+    for f in ("observed_a", "observed_b"):
+        if f in rec and not isinstance(rec[f], str):
+            problems.append(f"{f} must be a string (the normalized value, or `<absent>`)")
+    agreement = rec.get("agreement")
+    if not isinstance(agreement, bool):
+        problems.append("agreement must be a boolean")
+    else:
+        classification = rec.get("classification")
+        if agreement and classification != "agreed":
+            problems.append("an agreeing observation must be classified `agreed`")
+        if not agreement and classification == "agreed":
+            problems.append("a divergent observation must not be classified `agreed`")
+    delta = rec.get("release_delta")
+    if delta is not None:
+        if not isinstance(delta, dict):
+            problems.append("release_delta must be null or a mapping")
+        else:
+            for key in ("dimension", "entity_id"):
+                if not delta.get(key):
+                    problems.append(f"release_delta must name its {key}")
+    if "evidence" in rec and not rec["evidence"]:
+        problems.append("evidence must be non-empty (an observation cites the raw transcript it "
+                        "was read from)")
+    return problems
+
+
 def validate_compatibility_matrix(rec: dict) -> list[str]:
     """The assembled matrix: cells that are each directional and dimension-specific."""
     fields = ("matrix_id", "rows", "generated_from")
@@ -835,6 +900,9 @@ REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
                                  "measured_absences", "byte_identity"),
     "abi_facade": ("facade_id", "facade_kind", "authority_id", "release_id", "epoch", "adapter",
                    "evidence", "not_established"),
+    "semantic_observation": ("observation_id", "vocabulary", "dimension", "authority_a",
+                             "authority_b", "observed_a", "observed_b", "agreement",
+                             "classification", "release_delta", "evidence"),
 }
 
 SCHEMAS = {
@@ -851,6 +919,7 @@ SCHEMAS = {
     "compatibility_matrix": validate_compatibility_matrix,
     "parameterization_receipt": validate_parameterization_receipt,
     "abi_facade": validate_abi_facade,
+    "semantic_observation": validate_semantic_observation,
 }
 
 
@@ -1041,6 +1110,20 @@ _GOOD: dict[str, dict] = {
         "not_established": [],
         "evidence": ["forensics/authorities/SOURCE_MANIFEST.0.9.8zh.json#crypto/evp/evp.h"],
     },
+    "semantic_observation": {
+        "observation_id": "SO-presence-SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+        "vocabulary": "presence.SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+        "dimension": "source_api",
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "observed_a": "<absent>",
+        "observed_b": "16",
+        "agreement": False,
+        "classification": "declaration_added",
+        "release_delta": {"dimension": "api_presence",
+                           "entity_id": "macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS"},
+        "evidence": ["forensics/multitrack/semantic-courts.json#raw_transcripts"],
+    },
 }
 
 
@@ -1079,6 +1162,9 @@ def _bad(kind: str) -> dict:
     elif kind == "abi_facade":
         # a public layout whose fields overlap is not a layout any compiler produces
         rec["fields"][1]["offset"] = 0
+    elif kind == "semantic_observation":
+        # a divergent reading classified as agreement would let a difference be read as sameness
+        rec["classification"] = "agreed"
     else:
         raise AssertionError(f"no bad case for {kind}")
     return rec

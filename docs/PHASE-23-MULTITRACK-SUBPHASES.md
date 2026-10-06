@@ -477,6 +477,48 @@ the authority's own evidence rather than restating it. Four measured corrections
   from the committed measurement and fails if it drifts, and it checks that every façade module is
   cfg-gated behind the non-default selection.
 
+**4.11 The semantic courts read two authorities through one vocabulary, and the adapter never erases
+a difference (23.8, D541).** 23.8 lands the oracle-to-oracle and candidate-to-authority courts as
+`courts/phase23/semantic_probe.c`, the plane `forensics/multitrack/semantic-courts.json` (record kind
+`semantic_observation`, added to `forensics/tools/multitrack_schemas.py`), the generator
+`forensics/tools/gen_semantic_courts.py` and the court `RT-SEMANTIC-COURTS`. Four measured
+corrections, each checked by the court rather than asserted here.
+
+* **The runnable pair is 3.6.3 vs 3.6.4, and the raw transcripts are part of the artefact.** Both
+authorities are built in the forensic court venue, so the same probe source is compiled once against
+each prefix and run; both raw transcripts (stdout, stderr and exit) are preserved in the artefact,
+and the default (court and `regen_all.sh`) run re-derives every normalized observation from *those
+bytes* through the same adapter. The measured movement is **ten classified differences over twenty
+observations**: seven `release_identity` version-stamp readings, two `declaration_added`
+declarations (`SSL_VALUE_QUIC_MAX_PENDING_CONNS`, `X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH`) and one
+`declaration_added` error-reason reading. Ten observations agree, including the four exported
+symbols whose machine-code size the 23.6 engine records changed (`OSSL_parse_url`, `BN_uadd`,
+`BN_ucmp`, `OPENSSL_uni2utf8`), whose behaviour agrees and so corroborates the engine's
+implementation-size adjudication.
+* **Where a declaration differs incompatibly the probe carries a side-specific adapter, and every
+side emits the same vocabulary.** `SSL_VALUE_QUIC_MAX_PENDING_CONNS` and
+`X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH` are public in 3.6.4 and absent from 3.6.3, so an access
+would not compile on the older side; the `#ifdef` adapter emits the same `OBS <key>=<value>` key on
+both sides -- the value on the side that declares it, the literal `<absent>` on the side that does
+not -- so the difference is preserved in the vocabulary rather than erased by it. The court
+re-derives the observations from the raw bytes and refuses an adapter that maps a raw difference to
+agreement.
+* **Every difference is fed to the 23.6 delta engine where the engine carries the entity, and one
+reading fills a dimension the engine records absent.** A classified difference names the fine delta
+dimension and the entity id the engine keys its row by, and the court requires the row to resolve in
+the committed `forensics/deltas/openssl-3.6.3--openssl-3.6.4.json`; the `error.reason.*` readings
+name `error_behavior`, which the engine records in `absent_dimensions` for want of a committed
+per-authority plane, so 23.8 supplies the behavioural reading rather than restating a source claim.
+* **The candidate-to-authority dimension is discharged by the existing courts, not duplicated, and
+a pair the venue cannot run is recorded not-run.** The plane names the Phase-2 ABI family
+(`ABI-CONSTANTS`, `ABI-MATRIX`, `ABI-SUBSTITUTION`, `ABI-LINK`, `ABI-LOAD`, `ABI-LAYOUT`,
+`ABI-SYMBOL`) and the Phase-17 runtime family (`RT-TLS13-INTEROP`, `RT-CLI-BODIES`,
+`RT-CROSS-DSO-STATE`, `RT-DOWNSTREAM-CONSUMER`), and the court verifies each is registered and
+passing rather than taking the statement on trust; what 23.8 adds is the shared vocabulary so the
+candidate and the oracle are read the same way. The 0.9.8zh epoch lives in the separately pinned
+historical venue (`docs/REPRODUCIBILITY.md` sections 1.1 and 1.2), so both 0.9.8zh pairs are
+recorded `not_run` with that reason and are never counted as passing.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 21's process unchanged: a subphase lands its code, its court
