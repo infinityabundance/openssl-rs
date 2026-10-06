@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-AUTHORITY-ADMISSION` is 21.1's court: it stages no probe and admits the delta's input pair, recording each authority's identity and build profile as `{id, role, version, profile, manifest, checksum, admitted}` from forensics/authorities/AUTHORITIES.json, the two SOURCE_MANIFEST.{3.6.3,3.6.4}.json source identities, the build records and the differential that names the pair — `openssl-3.6.3-historical` versus `openssl-3.6.4-production`. It fails when an authority named as a delta input is not admitted, or when its identity disagrees between the registry and its manifest, and a synthetic view with an unadmitted authority in the pair and one with a manifest root hash drifted from the registry's are both detected. It records the pair's identity, not the delta between them. `RT-ATLAS-DELTA` is 21.2's: it stages no probe and recomputes the added / removed / changed obligation delta between the two authorities across the atlas planes the procedure names, from the per-authority atlases under forensics/atlas/openssl-3.6.3-historical and forensics/atlas/openssl-3.6.4-production keyed exactly as the differential tool keys them, requiring the committed differential to agree with what it recomputes. The exports plane is measured; the provider registration-row and prerequisite-unit planes are named `not-measured` with their reasons, because the artefacts the procedure names are single-authority and no committed differential compares them — an unmeasured plane is never counted motionless. A synthetic view with an injected added and an injected removed declaration row detects both, with the unchanged symbol plane reporting no motion. `RT-DELTA-DISPOSITION` is 21.3's: the disposition of every delta row with zero unexplained. `RT-AFFECTED-COURT-SELECTION` is 21.4's: the derivation of which courts a delta touches, recorded with the selection derivation. `MAINTENANCE-BOUNDARY-REGISTER` is 21.5's: the register of the explicit non-claims. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the delta between two admitted authorities, with no version-universality claim — OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4 — only the exercised delta claimed, and unknown left unknown. A 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced. docs/PHASE-21-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "claim": "`RT-AUTHORITY-ADMISSION` is 21.1's court: it stages no probe and admits the delta's input pair, recording each authority's identity and build profile as `{id, role, version, profile, manifest, checksum, admitted}` from forensics/authorities/AUTHORITIES.json, the two SOURCE_MANIFEST.{3.6.3,3.6.4}.json source identities, the build records and the differential that names the pair — `openssl-3.6.3-historical` versus `openssl-3.6.4-production`. It fails when an authority named as a delta input is not admitted, or when its identity disagrees between the registry and its manifest, and a synthetic view with an unadmitted authority in the pair and one with a manifest root hash drifted from the registry's are both detected. It records the pair's identity, not the delta between them. `RT-ATLAS-DELTA` is 21.2's: it stages no probe and recomputes the added / removed / changed obligation delta between the two authorities across the atlas planes the procedure names, from the per-authority atlases under forensics/atlas/openssl-3.6.3-historical and forensics/atlas/openssl-3.6.4-production keyed exactly as the differential tool keys them, requiring the committed differential to agree with what it recomputes. The exports plane is measured; the provider registration-row and prerequisite-unit planes are named `not-measured` with their reasons, because the artefacts the procedure names are single-authority and no committed differential compares them — an unmeasured plane is never counted motionless. A synthetic view with an injected added and an injected removed declaration row detects both, with the unchanged symbol plane reporting no motion. `RT-DELTA-DISPOSITION` is 21.3's: it dispositions every delta row against the candidate's own installed surface -- a measured row is `implemented` only when that surface carries it, a `not-measured` plane or axis is `boundary`, and a `removed`/`changed` row the candidate carries re-adopts the historical behaviour the fixed authority moved away from and is a finding -- with zero unexplained, so an un-dispositioned row is a `fail`. `RT-AFFECTED-COURT-SELECTION` is 21.4's: the derivation of which courts a delta touches, recorded with the selection derivation. `MAINTENANCE-BOUNDARY-REGISTER` is 21.5's: the register of the explicit non-claims. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the delta between two admitted authorities, with no version-universality claim — OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4 — only the exercised delta claimed, and unknown left unknown. A 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced. docs/PHASE-21-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
     "courts": [
       {
         "admission_authority": "docs/AUTHORITY_POLICY.md",
@@ -248,17 +248,123 @@
         "probe": "",
         "problems": [],
         "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "baseline_targets": 5,
+          "baseline_unexplained": 0,
+          "caught_security_reintroduction": true,
+          "caught_un_dispositioned": true,
+          "honest": true,
+          "injected_benign_added_findings": 0,
+          "injected_benign_added_row": "RT-DELTA-DISPOSITION-SYNTHETIC-BENIGN-ADDED-ROW",
+          "injected_reintroduced_findings": 1,
+          "injected_reintroduced_row": "RT-DELTA-DISPOSITION-SYNTHETIC-REINTRODUCED-ROW",
+          "injected_un_dispositioned_findings": 1,
+          "injected_un_dispositioned_row": "RT-DELTA-DISPOSITION-SYNTHETIC-UNDISPOSITIONED-ROW",
+          "specificity_holds": true
+        },
+        "counts": {
+          "boundary": 3,
+          "deferred": 0,
+          "findings": 0,
+          "implemented": 2,
+          "measured": 2,
+          "not_in_profile": 0,
+          "not_measured": 3,
+          "prohibited": 0,
+          "targets": 5,
+          "unexplained": 0
+        },
+        "court": "RT-DELTA-DISPOSITION",
+        "disposition_authority": [
+          "docs/SECURITY_DIVERGENCE_POLICY.md",
+          "docs/PHASE-21-SUBPHASES.md"
+        ],
+        "dispositions": [
+          {
+            "authority_value": "16",
+            "axis": "added",
+            "candidate_source": "artifacts/phase2/install/include/openssl/ssl.h",
+            "candidate_value": "16",
+            "carried": true,
+            "disposition": "implemented",
+            "id": "declarations.macros:added:SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+            "key": "SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+            "kind": "declaration",
+            "plane": "declarations.macros",
+            "prohibited": false,
+            "state": "measured"
+          },
+          {
+            "authority_value": "147",
+            "axis": "added",
+            "candidate_source": "artifacts/phase2/install/include/openssl/x509err.h",
+            "candidate_value": "147",
+            "carried": true,
+            "disposition": "implemented",
+            "id": "declarations.macros:added:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+            "key": "X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+            "kind": "declaration",
+            "plane": "declarations.macros",
+            "prohibited": false,
+            "state": "measured"
+          },
+          {
+            "axis": "not-measured-axis",
+            "carried": null,
+            "disposition": "boundary",
+            "id": "declarations.*.changed",
+            "key": "declarations.*.changed",
+            "kind": "axis",
+            "plane": "exports",
+            "prohibited": false,
+            "reason": "the committed differential compares declared-surface membership by key and not declaration bodies, so a declaration whose body changed without its name changing is not detected; `changed` is measured for the ABI symbols (their DSO version) and not for the declared declarations",
+            "state": "not-measured"
+          },
+          {
+            "axis": "not-measured-plane",
+            "carried": null,
+            "disposition": "boundary",
+            "id": "provider-registration-rows",
+            "key": "provider-registration-rows",
+            "kind": "plane",
+            "plane": "provider-registration-rows",
+            "prohibited": false,
+            "reason": "the named census forensics/atlas/provider-algorithms.json is generated for the production authority only, so no committed historical counterpart exists and atlas_differential.py does not compare it; the named authority-to-authority registration-row delta therefore cannot be computed from committed data. What would be needed is a second provider-algorithms.json census generated over the historical authority's provider tables. The differential does compare the per-authority provider-inventory.json (the algorithm names the built openssl publishes) under its own provider_algorithms key, and that adjacent plane is measured below -- it is not this named plane, and the not-measured plane carries no counts",
+            "state": "not-measured"
+          },
+          {
+            "axis": "not-measured-plane",
+            "carried": null,
+            "disposition": "boundary",
+            "id": "prerequisite-units",
+            "key": "prerequisite-units",
+            "kind": "plane",
+            "plane": "prerequisite-units",
+            "prohibited": false,
+            "reason": "the named plane forensics/prerequisites.json is a single-authority openssl-rs artefact (the prerequisite/divergence units of the implementation, not of an authority), with no committed historical counterpart and no differential tool that compares it; the authority-to-authority prerequisite-unit delta therefore cannot be computed from committed data. The named artefact's shape is recorded for context, but it is not a delta and this plane carries no counts",
+            "state": "not-measured"
+          }
+        ],
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the delta-disposition court reads committed atlases and the candidate's installed headers and stages no artifacts/phase21/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it dispositions every delta row RT-ATLAS-DELTA computed and every plane or axis it recorded `not-measured`, reading the delta from that court's own record rather than a second list. A measured `added`/`removed`/`changed` row is `implemented` only when the candidate's installed surface (artifacts/phase2/install/include/openssl/) carries the declaration with the authority's value -- verified, not asserted -- and is otherwise un-dispositioned, which is a fail; a `not-measured` plane or axis is dispositioned `boundary`, a recorded boundary rather than motionless. A `removed`/`changed` row the candidate carries would re-adopt the historical behaviour the fixed authority moved away from, which docs/SECURITY_DIVERGENCE_POLICY.md section 3 makes a finding and not a disposition. The instrument sensitivity control injects an un-dispositioned row and a re-adopted `removed` row and requires both caught while an ordinary carried `added` row produces no finding (docs/PHASE-21-SUBPHASES.md sections 2, 3.2 and 3.5)",
+        "probe": "",
+        "problems": [],
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
       "MAINTENANCE-BOUNDARY-REGISTER": "21.5 lands the register; it records the explicit non-claims — OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4, only the exercised delta is claimed, and unknown stays unknown — and checks that every recorded boundary still matches the evidence that establishes it",
-      "RT-AFFECTED-COURT-SELECTION": "21.4 lands the affected-court selection; it derives which courts a delta touches, records the selection derivation, and re-runs or re-derives exactly those courts, so a delta reaches the courts its obligations do and no more",
-      "RT-DELTA-DISPOSITION": "21.3 lands the delta disposition; it requires every delta row to be dispositioned (`implemented` / `deferred` / `not-in-profile` / `boundary`) with zero unexplained, so a newly discovered un-dispositioned delta row is a `fail`. A row whose disposition would re-adopt a historical behaviour against a security fix is a finding, not a disposition"
+      "RT-AFFECTED-COURT-SELECTION": "21.4 lands the affected-court selection; it derives which courts a delta touches, records the selection derivation, and re-runs or re-derives exactly those courts, so a delta reaches the courts its obligations do and no more"
     },
     "summary": {
       "fail": 0,
-      "pass": 2,
-      "total": 2
+      "pass": 3,
+      "total": 3
     }
   },
   "generator": "forensics/tools/phase21_courts.py",
@@ -402,6 +508,16 @@
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
       "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+    },
+    {
+      "name": "candidate-ssl.h",
+      "path": "artifacts/phase2/install/include/openssl/ssl.h",
+      "sha256": "cf9c22af93d97870c33715a06f56bb4458de0334b4d3396957c174c3c4928f0d"
+    },
+    {
+      "name": "candidate-x509err.h",
+      "path": "artifacts/phase2/install/include/openssl/x509err.h",
+      "sha256": "be93ee6c9d58aadb5f836d5e293ec93c94ffc603c46a1d8d1c8b31cf83959fb9"
     }
   ],
   "kind": "phase21-courts",

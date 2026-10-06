@@ -71,14 +71,37 @@ motionless (section 3.3). The two synthetic rows the control injects are the ins
 proof that the comparison can see an added and a removed row at all, and that an unchanged plane
 reports no motion.
 
+`RT-DELTA-DISPOSITION`, and what it dispositions
+-----------------------------------------------
+21.3's court. Its subject is the **disposition of every delta row** the atlas-delta court computed,
+together with every plane and axis it recorded `not-measured`:
+
+  * a measured `added` / `removed` / `changed` row is `implemented` **only when the candidate's own
+    installed surface carries the declaration** -- verified from
+    `artifacts/phase2/install/include/openssl/`, the distribution prefix the downstream consumers
+    link against, and never from the authority's atlas -- and is otherwise **un-dispositioned**,
+    which is a `fail` rather than a silent addition (`docs/PHASE-21-SUBPHASES.md` section 2);
+  * a plane or axis `RT-ATLAS-DELTA` recorded `not-measured` -- the provider registration-row and
+    prerequisite-unit planes and the declaration-body `changed` axis -- is dispositioned `boundary`:
+    a recorded boundary, never counted motionless;
+  * a `removed` / `changed` row whose disposition would be `implemented` re-adopts the historical
+    behaviour the fixed authority moved away from, so `docs/SECURITY_DIVERGENCE_POLICY.md` section 3
+    makes it a **finding, not a disposition**, and the court `fail`s rather than record it.
+
+The instrument sensitivity control
+----------------------------------
+Section 3.2's rule. Beside the real disposition the court derives synthetic target lists and requires
+each to react as it must: a measured row the candidate carries in no header (un-dispositioned) and a
+`removed` row the candidate carries (a prohibited re-adoption) are both caught, while an `added` row
+the candidate carries produces no finding. The control is honest only when the real disposition
+carries **zero findings** (specificity) *and* both injections are caught *and* the benign injection
+stays clean.
+
 The pending courts
 ------------------
-Three of the five courts the plan names are not runnable yet. `PENDING_COURTS` names each with the
+Two of the five courts the plan names are not runnable yet. `PENDING_COURTS` names each with the
 subphase that lands its instrument:
 
-  * `RT-DELTA-DISPOSITION` (21.3) — the disposition of every delta row (`implemented` / `deferred`
-    / `not-in-profile` / `boundary`), requiring zero unexplained, so a newly discovered
-    un-dispositioned delta row is a `fail` rather than a silent addition;
   * `RT-AFFECTED-COURT-SELECTION` (21.4) — the derivation of which courts a delta touches, recorded
     with the selection derivation, so the selected courts are re-run or re-derived;
   * `MAINTENANCE-BOUNDARY-REGISTER` (21.5) — the register that records the explicit non-claims
@@ -104,6 +127,7 @@ import argparse
 import copy
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -159,28 +183,39 @@ PREREQUISITES = REPO_ROOT / "forensics" / "prerequisites.json"
 CONTROL_ADDED_ROW = "RT-ATLAS-DELTA-SYNTHETIC-ADDED-ROW"
 CONTROL_REMOVED_ROW = "RT-ATLAS-DELTA-SYNTHETIC-REMOVED-ROW"
 
+# The candidate's installed declaration surface -- the headers `build_phase2.sh` installs under the
+# distribution prefix and Phase 17's consumers link against. A delta row is `implemented` only when
+# *this* surface carries the declaration, verified rather than asserted; the authority's atlas
+# carrying it says the authority moved, not that the candidate followed.
+INSTALL_INCLUDE = REPO_ROOT / "artifacts" / "phase2" / "install" / "include" / "openssl"
+
+# The synthetic targets the delta-disposition sensitivity control injects: a measured row the
+# candidate carries in no header (un-dispositioned), a `removed` row the candidate carries (a
+# prohibited re-adoption of the historical behaviour), and an ordinary `added` row the candidate
+# carries (which must produce no finding, so specificity is proven).
+CONTROL_UNDISPOSITIONED_ROW = "RT-DELTA-DISPOSITION-SYNTHETIC-UNDISPOSITIONED-ROW"
+CONTROL_REINTRODUCED_ROW = "RT-DELTA-DISPOSITION-SYNTHETIC-REINTRODUCED-ROW"
+CONTROL_BENIGN_ADDED_ROW = "RT-DELTA-DISPOSITION-SYNTHETIC-BENIGN-ADDED-ROW"
+
 AUTHORITY_ADMISSION = "RT-AUTHORITY-ADMISSION"
 ATLAS_DELTA = "RT-ATLAS-DELTA"
+DELTA_DISPOSITION = "RT-DELTA-DISPOSITION"
 
 # The courts, in the order they land. `(name, probe filename)`, and the probe is declared in the
 # same commit as the entry, so a runner that names a probe which does not exist cannot be
-# committed. A court that stages no probe names `""`: `RT-AUTHORITY-ADMISSION` and `RT-ATLAS-DELTA`
-# derive their evidence from committed records, so they have no staged transcript to read back.
+# committed. A court that stages no probe names `""`: `RT-AUTHORITY-ADMISSION`, `RT-ATLAS-DELTA`
+# and `RT-DELTA-DISPOSITION` derive their evidence from committed records, so they have no staged
+# transcript to read back.
 COURTS: list[tuple[str, str]] = [
     (AUTHORITY_ADMISSION, ""),
     (ATLAS_DELTA, ""),
+    (DELTA_DISPOSITION, ""),
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
 # the instrument and what the court will drive, so "nothing registered" is a stated distance rather
 # than a court quietly dropped.
 PENDING_COURTS: dict[str, str] = {
-    "RT-DELTA-DISPOSITION": (
-        "21.3 lands the delta disposition; it requires every delta row to be dispositioned "
-        "(`implemented` / `deferred` / `not-in-profile` / `boundary`) with zero unexplained, so a "
-        "newly discovered un-dispositioned delta row is a `fail`. A row whose disposition would "
-        "re-adopt a historical behaviour against a security fix is a finding, not a disposition"
-    ),
     "RT-AFFECTED-COURT-SELECTION": (
         "21.4 lands the affected-court selection; it derives which courts a delta touches, records "
         "the selection derivation, and re-runs or re-derives exactly those courts, so a delta "
@@ -872,6 +907,290 @@ def atlas_delta_court(name: str) -> dict:
     }
 
 
+# --------------------------------------------------------------------------------------------
+# the delta-disposition court: every delta row dispositioned, with zero unexplained
+# --------------------------------------------------------------------------------------------
+
+def candidate_declaration(name: str, defined_in: list, plane: str, expected_value) -> dict:
+    """Whether the candidate's **own installed surface** carries one delta declaration.
+
+    A delta row is `implemented` only when the candidate's installed headers carry the declaration,
+    not because the authority's atlas carries it (`docs/PHASE-21-SUBPHASES.md` section 3.3). The
+    authority's macro/declaration atlas records `defined_in` -- the header basename under
+    `include/openssl/` -- so the installed header is located beside it in the candidate's
+    distribution prefix. A macro's value is compared with the authority's when both are present, so
+    a declaration carried under a different value is not counted as carried. Returns
+    `{carried, source, value}`; `carried` false with no source is a declaration the candidate does
+    not carry at all, which makes the row un-dispositioned.
+    """
+    for header in defined_in or []:
+        p = INSTALL_INCLUDE / header
+        if not p.is_file():
+            nested = sorted(INSTALL_INCLUDE.rglob(header))
+            p = nested[0] if nested else p
+        if not p.is_file():
+            continue
+        text = p.read_text(encoding="utf-8", errors="replace")
+        if plane == "declarations.macros":
+            m = re.search(rf"^#\s*define\s+{re.escape(name)}\s+(\S.*?)\s*$", text, re.M)
+            if not m:
+                continue
+            value = re.split(r"/\*", m.group(1))[0].strip()
+            carried = expected_value is None or value == str(expected_value)
+            return {"carried": carried, "source": rel(p), "value": value}
+        if re.search(rf"\b{re.escape(name)}\b", text):
+            return {"carried": True, "source": rel(p), "value": None}
+    return {"carried": False, "source": None, "value": None}
+
+
+def delta_disposition_targets() -> list[dict]:
+    """Every delta row and every `not-measured` surface, as a disposition target.
+
+    The delta is the one `RT-ATLAS-DELTA` computed -- its own recorded planes, not a second list --
+    so the two courts cannot disagree about what moved. A measured row's `carried` is read from the
+    candidate's installed headers; a plane or axis recorded `not-measured` is a boundary target
+    (`docs/PHASE-21-SUBPHASES.md` sections 3.3 and 4.6).
+    """
+    view = read_delta_view()
+    delta = atlas_delta_court(ATLAS_DELTA)
+    targets: list[dict] = []
+    for plane in delta.get("planes") or []:
+        if plane.get("state") == "measured":
+            for axis in ("added", "removed", "changed"):
+                for row in plane.get(axis) or []:
+                    subplane = row["plane"].split(".", 1)[1]
+                    sides = (view.get("declarations") or {}).get(subplane) or {}
+                    rec = ((sides.get("to") or {}).get(row["key"])
+                           or (sides.get("from") or {}).get(row["key"]) or {})
+                    carried = candidate_declaration(
+                        row["key"], rec.get("defined_in") or [], row["plane"], rec.get("value"))
+                    targets.append({
+                        "id": f"{row['plane']}:{axis}:{row['key']}",
+                        "plane": row["plane"],
+                        "kind": row["kind"],
+                        "axis": axis,
+                        "key": row["key"],
+                        "state": "measured",
+                        "carried": bool(carried["carried"]),
+                        "candidate_source": carried.get("source"),
+                        "candidate_value": carried.get("value"),
+                        "authority_value": rec.get("value"),
+                    })
+            for ax in plane.get("not_measured_axes") or []:
+                targets.append({
+                    "id": ax["axis"],
+                    "plane": plane["plane"],
+                    "kind": "axis",
+                    "axis": "not-measured-axis",
+                    "key": ax["axis"],
+                    "state": "not-measured",
+                    "carried": None,
+                    "reason": ax.get("reason"),
+                })
+        else:
+            targets.append({
+                "id": plane["plane"],
+                "plane": plane["plane"],
+                "kind": "plane",
+                "axis": "not-measured-plane",
+                "key": plane["plane"],
+                "state": "not-measured",
+                "carried": None,
+                "reason": plane.get("reason"),
+            })
+    return targets
+
+
+def derive_dispositions(targets: list[dict]) -> dict:
+    """The disposition of every target, and the findings a real gap produces.
+
+    A pure function of the target list, so the sensitivity control injects a target and re-derives.
+    `implemented` is recorded only for a measured row the candidate carries; a `not-measured` plane
+    or axis is recorded `boundary`. A measured row the candidate does not carry is
+    **un-dispositioned** -- no value in `implemented`/`deferred`/`not-in-profile`/`boundary` is
+    honest for it -- and is a finding, because every un-dispositioned delta row is a `fail`
+    (`docs/PHASE-21-SUBPHASES.md` section 2). A `removed`/`changed` row the candidate carries would
+    re-adopt the historical behaviour the fixed authority moved away from, so
+    `docs/SECURITY_DIVERGENCE_POLICY.md` section 3 makes it a finding and not a disposition. A
+    non-empty findings list is a `fail`, not a verdict the court talks itself out of.
+    """
+    rows: list[dict] = []
+    findings: list[str] = []
+    for target in targets:
+        row = dict(target)
+        if row["state"] == "not-measured":
+            row["disposition"] = "boundary"
+        elif row.get("carried"):
+            row["disposition"] = "implemented"
+        else:
+            row["disposition"] = None
+        prohibited = row["axis"] in ("removed", "changed") \
+            and row["disposition"] == "implemented"
+        row["prohibited"] = bool(prohibited)
+        if row["disposition"] is None:
+            findings.append(
+                f"delta row {row['id']} is measured but the candidate's installed surface "
+                f"({rel(INSTALL_INCLUDE)}) does not carry it, so it is un-dispositioned: none of "
+                f"`implemented`/`deferred`/`not-in-profile`/`boundary` is honest for it, and an "
+                f"un-dispositioned delta row is a `fail` rather than a silent addition "
+                f"(docs/PHASE-21-SUBPHASES.md section 2, docs/PARITY_MODEL.md section 1)"
+            )
+        if prohibited:
+            findings.append(
+                f"delta row {row['id']} is on the `{row['axis']}` axis -- the trajectory "
+                f"{HISTORICAL_AUTHORITY} -> {PRODUCTION_AUTHORITY} moved away from it -- but the "
+                f"candidate's installed surface carries it, so dispositioning it `implemented` "
+                f"would re-adopt the historical behaviour the fixed authority removed; "
+                f"docs/SECURITY_DIVERGENCE_POLICY.md section 3 prohibits reintroducing a security "
+                f"regression to match a historical authority, so this is a finding and not a "
+                f"disposition and the court `fail`s"
+            )
+        rows.append(row)
+    counts = {
+        "targets": len(rows),
+        "measured": sum(1 for r in rows if r["state"] == "measured"),
+        "not_measured": sum(1 for r in rows if r["state"] == "not-measured"),
+        "implemented": sum(1 for r in rows if r["disposition"] == "implemented"),
+        "boundary": sum(1 for r in rows if r["disposition"] == "boundary"),
+        "deferred": sum(1 for r in rows if r["disposition"] == "deferred"),
+        "not_in_profile": sum(1 for r in rows if r["disposition"] == "not-in-profile"),
+        "unexplained": sum(1 for r in rows if r["disposition"] is None),
+        "prohibited": sum(1 for r in rows if r["prohibited"]),
+        "findings": len(findings),
+    }
+    return {"rows": rows, "counts": counts, "findings": findings}
+
+
+def delta_disposition_problems(derived: dict) -> list[str]:
+    """Internal consistency of the disposition itself, distinct from its findings.
+
+    The findings are real gaps in the delta; these are defects in the read or the derivation, which
+    make the verdict `fail` on their own account rather than letting an incomplete read pass.
+    """
+    problems: list[str] = []
+    counts = derived["counts"]
+    if counts["targets"] == 0:
+        problems.append(
+            "the delta carries no row and no not-measured plane, so the disposition is vacuous: an "
+            "empty target set is a read that measured nothing rather than a complete disposition"
+        )
+    accounted = (counts["implemented"] + counts["boundary"] + counts["deferred"]
+                 + counts["not_in_profile"] + counts["unexplained"])
+    if counts["targets"] != accounted:
+        problems.append(
+            f"the disposition does not account for every target: {counts['targets']} != "
+            f"implemented {counts['implemented']} + boundary {counts['boundary']} + deferred "
+            f"{counts['deferred']} + not-in-profile {counts['not_in_profile']} + unexplained "
+            f"{counts['unexplained']}"
+        )
+    if not INSTALL_INCLUDE.is_dir():
+        problems.append(
+            f"the candidate install prefix {rel(INSTALL_INCLUDE)} is absent, so no delta row's "
+            f"declaration can be verified against the candidate's own surface"
+        )
+    return problems
+
+
+def disposition_sensitivity_control(targets: list[dict]) -> dict:
+    """Prove the disposition can fail: inject an un-dispositioned and a re-adopted row.
+
+    Three synthetic target lists are derived beside the real one -- a measured row the candidate
+    carries in no header (un-dispositioned), a `removed` row the candidate carries (a prohibited
+    re-adoption of the historical behaviour), and an ordinary `added` row the candidate carries --
+    and each must behave as it must. The control is honest only when the real disposition carries
+    zero findings (specificity), both injections are caught, and the benign injection stays clean;
+    otherwise a court that cannot tell a carried row from an absent one, or a fixed-authority row
+    from a re-adopted one, would pass vacuously (`docs/PHASE-21-SUBPHASES.md` section 3.2).
+    """
+    base = derive_dispositions(targets)
+    specificity = not base["findings"]
+
+    def synthetic(cid: str, axis: str, carried: bool) -> dict:
+        return {
+            "id": cid, "plane": "synthetic", "kind": "declaration", "axis": axis,
+            "key": cid, "state": "measured", "carried": carried,
+            "candidate_source": None, "candidate_value": None, "authority_value": None,
+        }
+
+    un = derive_dispositions(
+        targets + [synthetic(CONTROL_UNDISPOSITIONED_ROW, "added", False)])
+    re_adopted = derive_dispositions(
+        targets + [synthetic(CONTROL_REINTRODUCED_ROW, "removed", True)])
+    benign = derive_dispositions(
+        targets + [synthetic(CONTROL_BENIGN_ADDED_ROW, "added", True)])
+
+    caught_un = any("un-dispositioned" in f for f in un["findings"])
+    caught_re = any("re-adopt the historical behaviour" in f for f in re_adopted["findings"])
+    benign_clean = not benign["findings"]
+    return {
+        "baseline_targets": base["counts"]["targets"],
+        "baseline_findings": len(base["findings"]),
+        "baseline_unexplained": base["counts"]["unexplained"],
+        "injected_un_dispositioned_row": CONTROL_UNDISPOSITIONED_ROW,
+        "injected_un_dispositioned_findings": len(un["findings"]),
+        "injected_reintroduced_row": CONTROL_REINTRODUCED_ROW,
+        "injected_reintroduced_findings": len(re_adopted["findings"]),
+        "injected_benign_added_row": CONTROL_BENIGN_ADDED_ROW,
+        "injected_benign_added_findings": len(benign["findings"]),
+        "caught_un_dispositioned": bool(caught_un),
+        "caught_security_reintroduction": bool(caught_re),
+        "specificity_holds": bool(specificity and benign_clean),
+        "honest": bool(specificity and benign_clean and caught_un and caught_re),
+    }
+
+
+def delta_disposition_court(name: str) -> dict:
+    """`RT-DELTA-DISPOSITION`: disposition every delta row, and fail on an un-dispositioned one.
+
+    Stages no probe. It reads the delta `RT-ATLAS-DELTA` computed and the candidate's installed
+    headers, dispositions every measured row (`implemented` only when the candidate carries the
+    declaration) and every `not-measured` plane or axis (`boundary`), and records no value that
+    would re-adopt a historical behaviour against a fixed authority. The verdict is `pass` only when
+    every row is dispositioned, no row re-adopts, the arithmetic is consistent, and the control is
+    honest; a real gap is a `finding` and a `fail`.
+    """
+    targets = delta_disposition_targets()
+    derived = derive_dispositions(targets)
+    control = disposition_sensitivity_control(targets)
+    problems = delta_disposition_problems(derived)
+
+    verdict = "pass" if (
+        not problems and control["honest"] and not derived["findings"]
+    ) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it dispositions every delta row RT-ATLAS-DELTA computed and every "
+            "plane or axis it recorded `not-measured`, reading the delta from that court's own "
+            "record rather than a second list. A measured `added`/`removed`/`changed` row is "
+            "`implemented` only when the candidate's installed surface "
+            "(artifacts/phase2/install/include/openssl/) carries the declaration with the "
+            "authority's value -- verified, not asserted -- and is otherwise un-dispositioned, "
+            "which is a fail; a `not-measured` plane or axis is dispositioned `boundary`, a "
+            "recorded boundary rather than motionless. A `removed`/`changed` row the candidate "
+            "carries would re-adopt the historical behaviour the fixed authority moved away from, "
+            "which docs/SECURITY_DIVERGENCE_POLICY.md section 3 makes a finding and not a "
+            "disposition. The instrument sensitivity control injects an un-dispositioned row and "
+            "a re-adopted `removed` row and requires both caught while an ordinary carried `added` "
+            "row produces no finding (docs/PHASE-21-SUBPHASES.md sections 2, 3.2 and 3.5)"
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the delta-disposition court reads committed atlases and the candidate's installed "
+            "headers and stages no artifacts/phase21/probes/ pair, so it takes no transcript to "
+            "diff and carries no FRF declaration"
+        ),
+        "disposition_authority": [rel(SECURITY_POLICY_DOC), rel(PLAN)],
+        "dispositions": derived["rows"],
+        "counts": derived["counts"],
+        "findings": derived["findings"],
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -884,15 +1203,19 @@ def main(argv: list[str]) -> int:
 
     records: list[dict] = []
     for name, filename in COURTS:
-        # 21.1's and 21.2's courts stage no probe: their subjects are the pair's committed identity
-        # and the movement between the two admitted authorities, so each is computed here rather than
-        # read back from disk and no digest cycle forms. This stratum owns no export, so no
-        # differential probe over a symbol set is its evidence.
+        # 21.1's, 21.2's and 21.3's courts stage no probe: their subjects are the pair's committed
+        # identity, the movement between the two admitted authorities, and the disposition of that
+        # movement, so each is computed here rather than read back from disk and no digest cycle
+        # forms. This stratum owns no export, so no differential probe over a symbol set is its
+        # evidence.
         if name == AUTHORITY_ADMISSION:
             records.append(authority_admission_court(name))
             continue
         if name == ATLAS_DELTA:
             records.append(atlas_delta_court(name))
+            continue
+        if name == DELTA_DISPOSITION:
+            records.append(delta_disposition_court(name))
             continue
         src = REPO_ROOT / "courts" / "phase21" / str(filename)
         records.append({"court": name, "verdict": "fail", "stage": "probe-missing",
@@ -928,7 +1251,11 @@ def main(argv: list[str]) -> int:
             "committed differential compares them — an unmeasured plane is never counted motionless. "
             "A synthetic view with an injected added and an injected removed declaration row detects "
             "both, with the unchanged symbol plane reporting no motion. `RT-DELTA-DISPOSITION` is "
-            "21.3's: the disposition of every delta row with zero unexplained. "
+            "21.3's: it dispositions every delta row against the candidate's own installed surface "
+            "-- a measured row is `implemented` only when that surface carries it, a `not-measured` "
+            "plane or axis is `boundary`, and a `removed`/`changed` row the candidate carries "
+            "re-adopts the historical behaviour the fixed authority moved away from and is a "
+            "finding -- with zero unexplained, so an un-dispositioned row is a `fail`. "
             "`RT-AFFECTED-COURT-SELECTION` is 21.4's: the derivation of which courts a delta "
             "touches, recorded with the selection derivation. `MAINTENANCE-BOUNDARY-REGISTER` is "
             "21.5's: the register of the explicit non-claims. This stratum owns no exported "
@@ -974,6 +1301,18 @@ def main(argv: list[str]) -> int:
         ],
         InputRef(name="provider-algorithms", path=PROVIDER_CENSUS),
         InputRef(name="prerequisites", path=PREREQUISITES),
+        # The 21.3 delta-disposition court's candidate-surface inputs: the installed headers it
+        # verified the committed delta's declarations against. They are read from the court's own
+        # recorded `candidate_source`s, so the evidence binds the exact bytes it read.
+        *[
+            InputRef(name=f"candidate-{Path(src).name}", path=REPO_ROOT / src)
+            for src in sorted({
+                str(r["candidate_source"])
+                for rec in records if rec.get("court") == DELTA_DISPOSITION
+                for r in (rec.get("dispositions") or [])
+                if r.get("candidate_source")
+            })
+        ],
     ]
     doc = envelope(kind="phase21-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
@@ -1009,6 +1348,26 @@ def main(argv: list[str]) -> int:
                     extra = (f" added={row['counts']['added']} removed={row['counts']['removed']} "
                              f"changed={row['counts']['changed']}")
                 print(f"      plane {row['plane']:<26} {tag}{extra}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == DELTA_DISPOSITION:
+            c = r["control"]
+            counts = r["counts"]
+            print(f"  {r['court']:<32} pass   (no probe, {counts['targets']} target(s): "
+                  f"{counts['implemented']} implemented / {counts['boundary']} boundary / "
+                  f"{counts['deferred']} deferred / {counts['not_in_profile']} not-in-profile / "
+                  f"{counts['unexplained']} unexplained; {counts['findings']} finding(s); "
+                  f"control honest={c['honest']} specificity={c['specificity_holds']} "
+                  f"injected-un-dispositioned->{c['injected_un_dispositioned_findings']} finding(s) "
+                  f"injected-reintroduced->{c['injected_reintroduced_findings']} finding(s) "
+                  f"injected-benign->{c['injected_benign_added_findings']} finding(s))")
+            for row in r["dispositions"]:
+                tag = "un-dispositioned" if row["disposition"] is None else row["disposition"]
+                if row.get("prohibited"):
+                    tag += " (prohibited)"
+                source = row.get("candidate_source") or ""
+                print(f"      row {row['id']:<68} {tag}"
+                      + (f"  ({source})" if source else ""))
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":
