@@ -30,10 +30,10 @@
         "closure": "the `RT-DELTA-DISPOSITION` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-DELTA-DISPOSITION is pending",
+        "measurement_state": "complete",
+        "observation": "RT-DELTA-DISPOSITION is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase21/COURTS.json",
         "unit": "delta-disposition",
         "what": "the disposition of every delta row (`implemented` / `deferred` / `not-in-profile` / `boundary`), requiring zero unexplained, so a newly discovered un-dispositioned delta row is a `fail` rather than a silent addition"
@@ -68,8 +68,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 2,
-      "open_in_this_stratum": 3,
+      "implemented": 3,
+      "open_in_this_stratum": 2,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -110,7 +110,7 @@
     {
       "name": "phase-21-courts",
       "path": "artifacts/phase21/COURTS.json",
-      "sha256": "e0d52c8bd32a9b8865db07e947fc887d945e6cb64d1975f4473aeb31dd7dd00a"
+      "sha256": "e1ccdb504aa97c494dc5d7b604b1ae3e0bed4e39ed1e6503ee5de788c894d3e9"
     }
   ],
   "kind": "phase21-obligations",

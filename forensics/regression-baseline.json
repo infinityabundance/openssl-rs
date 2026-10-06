@@ -295,6 +295,10 @@
       "observations": 10,
       "verdict": "pass"
     },
+    "RT-DELTA-DISPOSITION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-DH": {
       "observations": 589,
       "verdict": "pass"
@@ -846,7 +850,7 @@
     "phase18": 0,
     "phase19": 0,
     "phase20": 0,
-    "phase21": 3,
+    "phase21": 2,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
