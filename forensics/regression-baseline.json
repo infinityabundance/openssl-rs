@@ -148,6 +148,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "RT-ATLAS-PARAMETERIZATION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-AUTHORITY-ADMISSION": {
       "observations": 0,
       "verdict": "pass"
@@ -870,7 +874,7 @@
     "phase20": 0,
     "phase21": 0,
     "phase22": 0,
-    "phase23": 15,
+    "phase23": 14,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

@@ -588,6 +588,65 @@ def validate_security_observation(rec: dict) -> list[str]:
     return problems
 
 
+def validate_parameterization_receipt(rec: dict) -> list[str]:
+    """A parameterization receipt: the same code path over several authorities, with every
+    measured absence a counted zero that carries its provenance.
+
+    The load-bearing invariant is that a `measured_absence` row is never an omission: it must
+    carry `count == 0` **and** non-empty evidence. A receipt whose census row claims an absence
+    with no evidence, or an absence with a nonzero count, is refused.
+    """
+    fields = ("receipt_id", "default_authority", "plane_order", "censuses",
+              "measured_absences", "byte_identity")
+    problems = _missing(rec, fields)
+    problems += _nonempty(rec, "receipt_id")
+    problems += _nonempty(rec, "default_authority")
+    if "plane_order" in rec and not rec["plane_order"]:
+        problems.append("plane_order must list the shared plane set")
+    censuses = rec.get("censuses")
+    if "censuses" in rec and not isinstance(censuses, dict):
+        problems.append("censuses must be a mapping of authority id -> census")
+        return problems
+    absent = rec.get("measured_absences")
+    if "measured_absences" in rec and not isinstance(absent, dict):
+        problems.append("measured_absences must be a mapping of authority id -> plane list")
+    for aid, census in sorted((censuses or {}).items()):
+        if not isinstance(census, dict):
+            problems.append(f"census[{aid}] must be a mapping")
+            continue
+        if census.get("authority_id") != aid:
+            problems.append(f"census[{aid}] names authority_id {census.get('authority_id')!r}")
+        planes = census.get("planes")
+        if not isinstance(planes, list) or not planes:
+            problems.append(f"census[{aid}] must carry a non-empty plane list")
+            continue
+        for row in planes:
+            if not isinstance(row, dict) or not row.get("plane"):
+                problems.append(f"census[{aid}] carries a plane row with no name")
+                continue
+            if row.get("status") not in ("produced", "measured_absence"):
+                problems.append(f"census[{aid}] plane {row['plane']!r} status "
+                                f"{row.get('status')!r} is not produced/measured_absence")
+            if row.get("status") == "measured_absence":
+                if row.get("count") != 0:
+                    problems.append(f"census[{aid}] measured absence {row['plane']!r} has "
+                                    f"count {row.get('count')!r}, not zero")
+                ev = row.get("evidence")
+                if not ev:
+                    problems.append(f"census[{aid}] measured absence {row['plane']!r} carries "
+                                    f"no evidence (an absence is a counted claim)")
+    byte_identity = rec.get("byte_identity")
+    if "byte_identity" in rec:
+        if not isinstance(byte_identity, dict):
+            problems.append("byte_identity must be a mapping")
+        else:
+            if not byte_identity.get("authority_id"):
+                problems.append("byte_identity must name the authority it binds")
+            if not isinstance(byte_identity.get("files"), list):
+                problems.append("byte_identity.files must be a list")
+    return problems
+
+
 def validate_compatibility_matrix(rec: dict) -> list[str]:
     """The assembled matrix: cells that are each directional and dimension-specific."""
     fields = ("matrix_id", "rows", "generated_from")
@@ -638,6 +697,8 @@ REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
                              "evidence", "reintroduced"),
     "support_status": ("subject_id", "status", "rungs_attained", "evidence"),
     "compatibility_matrix": ("matrix_id", "rows", "generated_from"),
+    "parameterization_receipt": ("receipt_id", "default_authority", "plane_order", "censuses",
+                                 "measured_absences", "byte_identity"),
 }
 
 SCHEMAS = {
@@ -652,6 +713,7 @@ SCHEMAS = {
     "security_observation": validate_security_observation,
     "support_status": validate_support_status,
     "compatibility_matrix": validate_compatibility_matrix,
+    "parameterization_receipt": validate_parameterization_receipt,
 }
 
 
@@ -790,6 +852,28 @@ _GOOD: dict[str, dict] = {
         }],
         "generated_from": ["forensics/multitrack/compatibility-views.json"],
     },
+    "parameterization_receipt": {
+        "receipt_id": "PARAM-openssl-3.6.4-production",
+        "default_authority": "openssl-3.6.4-production",
+        "plane_order": ["source-tree", "providers", "quic"],
+        "censuses": {
+            "openssl-3.6.4-production": {
+                "authority_id": "openssl-3.6.4-production",
+                "planes": [{"plane": "providers", "status": "produced", "count": 388,
+                            "evidence": {"manifest_paths_matched": 388}}],
+            },
+            "openssl-0.9.8zh-historical": {
+                "authority_id": "openssl-0.9.8zh-historical",
+                "planes": [{"plane": "providers", "status": "measured_absence", "count": 0,
+                            "evidence": {"manifest_paths_matched": 0,
+                                         "detail": "0.9.8zh predates the 3.0.0 provider model"}}],
+            },
+        },
+        "measured_absences": {"openssl-0.9.8zh-historical": ["providers"]},
+        "byte_identity": {"authority_id": "openssl-3.6.4-production",
+                          "files": [{"path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+                                     "sha256": _DIGEST}]},
+    },
 }
 
 
@@ -822,6 +906,9 @@ def _bad(kind: str) -> dict:
         rec["rungs_attained"] = ["catalogued", "built-authority"]  # a skipped rung
     elif kind == "compatibility_matrix":
         rec["rows"] = [{"dimension": "source_api"}]  # a cell with no direction
+    elif kind == "parameterization_receipt":
+        # an absence with no evidence is an omission dressed as a measurement
+        rec["censuses"]["openssl-0.9.8zh-historical"]["planes"][0]["evidence"] = {}
     else:
         raise AssertionError(f"no bad case for {kind}")
     return rec

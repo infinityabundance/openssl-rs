@@ -147,6 +147,12 @@ GENERATORS_BEFORE_LEDGERS = [
     # fact a reader can recompute, which a generator nothing re-runs would defeat. The court
     # `RT-RELEASE-CATALOG` reads the two artefacts it writes.
     "forensics/tools/authority_catalog.py",
+    # Phase 23.3's parameterized archaeology atlas (D538). It is a pure function of committed
+    # inputs -- the default-authority alias, the admitted/historical registries and the committed
+    # source manifests -- so a stale receipt or plane census is a failure rather than a silent
+    # divergence. The RT-ATLAS-PARAMETERIZATION court reads the two artefacts it writes and
+    # re-derives every census through the same generator.
+    "forensics/tools/atlas_authority.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -305,6 +311,11 @@ COMPARED = [
     # is defeated by a generator nothing re-runs.
     "forensics/release-catalog.json",
     "forensics/authority-lineage.json",
+    # Phase 23.3's parameterization receipt and the historical authority's plane census: pure
+    # functions of the committed default-authority alias and the committed source manifests, so a
+    # stale copy is a failure and not a silent divergence.
+    "forensics/atlas/parameterization-receipt.json",
+    "forensics/atlas/openssl-0.9.8zh-historical/plane-census.json",
 ]
 
 # ---------------------------------------------------------------------------

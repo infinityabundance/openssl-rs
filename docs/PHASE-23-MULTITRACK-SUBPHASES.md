@@ -112,8 +112,9 @@ measures it, and each court lands with the subphase that builds its instrument:
 `delta-engine`, `abi-history-facades`, `semantic-courts`, `compatibility-views`,
 `historical-population`, `downstream-multitrack`, `directional-compatibility-edges`,
 `negative-obligations`, `security-lineage`, `support-status`, `compatibility-matrix` and
-`multitrack-seal`. Two of the seventeen have closed -- `release-nodes` (23.1) and `authority-nodes`
-(23.2) -- and the ledger's live `counts` is the record of that: `open_in_this_stratum` is the
+`multitrack-seal`. Three of the seventeen have closed -- `release-nodes` (23.1), `authority-nodes`
+(23.2) and `atlas-parameterization` (23.3, docs/DECISIONS.md D538) -- and the ledger's live `counts`
+is the record of that: `open_in_this_stratum` is the
 number of still-open units, not the whole working set. The five units this plan's first draft
 omitted -- `atlas-parameterization`, `abi-history-facades`, `semantic-courts`,
 `historical-population` and `downstream-multitrack` -- are the brief §52 slices §4.8 restores,
