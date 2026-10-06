@@ -32,6 +32,13 @@ before its evidence exists.
 | 20 | 3.6.4 custodian seal |
 | 21 | Maintenance delta machinery |
 | 22 | Authority exhaustiveness / whole-program compatibility atlas |
+| 23 | Multitrack authority compatibility and OpenSSL lineage |
+
+**Phase 23 is dependency-ordered after the authority archaeology and the maintenance-delta
+machinery, not after the highest number.** It is admitted once Phase 21 is complete, and because
+Phase 21 requires Phase 22 the edge covers both; no existing phase is renumbered. The dependency
+is declared rather than read off the numbers (`forensics/tools/phase_state.py`'s `REQUIRES`;
+`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 0).
 
 **Phase 22 is dependency-ordered out of number order.** Its evidence is the whole-program
 archaeology every later implementation stratum leans on -- the X.509 verification engine most of

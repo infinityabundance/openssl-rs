@@ -378,10 +378,15 @@ CHECKS: list[Check] = [
 # property of the document rather than a phase number special-cased here -- a plan that carries
 # the anchor and has no ledger still fails, in `active_status_check`.
 for _phase in active_phases():
-    _plan = f"docs/PHASE-{_phase}-SUBPHASES.md"
-    _path = REPO_ROOT / _plan
-    if not _path.is_file():
+    # A stratum's plan may carry a slug between the number and `SUBPHASES` (Phase 23's is
+    # `PHASE-23-MULTITRACK-SUBPHASES.md`), so the plan is discovered by glob rather than by
+    # composing the conventional name: composing it would silently skip a more specific plan, and
+    # a plan whose status clause is never checked is a clause that cannot fail.
+    _candidates = sorted(REPO_ROOT.glob(f"docs/PHASE-{_phase}-*SUBPHASES.md"))
+    if not _candidates:
         continue
+    _path = _candidates[0]
+    _plan = _path.relative_to(REPO_ROOT).as_posix()
     if LANDED_CLAUSE not in _path.read_text(encoding="utf-8"):
         continue
     CHECKS.append(active_status_check(_phase, _plan))

@@ -35454,3 +35454,80 @@ and its `--self-test`; `phase_state.py` and its `--self-test`; `plan_reconciliat
 `gen_frf_courts.py --check`; `cargo fmt`; `cargo clippy --all-targets -- -D warnings`.
 
 The push-event comparison reads its `before` from the seal commit's `github.event.before` (`3297fbae`), whose committed gate was stale at **386**, so the same regeneration is recorded a second time as `386 -> 468`; `forensics/ownership-transitions.json` carries both rows (the ref supplying `before` is the only difference) and `regression_guard.py --baseline-ref 3297fbae --require-current` passes.
+
+## D532 -- Phase 23 activates: the multitrack authority model, and its non-export unit
+
+Phase 23 is the stratum `docs/RELEASE_GATES.md` section 1 names "Multitrack authority
+compatibility and OpenSSL lineage". It is dependency-ordered after the authority archaeology
+(Phase 1, strengthened by Phase 22) and the maintenance-delta machinery (Phase 21): its first
+subphase, 23.0, lands `docs/PHASE-23-MULTITRACK-SUBPHASES.md`,
+`forensics/tools/multitrack_schemas.py`, the contract ledger `forensics/phase23-obligations.json`
+and the courts scaffold `artifacts/phase23/COURTS.json`, and its seal
+`docs/PHASE-23-MULTITRACK-SEAL.md` is a later subphase's. No existing phase is renumbered, and
+`REQUIRES[23] = (21,)`; because Phase 21 requires Phase 22, that edge transitively requires both.
+
+**The model.** One Rust implementation, not one per version: a single crate emits
+**independently-evidenced compatibility views** for the OpenSSL release lineage, from the first
+real release (OpenSSL 0.9.1c) through the latest admitted stable release and forward to future
+releases. The architecture is infrastructure for the lifetime of the project: **release nodes**
+(one per upstream release, with its scheme, channel and source identity), **authority nodes** (one
+per admitted built authority over a release, platform, arch, profile, toolchain and build
+environment, with binary and installed hashes), **lineage edges** (chronological successor, git
+ancestry, branch fork, maintenance successor, security backport, declared ABI compatibility,
+observed compatibility), **entity lineage** (same entity, renamed, moved, signature changed,
+layout changed, kind changed, split, merged, deprecated, removed, reintroduced, semantic
+successor, unknown relationship), a **delta engine**, **compatibility views**, **negative
+obligations** and **security lineage**. Phase 23 owns **no exported symbol**: reading
+`forensics/atlas/symbol-ownership.json` for `owner_phase == 23` yields no record, so its ledger's
+unit is not a symbol but the non-export `multitrack authority contract`, named in
+`atlas_common.NON_EXPORT_UNITS` so the export-partitioning tools skip it. Its ledger's working set
+is twelve contract units, one per subphase 23.1 through 23.12, all open at activation
+(`open_in_this_stratum` 12); the ledger fails closed if the ownership atlas ever assigns this
+stratum an export, the provider census a registration row, or the prerequisite plane a unit.
+
+**Deliberately forbidden shapes.** There is no per-version fork, no hundreds of Cargo features,
+and no runtime version switch in one DSO; the compatibility views are evidence artefacts the
+single implementation emits, not separate implementations. The four explicit choices this
+activation records are D533 through D536.
+
+## D533 -- Cross-version receipts are never inherited
+
+A receipt, claim or court result compiled against one authority or release is evidence about
+*that* authority and release and no other. Phase 23 never reinterprets a 3.6.x receipt as evidence
+for a different release, and never lets a compatibility view inherit evidence across a lineage
+edge. The rule generalises `docs/RELEASE_GATES.md` section 8's "an OpenSSL 3 receipt is never
+silently reinterpreted as evidence for OpenSSL 4" to the whole lineage: a lineage edge is a
+*relationship*, and a compatibility view citing it must still carry the release-specific evidence
+it was derived from. `multitrack_schemas.validate_compatibility_view` requires a per-view
+evidence list and a reference release, so a view with no release-specific evidence fails rather
+than inherits.
+
+## D534 -- Authority selection is explicit and singular, never a Cargo feature explosion
+
+A compatibility view names the authority or release it is about explicitly. Phase 23 adds no
+Cargo feature per version and no build-time switch that changes the implementation's behaviour by
+target version; the single DSO's behaviour is fixed by the source, and the version dimension lives
+in evidence artefacts (release nodes, authority nodes, compatibility views), not in the compiled
+artefact's configuration. `multitrack_schemas.validate_authority_node` requires the release id
+plus platform, arch, profile, toolchain and build environment, so an authority is never an
+implicit “whatever is built”.
+
+## D535 -- Compatibility is directional and dimension-specific, never one boolean
+
+There is no single "compatible" flag. A compatibility claim is a **directional** statement on a
+named **dimension** (source/API, ABI, semantic, behavioural, CLI/config, provider registration,
+protocol, error, ownership, concurrency), and a view in one direction does not imply the other.
+`multitrack_schemas.validate_compatibility_view` requires `dimension` and `direction` and rejects a
+record that carries only a boolean; `validate_compatibility_edge` additionally rejects evidence
+whose `evidence_kind` is `version_order`, because numeric ordering is not a compatibility
+measurement (`docs/PARITY_MODEL.md` sections 3 and 4 are the authority on the dimensions).
+
+## D536 -- Negative ("must be absent") obligations are first-class
+
+"Must be absent" is an obligation with the same standing as "must exist". Phase 23 records
+negative obligations as a first-class record kind -- `must_exist`, `must_not_exist`,
+`must_be_opaque`, `must_be_public`, `must_be_exported`, `must_not_be_exported` -- validated by
+`multitrack_schemas.validate_negative_obligation`, so a surface that must not be exported, must be
+opaque, or must not exist is a checkable claim rather than an omission. This is the discipline the
+project already applies where absence is load-bearing (a `NOEXIST` `.num` row, a deliberately
+absent feature); Phase 23 gives it the same vocabulary as presence.
