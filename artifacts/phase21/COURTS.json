@@ -1,0 +1,31 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "Phase 21's five courts are named and `pending`; none is registered as passing at activation. `RT-AUTHORITY-ADMISSION` is 21.1's: the admission / identification of a new authority and the record of its identity and profile as the delta input pair, exercised on the already-admitted `openssl-3.6.3-historical` versus `openssl-3.6.4-production`. `RT-ATLAS-DELTA` is 21.2's: the added / removed / changed obligation delta between the two authorities across the atlas planes (exports, provider rows, prerequisite units), computed mechanically from committed artefacts. `RT-DELTA-DISPOSITION` is 21.3's: the disposition of every delta row with zero unexplained. `RT-AFFECTED-COURT-SELECTION` is 21.4's: the derivation of which courts a delta touches, recorded with the selection derivation. `MAINTENANCE-BOUNDARY-REGISTER` is 21.5's: the register of the explicit non-claims. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the delta between two admitted authorities, with no version-universality claim — OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4 — only the exercised delta claimed, and unknown left unknown. A 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced. docs/PHASE-21-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "courts": [],
+    "pending_courts": {
+      "MAINTENANCE-BOUNDARY-REGISTER": "21.5 lands the register; it records the explicit non-claims — OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4, only the exercised delta is claimed, and unknown stays unknown — and checks that every recorded boundary still matches the evidence that establishes it",
+      "RT-AFFECTED-COURT-SELECTION": "21.4 lands the affected-court selection; it derives which courts a delta touches, records the selection derivation, and re-runs or re-derives exactly those courts, so a delta reaches the courts its obligations do and no more",
+      "RT-ATLAS-DELTA": "21.2 lands the atlas delta; it computes the added / removed / changed obligations between the two authorities across the atlas planes the procedure names — exports, provider registration rows and prerequisite units — from the committed differential and the per-authority atlases, never hand-listed, and names a plane it cannot yet compare `not-measured` rather than counting it as motionless",
+      "RT-AUTHORITY-ADMISSION": "21.1 lands the authority admission; it reads `forensics/authorities/AUTHORITIES.json` and the two `SOURCE_MANIFEST.{3.6.3,3.6.4}.json` files and records the delta's input pair — the identity and profile of `openssl-3.6.3-historical` and `openssl-3.6.4-production` — rather than typing a version, a checksum or a root hash",
+      "RT-DELTA-DISPOSITION": "21.3 lands the delta disposition; it requires every delta row to be dispositioned (`implemented` / `deferred` / `not-in-profile` / `boundary`) with zero unexplained, so a newly discovered un-dispositioned delta row is a `fail`. A row whose disposition would re-adopt a historical behaviour against a security fix is a finding, not a disposition"
+    },
+    "summary": {
+      "fail": 0,
+      "pass": 0,
+      "total": 0
+    }
+  },
+  "generator": "forensics/tools/phase21_courts.py",
+  "inputs": [
+    {
+      "name": "phase-21-plan",
+      "path": "docs/PHASE-21-SUBPHASES.md",
+      "sha256": "a351f3690d9fdc507b879098eb0929ef7c908eab39cca78f097bf453b07c15c1"
+    }
+  ],
+  "kind": "phase21-courts",
+  "schema": "openssl-rs/atlas/phase21-courts/v1"
+}

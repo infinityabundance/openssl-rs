@@ -57,13 +57,16 @@ PRODUCTION_AUTHORITY = "openssl-3.6.4-production"
 # zero. **Phase 19 owns no export either**: the ownership atlas assigns `owner_phase == 19` no
 # row, and its unit is the performance dispatch contract over five contract units and no
 # deferral, which a symbol-counting ledger would count zero. **Phase 20 owns no export either**:
+# zero. **Phase 20 owns no export either**:
 # the ownership atlas assigns `owner_phase == 20` no row, and its unit is the custodian seal
 # contract over five contract units and no deferral, which a symbol-counting ledger would count
-# zero. The marker is a property
+# zero. **Phase 21 owns no export either**: the ownership atlas assigns `owner_phase == 21` no
+# row, and its unit is the maintenance delta contract over five contract units and no deferral,
+# which a symbol-counting ledger would count zero. The marker is a property
 # of the document rather than a phase number those tools know (`docs/PHASE-22-SUBPHASES.md`, D485;
 # `docs/PHASE-16-SUBPHASES.md`, section 1; `docs/PHASE-17-SUBPHASES.md`, section 1;
 # `docs/PHASE-18-SUBPHASES.md`, section 1; `docs/PHASE-19-SUBPHASES.md`, section 1;
-# `docs/PHASE-20-SUBPHASES.md`, section 1).
+# `docs/PHASE-20-SUBPHASES.md`, section 1; `docs/PHASE-21-SUBPHASES.md`, section 1).
 NON_EXPORT_UNITS = {
     "compatibility plane",
     "cli-config contract",
@@ -71,6 +74,7 @@ NON_EXPORT_UNITS = {
     "hostile hardening contract",
     "performance dispatch contract",
     "custodian seal contract",
+    "maintenance delta contract",
 }
 HISTORICAL_AUTHORITY = "openssl-3.6.3-historical"
 
