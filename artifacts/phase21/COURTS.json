@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-AUTHORITY-ADMISSION` is 21.1's court: it stages no probe and admits the delta's input pair, recording each authority's identity and build profile as `{id, role, version, profile, manifest, checksum, admitted}` from forensics/authorities/AUTHORITIES.json, the two SOURCE_MANIFEST.{3.6.3,3.6.4}.json source identities, the build records and the differential that names the pair — `openssl-3.6.3-historical` versus `openssl-3.6.4-production`. It fails when an authority named as a delta input is not admitted, or when its identity disagrees between the registry and its manifest, and a synthetic view with an unadmitted authority in the pair and one with a manifest root hash drifted from the registry's are both detected. It records the pair's identity, not the delta between them. `RT-ATLAS-DELTA` is 21.2's: the added / removed / changed obligation delta between the two authorities across the atlas planes (exports, provider rows, prerequisite units), computed mechanically from committed artefacts. `RT-DELTA-DISPOSITION` is 21.3's: the disposition of every delta row with zero unexplained. `RT-AFFECTED-COURT-SELECTION` is 21.4's: the derivation of which courts a delta touches, recorded with the selection derivation. `MAINTENANCE-BOUNDARY-REGISTER` is 21.5's: the register of the explicit non-claims. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the delta between two admitted authorities, with no version-universality claim — OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4 — only the exercised delta claimed, and unknown left unknown. A 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced. docs/PHASE-21-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "claim": "`RT-AUTHORITY-ADMISSION` is 21.1's court: it stages no probe and admits the delta's input pair, recording each authority's identity and build profile as `{id, role, version, profile, manifest, checksum, admitted}` from forensics/authorities/AUTHORITIES.json, the two SOURCE_MANIFEST.{3.6.3,3.6.4}.json source identities, the build records and the differential that names the pair — `openssl-3.6.3-historical` versus `openssl-3.6.4-production`. It fails when an authority named as a delta input is not admitted, or when its identity disagrees between the registry and its manifest, and a synthetic view with an unadmitted authority in the pair and one with a manifest root hash drifted from the registry's are both detected. It records the pair's identity, not the delta between them. `RT-ATLAS-DELTA` is 21.2's: it stages no probe and recomputes the added / removed / changed obligation delta between the two authorities across the atlas planes the procedure names, from the per-authority atlases under forensics/atlas/openssl-3.6.3-historical and forensics/atlas/openssl-3.6.4-production keyed exactly as the differential tool keys them, requiring the committed differential to agree with what it recomputes. The exports plane is measured; the provider registration-row and prerequisite-unit planes are named `not-measured` with their reasons, because the artefacts the procedure names are single-authority and no committed differential compares them — an unmeasured plane is never counted motionless. A synthetic view with an injected added and an injected removed declaration row detects both, with the unchanged symbol plane reporting no motion. `RT-DELTA-DISPOSITION` is 21.3's: the disposition of every delta row with zero unexplained. `RT-AFFECTED-COURT-SELECTION` is 21.4's: the derivation of which courts a delta touches, recorded with the selection derivation. `MAINTENANCE-BOUNDARY-REGISTER` is 21.5's: the register of the explicit non-claims. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the delta between two admitted authorities, with no version-universality claim — OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4 — only the exercised delta claimed, and unknown left unknown. A 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced. docs/PHASE-21-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
     "courts": [
       {
         "admission_authority": "docs/AUTHORITY_POLICY.md",
@@ -56,18 +56,209 @@
         "probe": "",
         "problems": [],
         "verdict": "pass"
+      },
+      {
+        "adjacent_measurements": [
+          {
+            "added": 0,
+            "changed": null,
+            "classes": {},
+            "note": "adjacent, NOT the named provider-registration-rows plane: the differential's provider_algorithms key, computed from the per-authority provider-inventory.json",
+            "plane": "provider-inventory",
+            "removed": 0,
+            "sources": [
+              "forensics/atlas/openssl-3.6.3-historical/provider-inventory.json",
+              "forensics/atlas/openssl-3.6.4-production/provider-inventory.json"
+            ]
+          }
+        ],
+        "control": {
+          "baseline_counts": {
+            "added": 2,
+            "changed": 0,
+            "removed": 0
+          },
+          "caught_added": true,
+          "caught_removed": true,
+          "honest": true,
+          "injected_added_counts": {
+            "added": 3,
+            "changed": 0,
+            "removed": 0
+          },
+          "injected_added_row": "RT-ATLAS-DELTA-SYNTHETIC-ADDED-ROW",
+          "injected_removed_counts": {
+            "added": 2,
+            "changed": 0,
+            "removed": 1
+          },
+          "injected_removed_row": "RT-ATLAS-DELTA-SYNTHETIC-REMOVED-ROW",
+          "specificity_holds": true
+        },
+        "counts": {
+          "added": 2,
+          "changed": 0,
+          "planes_measured": 1,
+          "planes_named": 3,
+          "planes_not_measured": 2,
+          "removed": 0
+        },
+        "court": "RT-ATLAS-DELTA",
+        "divergence_authority": "docs/SECURITY_DIVERGENCE_POLICY.md",
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the atlas-delta court reads committed atlases and stages no artifacts/phase21/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it recomputes the added / removed / changed delta across the atlas planes docs/PHASE-21-SUBPHASES.md section 2 names, from the per-authority atlases under forensics/atlas/openssl-3.6.3-historical and forensics/atlas/openssl-3.6.4-production keyed exactly as forensics/tools/atlas_differential.py keys them, and requires the committed differential to agree with what it recomputes (a differential that no longer matches its authorities is a fail). The exports plane is measured (it is the plane whose two sides are both committed); the provider registration-row plane and the prerequisite unit plane are named `not-measured` with their reasons, because the artefacts the procedure names (forensics/atlas/provider-algorithms.json, forensics/prerequisites.json) are single-authority and no committed differential compares them -- an unmeasured plane is never counted motionless. The adjacent provider-inventory plane the differential does compare is measured and recorded as adjacent, not as the named plane. The instrument sensitivity control injects an added and a removed declaration row into a synthetic view and requires both to be caught with the unchanged symbol plane reporting no motion (docs/PHASE-21-SUBPHASES.md sections 3.2, 3.3 and 3.4)",
+        "planes": [
+          {
+            "added": [
+              {
+                "key": "SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+                "kind": "declaration",
+                "plane": "declarations.macros"
+              },
+              {
+                "key": "X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+                "kind": "declaration",
+                "plane": "declarations.macros"
+              }
+            ],
+            "changed": [],
+            "counts": {
+              "added": 2,
+              "changed": 0,
+              "removed": 0
+            },
+            "named_source": "the per-authority symbol atlases (symbols-libcrypto.json, symbols-libssl.json) and the declared-surface planes (functions, typedefs, structs, enums, variables, macros) under forensics/atlas/openssl-3.6.3-historical and forensics/atlas/openssl-3.6.4-production",
+            "not_measured_axes": [
+              {
+                "axis": "declarations.*.changed",
+                "reason": "the committed differential compares declared-surface membership by key and not declaration bodies, so a declaration whose body changed without its name changing is not detected; `changed` is measured for the ABI symbols (their DSO version) and not for the declared declarations"
+              }
+            ],
+            "plane": "exports",
+            "removed": [],
+            "sources": [
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+              "forensics/atlas/openssl-3.6.3-historical/functions.json",
+              "forensics/atlas/openssl-3.6.3-historical/typedefs.json",
+              "forensics/atlas/openssl-3.6.3-historical/structs.json",
+              "forensics/atlas/openssl-3.6.3-historical/enums.json",
+              "forensics/atlas/openssl-3.6.3-historical/variables.json",
+              "forensics/atlas/openssl-3.6.3-historical/macros.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+              "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+              "forensics/atlas/openssl-3.6.4-production/functions.json",
+              "forensics/atlas/openssl-3.6.4-production/typedefs.json",
+              "forensics/atlas/openssl-3.6.4-production/structs.json",
+              "forensics/atlas/openssl-3.6.4-production/enums.json",
+              "forensics/atlas/openssl-3.6.4-production/variables.json",
+              "forensics/atlas/openssl-3.6.4-production/macros.json"
+            ],
+            "state": "measured",
+            "subplanes": {
+              "declarations.enums": {
+                "added": [],
+                "changed": null,
+                "changed_measured": false,
+                "from_count": 4,
+                "removed": [],
+                "to_count": 4
+              },
+              "declarations.functions": {
+                "added": [],
+                "changed": null,
+                "changed_measured": false,
+                "from_count": 7485,
+                "removed": [],
+                "to_count": 7485
+              },
+              "declarations.macros": {
+                "added": [
+                  "SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+                  "X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+                ],
+                "changed": null,
+                "changed_measured": false,
+                "from_count": 16803,
+                "removed": [],
+                "to_count": 16805
+              },
+              "declarations.structs": {
+                "added": [],
+                "changed": null,
+                "changed_measured": false,
+                "from_count": 465,
+                "removed": [],
+                "to_count": 465
+              },
+              "declarations.typedefs": {
+                "added": [],
+                "changed": null,
+                "changed_measured": false,
+                "from_count": 1162,
+                "removed": [],
+                "to_count": 1162
+              },
+              "declarations.variables": {
+                "added": [],
+                "changed": null,
+                "changed_measured": false,
+                "from_count": 2,
+                "removed": [],
+                "to_count": 2
+              },
+              "symbols.libcrypto": {
+                "added": [],
+                "changed": [],
+                "changed_measured": true,
+                "from_count": 5949,
+                "removed": [],
+                "to_count": 5949
+              },
+              "symbols.libssl": {
+                "added": [],
+                "changed": [],
+                "changed_measured": true,
+                "from_count": 608,
+                "removed": [],
+                "to_count": 608
+              }
+            }
+          },
+          {
+            "named_source": "forensics/atlas/provider-algorithms.json",
+            "plane": "provider-registration-rows",
+            "reason": "the named census forensics/atlas/provider-algorithms.json is generated for the production authority only, so no committed historical counterpart exists and atlas_differential.py does not compare it; the named authority-to-authority registration-row delta therefore cannot be computed from committed data. What would be needed is a second provider-algorithms.json census generated over the historical authority's provider tables. The differential does compare the per-authority provider-inventory.json (the algorithm names the built openssl publishes) under its own provider_algorithms key, and that adjacent plane is measured below -- it is not this named plane, and the not-measured plane carries no counts",
+            "state": "not-measured"
+          },
+          {
+            "named_source": "forensics/prerequisites.json",
+            "named_source_shape": {
+              "deferrals": 1,
+              "divergences": 14,
+              "units": 152
+            },
+            "plane": "prerequisite-units",
+            "reason": "the named plane forensics/prerequisites.json is a single-authority openssl-rs artefact (the prerequisite/divergence units of the implementation, not of an authority), with no committed historical counterpart and no differential tool that compares it; the authority-to-authority prerequisite-unit delta therefore cannot be computed from committed data. The named artefact's shape is recorded for context, but it is not a delta and this plane carries no counts",
+            "state": "not-measured"
+          }
+        ],
+        "probe": "",
+        "problems": [],
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
       "MAINTENANCE-BOUNDARY-REGISTER": "21.5 lands the register; it records the explicit non-claims — OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4, only the exercised delta is claimed, and unknown stays unknown — and checks that every recorded boundary still matches the evidence that establishes it",
       "RT-AFFECTED-COURT-SELECTION": "21.4 lands the affected-court selection; it derives which courts a delta touches, records the selection derivation, and re-runs or re-derives exactly those courts, so a delta reaches the courts its obligations do and no more",
-      "RT-ATLAS-DELTA": "21.2 lands the atlas delta; it computes the added / removed / changed obligations between the two authorities across the atlas planes the procedure names — exports, provider registration rows and prerequisite units — from the committed differential and the per-authority atlases, never hand-listed, and names a plane it cannot yet compare `not-measured` rather than counting it as motionless",
       "RT-DELTA-DISPOSITION": "21.3 lands the delta disposition; it requires every delta row to be dispositioned (`implemented` / `deferred` / `not-in-profile` / `boundary`) with zero unexplained, so a newly discovered un-dispositioned delta row is a `fail`. A row whose disposition would re-adopt a historical behaviour against a security fix is a finding, not a disposition"
     },
     "summary": {
       "fail": 0,
-      "pass": 1,
-      "total": 1
+      "pass": 2,
+      "total": 2
     }
   },
   "generator": "forensics/tools/phase21_courts.py",
@@ -75,7 +266,7 @@
     {
       "name": "phase-21-plan",
       "path": "docs/PHASE-21-SUBPHASES.md",
-      "sha256": "a351f3690d9fdc507b879098eb0929ef7c908eab39cca78f097bf453b07c15c1"
+      "sha256": "1e56a2c730b5aa7cda1d1b2c5685e88624a9518b611d4a85c506654ec0c654f2"
     },
     {
       "name": "authority-registry",
@@ -111,6 +302,106 @@
       "name": "security-divergence-policy",
       "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
       "sha256": "2c111361650e76f51ce76513dbd3e12effe9c6df05690e0fad90630ffb889026"
+    },
+    {
+      "name": "openssl-3.6.3-historical-symbols-libcrypto.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+      "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6"
+    },
+    {
+      "name": "openssl-3.6.3-historical-symbols-libssl.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+      "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b"
+    },
+    {
+      "name": "openssl-3.6.3-historical-functions.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/functions.json",
+      "sha256": "c4c31aa8889527b1e934224070f8a12855885397dfdef414c9dcb92224f006a8"
+    },
+    {
+      "name": "openssl-3.6.3-historical-typedefs.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/typedefs.json",
+      "sha256": "b41eff262261c146a056a2ab265cdaba482381cabe29f1f15cad8422379f1497"
+    },
+    {
+      "name": "openssl-3.6.3-historical-structs.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/structs.json",
+      "sha256": "fdbb2546bb1701fece94a3c4114d44df175d3d72ef7157761ab1c816d8c9f1cd"
+    },
+    {
+      "name": "openssl-3.6.3-historical-enums.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/enums.json",
+      "sha256": "1ae4bab8dd4a3619d92a5b98f26f19f93f57fc5af0a9a1b83fde04ea905982b7"
+    },
+    {
+      "name": "openssl-3.6.3-historical-variables.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/variables.json",
+      "sha256": "00d480cfffdd667d475184e8f765a14fa65d59676727a3da7b953c269e55021a"
+    },
+    {
+      "name": "openssl-3.6.3-historical-macros.json",
+      "path": "forensics/atlas/openssl-3.6.3-historical/macros.json",
+      "sha256": "e300e9b5bcc783b0d5385090bd5bb0a7062cf368bc2d3f7cc192efe6f9a54e70"
+    },
+    {
+      "name": "openssl-3.6.4-production-symbols-libcrypto.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "openssl-3.6.4-production-symbols-libssl.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+      "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634"
+    },
+    {
+      "name": "openssl-3.6.4-production-functions.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+      "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0"
+    },
+    {
+      "name": "openssl-3.6.4-production-typedefs.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/typedefs.json",
+      "sha256": "af99118d026274d21e18b3c499ec6853eaf463f7491d56e05e934124d1458d83"
+    },
+    {
+      "name": "openssl-3.6.4-production-structs.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/structs.json",
+      "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893"
+    },
+    {
+      "name": "openssl-3.6.4-production-enums.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/enums.json",
+      "sha256": "a95111482a96ab687db8abe9c9ef485f3bee26ef6cb87089dea80c0c4c7574a1"
+    },
+    {
+      "name": "openssl-3.6.4-production-variables.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/variables.json",
+      "sha256": "5133de801f35c4825ef7a03a06fa1decf5203061df9456abe2046b2b8c45dd2c"
+    },
+    {
+      "name": "openssl-3.6.4-production-macros.json",
+      "path": "forensics/atlas/openssl-3.6.4-production/macros.json",
+      "sha256": "99e595fad544d1cff98c5495519db7abe68a34b32e6e97fd29735f9686c846da"
+    },
+    {
+      "name": "openssl-3.6.3-historical-provider-inventory",
+      "path": "forensics/atlas/openssl-3.6.3-historical/provider-inventory.json",
+      "sha256": "0ea1e0bbbd34713c4a3a1cf8678061b3ece0790da4ca737939bf7dcfbfc9d127"
+    },
+    {
+      "name": "openssl-3.6.4-production-provider-inventory",
+      "path": "forensics/atlas/openssl-3.6.4-production/provider-inventory.json",
+      "sha256": "62763c6bd86ed55cb509ac3bb3675fff5b26bfd78f4dc9a3c75f7d29abb0c522"
+    },
+    {
+      "name": "provider-algorithms",
+      "path": "forensics/atlas/provider-algorithms.json",
+      "sha256": "8a767c9f5c456e1b3b8e2d01a88f0b17f2184313d421c0a9e513c1dd2d118589"
+    },
+    {
+      "name": "prerequisites",
+      "path": "forensics/prerequisites.json",
+      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
     }
   ],
   "kind": "phase21-courts",

@@ -233,6 +233,36 @@ provider-row and prerequisite-unit planes, which `atlas_differential.py` does no
 records that as a `not-measured` surface with its reason rather than counting it as motionless, and
 the correction is recorded here and in the seal rather than folded into the prose it corrects.
 
+**4.6 The three named planes are not equally measurable, and 21.2's derivation established which is
+which (measured).** `RT-ATLAS-DELTA` recomputes the delta from the per-authority atlases and requires
+the committed differential to agree, and the result settles §4.5's open question:
+
+  * **exports — measured.** Both authorities' symbol atlases (`symbols-libcrypto.json`,
+    `symbols-libssl.json`) and declared-surface planes (`functions`, `typedefs`, `structs`, `enums`,
+    `variables`, `macros`) are committed, so the plane is compared directly. The movement is **2 added
+    declarations** (the two macros §1 names), `0` removed and `0` changed, over `0` changed ABI
+    symbols. The declaration *changed* axis is `not-measured`: the differential compares
+    declared-surface membership by key and not declaration bodies, so a declaration whose body moved
+    without its name moving is invisible, and the court records that axis rather than asserting zero.
+  * **provider registration rows — `not-measured`.** The procedure names
+    `forensics/atlas/provider-algorithms.json`, the openssl-rs census of the *production* authority's
+    provider tables; no historical counterpart is committed and `atlas_differential.py` does not
+    compare that census, so the named authority-to-authority registration-row delta cannot be
+    computed. What it would need is a second `provider-algorithms.json` census generated over the
+    historical authority's provider tables. The differential *does* compare the per-authority
+    `provider-inventory.json` (the algorithm names the built `openssl` publishes) under its own
+    `provider_algorithms` key; 21.2 measures that **adjacent** plane (`0` added, `0` removed) and
+    records it as adjacent, never as the named plane, so the unmeasured plane is not counted
+    motionless.
+  * **prerequisite units — `not-measured`.** `forensics/prerequisites.json` is a single-authority
+    openssl-rs artefact (the implementation's prerequisite and divergence units, not an authority's)
+    with no historical counterpart and no committed differential tool, so the plane cannot be
+    compared and is named `not-measured` with that reason.
+
+§4.5 anticipated the possibility for the provider-row and prerequisite-unit planes; this records
+which planes it turned out to apply to, and it is checked by `RT-ATLAS-DELTA` rather than folded
+into the prose it corrects.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 20's process unchanged: a subphase lands its code, its court

@@ -135,6 +135,10 @@
       "observations": 118,
       "verdict": "pass"
     },
+    "RT-ATLAS-DELTA": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-AUTHORITY-ADMISSION": {
       "observations": 0,
       "verdict": "pass"
@@ -842,7 +846,7 @@
     "phase18": 0,
     "phase19": 0,
     "phase20": 0,
-    "phase21": 4,
+    "phase21": 3,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,

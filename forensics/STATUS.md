@@ -41,7 +41,7 @@ renderer does not know any phase status.
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` |  |
 | 19 | Performance / CPU dispatch | `complete` |  |
 | 20 | 3.6.4 custodian seal | `complete` |  |
-| 21 | Maintenance delta machinery | `in-progress` | 4 open obligation(s) of this stratum recorded in forensics/phase21-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase21-obligations.json` publishes `unit: maintenance delta contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`authority-admission`, `atlas-delta`, `delta-disposition`, `affected-court-selection` and `maintenance-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it computes the delta between two authorities that are already admitted. Its `artifacts/phase21/COURTS.json` registers the courts that have landed and names the rest `pending` with the subphases that land them: `RT-AUTHORITY-ADMISSION` (21.1) passes and records the delta's input pair, while `RT-ATLAS-DELTA`, `RT-DELTA-DISPOSITION`, `RT-AFFECTED-COURT-SELECTION` and `MAINTENANCE-BOUNDARY-REGISTER` remain `pending`. A passing court is an **instrument**, not a property claim: the property it names may still carry findings, so `measurement_state` says the instrument completed while `property_status`/`findings` say what is claimed. The stratum makes no version-universality claim: OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4 (`docs/RELEASE_GATES.md` section 8, `docs/NON_CLAIMS.md` section 3), only the exercised delta is claimed, and unknown stays unknown (`docs/PARITY_MODEL.md` section 1); a 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced (`docs/SECURITY_DIVERGENCE_POLICY.md` section 1). The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-21-SUBPHASES.md` sections 1 and 4 record the measurement |
+| 21 | Maintenance delta machinery | `in-progress` | 3 open obligation(s) of this stratum recorded in forensics/phase21-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase21-obligations.json` publishes `unit: maintenance delta contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`authority-admission`, `atlas-delta`, `delta-disposition`, `affected-court-selection` and `maintenance-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it computes the delta between two authorities that are already admitted. Its `artifacts/phase21/COURTS.json` registers the courts that have landed and names the rest `pending` with the subphases that land them: `RT-AUTHORITY-ADMISSION` (21.1) passes and records the delta's input pair, and `RT-ATLAS-DELTA` (21.2) passes and recomputes the added / removed / changed delta across the atlas planes the procedure names -- the exports plane measured, the provider registration-row and prerequisite-unit planes named `not-measured` with their reasons rather than counted motionless -- while `RT-DELTA-DISPOSITION`, `RT-AFFECTED-COURT-SELECTION` and `MAINTENANCE-BOUNDARY-REGISTER` remain `pending`. A passing court is an **instrument**, not a property claim: the property it names may still carry findings, so `measurement_state` says the instrument completed while `property_status`/`findings` say what is claimed. The stratum makes no version-universality claim: OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4 (`docs/RELEASE_GATES.md` section 8, `docs/NON_CLAIMS.md` section 3), only the exercised delta is claimed, and unknown stays unknown (`docs/PARITY_MODEL.md` section 1); a 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced (`docs/SECURITY_DIVERGENCE_POLICY.md` section 1). The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-21-SUBPHASES.md` sections 1 and 4 record the measurement |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 
 No stratum is `not-started`.
@@ -387,16 +387,16 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 21 working set: 5
-* implemented: 1
+* implemented: 2
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 4
+* open in this stratum: 3
 
 Contract units (measurement vs property):
 
 | unit | measurement_state | property_status | findings |
 |---|---|---|---|
 | authority-admission | `complete` | `not_claimed` | — |
-| atlas-delta | `not_measured` | `not_claimed` | — |
+| atlas-delta | `complete` | `not_claimed` | — |
 | delta-disposition | `not_measured` | `not_claimed` | — |
 | affected-court-selection | `not_measured` | `not_claimed` | — |
 | maintenance-boundary-register | `not_measured` | `not_claimed` | — |
