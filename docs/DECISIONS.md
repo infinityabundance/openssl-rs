@@ -35753,3 +35753,49 @@ the shared vocabulary the plan requires and stages no duplicate court. A pair th
 execute -- the 0.9.8zh epoch, which lives in the separately pinned historical venue -- is recorded
 `not_run` with its reason and is never counted as passing. `semantic-courts` moves to
 `implemented`/closed and the stratum's `open_in_this_stratum` falls from ten to nine.
+
+## D542 -- the compatibility views are directional and dimension-specific, and a view never inherits another authority's receipt
+
+Phase 23.9 lands the compatibility views (`forensics/multitrack/compatibility-views.json` with the
+record kind `compatibility_view`, the generator `forensics/tools/compat_views.py`, court
+`RT-COMPATIBILITY-VIEWS`, unit `compatibility-views`), the per-authority distribution views whose
+API/ABI/distribution surface is *derived from that authority*. The measured corrections are recorded
+in `docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.12 and checked by the court.
+
+**A view is directional, dimension-specific, and carries a fine facet.** Every view is read
+`candidate_to_reference`: the subject is the emitted distribution (the implementation crate) and the
+reference is the authority whose evidence defines the surface. Its coarse `dimension` is one of the
+schema's closed `COMPAT_DIMENSIONS`; because the distribution shell is finer than that vocabulary,
+the view also names a fine `facet` -- library filenames, SONAMEs, the exported symbol set and its
+versions, static archive names, link names, pkg-config metadata, the installed layout and the
+version-reporting identity -- that lives with this generator and its court, exactly as the 23.6
+delta engine keeps its fine `DELTA_DIMENSIONS` beside the coarse schema dimension (D539). The shared
+vocabulary is not widened.
+
+**The view states its evidence kind, and neither a view nor an edge may cite numeric ordering.**
+`multitrack_schemas.validate_compatibility_view` now requires an `evidence_kind` and refuses
+`version_order` by name, so a view can no more rest on the version number than an edge can (D535,
+`docs/PARITY_MODEL.md` section 4). A view that carries a bare `compatible` boolean is the claim the
+model forbids and is refused; a view is never a single boolean.
+
+**The 3.6.4 production view is real and derived; the 0.9.8zh views are honestly unmeasured.** The
+production authority's eight views compare its derived distribution/ABI shell -- its own measured
+SONAMEs and exported symbol counts and version namespace (the production atlas), against the
+committed Phase-2 ABI-SYMBOL/ABI-VERSION and install-layout courts and the committed
+`artifacts/phase2/` distribution -- and all read `compatible`. The historical authority's six views
+read `not_measured`, because no candidate build exists for the 0.9.8zh epoch in this venue, and the
+two facets its receipt cannot support -- the static archive names and the pkg-config metadata -- are
+recorded `not_derivable` with their reasons rather than emitted with plausible values. The seven
+dimensions the distribution shell does not carry (source/API, semantic, protocol, error, ownership,
+concurrency and provider registration) are likewise recorded `not_derivable`, so every dimension is
+either an emitted view or a named gap.
+
+**Anti-inheritance is the load-bearing rule, and the court proves it.** Every reference-role
+evidence entry names the authority it belongs to and is content-addressed (path + sha256); a view for
+authority X carries only X's evidence and X's reference identity. The court re-derives the whole
+plane from the authorities' own committed evidence through the same generator and refuses a view
+whose reference evidence belongs to another authority. Its sensitivity control relays authority A's
+evidence into authority B's view, collapses a view to a boolean, makes a view cite numeric ordering
+and drops a view's reference authority, and requires each caught with specificity holding.
+`compatibility-views` moves to `implemented`/closed and the stratum's `open_in_this_stratum` falls
+from nine to eight.

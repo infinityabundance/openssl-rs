@@ -102,10 +102,10 @@
         "closure": "the `RT-COMPATIBILITY-VIEWS` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-COMPATIBILITY-VIEWS is pending",
+        "measurement_state": "complete",
+        "observation": "RT-COMPATIBILITY-VIEWS is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "compatibility-views",
         "what": "a directional, dimension-specific view per support status, each naming its reference release and the release-specific evidence it was derived from -- never a boolean, and never inheriting a receipt across a version"
@@ -212,8 +212,8 @@
       "contract_units": 17,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 8,
-      "open_in_this_stratum": 9,
+      "implemented": 9,
+      "open_in_this_stratum": 8,
       "owned": 17,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -249,12 +249,12 @@
     {
       "name": "phase-23-plan",
       "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
-      "sha256": "20887197d4d698325d7d2895ac5fddbcdc52c9abe2a270725dadb7900a55a71a"
+      "sha256": "5a7fdd987677b0e2deeaf81caac9d478983b6b1552e89e4602d7da3cc94eeb81"
     },
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "dc843e904a08f539ea0995c2092b6e6c6138f0063495f02f1003c50432af2778"
+      "sha256": "12694e005a9792b3b2d38053ffcaf8b6d610315c11b8849ed363ae34249fab65"
     }
   ],
   "kind": "phase23-obligations",

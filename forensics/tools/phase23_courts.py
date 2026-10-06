@@ -16,14 +16,15 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**Eight courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+**Nine courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
 lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, 23.3 lands
 `RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court, 23.4 lands `RT-LINEAGE-EDGES`, the
 typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage court, 23.6 lands
 `RT-DELTA-ENGINE`, the semantic compatibility-delta court, 23.7 lands
-`RT-ABI-HISTORY-FACADES`, the ABI/history-façade court, and 23.8 lands
-`RT-SEMANTIC-COURTS`, the oracle-to-oracle and candidate-to-authority semantic court; the other nine
-courts are named in
+`RT-ABI-HISTORY-FACADES`, the ABI/history-façade court, 23.8 lands
+`RT-SEMANTIC-COURTS`, the oracle-to-oracle and candidate-to-authority semantic court and 23.9 lands
+`RT-COMPATIBILITY-VIEWS`, the directional compatibility-view court; the other eight courts are named
+in
 `PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
 reproduced, so a court silently dropped is a finding rather than a smaller green run. This is
@@ -45,7 +46,7 @@ The seventeen courts, and the subphase that lands each
   * `RT-DELTA-ENGINE` -- 23.6, the delta engine (registered).
   * `RT-ABI-HISTORY-FACADES` -- 23.7, the ABI / history façades (registered).
   * `RT-SEMANTIC-COURTS` -- 23.8, the semantic multitrack courts (registered).
-  * `RT-COMPATIBILITY-VIEWS` -- 23.9, the compatibility views.
+  * `RT-COMPATIBILITY-VIEWS` -- 23.9, the compatibility views (registered).
   * `RT-HISTORICAL-POPULATION` -- 23.10, the historical population.
   * `RT-DOWNSTREAM-MULTITRACK` -- 23.11, the downstream multitrack court.
   * `RT-COMPATIBILITY-EDGES` -- 23.12, the directional compatibility edges.
@@ -56,8 +57,8 @@ The seventeen courts, and the subphase that lands each
   * `MULTITRACK-SEAL` -- 23.17, the full matrix, the FRF/Gemel chain and the seal.
 
 Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZATION`,
-`RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE`, `RT-DELTA-ENGINE`, `RT-ABI-HISTORY-FACADES` and
-`RT-SEMANTIC-COURTS` is
+`RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE`, `RT-DELTA-ENGINE`, `RT-ABI-HISTORY-FACADES`,
+`RT-SEMANTIC-COURTS` and `RT-COMPATIBILITY-VIEWS` is
 `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
@@ -93,6 +94,7 @@ from atlas_common import (  # noqa: E402
     envelope,
     rel,
     resolve_authority,
+    sha256_file,
     write_json,
 )
 
@@ -122,6 +124,10 @@ import gen_abi_facades  # noqa: E402
 # by (never a second, drifting vocabulary) and resolves each classified difference against the
 # committed 23.6 delta engine.
 import gen_semantic_courts  # noqa: E402
+# The Phase-23.9 compatibility-view generator, imported so the court re-derives the whole plane from
+# the committed evidence through the same code path the artefact was produced by (never a second,
+# drifting predicate) and checks each view's evidence provenance against the authority it names.
+import compat_views  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase23" / "COURTS.json"
 GENERATOR = "forensics/tools/phase23_courts.py"
@@ -176,6 +182,10 @@ KEY_ABSENCE_MARKERS = {
 SEMANTIC_COURTS = REPO_ROOT / "forensics" / "multitrack" / "semantic-courts.json"
 SEMANTIC_PROBE = REPO_ROOT / "courts" / "phase23" / "semantic_probe.c"
 
+# 23.9's subject: the directional, dimension-specific compatibility views plane. The court reads it
+# and re-derives every view from the authorities' own committed evidence through the same generator.
+COMPATIBILITY_VIEWS = REPO_ROOT / "forensics" / "multitrack" / "compatibility-views.json"
+
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 # 23.1's court, and the identity its subject must begin at. The root is upstream's first real
@@ -188,6 +198,7 @@ ENTITY_LINEAGE_COURT = "RT-ENTITY-LINEAGE"
 DELTA_ENGINE_COURT = "RT-DELTA-ENGINE"
 ABI_HISTORY_FACADES_COURT = "RT-ABI-HISTORY-FACADES"
 SEMANTIC_COURTS_COURT = "RT-SEMANTIC-COURTS"
+COMPATIBILITY_VIEWS_COURT = "RT-COMPATIBILITY-VIEWS"
 ROOT_RELEASE = "openssl-0.9.1c"
 CANONICAL_KINDS = ("branch_fork", "chronological_successor", "maintenance_successor")
 PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
@@ -217,12 +228,12 @@ COURTS: list[tuple[str, str]] = [
     (DELTA_ENGINE_COURT, "_delta_engine_court"),
     (ABI_HISTORY_FACADES_COURT, "_abi_history_facades_court"),
     (SEMANTIC_COURTS_COURT, "_semantic_courts_court"),
+    (COMPATIBILITY_VIEWS_COURT, "_compatibility_views_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-COMPATIBILITY-VIEWS": "23.9 -- the compatibility views",
     "RT-HISTORICAL-POPULATION": "23.10 -- the historical population",
     "RT-DOWNSTREAM-MULTITRACK": "23.11 -- the downstream multitrack court",
     "RT-COMPATIBILITY-EDGES": "23.12 -- the directional compatibility edges",
@@ -2818,6 +2829,225 @@ def _semantic_courts_court(name: str) -> dict:
     }
 
 
+def compatibility_view_findings(body: dict) -> list[str]:
+    """Every way the committed compatibility-views plane fails this court's subject.
+
+    A pure function of the committed plane, so the sensitivity control mutates one and re-checks.
+    It establishes that every view is a schema-valid, directional, dimension-specific
+    `compatibility_view` with an explicit `evidence_kind` that is never numeric ordering; that
+    every view names an admitted reference authority and a distribution facet; that its reference
+    evidence belongs to the authority it names (a view inherits no receipt across an authority);
+    that every evidence path is present and content-addressed; that the committed plane reproduces
+    from the authorities' own committed evidence through the same generator; and that every
+    `COMPAT_DIMENSIONS` member is either the dimension of an emitted view or recorded not-derivable
+    with a reason.
+    """
+    findings: list[str] = []
+    views = body.get("views") or []
+    not_derivable = body.get("not_derivable") or []
+    authorities = body.get("authorities") or []
+    if not views:
+        findings.append("the compatibility-views plane carries no view")
+    if not authorities:
+        findings.append("the compatibility-views plane names no authority")
+
+    for v in views:
+        vid = v.get("view_id") or "<no view_id>"
+        findings += [f"{vid}: {p}" for p in multitrack_schemas.validate_compatibility_view(v)]
+        if not v.get("facet"):
+            findings.append(f"{vid}: names no distribution facet, so it is not dimension-specific")
+        if v.get("reference_id") not in authorities:
+            findings.append(
+                f"{vid}: reference authority {v.get('reference_id')!r} is not an admitted authority"
+            )
+        evidence = v.get("evidence") or []
+        if not any(e.get("role") == "reference" for e in evidence):
+            findings.append(f"{vid}: carries no reference-role evidence, so it is not derived from "
+                            f"the authority it names")
+        for entry in evidence:
+            path, digest = entry.get("path"), entry.get("sha256")
+            if entry.get("role") == "reference" and entry.get("authority_id") != v.get("reference_id"):
+                findings.append(
+                    f"{vid}: reference evidence belongs to {entry.get('authority_id')!r}, not the "
+                    f"view's authority {v.get('reference_id')!r}: a view inherits no receipt across "
+                    f"an authority"
+                )
+            p = REPO_ROOT / str(path or "")
+            if not p.is_file():
+                findings.append(f"{vid}: evidence path {path!r} is absent")
+            elif digest != sha256_file(p):
+                findings.append(f"{vid}: evidence {path!r} is not content-addressed (recorded "
+                                f"sha256 does not match the file)")
+
+    # The committed plane must reproduce from the authorities' own committed evidence through the
+    # same generator the artefact was produced by: a relayed evidence path or a hand-edited value
+    # stops reproducing.
+    try:
+        derived = compat_views.derive_body()
+    except SystemExit as exc:
+        findings.append(f"the compatibility views could not be re-derived: {exc}")
+        derived = None
+    if derived is not None and derived != body:
+        findings.append(
+            "the committed views do not reproduce from the authorities' own evidence through the "
+            "same generator: a view was altered, relayed from another authority, or inherited"
+        )
+
+    # Every dimension is either the dimension of an emitted view for the authority, or a named
+    # not-derivable row with a reason -- never silently absent.
+    for aid in authorities:
+        covered = {v.get("dimension") for v in views if v.get("reference_id") == aid}
+        named = {r.get("dimension") for r in not_derivable if r.get("authority_id") == aid}
+        for dim in multitrack_schemas.COMPAT_DIMENSIONS:
+            if dim not in covered and dim not in named:
+                findings.append(
+                    f"{aid}: dimension {dim!r} has neither an emitted view nor a not-derivable "
+                    f"record with a reason"
+                )
+    for row in not_derivable:
+        if row.get("authority_id") not in authorities:
+            findings.append(f"a not-derivable row names {row.get('authority_id')!r}, which is not "
+                            f"an admitted authority")
+        if not str(row.get("reason") or "").strip():
+            findings.append(f"a not-derivable row ({row.get('dimension')!r}) carries no reason")
+    return findings
+
+
+def compatibility_views_sensitivity_control(body: dict) -> dict:
+    """Prove the court can fail: relay one authority's evidence into another's view, make a view a
+    single boolean, cite numeric ordering as the evidence kind, and drop the reference authority,
+    and require each caught with specificity holding."""
+    base = compatibility_view_findings(body)
+    specificity = not base
+
+    # (a) the load-bearing anti-inheritance rule: relay authority A's reference evidence into a
+    # view that names authority B. The view now carries evidence that is not its own.
+    relay = copy.deepcopy(body)
+    a_view = next((v for v in relay.get("views") or [] if v.get("reference_id") != PRODUCTION_AUTHORITY),
+                  None)
+    b_view = next((v for v in relay.get("views") or [] if v.get("reference_id") == PRODUCTION_AUTHORITY),
+                  None)
+    if a_view is None or b_view is None:
+        return {"honest": False, "reason": "the plane has no two authorities to relay between"}
+    b_view["evidence"] = copy.deepcopy(a_view["evidence"])
+    relay_findings = compatibility_view_findings(relay)
+    caught_relay = any("inherits no receipt" in f or "belongs to" in f for f in relay_findings)
+
+    # (b) a view collapsed to the one boolean the model forbids.
+    boolean = copy.deepcopy(body)
+    boolean["views"][0]["compatible"] = True
+    boolean_findings = compatibility_view_findings(boolean)
+    caught_boolean = any("boolean" in f for f in boolean_findings)
+
+    # (c) a view citing numeric ordering as its evidence kind.
+    ordering = copy.deepcopy(body)
+    ordering["views"][0]["evidence_kind"] = "version_order"
+    ordering_findings = compatibility_view_findings(ordering)
+    caught_ordering = any("ordering" in f for f in ordering_findings)
+
+    # (d) a view with no reference authority.
+    noref = copy.deepcopy(body)
+    noref["views"][0]["reference_id"] = ""
+    noref_findings = compatibility_view_findings(noref)
+    caught_noref = any("reference_id" in f or "reference authority" in f for f in noref_findings)
+
+    return {
+        "baseline_findings": len(base),
+        "injected_relayed_authority": [a_view.get("reference_id"), b_view.get("reference_id")],
+        "injected_relayed_findings": len(relay_findings),
+        "injected_boolean_view": boolean["views"][0].get("view_id"),
+        "injected_boolean_findings": len(boolean_findings),
+        "injected_ordering_view": ordering["views"][0].get("view_id"),
+        "injected_ordering_findings": len(ordering_findings),
+        "injected_no_reference_view": noref["views"][0].get("view_id"),
+        "injected_no_reference_findings": len(noref_findings),
+        "specificity_holds": specificity,
+        "caught_relayed_authority": caught_relay,
+        "caught_boolean_view": caught_boolean,
+        "caught_ordering_evidence": caught_ordering,
+        "caught_no_reference": caught_noref,
+        "honest": bool(specificity and caught_relay and caught_boolean and caught_ordering
+                       and caught_noref),
+    }
+
+
+def _compatibility_views_court(name: str) -> dict:
+    """`RT-COMPATIBILITY-VIEWS`: 23.9's court, the directional compatibility views.
+
+    Stages no probe. It reads `forensics/multitrack/compatibility-views.json` and re-derives the
+    whole plane from the authorities' own committed evidence through the same generator, and
+    establishes that every view is a schema-valid, directional, dimension-specific
+    `compatibility_view`; that no view is a boolean and none cites numeric ordering as its evidence
+    kind; that every view is derived from the authority it names and carries only that authority's
+    reference evidence; that every evidence path is content-addressed; and that a dimension the
+    evidence cannot support is recorded not-derivable with its reason. Four seeded mutations --
+    relaying authority A's evidence into authority B's view, a view collapsed to a boolean, a view
+    citing numeric ordering, and a view with no reference authority -- are each caught with
+    specificity holding. A passing view is an **instrument**: it records the distribution/ABI shell
+    surface derived from one authority and is not a one-boolean compatibility claim.
+    """
+    problems: list[str] = []
+    if not COMPATIBILITY_VIEWS.is_file():
+        problems.append(f"the compatibility-views plane {rel(COMPATIBILITY_VIEWS)} is absent")
+    body: dict = {}
+    if not problems:
+        body = read_json(COMPATIBILITY_VIEWS)
+    findings = compatibility_view_findings(body) if body else []
+    control = compatibility_views_sensitivity_control(body) if body else {"honest": False}
+    verdict = "pass" if (not findings and not problems and control.get("honest")) else "fail"
+
+    per_authority = []
+    for aid in sorted(set(body.get("authorities") or [])):
+        views = [v for v in body.get("views") or [] if v.get("reference_id") == aid]
+        rows = sorted((v.get("facet"), v.get("dimension"), v.get("status")) for v in views)
+        not_derivable = sorted(
+            (r.get("dimension"), r.get("facet"))
+            for r in body.get("not_derivable") or [] if r.get("authority_id") == aid
+        )
+        per_authority.append({
+            "authority_id": aid,
+            "support_status": views[0].get("support_status") if views else None,
+            "views": [{"facet": f, "dimension": d, "status": s} for f, d, s in rows],
+            "not_derivable": [d for d, _f in not_derivable],
+        })
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/multitrack/compatibility-views.json and re-derives "
+            "the whole plane from the authorities' own committed evidence through the same "
+            "generator. It establishes that every view is a schema-valid, directional, "
+            "dimension-specific compatibility_view with an explicit evidence_kind that is never "
+            "numeric ordering; that no view carries a bare `compatible` boolean; that every view "
+            "names an admitted reference authority and a distribution facet and carries only that "
+            "authority's reference evidence, so a view inherits no receipt across a version; that "
+            "every evidence path is present and content-addressed; that the committed plane "
+            "reproduces from the authorities' committed evidence; and that every dimension is "
+            "either an emitted view or recorded not-derivable with its reason. Relaying authority "
+            "A's evidence into authority B's view, a view collapsed to a boolean, a view citing "
+            "numeric ordering and a view with no reference authority are each detected with "
+            "specificity holding (docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 2, 3.1, 3.3 and "
+            "4.12)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the compatibility-views court reads a committed evidence plane and writes no "
+            "artifacts/phase23/probes/<probe>.{authority,candidate} pair, so it stages no "
+            "transcript to diff and carries no FRF declaration"
+        ),
+        "subject_id": body.get("subject_id"),
+        "direction_model": body.get("direction_model"),
+        "counts": body.get("counts"),
+        "per_authority": per_authority,
+        "not_derivable": body.get("not_derivable"),
+        "boundary": body.get("boundary"),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def _delta_engine_court(name: str) -> dict:
     """`RT-DELTA-ENGINE`: 23.6's court, the semantic compatibility delta.
 
@@ -3031,10 +3261,26 @@ def main(argv: list[str]) -> int:
             "difference, a probe read against the wrong authority and a difference left "
             "unclassified are each detected with specificity holding. A passing semantic court is "
             "an instrument: it records the movement between two named authorities and is not a "
-            "compatibility claim about either. Phase 23 owns "
+            "compatibility claim about either. `RT-COMPATIBILITY-VIEWS` is 23.9's court: the "
+            "directional, dimension-specific compatibility views. It stages no probe and reads "
+            "forensics/multitrack/compatibility-views.json, re-deriving the whole plane from the "
+            "authorities' own committed evidence through the same generator. It establishes that "
+            "every view is a schema-valid, directional, dimension-specific compatibility_view with "
+            "an explicit evidence_kind that is never numeric ordering; that no view carries a bare "
+            "`compatible` boolean; that every view names an admitted reference authority and a "
+            "distribution facet and carries only that authority's reference evidence, so a view "
+            "inherits no receipt across a version; that every evidence path is content-addressed; "
+            "and that a dimension the evidence cannot support is recorded not-derivable with its "
+            "reason. The 3.6.4 production view compares the authority's derived distribution/ABI "
+            "shell (library names, SONAMEs, exported symbols/versions, static archives, link names, "
+            "pkg-config metadata, installed layout, version identity) against the committed "
+            "artifacts/phase2 distribution, and the 0.9.8zh historical views are `not_measured` "
+            "because the epoch has no candidate build in this venue. Relaying authority A's "
+            "evidence into authority B's view, a view collapsed to a boolean, a view citing "
+            "numeric ordering and a view with no reference authority are each detected with "
+            "specificity holding. Phase 23 owns "
             "no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining nine courts -- "
-            "RT-COMPATIBILITY-VIEWS, "
+            "over a symbol set is its evidence, and its remaining eight courts -- "
             "RT-HISTORICAL-POPULATION, RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, "
             "RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, "
             "RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
@@ -3072,6 +3318,7 @@ def main(argv: list[str]) -> int:
         InputRef(name="historical-source-manifest", path=HISTORICAL_MANIFEST),
         InputRef(name="semantic-courts", path=SEMANTIC_COURTS),
         InputRef(name="semantic-probe", path=SEMANTIC_PROBE),
+        InputRef(name="compatibility-views", path=COMPATIBILITY_VIEWS),
     ]
     for path in sorted(DELTAS.glob("*.json")):
         inputs.append(InputRef(name=f"delta/{path.stem}", path=path))
@@ -3237,6 +3484,25 @@ def main(argv: list[str]) -> int:
             for entry in r["not_run"] or []:
                 print(f"      NOT-RUN {entry['pair'][0]} vs {entry['pair'][1]}")
             print(f"      boundary: {r['boundary']}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == COMPATIBILITY_VIEWS_COURT:
+            c = r["control"]
+            counts = r["counts"] or {}
+            print(f"  {r['court']:<32} pass   (no probe, {counts.get('views')} view(s) over "
+                  f"{counts.get('authorities')} authority/ies; {counts.get('by_status')}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"relayed-authority->{c['injected_relayed_findings']} "
+                  f"boolean->{c['injected_boolean_findings']} "
+                  f"ordering->{c['injected_ordering_findings']} "
+                  f"no-reference->{c['injected_no_reference_findings']} finding(s))")
+            for a in r["per_authority"]:
+                print(f"      authority {a['authority_id']:<32} "
+                      f"support={a['support_status']}")
+                for v in a["views"]:
+                    print(f"        {v['facet']:<34} {v['dimension']:<14} {v['status']}")
+                print(f"        not-derivable: {', '.join(a['not_derivable'])}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

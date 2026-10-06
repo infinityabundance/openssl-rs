@@ -519,6 +519,42 @@ candidate and the oracle are read the same way. The 0.9.8zh epoch lives in the s
 historical venue (`docs/REPRODUCIBILITY.md` sections 1.1 and 1.2), so both 0.9.8zh pairs are
 recorded `not_run` with that reason and are never counted as passing.
 
+**4.12 The compatibility views derive each authority's own distribution shell, and a view never
+inherits another authority's receipt (23.9, D542).** 23.9 lands the directional,
+dimension-specific compatibility views as `forensics/multitrack/compatibility-views.json` (record
+kind `compatibility_view`), the generator `forensics/tools/compat_views.py` and the court
+`RT-COMPATIBILITY-VIEWS`. Four measured corrections, each checked by the court rather than asserted.
+
+* **A view is directional, dimension-specific, and carries a fine facet.** A view's coarse
+  `dimension` is one of the schema's closed `COMPAT_DIMENSIONS`; the distribution shell is finer, so
+  a view also names a fine `facet` (library filenames, SONAMEs, the exported symbol set and its
+  versions, static archive names, link names, pkg-config metadata, the installed layout and the
+  version-reporting identity) that lives with the generator and its court -- the two-layer split
+  23.6 established (§4.9), rather than widening the shared vocabulary the views, edges and matrix
+  all read.
+* **The view states its evidence kind, and the schema refuses numeric ordering.**
+  `multitrack_schemas.validate_compatibility_view` now requires an `evidence_kind` and refuses
+  `version_order` by name, so a view can no more cite an ordering than an edge can (D535,
+  `docs/PARITY_MODEL.md` section 4).
+* **The 3.6.4 production view is real and derived; the 0.9.8zh views are honestly unmeasured.** The
+  production authority's eight views compare its derived distribution/ABI shell against the
+  committed `artifacts/phase2/` distribution (the authority's own measured SONAMEs, exported symbol
+  counts and version namespace, against the Phase-2 ABI-SYMBOL/ABI-VERSION and install-layout courts),
+  all `compatible`; the historical authority's six views are `not_measured` because no candidate
+  build exists for that epoch in this venue, and the two facets its receipt cannot support -- the
+  static archive names and the pkg-config metadata -- are recorded `not_derivable` with their
+  reasons rather than emitted with plausible values (§2's artefact table names
+  `forensics/multitrack/compatibility-views.json`; the path is unchanged).
+* **Anti-inheritance is load-bearing and proved.** Every reference-role evidence entry names the
+  authority it belongs to and is content-addressed (path + sha256), and a view for authority X
+  carries only X's evidence and X's reference identity. The court re-derives the whole plane from
+  the authorities' own committed evidence through the same generator and refuses a view whose
+  reference evidence belongs to another authority; its control relays authority A's evidence into
+  authority B's view (plus a view collapsed to a boolean, a view citing numeric ordering and a view
+  with no reference authority) and requires each caught with specificity holding.
+  `compatibility-views` moves to `implemented`/closed and the stratum's `open_in_this_stratum`
+  falls from nine to eight.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 21's process unchanged: a subphase lands its code, its court

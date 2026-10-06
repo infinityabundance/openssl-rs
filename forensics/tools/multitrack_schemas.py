@@ -497,10 +497,12 @@ def validate_compatibility_view(rec: dict) -> list[str]:
 
     The refusal this encodes is D535: a view that carries a bare `compatible` boolean and no
     dimension or direction is exactly the claim the model forbids, so it is a problem rather than
-    a terse form.
+    a terse form. The view also states its `evidence_kind`, and **`version_order` is refused by
+    name**: numeric ordering is a chronology, not a compatibility measurement, so a view may not
+    cite an ordering as the evidence it was derived from (docs/PARITY_MODEL.md sections 3 and 4).
     """
     fields = ("view_id", "subject_id", "reference_id", "dimension", "direction", "status",
-              "evidence", "support_status", "non_claims")
+              "evidence_kind", "evidence", "support_status", "non_claims")
     problems = _missing(rec, fields)
     for f in ("view_id", "subject_id", "reference_id"):
         problems += _nonempty(rec, f)
@@ -508,6 +510,14 @@ def validate_compatibility_view(rec: dict) -> list[str]:
     problems += _enum(rec, "direction", COMPAT_DIRECTIONS)
     problems += _enum(rec, "status", COMPAT_STATUSES)
     problems += _enum(rec, "support_status", SUPPORT_STATUSES)
+    kind = rec.get("evidence_kind")
+    if kind == "version_order":
+        problems.append(
+            "evidence_kind `version_order` is refused: a compatibility view is never derived from "
+            "numeric ordering (D535, docs/PARITY_MODEL.md section 4)"
+        )
+    elif "evidence_kind" in rec and kind not in EVIDENCE_KINDS:
+        problems.append(f"evidence_kind={kind!r} is not one of {sorted(EVIDENCE_KINDS)}")
     if "compatible" in rec:
         problems.append(
             "a compatibility view may not carry a bare `compatible` boolean: compatibility is "
@@ -887,7 +897,7 @@ REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
     "delta_receipt": ("receipt_id", "from_id", "to_id", "dimension", "direction", "added",
                       "removed", "changed", "evidence"),
     "compatibility_view": ("view_id", "subject_id", "reference_id", "dimension", "direction",
-                           "status", "evidence", "support_status", "non_claims"),
+                           "status", "evidence_kind", "evidence", "support_status", "non_claims"),
     "compatibility_edge": ("edge_id", "from_id", "to_id", "dimension", "direction", "status",
                            "evidence_kind", "evidence"),
     "negative_obligation": ("obligation_id", "kind", "subject", "scope", "rationale", "evidence",
@@ -1009,6 +1019,7 @@ _GOOD: dict[str, dict] = {
         "dimension": "source_api",
         "direction": "candidate_to_reference",
         "status": "compatible",
+        "evidence_kind": "atlas_differential",
         "evidence": ["forensics/atlas/differential/openssl-3.6.3-historical-vs-openssl-3.6.4-production.json"],
         "support_status": "atlas-complete",
         "non_claims": ["one platform/profile is not every platform/profile"],
@@ -1224,6 +1235,18 @@ def self_test() -> int:
         failures.append("validate_compatibility_edge accepted a `version_order` evidence kind")
     if "numeric ordering" not in " ".join(validate_compatibility_edge(_bad("compatibility_edge"))):
         failures.append("the version_order refusal does not say why ordering is not compatibility")
+
+    # A view is a claim on a dimension, not a boolean and not an ordering: the view validator must
+    # refuse both the bare `compatible` flag and a `version_order` evidence kind.
+    boolean_view = dict(_GOOD["compatibility_view"], compatible=True)
+    if not validate_compatibility_view(boolean_view):
+        failures.append("validate_compatibility_view accepted a bare `compatible` boolean")
+    ordering_view = dict(_GOOD["compatibility_view"], evidence_kind="version_order")
+    if not validate_compatibility_view(ordering_view):
+        failures.append("validate_compatibility_view accepted a `version_order` evidence kind")
+    if "numeric ordering" not in " ".join(validate_compatibility_view(ordering_view)):
+        failures.append("the view's version_order refusal does not say why ordering is not "
+                        "compatibility")
 
     # A declared ABI edge is a declaration, and every lineage edge carries provenance.
     unmarked = dict(_GOOD["lineage_edge"], kind="declared_abi_compatibility", dimension="abi")
