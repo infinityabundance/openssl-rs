@@ -263,6 +263,32 @@ the committed differential to agree, and the result settles §4.5's open questio
 which planes it turned out to apply to, and it is checked by `RT-ATLAS-DELTA` rather than folded
 into the prose it corrects.
 
+**4.7 A delta row's court is read from its declaring header, and an error-reason header owns none
+(measured).** `RT-AFFECTED-COURT-SELECTION` derives the courts a delta touches from the
+dispositioned delta and the coverage atlas's export -> court edge: a measured, `implemented` row
+reaches the courts the stratum that owns its declaring header stages, read from
+`artifacts/phase<stratum>/COURTS.json`. The derivation established two shapes the plan did not name:
+
+  * **a header's owning stratum is single-valued.** A header may declare an export another stratum
+    owns -- `x509.h` declares four phase-12 `X509_[CRL_]load_http` exports beside its own -- so the
+    ownership is read from `forensics/atlas/symbol-ownership.json`'s `headers` (the declaring-header
+    rule), which resolves the header to the one stratum that owns it, rather than to every stratum
+    that declares one function in it. The CRL-signature macro therefore reaches stratum 11 and not
+    stratum 12.
+  * **an error-reason header owns no stratum at all.** `x509err.h` declares no export, so the
+    declaring-header rule assigns it no owner and the plan's model would leave the CRL-signature
+    reason macro reaching no court. The selection resolves it through the error-header convention to
+    the sibling public header that carries the same reason codes (`x509err.h` -> `x509.h`, owned by
+    stratum 11), so the row reaches stratum 11's courts. The two added macros therefore reach the
+    courts of strata 14 (`SSL_VALUE_QUIC_MAX_PENDING_CONNS`, declared in `ssl.h`) and 11
+    (`X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH`), and the delta's three `not-measured` boundaries
+    reach none.
+
+This is checked by `RT-AFFECTED-COURT-SELECTION` rather than folded into the prose it corrects; it
+is the selection `docs/RELEASE_GATES.md` section 8's "re-run affected courts" step is made over,
+and the selected courts are re-derived from the registry each already published rather than
+re-executed (the instrument records the mode honestly; see `docs/PHASE-21-SUBPHASES.md` section 2).
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 20's process unchanged: a subphase lands its code, its court
