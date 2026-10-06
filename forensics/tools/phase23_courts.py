@@ -16,7 +16,7 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**Eleven courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+**Twelve courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
 lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, 23.3 lands
 `RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court, 23.4 lands `RT-LINEAGE-EDGES`, the
 typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage court, 23.6 lands
@@ -24,8 +24,9 @@ typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage cou
 `RT-ABI-HISTORY-FACADES`, the ABI/history-façade court, 23.8 lands
 `RT-SEMANTIC-COURTS`, the oracle-to-oracle and candidate-to-authority semantic court, 23.9 lands
 `RT-COMPATIBILITY-VIEWS`, the directional compatibility-view court, 23.10 lands
-`RT-HISTORICAL-POPULATION`, the historical-population court, and 23.11 lands
-`RT-DOWNSTREAM-MULTITRACK`, the unmodified-downstream-consumer court; the other six courts are
+`RT-HISTORICAL-POPULATION`, the historical-population court, 23.11 lands
+`RT-DOWNSTREAM-MULTITRACK`, the unmodified-downstream-consumer court, and 23.12 lands
+`RT-COMPATIBILITY-EDGES`, the directional compatibility-edge court; the other five courts are
 named in
 `PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
@@ -49,9 +50,9 @@ The seventeen courts, and the subphase that lands each
   * `RT-ABI-HISTORY-FACADES` -- 23.7, the ABI / history façades (registered).
   * `RT-SEMANTIC-COURTS` -- 23.8, the semantic multitrack courts (registered).
   * `RT-COMPATIBILITY-VIEWS` -- 23.9, the compatibility views (registered).
-  * `RT-HISTORICAL-POPULATION` -- 23.10, the historical population.
-  * `RT-DOWNSTREAM-MULTITRACK` -- 23.11, the downstream multitrack court.
-  * `RT-COMPATIBILITY-EDGES` -- 23.12, the directional compatibility edges.
+  * `RT-HISTORICAL-POPULATION` -- 23.10, the historical population (registered).
+  * `RT-DOWNSTREAM-MULTITRACK` -- 23.11, the downstream multitrack court (registered).
+  * `RT-COMPATIBILITY-EDGES` -- 23.12, the directional compatibility edges (registered).
   * `RT-NEGATIVE-OBLIGATIONS` -- 23.13, the negative obligations.
   * `RT-SECURITY-LINEAGE` -- 23.14, the security lineage.
   * `RT-SUPPORT-STATUS` -- 23.15, the support-status ladder.
@@ -60,8 +61,9 @@ The seventeen courts, and the subphase that lands each
 
 Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZATION`,
 `RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE`, `RT-DELTA-ENGINE`, `RT-ABI-HISTORY-FACADES`,
-`RT-SEMANTIC-COURTS`, `RT-COMPATIBILITY-VIEWS`, `RT-HISTORICAL-POPULATION` and
-`RT-DOWNSTREAM-MULTITRACK` is
+`RT-SEMANTIC-COURTS`, `RT-COMPATIBILITY-VIEWS`, `RT-HISTORICAL-POPULATION`,
+`RT-DOWNSTREAM-MULTITRACK` and
+`RT-COMPATIBILITY-EDGES` is
 `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
@@ -131,6 +133,11 @@ import gen_semantic_courts  # noqa: E402
 # the committed evidence through the same code path the artefact was produced by (never a second,
 # drifting predicate) and checks each view's evidence provenance against the authority it names.
 import compat_views  # noqa: E402
+# The Phase-23.12 compatibility-edge generator, imported so the court re-derives the whole plane
+# from the committed delta/lineage/view/ABI evidence through the same code path the artefact was
+# produced by (never a second, drifting predicate) and checks each side's evidence provenance
+# against the side it names.
+import compat_edges  # noqa: E402
 # The Phase-23.10 historical-population generator, imported so the court re-derives every support
 # status from the committed catalogue, authority nodes and receipts through the same code path the
 # artefact was produced by (never a hand-listed status) and re-derives a mutated epoch's coverage.
@@ -200,6 +207,11 @@ SEMANTIC_PROBE = REPO_ROOT / "courts" / "phase23" / "semantic_probe.c"
 # and re-derives every view from the authorities' own committed evidence through the same generator.
 COMPATIBILITY_VIEWS = REPO_ROOT / "forensics" / "multitrack" / "compatibility-views.json"
 
+# 23.12's subject: the directional, dimension-specific compatibility edges plane. The court reads it
+# and re-derives every edge from the committed delta/lineage/view/ABI evidence through the same
+# generator, and checks each side's evidence is its own.
+COMPATIBILITY_EDGES = REPO_ROOT / "forensics" / "multitrack" / "compatibility-edges.json"
+
 # 23.10's subject: the historical-population record over the release catalogue, and the records it
 # is derived from -- the authority nodes, the acquisition and build receipts, the committed atlases
 # and the semantic pair the runtime rung is read from.
@@ -227,6 +239,7 @@ DELTA_ENGINE_COURT = "RT-DELTA-ENGINE"
 ABI_HISTORY_FACADES_COURT = "RT-ABI-HISTORY-FACADES"
 SEMANTIC_COURTS_COURT = "RT-SEMANTIC-COURTS"
 COMPATIBILITY_VIEWS_COURT = "RT-COMPATIBILITY-VIEWS"
+COMPATIBILITY_EDGES_COURT = "RT-COMPATIBILITY-EDGES"
 HISTORICAL_POPULATION_COURT = "RT-HISTORICAL-POPULATION"
 DOWNSTREAM_MULTITRACK_COURT = "RT-DOWNSTREAM-MULTITRACK"
 ROOT_RELEASE = "openssl-0.9.1c"
@@ -259,6 +272,7 @@ COURTS: list[tuple[str, str]] = [
     (ABI_HISTORY_FACADES_COURT, "_abi_history_facades_court"),
     (SEMANTIC_COURTS_COURT, "_semantic_courts_court"),
     (COMPATIBILITY_VIEWS_COURT, "_compatibility_views_court"),
+    (COMPATIBILITY_EDGES_COURT, "_compatibility_edges_court"),
     (HISTORICAL_POPULATION_COURT, "_historical_population_court"),
     (DOWNSTREAM_MULTITRACK_COURT, "_downstream_multitrack_court"),
 ]
@@ -266,7 +280,6 @@ COURTS: list[tuple[str, str]] = [
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-COMPATIBILITY-EDGES": "23.12 -- the directional compatibility edges",
     "RT-NEGATIVE-OBLIGATIONS": "23.13 -- the negative obligations",
     "RT-SECURITY-LINEAGE": "23.14 -- the security lineage",
     "RT-SUPPORT-STATUS": "23.15 -- the support-status ladder",
@@ -3078,6 +3091,320 @@ def _compatibility_views_court(name: str) -> dict:
     }
 
 
+def compatibility_edge_findings(body: dict) -> list[str]:
+    """Every way the committed compatibility-edges plane fails this court's subject.
+
+    A pure function of the committed plane, so the sensitivity control mutates one and re-checks.
+    It establishes that every edge is a schema-valid, directional, dimension-specific
+    `compatibility_edge` whose facet maps onto its coarse dimension; that its verdict is PASS,
+    FAIL or UNKNOWN with `status` the schema projection, and never a bare boolean; that its
+    evidence kind is never numeric ordering; that every evidence entry is present,
+    content-addressed and names the side it belongs to, so a side's evidence is never inherited
+    from the other; that a PASS or FAIL cites decisive evidence and an UNKNOWN cites only an
+    absence adjudication with a reason; and that every declared pair-direction carries every
+    facet.
+    """
+    findings: list[str] = []
+    edges = body.get("edges") or []
+    directions = body.get("directions") or []
+    facets = body.get("facets") or {}
+    if not edges:
+        findings.append("the compatibility-edges plane carries no edge")
+    if not facets:
+        findings.append("the plane declares no facet vocabulary")
+    by_key: dict[tuple[str, str, str], dict] = {}
+
+    for e in edges:
+        eid = e.get("edge_id") or "<no edge_id>"
+        findings += [f"{eid}: {p}" for p in multitrack_schemas.validate_compatibility_edge(e)]
+        if not e.get("facet"):
+            findings.append(f"{eid}: names no facet, so it is not dimension-specific")
+        elif e["facet"] in facets and facets[e["facet"]]["dimension"] != e.get("dimension"):
+            findings.append(
+                f"{eid}: facet {e['facet']!r} names dimension "
+                f"{facets[e['facet']]['dimension']!r}, but the record says {e.get('dimension')!r}"
+            )
+        if e.get("from_id") == e.get("to_id"):
+            findings.append(f"{eid}: both sides of a directional edge are the same node")
+        verdict = e.get("verdict")
+        if verdict not in ("PASS", "FAIL", "UNKNOWN"):
+            findings.append(f"{eid}: verdict {verdict!r} is not PASS/FAIL/UNKNOWN")
+        else:
+            want = {"PASS": "compatible", "FAIL": "incompatible", "UNKNOWN": "unknown"}[verdict]
+            if e.get("status") != want:
+                findings.append(
+                    f"{eid}: verdict {verdict} projects to status {want!r}, but the record says "
+                    f"{e.get('status')!r}"
+                )
+        for flag in ("compatible", "overall", "is_compatible", "compatible_overall"):
+            if flag in e:
+                findings.append(
+                    f"{eid}: carries a `{flag}` flag: compatibility is not a single boolean"
+                )
+        if e.get("evidence_kind") == "version_order":
+            findings.append(f"{eid}: cites numeric ordering as its evidence kind")
+
+        entries = e.get("evidence") or []
+        if not entries:
+            findings.append(f"{eid}: cites no evidence")
+        decisive = 0
+        from_paths: set[str] = set()
+        to_paths: set[str] = set()
+        for entry in entries:
+            side = entry.get("side")
+            if side not in ("from_side", "to_side", "pair"):
+                findings.append(f"{eid}: evidence entry has side {side!r}")
+                continue
+            if entry.get("kind") == "version_order":
+                findings.append(f"{eid}: an evidence entry cites numeric ordering")
+            path = entry.get("path")
+            p = REPO_ROOT / str(path or "")
+            if not p.is_file():
+                findings.append(f"{eid}: evidence path {path!r} is absent")
+            elif entry.get("sha256") != sha256_file(p):
+                findings.append(f"{eid}: evidence {path!r} is not content-addressed (recorded "
+                                f"sha256 does not match the file)")
+            if entry.get("kind") != "manual_adjudication":
+                decisive += 1
+            if side == "from_side":
+                if entry.get("authority_id") != e.get("from_authority"):
+                    findings.append(
+                        f"{eid}: from-side evidence belongs to {entry.get('authority_id')!r}, not "
+                        f"the from side's authority {e.get('from_authority')!r}: a side's evidence "
+                        f"is not inherited from the other"
+                    )
+                if path:
+                    from_paths.add(str(path))
+            elif side == "to_side":
+                if entry.get("authority_id") != e.get("to_authority"):
+                    findings.append(
+                        f"{eid}: to-side evidence belongs to {entry.get('authority_id')!r}, not "
+                        f"the to side's authority {e.get('to_authority')!r}: a side's evidence is "
+                        f"not inherited from the other"
+                    )
+                if path:
+                    to_paths.add(str(path))
+        shared = from_paths & to_paths
+        if shared:
+            findings.append(
+                f"{eid}: the two sides share evidence {sorted(shared)}: a side's evidence is not "
+                f"inherited from the other"
+            )
+        if verdict == "UNKNOWN":
+            if not str(e.get("reason") or "").strip():
+                findings.append(f"{eid}: is UNKNOWN with no reason")
+            if decisive:
+                findings.append(
+                    f"{eid}: is UNKNOWN but cites decisive evidence, so it is not honestly "
+                    f"unmeasured"
+                )
+        elif verdict in ("PASS", "FAIL"):
+            if not decisive:
+                findings.append(
+                    f"{eid}: is {verdict} but cites no decisive evidence, so the verdict is not "
+                    f"established by evidence"
+                )
+        by_key[(e.get("from_id"), e.get("to_id"), e.get("facet"))] = e
+
+    # every declared pair-direction carries every facet, and no edge is outside them.
+    declared = {(d.get("from_id"), d.get("to_id"), d.get("direction")) for d in directions}
+    if len(by_key) != len(edges):
+        findings.append("the plane carries two edges with the same from/to/facet key")
+    for d in directions:
+        for facet in facets:
+            if (d.get("from_id"), d.get("to_id"), facet) not in by_key:
+                findings.append(
+                    f"the pair-direction {d.get('from_id')} -> {d.get('to_id')} "
+                    f"({d.get('direction')}) has no {facet!r} edge"
+                )
+    identity = set()
+    for e in edges:
+        identity.add(e.get("from_id"))
+        identity.add(e.get("to_id"))
+    for key in by_key:
+        edge = by_key[key]
+        if (key[0], key[1], edge.get("direction")) not in declared:
+            findings.append(
+                f"{edge.get('edge_id')}: its direction is not one of the plane's declared "
+                f"pair-directions"
+            )
+        unresolved = {edge.get("from_authority"), edge.get("to_authority")} - identity
+        if unresolved:
+            findings.append(
+                f"{edge.get('edge_id')}: names authority identity {sorted(unresolved)} not among "
+                f"the plane's sides"
+            )
+    return findings
+
+
+def compatibility_edges_sensitivity_control(body: dict) -> dict:
+    """Prove the court can fail: seed five mutations and require each caught.
+
+    The honest plane must yield **zero** findings (specificity), and each seeded mutation -- a
+    PASS with no evidence, a dimension collapsed to one boolean, a side's evidence inherited from
+    the other, a verdict defaulting to PASS where the evidence does not establish it, and an
+    evidence kind of numeric ordering -- must be caught.
+    """
+    base = compatibility_edge_findings(body)
+    specificity = not base
+
+    # (a) a PASS with no evidence: the load-bearing refusal of a default pass.
+    no_evidence = copy.deepcopy(body)
+    stripped = next((e for e in no_evidence["edges"] if e["verdict"] == "PASS"), None)
+    if stripped is None:
+        return {"honest": False, "reason": "the plane has no PASS edge to strip"}
+    stripped["evidence"] = []
+    stripped_id = stripped["edge_id"]
+    stripped_findings = compatibility_edge_findings(no_evidence)
+    caught_no_evidence = any("cites no evidence" in f for f in stripped_findings)
+
+    # (b) a dimension collapsed to the one boolean the model forbids.
+    boolean = copy.deepcopy(body)
+    boolean["edges"][0]["compatible"] = True
+    boolean_id = boolean["edges"][0]["edge_id"]
+    boolean_findings = compatibility_edge_findings(boolean)
+    caught_boolean = any("not a single boolean" in f for f in boolean_findings)
+
+    # (c) evidence inherited across the two sides: retag a from-side entry with the to side's
+    #     authority, so the from side now carries evidence that is not its own.
+    relay = copy.deepcopy(body)
+    relay_edge = next((e for e in relay["edges"]
+                       if any(x.get("side") == "from_side" for x in e["evidence"])
+                       and any(x.get("side") == "to_side" for x in e["evidence"])), None)
+    if relay_edge is None:
+        return {"honest": False, "reason": "the plane has no edge with both sides' own evidence"}
+    relay_entry = next(x for x in relay_edge["evidence"] if x.get("side") == "from_side")
+    relay_entry["authority_id"] = relay_edge["to_authority"]
+    relay_id = relay_edge["edge_id"]
+    relay_findings = compatibility_edge_findings(relay)
+    caught_relay = any("not inherited from the other" in f for f in relay_findings)
+
+    # (d) a verdict defaulting to PASS: an UNKNOWN flipped to PASS while its evidence still only
+    #     records the absence.
+    default_pass = copy.deepcopy(body)
+    unknown_edge = next((e for e in default_pass["edges"] if e["verdict"] == "UNKNOWN"), None)
+    if unknown_edge is None:
+        return {"honest": False, "reason": "the plane has no UNKNOWN edge to flip"}
+    unknown_edge["verdict"] = "PASS"
+    unknown_edge["status"] = "compatible"
+    default_id = unknown_edge["edge_id"]
+    default_findings = compatibility_edge_findings(default_pass)
+    caught_default = any("cites no decisive evidence" in f for f in default_findings)
+
+    # (e) an evidence kind of numeric ordering.
+    ordering = copy.deepcopy(body)
+    ordering["edges"][0]["evidence_kind"] = "version_order"
+    ordering_id = ordering["edges"][0]["edge_id"]
+    ordering_findings = compatibility_edge_findings(ordering)
+    caught_ordering = any("numeric ordering" in f for f in ordering_findings)
+
+    return {
+        "baseline_findings": len(base),
+        "injected_pass_without_evidence": stripped_id,
+        "injected_pass_without_evidence_findings": len(stripped_findings),
+        "injected_collapsed_boolean": boolean_id,
+        "injected_collapsed_boolean_findings": len(boolean_findings),
+        "injected_inherited_evidence": relay_id,
+        "injected_inherited_evidence_findings": len(relay_findings),
+        "injected_verdict_defaulting_to_pass": default_id,
+        "injected_verdict_defaulting_to_pass_findings": len(default_findings),
+        "injected_ordering_evidence": ordering_id,
+        "injected_ordering_evidence_findings": len(ordering_findings),
+        "specificity_holds": specificity,
+        "caught_pass_without_evidence": caught_no_evidence,
+        "caught_collapsed_boolean": caught_boolean,
+        "caught_inherited_evidence": caught_relay,
+        "caught_verdict_defaulting_to_pass": caught_default,
+        "caught_ordering_evidence": caught_ordering,
+        "honest": bool(specificity and caught_no_evidence and caught_boolean and caught_relay
+                       and caught_default and caught_ordering),
+    }
+
+
+def _compatibility_edges_court(name: str) -> dict:
+    """`RT-COMPATIBILITY-EDGES`: 23.12's court, the directional compatibility edges.
+
+    Stages no probe. It reads `forensics/multitrack/compatibility-edges.json` and re-derives the
+    whole plane from the committed delta/lineage/view/ABI evidence through the same generator, and
+    establishes that every edge is a schema-valid, directional, dimension-specific
+    `compatibility_edge`; that each verdict is PASS/FAIL/UNKNOWN with the evidence that establishes
+    it and never a bare boolean; that a facet whose evidence is absent is UNKNOWN, not PASS; that
+    neither side's evidence is inherited from the other; and that the evidence kind is never
+    numeric ordering. Five seeded mutations -- a PASS with no evidence, a dimension collapsed to
+    one boolean, evidence inherited across the two sides, a verdict defaulting to PASS, and a
+    numeric-ordering evidence kind -- are each caught with specificity holding. A passing edge is
+    an **instrument**: it records one directional, dimension-specific reading of one pair, not a
+    one-boolean compatibility claim.
+    """
+    problems: list[str] = []
+    if not COMPATIBILITY_EDGES.is_file():
+        problems.append(f"the compatibility-edges plane {rel(COMPATIBILITY_EDGES)} is absent")
+    body: dict = {}
+    if not problems:
+        body = read_json(COMPATIBILITY_EDGES)
+    findings = compatibility_edge_findings(body) if body else []
+
+    # The committed plane must reproduce from the committed evidence through the same generator:
+    # a typed verdict, a relayed evidence path or a hand-edited status stops reproducing.
+    if body:
+        try:
+            derived = compat_edges.derive_body()
+        except SystemExit as exc:
+            findings.append(f"the compatibility edges could not be re-derived: {exc}")
+            derived = None
+        if derived is not None and derived != body:
+            findings.append(
+                "the committed edges do not reproduce from the committed evidence through the "
+                "same generator: an edge was altered or a verdict was typed rather than derived"
+            )
+
+    control = compatibility_edges_sensitivity_control(body) if body else {"honest": False}
+    verdict = "pass" if (not findings and not problems and control.get("honest")) else "fail"
+
+    matrix = [
+        {"from_id": e.get("from_id"), "to_id": e.get("to_id"),
+         "direction": e.get("direction"), "dimension": e.get("dimension"),
+         "facet": e.get("facet"), "verdict": e.get("verdict"),
+         "status": e.get("status")}
+        for e in body.get("edges") or []
+    ]
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/multitrack/compatibility-edges.json and "
+            "re-derives the whole plane from the committed edge deltas, the entity lineage, the "
+            "compatibility views and the Phase-2 ABI courts through the same generator. It "
+            "establishes that every edge is a schema-valid, directional, dimension-specific "
+            "compatibility_edge whose facet maps onto its coarse dimension; that each verdict is "
+            "PASS/FAIL/UNKNOWN with the evidence that establishes it and never a single boolean; "
+            "that a facet whose evidence is absent is UNKNOWN with its reason, never PASS by "
+            "default; that every evidence entry is content-addressed and names the side it "
+            "belongs to, so neither side's evidence is inherited from the other; and that no "
+            "evidence kind is numeric ordering. A PASS with no evidence, a dimension collapsed to "
+            "one boolean, evidence inherited across the two sides, a verdict defaulting to PASS "
+            "and a numeric-ordering evidence kind are each detected with specificity holding "
+            "(docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 2, 3.1, 3.3 and 4.9)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the compatibility-edges court reads a committed evidence plane and writes no "
+            "artifacts/phase23/probes/<probe>.{authority,candidate} pair, so it stages no "
+            "transcript to diff and carries no FRF declaration"
+        ),
+        "direction_model": body.get("direction_model"),
+        "verdict_vocabulary": body.get("verdict_vocabulary"),
+        "counts": body.get("counts"),
+        "matrix": matrix,
+        "unknown": body.get("unknown"),
+        "boundary": body.get("boundary"),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def _reseal_population(body: dict) -> dict:
     """`body` with its content hash recomputed, so a mutation is caught on substance alone."""
     out = copy.deepcopy(body)
@@ -4045,13 +4372,29 @@ def main(argv: list[str]) -> int:
             "The Phase-17 candidate corpus is checked green and distinct: a candidate result is "
             "never relabelled as authority evidence. A consumer claiming a build with no artifact, "
             "an epoch counted passing while its consumer is `not_run`, and a result relabelled "
-            "across authorities are each detected with specificity holding. Phase 23 owns "
-            "no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining six courts -- "
-            "RT-COMPATIBILITY-EDGES, "
+            "across authorities are each detected with specificity holding. `RT-COMPATIBILITY-EDGES` "
+            "is 23.12's court: the directional compatibility edges. It stages no probe and reads "
+            "forensics/multitrack/compatibility-edges.json, re-deriving the whole plane from the "
+            "committed edge deltas, the entity lineage, the compatibility views and the Phase-2 "
+            "ABI courts through the same generator. It establishes that every edge is a "
+            "schema-valid, directional, dimension-specific compatibility_edge whose facet maps "
+            "onto its coarse dimension; that each verdict is PASS/FAIL/UNKNOWN with the evidence "
+            "that establishes it and never a single boolean; that a facet whose evidence is "
+            "absent is UNKNOWN with its reason, never PASS by default; that every evidence entry "
+            "is content-addressed and names the side it belongs to, so neither side's evidence is "
+            "inherited from the other; and that no evidence kind is numeric ordering. The "
+            "3.6.3->3.6.4 edge is read both ways, and its API-source facet passes forward and "
+            "fails backward because the two macros 3.6.4 added are absent from 3.6.3; the "
+            "candidate's relation to its reference authority 3.6.4-production is read both ways, "
+            "with the semantic facet UNKNOWN because no committed candidate-to-authority semantic "
+            "measurement exists. A PASS with no evidence, a dimension collapsed to one boolean, "
+            "evidence inherited across the two sides, a verdict defaulting to PASS and a "
+            "numeric-ordering evidence kind are each detected with specificity holding. Phase 23 "
+            "owns no exported symbol, so no differential probe "
+            "over a symbol set is its evidence, and its remaining five courts -- "
             "RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, "
             "RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
-            "the subphases that land them (23.12 through 23.17). The one thing the model forbids "
+            "the subphases that land them (23.13 through 23.17). The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "
@@ -4086,6 +4429,7 @@ def main(argv: list[str]) -> int:
         InputRef(name="semantic-courts", path=SEMANTIC_COURTS),
         InputRef(name="semantic-probe", path=SEMANTIC_PROBE),
         InputRef(name="compatibility-views", path=COMPATIBILITY_VIEWS),
+        InputRef(name="compatibility-edges", path=COMPATIBILITY_EDGES),
         InputRef(name="historical-population", path=HISTORICAL_POPULATION),
         InputRef(name="downstream-multitrack", path=DOWNSTREAM_MULTITRACK),
         InputRef(name="phase17-downstream-corpus", path=PHASE17_CORPUS),
@@ -4274,6 +4618,26 @@ def main(argv: list[str]) -> int:
                 for v in a["views"]:
                     print(f"        {v['facet']:<34} {v['dimension']:<14} {v['status']}")
                 print(f"        not-derivable: {', '.join(a['not_derivable'])}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == COMPATIBILITY_EDGES_COURT:
+            c = r["control"]
+            counts = r["counts"] or {}
+            print(f"  {r['court']:<32} pass   (no probe, {counts.get('edges')} edge(s) over "
+                  f"{counts.get('pairs')} pair(s) / {counts.get('directions')} direction(s); "
+                  f"{counts.get('by_verdict')}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"no-evidence->{c['injected_pass_without_evidence_findings']} "
+                  f"boolean->{c['injected_collapsed_boolean_findings']} "
+                  f"inherited->{c['injected_inherited_evidence_findings']} "
+                  f"default-pass->{c['injected_verdict_defaulting_to_pass_findings']} "
+                  f"ordering->{c['injected_ordering_evidence_findings']} finding(s))")
+            for m in r["matrix"]:
+                print(f"      {m['from_id']:<30} -> {m['to_id']:<30} {m['direction']:<22} "
+                      f"{m['facet']:<11} {m['verdict']}")
+            for u in r["unknown"] or []:
+                print(f"      UNKNOWN {u['edge_id']}: {u['reason']}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] == "pass" and r["court"] == HISTORICAL_POPULATION_COURT:

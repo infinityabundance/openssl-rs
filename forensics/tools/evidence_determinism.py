@@ -185,6 +185,12 @@ GENERATORS_BEFORE_LEDGERS = [
     # The RT-COMPATIBILITY-VIEWS court re-derives the whole plane through the same generator and
     # refuses a view relayed from another authority.
     "forensics/tools/compat_views.py",
+    # Phase 23.12's directional, dimension-specific compatibility edges. It is a pure function of
+    # the committed edge deltas, the entity lineage, the compatibility views and the Phase-2 ABI
+    # courts, so a stale committed plane -- or a verdict that was typed rather than derived -- is a
+    # failure rather than a silent divergence. The RT-COMPATIBILITY-EDGES court re-derives the whole
+    # plane through the same generator and refuses a side whose evidence is inherited from the other.
+    "forensics/tools/compat_edges.py",
     # Phase 23.10's historical population. It is a pure function of the committed catalogue, the
     # authority-node registry, the acquisition and build receipts, the committed atlases, the
     # compatibility views and the semantic pair, so a stale committed record -- or a hand-typed
@@ -386,6 +392,11 @@ COMPARED = [
     # so a stale committed plane -- or a view relayed from another authority -- is a failure rather
     # than a silent divergence.
     "forensics/multitrack/compatibility-views.json",
+    # Phase 23.12's compatibility edges: a pure function of the committed edge delta, the entity
+    # lineage, the compatibility views and the Phase-2 ABI courts, so a stale plane -- or an edge
+    # whose verdict is not established by its evidence -- is a failure rather than a silent
+    # divergence.
+    "forensics/multitrack/compatibility-edges.json",
     # Phase 23.10's historical population: a pure function of the committed catalogue, authority
     # nodes, receipts, atlases, compatibility views and semantic pair, so a stale record or a typed
     # status is a failure rather than a silent divergence.
