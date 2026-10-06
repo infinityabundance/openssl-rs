@@ -688,14 +688,13 @@
         "stratum": "3.6.4 custodian seal"
       },
       {
-        "blocking": "1 required evidence file(s) absent, the first being docs/PHASE-21-MAINTENANCE-SEAL.md",
+        "blocking": "",
         "deferred": [],
-        "evidence_absent": [
-          "docs/PHASE-21-MAINTENANCE-SEAL.md"
-        ],
+        "evidence_absent": [],
         "evidence_present": [
           "docs/PHASE-21-SUBPHASES.md",
           "forensics/tools/phase21_obligations.py",
+          "docs/PHASE-21-MAINTENANCE-SEAL.md",
           "forensics/phase21-obligations.json",
           "artifacts/phase21/COURTS.json",
           "forensics/atlas/court-coverage.json",
@@ -705,8 +704,8 @@
         "name": "maintenance-delta",
         "phase": 21,
         "provider_rows": null,
-        "seal_sha256": null,
-        "state": "in-progress",
+        "seal_sha256": "30fdd38a70a6e4c87b313733b85f6675a296eb2c203d341ef1063bd4b4dc3a9e",
+        "state": "complete",
         "stratum": "Maintenance delta machinery"
       },
       {
@@ -729,12 +728,12 @@
     ],
     "rule": "a phase may be complete only if every phase it requires is complete (forensics/tools/phase_state.py REQUIRES; docs/PHASE-22-SUBPHASES.md section 8)",
     "summary": {
-      "complete": 22,
-      "in_progress": 1,
+      "complete": 23,
+      "in_progress": 0,
       "not_started": 0
     }
   },
-  "body_hash": "2ce5984dade77578261577d4687e2d673feb6e736795734f7c7da0369506b56c",
+  "body_hash": "ac3e4631f080568e4860d587056847963d7db2f3540a01cdfc0f639ca8f3bd1b",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
