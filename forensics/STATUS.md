@@ -40,7 +40,7 @@ renderer does not know any phase status.
 | 17 | Downstream replacement court | `complete` |  |
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` |  |
 | 19 | Performance / CPU dispatch | `complete` |  |
-| 20 | 3.6.4 custodian seal | `in-progress` | 1 required evidence file(s) absent, the first being docs/PHASE-20-CUSTODIAN-SEAL.md |
+| 20 | 3.6.4 custodian seal | `complete` |  |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 
 Not started: strata 21-21 (1 total).
@@ -371,7 +371,7 @@ Contract units (measurement vs property):
 
 | unit | measurement_state | property_status | findings |
 |---|---|---|---|
-| custodian-maturity | `complete` | `NOT_CLAIMED` | `the committed evidence establishes L8 for libcrypto and libssl, not the L9 high-assurance custodian seal the seal names: stratum 20 is 'in-progress', not `complete`; artefact docs/PHASE-20-CUSTODIAN-SEAL.md is absent. L9 is the level Phase 20 itself is establishing (docs/PHASE-20-SUBPHASES.md section 4.2); a passing RT-CUSTODIAN-MATURITY is an instrument plus this derivation and must never be read as 'L9 custodian seal achieved'.` |
+| custodian-maturity | `complete` | `NOT_CLAIMED` | `the committed evidence establishes L8 for libcrypto and libssl, not the L9 high-assurance custodian seal the seal names: L9 is this stratum's own claim rather than prior evidence the instrument can certify; its evidence -- the completion of stratum 20 and docs/PHASE-20-CUSTODIAN-SEAL.md -- is the seal this instrument belongs to. L9 is the level Phase 20 itself is establishing (docs/PHASE-20-SUBPHASES.md section 4.2); a passing RT-CUSTODIAN-MATURITY is an instrument plus this derivation and must never be read as 'L9 custodian seal achieved'.` |
 | receipt-closure | `complete` | `not_claimed` | — |
 | custodian-residuals | `complete` | `not_claimed` | — |
 | substitution-witness | `complete` | `not_claimed` | — |

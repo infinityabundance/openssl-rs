@@ -183,6 +183,25 @@ non-claims are named in §0: **no FIPS validation**, **no universal parity from 
 plan reconciliation has no unit of this stratum's to judge; a subphase that discovers its unit is
 elsewhere records that rather than forcing a row (§0, §5).
 
+**4.5 The clause that made `gen_frf_courts.py` the stratum's seal was wrong about this stratum's
+shape, and the seal corrected it (measured).** Section 4.2 wrote "**No court is registered in
+`gen_frf_courts.py`**: that registry is the stratum's seal." Phase 20 owns **no FRF-declarable
+court**: all five custodian courts stage no `artifacts/phase20/probes/<probe>.{authority,candidate}`
+pair -- they read committed evidence -- so each carries `frf_declarable: false` with its exclusion
+reason in `artifacts/phase20/COURTS.json`. `forensics/tools/phase_state.py`'s
+`frf_gemel_blocking_reason` derives its requirement from that inventory, never from the registry it
+checks, and its documented rule is that "a stratum whose own court inventory declares no
+FRF-declarable court has begun no chain and is **not blocked here**": for Phase 20, as for Phase 22,
+it returns `""`. This stratum's FRF/Gemel chain entry is therefore **vacuous by the rule's own
+scoping**, not satisfied by a row in `gen_frf_courts.py`: there is no declarable court to register,
+no `.frf` receipt or compiled claim its chain names, and no Gemel checkpoint this stratum's chain
+requires -- the 0.0.25 release re-creates the store at its identity exactly as the 0.0.24 release
+(`docs/PHASE-19-PERFORMANCE-SEAL.md` §8) did for Phase 19's three declarable courts. What closes the
+stratum is `docs/PHASE-20-CUSTODIAN-SEAL.md`, the document `PHASE20_MODULES` names. This is the same
+measured correction Phase 22's seal made for its own non-declarable shape, and the registry clause
+above is not folded into §4.2 for the reason Phase 19's §4.5 gives: a correction merged into the
+prose it corrects cannot be checked against what it replaced.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 19's process unchanged: a subphase lands its code, its court

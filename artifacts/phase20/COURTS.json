@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-CUSTODIAN-MATURITY` is 20.1's court: it stages no probe and derives the L0-L9 maturity ladder of docs/RELEASE_GATES.md section 3 for libcrypto and libssl from committed evidence -- each stratum's seal and court registry, the provider census and its coverage join, the export court-coverage join and the Phase-17 downstream corpus. It records, per level per library, `{level, evidence_present, source_artifacts}`, and names only the highest level whose cumulative evidence is present. On the current tree that is L8 (downstream custodian court) for both libraries; L9 (high-assurance custodian seal) is absent because it is the level Phase 20 itself is establishing, and the gap is recorded as a finding, so the ledger's `custodian-maturity` property reads NOT_CLAIMED with findings_present. The court is pass as an instrument -- it derived the ladder, its evidence is committed, and a synthetic evidence view with a prerequisite removed detects the gap -- NOT because the ladder reaches L9. A passing RT-CUSTODIAN-MATURITY must never be read as 'L9 custodian seal achieved'. `RT-RECEIPT-CLOSURE` is 20.2's court: it stages no probe and joins every obligation the in-scope strata recorded `implemented` or closed to the FRF receipt that proves it, requiring a receipt, two adjudicated challenges and a zero-blocker `sensitivity-backed` claim at the current candidate identity for every FRF-declarable court each stratum ran, and joining each implemented export to its courts through the court-coverage atlas. On the current tree the closure is complete -- every stratum's chain is complete, the covering claims carry zero blockers and no export is courted by no court -- so it records zero findings; a real gap would be a finding and a `fail`, and a synthetic evidence view with a receipt removed, a claim blocker injected or a stale candidate identity detects the gap. `RT-CUSTODIAN-RESIDUALS` is 20.3's court: it stages no probe and dispositions every residual the earlier strata and the FRF store record -- the Phase-22 cross-plane census and the closure's `unknown_intersecting_root_keys`, the Phase-1 completeness and symbol reconciliation, the divergence, ownership-transition and prerequisite planes, the two boundary registers, the hostile/CT/ASan/Miri receipts, the unsafe-footprint ceiling and the FRF store's own residuals. For each residual it records `{source, id, disposition, intersects_production_profile, state}`; every residual must carry a disposition and no `UNKNOWN` residual may intersect the claimed production profile. On the current tree there are 167 `UNKNOWN` residuals (all POD_NAME_NOT_IN_ATLAS in the pod-contract plane) and the closure records that zero of them intersect a declared compatibility root, so the court records zero findings and says so precisely; a real un-dispositioned or `UNKNOWN`-intersecting residual would be a finding and a `fail`, and a synthetic evidence view with an un-dispositioned residual and one with an `UNKNOWN`-intersecting residual detects the gap while an `UNKNOWN` that does not intersect does not. `RT-SUBSTITUTION-WITNESS` is 20.4's court: it stages no probe and records the ABI-substitution witness chain and the machine-owned downstream corpus witness chain -- the Phase-2 ABI-substitution family (ABI-SUBSTITUTION, ABI-LOAD and ABI-LINK, read from artifacts/phase2/courts/ and cross-checked against artifacts/phase2/COURTS.json) and the six Phase-17 downstream programs (curl, git, haproxy, nginx, openssh and python), which it re-establishes as current and functional rather than assuming. For each witness it records `{witness, built_against, run_id_or_mode, observation, functional}`; on the current tree all nine witnesses are current and functional (candidate 0.0.24), so the court records zero findings. The Phase-17 driver has no cheap verify/currency mode, so the court re-derives currency and functional status from the machine-owned records and proves currency by candidate identity rather than re-running the harnesses, and says exactly that in its `reestablishment` block; a stale or non-functional witness would be a finding and a `fail`, and synthetic views with a stale witness and with non-functional downstream and ABI witnesses are all detected. `CUSTODIAN-BOUNDARY-REGISTER` is 20.5's court: it stages no probe and binds the authored register artifacts/phase20/custodian-boundary-register.json, which records, per surface, whether it is `claimed` (a passing court covers it) or `bounded` (explicitly outside this stratum). It re-reads the four custodian courts' records (the claimed side) and the constitution/limitations artefacts -- docs/NON_CLAIMS.md, docs/FIPS_CLAIMS.md, docs/UNSAFE.md and the unsafe-footprint growth ceiling (the bounded side) -- and fails the stratum if a recorded boundary has drifted from its evidence. The three load-bearing non-claims are carried as bounded rows: no FIPS validation, no universal parity from finite evidence, and memory safety measured rather than established. On the current tree the register records zero findings (specificity), and a synthetic view with a claimed row's court turned non-passing and one with a bounded row's cited evidence drifted are both detected. This is the last of the five units, so no court is `pending`. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the custodian claim over a finished implementation, with no FIPS validation, no universal-parity claim from finite evidence and no claim that memory safety is established. docs/PHASE-20-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "claim": "`RT-CUSTODIAN-MATURITY` is 20.1's court: it stages no probe and derives the L0-L9 maturity ladder of docs/RELEASE_GATES.md section 3 for libcrypto and libssl from committed evidence -- each stratum's seal and court registry, the provider census and its coverage join, the export court-coverage join and the Phase-17 downstream corpus. It records, per level per library, `{level, evidence_present, source_artifacts}`, and names only the highest level whose cumulative evidence is present. On the current tree that is L8 (downstream custodian court) for both libraries; L9 (high-assurance custodian seal) is absent because it is the level Phase 20 itself is establishing, and the gap is recorded as a finding, so the ledger's `custodian-maturity` property reads NOT_CLAIMED with findings_present. The court is pass as an instrument -- it derived the ladder, its evidence is committed, and a synthetic evidence view with a prerequisite removed detects the gap -- NOT because the ladder reaches L9. A passing RT-CUSTODIAN-MATURITY must never be read as 'L9 custodian seal achieved'. `RT-RECEIPT-CLOSURE` is 20.2's court: it stages no probe and joins every obligation the in-scope strata recorded `implemented` or closed to the FRF receipt that proves it, requiring a receipt, two adjudicated challenges and a zero-blocker `sensitivity-backed` claim at the current candidate identity for every FRF-declarable court each stratum ran, and joining each implemented export to its courts through the court-coverage atlas. On the current tree the closure is complete -- every stratum's chain is complete, the covering claims carry zero blockers and no export is courted by no court -- so it records zero findings; a real gap would be a finding and a `fail`, and a synthetic evidence view with a receipt removed, a claim blocker injected or a stale candidate identity detects the gap. `RT-CUSTODIAN-RESIDUALS` is 20.3's court: it stages no probe and dispositions every residual the earlier strata and the FRF store record -- the Phase-22 cross-plane census and the closure's `unknown_intersecting_root_keys`, the Phase-1 completeness and symbol reconciliation, the divergence, ownership-transition and prerequisite planes, the two boundary registers, the hostile/CT/ASan/Miri receipts, the unsafe-footprint ceiling and the FRF store's own residuals. For each residual it records `{source, id, disposition, intersects_production_profile, state}`; every residual must carry a disposition and no `UNKNOWN` residual may intersect the claimed production profile. On the current tree there are 334 `UNKNOWN` residual records -- the 167 POD_NAME_NOT_IN_ATLAS names the pod-contract plane carries, re-projected by two registers (the Phase-22 cross-plane census and the checkpoint's named `UNKNOWN` sets) -- and the closure records that zero of them intersect a declared compatibility root, so the court records zero findings and says so precisely; a real un-dispositioned or `UNKNOWN`-intersecting residual would be a finding and a `fail`, and a synthetic evidence view with an un-dispositioned residual and one with an `UNKNOWN`-intersecting residual detects the gap while an `UNKNOWN` that does not intersect does not. `RT-SUBSTITUTION-WITNESS` is 20.4's court: it stages no probe and records the ABI-substitution witness chain and the machine-owned downstream corpus witness chain -- the Phase-2 ABI-substitution family (ABI-SUBSTITUTION, ABI-LOAD and ABI-LINK, read from artifacts/phase2/courts/ and cross-checked against artifacts/phase2/COURTS.json) and the six Phase-17 downstream programs (curl, git, haproxy, nginx, openssh and python), which it re-establishes as current and functional rather than assuming. For each witness it records `{witness, built_against, run_id_or_mode, observation, functional}`; on the current tree all nine witnesses are current and functional (candidate 0.0.24), so the court records zero findings. The Phase-17 driver has no cheap verify/currency mode, so the court re-derives currency and functional status from the machine-owned records and proves currency by candidate identity rather than re-running the harnesses, and says exactly that in its `reestablishment` block; a stale or non-functional witness would be a finding and a `fail`, and synthetic views with a stale witness and with non-functional downstream and ABI witnesses are all detected. `CUSTODIAN-BOUNDARY-REGISTER` is 20.5's court: it stages no probe and binds the authored register artifacts/phase20/custodian-boundary-register.json, which records, per surface, whether it is `claimed` (a passing court covers it) or `bounded` (explicitly outside this stratum). It re-reads the four custodian courts' records (the claimed side) and the constitution/limitations artefacts -- docs/NON_CLAIMS.md, docs/FIPS_CLAIMS.md, docs/UNSAFE.md and the unsafe-footprint growth ceiling (the bounded side) -- and fails the stratum if a recorded boundary has drifted from its evidence. The three load-bearing non-claims are carried as bounded rows: no FIPS validation, no universal parity from finite evidence, and memory safety measured rather than established. On the current tree the register records zero findings (specificity), and a synthetic view with a claimed row's court turned non-passing and one with a bounded row's cited evidence drifted are both detected. This is the last of the five units, so no court is `pending`. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the custodian claim over a finished implementation, with no FIPS validation, no universal-parity claim from finite evidence and no claim that memory safety is established. docs/PHASE-20-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
     "courts": [
       {
         "control": {
@@ -53,6 +53,7 @@
           "docs/PHASE-18-HARDENING-SEAL.md",
           "docs/PHASE-19-PERFORMANCE-SEAL.md",
           "docs/PHASE-2-DISTRIBUTION-SEAL.md",
+          "docs/PHASE-20-CUSTODIAN-SEAL.md",
           "docs/PHASE-22-ATLAS-SEAL.md",
           "docs/PHASE-3-CORE-RUNTIME-SEAL.md",
           "docs/PHASE-4-BIO-CONF-SEAL.md",
@@ -69,7 +70,7 @@
           "forensics/phase-state.json"
         ],
         "findings": [
-          "the committed evidence establishes L8 for libcrypto and libssl, not the L9 high-assurance custodian seal the seal names: stratum 20 is 'in-progress', not `complete`; artefact docs/PHASE-20-CUSTODIAN-SEAL.md is absent. L9 is the level Phase 20 itself is establishing (docs/PHASE-20-SUBPHASES.md section 4.2); a passing RT-CUSTODIAN-MATURITY is an instrument plus this derivation and must never be read as 'L9 custodian seal achieved'."
+          "the committed evidence establishes L8 for libcrypto and libssl, not the L9 high-assurance custodian seal the seal names: L9 is this stratum's own claim rather than prior evidence the instrument can certify; its evidence -- the completion of stratum 20 and docs/PHASE-20-CUSTODIAN-SEAL.md -- is the seal this instrument belongs to. L9 is the level Phase 20 itself is establishing (docs/PHASE-20-SUBPHASES.md section 4.2); a passing RT-CUSTODIAN-MATURITY is an instrument plus this derivation and must never be read as 'L9 custodian seal achieved'."
         ],
         "frf_declarable": false,
         "frf_exclusion": "the maturity court reads committed evidence artefacts and stages no artifacts/phase20/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
@@ -383,7 +384,7 @@
           "18": "complete",
           "19": "complete",
           "2": "complete",
-          "20": "in-progress",
+          "20": "complete",
           "21": "not-started",
           "22": "complete",
           "3": "complete",
@@ -3744,7 +3745,7 @@
           },
           "path": "artifacts/phase20/custodian-boundary-register.json",
           "schema": "openssl-rs/custodian-boundary-register/v1",
-          "sha256": "72f86ed3bc7b4df3456b98807f6914bfc9af339e57f52a54efd4731cf1e2c3e5",
+          "sha256": "a45c19c9c8b75515bc849f371feba8f9b2026e9f97df706ee2ed9611a1180b23",
           "total": 8
         },
         "surfaces": [
@@ -3829,7 +3830,7 @@
     {
       "name": "phase-20-plan",
       "path": "docs/PHASE-20-SUBPHASES.md",
-      "sha256": "dac989cbf03e478e95ed668266cf6eb970a72ff48ade7c5e5dacf8378db84f3e"
+      "sha256": "382a7982057c3b72b94a11a7049461a1267677a0929b8e994311abbe1050253c"
     },
     {
       "name": "release-gates",
@@ -3909,7 +3910,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "9153aeef81ac1eff6acee74061016515700e7660799c6241624618d12e2d3fa5"
+      "sha256": "3d53af2845e13fa3c7b97bae6b773e657d7ccca2a7dbbcaa15d0698d29bfbf3c"
     },
     {
       "name": "court-coverage-rows",
@@ -3919,7 +3920,7 @@
     {
       "name": "divergence-obligations",
       "path": "forensics/divergence-obligations.json",
-      "sha256": "422bee0d0e03e5520437c7ee63a76040217d66498c9686ff00a1490185e28e85"
+      "sha256": "23aed520ca22fa5021448638ccc8f4e7bdbf2fedd81cdf9adec85c0ca82f8c0b"
     },
     {
       "name": "prerequisites",
@@ -3959,7 +3960,7 @@
     {
       "name": "custodian-boundary-register",
       "path": "artifacts/phase20/custodian-boundary-register.json",
-      "sha256": "72f86ed3bc7b4df3456b98807f6914bfc9af339e57f52a54efd4731cf1e2c3e5"
+      "sha256": "a45c19c9c8b75515bc849f371feba8f9b2026e9f97df706ee2ed9611a1180b23"
     },
     {
       "name": "non-claims",
