@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-CUSTODIAN-MATURITY` is 20.1's court: it stages no probe and derives the L0-L9 maturity ladder of docs/RELEASE_GATES.md section 3 for libcrypto and libssl from committed evidence -- each stratum's seal and court registry, the provider census and its coverage join, the export court-coverage join and the Phase-17 downstream corpus. It records, per level per library, `{level, evidence_present, source_artifacts}`, and names only the highest level whose cumulative evidence is present. On the current tree that is L8 (downstream custodian court) for both libraries; L9 (high-assurance custodian seal) is absent because it is the level Phase 20 itself is establishing, and the gap is recorded as a finding, so the ledger's `custodian-maturity` property reads NOT_CLAIMED with findings_present. The court is pass as an instrument -- it derived the ladder, its evidence is committed, and a synthetic evidence view with a prerequisite removed detects the gap -- NOT because the ladder reaches L9. A passing RT-CUSTODIAN-MATURITY must never be read as 'L9 custodian seal achieved'. `RT-RECEIPT-CLOSURE` is 20.2's court: it stages no probe and joins every obligation the in-scope strata recorded `implemented` or closed to the FRF receipt that proves it, requiring a receipt, two adjudicated challenges and a zero-blocker `sensitivity-backed` claim at the current candidate identity for every FRF-declarable court each stratum ran, and joining each implemented export to its courts through the court-coverage atlas. On the current tree the closure is complete -- every stratum's chain is complete, the covering claims carry zero blockers and no export is courted by no court -- so it records zero findings; a real gap would be a finding and a `fail`, and a synthetic evidence view with a receipt removed, a claim blocker injected or a stale candidate identity detects the gap. `RT-CUSTODIAN-RESIDUALS` is 20.3's court: it stages no probe and dispositions every residual the earlier strata and the FRF store record -- the Phase-22 cross-plane census and the closure's `unknown_intersecting_root_keys`, the Phase-1 completeness and symbol reconciliation, the divergence, ownership-transition and prerequisite planes, the two boundary registers, the hostile/CT/ASan/Miri receipts, the unsafe-footprint ceiling and the FRF store's own residuals. For each residual it records `{source, id, disposition, intersects_production_profile, state}`; every residual must carry a disposition and no `UNKNOWN` residual may intersect the claimed production profile. On the current tree there are 334 `UNKNOWN` residual records -- the 167 POD_NAME_NOT_IN_ATLAS names the pod-contract plane carries, re-projected by two registers (the Phase-22 cross-plane census and the checkpoint's named `UNKNOWN` sets) -- and the closure records that zero of them intersect a declared compatibility root, so the court records zero findings and says so precisely; a real un-dispositioned or `UNKNOWN`-intersecting residual would be a finding and a `fail`, and a synthetic evidence view with an un-dispositioned residual and one with an `UNKNOWN`-intersecting residual detects the gap while an `UNKNOWN` that does not intersect does not. `RT-SUBSTITUTION-WITNESS` is 20.4's court: it stages no probe and records the ABI-substitution witness chain and the machine-owned downstream corpus witness chain -- the Phase-2 ABI-substitution family (ABI-SUBSTITUTION, ABI-LOAD and ABI-LINK, read from artifacts/phase2/courts/ and cross-checked against artifacts/phase2/COURTS.json) and the six Phase-17 downstream programs (curl, git, haproxy, nginx, openssh and python), which it re-establishes as current and functional rather than assuming. For each witness it records `{witness, built_against, run_id_or_mode, observation, functional}`; on the current tree all nine witnesses are current and functional (candidate 0.0.25), so the court records zero findings. The Phase-17 driver has no cheap verify/currency mode, so the court re-derives currency and functional status from the machine-owned records and proves currency by candidate identity rather than re-running the harnesses, and says exactly that in its `reestablishment` block; a stale or non-functional witness would be a finding and a `fail`, and synthetic views with a stale witness and with non-functional downstream and ABI witnesses are all detected. `CUSTODIAN-BOUNDARY-REGISTER` is 20.5's court: it stages no probe and binds the authored register artifacts/phase20/custodian-boundary-register.json, which records, per surface, whether it is `claimed` (a passing court covers it) or `bounded` (explicitly outside this stratum). It re-reads the four custodian courts' records (the claimed side) and the constitution/limitations artefacts -- docs/NON_CLAIMS.md, docs/FIPS_CLAIMS.md, docs/UNSAFE.md and the unsafe-footprint growth ceiling (the bounded side) -- and fails the stratum if a recorded boundary has drifted from its evidence. The three load-bearing non-claims are carried as bounded rows: no FIPS validation, no universal parity from finite evidence, and memory safety measured rather than established. On the current tree the register records zero findings (specificity), and a synthetic view with a claimed row's court turned non-passing and one with a bounded row's cited evidence drifted are both detected. This is the last of the five units, so no court is `pending`. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the custodian claim over a finished implementation, with no FIPS validation, no universal-parity claim from finite evidence and no claim that memory safety is established. docs/PHASE-20-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "claim": "`RT-CUSTODIAN-MATURITY` is 20.1's court: it stages no probe and derives the L0-L9 maturity ladder of docs/RELEASE_GATES.md section 3 for libcrypto and libssl from committed evidence -- each stratum's seal and court registry, the provider census and its coverage join, the export court-coverage join and the Phase-17 downstream corpus. It records, per level per library, `{level, evidence_present, source_artifacts}`, and names only the highest level whose cumulative evidence is present. On the current tree that is L8 (downstream custodian court) for both libraries; L9 (high-assurance custodian seal) is absent because it is the level Phase 20 itself is establishing, and the gap is recorded as a finding, so the ledger's `custodian-maturity` property reads NOT_CLAIMED with findings_present. The court is pass as an instrument -- it derived the ladder, its evidence is committed, and a synthetic evidence view with a prerequisite removed detects the gap -- NOT because the ladder reaches L9. A passing RT-CUSTODIAN-MATURITY must never be read as 'L9 custodian seal achieved'. `RT-RECEIPT-CLOSURE` is 20.2's court: it stages no probe and joins every obligation the in-scope strata recorded `implemented` or closed to the FRF receipt that proves it, requiring a receipt, two adjudicated challenges and a zero-blocker `sensitivity-backed` claim at the current candidate identity for every FRF-declarable court each stratum ran, and joining each implemented export to its courts through the court-coverage atlas. On the current tree the closure is complete -- every stratum's chain is complete, the covering claims carry zero blockers and no export is courted by no court -- so it records zero findings; a real gap would be a finding and a `fail`, and a synthetic evidence view with a receipt removed, a claim blocker injected or a stale candidate identity detects the gap. `RT-CUSTODIAN-RESIDUALS` is 20.3's court: it stages no probe and dispositions every residual the earlier strata and the FRF store record -- the Phase-22 cross-plane census and the closure's `unknown_intersecting_root_keys`, the Phase-1 completeness and symbol reconciliation, the divergence, ownership-transition and prerequisite planes, the two boundary registers, the hostile/CT/ASan/Miri receipts, the unsafe-footprint ceiling and the FRF store's own residuals. For each residual it records `{source, id, disposition, intersects_production_profile, state}`; every residual must carry a disposition and no `UNKNOWN` residual may intersect the claimed production profile. On the current tree there are 334 `UNKNOWN` residual records -- the 167 POD_NAME_NOT_IN_ATLAS names the pod-contract plane carries, re-projected by two registers (the Phase-22 cross-plane census and the checkpoint's named `UNKNOWN` sets) -- and the closure records that zero of them intersect a declared compatibility root, so the court records zero findings and says so precisely; a real un-dispositioned or `UNKNOWN`-intersecting residual would be a finding and a `fail`, and a synthetic evidence view with an un-dispositioned residual and one with an `UNKNOWN`-intersecting residual detects the gap while an `UNKNOWN` that does not intersect does not. `RT-SUBSTITUTION-WITNESS` is 20.4's court: it stages no probe and records the ABI-substitution witness chain and the machine-owned downstream corpus witness chain -- the Phase-2 ABI-substitution family (ABI-SUBSTITUTION, ABI-LOAD and ABI-LINK, read from artifacts/phase2/courts/ and cross-checked against artifacts/phase2/COURTS.json) and the six Phase-17 downstream programs (curl, git, haproxy, nginx, openssh and python), which it re-establishes as current and functional rather than assuming. For each witness it records `{witness, built_against, run_id_or_mode, observation, functional}`; on the current tree all nine witnesses are current and functional (candidate 0.0.26), so the court records zero findings. The Phase-17 driver has no cheap verify/currency mode, so the court re-derives currency and functional status from the machine-owned records and proves currency by candidate identity rather than re-running the harnesses, and says exactly that in its `reestablishment` block; a stale or non-functional witness would be a finding and a `fail`, and synthetic views with a stale witness and with non-functional downstream and ABI witnesses are all detected. `CUSTODIAN-BOUNDARY-REGISTER` is 20.5's court: it stages no probe and binds the authored register artifacts/phase20/custodian-boundary-register.json, which records, per surface, whether it is `claimed` (a passing court covers it) or `bounded` (explicitly outside this stratum). It re-reads the four custodian courts' records (the claimed side) and the constitution/limitations artefacts -- docs/NON_CLAIMS.md, docs/FIPS_CLAIMS.md, docs/UNSAFE.md and the unsafe-footprint growth ceiling (the bounded side) -- and fails the stratum if a recorded boundary has drifted from its evidence. The three load-bearing non-claims are carried as bounded rows: no FIPS validation, no universal parity from finite evidence, and memory safety measured rather than established. On the current tree the register records zero findings (specificity), and a synthetic view with a claimed row's court turned non-passing and one with a bounded row's cited evidence drifted are both detected. This is the last of the five units, so no court is `pending`. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the custodian claim over a finished implementation, with no FIPS validation, no universal-parity claim from finite evidence and no claim that memory safety is established. docs/PHASE-20-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
     "courts": [
       {
         "control": {
@@ -398,7 +398,7 @@
         "verdict": "pass"
       },
       {
-        "candidate_version": "0.0.25",
+        "candidate_version": "0.0.26",
         "closure_authority": [
           "docs/CUSTODIAN_CONTRACT.md",
           "docs/RELEASE_GATES.md",
@@ -413,11 +413,11 @@
           "caught_nonzero_blocker": true,
           "caught_stale_identity": true,
           "honest": true,
-          "injected_blocker_claim": "00c2462a25bc2140e586acedf3e60f7383534d681473b40795ef5900054c33d6",
+          "injected_blocker_claim": "61c77d4d524fb7ab3e462e2c57eae7f01102201a995d57aa10274838bffabecf",
           "injected_blocker_count": 1,
           "injected_missing_receipt_court": "openssl-rs-rt-mem",
           "injected_missing_receipt_gaps": 251,
-          "injected_stale_claim": "00c2462a25bc2140e586acedf3e60f7383534d681473b40795ef5900054c33d6"
+          "injected_stale_claim": "61c77d4d524fb7ab3e462e2c57eae7f01102201a995d57aa10274838bffabecf"
         },
         "court": "RT-RECEIPT-CLOSURE",
         "findings": [],
@@ -430,7 +430,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "00c2462a25bc2140e586acedf3e60f7383534d681473b40795ef5900054c33d6",
+            "covering_claim": "61c77d4d524fb7ab3e462e2c57eae7f01102201a995d57aa10274838bffabecf",
             "joined": true,
             "missing": [],
             "obligations": 251,
@@ -453,7 +453,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "28527476643f1bb317cac4e749450f7f8c5ca15bf8edf6412609872e2f3dd13a",
+            "covering_claim": "cb0206bd4d4a1e1c12a87af9e356294d4d116f60ef8cd512f6920dd1feaa6b0f",
             "joined": true,
             "missing": [],
             "obligations": 249,
@@ -483,7 +483,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "9e559fdc3ecd722f1a9b2c3c9fc7650d0c3296531541adc82b2f7becb7475be1",
+            "covering_claim": "c640a36fcb1992e4b092a776dca9e093b576205dfb0a56c6ecf6154632c1cc5d",
             "joined": true,
             "missing": [],
             "obligations": 474,
@@ -505,7 +505,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "6fc993d798e7dbdc1b359398d8b7c24e944e3db983858ef9ec3d82f6fc0fbf1e",
+            "covering_claim": "a3c3cb16d0796441fb0846db5f91637e898db4919df4fde4cd956f65a1e9faf6",
             "joined": true,
             "missing": [],
             "obligations": 161,
@@ -527,7 +527,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "32f672068ebdd9843fa6045e9e63f6b8bde47c334c45a115ca7f2a2f143fbbf5",
+            "covering_claim": "176a062b23fe75c8f209c271fae8bd14aed09b6c5da66f5593960f106ecd75e2",
             "joined": true,
             "missing": [],
             "obligations": 736,
@@ -558,7 +558,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "7eed1e09e05a65a8dd61b63026e44a45204570f9c4ba1d830818b316a1801404",
+            "covering_claim": "9ed811bda3cab73939b68da812f03a6aefa709a379827405d7f750ac81741dca",
             "joined": true,
             "missing": [],
             "obligations": 786,
@@ -586,7 +586,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "dd66b287b2c4bfb561405c5545a8baea428df323ee2102a8dee124c80b96c998",
+            "covering_claim": "ef6529c3bb76cd53d38c8db6ac8858f97d02d61376e9978ff7b630f43bf9a416",
             "joined": true,
             "missing": [],
             "obligations": 69,
@@ -603,7 +603,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "1fb552c34f68f0ab054459532a89e53b0c9706982dff01face87e63e6a73ea23",
+            "covering_claim": "3d45820bd6800053a74a3ba05eadd0dc73a0fe9a8b6aea659e221a4e9308466c",
             "joined": true,
             "missing": [],
             "obligations": 298,
@@ -620,7 +620,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "5c0e9ad457477be4b99e135c56ee010fad2cf19c97f9972d6e630f1c6d447f92",
+            "covering_claim": "3b980b7ddb94896fd062aab1a73505bfc650fbb6fa889ff4ab74321cf294d133",
             "joined": true,
             "missing": [],
             "obligations": 1465,
@@ -641,7 +641,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "f4f9838d2e62e8b6fe44aa271e5d3ed96db466dd0468521a728bf9b6f43e2625",
+            "covering_claim": "7b1b6eba2f333afd934ebec41c65456069ab0c44364c0e9f499dab41a442b7eb",
             "joined": true,
             "missing": [],
             "obligations": 1030,
@@ -664,7 +664,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "410fdbd8c4b4c8eff3d3cec751f00bd2154f919df5a3239c8fb659abce9a764a",
+            "covering_claim": "1d399e5158123f4fe394ae4f0cd9085525972b8ab8b120783f0ef10f5cc8e069",
             "joined": true,
             "missing": [],
             "obligations": 377,
@@ -685,7 +685,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "815640424e64298fa0e9e248185113d6054e7c5ab4643598eaf402daadd9055b",
+            "covering_claim": "10b828f3a6728477715d82f06a9ea6a206e54380b4db1965c3fdb00604887955",
             "joined": true,
             "missing": [],
             "obligations": 600,
@@ -708,7 +708,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "3603593b996751c972f1fabceba14bbb3403fffc4ba01e2c2dac35d057c9a3b7",
+            "covering_claim": "5b886f1078bec71f60cf65f0f80e89eed5978806034257a9d9f6b3667a708d16",
             "joined": true,
             "missing": [],
             "obligations": 3,
@@ -722,7 +722,7 @@
           {
             "blockers": 0,
             "closed": false,
-            "covering_claim": "9c22f43cf76a18ec7fa4d91b0e36a80d148340c856f61a3c699e2d8e5db973e9",
+            "covering_claim": "1238240203da2757a72b1f613f6f88e397e6c1d6222e957de748cff2af62e101",
             "joined": true,
             "missing": [],
             "obligations": 3,
@@ -741,7 +741,7 @@
           {
             "blockers": 0,
             "closed": false,
-            "covering_claim": "d04cd5bbd876008366b72548b95260650f18dbc27088ee0ecc3b5f618d587450",
+            "covering_claim": "f0fba80442f953a081875f1aae6120ca27c3c3af5a5f491c58adde1ce0032f27",
             "joined": true,
             "missing": [],
             "obligations": 5,
@@ -759,7 +759,7 @@
           {
             "blockers": 0,
             "closed": false,
-            "covering_claim": "505ceaf418cb458554c3c7ac23922a2835a847ddc6b79c1291086878460af575",
+            "covering_claim": "08554c9f0527f5ef3e6c91b51111c319ba7975fc55bc1529d42ffd69b58d7838",
             "joined": true,
             "missing": [],
             "obligations": 5,
@@ -775,7 +775,7 @@
           {
             "blockers": 0,
             "closed": false,
-            "covering_claim": "149b73479733ec5b61e267ee99391ce5b7d15d92a43eb6da7eb52f179b506349",
+            "covering_claim": "87a0d073421d4b4a88b6afec396ab1a81f30d30e46e17e0c0618546b1d8afff5",
             "joined": true,
             "missing": [],
             "obligations": 5,
@@ -831,7 +831,7 @@
         "production_profile": {
           "authority": "openssl-3.6.4-production",
           "build_profile": "linux-x86_64-default-shared-legacy-notests",
-          "candidate_version": "0.0.25",
+          "candidate_version": "0.0.26",
           "observable_roots": [
             "binary-abi",
             "callbacks",
@@ -3564,7 +3564,7 @@
       },
       {
         "candidate_install": "artifacts/phase2/install",
-        "candidate_version": "0.0.25",
+        "candidate_version": "0.0.26",
         "control": {
           "baseline_current": 9,
           "baseline_functional": 9,
@@ -3647,7 +3647,7 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.25",
+            "candidate": "0.0.26",
             "chain": "downstream-corpus",
             "currency": "current",
             "current": true,
@@ -3659,7 +3659,7 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.25",
+            "candidate": "0.0.26",
             "chain": "downstream-corpus",
             "currency": "current",
             "current": true,
@@ -3671,7 +3671,7 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.25",
+            "candidate": "0.0.26",
             "chain": "downstream-corpus",
             "currency": "current",
             "current": true,
@@ -3683,7 +3683,7 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.25",
+            "candidate": "0.0.26",
             "chain": "downstream-corpus",
             "currency": "current",
             "current": true,
@@ -3695,7 +3695,7 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.25",
+            "candidate": "0.0.26",
             "chain": "downstream-corpus",
             "currency": "current",
             "current": true,
@@ -3707,7 +3707,7 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.25",
+            "candidate": "0.0.26",
             "chain": "downstream-corpus",
             "currency": "current",
             "current": true,
@@ -3860,7 +3860,7 @@
     {
       "name": "phase17-courts",
       "path": "artifacts/phase17/COURTS.json",
-      "sha256": "155f66ac875f910a174209296100cd2e3b72b6ed03568f0c78bb1342bdd3dbae"
+      "sha256": "2f8d36ff16a303d7ed6cb767050377f23e2327e3253d86616e85f34a2b6dc94a"
     },
     {
       "name": "phase18-courts",
@@ -3870,7 +3870,7 @@
     {
       "name": "downstream-corpus",
       "path": "forensics/atlas/downstream-corpus.json",
-      "sha256": "1d83b24c151f33f918d06aae4eefd8b55e6759e25e1ae614f22e59e7ae03553d"
+      "sha256": "698f988ac1d78caf6011c7fa3c423e899dd6c6336eab04bb4243b147d8bf492e"
     },
     {
       "name": "downstream-runner",
@@ -3910,7 +3910,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "d2145033bc308cdeeb6855bf2e4afb86c492e53cc7b577df098899f2df66d3f8"
+      "sha256": "76fb7b7150a7488c5928faada5486808fae5a781f97a8a10d0e07b43d6d382c0"
     },
     {
       "name": "court-coverage-rows",
@@ -3920,7 +3920,7 @@
     {
       "name": "divergence-obligations",
       "path": "forensics/divergence-obligations.json",
-      "sha256": "3228be41b996177b9d78f044abf3a82ce56ed0f394e35bb156320e17102d99ff"
+      "sha256": "80dfdf84963ff01c30be5e045255cd9c6a52f42c91adca48ba6060d4f83c5a3d"
     },
     {
       "name": "prerequisites",
@@ -4010,7 +4010,7 @@
     {
       "name": "gemel-trajectory",
       "path": "forensics/GEMEL_TRAJECTORY.md",
-      "sha256": "e49dca0a84d7ca136c305207fbef8b1606e59825c2271b2f262ee20900d56203"
+      "sha256": "6ae42fa440d91428a07faf4ed9abc5f32366742013028976e2e8f348280c7393"
     }
   ],
   "kind": "phase20-courts",
