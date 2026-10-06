@@ -160,7 +160,7 @@ the **multitrack evidence plane**, each artefact validated against a record kind
 | artefact | record kind | schema |
 |---|---|---|
 | `forensics/release-catalog.json` | release nodes | `release_node` |
-| `forensics/multitrack/authority-nodes.json` | authority nodes | `authority_node` |
+| `forensics/authority-nodes.json` | authority nodes | `authority_node` |
 | `forensics/authority-lineage.json` | lineage edges | `lineage_edge` |
 | `forensics/multitrack/entity-lineage.json` | entity lineage | `entity_lineage` |
 | `forensics/multitrack/delta-receipts.json` | delta-engine records | `delta_receipt` |
@@ -276,6 +276,29 @@ the prose it corrects. The correction is checked by the subphase's court rather 
 vulnerability affected, the release that fixed it and the evidence; the stratum records them so the
 matrix can never re-adopt the fixed behaviour. This is the direction `docs/SECURITY_DIVERGENCE_POLICY.md`
 §1 fixes, generalised from the 3.6.3-versus-3.6.4 delta Phase 21 computed to the whole lineage.
+
+**4.7 The authority-node registry landed at `forensics/authority-nodes.json`, and the historical
+venue is a separate pin.** Two corrections 23.2 records against this plan, each checked by its court
+rather than asserted here.
+
+* **The registry path.** §2's artefact table named `forensics/multitrack/authority-nodes.json`; it
+  landed at `forensics/authority-nodes.json`, the same top-level placement 23.1's
+  `forensics/release-catalog.json` uses, with the archaeology *inputs* under `forensics/multitrack/`.
+  The artefact's record kind is unchanged (`authority_node`), so this is a path correction, not a
+  record-kind split.
+* **The build venue is separate, and one historical authority is real.** The forensic court image
+  (`docker/openssl-rs-court.Dockerfile`) does not change. Historical acquisition and building run in
+  `docker/openssl-rs-historical.Dockerfile` — a separately pinned Debian bullseye image with an older
+  toolchain (GCC 10, Perl 5.32) than the court's (GCC 12, Perl 5.36) — driven by
+  `docker/openssl-rs-historical.sh` under the same resource guard. The first historical authority is
+  **OpenSSL 0.9.8zh**, acquired from the official release asset the catalogue's tag names, verified
+  against the upstream-published SHA-256, and built (`linux-x86_64-historical-shared`, serial `make`,
+  installed prefix) into a committed build receipt. The root release **0.9.1c** and **0.9.6m** are
+  recorded **unavailable** in the registry's `unavailable` list because no upstream-published digest
+  could be fetched for either; they are never nodes and never runtime-compatible. Nothing ancient
+  was patched: 0.9.8zh's one internal symlink (`apps/md4.c`) is allowed by the acquisition extractor
+  because it provably stays inside the tree, and the build runs in a copy so the pristine tree keeps
+  the root hash its source manifest records.
 
 ## 5. Process
 
