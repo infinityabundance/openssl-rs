@@ -165,9 +165,10 @@ evidence (`dispositioned`, `unknown`, `un_dispositioned`, `bounded`, `divergence
 
 **Honesty.** The court fails exactly two ways: a residual with **no disposition**, and an
 `UNKNOWN` residual that **intersects the claimed production profile**. On the current tree there are
-167 `UNKNOWN` residuals — all `POD_NAME_NOT_IN_ATLAS` from the pod-contract plane — and the closure
-records that **zero of them intersect** a declared compatibility root, so the court records **zero
-findings** and says so precisely. An `UNKNOWN` that merely does not intersect is not resolved by
+334 `UNKNOWN` residual records — the 167 `POD_NAME_NOT_IN_ATLAS` names the pod-contract plane
+carries, re-projected by two registers (the Phase-22 cross-plane census and the checkpoint's named
+`UNKNOWN` sets) — and the closure records that **zero of them intersect** a declared compatibility
+root, so the court records **zero findings** and says so precisely. An `UNKNOWN` that merely does not intersect is not resolved by
 this court: it is recorded, and `UNKNOWN` remains a result rather than a resting state. A real
 un-dispositioned or `UNKNOWN`-intersecting residual would be a finding and a `fail`, not a verdict
 the court talks itself out of.
@@ -477,6 +478,10 @@ class Level:
     provider_coverage: bool = False
     court_coverage: bool = False
     downstream_corpus: bool = False
+    # The level is the stratum's own claim rather than prior evidence: its evidence is the
+    # completion of this stratum and the seal it writes, so a court running inside the stratum
+    # records the gap to it as a finding instead of reading it as committed evidence (L9).
+    self_established: bool = False
 
 
 # The ladder, in order. Each level's `requirement` is the section 3 name verbatim, and the evidence
@@ -522,7 +527,7 @@ LEVELS: tuple[Level, ...] = (
           ("artifacts/phase17/COURTS.json", "forensics/atlas/downstream-corpus.json"),
           downstream_corpus=True),
     Level("L9", "high-assurance custodian seal", LIBRARIES, (18, 19, 20), (), (),
-          ("docs/PHASE-20-CUSTODIAN-SEAL.md",)),
+          ("docs/PHASE-20-CUSTODIAN-SEAL.md",), self_established=True),
 )
 
 LEVEL_BY_NAME: dict[str, Level] = {lv.level: lv for lv in LEVELS}
@@ -682,6 +687,19 @@ def level_own_present(lv: Level, ev: dict) -> tuple[bool, list[str]]:
     expected booleans.
     """
     missing: list[str] = []
+    if lv.self_established:
+        # The seal target is the stratum's own claim, not prior evidence. Its evidence -- the
+        # completion of stratum 20 and the seal document the stratum writes -- is the seal the
+        # instrument belongs to, so reading it as committed evidence here would make the court's
+        # own pass its precondition. The instrument records the gap to this level as the finding
+        # instead of deriving the level present (docs/PHASE-20-SUBPHASES.md sections 1, 3.2 and
+        # 3.3; `SEAL_GAP_UNITS` in forensics/tools/phase20_obligations.py is the same rule).
+        missing.append(
+            f"{lv.level} is this stratum's own claim rather than prior evidence the instrument "
+            f"can certify; its evidence -- the completion of stratum 20 and "
+            f"{rel(CUSTODIAN_SEAL_DOC)} -- is the seal this instrument belongs to"
+        )
+        return False, missing
     for p in lv.strata:
         state = (ev.get("strata") or {}).get(str(p))
         if state != "complete":
@@ -3157,9 +3175,11 @@ def main(argv: list[str]) -> int:
             "residuals. For each residual it records `{source, id, disposition, "
             "intersects_production_profile, state}`; every residual must carry a disposition and no "
             "`UNKNOWN` residual may intersect the claimed production profile. On the current tree "
-            "there are 167 `UNKNOWN` residuals (all POD_NAME_NOT_IN_ATLAS in the pod-contract "
-            "plane) and the closure records that zero of them intersect a declared compatibility "
-            "root, so the court records zero findings and says so precisely; a real un-dispositioned "
+            "there are 334 `UNKNOWN` residual records -- the 167 POD_NAME_NOT_IN_ATLAS names the "
+            "pod-contract plane carries, re-projected by two registers (the Phase-22 cross-plane "
+            "census and the checkpoint's named `UNKNOWN` sets) -- and the closure records that "
+            "zero of them intersect a declared compatibility root, so the court records zero "
+            "findings and says so precisely; a real un-dispositioned "
             "or `UNKNOWN`-intersecting residual would be a finding and a `fail`, and a synthetic "
             "evidence view with an un-dispositioned residual and one with an `UNKNOWN`-intersecting "
             "residual detects the gap while an `UNKNOWN` that does not intersect does not. "

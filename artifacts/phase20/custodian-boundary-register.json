@@ -24,7 +24,7 @@
         "seal_target_present": false,
         "findings_count": 1
       },
-      "note": "claimed, not a property claim: the passing court derived the ladder from committed evidence, so the *derivation* is covered -- but the L9 level the seal names is the level this stratum is still establishing, and the court records the gap as the finding below, so the property reads NOT_CLAIMED. A passing RT-CUSTODIAN-MATURITY must never be read as 'L9 custodian seal achieved' (docs/PHASE-20-SUBPHASES.md section 4.2)."
+      "note": "claimed, not a property claim: the passing court derived the ladder from committed evidence, so the *derivation* is covered -- but L9 is the level this stratum's own seal establishes, so the court records the gap to it as the finding below and the property reads NOT_CLAIMED. A passing RT-CUSTODIAN-MATURITY must never be read as 'L9 custodian seal achieved' (docs/PHASE-20-SUBPHASES.md sections 1 and 3.2; docs/PHASE-20-CUSTODIAN-SEAL.md resolves the gap as the seal's bounded claim)."
     },
     {
       "id": "custodian-receipt-closure",
@@ -136,9 +136,9 @@
       "evidence": {
         "plan_present": true,
         "plan_names_l9_seal": true,
-        "seal_doc_present": false
+        "seal_doc_present": true
       },
-      "note": "bounded: L9 high-assurance custodian seal is the level Phase 20 itself is establishing, and its evidence docs/PHASE-20-CUSTODIAN-SEAL.md is absent until 20.6 lands it (docs/PHASE-20-SUBPHASES.md section 4.2). The maturity court records the gap to L9 as a finding, so the register does not claim the level; a passing custodian court is an instrument, not the property it names."
+      "note": "bounded: the L9 high-assurance custodian seal is the level Phase 20 itself establishes, and it is the seal's own bounded claim (docs/PHASE-20-CUSTODIAN-SEAL.md) rather than a universal custodian property -- no FIPS validation, no universal parity from finite evidence, memory safety measured not established (docs/PHASE-20-SUBPHASES.md sections 0 and 4.3). The maturity court records the gap to L9 as a finding, so the register does not claim the level; a passing custodian court is an instrument, not the property it names."
     }
   ]
 }
