@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-AUTHORITY-ADMISSION` is 21.1's court: it stages no probe and admits the delta's input pair, recording each authority's identity and build profile as `{id, role, version, profile, manifest, checksum, admitted}` from forensics/authorities/AUTHORITIES.json, the two SOURCE_MANIFEST.{3.6.3,3.6.4}.json source identities, the build records and the differential that names the pair — `openssl-3.6.3-historical` versus `openssl-3.6.4-production`. It fails when an authority named as a delta input is not admitted, or when its identity disagrees between the registry and its manifest, and a synthetic view with an unadmitted authority in the pair and one with a manifest root hash drifted from the registry's are both detected. It records the pair's identity, not the delta between them. `RT-ATLAS-DELTA` is 21.2's: it stages no probe and recomputes the added / removed / changed obligation delta between the two authorities across the atlas planes the procedure names, from the per-authority atlases under forensics/atlas/openssl-3.6.3-historical and forensics/atlas/openssl-3.6.4-production keyed exactly as the differential tool keys them, requiring the committed differential to agree with what it recomputes. The exports plane is measured; the provider registration-row and prerequisite-unit planes are named `not-measured` with their reasons, because the artefacts the procedure names are single-authority and no committed differential compares them — an unmeasured plane is never counted motionless. A synthetic view with an injected added and an injected removed declaration row detects both, with the unchanged symbol plane reporting no motion. `RT-DELTA-DISPOSITION` is 21.3's: it dispositions every delta row against the candidate's own installed surface -- a measured row is `implemented` only when that surface carries it, a `not-measured` plane or axis is `boundary`, and a `removed`/`changed` row the candidate carries re-adopts the historical behaviour the fixed authority moved away from and is a finding -- with zero unexplained, so an un-dispositioned row is a `fail`. `RT-AFFECTED-COURT-SELECTION` is 21.4's: it stages no probe and derives which courts a delta touches, mechanically from the dispositioned delta and the coverage atlas's export -> court edge -- a measured, `implemented` row reaches the courts its declaring header's owning stratum stages, a row that is itself an export is covered directly, an error-reason header that owns no stratum is resolved to its sibling public header, and a `not-measured` boundary reaches no court. Each selected court is re-derived (its committed registry verdict and its coverage of the owning stratum re-read; the probes are not re-executed, so the mode is honestly `re-derived`), and a selection with a reached court omitted and one with a spurious court no row reaches are both detected. `MAINTENANCE-BOUNDARY-REGISTER` is 21.5's: the register of the explicit non-claims. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the delta between two admitted authorities, with no version-universality claim — OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4 — only the exercised delta claimed, and unknown left unknown. A 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced. docs/PHASE-21-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "claim": "`RT-AUTHORITY-ADMISSION` is 21.1's court: it stages no probe and admits the delta's input pair, recording each authority's identity and build profile as `{id, role, version, profile, manifest, checksum, admitted}` from forensics/authorities/AUTHORITIES.json, the two SOURCE_MANIFEST.{3.6.3,3.6.4}.json source identities, the build records and the differential that names the pair — `openssl-3.6.3-historical` versus `openssl-3.6.4-production`. It fails when an authority named as a delta input is not admitted, or when its identity disagrees between the registry and its manifest, and a synthetic view with an unadmitted authority in the pair and one with a manifest root hash drifted from the registry's are both detected. It records the pair's identity, not the delta between them. `RT-ATLAS-DELTA` is 21.2's: it stages no probe and recomputes the added / removed / changed obligation delta between the two authorities across the atlas planes the procedure names, from the per-authority atlases under forensics/atlas/openssl-3.6.3-historical and forensics/atlas/openssl-3.6.4-production keyed exactly as the differential tool keys them, requiring the committed differential to agree with what it recomputes. The exports plane is measured; the provider registration-row and prerequisite-unit planes are named `not-measured` with their reasons, because the artefacts the procedure names are single-authority and no committed differential compares them — an unmeasured plane is never counted motionless. A synthetic view with an injected added and an injected removed declaration row detects both, with the unchanged symbol plane reporting no motion. `RT-DELTA-DISPOSITION` is 21.3's: it dispositions every delta row against the candidate's own installed surface -- a measured row is `implemented` only when that surface carries it, a `not-measured` plane or axis is `boundary`, and a `removed`/`changed` row the candidate carries re-adopts the historical behaviour the fixed authority moved away from and is a finding -- with zero unexplained, so an un-dispositioned row is a `fail`. `RT-AFFECTED-COURT-SELECTION` is 21.4's: it stages no probe and derives which courts a delta touches, mechanically from the dispositioned delta and the coverage atlas's export -> court edge -- a measured, `implemented` row reaches the courts its declaring header's owning stratum stages, a row that is itself an export is covered directly, an error-reason header that owns no stratum is resolved to its sibling public header, and a `not-measured` boundary reaches no court. Each selected court is re-derived (its committed registry verdict and its coverage of the owning stratum re-read; the probes are not re-executed, so the mode is honestly `re-derived`), and a selection with a reached court omitted and one with a spurious court no row reaches are both detected. `MAINTENANCE-BOUNDARY-REGISTER` is 21.5's: the register of the explicit non-claims. It stages no probe and binds the authored register artifacts/phase21/maintenance-boundary-register.json, which records, per surface, whether it is `claimed` (a passing court covers it) or `bounded` (explicitly outside this stratum). It re-reads the four delta courts' records (the claimed side) and the constitution/limitations artefacts -- docs/RELEASE_GATES.md section 8, docs/NON_CLAIMS.md, docs/PARITY_MODEL.md section 1, docs/SECURITY_DIVERGENCE_POLICY.md and the two planes RT-ATLAS-DELTA recorded `not-measured`, the provider registration rows and prerequisite units -- and fails the stratum if a recorded boundary has drifted from its evidence. The load-bearing non-claims are carried as bounded rows: OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4, only the exercised delta is claimed, unknown stays unknown, the provider registration-row and prerequisite-unit planes are bounded rather than motionless with what would make each measurable, and a 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced. On the current tree the register records zero findings (specificity), and a synthetic view with a claimed row's court turned non-passing and one with a bounded row's cited evidence drifted are both detected. This is the last of the five units, so no court is `pending`. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the delta between two admitted authorities, with no version-universality claim. docs/PHASE-21-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
     "courts": [
       {
         "admission_authority": "docs/AUTHORITY_POLICY.md",
@@ -756,15 +756,126 @@
           "docs/SECURITY_DIVERGENCE_POLICY.md"
         ],
         "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught_bounded_drift": true,
+          "caught_claimed_court": true,
+          "honest": true,
+          "injected_bounded_findings": 1,
+          "injected_bounded_row": "nc-openssl-4-new-profile",
+          "injected_claimed_court": "RT-AUTHORITY-ADMISSION",
+          "injected_claimed_findings": 3,
+          "specificity_holds": true
+        },
+        "court": "MAINTENANCE-BOUNDARY-REGISTER",
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the register re-reads the courts registry and the constitution/limitations artefacts and stages no artifacts/phase21/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it re-reads the live courts registry (the four delta courts above) and the authored register artifacts/phase21/maintenance-boundary-register.json, and fails the stratum if any recorded claimed/bounded verdict, surface key or cited evidence value has drifted from what the courts and the constitution/limitations artefacts show (docs/PHASE-21-SUBPHASES.md section 3.6). A claimed row whose court no longer passes or no longer covers the surface, a bounded row a passing court now covers, and a bounded row whose cited evidence no longer matches docs/RELEASE_GATES.md section 8, docs/NON_CLAIMS.md, docs/PARITY_MODEL.md section 1, docs/SECURITY_DIVERGENCE_POLICY.md or the two `not-measured` planes RT-ATLAS-DELTA recorded are all findings. A bounded row that names nothing that would make its surface measurable is motionless rather than a stated distance, and is a finding. The instrument sensitivity control injects a claimed row whose court is not passing and a bounded row whose cited evidence has drifted, and requires both detected while the real register shows zero findings (docs/PHASE-21-SUBPHASES.md sections 2, 3.3 and 3.6). It is the stratum's own answer to docs/NON_CLAIMS.md: no version universality from a 3.x receipt, only the exercised delta claimed, unknown stays unknown, and a 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced.",
+        "probe": "",
+        "problems": [],
+        "register": {
+          "counts": {
+            "bounded": 6,
+            "claimed": 4
+          },
+          "path": "artifacts/phase21/maintenance-boundary-register.json",
+          "schema": "openssl-rs/maintenance-boundary-register/v1",
+          "sha256": "f310632a19f699c1b111d94cebc74901253837afb71b1f78d22d89e242d7be2f",
+          "total": 10
+        },
+        "surfaces": [
+          {
+            "court": "RT-AUTHORITY-ADMISSION",
+            "id": "authority-admission",
+            "surface_keys": [
+              "delta.authority.pair"
+            ],
+            "verdict": "claimed"
+          },
+          {
+            "court": "RT-ATLAS-DELTA",
+            "id": "atlas-delta",
+            "surface_keys": [
+              "delta.atlas.export-plane"
+            ],
+            "verdict": "claimed"
+          },
+          {
+            "court": "RT-DELTA-DISPOSITION",
+            "id": "delta-disposition",
+            "surface_keys": [
+              "delta.disposition.every-row"
+            ],
+            "verdict": "claimed"
+          },
+          {
+            "court": "RT-AFFECTED-COURT-SELECTION",
+            "id": "affected-court-selection",
+            "surface_keys": [
+              "delta.affected-court.selection"
+            ],
+            "verdict": "claimed"
+          },
+          {
+            "court": null,
+            "id": "nc-openssl-4-new-profile",
+            "surface_keys": [
+              "nc.no-version-universality"
+            ],
+            "verdict": "bounded"
+          },
+          {
+            "court": null,
+            "id": "nc-only-exercised-delta",
+            "surface_keys": [
+              "nc.only-exercised-delta"
+            ],
+            "verdict": "bounded"
+          },
+          {
+            "court": null,
+            "id": "nc-unknown-stays-unknown",
+            "surface_keys": [
+              "nc.unknown-stays-unknown"
+            ],
+            "verdict": "bounded"
+          },
+          {
+            "court": null,
+            "id": "nc-no-security-reintroduction",
+            "surface_keys": [
+              "nc.no-security-reintroduction"
+            ],
+            "verdict": "bounded"
+          },
+          {
+            "court": null,
+            "id": "nc-provider-registration-rows-not-measured",
+            "surface_keys": [
+              "nc.provider-registration-rows-not-measured"
+            ],
+            "verdict": "bounded"
+          },
+          {
+            "court": null,
+            "id": "nc-prerequisite-units-not-measured",
+            "surface_keys": [
+              "nc.prerequisite-units-not-measured"
+            ],
+            "verdict": "bounded"
+          }
+        ],
+        "verdict": "pass"
       }
     ],
-    "pending_courts": {
-      "MAINTENANCE-BOUNDARY-REGISTER": "21.5 lands the register; it records the explicit non-claims — OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4, only the exercised delta is claimed, and unknown stays unknown — and checks that every recorded boundary still matches the evidence that establishes it"
-    },
+    "pending_courts": {},
     "summary": {
       "fail": 0,
-      "pass": 4,
-      "total": 4
+      "pass": 5,
+      "total": 5
     }
   },
   "generator": "forensics/tools/phase21_courts.py",
@@ -922,7 +1033,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "a905288a8d8d9ea210cebbffd3a27bc13c7c4d119ace805caf81479cf5b32d84"
+      "sha256": "4fc9078baf743d27dccaa46f1146c04427f528eda9b09ff2b02508f365f3c70e"
     },
     {
       "name": "symbol-ownership",
@@ -938,6 +1049,26 @@
       "name": "phase14-courts",
       "path": "artifacts/phase14/COURTS.json",
       "sha256": "be5b6c61bdddb58d3df9220c0b3217b0b5915e463a72b9b57d4c34e9028ad76e"
+    },
+    {
+      "name": "maintenance-boundary-register",
+      "path": "artifacts/phase21/maintenance-boundary-register.json",
+      "sha256": "f310632a19f699c1b111d94cebc74901253837afb71b1f78d22d89e242d7be2f"
+    },
+    {
+      "name": "release-gates",
+      "path": "docs/RELEASE_GATES.md",
+      "sha256": "99c80e1f36abede7ef3425c1f5dcd71ba40e0d0d77317346d3564313f9a4f294"
+    },
+    {
+      "name": "non-claims",
+      "path": "docs/NON_CLAIMS.md",
+      "sha256": "eb554412116f863fdd3840a347b5377ca3232fe0ad9bd2938b2a9576776b6b7e"
+    },
+    {
+      "name": "parity-model",
+      "path": "docs/PARITY_MODEL.md",
+      "sha256": "1f5080bc6d68ae64c693c80422bb0f0dd73bf67fd2cd46090b315a7e60215e2a"
     }
   ],
   "kind": "phase21-courts",
