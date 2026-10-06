@@ -1,0 +1,91 @@
+{
+  "content_hash": "58e1ccdb2d186a2b30d53e972317f6234169296b3e2b675c3ea79672ddec37f2",
+  "receipts": [
+    {
+      "artifacts": [
+        {
+          "name": "libcrypto.so.0.9.8",
+          "path": "forensics/authorities/prefix/openssl-0.9.8zh-historical/lib/libcrypto.so.0.9.8",
+          "sha256": "ff5e81fcaa654c19c50e8eb96083f9aa6bb40bd5b00b96fb5d7242cbe6d62ade",
+          "size_bytes": 1838296
+        },
+        {
+          "name": "libssl.so.0.9.8",
+          "path": "forensics/authorities/prefix/openssl-0.9.8zh-historical/lib/libssl.so.0.9.8",
+          "sha256": "43296578a2539463e692a5857118d410b829b0e19e72137853c9f8cca0f2df2f",
+          "size_bytes": 415256
+        }
+      ],
+      "banner": "OpenSSL 0.9.8zh 3 Dec 2015",
+      "binary_hashes": {
+        "libcrypto.so.0.9.8": "ff5e81fcaa654c19c50e8eb96083f9aa6bb40bd5b00b96fb5d7242cbe6d62ade",
+        "libssl.so.0.9.8": "43296578a2539463e692a5857118d410b829b0e19e72137853c9f8cca0f2df2f"
+      },
+      "build_argv": [
+        "make"
+      ],
+      "build_environment": {
+        "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+        "image": "openssl-rs-historical:1",
+        "locale": "C.UTF-8",
+        "parallel_jobs": 1,
+        "venue": "openssl-rs-historical"
+      },
+      "configure_argv": [
+        "perl",
+        "Configure",
+        "linux-x86_64",
+        "--prefix=/work/forensics/authorities/prefix/openssl-0.9.8zh-historical",
+        "--openssldir=/work/forensics/authorities/prefix/openssl-0.9.8zh-historical/ssl",
+        "shared"
+      ],
+      "git": {
+        "commit": "c2ef67100cd0ca2321b5f1a437abb93fc7e11e37",
+        "tag": "OpenSSL_0_9_8zh"
+      },
+      "id": "openssl-0.9.8zh-historical",
+      "install_argv": [
+        "make",
+        "install"
+      ],
+      "installed_hashes": {
+        "include/openssl/crypto.h": "9a15c92d24360c89b71d273624b9e6891512374e4ab0a847a3bb8de567e500c2",
+        "include/openssl/evp.h": "823df035c9ebab3376f667ac8f627e5065570095d59ee6cd3898ead45abd1ac6",
+        "include/openssl/ssl.h": "0c74fdc5a2c0ad19f242a33ec5b53eee9c600936c252684d3ee30e31e08ee06e"
+      },
+      "outcome": "built",
+      "platform": {
+        "machine": "x86_64",
+        "system": "Linux"
+      },
+      "profile": "linux-x86_64-historical-shared",
+      "profile_args": [
+        "shared"
+      ],
+      "release_id": "openssl-0.9.8zh",
+      "source_manifest": {
+        "file_count": 2019,
+        "path": "forensics/authorities/SOURCE_MANIFEST.0.9.8zh.json",
+        "root_hash": "083ae3530093d12577986975822421ddf995879b1954dca291589e9cdff830e8"
+      },
+      "source_package": {
+        "artifact": "openssl-0.9.8zh.tar.gz",
+        "checksum_verified": true,
+        "published_sha256": "f1d9f3ed1b85a82ecf80d0e2d389e1fda3fca9a4dba0bf07adbf231e1a5e2fd6",
+        "sha256": "f1d9f3ed1b85a82ecf80d0e2d389e1fda3fca9a4dba0bf07adbf231e1a5e2fd6",
+        "source_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_0_9_8zh/openssl-0.9.8zh.tar.gz"
+      },
+      "source_tree_pristine": "forensics/authorities/src/openssl-0.9.8zh",
+      "toolchain": {
+        "cc": "cc (Debian 10.2.1-6) 10.2.1 20210110",
+        "gcc": "gcc (Debian 10.2.1-6) 10.2.1 20210110",
+        "ld": "GNU ld (GNU Binutils for Debian) 2.35.2",
+        "make": "GNU Make 4.3",
+        "perl": "5.032001",
+        "python": "3.9.2"
+      },
+      "version": "0.9.8zh"
+    }
+  ],
+  "schema": "openssl-rs/historical-build-receipts/v1"
+}

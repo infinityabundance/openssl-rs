@@ -1,0 +1,249 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "content_hash": "2e928b549fcbf3096562a6fd28ae6b40c371ee5b67c71c3cceeb25738357df2a",
+    "counts": {
+      "admitted": 2,
+      "built": 3,
+      "historical_built": 1,
+      "nodes": 3,
+      "unavailable": 2
+    },
+    "nodes": [
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-0.9.8zh-historical",
+        "binary_hashes": {
+          "libcrypto.so.0.9.8": "ff5e81fcaa654c19c50e8eb96083f9aa6bb40bd5b00b96fb5d7242cbe6d62ade",
+          "libssl.so.0.9.8": "43296578a2539463e692a5857118d410b829b0e19e72137853c9f8cca0f2df2f"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-0.9.8zh-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-0.9.8zh-historical/ssl",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "c2ef67100cd0ca2321b5f1a437abb93fc7e11e37",
+          "tag": "OpenSSL_0_9_8zh"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "9a15c92d24360c89b71d273624b9e6891512374e4ab0a847a3bb8de567e500c2",
+          "include/openssl/evp.h": "823df035c9ebab3376f667ac8f627e5065570095d59ee6cd3898ead45abd1ac6",
+          "include/openssl/ssl.h": "0c74fdc5a2c0ad19f242a33ec5b53eee9c600936c252684d3ee30e31e08ee06e"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.0.9.8zh.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-0.9.8zh",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-0.9.8zh.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "f1d9f3ed1b85a82ecf80d0e2d389e1fda3fca9a4dba0bf07adbf231e1a5e2fd6",
+          "sha256": "f1d9f3ed1b85a82ecf80d0e2d389e1fda3fca9a4dba0bf07adbf231e1a5e2fd6"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-3.6.3-historical",
+        "binary_hashes": {
+          "libcrypto.so.3": "920e74fd774c57e8bfbcfb5d3714f226df1e73ccb984ea842fcbf1c3f655c175",
+          "libssl.so.3": "58097b11018364422b5bf8c7548c5a04b82b7123e48a704d96ecf397673d4097"
+        },
+        "build_environment": {
+          "captures": "forensics/authorities/captures/openssl-3.6.3-historical",
+          "configure_argv": [
+            "perl",
+            "/work/forensics/authorities/src/openssl-3.6.3/Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-3.6.3-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-3.6.3-historical/ssl",
+            "--libdir=lib",
+            "shared",
+            "enable-legacy",
+            "no-tests"
+          ],
+          "image": "openssl-rs-court:1",
+          "profile_args": [
+            "shared",
+            "enable-legacy",
+            "no-tests"
+          ],
+          "venue": "openssl-rs-court"
+        },
+        "build_profile": "linux-x86_64-default-shared-legacy-notests",
+        "build_receipt": "forensics/atlas/BUILD_RECORDS.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "aae016bfd52fcad2bc9657c2c782cfdf73b1ed5f",
+          "tag": "openssl-3.6.3"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "d32ee346e9cc57b6afe1b05fe47a59a884106c125b0c53ab8612c0ec070163e8",
+          "include/openssl/evp.h": "0c2e950834c4cd0ac8a887f039400932e7cb1d6aaf2f80da73698a8ed5c3b318",
+          "include/openssl/ssl.h": "49396e5bc844a85473f643cd91104542732a694e49535577962e1e70d620bb9c"
+        },
+        "metadata_provenance": [
+          "forensics/authorities/AUTHORITIES.json",
+          "forensics/atlas/BUILD_RECORDS.json",
+          "forensics/authorities/SOURCE_MANIFEST.3.6.3.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-3.6.3",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-3.6.3.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "243a86649cf6f23eeb6a2ff2456e09e5d77dd9018a54d3d96b0c6bdd6ba6c7f1",
+          "sha256": "243a86649cf6f23eeb6a2ff2456e09e5d77dd9018a54d3d96b0c6bdd6ba6c7f1"
+        },
+        "toolchain": "cc (Debian 12.2.0-14+deb12u1) 12.2.0"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-3.6.4-production",
+        "binary_hashes": {
+          "libcrypto.so.3": "f578d4a3af545bf812ed9b0f4bbce0f4ad25205960c4161c796a46442fb238cc",
+          "libssl.so.3": "c25b910e51116973f1e0f2c4a834d39f07c818e6e22727a5eb8bd0fa3f4f3d9b"
+        },
+        "build_environment": {
+          "captures": "forensics/authorities/captures/openssl-3.6.4-production",
+          "configure_argv": [
+            "perl",
+            "/work/forensics/authorities/src/openssl-3.6.4/Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-3.6.4-production",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-3.6.4-production/ssl",
+            "--libdir=lib",
+            "shared",
+            "enable-legacy",
+            "no-tests"
+          ],
+          "image": "openssl-rs-court:1",
+          "profile_args": [
+            "shared",
+            "enable-legacy",
+            "no-tests"
+          ],
+          "venue": "openssl-rs-court"
+        },
+        "build_profile": "linux-x86_64-default-shared-legacy-notests",
+        "build_receipt": "forensics/atlas/BUILD_RECORDS.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "d3c1b1169b3569ff3069e5b399f47b2b28e03d79",
+          "tag": "openssl-3.6.4"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "eadc6fff4f4010cd2d3337e13d11c156e9b5996ae531abccaf7dcf5003f7828a",
+          "include/openssl/evp.h": "0c2e950834c4cd0ac8a887f039400932e7cb1d6aaf2f80da73698a8ed5c3b318",
+          "include/openssl/ssl.h": "cf9c22af93d97870c33715a06f56bb4458de0334b4d3396957c174c3c4928f0d"
+        },
+        "metadata_provenance": [
+          "forensics/authorities/AUTHORITIES.json",
+          "forensics/atlas/BUILD_RECORDS.json",
+          "forensics/authorities/SOURCE_MANIFEST.3.6.4.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-3.6.4",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-3.6.4.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "9bffaa1ad1e07b354c21bd3324ec02fa15579f45a7d0494b3e74bc449b7333ef",
+          "sha256": "9bffaa1ad1e07b354c21bd3324ec02fa15579f45a7d0494b3e74bc449b7333ef"
+        },
+        "toolchain": "cc (Debian 12.2.0-14+deb12u1) 12.2.0"
+      }
+    ],
+    "note": "the registry is a registry of *builds*, not of releases: an authority node is what a court can be run against, and a release node in forensics/release-catalog.json is a fact about upstream. The admitted pair openssl-3.6.3-historical and openssl-3.6.4-production are build-compatible in the forensic court (linux-x86_64-default-shared-legacy-notests); the built historical authority openssl-0.9.8zh-historical is a pre-1.1.0 source with no out-of-tree build, built in the separately pinned historical venue (docs/PHASE-23-MULTITRACK-SUBPHASES.md section 2). The unavailable list names the early releases whose official digest could not be fetched, so they were not admitted: an unavailable authority is never counted as runtime-compatible",
+    "rule": "one authority node per built authority, read from the records that carry each build -- the release catalogue, AUTHORITIES.json, BUILD_RECORDS.json and the historical acquisition and build receipts -- and never typed. Each node keeps release identity (release_id, git) separate from platform/profile identity (platform, arch, build_profile, toolchain, build_environment), and is content-addressed by its binary and installed hashes. A release that could not be acquired or built is recorded in `unavailable` with its reason and is never a node",
+    "unavailable": [
+      {
+        "git": {
+          "commit": "320a14cb5b12cbdd2ff4d81c1e9a2ea7a139a038",
+          "tag": "OpenSSL_0_9_1c"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "outcome": "unavailable",
+        "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+        "release_id": "openssl-0.9.1c",
+        "runtime_compatible": false,
+        "runtime_evidence": "unavailable",
+        "version": "0.9.1c"
+      },
+      {
+        "git": {
+          "commit": "8ccf402239a07d23ab308c9dc11bfbe59bad3e65",
+          "tag": "OpenSSL_0_9_6m"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "outcome": "unavailable",
+        "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+        "release_id": "openssl-0.9.6m",
+        "runtime_compatible": false,
+        "runtime_evidence": "unavailable",
+        "version": "0.9.6m"
+      }
+    ]
+  },
+  "generator": "forensics/tools/authority_nodes.py",
+  "inputs": [
+    {
+      "name": "release-catalog",
+      "path": "forensics/release-catalog.json",
+      "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b"
+    },
+    {
+      "name": "authority-registry",
+      "path": "forensics/authorities/AUTHORITIES.json",
+      "sha256": "8885e8ecfe27c308d97ded8db8b197ff1b46177a1b8932535824d8a7d2b18944"
+    },
+    {
+      "name": "build-records",
+      "path": "forensics/atlas/BUILD_RECORDS.json",
+      "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0"
+    },
+    {
+      "name": "historical-acquisition",
+      "path": "forensics/multitrack/historical-acquisition.json",
+      "sha256": "d04fa21247477f7d96a51012bb0712c372bc0973a15a40ce302378c37f3e9b95"
+    },
+    {
+      "name": "historical-build-receipts",
+      "path": "forensics/multitrack/historical-build-receipts.json",
+      "sha256": "6f0e9b8b24bd4c70a85d84bd1239d3b4e4b26b38d34aed3f79cfab0411cd642e"
+    }
+  ],
+  "kind": "authority-nodes",
+  "schema": "openssl-rs/atlas/authority-nodes/v1"
+}

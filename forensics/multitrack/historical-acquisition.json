@@ -1,0 +1,61 @@
+{
+  "acquisitions": [
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-0.9.8zh.tar.gz",
+        "published_sha256": "f1d9f3ed1b85a82ecf80d0e2d389e1fda3fca9a4dba0bf07adbf231e1a5e2fd6",
+        "sha256": "f1d9f3ed1b85a82ecf80d0e2d389e1fda3fca9a4dba0bf07adbf231e1a5e2fd6",
+        "size_bytes": 3818524
+      },
+      "git": {
+        "commit": "c2ef67100cd0ca2321b5f1a437abb93fc7e11e37",
+        "tag": "OpenSSL_0_9_8zh"
+      },
+      "id": "openssl-0.9.8zh-historical",
+      "notes": "Historical authority over openssl-0.9.8zh, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/OpenSSL_0_9_8zh/openssl-0.9.8zh). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-0.9.8zh",
+      "released": "2015-12-03",
+      "role": "historical",
+      "series": "0.9.8",
+      "source_tree": {
+        "file_count": 2019,
+        "manifest": "SOURCE_MANIFEST.0.9.8zh.json",
+        "path": "forensics/authorities/src/openssl-0.9.8zh",
+        "root_hash": "083ae3530093d12577986975822421ddf995879b1954dca291589e9cdff830e8",
+        "total_bytes": 18338277
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_0_9_8zh/openssl-0.9.8zh.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_0_9_8zh/openssl-0.9.8zh.tar.gz"
+      },
+      "version": "0.9.8zh"
+    }
+  ],
+  "schema": "openssl-rs/historical-acquisition/v1",
+  "unavailable": [
+    {
+      "git": {
+        "commit": "320a14cb5b12cbdd2ff4d81c1e9a2ea7a139a038",
+        "tag": "OpenSSL_0_9_1c"
+      },
+      "outcome": "unavailable",
+      "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+      "release_id": "openssl-0.9.1c",
+      "version": "0.9.1c"
+    },
+    {
+      "git": {
+        "commit": "8ccf402239a07d23ab308c9dc11bfbe59bad3e65",
+        "tag": "OpenSSL_0_9_6m"
+      },
+      "outcome": "unavailable",
+      "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+      "release_id": "openssl-0.9.6m",
+      "version": "0.9.6m"
+    }
+  ]
+}

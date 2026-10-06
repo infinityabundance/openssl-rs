@@ -18,10 +18,10 @@
         "closure": "the `RT-AUTHORITY-NODES` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-AUTHORITY-NODES is pending",
+        "measurement_state": "complete",
+        "observation": "RT-AUTHORITY-NODES is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "authority-nodes",
         "what": "one authority node per built authority, recording platform, arch, build profile, toolchain, build environment and binary/installed hashes, so a view is always bounded to a named, content-addressed build"
@@ -152,8 +152,8 @@
       "contract_units": 12,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 1,
-      "open_in_this_stratum": 11,
+      "implemented": 2,
+      "open_in_this_stratum": 10,
       "owned": 12,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -189,12 +189,12 @@
     {
       "name": "phase-23-plan",
       "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
-      "sha256": "7497bc2af484c1d8a8f45c805a3c1f4c852b81a2e413c3c8fab0fb46177f8787"
+      "sha256": "4f0a085a68f8b793eb8024bc7fcdd247f8ec560ceee9efc3194b66f156024a04"
     },
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "567c326e509d1c31bf4cf6b8b161f288d12829fc733f39988cd628d507cfff30"
+      "sha256": "6514f6b28a0f8c8fa77cf853b4a298d439c0ee1f6e23294ad90b1f7136ab919c"
     }
   ],
   "kind": "phase23-obligations",

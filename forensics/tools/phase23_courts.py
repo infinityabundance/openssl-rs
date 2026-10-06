@@ -13,8 +13,9 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**One court is registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and lineage
-court; the other eleven courts are named in `PENDING_COURTS` and land with the subphases that
+**Two courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+lineage court, and 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court; the other
+ten courts are named in `PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
 reproduced, so a court silently dropped is a finding rather than a smaller green run. This is
 the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this registry,
@@ -27,7 +28,7 @@ kinds are a file the evidence points at rather than prose the plan would have to
 The twelve courts, and the subphase that lands each
 ---------------------------------------------------
   * `RT-RELEASE-CATALOG` -- 23.1, the release-node catalogue and its lineage (registered).
-  * `RT-AUTHORITY-NODES` -- 23.2, the authority-node registry.
+  * `RT-AUTHORITY-NODES` -- 23.2, the authority-node registry (registered).
   * `RT-LINEAGE-EDGES` -- 23.3, the lineage edges.
   * `RT-ENTITY-LINEAGE` -- 23.4, the entity lineage.
   * `RT-DELTA-ENGINE` -- 23.5, the delta engine.
@@ -39,7 +40,7 @@ The twelve courts, and the subphase that lands each
   * `RT-COMPATIBILITY-MATRIX` -- 23.11, the compatibility matrix.
   * `MULTITRACK-SEAL` -- 23.12, the full matrix, the FRF/Gemel chain and the seal.
 
-Every one but `RT-RELEASE-CATALOG` is `pending`. A passing court is an instrument, not a property
+Every one but `RT-RELEASE-CATALOG` and `RT-AUTHORITY-NODES` is `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
 vulnerability is observed but never reintroduced.
@@ -57,6 +58,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -86,9 +88,22 @@ CATALOG = REPO_ROOT / "forensics" / "release-catalog.json"
 LINEAGE = REPO_ROOT / "forensics" / "authority-lineage.json"
 SNAPSHOT = REPO_ROOT / "forensics" / "multitrack" / "release-archaeology.json"
 
+# 23.2's subject: the authority-node registry and the records it is derived from. The registry
+# itself is the committed artefact the court reads; the acquisition and build receipts and the
+# admitted-authority registry are the evidence its claims are checked against.
+AUTHORITY_NODES = REPO_ROOT / "forensics" / "authority-nodes.json"
+AUTHORITY_REGISTRY = REPO_ROOT / "forensics" / "authorities" / "AUTHORITIES.json"
+AUTHORITY_SRC = REPO_ROOT / "forensics" / "authorities"
+BUILD_RECORDS = REPO_ROOT / "forensics" / "atlas" / "BUILD_RECORDS.json"
+HIST_ACQ = REPO_ROOT / "forensics" / "multitrack" / "historical-acquisition.json"
+HIST_RECEIPTS = REPO_ROOT / "forensics" / "multitrack" / "historical-build-receipts.json"
+
+_HEX64 = re.compile(r"^[0-9a-f]{64}$")
+
 # 23.1's court, and the identity its subject must begin at. The root is upstream's first real
 # OpenSSL release (23 December 1998), not a version the catalogue would pick by sorting.
 RELEASE_CATALOG = "RT-RELEASE-CATALOG"
+AUTHORITY_NODES_COURT = "RT-AUTHORITY-NODES"
 ROOT_RELEASE = "openssl-0.9.1c"
 CANONICAL_KINDS = ("branch_fork", "chronological_successor", "maintenance_successor")
 PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
@@ -98,12 +113,12 @@ PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
 # table leaves the registry and fails `run_courts.py`.
 COURTS: list[tuple[str, str]] = [
     (RELEASE_CATALOG, "_release_catalog_court"),
+    (AUTHORITY_NODES_COURT, "_authority_nodes_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-AUTHORITY-NODES": "23.2 -- the authority-node registry",
     "RT-LINEAGE-EDGES": "23.3 -- the lineage edges",
     "RT-ENTITY-LINEAGE": "23.4 -- the entity lineage",
     "RT-DELTA-ENGINE": "23.5 -- the delta engine",
@@ -416,6 +431,311 @@ def _release_catalog_court(name: str) -> dict:
     }
 
 
+def _reseal_nodes(body: dict) -> dict:
+    """`body` with its content hash recomputed, so a mutation is caught on substance alone."""
+    out = copy.deepcopy(body)
+    out["content_hash"] = content_hash({"nodes": out.get("nodes", []),
+                                        "unavailable": out.get("unavailable", [])})
+    return out
+
+
+def authority_nodes_findings(body: dict, catalog: dict, authorities: dict, build_records: dict,
+                             hist_acq: dict, hist_receipts: dict) -> list[str]:
+    """Every way the authority-node registry and its backing records fail this court's subject.
+
+    A pure function of the committed bodies, so the sensitivity control can mutate them and
+    re-check. It establishes that every node is schema-valid, content-addressed and backed by an
+    actual receipt; that release identity is proven against the catalogue rather than assumed; that
+    the admitted pair still verifies and has a node; and that an unavailable release is recorded as
+    unavailable and never counted as runtime-compatible.
+    """
+    findings: list[str] = []
+    nodes = body.get("nodes", [])
+    unavailable = body.get("unavailable", [])
+    catalog_nodes = {n["release_id"]: n for n in catalog.get("nodes", [])}
+    auth_by_id = {a["id"]: a for a in authorities.get("authorities", [])}
+    builds_by_id = {b["id"]: b for b in build_records.get("builds", [])}
+    receipts_by_release = {r["release_id"]: r for r in hist_receipts.get("receipts", [])}
+    acq_by_release = {r["release_id"]: r for r in hist_acq.get("acquisitions", [])}
+    acq_unavailable = {r["release_id"]: r for r in hist_acq.get("unavailable", [])}
+    receipt_rel = rel(HIST_RECEIPTS)
+    build_records_rel = rel(BUILD_RECORDS)
+
+    ids = [n["authority_id"] for n in nodes]
+    if len(set(ids)) != len(ids):
+        findings.append(f"the registry has {len(ids) - len(set(ids))} duplicate authority node id(s)")
+
+    for n in nodes:
+        aid = n["authority_id"]
+        rid = n["release_id"]
+        # 1. schema validity.
+        findings += [f"authority node {aid}: {p}" for p in multitrack_schemas.validate_authority_node(n)]
+        cat = catalog_nodes.get(rid)
+        if cat is None:
+            findings.append(f"authority node {aid}: release {rid} is not a release node in the "
+                            f"catalogue")
+        else:
+            # 2. release identity is the catalogue's, and is kept separate from the profile.
+            git = n.get("git") or {}
+            if git.get("tag") != cat["upstream_tag"] or git.get("commit") != cat["upstream_commit"]:
+                findings.append(f"authority node {aid}: git identity {git} disagrees with the "
+                                f"catalogue's {cat['upstream_tag']}@{cat['upstream_commit']}")
+        # 3. the source package is proven, not asserted: a verified published digest.
+        sp = n.get("source_package") or {}
+        if sp.get("checksum_verified") is not True:
+            findings.append(f"authority node {aid}: source package checksum is not verified")
+        if not sp.get("sha256") or sp.get("sha256") != sp.get("published_sha256"):
+            findings.append(f"authority node {aid}: source package sha256 != published sha256, so "
+                            f"tag == tarball is asserted without proof")
+        if cat is not None and sp.get("artifact") != f"openssl-{cat['display_version']}.tar.gz":
+            findings.append(f"authority node {aid}: source artifact {sp.get('artifact')!r} is not "
+                            f"the release's own tarball")
+        # 4. content-addressed: every binary and installed hash is a real digest.
+        for field in ("binary_hashes", "installed_hashes"):
+            value = n.get(field)
+            if not isinstance(value, dict) or not value:
+                findings.append(f"authority node {aid}: {field} is empty, so the node binds nothing")
+                continue
+            for key, digest in value.items():
+                if not (isinstance(digest, str) and _HEX64.match(digest)):
+                    findings.append(f"authority node {aid}: {field}[{key!r}] is not a 64-hex "
+                                    f"content address ({digest!r})")
+        # 5. a built-authority claim is backed by an actual build receipt.
+        if n.get("claim") == "built-authority":
+            receipt = n.get("build_receipt")
+            if not receipt or not (REPO_ROOT / receipt).is_file():
+                findings.append(f"authority node {aid}: claims built-authority but its build "
+                                f"receipt {receipt!r} is absent")
+            elif receipt == receipt_rel:
+                rec = receipts_by_release.get(rid)
+                if rec is None:
+                    findings.append(f"authority node {aid}: no historical build receipt names {rid}")
+                else:
+                    if rec.get("binary_hashes") != n.get("binary_hashes"):
+                        findings.append(f"authority node {aid}: binary hashes disagree with its "
+                                        f"build receipt")
+                    if rec.get("installed_hashes") != n.get("installed_hashes"):
+                        findings.append(f"authority node {aid}: installed hashes disagree with its "
+                                        f"build receipt")
+                    if rec.get("source_package", {}).get("sha256") != sp.get("sha256"):
+                        findings.append(f"authority node {aid}: source digest disagrees with its "
+                                        f"build receipt")
+            elif receipt == build_records_rel:
+                build = builds_by_id.get(aid)
+                if build is None:
+                    findings.append(f"authority node {aid}: no build record names it")
+                elif build.get("profile") != n.get("build_profile"):
+                    findings.append(f"authority node {aid}: build profile {n.get('build_profile')!r} "
+                                    f"disagrees with its build record {build.get('profile')!r}")
+        if n.get("runtime_evidence") == "unavailable":
+            findings.append(f"authority node {aid}: is a node but marked runtime-unavailable")
+
+    # 6. every admitted authority still verifies and has a node whose identity reproduces.
+    for a in authorities.get("authorities", []):
+        rid = f"openssl-{a['version']}"
+        node = next((n for n in nodes if n["authority_id"] == a["id"]), None)
+        if node is None:
+            findings.append(f"admitted authority {a['id']} has no authority node")
+            continue
+        if (node.get("source_package") or {}).get("sha256") != a["artifact"]["sha256"]:
+            findings.append(f"admitted authority {a['id']}: node source digest disagrees with the "
+                            f"registry's verified archive digest")
+        manifest_path = AUTHORITY_SRC / a["source_tree"]["manifest"]
+        if not manifest_path.is_file():
+            findings.append(f"admitted authority {a['id']}: source manifest "
+                            f"{a['source_tree']['manifest']} is absent")
+        else:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if manifest.get("root_hash") != a["source_tree"]["root_hash"]:
+                findings.append(f"admitted authority {a['id']}: source manifest root hash does not "
+                                f"reproduce the registry's")
+            if manifest.get("file_count") != a["source_tree"]["file_count"]:
+                findings.append(f"admitted authority {a['id']}: source manifest file count does not "
+                                f"reproduce the registry's")
+        if rid not in catalog_nodes:
+            findings.append(f"admitted authority {a['id']}: its release {rid} is not catalogued")
+
+    # 7. an unavailable release is recorded as unavailable, backed by the acquisition evidence,
+    #    and is never also a node -- so it is never counted as runtime-compatible.
+    for u in unavailable:
+        rid = u.get("release_id")
+        if u.get("outcome") != "unavailable":
+            findings.append(f"unavailable entry {rid}: outcome is not `unavailable`")
+        if not u.get("reason"):
+            findings.append(f"unavailable entry {rid}: carries no reason")
+        if u.get("runtime_evidence") != "unavailable":
+            findings.append(f"unavailable entry {rid}: does not record runtime evidence unavailable")
+        if u.get("runtime_compatible") is not False:
+            findings.append(f"unavailable entry {rid}: is not recorded runtime-incompatible")
+        if rid not in acq_unavailable:
+            findings.append(f"unavailable entry {rid}: is not recorded unavailable in the "
+                            f"acquisition registry")
+        if any(n["release_id"] == rid for n in nodes):
+            findings.append(f"unavailable entry {rid}: is also an authority node, so it would be "
+                            f"counted as runtime-compatible")
+    for rid in acq_unavailable:
+        if not any(u.get("release_id") == rid for u in unavailable):
+            findings.append(f"acquisition records {rid} unavailable but the registry omits it")
+
+    # 8. every historical build receipt backs exactly one node.
+    for rid in receipts_by_release:
+        if not any(n["release_id"] == rid for n in nodes):
+            findings.append(f"build receipt for {rid} has no authority node")
+    for rid in acq_by_release:
+        if not any(n["release_id"] == rid for n in nodes):
+            findings.append(f"acquired release {rid} has no authority node")
+
+    # 9. the content hash is a function of the committed body.
+    recomputed = content_hash({"nodes": nodes, "unavailable": unavailable})
+    if recomputed != body.get("content_hash"):
+        findings.append("the registry content_hash does not reproduce from its body")
+    return findings
+
+
+def authority_nodes_sensitivity_control(body: dict, catalog: dict, authorities: dict,
+                                        build_records: dict, hist_acq: dict,
+                                        hist_receipts: dict) -> dict:
+    """Prove the court can fail: seed three mutations and require each to be caught.
+
+    The honest registry must yield **zero** findings (specificity), and each seeded mutation -- a
+    `built-authority` claim with no receipt, a dropped required identity field, and a source digest
+    that asserts `tag == tarball` without proof -- must be caught. Each mutated body is re-sealed
+    first, so the detection is the semantic check and never the content-hash check firing on an
+    un-recomputed digest.
+    """
+    base = authority_nodes_findings(body, catalog, authorities, build_records, hist_acq,
+                                    hist_receipts)
+    specificity = not base
+
+    # (a) claim built-authority for a node whose receipt does not exist.
+    no_receipt = copy.deepcopy(body)
+    for n in no_receipt["nodes"]:
+        if n["authority_id"] == "openssl-0.9.8zh-historical":
+            n["build_receipt"] = "forensics/multitrack/does-not-exist.json"
+    no_receipt = _reseal_nodes(no_receipt)
+    no_receipt_findings = authority_nodes_findings(no_receipt, catalog, authorities, build_records,
+                                                   hist_acq, hist_receipts)
+    caught_no_receipt = any("claims built-authority" in f and "absent" in f
+                            for f in no_receipt_findings)
+
+    # (b) drop a required identity field (the platform).
+    dropped = copy.deepcopy(body)
+    for n in dropped["nodes"]:
+        if n["authority_id"] == "openssl-3.6.4-production":
+            n.pop("platform", None)
+    dropped = _reseal_nodes(dropped)
+    dropped_findings = authority_nodes_findings(dropped, catalog, authorities, build_records,
+                                                hist_acq, hist_receipts)
+    caught_dropped = any("platform" in f and "missing required field" in f
+                         for f in dropped_findings)
+
+    # (c) assert a source digest without proof: sha256 no longer matches the published digest.
+    unproven = copy.deepcopy(body)
+    for n in unproven["nodes"]:
+        if n["authority_id"] == "openssl-3.6.4-production":
+            n["source_package"]["sha256"] = "0" * 64
+    unproven = _reseal_nodes(unproven)
+    unproven_findings = authority_nodes_findings(unproven, catalog, authorities, build_records,
+                                                 hist_acq, hist_receipts)
+    caught_unproven = any("asserted without proof" in f for f in unproven_findings)
+
+    return {
+        "baseline_findings": len(base),
+        "injected_built_without_receipt": "openssl-0.9.8zh-historical",
+        "injected_built_without_receipt_findings": len(no_receipt_findings),
+        "injected_dropped_platform": "openssl-3.6.4-production",
+        "injected_dropped_platform_findings": len(dropped_findings),
+        "injected_unproven_tarball": "openssl-3.6.4-production source_package.sha256",
+        "injected_unproven_tarball_findings": len(unproven_findings),
+        "specificity_holds": specificity,
+        "caught_built_without_receipt": caught_no_receipt,
+        "caught_dropped_platform": caught_dropped,
+        "caught_unproven_tarball": caught_unproven,
+        "honest": bool(specificity and caught_no_receipt and caught_dropped and caught_unproven),
+    }
+
+
+def _authority_nodes_court(name: str) -> dict:
+    """`RT-AUTHORITY-NODES`: 23.2's court, the authority-node registry.
+
+    Stages no probe. It reads `forensics/authority-nodes.json` and the records it is derived from
+    -- the release catalogue, the admitted-authority registry, the build records and the historical
+    acquisition and build receipts -- and establishes that every node is schema-valid,
+    content-addressed and backed by an actual receipt; that release identity is proven against the
+    catalogue and kept separate from platform/profile identity; that the admitted pair still
+    verifies; and that an unavailable authority is recorded unavailable and never a node. Three
+    seeded mutations are each caught with specificity holding. A passing registry is a
+    **registry**, not a compatibility claim.
+    """
+    problems: list[str] = []
+    for path, label in ((AUTHORITY_NODES, "authority-node registry"),
+                        (CATALOG, "release catalogue"),
+                        (AUTHORITY_REGISTRY, "authority registry"),
+                        (BUILD_RECORDS, "build records"),
+                        (HIST_ACQ, "historical acquisition"),
+                        (HIST_RECEIPTS, "historical build receipts")):
+        if not path.is_file():
+            problems.append(f"the {label} {rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    body = read_json(AUTHORITY_NODES)
+    catalog = read_json(CATALOG)
+    authorities = read_json(AUTHORITY_REGISTRY)
+    build_records = read_json(BUILD_RECORDS)
+    hist_acq = read_json(HIST_ACQ)
+    hist_receipts = read_json(HIST_RECEIPTS)
+
+    findings = authority_nodes_findings(body, catalog, authorities, build_records, hist_acq,
+                                        hist_receipts)
+    control = authority_nodes_sensitivity_control(body, catalog, authorities, build_records,
+                                                  hist_acq, hist_receipts)
+    counts = body.get("counts", {})
+    verdict = "pass" if (not findings and not problems and control["honest"]) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/authority-nodes.json and the records it is derived "
+            "from -- forensics/release-catalog.json, forensics/authorities/AUTHORITIES.json, "
+            "forensics/atlas/BUILD_RECORDS.json and the historical acquisition and build receipts "
+            "-- and establishes that every node is schema-valid, content-addressed and backed by an "
+            "actual build receipt; that release identity (release_id, git) is proven against the "
+            "catalogue and kept separate from platform/profile identity; that the admitted pair's "
+            "source manifests still reproduce; and that an unavailable authority is recorded "
+            "unavailable and is never a node. A built-authority claim with no receipt, a dropped "
+            "required identity field, and a source digest asserting tag == tarball without proof "
+            "are each detected (docs/PHASE-23-MULTITRACK-SUBPHASES.md section 3.2)"
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the authority-node court reads committed build evidence and stages no "
+            "artifacts/phase23/probes/ pair, so it takes no transcript to diff and carries no FRF "
+            "declaration"
+        ),
+        "nodes": counts.get("nodes"),
+        "built": counts.get("built"),
+        "unavailable": counts.get("unavailable"),
+        "content_hash": body.get("content_hash"),
+        "node_identities": [
+            {"authority_id": n["authority_id"], "release_id": n["release_id"],
+             "profile": n["build_profile"], "claim": n.get("claim"),
+             "receipt": n.get("build_receipt")}
+            for n in body.get("nodes", [])
+        ],
+        "unavailable_identities": [
+            {"release_id": u["release_id"], "outcome": u.get("outcome"),
+             "runtime_evidence": u.get("runtime_evidence")}
+            for u in body.get("unavailable", [])
+        ],
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -462,12 +782,22 @@ def main(argv: list[str]) -> int:
             "repointed parent edge and a `latest-stable` pointed at a beta are each detected "
             "with specificity holding on the honest catalogue. A passing catalogue is a "
             "catalogue, not a compatibility claim: no edge says any release is compatible with "
-            "any other. Phase 23 owns no exported symbol, so no differential probe over a symbol "
-            "set is its evidence, and its remaining eleven courts -- RT-AUTHORITY-NODES, "
-            "RT-LINEAGE-EDGES, RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, RT-COMPATIBILITY-VIEWS, "
+            "any other. `RT-AUTHORITY-NODES` is 23.2's court: the authority-node registry. It "
+            "stages no probe and reads forensics/authority-nodes.json and the records it is "
+            "derived from -- the release catalogue, the admitted-authority registry, the build "
+            "records and the historical acquisition and build receipts -- and establishes that "
+            "every node is schema-valid, content-addressed and backed by an actual build receipt; "
+            "that release identity (release_id, git) is proven against the catalogue and kept "
+            "separate from platform/profile identity; that the admitted pair's source manifests "
+            "still reproduce; and that an unavailable authority is recorded unavailable and is "
+            "never a node. A built-authority claim with no receipt, a dropped required identity "
+            "field, and a source digest asserting tag == tarball without proof are each detected "
+            "with specificity holding. Phase 23 owns no exported symbol, so no differential probe "
+            "over a symbol set is its evidence, and its remaining ten courts -- RT-LINEAGE-EDGES, "
+            "RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, RT-COMPATIBILITY-VIEWS, "
             "RT-COMPATIBILITY-EDGES, RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, "
             "RT-SUPPORT-STATUS, RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
-            "the subphases that land them (23.2 through 23.12). The one thing the model forbids "
+            "the subphases that land them (23.3 through 23.12). The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "
@@ -482,6 +812,11 @@ def main(argv: list[str]) -> int:
         InputRef(name="release-catalog", path=CATALOG),
         InputRef(name="authority-lineage", path=LINEAGE),
         InputRef(name="release-archaeology", path=SNAPSHOT),
+        InputRef(name="authority-nodes", path=AUTHORITY_NODES),
+        InputRef(name="authority-registry", path=AUTHORITY_REGISTRY),
+        InputRef(name="build-records", path=BUILD_RECORDS),
+        InputRef(name="historical-acquisition", path=HIST_ACQ),
+        InputRef(name="historical-build-receipts", path=HIST_RECEIPTS),
     ]
     doc = envelope(kind="phase23-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
@@ -502,6 +837,24 @@ def main(argv: list[str]) -> int:
                   f"final->beta->{c['injected_final_to_beta_findings']} "
                   f"repointed->{c['injected_repointed_findings']} "
                   f"stable->beta->{c['injected_stable_beta_findings']} finding(s))")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == AUTHORITY_NODES_COURT:
+            c = r["control"]
+            print(f"  {r['court']:<32} pass   (no probe, {r['nodes']} node(s) "
+                  f"{r['built']} built, {r['unavailable']} unavailable; "
+                  f"content_hash={r['content_hash'][:16]}...; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"no-receipt->{c['injected_built_without_receipt_findings']} "
+                  f"dropped-platform->{c['injected_dropped_platform_findings']} "
+                  f"unproven-tarball->{c['injected_unproven_tarball_findings']} finding(s))")
+            for n in r["node_identities"]:
+                print(f"      node {n['authority_id']:<32} release={n['release_id']:<18} "
+                      f"profile={n['profile']} claim={n['claim']}")
+            for u in r["unavailable_identities"]:
+                print(f"      unavailable {u['release_id']:<27} outcome={u['outcome']} "
+                      f"runtime_evidence={u['runtime_evidence']}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":
