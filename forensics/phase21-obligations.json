@@ -1,0 +1,118 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "contract_units": [
+      {
+        "closure": "the `RT-AUTHORITY-ADMISSION` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "complete",
+        "observation": "RT-AUTHORITY-ADMISSION is pass",
+        "property_status": "not_claimed",
+        "state": "implemented",
+        "surface": "artifacts/phase21/COURTS.json",
+        "unit": "authority-admission",
+        "what": "the admission / identification of a new authority and the record of its identity and profile as the delta input pair, exercised on the already-admitted `openssl-3.6.3-historical` versus `openssl-3.6.4-production` (`forensics/authorities/AUTHORITIES.json`, the two `SOURCE_MANIFEST.{3.6.3,3.6.4}.json` files)"
+      },
+      {
+        "closure": "the `RT-ATLAS-DELTA` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "complete",
+        "observation": "RT-ATLAS-DELTA is pass",
+        "property_status": "not_claimed",
+        "state": "implemented",
+        "surface": "artifacts/phase21/COURTS.json",
+        "unit": "atlas-delta",
+        "what": "the added / removed / changed obligation delta between the two authorities, computed across the atlas planes the procedure names -- exports, provider registration rows and prerequisite units -- mechanically from committed artefacts (the differential `forensics/atlas/differential/openssl-3.6.3-historical-vs-openssl-3.6.4-production.json` and the per-authority atlases), never hand-listed"
+      },
+      {
+        "closure": "the `RT-DELTA-DISPOSITION` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "complete",
+        "observation": "RT-DELTA-DISPOSITION is pass",
+        "property_status": "not_claimed",
+        "state": "implemented",
+        "surface": "artifacts/phase21/COURTS.json",
+        "unit": "delta-disposition",
+        "what": "the disposition of every delta row (`implemented` / `deferred` / `not-in-profile` / `boundary`), requiring zero unexplained, so a newly discovered un-dispositioned delta row is a `fail` rather than a silent addition"
+      },
+      {
+        "closure": "the `RT-AFFECTED-COURT-SELECTION` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "complete",
+        "observation": "RT-AFFECTED-COURT-SELECTION is pass",
+        "property_status": "not_claimed",
+        "state": "implemented",
+        "surface": "artifacts/phase21/COURTS.json",
+        "unit": "affected-court-selection",
+        "what": "the derivation of which courts a delta touches, recorded with the selection derivation, so the selected courts are re-run or re-derived and a delta reaches exactly the courts its obligations do"
+      },
+      {
+        "closure": "the `MAINTENANCE-BOUNDARY-REGISTER` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "complete",
+        "observation": "MAINTENANCE-BOUNDARY-REGISTER is pass",
+        "property_status": "not_claimed",
+        "state": "implemented",
+        "surface": "artifacts/phase21/COURTS.json",
+        "unit": "maintenance-boundary-register",
+        "what": "the register that records the explicit non-claims -- OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4, only the exercised delta is claimed, and unknown stays unknown -- and that fails the stratum if a recorded boundary drifts from its evidence"
+      }
+    ],
+    "counts": {
+      "atlas_owned": 0,
+      "contract_units": 5,
+      "deferrals_received": 0,
+      "deferred_to_later_phase": 0,
+      "implemented": 5,
+      "open_in_this_stratum": 0,
+      "owned": 5,
+      "provider_rows_open": 0,
+      "provider_rows_owned": 0,
+      "unit_deferrals_received": 0
+    },
+    "deferrals": [],
+    "deferred": [],
+    "implemented": [],
+    "note": "`open` is the only list that blocks this stratum, and its count is over the maintenance delta contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. Phase 21 owns no provider registration row and no export: it activates no provider and adds no library surface, because it computes the delta between two authorities that are already admitted. Its five contract units are the maintenance delta contract docs/PHASE-21-SUBPHASES.md section 1 names -- the authority admission, the atlas delta, the delta disposition, the affected-court selection and the maintenance-boundary register -- and its `counts` block is the live record of which of them are implemented: 21.1 landed the authority admission, 21.2 the atlas delta, 21.3 the delta disposition, 21.4 the affected-court selection and 21.5 the maintenance-boundary register, so all five contract units are implemented and `open_in_this_stratum` is zero; 21.6's seal docs/PHASE-21-MAINTENANCE-SEAL.md is the stratum's closure, and because Phase 21 owns no FRF-declarable court its FRF/Gemel chain entry is vacuous by the rule's own scoping, so the seal document is the required evidence and it has landed. Nothing here is a version-universality claim: a passing delta court measures the movement between the two authorities it names and nothing beyond them, because OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4 (docs/RELEASE_GATES.md section 8, docs/NON_CLAIMS.md section 3). Only the exercised delta is claimed, and unknown stays unknown: a delta row the courts cannot disposition is `UNKNOWN`, a research result rather than a resting state (docs/PARITY_MODEL.md section 1). A 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced (docs/SECURITY_DIVERGENCE_POLICY.md section 1). Each contract unit records its two axes separately: `measurement_state` says the instrument completed, and `property_status`/`findings` say what is claimed about a delta property. The `delta-disposition` unit's property is `NOT_CLAIMED` with every un-dispositioned change named as a finding, so a passing `RT-DELTA-DISPOSITION` is an instrument plus a disposition record and must never be read as 'the delta is implemented'.",
+    "open": [],
+    "provider_rows": [],
+    "rule": "this stratum's working set is not a set of exported symbols: Phase 21 owns no export, no provider registration row and no prerequisite deferral, so its working set is exactly the maintenance delta contract units docs/PHASE-21-SUBPHASES.md names, each measured by the Phase-21 courts registry. Every row is read from those atlases; the ledger types none of them, and `main` fails closed if the ownership atlas assigns this stratum an export, the provider census assigns it a row, or the prerequisite plane assigns it a deferral or unit",
+    "unit": "maintenance delta contract",
+    "unit_deferrals": []
+  },
+  "generator": "forensics/tools/phase21_obligations.py",
+  "inputs": [
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "provider-algorithms",
+      "path": "forensics/atlas/provider-algorithms.json",
+      "sha256": "8a767c9f5c456e1b3b8e2d01a88f0b17f2184313d421c0a9e513c1dd2d118589"
+    },
+    {
+      "name": "prerequisites",
+      "path": "forensics/prerequisites.json",
+      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+    },
+    {
+      "name": "phase-21-plan",
+      "path": "docs/PHASE-21-SUBPHASES.md",
+      "sha256": "034876cc650f41c600fe2e1459c529e04f0f7a95c9774ec51ae82b1898373bcc"
+    },
+    {
+      "name": "phase-21-courts",
+      "path": "artifacts/phase21/COURTS.json",
+      "sha256": "b5cb2a374a4cbcb02cc0802d0491f50572927151ffec5cc200f9d8b005b96d84"
+    }
+  ],
+  "kind": "phase21-obligations",
+  "schema": "openssl-rs/atlas/phase21-obligations/v1"
+}

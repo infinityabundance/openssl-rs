@@ -12,6 +12,7 @@
     "phase19",
     "phase2",
     "phase20",
+    "phase21",
     "phase22",
     "phase3",
     "phase4",
@@ -98,7 +99,15 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "MAINTENANCE-BOUNDARY-REGISTER": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "PERFORMANCE-BOUNDARY-REGISTER": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-AFFECTED-COURT-SELECTION": {
       "observations": 0,
       "verdict": "pass"
     },
@@ -132,6 +141,14 @@
     },
     "RT-ASYM-CIPHER": {
       "observations": 118,
+      "verdict": "pass"
+    },
+    "RT-ATLAS-DELTA": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-AUTHORITY-ADMISSION": {
+      "observations": 0,
       "verdict": "pass"
     },
     "RT-BIO": {
@@ -284,6 +301,10 @@
     },
     "RT-DEFAULTS": {
       "observations": 10,
+      "verdict": "pass"
+    },
+    "RT-DELTA-DISPOSITION": {
+      "observations": 0,
       "verdict": "pass"
     },
     "RT-DH": {
@@ -811,6 +832,7 @@
     "phase18": 0,
     "phase19": 0,
     "phase20": 0,
+    "phase21": 0,
     "phase22": 0,
     "phase3": 43,
     "phase4": 23,
@@ -836,6 +858,7 @@
     "phase18": 0,
     "phase19": 0,
     "phase20": 0,
+    "phase21": 0,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -857,6 +880,7 @@
     "phase18": 5,
     "phase19": 5,
     "phase20": 5,
+    "phase21": 5,
     "phase22": 18,
     "phase3": 294,
     "phase4": 272,
@@ -881,7 +905,7 @@
     "19": "complete",
     "2": "complete",
     "20": "complete",
-    "21": "not-started",
+    "21": "complete",
     "22": "complete",
     "3": "complete",
     "4": "complete",
