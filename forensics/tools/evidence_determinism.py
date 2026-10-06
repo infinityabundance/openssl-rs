@@ -197,14 +197,6 @@ GENERATORS_BEFORE_LEDGERS = [
     # rather than a silent divergence. The RT-NEGATIVE-OBLIGATIONS court re-derives the whole plane
     # through the same generator and re-reads each record's named evidence through `adjudicate`.
     "forensics/tools/negative_obligations.py",
-    # Phase 23.14's security lineage. It is a pure function of the committed source snapshot, the
-    # release catalogue, the default-authority alias, the divergence register and the negative
-    # obligations plane, so a stale committed plane -- or a typed disposition, a hand-listed fix or
-    # a re-adopted vulnerable behaviour -- is a failure rather than a silent divergence. It also
-    # supplies the `security_backport` lineage edges `authority_catalog.py` merges, so it runs
-    # after that generator. The RT-SECURITY-LINEAGE court re-derives the whole plane through the
-    # same generator and re-reads every cited evidence path.
-    "forensics/tools/security_lineage.py",
     # Phase 23.11's downstream multitrack court. Its default run is a pure function of the committed
     # artefact's own preserved raw outputs: it re-derives every consumer record from the raw build
     # and run bytes through the same code, so a stale committed record -- or a hand-typed outcome --
@@ -221,6 +213,13 @@ GENERATORS_BEFORE_LEDGERS = [
     # The RT-HISTORICAL-POPULATION court re-derives the whole record through the same generator and
     # refuses a typed status.
     "forensics/tools/historical_population.py",
+    # Phase 23.15's support-status ladder (D545). It reuses 23.10's derivation -- it calls the
+    # historical-population generator and re-expresses each record as the schema-validated
+    # `support_status` row the plan names, adding the per-rung evidence and the reason for each rung
+    # not attained, so the status has one derivation rather than two. The RT-SUPPORT-STATUS court
+    # re-derives the whole plane through the same generator, reconciles every row with its population
+    # record, and checks each attained rung is backed by the artefact that establishes it.
+    "forensics/tools/support_status.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -240,9 +239,19 @@ GENERATORS_AFTER_LEDGERS = [
     # copy is a failure and not a silent divergence: `phase_state.py` refuses to derive any
     # state without it, and the whole point of the file is that a triggered obligation cannot
     # be outrun by a derived `complete`, so a generator nothing re-runs would reintroduce
-    # exactly that. It sits immediately before `phase_state.py` because it consumes nothing
-    # and `phase_state.py` consumes *it*.
+    # exactly that. It sits before `phase_state.py`, which consumes *it*.
     "forensics/tools/divergence_obligations.py",
+    # Phase 23.14's security lineage. It is a pure function of the committed source snapshot, the
+    # release catalogue, the default-authority alias, the divergence register and the negative
+    # obligations plane, so a stale committed plane -- or a typed disposition, a hand-listed fix or
+    # a re-adopted vulnerable behaviour -- is a failure rather than a silent divergence. It records
+    # the divergence register's own hash as evidence, so it must run **after**
+    # `divergence_obligations.py` (the court's content-addressing check reads the recorded hash back
+    # against that file); it also supplies the `security_backport` lineage edges `authority_catalog.py`
+    # merges, which stays a one-run lag exactly as the ledgers' own inputs do. The RT-SECURITY-LINEAGE
+    # court re-derives the whole plane through the same generator and re-reads every cited evidence
+    # path.
+    "forensics/tools/security_lineage.py",
     "forensics/tools/phase_state.py",
     # The prerequisite gate reads the phase states to decide whether a stratum has
     # sealed, so it sits after `phase_state.py` rather than beside it. It needs no
@@ -429,6 +438,10 @@ COMPARED = [
     # nodes, receipts, atlases, compatibility views and semantic pair, so a stale record or a typed
     # status is a failure rather than a silent divergence.
     "forensics/multitrack/historical-population.json",
+    # Phase 23.15's support-status ladder: a pure function of the 23.10 population, so a stale row, a
+    # typed status or a row that disagrees with its population record is a failure rather than a
+    # silent divergence.
+    "forensics/multitrack/support-status.json",
     # Phase 23.11's downstream multitrack court: a pure function of the committed artefact's own
     # preserved raw outputs, so a stale record or a hand-typed outcome is a failure rather than a
     # silent divergence. The raw build/run outputs are carried inside the artefact, which is why the

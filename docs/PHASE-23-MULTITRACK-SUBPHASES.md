@@ -606,6 +606,60 @@ rather than asserted here.
 
 The court's property is **NOT_CLAIMED**: the 287 unobserved source records and the one unresolved observation are named as findings, so a passing `RT-SECURITY-LINEAGE` is an instrument plus an observation record and must never be read as "the lineage is secure".
 
+**4.15 The support-status ladder is the schema-validated projection of the historical population, and the ladder's ordering rule is corrected to match it (23.15, D545).** 23.15 lands the support-status plane
+`forensics/multitrack/support-status.json` (record kind `support_status`, the kind 23.0 defined), the
+generator `forensics/tools/support_status.py` and the court `RT-SUPPORT-STATUS`. Five measured
+corrections, each checked by the court rather than asserted here.
+
+* **The plane is one derivation, not a second truth: it re-expresses the 23.10 population rather than
+  re-deriving a status.** The plan's §2 artefact table names `forensics/multitrack/support-status.json`
+  with the `support_status` record kind, but 23.10's `historical-population.json` already records a
+  status per node. Rather than hand-maintain a parallel truth, 23.15's generator calls
+  `historical_population.derive_body()` -- the one derivation of a status -- and re-expresses each
+  record in the schema-validated `support_status` shape, adding the two things the subphase row asks
+  for and 23.10 does not carry per node: the **evidence for each rung attained** (`evidence_by_rung`,
+  the artefact that establishes it) and the **reason for each rung not attained** (`not_attained`). The
+  court proves the reconciliation node-for-node and rung-for-rung and re-derives both planes through
+  their own generators, so the two artefacts cannot drift and neither is typed. This is choice (a) of
+  the two the subphase allowed: the canonical, schema-validated `support_status` plane is reconciled
+  with the population it projectes, and `RT-SUPPORT-STATUS` and `RT-HISTORICAL-POPULATION` record the
+  same fact once.
+* **The ladder's ordering rule is corrected: the core rungs are a prefix, and the additive rungs are
+  independent evidence planes.** 23.0's `validate_support_status` required `rungs_attained` to be a
+  strict prefix of `SUPPORT_LADDER`. The committed population is deliberately not a strict prefix: the
+  four historical epoch representatives (0.9.8zh, 1.0.2u, 1.1.1w, 3.0.0) are `downstream-evidenced`
+  from a real consumer with no `candidate-view` and no `runtime-evidenced`, because a downstream
+  consumer build is not gated on the oracle-to-oracle measurement (§4.13). The correction introduces
+  `SUPPORT_CORE` (the contiguous climb `catalogued` -> `admitted-source` -> `built-authority` ->
+  `atlas-complete`), requires the core rungs to be a prefix -- a node cannot skip a core rung it did
+  not evidence -- and leaves `candidate-view`, `runtime-evidenced`, `downstream-evidenced` and
+  `maintained` as independent additive rungs that may be attained from their own evidence planes. The
+  validator still refuses an out-of-order rung, a duplicate, a status that is not the highest rung, and
+  an `archaeological-only` node with a rung; the documented-bad case (a node that skips `admitted-source`)
+  is still refused, and a new documented-good case (0.9.8zh's independent-rung form) is accepted.
+* **A status is a release/authority state, not a parity dimension, and the plane says so.** Each row
+  carries `support_role` (`support-target` or `archaeology`), the ladder's own bookkeeping, and the
+  plane names no `PARITY_VERIFIED` and no one-boolean compatibility claim; the court refuses a row that
+  carries a competing `compatible`/`parity` field. The stratum's compatibility claim stays directional
+  and dimension-specific in the compatibility views and matrix (`docs/PARITY_MODEL.md` sections 3 and
+  4). A node is never counted a support target while it is `archaeological-only`: the role disagrees
+  with the status and the court fails.
+* **Every rung is backed by the evidence that establishes it, checked against the raw plane.** The
+  court re-reads each attained rung's evidence rather than trusting the row: `catalogued` against the
+  catalogue, `admitted-source` against the acquisition and admitted-authority records,
+  `built-authority` against the authority node's actual receipt, `atlas-complete` against a committed
+  atlas, `candidate-view` against a compatible view, `runtime-evidenced` against the executed semantic
+  pair, `downstream-evidenced` against a passing consumer, and `maintained` against the default-authority
+  alias. The measured ladder is **245 support targets and 127 archaeological-only nodes**: 239
+  `catalogued`, four `downstream-evidenced` (0.9.8zh, 1.0.2u, 1.1.1w, 3.0.0), one `runtime-evidenced`
+  (3.6.3), one `maintained` (3.6.4) and the 127 archaeology nodes (the 125 pre-release/auxiliary nodes
+  and the two releases whose official source cannot be admitted).
+* **The instrument's sensitivity is proved.** The honest plane yields zero findings, and four seeded
+  mutations -- a node claiming a higher rung with no evidence, a node skipping a core rung, an
+  archaeological-only node counted a support target, and a status typed rather than derived -- are each
+  caught with specificity holding. `support-status` moves to `implemented`/closed and the stratum's
+  `open_in_this_stratum` falls from three to two.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 21's process unchanged: a subphase lands its code, its court

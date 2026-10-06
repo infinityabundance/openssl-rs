@@ -808,6 +808,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "RT-SUPPORT-STATUS": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-THREAD": {
       "observations": 40,
       "verdict": "pass"
@@ -918,7 +922,7 @@
     "phase20": 0,
     "phase21": 0,
     "phase22": 0,
-    "phase23": 3,
+    "phase23": 2,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
