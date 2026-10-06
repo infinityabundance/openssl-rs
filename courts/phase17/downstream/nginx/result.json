@@ -4,7 +4,7 @@
     "detail": "nginx/1.26.3, built with OpenSSL 3.6.4",
     "ok": true
   },
-  "candidate": "0.0.24",
+  "candidate": "0.0.25",
   "concurrency": {
     "ok": 16,
     "total": 16
