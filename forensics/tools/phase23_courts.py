@@ -16,7 +16,7 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**Sixteen courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+**Seventeen courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
 lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, 23.3 lands
 `RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court, 23.4 lands `RT-LINEAGE-EDGES`, the
 typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage court, 23.6 lands
@@ -30,10 +30,8 @@ typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage cou
 `RT-NEGATIVE-OBLIGATIONS`, the negative/positive-obligation court, and 23.14 lands
 `RT-SECURITY-LINEAGE`, the security-lineage court, and 23.15 lands `RT-SUPPORT-STATUS`, the
 support-status-ladder court, and 23.16 lands `RT-COMPATIBILITY-MATRIX`, the assembled-matrix
-court; the remaining court is
-named in
-`PENDING_COURTS` and lands with the subphase that
-builds the instrument it drives. The registry is the file `run_courts.py` checks is
+court, and 23.17 lands `MULTITRACK-SEAL`, the seal court; `PENDING_COURTS` is empty. The registry
+is the file `run_courts.py` checks is
 reproduced, so a court silently dropped is a finding rather than a smaller green run. This is
 the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this registry,
 so this runner does **not** bind the obligations ledger as an input.
@@ -61,15 +59,10 @@ The seventeen courts, and the subphase that lands each
   * `RT-SECURITY-LINEAGE` -- 23.14, the security lineage (registered).
   * `RT-SUPPORT-STATUS` -- 23.15, the support-status ladder (registered).
   * `RT-COMPATIBILITY-MATRIX` -- 23.16, the compatibility matrix (registered).
-  * `MULTITRACK-SEAL` -- 23.17, the full matrix, the FRF/Gemel chain and the seal.
+  * `MULTITRACK-SEAL` -- 23.17, the full matrix, the FRF/Gemel chain and the seal (registered).
 
-Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZATION`,
-`RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE`, `RT-DELTA-ENGINE`, `RT-ABI-HISTORY-FACADES`,
-`RT-SEMANTIC-COURTS`, `RT-COMPATIBILITY-VIEWS`, `RT-HISTORICAL-POPULATION`,
-`RT-DOWNSTREAM-MULTITRACK`, `RT-COMPATIBILITY-EDGES`,
-`RT-NEGATIVE-OBLIGATIONS`, `RT-SECURITY-LINEAGE`, `RT-SUPPORT-STATUS` and
-`RT-COMPATIBILITY-MATRIX` is
-`pending`. A passing court is an instrument, not a property
+Every one of the seventeen is registered; none is `pending`. A passing court is an instrument, not
+a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
 vulnerability is observed but never reintroduced.
@@ -172,6 +165,10 @@ import security_lineage  # noqa: E402
 # The candidate version the Phase-17 corpus names, read from the one manifest knob so the
 # distinctness check cannot drift from `Cargo.toml`.
 import gen_frf_courts  # noqa: E402
+# The Phase-23.17 declared contract-unit table, imported so the seal court checks the declared
+# seventeen units against the one declaration rather than restating them, and so a unit dropped
+# from the ledger is a finding at the seal rather than a silent omission.
+import phase23_obligations  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase23" / "COURTS.json"
 GENERATOR = "forensics/tools/phase23_courts.py"
@@ -272,6 +269,16 @@ SECURITY_SOURCE = REPO_ROOT / "forensics" / "multitrack" / "security-source.json
 SECURITY_DIVERGENCE = REPO_ROOT / "forensics" / "divergence-obligations.json"
 SECURITY_POLICY = REPO_ROOT / "docs" / "SECURITY_DIVERGENCE_POLICY.md"
 
+# 23.17's subject: the seal document, the Gemel projection it records the chain status from, and
+# the non-claims authority it defers to. The seal court reads the committed multitrack planes, the
+# declared contract and the FRF registry, and the seal itself. It deliberately reads **no** derived
+# state of this stratum -- `forensics/phase-state.json` and `forensics/phase23-obligations.json`
+# are what this court's own pass moves, and an instrument that reads its own effect would flip with
+# that effect rather than with the evidence it measures (the Phase-20 defect this seal records).
+SEAL_DOC = REPO_ROOT / "docs" / "PHASE-23-MULTITRACK-SEAL.md"
+GEMEL_TRAJECTORY = REPO_ROOT / "forensics" / "GEMEL_TRAJECTORY.md"
+NON_CLAIMS = REPO_ROOT / "docs" / "NON_CLAIMS.md"
+
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 # 23.1's court, and the identity its subject must begin at. The root is upstream's first real
@@ -292,7 +299,22 @@ SUPPORT_STATUS_COURT = "RT-SUPPORT-STATUS"
 COMPATIBILITY_MATRIX_COURT = "RT-COMPATIBILITY-MATRIX"
 HISTORICAL_POPULATION_COURT = "RT-HISTORICAL-POPULATION"
 DOWNSTREAM_MULTITRACK_COURT = "RT-DOWNSTREAM-MULTITRACK"
+SEAL_COURT = "MULTITRACK-SEAL"
 ROOT_RELEASE = "openssl-0.9.1c"
+
+# The scaffolding every seal in this repository carries, and nothing about its prose: the derived
+# status line, the deferral to the generated census, the non-claims section and the licence. A seal
+# stripped of any of these is not a seal, and the check is on the document's shape rather than on a
+# sentence, so it cannot be satisfied by wording the court happens to agree with.
+SEAL_REQUIRED_MARKERS = (
+    "STATUS: derived",
+    "docs/SEAL-CENSUS.md",
+    "non-claims",
+    "SPDX-License-Identifier: Apache-2.0",
+)
+# The seal unit's name in the declared contract, and the FRF chain rule the stratum owes: none of
+# its courts stages a probe pair, so no court is declarable and the chain entry is vacuous.
+SEAL_UNIT = "multitrack-seal"
 CANONICAL_KINDS = ("branch_fork", "chronological_successor", "maintenance_successor")
 PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
 
@@ -329,13 +351,13 @@ COURTS: list[tuple[str, str]] = [
     (SUPPORT_STATUS_COURT, "_support_status_court"),
     (COMPATIBILITY_MATRIX_COURT, "_compatibility_matrix_court"),
     (DOWNSTREAM_MULTITRACK_COURT, "_downstream_multitrack_court"),
+    (SEAL_COURT, "_multitrack_seal_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
-# plan orders them, so the registry reads as the execution order.
-PENDING_COURTS: dict[str, str] = {
-    "MULTITRACK-SEAL": "23.17 -- the full matrix, the FRF/Gemel chain and the seal",
-}
+# plan orders them, so the registry reads as the execution order. Empty since 23.17 lands the last
+# court: the registry is complete, and `run_courts.py` fails if a court is removed from `COURTS`.
+PENDING_COURTS: dict[str, str] = {}
 
 
 def read_json(path: Path) -> dict:
@@ -5758,6 +5780,374 @@ def _compatibility_matrix_court(name: str) -> dict:
     }
 
 
+# --------------------------------------------------------------------------------------------
+# 23.17 -- the seal: the closure of the matrix, the FRF/Gemel chain rule and the seal document
+# --------------------------------------------------------------------------------------------
+
+
+def multitrack_seal_findings(ev: dict, *, matrix_reproduces: bool) -> list[str]:
+    """Every way the committed multitrack stratum fails the seal's closure conditions.
+
+    The conditions are the ones `docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 2's 23.17 row and
+    the brief's seal requirement list name: the declared contract is the plan's seventeen units
+    with the seal last; the assembled matrix is closed -- its planes are joined, its cell count is
+    relations x dimensions, its verdicts sum to it, and its boundary and non-claims are named --
+    and reproduces from those planes through the same generator; no Phase-23 court is
+    FRF-declarable, so the chain entry is vacuous by `frf_gemel_blocking_reason`'s own scoping; the
+    Gemel projection records the current checkpoint; the seal document exists and carries the
+    scaffolding every seal carries; and the coverage boundaries the subphases recorded -- the
+    unavailable releases, the undecodable catalogue labels, the observed subset of the source's
+    advisory records, the not-run downstream pairs and the not-established layouts -- are present
+    in the planes rather than omitted.
+    """
+    out: list[str] = []
+
+    # 1. the declared contract is the plan's seventeen units, and the seal is the last of them.
+    units = ev["declared_units"]
+    if len(units) != 17:
+        out.append(f"the declared multitrack contract has {len(units)} unit(s), not the plan's 17")
+    names = [u[0] for u in units]
+    if len(set(names)) != len(names):
+        out.append("the declared multitrack contract repeats a unit name")
+    courts = [u[1] for u in units]
+    if len(set(courts)) != len(courts):
+        out.append("the declared multitrack contract repeats a court name")
+    if units and (units[-1][0] != SEAL_UNIT or units[-1][1] != SEAL_COURT):
+        out.append("the seal is not the last unit of the declared contract")
+    for unit, _court, closure, _what in units:
+        if not closure.strip():
+            out.append(f"the declared unit {unit} names no closure evidence")
+
+    # 2. the assembled matrix is closed and reproduces from its five planes.
+    if not matrix_reproduces:
+        out.append(
+            "the committed compatibility matrix does not reproduce from the five committed "
+            "planes through the same generator"
+        )
+    matrix = ev["matrix"] or {}
+    counts = matrix.get("counts") or {}
+    relations = counts.get("relations")
+    dimensions = counts.get("dimensions")
+    cells = counts.get("cells")
+    if not (isinstance(relations, int) and isinstance(dimensions, int)
+            and isinstance(cells, int) and cells == relations * dimensions):
+        out.append("the matrix's cell count is not its relations x its dimensions")
+    if counts.get("planes_joined") != len(matrix.get("generated_from") or []):
+        out.append("the matrix does not join every plane it names")
+    if sum((counts.get("by_verdict") or {}).values()) != cells:
+        out.append("the matrix's verdict counts do not sum to its cell count")
+    if not matrix.get("boundary"):
+        out.append("the matrix names no boundary")
+    if not matrix.get("non_claims"):
+        out.append("the matrix names no non-claims")
+
+    # 3. no Phase-23 court is FRF-declarable, so the chain entry is vacuous by the rule's scoping.
+    if any(phase == 23 for _cid, phase, _probe, _desc in ev["frf_courts"]):
+        out.append(
+            "a Phase-23 court is declared in gen_frf_courts.py, so the stratum stages a "
+            "declarable court and its FRF/Gemel chain entry is not vacuous"
+        )
+
+    # 4. the Gemel projection records the current checkpoint the release re-creates the store at.
+    if "current:" not in (ev["gemel_text"] or ""):
+        out.append(f"{rel(GEMEL_TRAJECTORY)} records no current checkpoint")
+
+    # 5. the seal document exists and carries the scaffolding every seal carries.
+    seal_text = ev["seal_text"]
+    if seal_text is None:
+        out.append(f"the seal document {rel(SEAL_DOC)} is absent")
+    else:
+        for marker in SEAL_REQUIRED_MARKERS:
+            if marker not in seal_text:
+                out.append(f"the seal document {rel(SEAL_DOC)} does not carry {marker!r}")
+
+    # 6. the coverage boundaries the subphases recorded are present, not omitted.
+    catalog = ev["catalog"] or {}
+    unresolved = catalog.get("unresolved") or []
+    if catalog.get("root") != ROOT_RELEASE:
+        out.append(f"the release catalogue's root is not {ROOT_RELEASE}")
+    if not unresolved or len(unresolved) != (catalog.get("counts") or {}).get("unresolved"):
+        out.append("the catalogue does not record its undecodable labels")
+    elif any(not u.get("reason") for u in unresolved):
+        out.append("an undecodable catalogue label carries no reason")
+
+    nodes = ev["authority_nodes"] or {}
+    unavailable = nodes.get("unavailable") or []
+    if not unavailable or len(unavailable) != (nodes.get("counts") or {}).get("unavailable"):
+        out.append("the authority registry does not record its unavailable releases")
+    elif any(u.get("runtime_compatible") for u in unavailable):
+        out.append("an unavailable release is counted runtime-compatible")
+
+    source = ev["security_source"] or {}
+    observed = source.get("observed") or []
+    total = (source.get("source") or {}).get("all_reference_count")
+    if not isinstance(total, int) or not observed or len(observed) >= total:
+        out.append("the security source does not record a proper observed subset of its records")
+    elif any(not (o.get("advisory_url") and o.get("advisory_sha256")) for o in observed):
+        out.append("an observed advisory carries no url or digest")
+
+    downstream = ev["downstream"] or {}
+    not_run = downstream.get("not_run") or []
+    if not not_run or len(not_run) != (downstream.get("counts") or {}).get("not_run"):
+        out.append("the downstream plane does not record its not-run pairs")
+    elif any(n.get("outcome") != "not_run" for n in not_run):
+        out.append("a downstream pair is listed not-run but does not read not_run")
+
+    facades = ev["facades"] or {}
+    not_established = facades.get("not_established") or []
+    if not not_established or any(not n.get("reason") for n in not_established):
+        out.append("the ABI/history facade plane records no not-established layout")
+
+    return out
+
+
+def multitrack_seal_sensitivity_control(ev: dict) -> dict:
+    """Prove the seal court can fail: seed six mutations and require each caught.
+
+    The honest evidence must yield **zero** findings (specificity), and each seeded mutation -- a
+    contract unit dropped from the declared seventeen, a matrix whose cell count is inconsistent, a
+    Phase-23 court injected into the FRF registry, a seal document stripped of its scaffolding, an
+    omitted catalogue boundary, and a matrix that does not reproduce from its planes -- must be
+    caught. The detection is attributed to the condition each mutation moves.
+    """
+    def findings(evidence: dict, *, reproduces: bool = True) -> list[str]:
+        return multitrack_seal_findings(evidence, matrix_reproduces=reproduces)
+
+    base = findings(ev)
+    specificity = not base
+
+    dropped = copy.deepcopy(ev)
+    dropped["declared_units"] = tuple(dropped["declared_units"][:-1])
+    dropped_findings = findings(dropped)
+
+    inconsistent = copy.deepcopy(ev)
+    inconsistent["matrix"]["counts"]["cells"] = 9999
+    inconsistent_findings = findings(inconsistent)
+
+    injected = copy.deepcopy(ev)
+    injected["frf_courts"] = list(ev["frf_courts"]) + [
+        ("openssl-rs-multitrack-seal", 23, "multitrack-seal", "injected"),
+    ]
+    injected_findings = findings(injected)
+
+    stripped = copy.deepcopy(ev)
+    stripped["seal_text"] = (ev["seal_text"] or "").replace("non-claims", "omitted")
+    stripped_findings = findings(stripped)
+
+    boundary = copy.deepcopy(ev)
+    boundary["catalog"]["unresolved"] = []
+    boundary_findings = findings(boundary)
+
+    nonrepro = findings(ev, reproduces=False)
+
+    caught = (dropped_findings, inconsistent_findings, injected_findings, stripped_findings,
+              boundary_findings, nonrepro)
+    return {
+        "baseline_findings": len(base),
+        "specificity_holds": specificity,
+        "injected_dropped_unit_findings": len(dropped_findings),
+        "injected_matrix_inconsistent_findings": len(inconsistent_findings),
+        "injected_frf_declaration_findings": len(injected_findings),
+        "injected_seal_stripped_findings": len(stripped_findings),
+        "injected_boundary_omitted_findings": len(boundary_findings),
+        "injected_matrix_nonreproducing_findings": len(nonrepro),
+        "honest": bool(specificity and all(caught)),
+    }
+
+
+def _multitrack_seal_court(name: str) -> dict:
+    """`MULTITRACK-SEAL`: 23.17's court, the full matrix, the FRF/Gemel chain and the seal.
+
+    Stages no probe. It reads the committed multitrack planes, the declared contract and the FRF
+    registry, and the seal document itself, and establishes that the declared contract is the
+    plan's seventeen units with the seal last; that the assembled matrix is closed -- its planes
+    joined, its cell count relations x dimensions, its verdicts summing to it, its boundary and
+    non-claims named -- and reproduces from those five planes through the same generator; that no
+    Phase-23 court is FRF-declarable, so the chain entry is vacuous by
+    `frf_gemel_blocking_reason`'s own scoping and no `.frf` object or Gemel checkpoint is owed at
+    this seal; that the Gemel projection records the current checkpoint the release re-creates the
+    store at; that the seal document exists and carries the scaffolding every seal carries; and
+    that the coverage boundaries the subphases recorded are present in the planes rather than
+    omitted. It reads **no** derived state of this stratum (`forensics/phase-state.json`,
+    `forensics/phase23-obligations.json`), so its finding cannot flip with its own pass. A dropped
+    contract unit, an inconsistent or non-reproducing matrix, an injected FRF declaration, a
+    stripped seal and an omitted boundary are each detected with specificity holding (the Phase-20
+    defect this seal records). A passing seal is an **instrument**: it closes the matrix as the
+    stratum's claim and is not a one-boolean compatibility claim about any release.
+    """
+    problems: list[str] = []
+    for path in (SEAL_DOC, COMPATIBILITY_MATRIX, CATALOG, AUTHORITY_NODES, PARAM_RECEIPT, LINEAGE,
+                 ENTITY_LINEAGE, COMPATIBILITY_VIEWS, COMPATIBILITY_EDGES, NEGATIVE_OBLIGATIONS,
+                 SECURITY_LINEAGE, SECURITY_SOURCE, SUPPORT_STATUS, HISTORICAL_POPULATION,
+                 DOWNSTREAM_MULTITRACK, SEMANTIC_COURTS, ABI_FACADES, NON_CLAIMS, GEMEL_TRAJECTORY):
+        if not path.is_file():
+            problems.append(f"{rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    ev = {
+        "catalog": read_json(CATALOG),
+        "authority_nodes": read_json(AUTHORITY_NODES),
+        "parameterization": read_json(PARAM_RECEIPT),
+        "lineage": read_json(LINEAGE),
+        "entity_lineage": read_json(ENTITY_LINEAGE),
+        "views": read_json(COMPATIBILITY_VIEWS),
+        "edges": read_json(COMPATIBILITY_EDGES),
+        "obligations": read_json(NEGATIVE_OBLIGATIONS),
+        "security": read_json(SECURITY_LINEAGE),
+        "security_source": read_json(SECURITY_SOURCE),
+        "support": read_json(SUPPORT_STATUS),
+        "population": read_json(HISTORICAL_POPULATION),
+        "downstream": read_json(DOWNSTREAM_MULTITRACK),
+        "semantic": read_json(SEMANTIC_COURTS),
+        "matrix": read_json(COMPATIBILITY_MATRIX),
+        "facades": read_json(ABI_FACADES),
+        "seal_text": SEAL_DOC.read_text(encoding="utf-8"),
+        "non_claims_text": NON_CLAIMS.read_text(encoding="utf-8"),
+        "gemel_text": GEMEL_TRAJECTORY.read_text(encoding="utf-8"),
+        "declared_units": phase23_obligations.COURT_UNITS,
+        "frf_courts": gen_frf_courts.COURTS,
+    }
+
+    # The matrix closure is the stratum's claim: the committed matrix must be the one the 23.16
+    # generator derives from the five planes, so a cell that was typed rather than joined stops
+    # reproducing here even though 23.16's own court already refuses it.
+    try:
+        matrix_reproduces = compat_matrix.derive_body() == ev["matrix"]
+    except SystemExit as exc:
+        problems.append(f"the compatibility matrix could not be re-derived: {exc}")
+        matrix_reproduces = False
+
+    findings = multitrack_seal_findings(ev, matrix_reproduces=matrix_reproduces)
+    control = multitrack_seal_sensitivity_control(ev)
+    verdict = "pass" if (not findings and not problems and control.get("honest")) else "fail"
+
+    catalog_counts = ev["catalog"].get("counts") or {}
+    node_counts = ev["authority_nodes"].get("counts") or {}
+    lineage_counts = ev["lineage"].get("counts") or {}
+    entity_counts = ev["entity_lineage"].get("counts") or {}
+    view_counts = ev["views"].get("counts") or {}
+    edge_counts = ev["edges"].get("counts") or {}
+    obligation_counts = ev["obligations"].get("counts") or {}
+    security_counts = ev["security"].get("counts") or {}
+    support_counts = ev["support"].get("counts") or {}
+    population_counts = ev["population"].get("counts") or {}
+    downstream_counts = ev["downstream"].get("counts") or {}
+    matrix_counts = ev["matrix"].get("counts") or {}
+    source = ev["security_source"].get("source") or {}
+    observed = ev["security_source"].get("observed") or []
+    all_refs = source.get("all_reference_count")
+    unavailable = ev["authority_nodes"].get("unavailable") or []
+    not_run = ev["downstream"].get("not_run") or []
+    not_established = ev["facades"].get("not_established") or []
+    semantic_not_run = ev["semantic"].get("not_run") or []
+
+    gemel_current = None
+    for line in ev["gemel_text"].splitlines():
+        if line.startswith("current:"):
+            gemel_current = line.split("`")[1]
+            break
+    vacuous = not any(phase == 23 for _cid, phase, _p, _d in ev["frf_courts"])
+
+    closure = {
+        "catalog": {"root": ev["catalog"].get("root"),
+                    "nodes": catalog_counts.get("nodes"),
+                    "final": (catalog_counts.get("channels") or {}).get("final"),
+                    "undecodable": catalog_counts.get("unresolved")},
+        "built_authorities": {"nodes": node_counts.get("nodes"),
+                              "built": node_counts.get("built"),
+                              "historical_built": node_counts.get("historical_built"),
+                              "unavailable": node_counts.get("unavailable")},
+        "atlas_parameterization": {"atlas_dir": (ev["parameterization"].get("byte_identity")
+                                                 or {}).get("atlas_dir")},
+        "lineage": {"edges": lineage_counts.get("edges")},
+        "entity_lineage": {"rows": entity_counts.get("rows"),
+                           "pairs": entity_counts.get("pairs")},
+        "candidate_views": {"views": view_counts.get("views"),
+                            "by_status": view_counts.get("by_status")},
+        "directional_edges": {"edges": edge_counts.get("edges")},
+        "negative_surface": {"obligations": obligation_counts.get("obligations"),
+                             "negative": obligation_counts.get("negative"),
+                             "open": obligation_counts.get("open")},
+        "security": {"branch_fixes": security_counts.get("branch_fixes"),
+                     "by_disposition": security_counts.get("by_disposition")},
+        "security_source": {"observed": len(observed), "records": all_refs},
+        "support_status": {"nodes": support_counts.get("nodes"),
+                           "support_targets": support_counts.get("support_targets"),
+                           "archaeology": support_counts.get("archaeology")},
+        "historical_population": {"nodes": population_counts.get("nodes"),
+                                  "epochs_covered": population_counts.get("epochs_covered")},
+        "downstream": {"epochs_covered": downstream_counts.get("epochs_covered"),
+                       "passed": downstream_counts.get("passed"),
+                       "not_run": downstream_counts.get("not_run")},
+        "semantic": {"differs": ev["semantic"].get("differs"),
+                     "not_run": len(semantic_not_run)},
+        "matrix": {"relations": matrix_counts.get("relations"),
+                   "dimensions": matrix_counts.get("dimensions"),
+                   "cells": matrix_counts.get("cells"),
+                   "by_verdict": matrix_counts.get("by_verdict"),
+                   "planes_joined": matrix_counts.get("planes_joined")},
+    }
+
+    coverage = {
+        "unavailable_releases": [u.get("release_id") for u in unavailable],
+        "undecodable_catalog_labels": len(ev["catalog"].get("unresolved") or []),
+        "security_source_observed": len(observed),
+        "security_source_records": all_refs,
+        "security_source_unobserved": (all_refs - len(observed))
+        if isinstance(all_refs, int) else None,
+        "downstream_not_run": len(not_run),
+        "semantic_pairs_not_run": len(semantic_not_run),
+        "layouts_not_established": [n.get("claim") for n in not_established],
+        "views_not_measured": (view_counts.get("by_status") or {}).get("not_measured"),
+        "entity_lineage_boundary": ev["entity_lineage"].get("boundary"),
+    }
+
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed multitrack planes, the declared contract, the "
+            "FRF registry and the Gemel projection, and the seal document itself. It establishes "
+            "that the declared contract is the plan's seventeen units with the seal last; that the "
+            "assembled matrix is closed -- its five planes joined, its cell count relations x "
+            "dimensions, its verdicts summing to it, its boundary and non-claims named -- and "
+            "reproduces from those planes through the same 23.16 generator; that no Phase-23 court "
+            "is FRF-declarable, so the chain entry is vacuous by frf_gemel_blocking_reason's own "
+            "scoping; that the Gemel projection records the current checkpoint; that the seal "
+            "document exists and carries the scaffolding every seal carries; and that the coverage "
+            "boundaries the subphases recorded -- the unavailable releases, the undecodable "
+            "catalogue labels, the observed subset of the source's advisory records, the not-run "
+            "downstream pairs and the not-established layouts -- are present rather than omitted. "
+            "It reads no derived state of this stratum, so its finding cannot flip with its own "
+            "pass. A dropped contract unit, an inconsistent or non-reproducing matrix, an injected "
+            "FRF declaration, a stripped seal and an omitted boundary are each detected with "
+            "specificity holding (docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 2, 3 and 4)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the seal court reads committed evidence and the seal document and writes no "
+            "artifacts/phase23/probes/<probe>.{authority,candidate} pair, so it stages no "
+            "transcript to diff and carries no FRF declaration"
+        ),
+        "seal_document": rel(SEAL_DOC),
+        "seal_document_present": SEAL_DOC.is_file(),
+        "contract_units": len(ev["declared_units"]),
+        "closure": closure,
+        "coverage_boundaries": coverage,
+        "chain": {
+            "frf_declarable_courts": 0 if vacuous else 1,
+            "vacuous": vacuous,
+            "gemel_current": gemel_current,
+        },
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -6041,11 +6431,23 @@ def main(argv: list[str]) -> int:
             "contradicts its plane, a cell collapsed to one boolean, a cell with no source record "
             "and a PASS with no evidence are each detected with specificity holding. A passing "
             "matrix is an instrument: it assembles the directions and dimensions the planes "
-            "measured, it is not a one-boolean compatibility claim about any release. Phase 23 "
-            "owns no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining court -- "
-            "MULTITRACK-SEAL -- is pending with "
-            "the subphase that lands it (23.17). The one thing the model forbids "
+            "measured, it is not a one-boolean compatibility claim about any release. "
+            "`MULTITRACK-SEAL` is 23.17's court: the closure of the matrix as the stratum's "
+            "claim, the FRF/Gemel chain rule and the seal. It stages no probe and reads the "
+            "committed multitrack planes, the declared contract, the FRF registry and the Gemel "
+            "projection, and the seal document `docs/PHASE-23-MULTITRACK-SEAL.md`. It establishes "
+            "that the declared contract is the plan's seventeen units with the seal last; that "
+            "the assembled matrix is closed and reproduces from its five planes through the same "
+            "generator; that no Phase-23 court is FRF-declarable, so the chain entry is vacuous "
+            "by `frf_gemel_blocking_reason`'s own scoping and no `.frf` object or Gemel "
+            "checkpoint is owed at this seal; that the Gemel projection records the current "
+            "checkpoint the release re-creates the store at; that the seal document exists and "
+            "carries the scaffolding every seal carries; and that the coverage boundaries the "
+            "subphases recorded are present in the planes rather than omitted. It reads no derived "
+            "state of this stratum, so its finding cannot flip with its own pass, and a dropped "
+            "contract unit, an inconsistent or non-reproducing matrix, an injected FRF "
+            "declaration, a stripped seal and an omitted boundary are each detected with "
+            "specificity holding. The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "
@@ -6091,6 +6493,9 @@ def main(argv: list[str]) -> int:
         InputRef(name="compatibility-matrix", path=COMPATIBILITY_MATRIX),
         InputRef(name="downstream-multitrack", path=DOWNSTREAM_MULTITRACK),
         InputRef(name="phase17-downstream-corpus", path=PHASE17_CORPUS),
+        InputRef(name="phase-23-seal", path=SEAL_DOC),
+        InputRef(name="gemel-trajectory", path=GEMEL_TRAJECTORY),
+        InputRef(name="non-claims", path=NON_CLAIMS),
         InputRef(name="semantic-courts", path=SEMANTIC_COURTS),
     ]
     for path in sorted(DELTAS.glob("*.json")):
@@ -6436,6 +6841,32 @@ def main(argv: list[str]) -> int:
                 print(f"      property finding: {f}")
             if len(r["findings"]) > 3:
                 print(f"      property finding: ... and {len(r['findings']) - 3} more")
+        elif r["verdict"] == "pass" and r["court"] == SEAL_COURT:
+            c = r["control"]
+            matrix_closure = r["closure"]["matrix"]
+            chain = r["chain"]
+            coverage = r["coverage_boundaries"]
+            print(f"  {r['court']:<32} pass   (no probe, seal-present={r['seal_document_present']}, "
+                  f"{r['contract_units']} unit(s), matrix {matrix_closure.get('cells')} cell(s) "
+                  f"{matrix_closure.get('by_verdict')}; chain vacuous={chain['vacuous']} "
+                  f"gemel={chain['gemel_current']}; {len(r['findings'])} finding(s); "
+                  f"control honest={c['honest']} specificity={c['specificity_holds']} "
+                  f"dropped-unit->{c['injected_dropped_unit_findings']} "
+                  f"matrix-inconsistent->{c['injected_matrix_inconsistent_findings']} "
+                  f"frf-declaration->{c['injected_frf_declaration_findings']} "
+                  f"seal-stripped->{c['injected_seal_stripped_findings']} "
+                  f"boundary-omitted->{c['injected_boundary_omitted_findings']} "
+                  f"matrix-nonreproducing->{c['injected_matrix_nonreproducing_findings']} "
+                  f"finding(s))")
+            print(f"      coverage: unavailable={coverage['unavailable_releases']} "
+                  f"undecodable-labels={coverage['undecodable_catalog_labels']} "
+                  f"security-observed={coverage['security_source_observed']}"
+                  f"/{coverage['security_source_records']} "
+                  f"downstream-not-run={coverage['downstream_not_run']} "
+                  f"semantic-not-run={coverage['semantic_pairs_not_run']} "
+                  f"layouts-not-established={len(coverage['layouts_not_established'])}")
+            for f in r["findings"][:6]:
+                print(f"      finding: {f}")
         elif r["verdict"] != "pass":
             print(f"  {r['court']:<32} FAIL   stage={r.get('stage', 'derive')}")
             for p in (r.get("problems") or [])[:12]:
