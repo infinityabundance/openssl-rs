@@ -18,10 +18,10 @@
         "closure": "the `RT-ATLAS-DELTA` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-ATLAS-DELTA is pending",
+        "measurement_state": "complete",
+        "observation": "RT-ATLAS-DELTA is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase21/COURTS.json",
         "unit": "atlas-delta",
         "what": "the added / removed / changed obligation delta between the two authorities, computed across the atlas planes the procedure names -- exports, provider registration rows and prerequisite units -- mechanically from committed artefacts (the differential `forensics/atlas/differential/openssl-3.6.3-historical-vs-openssl-3.6.4-production.json` and the per-authority atlases), never hand-listed"
@@ -68,8 +68,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 1,
-      "open_in_this_stratum": 4,
+      "implemented": 2,
+      "open_in_this_stratum": 3,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -105,12 +105,12 @@
     {
       "name": "phase-21-plan",
       "path": "docs/PHASE-21-SUBPHASES.md",
-      "sha256": "a351f3690d9fdc507b879098eb0929ef7c908eab39cca78f097bf453b07c15c1"
+      "sha256": "1e56a2c730b5aa7cda1d1b2c5685e88624a9518b611d4a85c506654ec0c654f2"
     },
     {
       "name": "phase-21-courts",
       "path": "artifacts/phase21/COURTS.json",
-      "sha256": "a3fd8548b132bec3f0cebac9aee5594d5f97ee4f585a329180fdecdad882ad17"
+      "sha256": "e0d52c8bd32a9b8865db07e947fc887d945e6cb64d1975f4473aeb31dd7dd00a"
     }
   ],
   "kind": "phase21-obligations",

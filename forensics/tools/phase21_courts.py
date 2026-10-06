@@ -43,14 +43,39 @@ registry's. The control is honest only when the real pair yields **zero findings
 *and* both injections are caught; otherwise a court that cannot tell an admitted authority from an
 unadmitted one, or an identity from its forgery, would pass vacuously.
 
+`RT-ATLAS-DELTA`, and what it compares
+--------------------------------------
+21.2's court. Its subject is the **movement between the two authorities**, computed across the
+atlas planes `docs/PHASE-21-SUBPHASES.md` section 2 names:
+
+  * **exports** — the per-authority symbol atlases (`symbols-libcrypto.json`, `symbols-libssl.json`)
+    and the declared-surface planes (`functions`, `typedefs`, `structs`, `enums`, `variables`,
+    `macros`), read from `forensics/atlas/openssl-3.6.3-historical` and
+    `forensics/atlas/openssl-3.6.4-production` and keyed exactly as
+    `forensics/tools/atlas_differential.py` keys them. **Measured**: it is the plane whose two sides
+    are both committed, and the committed differential is a second record of the same movement, so
+    the court recomputes the delta and requires the two to agree.
+  * **provider registration rows** — the procedure names
+    `forensics/atlas/provider-algorithms.json`, the openssl-rs census of the production authority's
+    provider tables. A historical counterpart is not committed and `atlas_differential.py` does not
+    compare it, so the named authority-to-authority registration-row delta is **`not-measured`**
+    with that reason. The differential *does* compare the per-authority `provider-inventory.json`
+    (the algorithm names the built `openssl` publishes) under its own `provider_algorithms` key;
+    the court measures that **adjacent** plane and records it as adjacent, never as the named one.
+  * **prerequisite units** — the procedure names `forensics/prerequisites.json`, the openssl-rs
+    prerequisite plane. It is a single-authority artefact with no historical counterpart and no
+    committed differential tool, so the plane is **`not-measured`** with that reason.
+
+A plane the court cannot compare is named `not-measured` with its reason rather than counted as
+motionless (section 3.3). The two synthetic rows the control injects are the instrument-sensitivity
+proof that the comparison can see an added and a removed row at all, and that an unchanged plane
+reports no motion.
+
 The pending courts
 ------------------
-Four of the five courts the plan names are not runnable yet. `PENDING_COURTS` names each with the
+Three of the five courts the plan names are not runnable yet. `PENDING_COURTS` names each with the
 subphase that lands its instrument:
 
-  * `RT-ATLAS-DELTA` (21.2) — the added / removed / changed obligation delta between the two
-    authorities across the atlas planes (exports, provider rows, prerequisite units), computed
-    mechanically from committed artefacts;
   * `RT-DELTA-DISPOSITION` (21.3) — the disposition of every delta row (`implemented` / `deferred`
     / `not-in-profile` / `boundary`), requiring zero unexplained, so a newly discovered
     un-dispositioned delta row is a `fail` rather than a silent addition;
@@ -89,15 +114,22 @@ from atlas_common import (  # noqa: E402
     PRODUCTION_AUTHORITY,
     REPO_ROOT,
     InputRef,
+    content_hash,
     envelope,
     rel,
     resolve_authority,
     write_json,
 )
 
+# The differential tool is imported rather than re-implemented: the court keys the per-authority
+# atlases exactly as `atlas_differential.py` keys them (`SET_PLANES`) and diffs the same record
+# sets, so "the planes the procedure names" cannot drift from the tool that computes them.
+import atlas_differential as differential_tool  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase21" / "COURTS.json"
 GENERATOR = "forensics/tools/phase21_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-21-SUBPHASES.md"
+ATLAS = REPO_ROOT / "forensics" / "atlas"
 
 # The committed records the authority-admission court reads. Each is content-addressed through the
 # envelope's `inputs`, so the court's evidence binds the exact bytes it read.
@@ -117,27 +149,32 @@ DIFFERENTIAL = (
 # over the newline-joined, path-sorted lines `<file-sha256>  <repo-relative-path>`.
 ROOT_HASH_ALGORITHM = "sha256(<sha256>  <path>\\n, lexicographic)"
 
+# The two named provider / prerequisite planes, and the differential tool's own provider plane
+# (which compares the per-authority `provider-inventory.json`, a *different* artefact).
+PROVIDER_CENSUS = ATLAS / "provider-algorithms.json"
+PREREQUISITES = REPO_ROOT / "forensics" / "prerequisites.json"
+
+# The synthetic rows the atlas-delta sensitivity control injects -- names no authority atlas carries,
+# so their appearance in the recomputed delta is unambiguous evidence the comparison saw them.
+CONTROL_ADDED_ROW = "RT-ATLAS-DELTA-SYNTHETIC-ADDED-ROW"
+CONTROL_REMOVED_ROW = "RT-ATLAS-DELTA-SYNTHETIC-REMOVED-ROW"
+
 AUTHORITY_ADMISSION = "RT-AUTHORITY-ADMISSION"
+ATLAS_DELTA = "RT-ATLAS-DELTA"
 
 # The courts, in the order they land. `(name, probe filename)`, and the probe is declared in the
 # same commit as the entry, so a runner that names a probe which does not exist cannot be
-# committed. A court that stages no probe names `""`: `RT-AUTHORITY-ADMISSION` derives its
-# evidence from committed records, so it has no staged transcript to read back.
+# committed. A court that stages no probe names `""`: `RT-AUTHORITY-ADMISSION` and `RT-ATLAS-DELTA`
+# derive their evidence from committed records, so they have no staged transcript to read back.
 COURTS: list[tuple[str, str]] = [
     (AUTHORITY_ADMISSION, ""),
+    (ATLAS_DELTA, ""),
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
 # the instrument and what the court will drive, so "nothing registered" is a stated distance rather
 # than a court quietly dropped.
 PENDING_COURTS: dict[str, str] = {
-    "RT-ATLAS-DELTA": (
-        "21.2 lands the atlas delta; it computes the added / removed / changed obligations between "
-        "the two authorities across the atlas planes the procedure names — exports, provider "
-        "registration rows and prerequisite units — from the committed differential and the "
-        "per-authority atlases, never hand-listed, and names a plane it cannot yet compare "
-        "`not-measured` rather than counting it as motionless"
-    ),
     "RT-DELTA-DISPOSITION": (
         "21.3 lands the delta disposition; it requires every delta row to be dispositioned "
         "(`implemented` / `deferred` / `not-in-profile` / `boundary`) with zero unexplained, so a "
@@ -440,6 +477,401 @@ def authority_admission_court(name: str) -> dict:
     }
 
 
+# --------------------------------------------------------------------------------------------
+# the atlas-delta court: the added / removed / changed delta across the named atlas planes
+# --------------------------------------------------------------------------------------------
+
+def _records_by_key(doc: dict, keyfn) -> dict:
+    """One authority atlas's records keyed as `atlas_differential.py` keys them."""
+    return {keyfn(r): r for r in (doc.get("body") or {}).get("records") or []}
+
+
+def read_delta_view() -> dict:
+    """The two authorities' export-plane records and the committed differential, as one view.
+
+    A *view* is the pure-function input of the delta derivation: per authority, the symbol atlases
+    (`symbols-libcrypto.json`, `symbols-libssl.json`) and the declared-surface atlases
+    (`functions`/`typedefs`/`structs`/`enums`/`variables`/`macros`) keyed exactly as
+    `forensics/tools/atlas_differential.py` keys them -- the key functions are imported from that
+    tool, not re-typed -- plus the differential that names the pair. The sensitivity control mutates
+    a copy and re-runs the same derivation without touching the tree.
+    """
+    declarations: dict[str, dict] = {}
+    for plane, fname, keyfn in differential_tool.SET_PLANES:
+        sides: dict[str, dict] = {}
+        for side, aid in (("from", HISTORICAL_AUTHORITY), ("to", PRODUCTION_AUTHORITY)):
+            p = ATLAS / aid / fname
+            sides[side] = _records_by_key(json.loads(p.read_text()), keyfn) if p.is_file() else {}
+        declarations[plane] = sides
+    symbols: dict[str, dict] = {}
+    for lib in ("libcrypto", "libssl"):
+        sides = {}
+        for side, aid in (("from", HISTORICAL_AUTHORITY), ("to", PRODUCTION_AUTHORITY)):
+            p = ATLAS / aid / f"symbols-{lib}.json"
+            sides[side] = (
+                {r.get("symbol"): r
+                 for r in (json.loads(p.read_text()).get("body") or {}).get("records") or []}
+                if p.is_file() else {}
+            )
+        symbols[lib] = sides
+    differential = json.loads(DIFFERENTIAL.read_text(encoding="utf-8"))
+    return {
+        "declarations": declarations,
+        "symbols": symbols,
+        "differential": differential.get("body", differential),
+        "differential_body_hash": differential.get("body_hash"),
+    }
+
+
+def export_delta(view: dict) -> dict:
+    """The added / removed / changed rows across the export plane, from a view.
+
+    A pure function of its view, so the sensitivity control mutates a copy and re-runs it. The
+    symbol sub-planes are set-diffed by symbol name and their `changed` axis is the DSO version the
+    differential records; the declared-surface sub-planes are set-diffed by their own key (the key
+    function is `atlas_differential.SET_PLANES`'s). The committed differential compares declaration
+    *membership* by key and not declaration bodies, so a declaration whose body changed without its
+    name changing is not detected: that axis is recorded `not-measured` rather than asserted zero.
+    """
+    added: list[dict] = []
+    removed: list[dict] = []
+    changed: list[dict] = []
+    subplanes: dict[str, dict] = {}
+    for lib, sides in sorted((view.get("symbols") or {}).items()):
+        oa, ob = sides.get("from") or {}, sides.get("to") or {}
+        a, r = sorted(set(ob) - set(oa)), sorted(set(oa) - set(ob))
+        c = sorted(
+            s for s in (set(oa) & set(ob))
+            if (oa[s].get("dso") or {}).get("version") != (ob[s].get("dso") or {}).get("version")
+        )
+        subplanes[f"symbols.{lib}"] = {
+            "added": a, "removed": r, "changed": c, "changed_measured": True,
+            "from_count": len(oa), "to_count": len(ob),
+        }
+        added += [{"plane": f"symbols.{lib}", "kind": "symbol", "key": s} for s in a]
+        removed += [{"plane": f"symbols.{lib}", "kind": "symbol", "key": s} for s in r]
+        changed += [
+            {"plane": f"symbols.{lib}", "kind": "symbol", "key": s,
+             "from": (oa[s].get("dso") or {}).get("version"),
+             "to": (ob[s].get("dso") or {}).get("version")}
+            for s in c
+        ]
+    for plane, sides in sorted((view.get("declarations") or {}).items()):
+        oa, ob = sides.get("from") or {}, sides.get("to") or {}
+        a, r = sorted(set(ob) - set(oa)), sorted(set(oa) - set(ob))
+        subplanes[f"declarations.{plane}"] = {
+            "added": a, "removed": r, "changed": None, "changed_measured": False,
+            "from_count": len(oa), "to_count": len(ob),
+        }
+        added += [{"plane": f"declarations.{plane}", "kind": "declaration", "key": s} for s in a]
+        removed += [{"plane": f"declarations.{plane}", "kind": "declaration", "key": s} for s in r]
+    return {
+        "added": added,
+        "removed": removed,
+        "changed": changed,
+        "counts": {"added": len(added), "removed": len(removed), "changed": len(changed)},
+        "subplanes": subplanes,
+    }
+
+
+def atlas_delta_findings(view: dict, recomputed: dict) -> list[str]:
+    """Every way the committed differential and the per-authority atlases disagree.
+
+    The delta is recomputed from the per-authority atlases, and the committed differential is a
+    second record of the same movement; a differential that no longer matches its authorities is a
+    `fail`, not a number the court trusts (`docs/PHASE-21-SUBPHASES.md` section 3.4). The
+    differential's own `body_hash` is recomputed for the same reason.
+    """
+    findings: list[str] = []
+    body = view.get("differential") or {}
+    recorded_hash = view.get("differential_body_hash")
+    if recorded_hash and content_hash(body) != recorded_hash:
+        findings.append(
+            f"the differential's recorded body_hash {recorded_hash!r} does not reproduce its body"
+        )
+    planes = body.get("planes") or {}
+    for plane, _fname, _keyfn in differential_tool.SET_PLANES:
+        dp = planes.get(plane)
+        if not isinstance(dp, dict):
+            findings.append(f"the differential records no `{plane}` declared-surface plane")
+            continue
+        sub = (recomputed.get("subplanes") or {}).get(f"declarations.{plane}") or {}
+        for axis in ("added", "removed"):
+            committed = sorted(dp.get(f"{axis}_in_to") or [])
+            fresh = sorted(sub.get(axis) or [])
+            if committed != fresh:
+                findings.append(
+                    f"declarations.{plane}.{axis}: the committed differential records "
+                    f"{committed!r} but the per-authority atlases yield {fresh!r}"
+                )
+    for lib in ("libcrypto", "libssl"):
+        dp = (planes.get("symbols") or {}).get(lib)
+        if not isinstance(dp, dict):
+            findings.append(f"the differential records no `symbols.{lib}` plane")
+            continue
+        sub = (recomputed.get("subplanes") or {}).get(f"symbols.{lib}") or {}
+        for axis in ("added", "removed"):
+            committed = sorted(dp.get(f"{axis}_in_to") or [])
+            fresh = sorted(sub.get(axis) or [])
+            if committed != fresh:
+                findings.append(
+                    f"symbols.{lib}.{axis}: the committed differential records {committed!r} but "
+                    f"the per-authority atlases yield {fresh!r}"
+                )
+        committed_changed = sorted(c.get("symbol") for c in dp.get("version_changed") or [])
+        if committed_changed != sorted(sub.get("changed") or []):
+            findings.append(
+                f"symbols.{lib}.changed: the committed differential records {committed_changed!r} "
+                f"but the per-authority atlases yield {sorted(sub.get('changed') or [])!r}"
+            )
+    return findings
+
+
+def _provider_classes(aid: str) -> dict:
+    p = ATLAS / aid / "provider-inventory.json"
+    if not p.is_file():
+        return {}
+    return (json.loads(p.read_text()).get("body") or {}).get("algorithm_classes") or {}
+
+
+def _provider_entry_names(info: dict, cls: str) -> set[str]:
+    """The entry names of one provider class, exactly as `atlas_differential.plane_providers` reads."""
+    entries = info.get("entries") or []
+    if cls == "disabled":
+        return {e for e in entries if isinstance(e, str)}
+    return {e["name"] for e in entries if isinstance(e, dict)}
+
+
+def provider_inventory_delta() -> dict:
+    """The per-authority provider *inventory* movement -- an adjacent measurement, not the named plane.
+
+    `atlas_differential.py` compares the two authorities' `provider-inventory.json` (the algorithm
+    names the built `openssl` publishes) under its own `provider_algorithms` key. That is a
+    *different* artefact from the named provider registration-row census
+    `forensics/atlas/provider-algorithms.json`, which exists only for the production authority. It
+    is computed so the reader sees it was measured rather than overlooked, and is recorded as
+    adjacent, never as the named plane.
+    """
+    a, b = _provider_classes(HISTORICAL_AUTHORITY), _provider_classes(PRODUCTION_AUTHORITY)
+    classes: dict[str, dict] = {}
+    added = removed = 0
+    for cls in sorted(set(a) | set(b)):
+        ea = _provider_entry_names(a.get(cls) or {}, cls)
+        eb = _provider_entry_names(b.get(cls) or {}, cls)
+        if ea != eb:
+            classes[cls] = {"added": sorted(eb - ea), "removed": sorted(ea - eb)}
+            added += len(eb - ea)
+            removed += len(ea - eb)
+    return {"added": added, "removed": removed, "classes": classes}
+
+
+def prerequisite_shape() -> dict:
+    """The named prerequisite plane's shape, read for context -- it is not a delta."""
+    if not PREREQUISITES.is_file():
+        return {"units": None, "deferrals": None, "divergences": None}
+    body = (json.loads(PREREQUISITES.read_text()).get("body") or {})
+    return {
+        "units": len(body.get("units") or []),
+        "deferrals": len(body.get("deferrals") or []),
+        "divergences": len(body.get("divergences") or []),
+    }
+
+
+def atlas_delta_sensitivity_control(view: dict, recomputed: dict) -> dict:
+    """Prove the atlas delta can fail: inject an added and a removed row, require both caught.
+
+    Two synthetic views are derived beside the real one -- a declaration the `to` authority carries
+    and the `from` authority does not, and one the `from` authority carries and the `to` does not --
+    and the recomputed delta must report the first as `added` and the second as `removed`. The
+    control is honest only when the real derivation carries neither synthetic row (specificity),
+    both injections are caught, and the unchanged plane (the symbol sub-plane, which neither
+    injection touches) reports **no** motion; otherwise a court that cannot see an added or a removed
+    row would pass vacuously.
+    """
+    caught_added_view = copy.deepcopy(view)
+    caught_added_view["declarations"]["macros"]["to"][CONTROL_ADDED_ROW] = {"name": CONTROL_ADDED_ROW}
+    added_delta = export_delta(caught_added_view)
+    caught_added = any(r["key"] == CONTROL_ADDED_ROW for r in added_delta["added"])
+
+    caught_removed_view = copy.deepcopy(view)
+    caught_removed_view["declarations"]["functions"]["from"][CONTROL_REMOVED_ROW] = {
+        "name": CONTROL_REMOVED_ROW
+    }
+    removed_delta = export_delta(caught_removed_view)
+    caught_removed = any(r["key"] == CONTROL_REMOVED_ROW for r in removed_delta["removed"])
+
+    synthetic = {CONTROL_ADDED_ROW, CONTROL_REMOVED_ROW}
+    honest_clean = not any(
+        r["key"] in synthetic for r in (recomputed["added"] + recomputed["removed"])
+    )
+    # The unchanged plane: neither injection touches the symbol sub-planes, so a comparison that
+    # reports motion there has lost specificity.
+    unchanged_plane_clean = not (
+        [r for r in added_delta["added"] if r["plane"].startswith("symbols.")]
+        or [r for r in removed_delta["removed"] if r["plane"].startswith("symbols.")]
+    )
+    specificity = honest_clean and unchanged_plane_clean
+    return {
+        "baseline_counts": recomputed["counts"],
+        "injected_added_row": CONTROL_ADDED_ROW,
+        "injected_added_counts": added_delta["counts"],
+        "injected_removed_row": CONTROL_REMOVED_ROW,
+        "injected_removed_counts": removed_delta["counts"],
+        "caught_added": bool(caught_added),
+        "caught_removed": bool(caught_removed),
+        "specificity_holds": bool(specificity),
+        "honest": bool(caught_added and caught_removed and specificity),
+    }
+
+
+def atlas_delta_court(name: str) -> dict:
+    """`RT-ATLAS-DELTA`: the added / removed / changed delta across the named atlas planes.
+
+    Stages no probe. It recomputes the export-plane delta from the per-authority symbol and
+    declared-surface atlases and requires the committed differential to agree; it names the provider
+    registration-row and prerequisite-unit planes `not-measured` with their reasons rather than
+    counting them motionless; and it records the adjacent provider-inventory measurement beside the
+    named provider plane so nothing measured is hidden and nothing unmeasured is counted.
+    """
+    view = read_delta_view()
+    recomputed = export_delta(view)
+    findings = atlas_delta_findings(view, recomputed)
+    control = atlas_delta_sensitivity_control(view, recomputed)
+    adjacent = provider_inventory_delta()
+
+    problems: list[str] = []
+    for p in (DIFFERENTIAL, PROVIDER_CENSUS, PREREQUISITES):
+        if not p.is_file():
+            problems.append(f"{rel(p)} is absent, so its plane cannot be named")
+    for aid in (HISTORICAL_AUTHORITY, PRODUCTION_AUTHORITY):
+        for fname in ("symbols-libcrypto.json", "symbols-libssl.json",
+                      *[f for _p, f, _k in differential_tool.SET_PLANES]):
+            if not (ATLAS / aid / fname).is_file():
+                problems.append(f"forensics/atlas/{aid}/{fname} is absent")
+
+    exports = {
+        "plane": "exports",
+        "state": "measured",
+        "named_source": (
+            "the per-authority symbol atlases (symbols-libcrypto.json, symbols-libssl.json) and "
+            "the declared-surface planes (functions, typedefs, structs, enums, variables, macros) "
+            "under forensics/atlas/openssl-3.6.3-historical and forensics/atlas/openssl-3.6.4-production"
+        ),
+        "sources": [
+            f"forensics/atlas/{aid}/{fname}"
+            for aid in (HISTORICAL_AUTHORITY, PRODUCTION_AUTHORITY)
+            for fname in ("symbols-libcrypto.json", "symbols-libssl.json",
+                          *[f for _p, f, _k in differential_tool.SET_PLANES])
+        ],
+        "added": recomputed["added"],
+        "removed": recomputed["removed"],
+        "changed": recomputed["changed"],
+        "counts": recomputed["counts"],
+        "subplanes": recomputed["subplanes"],
+        "not_measured_axes": [
+            {
+                "axis": "declarations.*.changed",
+                "reason": (
+                    "the committed differential compares declared-surface membership by key and "
+                    "not declaration bodies, so a declaration whose body changed without its name "
+                    "changing is not detected; `changed` is measured for the ABI symbols (their DSO "
+                    "version) and not for the declared declarations"
+                ),
+            }
+        ],
+    }
+    provider = {
+        "plane": "provider-registration-rows",
+        "state": "not-measured",
+        "named_source": rel(PROVIDER_CENSUS),
+        "reason": (
+            "the named census forensics/atlas/provider-algorithms.json is generated for the "
+            "production authority only, so no committed historical counterpart exists and "
+            "atlas_differential.py does not compare it; the named authority-to-authority "
+            "registration-row delta therefore cannot be computed from committed data. What would be "
+            "needed is a second provider-algorithms.json census generated over the historical "
+            "authority's provider tables. The differential does compare the per-authority "
+            "provider-inventory.json (the algorithm names the built openssl publishes) under its own "
+            "provider_algorithms key, and that adjacent plane is measured below -- it is not this "
+            "named plane, and the not-measured plane carries no counts"
+        ),
+    }
+    prerequisites = {
+        "plane": "prerequisite-units",
+        "state": "not-measured",
+        "named_source": rel(PREREQUISITES),
+        "reason": (
+            "the named plane forensics/prerequisites.json is a single-authority openssl-rs artefact "
+            "(the prerequisite/divergence units of the implementation, not of an authority), with no "
+            "committed historical counterpart and no differential tool that compares it; the "
+            "authority-to-authority prerequisite-unit delta therefore cannot be computed from "
+            "committed data. The named artefact's shape is recorded for context, but it is not a "
+            "delta and this plane carries no counts"
+        ),
+        "named_source_shape": prerequisite_shape(),
+    }
+    planes = [exports, provider, prerequisites]
+
+    verdict = "pass" if (not findings and not problems and control["honest"]) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it recomputes the added / removed / changed delta across the atlas "
+            "planes docs/PHASE-21-SUBPHASES.md section 2 names, from the per-authority atlases "
+            "under forensics/atlas/openssl-3.6.3-historical and forensics/atlas/openssl-3.6.4-production "
+            "keyed exactly as forensics/tools/atlas_differential.py keys them, and requires the "
+            "committed differential to agree with what it recomputes (a differential that no longer "
+            "matches its authorities is a fail). The exports plane is measured (it is the plane whose "
+            "two sides are both committed); the provider registration-row plane and the prerequisite "
+            "unit plane are named `not-measured` with their reasons, because the artefacts the "
+            "procedure names (forensics/atlas/provider-algorithms.json, forensics/prerequisites.json) "
+            "are single-authority and no committed differential compares them -- an unmeasured plane is "
+            "never counted motionless. The adjacent provider-inventory plane the differential does "
+            "compare is measured and recorded as adjacent, not as the named plane. The instrument "
+            "sensitivity control injects an added and a removed declaration row into a synthetic view "
+            "and requires both to be caught with the unchanged symbol plane reporting no motion "
+            "(docs/PHASE-21-SUBPHASES.md sections 3.2, 3.3 and 3.4)"
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the atlas-delta court reads committed atlases and stages no artifacts/phase21/probes/ "
+            "pair, so it takes no transcript to diff and carries no FRF declaration"
+        ),
+        "divergence_authority": rel(SECURITY_POLICY_DOC),
+        "planes": planes,
+        "adjacent_measurements": [
+            {
+                "plane": "provider-inventory",
+                "note": (
+                    "adjacent, NOT the named provider-registration-rows plane: the differential's "
+                    "provider_algorithms key, computed from the per-authority provider-inventory.json"
+                ),
+                "sources": [
+                    f"forensics/atlas/{aid}/provider-inventory.json"
+                    for aid in (HISTORICAL_AUTHORITY, PRODUCTION_AUTHORITY)
+                ],
+                "added": adjacent["added"],
+                "removed": adjacent["removed"],
+                "changed": None,
+                "classes": adjacent["classes"],
+            }
+        ],
+        "counts": {
+            "planes_named": len(planes),
+            "planes_measured": sum(1 for p in planes if p["state"] == "measured"),
+            "planes_not_measured": sum(1 for p in planes if p["state"] == "not-measured"),
+            "added": recomputed["counts"]["added"],
+            "removed": recomputed["counts"]["removed"],
+            "changed": recomputed["counts"]["changed"],
+        },
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -452,12 +884,15 @@ def main(argv: list[str]) -> int:
 
     records: list[dict] = []
     for name, filename in COURTS:
-        # 21.1's authority-admission court stages no probe: its subject is the pair's committed
-        # identity, so it is computed here rather than read back from disk and no digest cycle
-        # forms. This stratum owns no export, so no differential probe over a symbol set is its
-        # evidence.
+        # 21.1's and 21.2's courts stage no probe: their subjects are the pair's committed identity
+        # and the movement between the two admitted authorities, so each is computed here rather than
+        # read back from disk and no digest cycle forms. This stratum owns no export, so no
+        # differential probe over a symbol set is its evidence.
         if name == AUTHORITY_ADMISSION:
             records.append(authority_admission_court(name))
+            continue
+        if name == ATLAS_DELTA:
+            records.append(atlas_delta_court(name))
             continue
         src = REPO_ROOT / "courts" / "phase21" / str(filename)
         records.append({"court": name, "verdict": "fail", "stage": "probe-missing",
@@ -482,9 +917,17 @@ def main(argv: list[str]) -> int:
             "between the registry and its manifest, and a synthetic view with an unadmitted "
             "authority in the pair and one with a manifest root hash drifted from the registry's "
             "are both detected. It records the pair's identity, not the delta between them. "
-            "`RT-ATLAS-DELTA` is 21.2's: the added / removed / changed obligation delta between "
-            "the two authorities across the atlas planes (exports, provider rows, prerequisite "
-            "units), computed mechanically from committed artefacts. `RT-DELTA-DISPOSITION` is "
+            "`RT-ATLAS-DELTA` is 21.2's: it stages no probe and recomputes the added / removed / "
+            "changed obligation delta between the two authorities across the atlas planes the "
+            "procedure names, from the per-authority atlases under "
+            "forensics/atlas/openssl-3.6.3-historical and forensics/atlas/openssl-3.6.4-production "
+            "keyed exactly as the differential tool keys them, requiring the committed differential "
+            "to agree with what it recomputes. The exports plane is measured; the provider "
+            "registration-row and prerequisite-unit planes are named `not-measured` with their "
+            "reasons, because the artefacts the procedure names are single-authority and no "
+            "committed differential compares them — an unmeasured plane is never counted motionless. "
+            "A synthetic view with an injected added and an injected removed declaration row detects "
+            "both, with the unchanged symbol plane reporting no motion. `RT-DELTA-DISPOSITION` is "
             "21.3's: the disposition of every delta row with zero unexplained. "
             "`RT-AFFECTED-COURT-SELECTION` is 21.4's: the derivation of which courts a delta "
             "touches, recorded with the selection derivation. `MAINTENANCE-BOUNDARY-REGISTER` is "
@@ -514,6 +957,23 @@ def main(argv: list[str]) -> int:
         InputRef(name="differential", path=DIFFERENTIAL),
         InputRef(name="authority-policy", path=AUTHORITY_POLICY_DOC),
         InputRef(name="security-divergence-policy", path=SECURITY_POLICY_DOC),
+        # The 21.2 atlas-delta court's per-authority inputs: the symbol and declared-surface atlases
+        # it recomputes the export-plane delta from, the named provider census and prerequisite
+        # plane, and the per-authority provider inventories it measures as the adjacent plane.
+        *[
+            InputRef(name=f"{aid}-{fname}", path=ATLAS / aid / fname)
+            for aid in (HISTORICAL_AUTHORITY, PRODUCTION_AUTHORITY)
+            for fname in ("symbols-libcrypto.json", "symbols-libssl.json",
+                          *[f for _p, f, _k in differential_tool.SET_PLANES])
+            if (ATLAS / aid / fname).is_file()
+        ],
+        *[
+            InputRef(name=f"{aid}-provider-inventory", path=ATLAS / aid / "provider-inventory.json")
+            for aid in (HISTORICAL_AUTHORITY, PRODUCTION_AUTHORITY)
+            if (ATLAS / aid / "provider-inventory.json").is_file()
+        ],
+        InputRef(name="provider-algorithms", path=PROVIDER_CENSUS),
+        InputRef(name="prerequisites", path=PREREQUISITES),
     ]
     doc = envelope(kind="phase21-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
@@ -530,6 +990,25 @@ def main(argv: list[str]) -> int:
                   f"specificity={c['specificity_holds']} "
                   f"injected-unadmitted->{c['injected_unadmitted_findings']} finding(s) "
                   f"injected-identity-drift->{c['injected_identity_findings']} finding(s))")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == ATLAS_DELTA:
+            c = r["control"]
+            counts = r["counts"]
+            print(f"  {r['court']:<32} pass   (no probe, {counts['planes_measured']} measured / "
+                  f"{counts['planes_not_measured']} not-measured plane(s), "
+                  f"delta added={counts['added']} removed={counts['removed']} "
+                  f"changed={counts['changed']}; control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"injected-added->{c['injected_added_counts']['added']} row(s) "
+                  f"injected-removed->{c['injected_removed_counts']['removed']} row(s))")
+            for row in r["planes"]:
+                tag = "measured" if row["state"] == "measured" else "not-measured"
+                extra = ""
+                if row["state"] == "measured":
+                    extra = (f" added={row['counts']['added']} removed={row['counts']['removed']} "
+                             f"changed={row['counts']['changed']}")
+                print(f"      plane {row['plane']:<26} {tag}{extra}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":
