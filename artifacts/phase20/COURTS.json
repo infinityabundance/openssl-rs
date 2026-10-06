@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-CUSTODIAN-MATURITY` is 20.1's court: it stages no probe and derives the L0-L9 maturity ladder of docs/RELEASE_GATES.md section 3 for libcrypto and libssl from committed evidence -- each stratum's seal and court registry, the provider census and its coverage join, the export court-coverage join and the Phase-17 downstream corpus. It records, per level per library, `{level, evidence_present, source_artifacts}`, and names only the highest level whose cumulative evidence is present. On the current tree that is L8 (downstream custodian court) for both libraries; L9 (high-assurance custodian seal) is absent because it is the level Phase 20 itself is establishing, and the gap is recorded as a finding, so the ledger's `custodian-maturity` property reads NOT_CLAIMED with findings_present. The court is pass as an instrument -- it derived the ladder, its evidence is committed, and a synthetic evidence view with a prerequisite removed detects the gap -- NOT because the ladder reaches L9. A passing RT-CUSTODIAN-MATURITY must never be read as 'L9 custodian seal achieved'. `RT-RECEIPT-CLOSURE` is 20.2's court: it stages no probe and joins every obligation the in-scope strata recorded `implemented` or closed to the FRF receipt that proves it, requiring a receipt, two adjudicated challenges and a zero-blocker `sensitivity-backed` claim at the current candidate identity for every FRF-declarable court each stratum ran, and joining each implemented export to its courts through the court-coverage atlas. On the current tree the closure is complete -- every stratum's chain is complete, the covering claims carry zero blockers and no export is courted by no court -- so it records zero findings; a real gap would be a finding and a `fail`, and a synthetic evidence view with a receipt removed, a claim blocker injected or a stale candidate identity detects the gap. The other three courts (`RT-CUSTODIAN-RESIDUALS` 20.3, `RT-SUBSTITUTION-WITNESS` 20.4 and `CUSTODIAN-BOUNDARY-REGISTER` 20.5) are named and `pending`. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the custodian claim over a finished implementation, with no FIPS validation, no universal-parity claim from finite evidence and no claim that memory safety is established. docs/PHASE-20-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "claim": "`RT-CUSTODIAN-MATURITY` is 20.1's court: it stages no probe and derives the L0-L9 maturity ladder of docs/RELEASE_GATES.md section 3 for libcrypto and libssl from committed evidence -- each stratum's seal and court registry, the provider census and its coverage join, the export court-coverage join and the Phase-17 downstream corpus. It records, per level per library, `{level, evidence_present, source_artifacts}`, and names only the highest level whose cumulative evidence is present. On the current tree that is L8 (downstream custodian court) for both libraries; L9 (high-assurance custodian seal) is absent because it is the level Phase 20 itself is establishing, and the gap is recorded as a finding, so the ledger's `custodian-maturity` property reads NOT_CLAIMED with findings_present. The court is pass as an instrument -- it derived the ladder, its evidence is committed, and a synthetic evidence view with a prerequisite removed detects the gap -- NOT because the ladder reaches L9. A passing RT-CUSTODIAN-MATURITY must never be read as 'L9 custodian seal achieved'. `RT-RECEIPT-CLOSURE` is 20.2's court: it stages no probe and joins every obligation the in-scope strata recorded `implemented` or closed to the FRF receipt that proves it, requiring a receipt, two adjudicated challenges and a zero-blocker `sensitivity-backed` claim at the current candidate identity for every FRF-declarable court each stratum ran, and joining each implemented export to its courts through the court-coverage atlas. On the current tree the closure is complete -- every stratum's chain is complete, the covering claims carry zero blockers and no export is courted by no court -- so it records zero findings; a real gap would be a finding and a `fail`, and a synthetic evidence view with a receipt removed, a claim blocker injected or a stale candidate identity detects the gap. `RT-CUSTODIAN-RESIDUALS` is 20.3's court: it stages no probe and dispositions every residual the earlier strata and the FRF store record -- the Phase-22 cross-plane census and the closure's `unknown_intersecting_root_keys`, the Phase-1 completeness and symbol reconciliation, the divergence, ownership-transition and prerequisite planes, the two boundary registers, the hostile/CT/ASan/Miri receipts, the unsafe-footprint ceiling and the FRF store's own residuals. For each residual it records `{source, id, disposition, intersects_production_profile, state}`; every residual must carry a disposition and no `UNKNOWN` residual may intersect the claimed production profile. On the current tree there are 167 `UNKNOWN` residuals (all POD_NAME_NOT_IN_ATLAS in the pod-contract plane) and the closure records that zero of them intersect a declared compatibility root, so the court records zero findings and says so precisely; a real un-dispositioned or `UNKNOWN`-intersecting residual would be a finding and a `fail`, and a synthetic evidence view with an un-dispositioned residual and one with an `UNKNOWN`-intersecting residual detects the gap while an `UNKNOWN` that does not intersect does not. The other two courts (`RT-SUBSTITUTION-WITNESS` 20.4 and `CUSTODIAN-BOUNDARY-REGISTER` 20.5) are named and `pending`. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the custodian claim over a finished implementation, with no FIPS validation, no universal-parity claim from finite evidence and no claim that memory safety is established. docs/PHASE-20-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
     "courts": [
       {
         "control": {
@@ -804,17 +804,2772 @@
           "strata_joined": 17
         },
         "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_closed": true,
+          "baseline_residuals": 63994,
+          "baseline_unknown": 334,
+          "baseline_unknown_intersecting": 0,
+          "caught_un_dispositioned": true,
+          "caught_unknown_intersecting": true,
+          "honest": true,
+          "injected_source": "phase22-reconciliation",
+          "injected_un_dispositioned_findings": 1,
+          "injected_unknown_intersecting_findings": 1,
+          "injected_unknown_not_intersecting_findings": 0,
+          "specificity_holds": true
+        },
+        "court": "RT-CUSTODIAN-RESIDUALS",
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the residual-disposition court reads the registers the earlier strata and the FRF store write and stages no artifacts/phase20/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it dispositions every residual the earlier strata and the FRF store record. It reads the registers that carry them -- the Phase-22 cross-plane residual census and the closure's `unknown_intersecting_root_keys`, the Phase-22 checkpoint's named `UNKNOWN` sets, the Phase-1 archaeology completeness and the symbol reconciliation, the divergence, ownership-transition and prerequisite planes, the Phase-18 hostile-boundary and Phase-19 performance-boundary registers, the Phase-18 court residual counts, the CT-primitives `separated` findings, the ASan closure and the Miri TCB receipts, the UNSAFE-FOOTPRINT growth ceiling and the FRF store's own residual tokens -- maintaining no list of its own (docs/PHASE-20-SUBPHASES.md section 3.4). For each residual it records `{source, id, disposition, intersects_production_profile, state}`; every residual must carry a disposition and no `UNKNOWN` residual may intersect the claimed production profile (docs/CUSTODIAN_CONTRACT.md sections 6 and 8, docs/PARITY_MODEL.md section 1). The court is pass only when every register was read, the disposition is complete, and a synthetic view with an un-dispositioned residual and one with an `UNKNOWN`-intersecting residual each detects the gap while an `UNKNOWN` that does not intersect does not (section 3.2).",
+        "probe": "",
+        "problems": [],
+        "production_profile": {
+          "authority": "openssl-3.6.4-production",
+          "build_profile": "linux-x86_64-default-shared-legacy-notests",
+          "candidate_version": "0.0.24",
+          "observable_roots": [
+            "binary-abi",
+            "callbacks",
+            "cli",
+            "configuration",
+            "distribution",
+            "modules",
+            "source-api"
+          ],
+          "roots_declared": 10,
+          "roots_observed": 7,
+          "unknown_intersecting_keys": [],
+          "unpopulated_families": [
+            "dynamic-loading",
+            "protocol",
+            "runtime-behaviour"
+          ]
+        },
+        "residual_authority": [
+          "docs/CUSTODIAN_CONTRACT.md",
+          "docs/PARITY_MODEL.md",
+          "docs/PHASE-22-SUBPHASES.md"
+        ],
+        "residuals": [
+          {
+            "class": "not-reached",
+            "disposition": "not-reached",
+            "id": "TSan, UBSan, MSan (a later step by instruction)",
+            "intersects_production_profile": false,
+            "source": "asan",
+            "state": "bounded"
+          },
+          {
+            "class": "not-reached",
+            "disposition": "not-reached",
+            "id": "the authority under ASan (the authority is not rebuilt in this venue)",
+            "intersects_production_profile": false,
+            "source": "asan",
+            "state": "bounded"
+          },
+          {
+            "class": "ct",
+            "disposition": "separated",
+            "id": "bn-inverse",
+            "intersects_production_profile": true,
+            "source": "ct-primitives",
+            "state": "not-claimed-finding"
+          },
+          {
+            "class": "ct",
+            "disposition": "separated",
+            "id": "bn-modexp",
+            "intersects_production_profile": true,
+            "source": "ct-primitives",
+            "state": "not-claimed-finding"
+          },
+          {
+            "class": "",
+            "disposition": "accepted_permanent_divergence",
+            "id": "D-CBCHMAC-MAXBUFSZ-ASSERT-1",
+            "intersects_production_profile": false,
+            "source": "divergence-obligations",
+            "state": "dispositioned"
+          },
+          {
+            "class": "",
+            "disposition": "fixed",
+            "id": "D-CBCHMAC-MULTIBLOCK-ENC-1",
+            "intersects_production_profile": false,
+            "source": "divergence-obligations",
+            "state": "dispositioned"
+          },
+          {
+            "class": "",
+            "disposition": "fixed",
+            "id": "D-DECODER-ABSENT-1",
+            "intersects_production_profile": false,
+            "source": "divergence-obligations",
+            "state": "dispositioned"
+          },
+          {
+            "class": "",
+            "disposition": "accepted_permanent_divergence",
+            "id": "D-EC-1",
+            "intersects_production_profile": false,
+            "source": "divergence-obligations",
+            "state": "dispositioned"
+          },
+          {
+            "class": "",
+            "disposition": "accepted_permanent_divergence",
+            "id": "D-EC-2",
+            "intersects_production_profile": false,
+            "source": "divergence-obligations",
+            "state": "dispositioned"
+          },
+          {
+            "class": "",
+            "disposition": "fixed",
+            "id": "D-EVP-CIPHER-LEGACY-NID-1",
+            "intersects_production_profile": false,
+            "source": "divergence-obligations",
+            "state": "dispositioned"
+          },
+          {
+            "class": "",
+            "disposition": "fixed",
+            "id": "D-GF2M-1",
+            "intersects_production_profile": false,
+            "source": "divergence-obligations",
+            "state": "dispositioned"
+          },
+          {
+            "class": "",
+            "disposition": "fixed",
+            "id": "D-PBE-PKCS12-KEYGEN-1",
+            "intersects_production_profile": false,
+            "source": "divergence-obligations",
+            "state": "dispositioned"
+          },
+          {
+            "class": "",
+            "disposition": "fixed",
+            "id": "D-PKEY-AMETH-1",
+            "intersects_production_profile": false,
+            "source": "divergence-obligations",
+            "state": "dispositioned"
+          },
+          {
+            "class": "",
+            "disposition": "fixed",
+            "id": "D-PKEY-AMETH-3",
+            "intersects_production_profile": false,
+            "source": "divergence-obligations",
+            "state": "dispositioned"
+          },
+          {
+            "class": "frf-sensitivity-mutant",
+            "count": 302,
+            "disposition": "open",
+            "id": "frf-mutant:open",
+            "intersects_production_profile": false,
+            "source": "frf-store",
+            "state": "sensitivity-mutant"
+          },
+          {
+            "class": "frf-sensitivity-mutant",
+            "disposition": "oracle_version",
+            "id": "frf-mutant:oracle_version",
+            "intersects_production_profile": false,
+            "source": "frf-store",
+            "state": "sensitivity-mutant"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "ct-resolution-floor",
+            "intersects_production_profile": false,
+            "source": "hostile-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-constant-time-proof",
+            "intersects_production_profile": false,
+            "source": "hostile-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-der-writer",
+            "intersects_production_profile": false,
+            "source": "hostile-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-fuzzer",
+            "intersects_production_profile": false,
+            "source": "hostile-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-memory-safety-proof",
+            "intersects_production_profile": false,
+            "source": "hostile-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-parity",
+            "intersects_production_profile": false,
+            "source": "hostile-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-security-proof",
+            "intersects_production_profile": false,
+            "source": "hostile-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-tls-state-machine",
+            "intersects_production_profile": false,
+            "source": "hostile-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-verification",
+            "intersects_production_profile": false,
+            "source": "hostile-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-wallclock-attack",
+            "intersects_production_profile": false,
+            "source": "hostile-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "recorded-divergence",
+            "count": 283,
+            "disposition": "recorded-divergence",
+            "id": "RT-HOSTILE-TLS:recorded-divergence",
+            "intersects_production_profile": true,
+            "source": "hostile-courts",
+            "state": "recorded-divergence"
+          },
+          {
+            "class": "recorded-divergence",
+            "count": 21,
+            "disposition": "recorded-divergence",
+            "id": "RT-MEM-HARDENING:recorded-divergence",
+            "intersects_production_profile": true,
+            "source": "hostile-courts",
+            "state": "recorded-divergence"
+          },
+          {
+            "class": "miri-unsupported",
+            "disposition": "unsupported-foreign-function",
+            "id": "crypto_async::arch::async_posix",
+            "intersects_production_profile": false,
+            "source": "miri",
+            "state": "bounded"
+          },
+          {
+            "class": "miri-unsupported",
+            "disposition": "unsupported-foreign-function",
+            "id": "dso::dlfcn::tests",
+            "intersects_production_profile": false,
+            "source": "miri",
+            "state": "bounded"
+          },
+          {
+            "class": "miri-unsupported",
+            "disposition": "unsupported-foreign-function",
+            "id": "rand::sys",
+            "intersects_production_profile": false,
+            "source": "miri",
+            "state": "bounded"
+          },
+          {
+            "class": "miri-unsupported",
+            "disposition": "unsupported-foreign-function",
+            "id": "runtime::bio::sys",
+            "intersects_production_profile": false,
+            "source": "miri",
+            "state": "bounded"
+          },
+          {
+            "class": "miri-unsupported",
+            "disposition": "unsupported-foreign-function",
+            "id": "runtime::mem::tests::clear_realloc_shrinking_keeps_the_pointer_and_cleanses",
+            "intersects_production_profile": false,
+            "source": "miri",
+            "state": "bounded"
+          },
+          {
+            "class": "miri-unsupported",
+            "disposition": "unsupported-foreign-function",
+            "id": "runtime::mem::tests::custom_allocator_is_used_and_reported",
+            "intersects_production_profile": false,
+            "source": "miri",
+            "state": "bounded"
+          },
+          {
+            "class": "miri-unsupported",
+            "disposition": "unsupported-foreign-function",
+            "id": "runtime::mem::tests::zalloc_and_calloc_are_zeroed",
+            "intersects_production_profile": false,
+            "source": "miri",
+            "state": "bounded"
+          },
+          {
+            "class": "miri-unsupported",
+            "disposition": "unsupported-foreign-function",
+            "id": "runtime::rdtsc",
+            "intersects_production_profile": false,
+            "source": "miri",
+            "state": "bounded"
+          },
+          {
+            "class": "miri-unsupported",
+            "disposition": "unsupported-foreign-function",
+            "id": "runtime::thread_arch",
+            "intersects_production_profile": false,
+            "source": "miri",
+            "state": "bounded"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:blocking_dependencies",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:sealed_census",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:sealed_census",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:sealed_census",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:sealed_census",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:sealed_census",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "metric-correction",
+            "disposition": "approved-transition",
+            "id": "metric-correction:sealed_census",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "state-correction",
+            "disposition": "approved-transition",
+            "id": "state-correction:3",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "state-correction",
+            "disposition": "approved-transition",
+            "id": "state-correction:4",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "state-correction",
+            "disposition": "approved-transition",
+            "id": "state-correction:5",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "universe-transition",
+            "disposition": "approved-transition",
+            "id": "universe-transition:3",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "universe-transition",
+            "disposition": "approved-transition",
+            "id": "universe-transition:4",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "universe-transition",
+            "disposition": "approved-transition",
+            "id": "universe-transition:5",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "universe-transition",
+            "disposition": "approved-transition",
+            "id": "universe-transition:6",
+            "intersects_production_profile": true,
+            "source": "ownership-transitions",
+            "state": "approved"
+          },
+          {
+            "class": "not-measured",
+            "disposition": "not-measured",
+            "id": "evp-engine-path",
+            "intersects_production_profile": false,
+            "source": "performance-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-asm-rust-equivalence",
+            "intersects_production_profile": false,
+            "source": "performance-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-benchmark-parity",
+            "intersects_production_profile": false,
+            "source": "performance-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-guarantee",
+            "intersects_production_profile": false,
+            "source": "performance-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-instruction-count",
+            "intersects_production_profile": false,
+            "source": "performance-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-parity",
+            "intersects_production_profile": false,
+            "source": "performance-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "not-claimed",
+            "disposition": "not-claimed",
+            "id": "nc-wallclock",
+            "intersects_production_profile": false,
+            "source": "performance-boundary-register",
+            "state": "bounded"
+          },
+          {
+            "class": "ABI_ONLY_EXPORTED",
+            "count": 26,
+            "disposition": "closed",
+            "id": "ABI_ONLY_EXPORTED",
+            "intersects_production_profile": true,
+            "source": "phase1-completeness",
+            "state": "dispositioned"
+          },
+          {
+            "class": "DECLARED_NOT_EXPORTED_BY_AUTHORITY",
+            "count": 11,
+            "disposition": "closed",
+            "id": "DECLARED_NOT_EXPORTED_BY_AUTHORITY",
+            "intersects_production_profile": true,
+            "source": "phase1-completeness",
+            "state": "dispositioned"
+          },
+          {
+            "class": "deferred",
+            "disposition": "deferred",
+            "id": "initialisation-and-cleanup",
+            "intersects_production_profile": false,
+            "source": "phase1-completeness",
+            "state": "deferred"
+          },
+          {
+            "class": "deferred",
+            "disposition": "deferred",
+            "id": "object-and-nid-database",
+            "intersects_production_profile": false,
+            "source": "phase1-completeness",
+            "state": "deferred"
+          },
+          {
+            "class": "deferred",
+            "disposition": "deferred",
+            "id": "ownership-behavioural-probes",
+            "intersects_production_profile": false,
+            "source": "phase1-completeness",
+            "state": "deferred"
+          },
+          {
+            "class": "deferred",
+            "disposition": "deferred",
+            "id": "panic-payload-surfacing-at-ffi",
+            "intersects_production_profile": false,
+            "source": "phase1-completeness",
+            "state": "deferred"
+          },
+          {
+            "class": "deferred",
+            "disposition": "deferred",
+            "id": "secure-memory-semantics",
+            "intersects_production_profile": false,
+            "source": "phase1-completeness",
+            "state": "deferred"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "count": 167,
+            "disposition": "UNKNOWN",
+            "id": "POD_NAME_NOT_IN_ATLAS",
+            "intersects_production_profile": false,
+            "source": "phase22-gemel-checkpoint",
+            "state": "unknown"
+          },
+          {
+            "class": "AST_ONLY",
+            "count": 186,
+            "disposition": "INTERNAL_REACHABLE",
+            "id": "AST_ONLY/INTERNAL_REACHABLE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "AST_ONLY",
+            "count": 9607,
+            "disposition": "INTERNAL_UNREACHABLE_PROFILE",
+            "id": "AST_ONLY/INTERNAL_UNREACHABLE_PROFILE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "BINARY_ONLY",
+            "count": 19,
+            "disposition": "INTERNAL_REACHABLE",
+            "id": "BINARY_ONLY/INTERNAL_REACHABLE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "BINARY_ONLY",
+            "count": 25,
+            "disposition": "INTERNAL_UNREACHABLE_PROFILE",
+            "id": "BINARY_ONLY/INTERNAL_UNREACHABLE_PROFILE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "CLI_ONLY",
+            "count": 4434,
+            "disposition": "REQUIRED_COMPATIBILITY",
+            "id": "CLI_ONLY/REQUIRED_COMPATIBILITY",
+            "intersects_production_profile": true,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "CONDITIONAL_ONLY",
+            "count": 50,
+            "disposition": "EXCLUDED_BY_BUILD_PROFILE",
+            "id": "CONDITIONAL_ONLY/EXCLUDED_BY_BUILD_PROFILE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "CONDITIONAL_ONLY",
+            "count": 79,
+            "disposition": "GENERATED_INTERMEDIATE",
+            "id": "CONDITIONAL_ONLY/GENERATED_INTERMEDIATE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "CONDITIONAL_ONLY",
+            "count": 12,
+            "disposition": "INTERNAL_UNREACHABLE_PROFILE",
+            "id": "CONDITIONAL_ONLY/INTERNAL_UNREACHABLE_PROFILE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "CONFIG_ONLY",
+            "disposition": "DEMO_ONLY",
+            "id": "CONFIG_ONLY/DEMO_ONLY",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "CONFIG_ONLY",
+            "count": 111,
+            "disposition": "REQUIRED_COMPATIBILITY",
+            "id": "CONFIG_ONLY/REQUIRED_COMPATIBILITY",
+            "intersects_production_profile": true,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "CONFIG_ONLY",
+            "count": 15,
+            "disposition": "TEST_ONLY",
+            "id": "CONFIG_ONLY/TEST_ONLY",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "CROSSWALK_ONLY",
+            "count": 6,
+            "disposition": "DEMO_ONLY",
+            "id": "CROSSWALK_ONLY/DEMO_ONLY",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "CROSSWALK_ONLY",
+            "count": 394,
+            "disposition": "TEST_ONLY",
+            "id": "CROSSWALK_ONLY/TEST_ONLY",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "DECLARED_NOT_DEFINED",
+            "count": 2,
+            "disposition": "AUTHORITY_BUG_BOUNDARY",
+            "id": "DECLARED_NOT_DEFINED/AUTHORITY_BUG_BOUNDARY",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "DISPATCH_UNWITNESSED_IN_BINARY",
+            "count": 741,
+            "disposition": "REQUIRED_COMPATIBILITY",
+            "id": "DISPATCH_UNWITNESSED_IN_BINARY/REQUIRED_COMPATIBILITY",
+            "intersects_production_profile": true,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "DOXYGEN_ONLY",
+            "count": 24047,
+            "disposition": "INTERNAL_UNREACHABLE_PROFILE",
+            "id": "DOXYGEN_ONLY/INTERNAL_UNREACHABLE_PROFILE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "GENERATED_ONLY",
+            "count": 1034,
+            "disposition": "GENERATED_INTERMEDIATE",
+            "id": "GENERATED_ONLY/GENERATED_INTERMEDIATE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "GENERATED_WITHOUT_PROVENANCE",
+            "disposition": "GENERATED_INTERMEDIATE",
+            "id": "GENERATED_WITHOUT_PROVENANCE/GENERATED_INTERMEDIATE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "INSTALL_ONLY",
+            "count": 7495,
+            "disposition": "GENERATED_INTERMEDIATE",
+            "id": "INSTALL_ONLY/GENERATED_INTERMEDIATE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "INSTALL_ONLY",
+            "count": 162,
+            "disposition": "REQUIRED_COMPATIBILITY",
+            "id": "INSTALL_ONLY/REQUIRED_COMPATIBILITY",
+            "intersects_production_profile": true,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "INSTALL_ONLY",
+            "count": 9,
+            "disposition": "TOOLING_ONLY",
+            "id": "INSTALL_ONLY/TOOLING_ONLY",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "PHASE1_ONLY",
+            "count": 5,
+            "disposition": "EXCLUDED_BY_BUILD_PROFILE",
+            "id": "PHASE1_ONLY/EXCLUDED_BY_BUILD_PROFILE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "PHASE1_ONLY",
+            "count": 4535,
+            "disposition": "INTERNAL_UNREACHABLE_PROFILE",
+            "id": "PHASE1_ONLY/INTERNAL_UNREACHABLE_PROFILE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "PHASE1_ONLY",
+            "count": 2,
+            "disposition": "PLATFORM_EXCLUDED",
+            "id": "PHASE1_ONLY/PLATFORM_EXCLUDED",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "PHASE1_ONLY",
+            "count": 6503,
+            "disposition": "REQUIRED_COMPATIBILITY",
+            "id": "PHASE1_ONLY/REQUIRED_COMPATIBILITY",
+            "intersects_production_profile": true,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "POD_ONLY",
+            "count": 3294,
+            "disposition": "INTERNAL_UNREACHABLE_PROFILE",
+            "id": "POD_ONLY/INTERNAL_UNREACHABLE_PROFILE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "dispositioned"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:ASN1_OP_PRINT_",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:BIO_LOOKUP_SERVER",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:BIO_PARSE_PRIO_SERV",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:EVP_TYPE_CTX_get_algor",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:EVP_TYPE_CTX_get_algor_params",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:EVP_TYPE_CTX_set_algor_params",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:EVP_ciphername",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:LHASH",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:LHASH_DOALL_ARG_FN_TYPE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OPENSSL_Applink",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OPENSSL_MALLOC_FAILURES",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OPENSSL_MALLOC_FD",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OPENSSL_MALLOC_SEED",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OPENSSL_armcap",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OPENSSL_ia32cap",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OPENSSL_mem_debug_pop",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OPENSSL_mem_debug_push",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OPENSSL_ppccap",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OPENSSL_riscvcap",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OPENSSL_s390xcap",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OSSL_PARAM_BLD_push_TYPE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OSSL_PARAM_construct_TYPE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OSSL_PARAM_get_TYPE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OSSL_PARAM_set_TYPE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OSSL_TARGET_CERT_free",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:OSSL_TARGET_CERT_new",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:PEM_read_bio_TYPE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:PEM_write_TYPE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:PEM_write_bio_TYPE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:PROFESSION_INFOS_free",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:PROFESSION_INFOS_new",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:SSL_set_new_pending_conn_cb_fn",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:TYPE_dup",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:TYPE_free",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:TYPE_get_ex_data",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:TYPE_get_ex_new_index",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:TYPE_it",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:TYPE_new",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:TYPE_print_ctx",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:TYPE_set_ex_data",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:aead_id",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:algorithm_description",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:algorithm_names",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:app_data",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:application",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:asn1_const_cb",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:asn1_ex_clear",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:asn1_ex_d2i",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:asn1_ex_d2i_ex",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:asn1_ex_free",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:asn1_ex_i2d",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:asn1_ex_new",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:asn1_ex_new_ex",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:asn1_ex_print",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:boundary",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:custom",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:custom_ui",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_OSSL_ISSUER_SERIAL",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_OSSL_OBJECT_DIGEST_INFO",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_OSSL_TARGET_CERT",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_TYPE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_TYPEPrivateKey_bio",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_TYPEPrivateKey_fp",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_TYPEPublicKey",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_TYPEPublicKey_bio",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_TYPEPublicKey_fp",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_TYPE_PUBKEY",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_TYPE_PUBKEY_bio",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_TYPE_PUBKEY_fp",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_TYPE_bio",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_TYPE_fp",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_TYPEparams",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_TYPEparams_bio",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:d2i_TYPEparams_fp",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:data_size",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:data_type",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:detail",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:enc_offset",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:errors",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:fd",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:frame_type",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:function_id",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_OSSL_ISSUER_SERIAL",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_OSSL_OBJECT_DIGEST_INFO",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_OSSL_TARGET_CERT",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPE",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPEPrivateKey",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPEPrivateKey_bio",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPEPrivateKey_fp",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPEPublicKey",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPEPublicKey_bio",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPEPublicKey_fp",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPE_PUBKEY",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPE_PUBKEY_bio",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPE_PUBKEY_fp",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPE_bio",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPE_fp",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPEparams",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPEparams_bio",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:i2d_TYPEparams_fp",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:id",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:implementation",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:indent",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:int",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:kdf_id",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:kem_id",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:lh_TYPE_delete",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:lh_TYPE_doall",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:lh_TYPE_doall_arg",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:lh_TYPE_error",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:lh_TYPE_flush",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:lh_TYPE_free",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:lh_TYPE_get_down_load",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:lh_TYPE_insert",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:lh_TYPE_new",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:lh_TYPE_num_items",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:lh_TYPE_retrieve",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:lh_TYPE_set_down_load",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:local",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:msgs_processed",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:name",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:ndef_bio",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:num_msg",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:openssl_user_macros",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:property_definition",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:quic_error_code",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:quic_reason",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:reason",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:reason_len",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:ref_lock",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:ref_offset",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:req",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:return_size",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:revents",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:serial",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:size",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:size_t",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_compfunc",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_deep_copy",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_delete",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_delete_ptr",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_dup",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_find",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_find_all",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_find_ex",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_free",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_insert",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_is_sorted",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_new",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_new_null",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_new_reserve",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_num",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_pop",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_pop_free",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_push",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_reserve",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_set",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_set_cmp_func",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_shift",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_sort",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_unshift",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_value",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:sk_TYPE_zero",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:ui_data",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:undefined",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:user",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "POD_NAME_NOT_IN_ATLAS",
+            "disposition": "UNKNOWN",
+            "id": "sym|pod-doc:void",
+            "intersects_production_profile": false,
+            "source": "phase22-reconciliation",
+            "state": "unknown"
+          },
+          {
+            "class": "deferral",
+            "disposition": "deferred",
+            "id": "deferral:OSSL_provider_init",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "deferred"
+          },
+          {
+            "class": "shadowed_by_a_crate_identifier",
+            "disposition": "shadowed_by_a_crate_identifier",
+            "id": "divergence:several",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "modelled_differently",
+            "disposition": "modelled_differently",
+            "id": "divergence:src/bn/intern.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "named_differently",
+            "disposition": "named_differently",
+            "id": "divergence:src/cmp/cmp_asn.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "modelled_differently",
+            "disposition": "modelled_differently",
+            "id": "divergence:src/context/mod.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "named_differently",
+            "disposition": "named_differently",
+            "id": "divergence:src/context/mod.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "named_differently",
+            "disposition": "named_differently",
+            "id": "divergence:src/crmf/crmf_asn.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "modelled_differently",
+            "disposition": "modelled_differently",
+            "id": "divergence:src/ec/curve.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "shadowed_by_a_crate_identifier",
+            "disposition": "shadowed_by_a_crate_identifier",
+            "id": "divergence:src/engine/eng_dyn.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "modelled_differently",
+            "disposition": "modelled_differently",
+            "id": "divergence:src/engine/eng_lib.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "named_differently",
+            "disposition": "named_differently",
+            "id": "divergence:src/engine/eng_lib.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "modelled_differently",
+            "disposition": "modelled_differently",
+            "id": "divergence:src/provider/legacyprov.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "modelled_differently",
+            "disposition": "modelled_differently",
+            "id": "divergence:src/runtime/thread.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "named_differently",
+            "disposition": "named_differently",
+            "id": "divergence:src/runtime/thread_events.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "reduced_transcription",
+            "disposition": "reduced_transcription",
+            "id": "divergence:src/ssl/statem/statem_clnt.rs, src/ssl/statem/statem_srvr.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "does_not_exist_in_this_authority",
+            "count": 4,
+            "disposition": "does_not_exist_in_this_authority",
+            "id": "unit-class:does_not_exist_in_this_authority",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "bounded"
+          },
+          {
+            "class": "not_in_this_profile",
+            "count": 3,
+            "disposition": "not_in_this_profile",
+            "id": "unit-class:not_in_this_profile",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "bounded"
+          },
+          {
+            "class": "reached_by_a_named_construct",
+            "count": 145,
+            "disposition": "reached_by_a_named_construct",
+            "id": "unit-class:reached_by_a_named_construct",
+            "intersects_production_profile": true,
+            "source": "prerequisites",
+            "state": "reached"
+          }
+        ],
+        "sources": [
+          {
+            "checked": 62936,
+            "dispositioned": 62936,
+            "dispositions": {
+              "AUTHORITY_BUG_BOUNDARY": 2,
+              "DEMO_ONLY": 7,
+              "EXCLUDED_BY_BUILD_PROFILE": 55,
+              "GENERATED_INTERMEDIATE": 8609,
+              "INTERNAL_REACHABLE": 205,
+              "INTERNAL_UNREACHABLE_PROFILE": 41520,
+              "PLATFORM_EXCLUDED": 2,
+              "REQUIRED_COMPATIBILITY": 11951,
+              "TEST_ONLY": 409,
+              "TOOLING_ONLY": 9,
+              "UNKNOWN": 167
+            },
+            "intersecting": 11951,
+            "path": "forensics/atlas/phase22/reconciliation.json",
+            "residuals": 62936,
+            "source": "phase22-reconciliation",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 167,
+            "unknown_intersecting": 0,
+            "what": "the cross-plane residual census: every reachable entity's residual class and disposition, with each `UNKNOWN` residual named individually and tested against the closure"
+          },
+          {
+            "checked": 0,
+            "dispositioned": 0,
+            "dispositions": {},
+            "intersecting": 0,
+            "path": "forensics/atlas/phase22/compatibility-closure.json",
+            "residuals": 0,
+            "source": "phase22-closure",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 0,
+            "unknown_intersecting": 0,
+            "what": "the reachability closure's own `unknown_intersecting_root_keys`: the `UNKNOWN` residuals that reach a declared compatibility root, which the Phase-22 seal requires to be zero"
+          },
+          {
+            "checked": 1,
+            "dispositioned": 167,
+            "dispositions": {
+              "UNKNOWN": 167
+            },
+            "intersecting": 0,
+            "path": "forensics/atlas/phase22/gemel-checkpoint.json",
+            "residuals": 167,
+            "source": "phase22-gemel-checkpoint",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 167,
+            "unknown_intersecting": 0,
+            "what": "the checkpoint's residual census and its named `UNKNOWN` sets, with the intersection key"
+          },
+          {
+            "checked": 7,
+            "dispositioned": 42,
+            "dispositions": {
+              "closed": 37,
+              "deferred": 5
+            },
+            "intersecting": 37,
+            "path": "forensics/atlas/phase1-completeness.json",
+            "residuals": 42,
+            "source": "phase1-completeness",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 0,
+            "unknown_intersecting": 0,
+            "what": "the archaeology completeness residual-disposition classes, the open-`UNKNOWN` set, the missing set and the deferred planes"
+          },
+          {
+            "checked": 10,
+            "dispositioned": 0,
+            "dispositions": {},
+            "intersecting": 0,
+            "path": "forensics/atlas/openssl-3.6.4-production/surface-reconciliation.json",
+            "residuals": 0,
+            "source": "symbol-reconciliation",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 0,
+            "unknown_intersecting": 0,
+            "what": "the five hard-residual classes per library over the four symbol planes"
+          },
+          {
+            "checked": 10,
+            "dispositioned": 10,
+            "dispositions": {
+              "accepted_permanent_divergence": 3,
+              "fixed": 7
+            },
+            "intersecting": 0,
+            "path": "forensics/divergence-obligations.json",
+            "residuals": 10,
+            "source": "divergence-obligations",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 0,
+            "unknown_intersecting": 0,
+            "what": "the machine-readable divergence register: every obligation's disposition and blocking state"
+          },
+          {
+            "checked": 35,
+            "dispositioned": 35,
+            "dispositions": {
+              "approved-transition": 35
+            },
+            "intersecting": 35,
+            "path": "forensics/ownership-transitions.json",
+            "residuals": 35,
+            "source": "ownership-transitions",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 0,
+            "unknown_intersecting": 0,
+            "what": "the approved obligation-ledger universe changes and downward phase-state corrections, each with its recorded reason"
+          },
+          {
+            "checked": 167,
+            "dispositioned": 167,
+            "dispositions": {
+              "deferred": 1,
+              "does_not_exist_in_this_authority": 4,
+              "modelled_differently": 6,
+              "named_differently": 5,
+              "not_in_this_profile": 3,
+              "reached_by_a_named_construct": 145,
+              "reduced_transcription": 1,
+              "shadowed_by_a_crate_identifier": 2
+            },
+            "intersecting": 145,
+            "path": "forensics/prerequisites.json",
+            "residuals": 167,
+            "source": "prerequisites",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 0,
+            "unknown_intersecting": 0,
+            "what": "the prerequisite plane's deferrals, deliberate divergences and authority-unit classes"
+          },
+          {
+            "checked": 29,
+            "dispositioned": 10,
+            "dispositions": {
+              "not-claimed": 10
+            },
+            "intersecting": 0,
+            "path": "artifacts/phase18/hostile-boundary-register.json",
+            "residuals": 10,
+            "source": "hostile-boundary-register",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 0,
+            "unknown_intersecting": 0,
+            "what": "the Phase-18 hostile-boundary register's `not-claimed` surfaces"
+          },
+          {
+            "checked": 14,
+            "dispositioned": 7,
+            "dispositions": {
+              "not-claimed": 6,
+              "not-measured": 1
+            },
+            "intersecting": 0,
+            "path": "artifacts/phase19/performance-boundary-register.json",
+            "residuals": 7,
+            "source": "performance-boundary-register",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 0,
+            "unknown_intersecting": 0,
+            "what": "the Phase-19 performance-boundary register's `not-claimed` and `not-measured` surfaces"
+          },
+          {
+            "checked": 3,
+            "dispositioned": 304,
+            "dispositions": {
+              "recorded-divergence": 304
+            },
+            "intersecting": 304,
+            "path": "artifacts/phase18/COURTS.json",
+            "residuals": 304,
+            "source": "hostile-courts",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 0,
+            "unknown_intersecting": 0,
+            "what": "the Phase-18 hostile courts' residual and recorded-divergence counts (the hostile residual count is the one that must be zero)"
+          },
+          {
+            "checked": 6,
+            "dispositioned": 2,
+            "dispositions": {
+              "separated": 2
+            },
+            "intersecting": 2,
+            "path": "artifacts/phase18/COURTS.json",
+            "residuals": 2,
+            "source": "ct-primitives",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 0,
+            "unknown_intersecting": 0,
+            "what": "the CT-primitives `separated` findings (`bn-modexp`, `bn-inverse`)"
+          },
+          {
+            "checked": 6,
+            "dispositioned": 2,
+            "dispositions": {
+              "not-reached": 2
+            },
+            "intersecting": 0,
+            "path": "artifacts/phase18/asan.json",
+            "residuals": 2,
+            "source": "asan",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 0,
+            "unknown_intersecting": 0,
+            "what": "the ASan closure's layer findings and its `not_reached` instruments"
+          },
+          {
+            "checked": 18,
+            "dispositioned": 9,
+            "dispositions": {
+              "unsupported-foreign-function": 9
+            },
+            "intersecting": 0,
+            "path": "artifacts/phase18/miri-tcb.json",
+            "residuals": 9,
+            "source": "miri",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 0,
+            "unknown_intersecting": 0,
+            "what": "the Miri TCB suite's unsupported tests and its problems"
+          },
+          {
+            "checked": 75,
+            "dispositioned": 0,
+            "dispositions": {},
+            "intersecting": 0,
+            "path": "artifacts/phase18/unsafe-bounds.json",
+            "residuals": 0,
+            "source": "unsafe-footprint",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 0,
+            "unknown_intersecting": 0,
+            "what": "the UNSAFE-FOOTPRINT growth check: a core module above its recorded ceiling is a residual"
+          },
+          {
+            "checked": 303,
+            "dispositioned": 303,
+            "dispositions": {
+              "open": 302,
+              "oracle_version": 1
+            },
+            "intersecting": 0,
+            "path": ".frf/residuals",
+            "residuals": 303,
+            "source": "frf-store",
+            "state": "closed",
+            "un_dispositioned": 0,
+            "unknown": 0,
+            "unknown_intersecting": 0,
+            "what": "the FRF store's own residual tokens, the sensitivity mutants each challenge injects"
+          }
+        ],
+        "totals": {
+          "bounded": 35,
+          "checked": 63620,
+          "dispositioned": 63994,
+          "findings": 0,
+          "intersecting": 12474,
+          "residuals": 63994,
+          "sources": 16,
+          "sources_present": 16,
+          "un_dispositioned": 0,
+          "unknown": 334,
+          "unknown_intersecting": 0
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
       "CUSTODIAN-BOUNDARY-REGISTER": "20.5 lands the register; it records what is claimed, what is bounded, and the explicit non-claims (no FIPS validation, no universal parity from finite evidence, memory safety measured-not-established), and checks that every recorded boundary still matches the evidence that establishes it",
-      "RT-CUSTODIAN-RESIDUALS": "20.3 lands the residual disposition; it requires every residual to be dispositioned and zero `UNKNOWN` to intersect the claimed production profile, so a newly discovered un-dispositioned residual is a `fail`",
       "RT-SUBSTITUTION-WITNESS": "20.4 lands the substitution witness; it runs binaries built against the admitted authority unmodified against the candidate over the machine-owned Phase-17 downstream corpus, which it re-establishes as current and functional, and records each witness's build, run and observation"
     },
     "summary": {
       "fail": 0,
-      "pass": 2,
-      "total": 2
+      "pass": 3,
+      "total": 3
     }
   },
   "generator": "forensics/tools/phase20_courts.py",
@@ -855,6 +3610,11 @@
       "sha256": "ba3bd9c8fe28c34cff41f2df597422e8797f8c6be3dbc7ecc734ae716c653c64"
     },
     {
+      "name": "phase18-courts",
+      "path": "artifacts/phase18/COURTS.json",
+      "sha256": "099302f8e807e9091b1384915633295483a40968e3ae80b2112f7136f4159e46"
+    },
+    {
       "name": "downstream-corpus",
       "path": "forensics/atlas/downstream-corpus.json",
       "sha256": "4406df8974086a6b483d0e4e6f45bd45e265ff4c3cd4cb8e04d579e89228c95d"
@@ -872,12 +3632,72 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "9d3da27a1bb52a2b3f22c1afa00e9c64b1651c93e0979f46306c0b8144e96d72"
+      "sha256": "6dfe0d807cfaf2b0af4673fed0fb9823426e44c82f7bef3fd2299078b43af775"
     },
     {
       "name": "court-coverage-rows",
       "path": "forensics/atlas/court-coverage-rows.json",
       "sha256": "74fc30129bb4ad4a9ad87973a451ea85780698bf8cdd1c63c8c125ef6904d2fa"
+    },
+    {
+      "name": "divergence-obligations",
+      "path": "forensics/divergence-obligations.json",
+      "sha256": "9e313cb19e3659393526dbedcc520c5ee246a16b71e849f8d17600a52648bd68"
+    },
+    {
+      "name": "prerequisites",
+      "path": "forensics/prerequisites.json",
+      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+    },
+    {
+      "name": "phase22-reconciliation",
+      "path": "forensics/atlas/phase22/reconciliation.json",
+      "sha256": "a9d17ba2e4602221d244701d002004d04218977021745bcc83cba1220cfffcba"
+    },
+    {
+      "name": "phase22-closure",
+      "path": "forensics/atlas/phase22/compatibility-closure.json",
+      "sha256": "58734faebbd0b99bfdd612a0b799c1892eb2bcf8f0288ddefc9c97917d1183a6"
+    },
+    {
+      "name": "phase22-gemel",
+      "path": "forensics/atlas/phase22/gemel-checkpoint.json",
+      "sha256": "5942d9ac609df20a2bf602e704f6bc31254980a9c57d171ab39e0e00756ca9ce"
+    },
+    {
+      "name": "surface-reconciliation",
+      "path": "forensics/atlas/openssl-3.6.4-production/surface-reconciliation.json",
+      "sha256": "43bf1b33f3dd6f9bf503bfc084bf46dd5bf1048523c693650bccc0d4df037b18"
+    },
+    {
+      "name": "hostile-boundary-register",
+      "path": "artifacts/phase18/hostile-boundary-register.json",
+      "sha256": "7e8ff63b8f22f9d70e377aac816be02265b925ae6b1ac5942fcae098b7ec3fa8"
+    },
+    {
+      "name": "performance-boundary-register",
+      "path": "artifacts/phase19/performance-boundary-register.json",
+      "sha256": "0e9ec543738e1ef738577c037500b22133c54f31d2a37c1f3f586670cc1467a3"
+    },
+    {
+      "name": "asan-closure",
+      "path": "artifacts/phase18/asan.json",
+      "sha256": "29d9cc930c421741527d11080595364cbd2ae5ebf0abdbd3c71417f5429fda6b"
+    },
+    {
+      "name": "miri-tcb",
+      "path": "artifacts/phase18/miri-tcb.json",
+      "sha256": "3193fb798e3b6702fe5a040fb19bb6a7f0219f71322f0d521a499a2280a34d03"
+    },
+    {
+      "name": "unsafe-footprint",
+      "path": "forensics/atlas/unsafe-footprint.json",
+      "sha256": "6951d4a5091ec06a63fab65eea7388cd73442e126940f2c2efbf80fad6547298"
+    },
+    {
+      "name": "unsafe-bounds",
+      "path": "artifacts/phase18/unsafe-bounds.json",
+      "sha256": "e7c63098c60ad7cdfbfdc90bc51da50882fa6731a1b7591896d2059f34d43872"
     },
     {
       "name": "gen-frf-courts",

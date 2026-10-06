@@ -67,8 +67,10 @@ records both axes explicitly so the two cannot be conflated:
 as an instrument while recording, as a `finding`, where the level the committed evidence supports is
 lower than the level the seal might otherwise name, so its property reads `NOT_CLAIMED` with
 `findings_present`. **A passing `RT-CUSTODIAN-MATURITY` must never be read as "L9 custodian seal
-achieved".** The findings are read from the court row, not typed here; the ledger fails closed if
-the court stops carrying them.
+achieved".** `custodian-residuals` is the second property unit: a real un-dispositioned or
+`UNKNOWN`-intersecting residual is a `finding` and reads `NOT_CLAIMED`, while a genuinely closed set
+records zero findings and reads `not_claimed`. The findings are read from the court row, not typed
+here; the ledger fails closed if the maturity court stops carrying them.
 
 Outputs
 -------
@@ -148,9 +150,20 @@ COURT_UNITS: tuple[tuple[str, str, str, str], ...] = (
 # behaviour. `custodian-maturity`'s subject is the level the committed evidence supports, and its
 # court is candid that a passing verdict is about the instrument plus a derived measurement, not
 # about the level: where the evidence supports less than the level the seal might name, the gap is
-# recorded as a `finding` and the property is explicitly NOT claimed. Every other unit makes no
-# custodian-property claim, which `property_status` records as `not_claimed`.
-PROPERTY_UNITS: frozenset[str] = frozenset({"custodian-maturity"})
+# recorded as a `finding` and the property is explicitly NOT claimed. `custodian-residuals`'s subject
+# is the closed residual set: while a real un-dispositioned or `UNKNOWN`-intersecting residual is a
+# finding, the property reads `NOT_CLAIMED`; on a genuinely closed set it records zero findings and
+# reads `not_claimed`, exactly as `receipt-closure` does. Every other unit makes no custodian-property
+# claim, which `property_status` records as `not_claimed`.
+PROPERTY_UNITS: frozenset[str] = frozenset({"custodian-maturity", "custodian-residuals"})
+
+# The property units whose property is **never** claimable by a passing instrument: the level the
+# seal names is established by the stratum's own seal (20.6), not by the court, so a passing
+# `custodian-maturity` that stopped carrying the gap as a finding would let the pass be read as "L9
+# custodian seal achieved". `custodian-residuals` is deliberately **not** here: on a genuinely closed
+# residual set zero findings is the correct and complete answer, and requiring a finding would make
+# the court unable to report closure.
+SEAL_GAP_UNITS: frozenset[str] = frozenset({"custodian-maturity"})
 
 
 def load(relpath: str) -> dict:
@@ -332,12 +345,13 @@ def main(argv: list[str]) -> int:
 
     contracts = contract_units(courts_body)
 
-    # The two-axis rule is a hard invariant for a property unit while its property is unclaimed:
-    # a passing `custodian-maturity` that stopped carrying the gap to the level the seal names
-    # would let the pass be read as "L9 custodian seal achieved", exactly what this ledger exists
-    # to prevent. The docstring says the ledger fails closed; this is that failure.
+    # The two-axis rule is a hard invariant for a *seal-gap* unit while its property is unclaimed:
+    # a passing `custodian-maturity` that stopped carrying the gap to the level the seal names would
+    # let the pass be read as "L9 custodian seal achieved", exactly what this ledger exists to
+    # prevent. `custodian-residuals` is not a seal-gap unit: a genuinely closed residual set is a
+    # complete pass with zero findings, and the invariant must not force a finding onto it.
     for unit in contracts:
-        if unit["unit"] in PROPERTY_UNITS and unit["state"] == "implemented" \
+        if unit["unit"] in SEAL_GAP_UNITS and unit["state"] == "implemented" \
                 and not unit["findings_present"]:
             raise SystemExit(
                 f"phase20-obligations: {unit['unit']} passed as an instrument but carries no "
@@ -399,9 +413,10 @@ def main(argv: list[str]) -> int:
             "custodian seal contract docs/PHASE-20-SUBPHASES.md section 1 names -- the maturity "
             "derivation, the receipt closure, the residual disposition, the substitution witness "
             "and the custodian-boundary register -- and its `counts` block is the live record of "
-            "which of them are implemented: 20.1 landed the maturity derivation, so "
-            "`custodian-maturity` is implemented while the other four are open. Nothing here is a "
-            "claim "
+            "which of them are implemented: 20.1 landed the maturity derivation, 20.2 the receipt "
+            "closure and 20.3 the residual disposition, so `custodian-maturity`, `receipt-closure` "
+            "and `custodian-residuals` are implemented while the other two are open. Nothing here "
+            "is a claim "
             "stronger than docs/CUSTODIAN_CONTRACT.md section 6's: a passing custodian court is an "
             "instrument and a bounded measurement, not a universal-parity claim, and there is no "
             "FIPS-validation claim, no claim of universal parity from finite evidence, and no "

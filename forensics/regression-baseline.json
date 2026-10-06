@@ -274,6 +274,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "RT-CUSTODIAN-RESIDUALS": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-DEFAULTS": {
       "observations": 10,
       "verdict": "pass"
@@ -823,7 +827,7 @@
     "phase17": 0,
     "phase18": 0,
     "phase19": 0,
-    "phase20": 3,
+    "phase20": 2,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
