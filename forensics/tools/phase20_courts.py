@@ -124,15 +124,71 @@ non-zero blocker, and a covering claim's recorded candidate identity moved off t
 The control is honest only when the real join is complete *and* all three injections are detected;
 otherwise a join that cannot tell evidence from its absence would pass vacuously.
 
+`RT-CUSTODIAN-RESIDUALS`, and what it dispositions
+-----------------------------------------------
+20.3's court. Its subject is the **residual disposition**: every residual the earlier strata and
+the FRF store record must carry a disposition, and **no `UNKNOWN` residual may intersect the
+claimed production profile**. `docs/CUSTODIAN_CONTRACT.md` section 6 makes custodian compatibility
+conditional on "no unresolved residual intersecting the claimed scope", section 8 keeps `UNKNOWN`
+an honest result rather than a resting state, and `docs/PARITY_MODEL.md` section 1 defines the two
+states that must never be papered over; this court is where that discipline is executed over the
+registers rather than asserted. Like the two courts above it stages no probe and maintains no list
+of its own: it reads the residual sources the earlier strata write, so a residual added without a
+disposition is visible as a `fail` rather than a silent addition. The sources are bound to
+the committed registers that carry them:
+
+  * the **Phase-22 cross-plane residual census** `forensics/atlas/phase22/reconciliation.json`
+    (every reachable entity's residual class and disposition) and the closure
+    `forensics/atlas/phase22/compatibility-closure.json` (`unknown_intersecting_root_keys`, the
+    register's own computation of which `UNKNOWN` residual reaches a declared compatibility root)
+    and the checkpoint `forensics/atlas/phase22/gemel-checkpoint.json` (the `UNKNOWN` sets, named);
+  * the **Phase-1 archaeology completeness** `forensics/atlas/phase1-completeness.json` (the
+    residual-disposition classes, the open-`UNKNOWN` set, the missing set and the deferred planes)
+    and the **symbol reconciliation** `forensics/atlas/openssl-3.6.4-production/
+    surface-reconciliation.json` (the five hard-residual classes per library);
+  * the **divergence obligations** `forensics/divergence-obligations.json`, the **ownership
+    transitions** `forensics/ownership-transitions.json` and the **prerequisite plane**
+    `forensics/prerequisites.json` (its divergences, deferrals and classification rows);
+  * the **Phase-18 hostile-boundary register** and the **Phase-19 performance-boundary register**,
+    the Phase-18 hostile-court residual counts, the **CT-primitives** `bn-modexp`/`bn-inverse`
+    findings, the **ASan** closure and the **Miri** TCB receipts;
+  * the **unsafe-footprint growth ceiling** `forensics/atlas/unsafe-footprint.json` against
+    `artifacts/phase18/unsafe-bounds.json`;
+  * the **FRF store's residuals** `.frf/residuals/*.token.json`.
+
+Each source is recorded with its residual records, each record the shape `{source, id,
+`disposition`, intersects_production_profile, state}` — where a residual the register carries only as
+a set is held as one record with its `count`, and every `UNKNOWN` residual is held individually so
+the intersection discipline is visible per name. The `state` names how the residual bears
+evidence (`dispositioned`, `unknown`, `un_dispositioned`, `bounded`, `divergence`,
+`sensitivity-mutant`, ...).
+
+**Honesty.** The court fails exactly two ways: a residual with **no disposition**, and an
+`UNKNOWN` residual that **intersects the claimed production profile**. On the current tree there are
+167 `UNKNOWN` residuals — all `POD_NAME_NOT_IN_ATLAS` from the pod-contract plane — and the closure
+records that **zero of them intersect** a declared compatibility root, so the court records **zero
+findings** and says so precisely. An `UNKNOWN` that merely does not intersect is not resolved by
+this court: it is recorded, and `UNKNOWN` remains a result rather than a resting state. A real
+un-dispositioned or `UNKNOWN`-intersecting residual would be a finding and a `fail`, not a verdict
+the court talks itself out of.
+
+The instrument sensitivity control
+----------------------------------
+Section 3.2's rule again: a control that cannot fail is not evidence. Beside the real derivation the
+court derives three **synthetic evidence views** and requires the disposition to react to each: a
+residual given **no disposition** must surface as an un-dispositioned finding, a residual recorded
+`UNKNOWN` and flagged as **intersecting the profile** must surface as an `UNKNOWN`-intersecting
+finding, and a residual recorded `UNKNOWN` but **not intersecting** must surface **no** finding. The
+control is honest only when the real view is closed (zero findings) *and* all three injections behave
+as required; otherwise a court that cannot tell a dispositioned residual from an absent one, or an
+intersecting `UNKNOWN` from a harmless one, would pass vacuously.
+
 The pending courts
 ------------------
-The other three courts the plan names are not runnable yet; each is registered in `PENDING_COURTS`
+The other two courts the plan names are not runnable yet; each is registered in `PENDING_COURTS`
 with the subphase that lands its instrument and what it will drive, so "nothing registered" is a
 stated distance rather than a court quietly dropped:
 
-  * `RT-CUSTODIAN-RESIDUALS` (20.3) — the disposition of every residual, requiring zero `UNKNOWN`
-    intersecting the claimed production profile, so a newly discovered un-dispositioned residual is
-    a `fail` rather than a silent addition;
   * `RT-SUBSTITUTION-WITNESS` (20.4) — the ABI-substitution witness chain and the machine-owned
     downstream corpus witness chain: binaries built against the admitted authority run unmodified
     against the candidate, over the Phase-17 corpus the court re-establishes as current and
@@ -156,6 +212,7 @@ SPDX-License-Identifier: Apache-2.0"""
 from __future__ import annotations
 
 import argparse
+import collections
 import copy
 import json
 import re
@@ -213,6 +270,29 @@ CUSTODIAN_CONTRACT = REPO_ROOT / "docs" / "CUSTODIAN_CONTRACT.md"
 PARITY_MODEL = REPO_ROOT / "docs" / "PARITY_MODEL.md"
 GEN_FRF_COURTS_SRC = REPO_ROOT / "forensics" / "tools" / "gen_frf_courts.py"
 
+# The registers the residual disposition reads. The Phase-22 census carries the cross-plane
+# residual rows and the closure carries the register's own computation of which `UNKNOWN` residual
+# reaches a declared compatibility root; the checkpoint names the `UNKNOWN` sets. The Phase-1 and
+# symbol reconciliations, the divergence/prerequisite planes, the two Phase-18/19 boundary registers
+# and the Phase-18 hostile/CT/ASan/Miri receipts, the unsafe-footprint ceiling and the FRF store's
+# own residuals are the other registers the earlier strata write. None is a list this court keeps.
+PHASE22_RECONCILIATION = REPO_ROOT / "forensics" / "atlas" / "phase22" / "reconciliation.json"
+PHASE22_CLOSURE = REPO_ROOT / "forensics" / "atlas" / "phase22" / "compatibility-closure.json"
+PHASE22_GEMEL = REPO_ROOT / "forensics" / "atlas" / "phase22" / "gemel-checkpoint.json"
+SURFACE_RECONCILIATION = (REPO_ROOT / "forensics" / "atlas" / "openssl-3.6.4-production"
+                          / "surface-reconciliation.json")
+DIVERGENCE_OBLIGATIONS = REPO_ROOT / "forensics" / "divergence-obligations.json"
+PREREQUISITES = REPO_ROOT / "forensics" / "prerequisites.json"
+HOSTILE_BOUNDARY_REGISTER = REPO_ROOT / "artifacts" / "phase18" / "hostile-boundary-register.json"
+PERFORMANCE_BOUNDARY_REGISTER = (REPO_ROOT / "artifacts" / "phase19"
+                                 / "performance-boundary-register.json")
+PHASE18_COURTS = REPO_ROOT / "artifacts" / "phase18" / "COURTS.json"
+ASAN_CLOSURE = REPO_ROOT / "artifacts" / "phase18" / "asan.json"
+MIRI_TCB = REPO_ROOT / "artifacts" / "phase18" / "miri-tcb.json"
+UNSAFE_FOOTPRINT = REPO_ROOT / "forensics" / "atlas" / "unsafe-footprint.json"
+UNSAFE_BOUNDS = REPO_ROOT / "artifacts" / "phase18" / "unsafe-bounds.json"
+FRF_RESIDUALS = REPO_ROOT / ".frf" / "residuals"
+
 # The two axes every runtime court declares and challenges; the same pair the FRF chain rule reads.
 FRF_CHALLENGE_OPERATORS = ("stdout-first-line", "exit-class")
 
@@ -228,28 +308,26 @@ CLOSURE_PHASES: tuple[int, ...] = tuple(range(3, 20))
 
 CUSTODIAN_MATURITY = "RT-CUSTODIAN-MATURITY"
 RECEIPT_CLOSURE = "RT-RECEIPT-CLOSURE"
+CUSTODIAN_RESIDUALS = "RT-CUSTODIAN-RESIDUALS"
 
 # The courts, in the order they land. `(name, probe filename)`, and the probe is declared in the
 # same commit as the entry, so a runner that names a probe which does not exist cannot be
-# committed. `RT-CUSTODIAN-MATURITY` and `RT-RECEIPT-CLOSURE` stage no probe -- their subjects are
-# committed evidence, not transcript pairs -- so their probes are `None`, exactly as Phase 19's
-# register court is. **Empty of later courts at 20.2**: 20.3 through 20.5 land the other three
-# instruments and add their rows.
+# committed. `RT-CUSTODIAN-MATURITY`, `RT-RECEIPT-CLOSURE` and `RT-CUSTODIAN-RESIDUALS` stage no
+# probe -- their subjects are committed evidence, not transcript pairs -- so their probes are
+# `None`, exactly as Phase 19's register court is. **Empty of later courts at 20.3**: 20.4 and 20.5
+# land the other two instruments and add their rows.
 COURTS: list[tuple[str, str | None]] = [
     (CUSTODIAN_MATURITY, None),
     (RECEIPT_CLOSURE, None),
+    (CUSTODIAN_RESIDUALS, None),
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
 # the instrument and what the court will drive, so "nothing registered" is a stated distance rather
 # than a court quietly dropped. `RT-CUSTODIAN-MATURITY` left this table when 20.1 landed its
-# derivation and `RT-RECEIPT-CLOSURE` when 20.2 landed its join.
+# derivation, `RT-RECEIPT-CLOSURE` when 20.2 landed its join, and `RT-CUSTODIAN-RESIDUALS` when 20.3
+# landed its disposition.
 PENDING_COURTS: dict[str, str] = {
-    "RT-CUSTODIAN-RESIDUALS": (
-        "20.3 lands the residual disposition; it requires every residual to be dispositioned and "
-        "zero `UNKNOWN` to intersect the claimed production profile, so a newly discovered "
-        "un-dispositioned residual is a `fail`"
-    ),
     "RT-SUBSTITUTION-WITNESS": (
         "20.4 lands the substitution witness; it runs binaries built against the admitted "
         "authority unmodified against the candidate over the machine-owned Phase-17 downstream "
@@ -1367,6 +1445,740 @@ def receipt_closure_court(name: str) -> dict:
     }
 
 
+# --------------------------------------------------------------------------------------------
+# the residual disposition: reading the registers, and dispositioning every residual
+# --------------------------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class ResidualSource:
+    """One committed register the residual disposition reads, bound to the artefact that carries it.
+
+    `path` is the repository-relative register; `what` is the one-line statement of what residual
+    class it carries. The court maintains no residual of its own -- every record it dispositions is
+    read from one of these registers, so a residual added without a disposition is visible rather
+    than absorbed.
+    """
+
+    name: str
+    path: str
+    what: str
+
+
+# The residual registers, in the order they are reported. They are the registers the earlier strata
+# and the FRF store write: the Phase-22 cross-plane census and its closure/checkpoint, the Phase-1
+# completeness and the symbol reconciliation, the divergence, ownership-transition and prerequisite
+# planes, the two boundary registers, the Phase-18 hostile/CT/ASan/Miri receipts, the
+# unsafe-footprint ceiling and the FRF store itself.
+RESIDUAL_SOURCES: tuple[ResidualSource, ...] = (
+    ResidualSource(
+        "phase22-reconciliation", "forensics/atlas/phase22/reconciliation.json",
+        "the cross-plane residual census: every reachable entity's residual class and disposition, "
+        "with each `UNKNOWN` residual named individually and tested against the closure"),
+    ResidualSource(
+        "phase22-closure", "forensics/atlas/phase22/compatibility-closure.json",
+        "the reachability closure's own `unknown_intersecting_root_keys`: the `UNKNOWN` residuals "
+        "that reach a declared compatibility root, which the Phase-22 seal requires to be zero"),
+    ResidualSource(
+        "phase22-gemel-checkpoint", "forensics/atlas/phase22/gemel-checkpoint.json",
+        "the checkpoint's residual census and its named `UNKNOWN` sets, with the intersection key"),
+    ResidualSource(
+        "phase1-completeness", "forensics/atlas/phase1-completeness.json",
+        "the archaeology completeness residual-disposition classes, the open-`UNKNOWN` set, the "
+        "missing set and the deferred planes"),
+    ResidualSource(
+        "symbol-reconciliation",
+        "forensics/atlas/openssl-3.6.4-production/surface-reconciliation.json",
+        "the five hard-residual classes per library over the four symbol planes"),
+    ResidualSource(
+        "divergence-obligations", "forensics/divergence-obligations.json",
+        "the machine-readable divergence register: every obligation's disposition and blocking state"),
+    ResidualSource(
+        "ownership-transitions", "forensics/ownership-transitions.json",
+        "the approved obligation-ledger universe changes and downward phase-state corrections, each "
+        "with its recorded reason"),
+    ResidualSource(
+        "prerequisites", "forensics/prerequisites.json",
+        "the prerequisite plane's deferrals, deliberate divergences and authority-unit classes"),
+    ResidualSource(
+        "hostile-boundary-register", "artifacts/phase18/hostile-boundary-register.json",
+        "the Phase-18 hostile-boundary register's `not-claimed` surfaces"),
+    ResidualSource(
+        "performance-boundary-register", "artifacts/phase19/performance-boundary-register.json",
+        "the Phase-19 performance-boundary register's `not-claimed` and `not-measured` surfaces"),
+    ResidualSource(
+        "hostile-courts", "artifacts/phase18/COURTS.json",
+        "the Phase-18 hostile courts' residual and recorded-divergence counts (the hostile residual "
+        "count is the one that must be zero)"),
+    ResidualSource(
+        "ct-primitives", "artifacts/phase18/COURTS.json",
+        "the CT-primitives `separated` findings (`bn-modexp`, `bn-inverse`)"),
+    ResidualSource(
+        "asan", "artifacts/phase18/asan.json",
+        "the ASan closure's layer findings and its `not_reached` instruments"),
+    ResidualSource(
+        "miri", "artifacts/phase18/miri-tcb.json",
+        "the Miri TCB suite's unsupported tests and its problems"),
+    ResidualSource(
+        "unsafe-footprint", "artifacts/phase18/unsafe-bounds.json",
+        "the UNSAFE-FOOTPRINT growth check: a core module above its recorded ceiling is a residual"),
+    ResidualSource(
+        "frf-store", ".frf/residuals",
+        "the FRF store's own residual tokens, the sensitivity mutants each challenge injects"),
+)
+
+
+# The profile a residual can intersect. The claimed production profile is the exact build the
+# candidate is measured under and the declared compatibility-root families the closure observes;
+# the register's own `unknown_intersecting_root_keys` is read, never re-derived here.
+def read_residual_profile(closure: dict | None) -> dict:
+    """The claimed production profile, read from the closure and the FRF candidate identity."""
+    body = (closure or {}).get("body") or {}
+    counts = body.get("counts") or {}
+    unpopulated = body.get("unpopulated") or []
+    return {
+        "authority": str((closure or {}).get("authority") or ""),
+        "candidate_version": gen_frf_courts.CANDIDATE_VERSION,
+        "build_profile": gen_frf_courts.BUILD_PROFILE,
+        "observable_roots": sorted(str(r) for r in (body.get("roots") or {})),
+        "roots_declared": int(counts.get("roots_declared", 0)),
+        "roots_observed": int(counts.get("roots", 0)),
+        "unpopulated_families": sorted(str(u.get("family")) for u in unpopulated),
+        "unknown_intersecting_keys": sorted(
+            str(k) for k in (body.get("unknown_intersecting_root_keys") or [])),
+    }
+
+
+def residual_record(id: str, disposition: str | None, intersects: bool, state: str,
+                    count: int = 1, cls: str | None = None) -> dict:
+    """One normalized residual record, at the granularity the source register carries it.
+
+    `count` is the number of residuals the record stands for: a residual set the register records
+    only in aggregate is held as one record with its count, while an individually named residual
+    (every `UNKNOWN` one) is held with `count` 1 so the intersection discipline is visible per name.
+    """
+    rec = {
+        "id": id,
+        "disposition": disposition,
+        "intersects_production_profile": bool(intersects),
+        "state": state,
+        "count": int(count),
+    }
+    if cls is not None:
+        rec["class"] = cls
+    return rec
+
+
+def read_census_residuals(unknown_keys: frozenset[str]) -> tuple[list[dict], int]:
+    """The Phase-22 cross-plane census: non-`UNKNOWN` residuals grouped, `UNKNOWN` ones named.
+
+    The register records 60k+ residuals, so a residual set whose disposition is not `UNKNOWN` is
+    held as one record per `(class, disposition)` with its count -- the disposition is uniform over
+    the set, so the aggregate is exact. Every `UNKNOWN` residual is held individually and its
+    intersection is read from the closure's `unknown_intersecting_root_keys`, so the fact the seal
+    turns on is visible per name rather than buried in a count.
+    """
+    doc = read_json("forensics/atlas/phase22/reconciliation.json")
+    if not doc:
+        return [], 0
+    rows = (doc["body"].get("residuals") or [])
+    groups: dict[tuple[str, str], int] = {}
+    unknown: list[dict] = []
+    for r in rows:
+        cls = str(r.get("class"))
+        disp = str(r.get("disposition"))
+        if disp == "UNKNOWN":
+            key = str(r.get("key"))
+            unknown.append(residual_record(key, "UNKNOWN", key in unknown_keys, "unknown", 1, cls))
+        else:
+            groups[(cls, disp)] = groups.get((cls, disp), 0) + 1
+    out = [residual_record(f"{cls}/{disp}", disp, disp == "REQUIRED_COMPATIBILITY",
+                           "dispositioned", n, cls)
+           for (cls, disp), n in sorted(groups.items())]
+    out += sorted(unknown, key=lambda rec: rec["id"])
+    return out, len(rows)
+
+
+def read_closure_residuals(unknown_keys: frozenset[str]) -> tuple[list[dict], int]:
+    """The closure's own blocking set: the `UNKNOWN` residuals that reach a declared root.
+
+    Zero on the current tree -- the Phase-22 seal's "zero UNKNOWN residuals intersect the claimed
+    production profile" holds -- so an empty list is the measured answer and not an omission.
+    """
+    doc = read_json("forensics/atlas/phase22/compatibility-closure.json")
+    if not doc:
+        return [], 0
+    return ([residual_record(k, "UNKNOWN", True, "unknown-intersecting", 1, "compatibility-root")
+             for k in sorted(unknown_keys)], len(unknown_keys))
+
+
+def read_gemel_residuals() -> tuple[list[dict], int]:
+    """The checkpoint's residual census: the named `UNKNOWN` sets and the intersection key."""
+    doc = read_json("forensics/atlas/phase22/gemel-checkpoint.json")
+    if not doc:
+        return [], 0
+    census = doc["body"].get("residual_census") or {}
+    inter = bool(census.get("intersecting_root_keys"))
+    sets = census.get("unknown_sets") or {}
+    out = [residual_record(cls, "UNKNOWN", inter, "unknown", len(keys or []), cls)
+           for cls, keys in sorted(sets.items())]
+    return out, len(sets)
+
+
+def read_phase1_residuals() -> tuple[list[dict], int]:
+    """Phase-1 completeness: the residual-disposition classes, unknowns, missing and deferred."""
+    doc = read_json("forensics/atlas/phase1-completeness.json")
+    if not doc:
+        return [], 0
+    body = doc["body"]
+    out: list[dict] = []
+    for r in (body.get("residual_dispositions") or []):
+        cls = str(r.get("class"))
+        closed = bool(r.get("closed"))
+        public = bool(r.get("source_public") or r.get("binary_public") or r.get("must_export"))
+        out.append(residual_record(cls, "closed" if closed else "open", public,
+                                   "dispositioned" if closed else "open",
+                                   int(r.get("count", 1)), cls))
+    for u in (body.get("open_unknowns") or []):
+        out.append(residual_record(str(u), "UNKNOWN", False, "unknown", 1, "open_unknown"))
+    for m in (body.get("missing") or []):
+        out.append(residual_record(str(m), None, True, "un_dispositioned", 1, "missing"))
+    for d in (body.get("deferred") or []):
+        out.append(residual_record(str(d.get("plane")), "deferred", False, "deferred", 1, "deferred"))
+    return out, (len(body.get("residual_dispositions") or [])
+                 + len(body.get("open_unknowns") or []) + len(body.get("missing") or [])
+                 + len(body.get("deferred") or []))
+
+
+def read_symbol_residuals() -> tuple[list[dict], int]:
+    """The symbol reconciliation's five hard-residual classes per library.
+
+    A class is a residual only when it holds an entry; all ten are empty on the current tree, which
+    is the `docs/PARITY_MODEL.md` section 4 "zero hard residuals" measurement. The `checked` count
+    is the number of classes examined, so an empty result is a stated measurement, not silence.
+    """
+    doc = read_json("forensics/atlas/openssl-3.6.4-production/surface-reconciliation.json")
+    if not doc:
+        return [], 0
+    hard = (doc["body"].get("symbol_hard_residuals") or {})
+    out: list[dict] = []
+    checked = 0
+    for lib, classes in sorted(hard.items()):
+        for cls, entries in sorted((classes or {}).items()):
+            checked += 1
+            for e in (entries or []):
+                name = e.get("symbol") if isinstance(e, dict) else e
+                out.append(residual_record(f"{lib}/{cls}:{name}", None, True,
+                                           "un_dispositioned", 1, cls))
+    return out, checked
+
+
+def read_divergence_residuals() -> tuple[list[dict], int]:
+    """The divergence register: each obligation's disposition and its own blocking flag."""
+    doc = read_json("forensics/divergence-obligations.json")
+    if not doc:
+        return [], 0
+    rows = doc["body"].get("rows") or []
+    out = [residual_record(str(r.get("id")), str(r.get("disposition")) or None,
+                           bool(r.get("blocking")),
+                           "blocking" if r.get("blocking") else "dispositioned",
+                           1, str(r.get("class") or ""))
+           for r in rows]
+    return out, len(rows)
+
+
+def read_ownership_transition_residuals() -> tuple[list[dict], int]:
+    """The ownership-transition register: approved ledger-universe and phase-state corrections.
+
+    These are not unresolved residuals -- they are the approved changes to a ledger's universe and
+    the approved downward corrections to a derived phase state, each carrying the reason and
+    evidence that justify it -- so each is dispositioned `approved-transition`. An entry with no
+    recorded reason would be an un-dispositioned residual and a finding.
+    """
+    doc = read_json("forensics/ownership-transitions.json")
+    if not doc:
+        return [], 0
+    out: list[dict] = []
+    checked = 0
+    for key, kind in (("transitions", "universe-transition"),
+                      ("phase_state_transitions", "state-correction"),
+                      ("prerequisite_transitions", "metric-correction")):
+        entries = doc.get(key) or []
+        checked += len(entries)
+        for e in entries:
+            reason = e.get("reason")
+            ident = f"{kind}:{e.get('phase', e.get('metric', '?'))}"
+            out.append(residual_record(ident, "approved-transition" if reason else None, True,
+                                       "approved" if reason else "un_dispositioned", 1, kind))
+    return out, checked
+
+
+def read_prerequisite_residuals() -> tuple[list[dict], int]:
+    """The prerequisite plane: deferrals, deliberate divergences and unit-class dispositions."""
+    doc = read_json("forensics/prerequisites.json")
+    if not doc:
+        return [], 0
+    body = doc["body"]
+    out: list[dict] = []
+    for d in (body.get("deferrals") or []):
+        name = d.get("symbol") or d.get("authority_unit") or "deferral"
+        out.append(residual_record(f"deferral:{name}", "deferred", False, "deferred", 1,
+                                   "deferral"))
+    for d in (body.get("divergences") or []):
+        cls = str(d.get("class"))
+        name = d.get("owner_module") or "divergence"
+        out.append(residual_record(f"divergence:{name}", cls, False, "divergence", 1, cls))
+    groups = collections.Counter(str(u.get("class")) for u in (body.get("units") or []))
+    for cls, n in sorted(groups.items()):
+        reached = cls == "reached_by_a_named_construct"
+        out.append(residual_record(f"unit-class:{cls}", cls, reached,
+                                   "reached" if reached else "bounded", n, cls))
+    return out, (len(body.get("deferrals") or []) + len(body.get("divergences") or [])
+                 + len(body.get("units") or []))
+
+
+def read_register_residuals(path: str, classes: tuple[str, ...]) -> tuple[list[dict], int]:
+    """The `not-claimed`/`not-measured` surfaces of a Phase-18/19 boundary register.
+
+    A boundary surface is the register's explicit non-claim: it is bounded rather than measured, so
+    it carries the register's classification as its disposition and is not an `UNKNOWN`.
+    """
+    doc = read_json(path)
+    if not doc:
+        return [], 0
+    surfaces = doc.get("surfaces") or []
+    out = [residual_record(str(s.get("id")), str(s.get("classification")), False, "bounded", 1,
+                           str(s.get("classification")))
+           for s in surfaces if str(s.get("classification")) in classes]
+    return out, len(surfaces)
+
+
+def read_hostile_court_residuals() -> tuple[list[dict], int]:
+    """The Phase-18 hostile courts' residual counts.
+
+    A hostile residual -- a crash, OOM or timeout the candidate produced on hostile input where the
+    authority did not -- is an un-dispositioned defect and would fail the court. The recorded
+    divergences are the courts' classified value differences and carry their own disposition.
+    """
+    doc = read_json("artifacts/phase18/COURTS.json")
+    if not doc:
+        return [], 0
+    out: list[dict] = []
+    checked = 0
+    for c in (doc["body"].get("courts") or []):
+        if c.get("hostile_residual_count") is None and c.get("recorded_divergence_count") is None:
+            continue
+        checked += 1
+        name = str(c.get("court"))
+        hostile = int(c.get("hostile_residual_count") or 0)
+        recorded = int(c.get("recorded_divergence_count") or 0)
+        if hostile:
+            out.append(residual_record(f"{name}:hostile", None, True, "un_dispositioned",
+                                       hostile, "hostile-residual"))
+        if recorded:
+            out.append(residual_record(f"{name}:recorded-divergence", "recorded-divergence", True,
+                                       "recorded-divergence", recorded, "recorded-divergence"))
+    return out, checked
+
+
+def read_ct_residuals() -> tuple[list[dict], int]:
+    """CT-primitives' `separated` findings -- dispositioned, and explicitly NOT_CLAIMED."""
+    doc = read_json("artifacts/phase18/COURTS.json")
+    if not doc:
+        return [], 0
+    row = next((c for c in doc["body"].get("courts", [])
+                if c.get("court") == "CT-PRIMITIVES"), None)
+    if row is None:
+        return [], 0
+    findings = row.get("findings") or []
+    paths = row.get("paths") or []
+    out = [residual_record(str(f), "separated", True, "not-claimed-finding", 1, "ct")
+           for f in findings]
+    return out, len(paths) or len(findings)
+
+
+def read_asan_residuals() -> tuple[list[dict], int]:
+    """The ASan closure: layer findings (un-dispositioned defects) and the `not_reached` set."""
+    doc = read_json("artifacts/phase18/asan.json")
+    if not doc:
+        return [], 0
+    out: list[dict] = []
+    layers = doc.get("layers") or []
+    for layer in layers:
+        for f in (layer.get("findings") or []):
+            out.append(residual_record(f"{layer.get('layer')}:{f}", None, True,
+                                       "un_dispositioned", 1, "asan-layer-finding"))
+    for r in (doc.get("not_reached") or []):
+        out.append(residual_record(str(r), "not-reached", False, "bounded", 1, "not-reached"))
+    return out, len(layers)
+
+
+def read_miri_residuals() -> tuple[list[dict], int]:
+    """The Miri TCB suite: the tests Miri cannot interpret (bounded) and any problems (defects)."""
+    doc = read_json("artifacts/phase18/miri-tcb.json")
+    if not doc:
+        return [], 0
+    out: list[dict] = []
+    for u in (doc.get("unsupported") or []):
+        out.append(residual_record(str(u.get("test")), "unsupported-foreign-function", False,
+                                   "bounded", 1, "miri-unsupported"))
+    for p in (doc.get("problems") or []):
+        out.append(residual_record(str(p), None, True, "un_dispositioned", 1, "miri-problem"))
+    results = doc.get("results") or {}
+    return out, len(results) + len(out)
+
+
+def read_unsafe_residuals() -> tuple[list[dict], int]:
+    """The UNSAFE-FOOTPRINT growth check: a core module above its recorded ceiling is a residual.
+
+    The boundary layer (ffi, runtime, dso, engine, async, context) is allowed to grow; a core
+    module's `unsafe_sites`/`extern_c_fns` above `artifacts/phase18/unsafe-bounds.json` is a
+    footprint regression and is un-dispositioned, exactly as the Phase-18 register court reads it.
+    """
+    fp = read_json("forensics/atlas/unsafe-footprint.json")
+    bounds = read_json("artifacts/phase18/unsafe-bounds.json")
+    if not fp or not bounds:
+        return [], 0
+    default = bounds.get("default") or {}
+    ceiling = bounds.get("bounds") or {}
+    modules = fp["body"].get("modules") or []
+    out: list[dict] = []
+    for m in modules:
+        if str(m.get("classification")) != "core":
+            continue
+        b = ceiling.get(str(m.get("module")), default)
+        over = [metric for metric in ("unsafe_sites", "extern_c_fns")
+                if int(m.get(metric, 0)) > int(b.get(metric, 0))]
+        if over:
+            out.append(residual_record(f"{m.get('module')}:{'+'.join(over)}", None, True,
+                                       "un_dispositioned", 1, "unsafe-growth"))
+    return out, len(modules)
+
+
+def read_frf_residuals() -> tuple[list[dict], int]:
+    """The FRF store's residual tokens -- the sensitivity mutants each challenge injects.
+
+    These are control residuals, not candidate defects: a challenge's mutant perturbs the observed
+    axis precisely so the court detects it (`saw_defect`), and a residual produced is the challenge
+    succeeding. The register that says whether one blocks the candidate claim is the compiled claim
+    store: a residual intersects the profile only when a `sensitivity-backed` claim blocks on it, so
+    the intersection is read from `.frf/claims/` rather than assumed.
+    """
+    if not FRF_RESIDUALS.is_dir():
+        return [], 0
+    tokens: list[dict] = []
+    for p in sorted(FRF_RESIDUALS.glob("*.token.json")):
+        try:
+            tokens.append(json.loads(p.read_text(encoding="utf-8")))
+        except (OSError, json.JSONDecodeError):
+            continue
+    if not tokens:
+        return [], 0
+    blocked: set[str] = set()
+    for claim in read_frf_claims().values():
+        for b in (claim.get("blockers") or []):
+            blocked.add(b if isinstance(b, str) else json.dumps(b, sort_keys=True))
+    by_disp = collections.Counter()
+    blocking = collections.Counter()
+    for t in tokens:
+        disp = str(t.get("disposition") or "")
+        by_disp[disp] += 1
+        if str(t.get("residual_id")) in blocked:
+            blocking[disp] += 1
+    out = [residual_record(f"frf-mutant:{disp or 'none'}", disp or None, blocking[disp] > 0,
+                           "sensitivity-mutant", n, "frf-sensitivity-mutant")
+           for disp, n in sorted(by_disp.items())]
+    return out, len(tokens)
+
+
+# The reader for each source, keyed by name. A reader returns `(records, checked)`; `checked` is the
+# number of register rows examined, so a source that legitimately carries zero residuals states a
+# measurement rather than falling silent. The Phase-22 readers take the closure's own blocking set.
+RESIDUAL_READERS: dict[str, object] = {
+    "phase22-reconciliation": read_census_residuals,
+    "phase22-closure": read_closure_residuals,
+    "phase22-gemel-checkpoint": lambda keys: read_gemel_residuals(),
+    "phase1-completeness": lambda keys: read_phase1_residuals(),
+    "symbol-reconciliation": lambda keys: read_symbol_residuals(),
+    "divergence-obligations": lambda keys: read_divergence_residuals(),
+    "ownership-transitions": lambda keys: read_ownership_transition_residuals(),
+    "prerequisites": lambda keys: read_prerequisite_residuals(),
+    "hostile-boundary-register": lambda keys: read_register_residuals(
+        "artifacts/phase18/hostile-boundary-register.json", ("not-claimed", "not-measured")),
+    "performance-boundary-register": lambda keys: read_register_residuals(
+        "artifacts/phase19/performance-boundary-register.json", ("not-claimed", "not-measured")),
+    "hostile-courts": lambda keys: read_hostile_court_residuals(),
+    "ct-primitives": lambda keys: read_ct_residuals(),
+    "asan": lambda keys: read_asan_residuals(),
+    "miri": lambda keys: read_miri_residuals(),
+    "unsafe-footprint": lambda keys: read_unsafe_residuals(),
+    "frf-store": lambda keys: read_frf_residuals(),
+}
+
+
+def read_residual_evidence() -> dict:
+    """The committed residual evidence view the disposition is derived from.
+
+    A plain dict so the sensitivity control can deep-copy it and inject a residual without touching
+    the tree. Every record is read from a register; none is typed as present. `unknown_intersection`
+    is the closure's own blocking set, and each source records whether its register was present so
+    an absent register is a stated problem rather than a silently empty source.
+    """
+    closure = read_json("forensics/atlas/phase22/compatibility-closure.json")
+    unknown_keys = frozenset(
+        str(k) for k in ((closure or {}).get("body", {}).get("unknown_intersecting_root_keys")
+                        or []))
+    sources: dict[str, dict] = {}
+    for spec in RESIDUAL_SOURCES:
+        reader = RESIDUAL_READERS[spec.name]
+        records, checked = reader(unknown_keys)
+        sources[spec.name] = {
+            "present": (REPO_ROOT / spec.path).exists(),
+            "checked": checked,
+            "residuals": records,
+        }
+    return {
+        "profile": read_residual_profile(closure),
+        "unknown_intersecting_keys": sorted(unknown_keys),
+        "sources": sources,
+    }
+
+
+def residual_finding(source: str, rec: dict) -> str:
+    """The finding text for one residual that is un-dispositioned or `UNKNOWN`-intersecting."""
+    if not rec.get("disposition"):
+        return (f"residual {rec['id']!r} from {source} carries no disposition, so it is an "
+                "un-dispositioned residual a custodian claim cannot exclude "
+                "(docs/PARITY_MODEL.md section 5, docs/CUSTODIAN_CONTRACT.md section 6)")
+    return (f"residual {rec['id']!r} from {source} is `UNKNOWN` and intersects the claimed "
+            "production profile, so docs/CUSTODIAN_CONTRACT.md section 6's no-unresolved-residual-"
+            "intersecting-the-claimed-scope condition is not satisfied")
+
+
+def derive_residuals(ev: dict) -> dict:
+    """The disposition over an evidence view: per source, and the findings a real gap produces.
+
+    A pure function of the evidence view, so the sensitivity control can inject a residual and
+    re-derive. The findings are exactly two classes -- a residual with no disposition, and an
+    `UNKNOWN` residual that intersects the profile -- and a non-empty list is a `fail`, not a
+    verdict the court talks itself out of.
+    """
+    sources_out: list[dict] = []
+    residuals: list[dict] = []
+    findings: list[str] = []
+    totals = {
+        "sources": 0, "sources_present": 0, "checked": 0, "residuals": 0,
+        "dispositioned": 0, "un_dispositioned": 0, "unknown": 0,
+        "unknown_intersecting": 0, "intersecting": 0, "bounded": 0, "findings": 0,
+    }
+    for spec in RESIDUAL_SOURCES:
+        block = (ev.get("sources") or {}).get(spec.name)
+        recs = list((block or {}).get("residuals") or [])
+        state = "closed" if (block and block.get("present")) else "absent"
+        disp_counts: collections.Counter = collections.Counter()
+        n_res = n_disp = n_un = n_unk = n_unk_inter = n_inter = n_bounded = 0
+        for rec in recs:
+            count = int(rec.get("count", 1))
+            n_res += count
+            disp = rec.get("disposition")
+            if disp:
+                n_disp += count
+                disp_counts[str(disp)] += count
+            else:
+                n_un += count
+            if str(disp) == "UNKNOWN":
+                n_unk += count
+                if rec.get("intersects_production_profile"):
+                    n_unk_inter += count
+            if rec.get("intersects_production_profile"):
+                n_inter += count
+            if rec.get("state") == "bounded":
+                n_bounded += count
+            if not disp or (str(disp) == "UNKNOWN" and rec.get("intersects_production_profile")):
+                findings.append(residual_finding(spec.name, rec))
+                state = "open"
+        totals["sources"] += 1
+        totals["sources_present"] += 1 if (block and block.get("present")) else 0
+        totals["checked"] += int((block or {}).get("checked", 0))
+        totals["residuals"] += n_res
+        totals["dispositioned"] += n_disp
+        totals["un_dispositioned"] += n_un
+        totals["unknown"] += n_unk
+        totals["unknown_intersecting"] += n_unk_inter
+        totals["intersecting"] += n_inter
+        totals["bounded"] += n_bounded
+        sources_out.append({
+            "source": spec.name,
+            "path": spec.path,
+            "what": spec.what,
+            "checked": int((block or {}).get("checked", 0)),
+            "residuals": n_res,
+            "dispositioned": n_disp,
+            "un_dispositioned": n_un,
+            "unknown": n_unk,
+            "unknown_intersecting": n_unk_inter,
+            "intersecting": n_inter,
+            "dispositions": dict(sorted(disp_counts.items())),
+            "state": state,
+        })
+        for rec in recs:
+            row = {
+                "source": spec.name,
+                "id": rec["id"],
+                "disposition": rec.get("disposition"),
+                "intersects_production_profile": bool(rec.get("intersects_production_profile")),
+                "state": rec.get("state"),
+            }
+            if int(rec.get("count", 1)) != 1:
+                row["count"] = int(rec.get("count"))
+            if rec.get("class") is not None:
+                row["class"] = rec.get("class")
+            residuals.append(row)
+    totals["findings"] = len(findings)
+    residuals.sort(key=lambda r: (r["source"], r["id"]))
+    return {
+        "profile": ev.get("profile") or {},
+        "sources": sources_out,
+        "residuals": residuals,
+        "totals": totals,
+        "findings": findings,
+    }
+
+
+def residuals_problems(ev: dict, derived: dict) -> list[str]:
+    """Internal consistency of the disposition itself, distinct from its findings.
+
+    The findings are real residual gaps; these are defects in the derivation or the evidence view,
+    which make the verdict `fail` on their own account rather than letting an incomplete read pass.
+    """
+    problems: list[str] = []
+    for spec in RESIDUAL_SOURCES:
+        block = (ev.get("sources") or {}).get(spec.name)
+        if block is None or not block.get("present"):
+            problems.append(
+                f"the residual source {spec.name} ({spec.path}) is absent, so its residuals were "
+                f"not read and the disposition is incomplete")
+    totals = derived["totals"]
+    if totals["residuals"] != totals["dispositioned"] + totals["un_dispositioned"]:
+        problems.append(
+            "the residual total is not its dispositioned and un-dispositioned parts: "
+            f"{totals['residuals']} != {totals['dispositioned']} + {totals['un_dispositioned']}")
+    if totals["unknown_intersecting"] > totals["unknown"]:
+        problems.append(
+            f"the UNKNOWN-intersecting count {totals['unknown_intersecting']} exceeds the UNKNOWN "
+            f"count {totals['unknown']}")
+    return problems
+
+
+def residuals_sensitivity_control(ev: dict) -> dict:
+    """Prove the disposition can fail: inject an un-dispositioned and an intersecting `UNKNOWN`.
+
+    Three synthetic evidence views are derived beside the real one: a residual given no disposition,
+    a residual recorded `UNKNOWN` and flagged as intersecting the profile, and a residual recorded
+    `UNKNOWN` but *not* intersecting. The control is honest only when the real view is closed (zero
+    findings) *and* the first two injections are detected *and* the third produces no finding -- so a
+    court that cannot tell a dispositioned residual from an absent one, or an intersecting `UNKNOWN`
+    from a harmless one, cannot pass.
+    """
+    base = derive_residuals(ev)
+    base_closed = (not base["findings"] and base["totals"]["un_dispositioned"] == 0
+                   and base["totals"]["unknown_intersecting"] == 0)
+
+    victim = next((spec.name for spec in RESIDUAL_SOURCES
+                   if (ev.get("sources") or {}).get(spec.name, {}).get("present")), RESIDUAL_SOURCES[0].name)
+
+    def injected(record: dict) -> dict:
+        view = copy.deepcopy(ev)
+        view["sources"][victim]["residuals"] = \
+            list(view["sources"][victim].get("residuals") or []) + [record]
+        return derive_residuals(view)
+
+    d_un = injected(residual_record("injected-un-dispositioned", None, True, "un_dispositioned"))
+    d_inter = injected(residual_record("injected-unknown-intersecting", "UNKNOWN", True, "unknown"))
+    d_clean = injected(residual_record("injected-unknown-not-intersecting", "UNKNOWN", False,
+                                       "unknown"))
+    caught_un = any("no disposition" in f for f in d_un["findings"])
+    caught_inter = any("intersects the claimed" in f for f in d_inter["findings"])
+    specificity = not d_clean["findings"]
+    return {
+        "baseline_closed": base_closed,
+        "baseline_residuals": base["totals"]["residuals"],
+        "baseline_unknown": base["totals"]["unknown"],
+        "baseline_unknown_intersecting": base["totals"]["unknown_intersecting"],
+        "injected_source": victim,
+        "injected_un_dispositioned_findings": len(d_un["findings"]),
+        "injected_unknown_intersecting_findings": len(d_inter["findings"]),
+        "injected_unknown_not_intersecting_findings": len(d_clean["findings"]),
+        "caught_un_dispositioned": caught_un,
+        "caught_unknown_intersecting": caught_inter,
+        "specificity_holds": specificity,
+        "honest": bool(base_closed and caught_un and caught_inter and specificity),
+    }
+
+
+def residual_court(name: str) -> dict:
+    """`RT-CUSTODIAN-RESIDUALS`: disposition every residual, and fail on an `UNKNOWN`-intersecting one.
+
+    Stages no probe. It reads the residual registers the earlier strata and the FRF store write --
+    the Phase-22 census and its closure, the Phase-1 completeness and symbol reconciliation, the
+    divergence, ownership-transition and prerequisite planes, the two boundary registers, the
+    hostile/CT/ASan/Miri receipts and the unsafe-footprint ceiling -- and records, per source, every
+    residual with its disposition and whether it intersects the claimed production profile. The
+    verdict is `pass` only when every register was read, every residual carries a disposition, no
+    `UNKNOWN` intersects the profile, and the control is honest; a real gap is a `finding` and a
+    `fail`.
+    """
+    ev = read_residual_evidence()
+    derived = derive_residuals(ev)
+    control = residuals_sensitivity_control(ev)
+    problems = residuals_problems(ev, derived)
+
+    findings = list(derived["findings"])
+    totals = derived["totals"]
+    verdict = "pass" if (
+        not problems and control["honest"] and not findings
+        and totals["un_dispositioned"] == 0 and totals["unknown_intersecting"] == 0
+    ) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it dispositions every residual the earlier strata and the FRF store "
+            "record. It reads the registers that carry them -- the Phase-22 cross-plane residual "
+            "census and the closure's `unknown_intersecting_root_keys`, the Phase-22 checkpoint's "
+            "named `UNKNOWN` sets, the Phase-1 archaeology completeness and the symbol "
+            "reconciliation, the divergence, ownership-transition and prerequisite planes, the "
+            "Phase-18 hostile-boundary and Phase-19 performance-boundary registers, the Phase-18 "
+            "court residual counts, the CT-primitives `separated` findings, the ASan closure and "
+            "the Miri TCB receipts, the UNSAFE-FOOTPRINT growth ceiling and the FRF store's own "
+            "residual tokens -- maintaining no list of its own (docs/PHASE-20-SUBPHASES.md section "
+            "3.4). For each residual it records `{source, id, disposition, "
+            "intersects_production_profile, state}`; every residual must carry a disposition and "
+            "no `UNKNOWN` residual may intersect the claimed production profile "
+            "(docs/CUSTODIAN_CONTRACT.md sections 6 and 8, docs/PARITY_MODEL.md section 1). The "
+            "court is pass only when every register was read, the disposition is complete, and a "
+            "synthetic view with an un-dispositioned residual and one with an `UNKNOWN`-intersecting "
+            "residual each detects the gap while an `UNKNOWN` that does not intersect does not "
+            "(section 3.2)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the residual-disposition court reads the registers the earlier strata and the FRF "
+            "store write and stages no artifacts/phase20/probes/ pair, so it takes no transcript to "
+            "diff and carries no FRF declaration"
+        ),
+        "residual_authority": [rel(CUSTODIAN_CONTRACT), rel(PARITY_MODEL),
+                               rel(REPO_ROOT / "docs" / "PHASE-22-SUBPHASES.md")],
+        "production_profile": derived["profile"],
+        "sources": derived["sources"],
+        "residuals": derived["residuals"],
+        "totals": totals,
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1379,15 +2191,18 @@ def main(argv: list[str]) -> int:
 
     records: list[dict] = []
     for name, filename in COURTS:
-        # 20.1's maturity court and 20.2's receipt-closure court stage no probe: their subjects are
-        # committed evidence, so they are computed here rather than read back from disk, and no
-        # digest cycle forms. Phase 20 owns no export, so no differential probe over a symbol set is
-        # its evidence.
+        # 20.1's maturity court, 20.2's receipt-closure court and 20.3's residual-disposition court
+        # stage no probe: their subjects are committed evidence, so they are computed here rather
+        # than read back from disk, and no digest cycle forms. Phase 20 owns no export, so no
+        # differential probe over a symbol set is its evidence.
         if name == CUSTODIAN_MATURITY:
             records.append(custodian_maturity_court(name))
             continue
         if name == RECEIPT_CLOSURE:
             records.append(receipt_closure_court(name))
+            continue
+        if name == CUSTODIAN_RESIDUALS:
+            records.append(residual_court(name))
             continue
         src = REPO_ROOT / "courts" / "phase20" / str(filename)
         records.append({"court": name, "verdict": "fail", "stage": "probe-missing",
@@ -1424,8 +2239,23 @@ def main(argv: list[str]) -> int:
             "-- every stratum's chain is complete, the covering claims carry zero blockers and no "
             "export is courted by no court -- so it records zero findings; a real gap would be a "
             "finding and a `fail`, and a synthetic evidence view with a receipt removed, a claim "
-            "blocker injected or a stale candidate identity detects the gap. The other three courts "
-            "(`RT-CUSTODIAN-RESIDUALS` 20.3, `RT-SUBSTITUTION-WITNESS` 20.4 and "
+            "blocker injected or a stale candidate identity detects the gap. `RT-CUSTODIAN-RESIDUALS` "
+            "is 20.3's court: it stages no probe and dispositions every residual the earlier strata "
+            "and the FRF store record -- the Phase-22 cross-plane census and the closure's "
+            "`unknown_intersecting_root_keys`, the Phase-1 completeness and symbol reconciliation, "
+            "the divergence, ownership-transition and prerequisite planes, the two boundary "
+            "registers, the "
+            "hostile/CT/ASan/Miri receipts, the unsafe-footprint ceiling and the FRF store's own "
+            "residuals. For each residual it records `{source, id, disposition, "
+            "intersects_production_profile, state}`; every residual must carry a disposition and no "
+            "`UNKNOWN` residual may intersect the claimed production profile. On the current tree "
+            "there are 167 `UNKNOWN` residuals (all POD_NAME_NOT_IN_ATLAS in the pod-contract "
+            "plane) and the closure records that zero of them intersect a declared compatibility "
+            "root, so the court records zero findings and says so precisely; a real un-dispositioned "
+            "or `UNKNOWN`-intersecting residual would be a finding and a `fail`, and a synthetic "
+            "evidence view with an un-dispositioned residual and one with an `UNKNOWN`-intersecting "
+            "residual detects the gap while an `UNKNOWN` that does not intersect does not. The "
+            "other two courts (`RT-SUBSTITUTION-WITNESS` 20.4 and "
             "`CUSTODIAN-BOUNDARY-REGISTER` 20.5) are named and `pending`. This stratum owns no "
             "exported symbol, so no differential probe over a symbol set is its evidence: the "
             "subject is the custodian claim over a finished implementation, with no FIPS "
@@ -1443,11 +2273,24 @@ def main(argv: list[str]) -> int:
         InputRef(name="phase1-completeness", path=PHASE1_COMPLETENESS),
         InputRef(name="phase2-courts", path=PHASE2_COURTS),
         InputRef(name="phase17-courts", path=PHASE17_COURTS),
+        InputRef(name="phase18-courts", path=PHASE18_COURTS),
         InputRef(name="downstream-corpus", path=DOWNSTREAM),
         InputRef(name="provider-algorithms", path=PROVIDERS),
         InputRef(name="provider-court-coverage", path=PROVIDER_COVERAGE),
         InputRef(name="court-coverage", path=COURT_COVERAGE),
         InputRef(name="court-coverage-rows", path=COURT_COVERAGE_ROWS),
+        InputRef(name="divergence-obligations", path=DIVERGENCE_OBLIGATIONS),
+        InputRef(name="prerequisites", path=PREREQUISITES),
+        InputRef(name="phase22-reconciliation", path=PHASE22_RECONCILIATION),
+        InputRef(name="phase22-closure", path=PHASE22_CLOSURE),
+        InputRef(name="phase22-gemel", path=PHASE22_GEMEL),
+        InputRef(name="surface-reconciliation", path=SURFACE_RECONCILIATION),
+        InputRef(name="hostile-boundary-register", path=HOSTILE_BOUNDARY_REGISTER),
+        InputRef(name="performance-boundary-register", path=PERFORMANCE_BOUNDARY_REGISTER),
+        InputRef(name="asan-closure", path=ASAN_CLOSURE),
+        InputRef(name="miri-tcb", path=MIRI_TCB),
+        InputRef(name="unsafe-footprint", path=UNSAFE_FOOTPRINT),
+        InputRef(name="unsafe-bounds", path=UNSAFE_BOUNDS),
         InputRef(name="gen-frf-courts", path=GEN_FRF_COURTS_SRC),
         InputRef(name="frf-readme", path=FRF_README),
         InputRef(name="gemel-trajectory", path=GEMEL_TRAJECTORY),
@@ -1480,6 +2323,21 @@ def main(argv: list[str]) -> int:
                   f"control honest={c['honest']} "
                   f"injected-missing-receipt->{c['injected_missing_receipt_gaps']} gap(s) "
                   f"injected-blocker->{c['injected_blocker_count']})")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == CUSTODIAN_RESIDUALS:
+            c = r["control"]
+            t = r["totals"]
+            print(f"  {r['court']:<32} pass   (no probe, disposition: "
+                  f"{t['sources_present']}/{t['sources']} source(s) read, "
+                  f"{t['residuals']} residual record(s) across the sources "
+                  f"({t['un_dispositioned']} un-dispositioned, {t['unknown']} UNKNOWN, "
+                  f"{t['unknown_intersecting']} UNKNOWN intersecting), "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"injected-un-dispositioned->{c['injected_un_dispositioned_findings']} finding(s) "
+                  f"injected-unknown-intersecting->{c['injected_unknown_intersecting_findings']} "
+                  f"finding(s) injected-unknown-clean->"
+                  f"{c['injected_unknown_not_intersecting_findings']} finding(s))")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":
