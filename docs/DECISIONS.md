@@ -35710,3 +35710,46 @@ default 3.6.4 production candidate compiles none of the façades (D534). The cou
 generated `src/compat/layout_generated.rs` from the committed measurement and checks the cfg gating,
 so the default build's artefacts, symbols, layouts and semantics are unchanged. `abi-history-facades`
 moves to `implemented`/closed and the stratum's `open_in_this_stratum` falls from eleven to ten.
+
+## D541 -- the semantic multitrack courts read authority A and authority B through one vocabulary, and a difference is never erased
+
+Phase 23.8 lands the semantic multitrack courts (`courts/phase23/semantic_probe.c`, the plane
+`forensics/multitrack/semantic-courts.json` with the record kind `semantic_observation`, the
+generator `forensics/tools/gen_semantic_courts.py`, court `RT-SEMANTIC-COURTS`, unit
+`semantic-courts`), the oracle-to-oracle and candidate-to-authority comparison the brief requires.
+The measured corrections are recorded in `docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.11 and
+checked by the court.
+
+**The pair that is real is 3.6.3 vs 3.6.4, and it is measured, not asserted.** Both authorities are
+built in the forensic court venue, so the shared probe is compiled and run once against each prefix
+and its raw transcript (stdout, stderr and exit) is preserved *in* the artefact. The measured
+3.6.3 -> 3.6.4 movement is ten classified differences over twenty observations: seven version-stamp
+readings (`release_identity`, tied to the `macro_value` rows the 23.6 engine already carries), two
+added declarations (`declaration_added`: `SSL_VALUE_QUIC_MAX_PENDING_CONNS` and
+`X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH`) and one error-reason reading (`declaration_added`). The
+ten agreeing observations include the four exported symbols whose machine-code size the 23.6 engine
+records changed (`OSSL_parse_url`, `BN_uadd`, `BN_ucmp`, `OPENSSL_uni2utf8`): their behaviour agrees,
+which corroborates the engine's adjudication that the `st_size` movement is an implementation-size
+observation and not an ABI contract change.
+
+**The adapters normalize the shape and preserve the difference, and the court proves it.** Where a
+declaration differs across the pair the probe carries a side-specific `#ifdef` adapter that emits the
+same `OBS <key>=<value>` line on both sides: the value on the side that declares it, the literal
+`<absent>` on the side that does not. An adapter that mapped both sides to the same reading would
+erase the difference under investigation; the court re-derives every normalized observation from the
+preserved raw bytes through the same adapter and refuses the erasure, and its sensitivity control
+injects exactly that (plus a probe read against the wrong authority and a difference left
+unclassified) and requires each caught with specificity holding.
+
+**Everything is a classified release delta, and the candidate-to-authority dimension is not
+duplicated.** Each divergence names the fine delta dimension and the entity id the 23.6 engine keys
+its row by, and the court requires the row to resolve in the committed
+`forensics/deltas/openssl-3.6.3--openssl-3.6.4.json`; the `error.reason.*` readings name
+`error_behavior`, the dimension the engine records absent for want of a committed per-authority
+plane, so 23.8 supplies the behavioural reading rather than restating a claim. The
+candidate-to-authority dimension is discharged by the existing Phase-2 ABI family and Phase-17
+runtime family, which the plane names and the court verifies are registered and passing; 23.8 adds
+the shared vocabulary the plan requires and stages no duplicate court. A pair the venue cannot
+execute -- the 0.9.8zh epoch, which lives in the separately pinned historical venue -- is recorded
+`not_run` with its reason and is never counted as passing. `semantic-courts` moves to
+`implemented`/closed and the stratum's `open_in_this_stratum` falls from ten to nine.

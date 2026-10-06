@@ -90,10 +90,10 @@
         "closure": "the `RT-SEMANTIC-COURTS` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-SEMANTIC-COURTS is pending",
+        "measurement_state": "complete",
+        "observation": "RT-SEMANTIC-COURTS is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "semantic-courts",
         "what": "the oracle-to-oracle (authority A vs authority B) and candidate-to-authority courts, with side-specific adapters that emit the same normalized observation vocabulary, so the two sides of a comparison are read the same way"
@@ -212,8 +212,8 @@
       "contract_units": 17,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 7,
-      "open_in_this_stratum": 10,
+      "implemented": 8,
+      "open_in_this_stratum": 9,
       "owned": 17,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -249,12 +249,12 @@
     {
       "name": "phase-23-plan",
       "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
-      "sha256": "5ddeb500c799d76995782355fb0188c2aba2b084af7480afb84215e9d3a05e04"
+      "sha256": "20887197d4d698325d7d2895ac5fddbcdc52c9abe2a270725dadb7900a55a71a"
     },
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "e5b949ecd58481b7882b3f6fece8c05ce64d03217c1ace6f289e84c9a49ea75c"
+      "sha256": "dc843e904a08f539ea0995c2092b6e6c6138f0063495f02f1003c50432af2778"
     }
   ],
   "kind": "phase23-obligations",

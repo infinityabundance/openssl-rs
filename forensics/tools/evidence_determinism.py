@@ -171,6 +171,13 @@ GENERATORS_BEFORE_LEDGERS = [
     # a cargo-visible generated file cannot drift from the measurement. (`--measure` runs only in
     # the historical venue and writes the measurement itself; the court never needs a compiler.)
     "forensics/tools/gen_abi_facades.py",
+    # Phase 23.8's semantic multitrack courts. Its default run is a pure function of the committed
+    # artefact's own preserved raw transcripts: it re-derives every normalized observation through
+    # the same adapter and re-classifies every difference against the committed 23.6 delta engine,
+    # so a stale committed plane is a failure rather than a silent divergence. (`--measure` compiles
+    # and runs the probe against both authorities and runs only in the court venue; the court and
+    # this re-derivation need neither a compiler nor an authority prefix.)
+    "forensics/tools/gen_semantic_courts.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -349,6 +356,11 @@ COMPARED = [
     # (`forensics/multitrack/abi-facades.json`) is a historical-venue measurement, compared by the
     # RT-ABI-HISTORY-FACADES court against its provenance rather than regenerated here.
     "src/compat/layout_generated.rs",
+    # Phase 23.8's normalized oracle-to-oracle observations and the raw transcripts they were
+    # re-derived from. A pure function of those preserved raw bytes and the committed 23.6 delta, so
+    # a hand edit to a normalized reading or a classification is a failure rather than a silent
+    # divergence -- which is exactly the erasure the court's sensitivity control injects.
+    "forensics/multitrack/semantic-courts.json",
 ]
 
 # ---------------------------------------------------------------------------

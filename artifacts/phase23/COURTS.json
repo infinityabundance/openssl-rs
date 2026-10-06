@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-RELEASE-CATALOG` is 23.1's court: the release catalogue and its lineage. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, both derived from forensics/multitrack/release-archaeology.json -- the official OpenSSL release timeline, the git tag each release names and the commit it peels to, and the nearest release ancestor the git graph gives it. It establishes that the graph begins at OpenSSL 0.9.1c (23 December 1998), that every upstream mainline final is present with no unexplained gap, that a pre-release is classified and never promoted to final or to the `latest-stable` alias merely by sorting higher, that the lineage is a typed DAG whose parallel branches are branch_fork edges rather than a false linear mainline, that every node is schema-valid with provenance, and that SSLeay is provenance ancestry only. A deleted release, a `final` flipped to `beta`, a repointed parent edge and a `latest-stable` pointed at a beta are each detected with specificity holding on the honest catalogue. A passing catalogue is a catalogue, not a compatibility claim: no edge says any release is compatible with any other. `RT-AUTHORITY-NODES` is 23.2's court: the authority-node registry. It stages no probe and reads forensics/authority-nodes.json and the records it is derived from -- the release catalogue, the admitted-authority registry, the build records and the historical acquisition and build receipts -- and establishes that every node is schema-valid, content-addressed and backed by an actual build receipt; that release identity (release_id, git) is proven against the catalogue and kept separate from platform/profile identity; that the admitted pair's source manifests still reproduce; and that an unavailable authority is recorded unavailable and is never a node. A built-authority claim with no receipt, a dropped required identity field, and a source digest asserting tag == tarball without proof are each detected with specificity holding. `RT-ATLAS-PARAMETERIZATION` is 23.3's court: the parameterized atlases. Its instrument is the generator itself: it reads forensics/atlas/parameterization-receipt.json, the committed default-authority alias and forensics/atlas/openssl-0.9.8zh-historical/plane-census.json, re-derives every census through the same generator, corroborates the historical authority's decisive absences (providers, provider registrations, QUIC) against its committed source manifest, and re-runs the authority-parameterized archaeology generators for the 3.6.4 production authority, asserting its committed plane is byte-identical. The default is the committed alias, never the catalogue's `latest-stable` (openssl-4.0.3); swapping the authority argument changes the produced census, so a hidden production fallback is caught, and a measured absence with no provenance or a nonzero count is refused. The one pre-existing, disclosed drift (parity-obligations.json) is measured live and undone, never applied. `RT-LINEAGE-EDGES` is 23.4's court: the typed lineage edges. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, and establishes that every edge is schema-valid, typed and directed, with its stated sense following the evidence's chronology and its provenance resolving; that the graph is a DAG whose parallel supported branches (1.0.2, 1.1.1, 3.x, 4.x) are typed branch_fork edges rather than a false linear mainline; that a date-order chronological_successor edge is never presented as an ABI proof; that the declared_abi_compatibility edges are marked declarations scoped to their declared family; and that every kind the vocabulary names but the evidence cannot settle is recorded absent with a reason. A reversed edge direction, a date-order edge relabelled declared_abi_compatibility, an introduced cycle and an edge stripped of provenance are each detected with specificity holding. A passing edge set is a set of relationships, not a compatibility claim. `RT-ENTITY-LINEAGE` is 23.5's court: the entity lineage. It stages no probe and reads forensics/multitrack/entity-lineage.json and the committed atlases it derives from, and establishes that every row is schema-valid, provenanced and names the two releases, both entities, the strong signals and a confidence; that a settled relation rests on a strong signal and never on a fuzzy nomination; that same_entity rows are the same entity and reproduce as such from the atlases; that no relation is settled on the authority-scoped install prefix moving; that no entity is dropped, silently merged or both renamed and split; and that the plane names its coverage boundary and its absent relations. The committed differential atlas corroborates the per-plane counts independently. A same_entity off name-only similarity, a renamed_to that is really a split, a settled relation with no strong signal and a silent merge are each detected with specificity holding. A passing entity plane records what became of each entity and says nothing about compatibility. `RT-DELTA-ENGINE` is 23.6's court: the semantic compatibility delta. It stages no probe and reads the committed edge deltas under forensics/deltas/ and the committed atlases and entity lineage they derive from, and establishes that every receipt is a schema-valid delta_receipt, every row is directed and dimension-specific with evidence, a confidence and an adjudication, every row reproduces from the atlases and the entity lineage, the measured and absent dimension sets are complete and disjoint, and no row or evidence path is a source-line diff standing in for the delta. A composed path equals the composition of its edge deltas, and a pairwise combination the plan forbids is recorded as a gap rather than committed. An unclassified change, a composed path that disagrees with its edges, a row with no evidence and a dimension the evidence cannot support are each detected with specificity holding. A passing delta records the changed surface between two named nodes; it is not a compatibility claim about either. `RT-ABI-HISTORY-FACADES` is 23.7's court: the compatibility-policy layer and the historical ABI/history façades. It stages no probe and reads forensics/multitrack/abi-facades.json, the generated src/compat/layout_generated.rs and the compat sources the build gating lives in, and establishes that every record is a schema-valid abi_facade naming an explicit adapter rather than a blind cast; that every historical layout is measured from the 0.9.8zh headers and its header hash resolves in the committed source manifest while the production authority marks the same struct opaque (the 1.1.0 opacity transition); that a prototype's eras genuinely differ and its canonical declaration is the production atlas's own; that the ENGINE -> Provider -> no-ENGINE architecture and the init/thread epochs are the census's own; and that the generated repr(C) size/alignment/offset assertions are exactly what the measurement yields. The default 3.6.4 production build is unaffected: every façade module is cfg-gated behind the non-default compatibility selection, which build.rs resolves through the committed default-authority alias. A perturbed struct offset, a provider in a pre-provider epoch and a blind-cast façade are each detected with specificity holding, and the plane names the boundary of what is not established (the 1.0.x epoch and the pre-1.1.0 aggregates it does not cover). A passing façade plane establishes a small historical epoch; it is not a source or binary compatibility claim about any release. Phase 23 owns no exported symbol, so no differential probe over a symbol set is its evidence, and its remaining ten courts -- RT-SEMANTIC-COURTS, RT-COMPATIBILITY-VIEWS, RT-HISTORICAL-POPULATION, RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with the subphases that land them (23.8 through 23.17). The one thing the model forbids everywhere is a single boolean: compatibility is directional and dimension-specific, a cross-version receipt is never inherited, an authority is named explicitly and singularly, and a historical vulnerability is observed but never reintroduced. docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "`RT-RELEASE-CATALOG` is 23.1's court: the release catalogue and its lineage. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, both derived from forensics/multitrack/release-archaeology.json -- the official OpenSSL release timeline, the git tag each release names and the commit it peels to, and the nearest release ancestor the git graph gives it. It establishes that the graph begins at OpenSSL 0.9.1c (23 December 1998), that every upstream mainline final is present with no unexplained gap, that a pre-release is classified and never promoted to final or to the `latest-stable` alias merely by sorting higher, that the lineage is a typed DAG whose parallel branches are branch_fork edges rather than a false linear mainline, that every node is schema-valid with provenance, and that SSLeay is provenance ancestry only. A deleted release, a `final` flipped to `beta`, a repointed parent edge and a `latest-stable` pointed at a beta are each detected with specificity holding on the honest catalogue. A passing catalogue is a catalogue, not a compatibility claim: no edge says any release is compatible with any other. `RT-AUTHORITY-NODES` is 23.2's court: the authority-node registry. It stages no probe and reads forensics/authority-nodes.json and the records it is derived from -- the release catalogue, the admitted-authority registry, the build records and the historical acquisition and build receipts -- and establishes that every node is schema-valid, content-addressed and backed by an actual build receipt; that release identity (release_id, git) is proven against the catalogue and kept separate from platform/profile identity; that the admitted pair's source manifests still reproduce; and that an unavailable authority is recorded unavailable and is never a node. A built-authority claim with no receipt, a dropped required identity field, and a source digest asserting tag == tarball without proof are each detected with specificity holding. `RT-ATLAS-PARAMETERIZATION` is 23.3's court: the parameterized atlases. Its instrument is the generator itself: it reads forensics/atlas/parameterization-receipt.json, the committed default-authority alias and forensics/atlas/openssl-0.9.8zh-historical/plane-census.json, re-derives every census through the same generator, corroborates the historical authority's decisive absences (providers, provider registrations, QUIC) against its committed source manifest, and re-runs the authority-parameterized archaeology generators for the 3.6.4 production authority, asserting its committed plane is byte-identical. The default is the committed alias, never the catalogue's `latest-stable` (openssl-4.0.3); swapping the authority argument changes the produced census, so a hidden production fallback is caught, and a measured absence with no provenance or a nonzero count is refused. The one pre-existing, disclosed drift (parity-obligations.json) is measured live and undone, never applied. `RT-LINEAGE-EDGES` is 23.4's court: the typed lineage edges. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, and establishes that every edge is schema-valid, typed and directed, with its stated sense following the evidence's chronology and its provenance resolving; that the graph is a DAG whose parallel supported branches (1.0.2, 1.1.1, 3.x, 4.x) are typed branch_fork edges rather than a false linear mainline; that a date-order chronological_successor edge is never presented as an ABI proof; that the declared_abi_compatibility edges are marked declarations scoped to their declared family; and that every kind the vocabulary names but the evidence cannot settle is recorded absent with a reason. A reversed edge direction, a date-order edge relabelled declared_abi_compatibility, an introduced cycle and an edge stripped of provenance are each detected with specificity holding. A passing edge set is a set of relationships, not a compatibility claim. `RT-ENTITY-LINEAGE` is 23.5's court: the entity lineage. It stages no probe and reads forensics/multitrack/entity-lineage.json and the committed atlases it derives from, and establishes that every row is schema-valid, provenanced and names the two releases, both entities, the strong signals and a confidence; that a settled relation rests on a strong signal and never on a fuzzy nomination; that same_entity rows are the same entity and reproduce as such from the atlases; that no relation is settled on the authority-scoped install prefix moving; that no entity is dropped, silently merged or both renamed and split; and that the plane names its coverage boundary and its absent relations. The committed differential atlas corroborates the per-plane counts independently. A same_entity off name-only similarity, a renamed_to that is really a split, a settled relation with no strong signal and a silent merge are each detected with specificity holding. A passing entity plane records what became of each entity and says nothing about compatibility. `RT-DELTA-ENGINE` is 23.6's court: the semantic compatibility delta. It stages no probe and reads the committed edge deltas under forensics/deltas/ and the committed atlases and entity lineage they derive from, and establishes that every receipt is a schema-valid delta_receipt, every row is directed and dimension-specific with evidence, a confidence and an adjudication, every row reproduces from the atlases and the entity lineage, the measured and absent dimension sets are complete and disjoint, and no row or evidence path is a source-line diff standing in for the delta. A composed path equals the composition of its edge deltas, and a pairwise combination the plan forbids is recorded as a gap rather than committed. An unclassified change, a composed path that disagrees with its edges, a row with no evidence and a dimension the evidence cannot support are each detected with specificity holding. A passing delta records the changed surface between two named nodes; it is not a compatibility claim about either. `RT-ABI-HISTORY-FACADES` is 23.7's court: the compatibility-policy layer and the historical ABI/history façades. It stages no probe and reads forensics/multitrack/abi-facades.json, the generated src/compat/layout_generated.rs and the compat sources the build gating lives in, and establishes that every record is a schema-valid abi_facade naming an explicit adapter rather than a blind cast; that every historical layout is measured from the 0.9.8zh headers and its header hash resolves in the committed source manifest while the production authority marks the same struct opaque (the 1.1.0 opacity transition); that a prototype's eras genuinely differ and its canonical declaration is the production atlas's own; that the ENGINE -> Provider -> no-ENGINE architecture and the init/thread epochs are the census's own; and that the generated repr(C) size/alignment/offset assertions are exactly what the measurement yields. The default 3.6.4 production build is unaffected: every façade module is cfg-gated behind the non-default compatibility selection, which build.rs resolves through the committed default-authority alias. A perturbed struct offset, a provider in a pre-provider epoch and a blind-cast façade are each detected with specificity holding, and the plane names the boundary of what is not established (the 1.0.x epoch and the pre-1.1.0 aggregates it does not cover). A passing façade plane establishes a small historical epoch; it is not a source or binary compatibility claim about any release. `RT-SEMANTIC-COURTS` is 23.8's court: the semantic multitrack courts. It stages no probe at court time: the shared probe courts/phase23/semantic_probe.c is compiled and run against both authorities in the court venue, and the court re-runs the authority-to-authority comparison from the raw transcripts the committed plane preserves. It establishes that both sides emit the same normalized observation vocabulary; that the side-specific adapters for the declarations that differ across the pair preserve the difference rather than erasing it; that the committed observations reproduce from the raw bytes through the same adapter; that every observed difference is a classified release delta resolving in the committed 23.6 delta engine (or in a dimension it records absent with its reason); that the candidate-to-authority dimension is discharged by named, passing existing Phase-2 and Phase-17 courts rather than duplicated; and that a pair the venue cannot execute is recorded not-run with its reason. An adapter that normalizes away a real difference, a probe read against the wrong authority and a difference left unclassified are each detected with specificity holding. A passing semantic court is an instrument: it records the movement between two named authorities and is not a compatibility claim about either. Phase 23 owns no exported symbol, so no differential probe over a symbol set is its evidence, and its remaining nine courts -- RT-COMPATIBILITY-VIEWS, RT-HISTORICAL-POPULATION, RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with the subphases that land them (23.9 through 23.17). The one thing the model forbids everywhere is a single boolean: compatibility is directional and dimension-specific, a cross-version receipt is never inherited, an authority is named explicitly and singularly, and a historical vulnerability is observed but never reintroduced. docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "catalog_counts": {
@@ -547,6 +547,541 @@
         "probe": "",
         "problems": [],
         "verdict": "pass"
+      },
+      {
+        "agrees": 10,
+        "boundary": "The oracle-to-oracle comparison is bounded to the two forensic-venue authorities openssl-3.6.3-historical and openssl-3.6.4-production, on the linux/x86_64 default shared/legacy profile, over the observation vocabulary the probe emits. It is a behavioural reading of a named pair and is not a compatibility claim about either authority, and it is not a source-line diff. `error_behavior` is read behaviourally here while the 23.6 delta engine records the dimension absent for want of a committed per-authority plane; the 0.9.8zh epoch is not compared (see not_run).",
+        "candidate_to_authority": {
+          "disposition": "discharged_by_existing_courts",
+          "existing_courts": [
+            {
+              "artefact": "artifacts/phase2/COURTS.json",
+              "courts": [
+                "ABI-SYMBOL",
+                "ABI-LAYOUT",
+                "ABI-CONSTANTS",
+                "ABI-MATRIX",
+                "ABI-SUBSTITUTION",
+                "ABI-LINK",
+                "ABI-LOAD"
+              ],
+              "how": "the candidate distribution shell is compiled against the authority headers and run/linked against the candidate DSOs, so the source-surface constants and the binary substitution are candidate-to-authority comparisons"
+            },
+            {
+              "artefact": "artifacts/phase17/COURTS.json",
+              "courts": [
+                "RT-TLS13-INTEROP",
+                "RT-CLI-BODIES",
+                "RT-CROSS-DSO-STATE",
+                "RT-DOWNSTREAM-CONSUMER"
+              ],
+              "how": "the same probe source executes once against the authority and once against the candidate, so the runtime behaviour is a candidate-to-authority comparison"
+            }
+          ],
+          "statement": "the candidate-to-authority dimension is executed by the existing Phase-2 ABI family and Phase-17 runtime family, so 23.8 does not stage a duplicate court; what 23.8 adds is the shared vocabulary — the one `courts/phase23/semantic_probe.c` source, whose normalized `OBS key=value` rows both the oracle-to-oracle and a candidate run would be read through, so the candidate and the oracle are read the same way"
+        },
+        "classified_differences": [
+          {
+            "classification": "declaration_added",
+            "dimension": "error",
+            "observation_id": "SO-error.reason.CRL_SIGNATURE_ALGORITHM_MISMATCH",
+            "observed_a": "<absent>",
+            "observed_b": "<null>",
+            "release_delta": null,
+            "vocabulary": "error.reason.CRL_SIGNATURE_ALGORITHM_MISMATCH"
+          },
+          {
+            "classification": "declaration_added",
+            "dimension": "source_api",
+            "observation_id": "SO-presence.SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+            "observed_a": "<absent>",
+            "observed_b": "16",
+            "release_delta": {
+              "adjudication": "`SSL_VALUE_QUIC_MAX_PENDING_CONNS` is public in the subject and absent from the reference",
+              "classification": "added",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "api_presence",
+              "entity_id": "macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+              "facet": "entity"
+            },
+            "vocabulary": "presence.SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+          },
+          {
+            "classification": "declaration_added",
+            "dimension": "source_api",
+            "observation_id": "SO-presence.X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+            "observed_a": "<absent>",
+            "observed_b": "147",
+            "release_delta": {
+              "adjudication": "`X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH` is public in the subject and absent from the reference",
+              "classification": "added",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "api_presence",
+              "entity_id": "macro:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+              "facet": "entity"
+            },
+            "vocabulary": "presence.X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+          },
+          {
+            "classification": "release_identity",
+            "dimension": "source_api",
+            "observation_id": "SO-version.full",
+            "observed_a": "3.6.3",
+            "observed_b": "3.6.4",
+            "release_delta": {
+              "adjudication": "the macro's public value changed",
+              "classification": "changed",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "macro_value",
+              "entity_id": "macro:OPENSSL_FULL_VERSION_STR",
+              "facet": "value"
+            },
+            "vocabulary": "version.full"
+          },
+          {
+            "classification": "release_identity",
+            "dimension": "source_api",
+            "observation_id": "SO-version.number",
+            "observed_a": "811597872",
+            "observed_b": "811597888",
+            "release_delta": {
+              "adjudication": "the macro's public value changed",
+              "classification": "changed",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "macro_value",
+              "entity_id": "macro:OPENSSL_VERSION_PATCH",
+              "facet": "value"
+            },
+            "vocabulary": "version.number"
+          },
+          {
+            "classification": "release_identity",
+            "dimension": "source_api",
+            "observation_id": "SO-version.patch",
+            "observed_a": "3",
+            "observed_b": "4",
+            "release_delta": {
+              "adjudication": "the macro's public value changed",
+              "classification": "changed",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "macro_value",
+              "entity_id": "macro:OPENSSL_VERSION_PATCH",
+              "facet": "value"
+            },
+            "vocabulary": "version.patch"
+          },
+          {
+            "classification": "release_identity",
+            "dimension": "source_api",
+            "observation_id": "SO-version.release_date",
+            "observed_a": "9 Jun 2026",
+            "observed_b": "25 Aug 2026",
+            "release_delta": {
+              "adjudication": "the macro's public value changed",
+              "classification": "changed",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "macro_value",
+              "entity_id": "macro:OPENSSL_RELEASE_DATE",
+              "facet": "value"
+            },
+            "vocabulary": "version.release_date"
+          },
+          {
+            "classification": "release_identity",
+            "dimension": "source_api",
+            "observation_id": "SO-version.str",
+            "observed_a": "3.6.3",
+            "observed_b": "3.6.4",
+            "release_delta": {
+              "adjudication": "the macro's public value changed",
+              "classification": "changed",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "macro_value",
+              "entity_id": "macro:OPENSSL_VERSION_STR",
+              "facet": "value"
+            },
+            "vocabulary": "version.str"
+          },
+          {
+            "classification": "release_identity",
+            "dimension": "source_api",
+            "observation_id": "SO-version.text.macro",
+            "observed_a": "OpenSSL 3.6.3 9 Jun 2026",
+            "observed_b": "OpenSSL 3.6.4 25 Aug 2026",
+            "release_delta": {
+              "adjudication": "the macro's public value changed",
+              "classification": "changed",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "macro_value",
+              "entity_id": "macro:OPENSSL_VERSION_TEXT",
+              "facet": "value"
+            },
+            "vocabulary": "version.text.macro"
+          },
+          {
+            "classification": "release_identity",
+            "dimension": "source_api",
+            "observation_id": "SO-version.text.runtime",
+            "observed_a": "OpenSSL 3.6.3 9 Jun 2026",
+            "observed_b": "OpenSSL 3.6.4 25 Aug 2026",
+            "release_delta": {
+              "adjudication": "the macro's public value changed",
+              "classification": "changed",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "macro_value",
+              "entity_id": "macro:OPENSSL_VERSION_TEXT",
+              "facet": "value"
+            },
+            "vocabulary": "version.text.runtime"
+          }
+        ],
+        "control": {
+          "baseline_findings": 0,
+          "caught_erased_difference": true,
+          "caught_unclassified_difference": true,
+          "caught_wrong_authority": true,
+          "honest": true,
+          "injected_erased": "SO-presence.SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+          "injected_erased_findings": 2,
+          "injected_swapped_authorities": [
+            "openssl-3.6.3-historical",
+            "openssl-3.6.4-production"
+          ],
+          "injected_unclassified": "SO-error.reason.CRL_SIGNATURE_ALGORITHM_MISMATCH",
+          "injected_unclassified_findings": 3,
+          "injected_wrong_authority_findings": 5,
+          "specificity_holds": true
+        },
+        "court": "RT-SEMANTIC-COURTS",
+        "differs": 10,
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the semantic court compares an authority against an authority (oracle-to-oracle) and re-runs the comparison from raw transcripts preserved in the committed artefact, so it stages no artifacts/phase23/probes/<probe>.{authority,candidate} pair a challenge could locate and diffs no authority-versus-candidate transcript; the candidate-to-authority dimension is discharged by the existing Phase-2 and Phase-17 courts this plane names",
+        "method": "stages no probe at court time: the shared probe courts/phase23/semantic_probe.c was compiled and run against both authorities in the court venue by gen_semantic_courts.py --measure, and the court re-runs the authority-to-authority comparison from the raw transcripts the artefact preserves. It establishes that every observation is a schema-valid semantic_observation over the shared normalized vocabulary; that the raw transcripts are content-addressed and attributed to the authority they name; that the committed observations reproduce from those raw bytes through the same adapter; that the side-specific adapters for the declarations that differ across the pair preserve the difference rather than erasing it; that every divergence is a classified release delta resolving in the committed 23.6 delta engine (or in a dimension it records absent); that the candidate-to-authority dimension is discharged by named, passing existing courts rather than duplicated; and that a pair the venue cannot execute is recorded not-run with its reason. An adapter that erases a real difference, a probe read against the wrong authority and an unclassified difference are each detected with specificity holding (docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 2, 3.2 and 4.11).",
+        "not_run": [
+          {
+            "direction": "authority_a_vs_authority_b",
+            "pair": [
+              "openssl-3.6.4-production",
+              "openssl-0.9.8zh-historical"
+            ],
+            "reason": "the 0.9.8zh authority is built in the separate historical venue (`docker/openssl-rs-historical.Dockerfile`, GCC 10 / Perl 5.32, pinned independently of the forensic court's GCC 12 / Perl 5.36; `docs/REPRODUCIBILITY.md` sections 1.1 and 1.2). Its installed prefix is a historical-venue build product not present in the forensic court venue, and its pre-3.0 headers and ABI are not compile-compatible with the 3.6.4 probe, so the oracle-to-oracle comparison is not executed here rather than approximated."
+          },
+          {
+            "direction": "authority_a_vs_authority_b",
+            "pair": [
+              "openssl-3.6.3-historical",
+              "openssl-0.9.8zh-historical"
+            ],
+            "reason": "the same venue separation: 3.6.3 is a forensic-venue authority and 0.9.8zh a historical-venue one, so neither prefix is present in the other venue and no single probe can be linked against both in one container. The 0.9.8zh epoch is measured by the historical-venue façade plane (23.7), not by an oracle-to-oracle semantic court."
+          }
+        ],
+        "observations": [
+          {
+            "agreement": true,
+            "classification": "agreed",
+            "dimension": "abi",
+            "observation_id": "SO-behaviour.BN_uadd",
+            "observed_a": "0F0F0F0F0F0F100E",
+            "observed_b": "0F0F0F0F0F0F100E",
+            "release_delta": {
+              "compat_dimension": "abi",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "abi_symbol_presence",
+              "entity_id": "function:BN_uadd"
+            },
+            "vocabulary": "behaviour.BN_uadd"
+          },
+          {
+            "agreement": true,
+            "classification": "agreed",
+            "dimension": "abi",
+            "observation_id": "SO-behaviour.BN_ucmp",
+            "observed_a": "1",
+            "observed_b": "1",
+            "release_delta": {
+              "compat_dimension": "abi",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "abi_symbol_presence",
+              "entity_id": "function:BN_ucmp"
+            },
+            "vocabulary": "behaviour.BN_ucmp"
+          },
+          {
+            "agreement": true,
+            "classification": "agreed",
+            "dimension": "semantic",
+            "observation_id": "SO-behaviour.EVP_sha256",
+            "observed_a": "0d61cdc962a38c9ea30266c09dbedf0ddbd487e176cecc739f0f552e13cf7214",
+            "observed_b": "0d61cdc962a38c9ea30266c09dbedf0ddbd487e176cecc739f0f552e13cf7214",
+            "release_delta": null,
+            "vocabulary": "behaviour.EVP_sha256"
+          },
+          {
+            "agreement": true,
+            "classification": "agreed",
+            "dimension": "semantic",
+            "observation_id": "SO-behaviour.OPENSSL_uni2utf8",
+            "observed_a": "AÃ©B",
+            "observed_b": "AÃ©B",
+            "release_delta": {
+              "compat_dimension": "abi",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "abi_symbol_presence",
+              "entity_id": "function:OPENSSL_uni2utf8"
+            },
+            "vocabulary": "behaviour.OPENSSL_uni2utf8"
+          },
+          {
+            "agreement": true,
+            "classification": "agreed",
+            "dimension": "abi",
+            "observation_id": "SO-behaviour.OSSL_parse_url",
+            "observed_a": "r=1 scheme=https host=example.com port=8443 portnum=8443 path=/a/b query=q=1 frag=frag",
+            "observed_b": "r=1 scheme=https host=example.com port=8443 portnum=8443 path=/a/b query=q=1 frag=frag",
+            "release_delta": {
+              "compat_dimension": "abi",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "abi_symbol_presence",
+              "entity_id": "function:OSSL_parse_url"
+            },
+            "vocabulary": "behaviour.OSSL_parse_url"
+          },
+          {
+            "agreement": true,
+            "classification": "agreed",
+            "dimension": "source_api",
+            "observation_id": "SO-const.EVP_MAX_MD_SIZE",
+            "observed_a": "64",
+            "observed_b": "64",
+            "release_delta": null,
+            "vocabulary": "const.EVP_MAX_MD_SIZE"
+          },
+          {
+            "agreement": true,
+            "classification": "agreed",
+            "dimension": "source_api",
+            "observation_id": "SO-const.SHA256_DIGEST_LENGTH",
+            "observed_a": "32",
+            "observed_b": "32",
+            "release_delta": null,
+            "vocabulary": "const.SHA256_DIGEST_LENGTH"
+          },
+          {
+            "agreement": true,
+            "classification": "agreed",
+            "dimension": "source_api",
+            "observation_id": "SO-const.TLS1_3_VERSION",
+            "observed_a": "772",
+            "observed_b": "772",
+            "release_delta": null,
+            "vocabulary": "const.TLS1_3_VERSION"
+          },
+          {
+            "agreement": true,
+            "classification": "agreed",
+            "dimension": "source_api",
+            "observation_id": "SO-const.X509_V_OK",
+            "observed_a": "0",
+            "observed_b": "0",
+            "release_delta": null,
+            "vocabulary": "const.X509_V_OK"
+          },
+          {
+            "agreement": false,
+            "classification": "declaration_added",
+            "dimension": "error",
+            "observation_id": "SO-error.reason.CRL_SIGNATURE_ALGORITHM_MISMATCH",
+            "observed_a": "<absent>",
+            "observed_b": "<null>",
+            "release_delta": null,
+            "vocabulary": "error.reason.CRL_SIGNATURE_ALGORITHM_MISMATCH"
+          },
+          {
+            "agreement": true,
+            "classification": "agreed",
+            "dimension": "error",
+            "observation_id": "SO-error.reason.MALLOC_FAILURE",
+            "observed_a": "<null>",
+            "observed_b": "<null>",
+            "release_delta": null,
+            "vocabulary": "error.reason.MALLOC_FAILURE"
+          },
+          {
+            "agreement": false,
+            "classification": "declaration_added",
+            "dimension": "source_api",
+            "observation_id": "SO-presence.SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+            "observed_a": "<absent>",
+            "observed_b": "16",
+            "release_delta": {
+              "adjudication": "`SSL_VALUE_QUIC_MAX_PENDING_CONNS` is public in the subject and absent from the reference",
+              "classification": "added",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "api_presence",
+              "entity_id": "macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+              "facet": "entity"
+            },
+            "vocabulary": "presence.SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+          },
+          {
+            "agreement": false,
+            "classification": "declaration_added",
+            "dimension": "source_api",
+            "observation_id": "SO-presence.X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+            "observed_a": "<absent>",
+            "observed_b": "147",
+            "release_delta": {
+              "adjudication": "`X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH` is public in the subject and absent from the reference",
+              "classification": "added",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "api_presence",
+              "entity_id": "macro:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+              "facet": "entity"
+            },
+            "vocabulary": "presence.X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+          },
+          {
+            "agreement": false,
+            "classification": "release_identity",
+            "dimension": "source_api",
+            "observation_id": "SO-version.full",
+            "observed_a": "3.6.3",
+            "observed_b": "3.6.4",
+            "release_delta": {
+              "adjudication": "the macro's public value changed",
+              "classification": "changed",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "macro_value",
+              "entity_id": "macro:OPENSSL_FULL_VERSION_STR",
+              "facet": "value"
+            },
+            "vocabulary": "version.full"
+          },
+          {
+            "agreement": false,
+            "classification": "release_identity",
+            "dimension": "source_api",
+            "observation_id": "SO-version.number",
+            "observed_a": "811597872",
+            "observed_b": "811597888",
+            "release_delta": {
+              "adjudication": "the macro's public value changed",
+              "classification": "changed",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "macro_value",
+              "entity_id": "macro:OPENSSL_VERSION_PATCH",
+              "facet": "value"
+            },
+            "vocabulary": "version.number"
+          },
+          {
+            "agreement": false,
+            "classification": "release_identity",
+            "dimension": "source_api",
+            "observation_id": "SO-version.patch",
+            "observed_a": "3",
+            "observed_b": "4",
+            "release_delta": {
+              "adjudication": "the macro's public value changed",
+              "classification": "changed",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "macro_value",
+              "entity_id": "macro:OPENSSL_VERSION_PATCH",
+              "facet": "value"
+            },
+            "vocabulary": "version.patch"
+          },
+          {
+            "agreement": false,
+            "classification": "release_identity",
+            "dimension": "source_api",
+            "observation_id": "SO-version.release_date",
+            "observed_a": "9 Jun 2026",
+            "observed_b": "25 Aug 2026",
+            "release_delta": {
+              "adjudication": "the macro's public value changed",
+              "classification": "changed",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "macro_value",
+              "entity_id": "macro:OPENSSL_RELEASE_DATE",
+              "facet": "value"
+            },
+            "vocabulary": "version.release_date"
+          },
+          {
+            "agreement": false,
+            "classification": "release_identity",
+            "dimension": "source_api",
+            "observation_id": "SO-version.str",
+            "observed_a": "3.6.3",
+            "observed_b": "3.6.4",
+            "release_delta": {
+              "adjudication": "the macro's public value changed",
+              "classification": "changed",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "macro_value",
+              "entity_id": "macro:OPENSSL_VERSION_STR",
+              "facet": "value"
+            },
+            "vocabulary": "version.str"
+          },
+          {
+            "agreement": false,
+            "classification": "release_identity",
+            "dimension": "source_api",
+            "observation_id": "SO-version.text.macro",
+            "observed_a": "OpenSSL 3.6.3 9 Jun 2026",
+            "observed_b": "OpenSSL 3.6.4 25 Aug 2026",
+            "release_delta": {
+              "adjudication": "the macro's public value changed",
+              "classification": "changed",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "macro_value",
+              "entity_id": "macro:OPENSSL_VERSION_TEXT",
+              "facet": "value"
+            },
+            "vocabulary": "version.text.macro"
+          },
+          {
+            "agreement": false,
+            "classification": "release_identity",
+            "dimension": "source_api",
+            "observation_id": "SO-version.text.runtime",
+            "observed_a": "OpenSSL 3.6.3 9 Jun 2026",
+            "observed_b": "OpenSSL 3.6.4 25 Aug 2026",
+            "release_delta": {
+              "adjudication": "the macro's public value changed",
+              "classification": "changed",
+              "compat_dimension": "source_api",
+              "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "dimension": "macro_value",
+              "entity_id": "macro:OPENSSL_VERSION_TEXT",
+              "facet": "value"
+            },
+            "vocabulary": "version.text.runtime"
+          }
+        ],
+        "probe": "",
+        "problems": [],
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
@@ -558,7 +1093,6 @@
       "RT-HISTORICAL-POPULATION": "23.10 -- the historical population",
       "RT-NEGATIVE-OBLIGATIONS": "23.13 -- the negative obligations",
       "RT-SECURITY-LINEAGE": "23.14 -- the security lineage",
-      "RT-SEMANTIC-COURTS": "23.8 -- the semantic multitrack courts",
       "RT-SUPPORT-STATUS": "23.15 -- the support-status ladder"
     },
     "schemas": {
@@ -717,6 +1251,22 @@
         ],
         "valid": "validate_security_observation"
       },
+      "semantic_observation": {
+        "fields": [
+          "observation_id",
+          "vocabulary",
+          "dimension",
+          "authority_a",
+          "authority_b",
+          "observed_a",
+          "observed_b",
+          "agreement",
+          "classification",
+          "release_delta",
+          "evidence"
+        ],
+        "valid": "validate_semantic_observation"
+      },
       "support_status": {
         "fields": [
           "subject_id",
@@ -729,8 +1279,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 7,
-      "total": 7
+      "pass": 8,
+      "total": 8
     }
   },
   "generator": "forensics/tools/phase23_courts.py",
@@ -738,12 +1288,12 @@
     {
       "name": "phase-23-plan",
       "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
-      "sha256": "5ddeb500c799d76995782355fb0188c2aba2b084af7480afb84215e9d3a05e04"
+      "sha256": "20887197d4d698325d7d2895ac5fddbcdc52c9abe2a270725dadb7900a55a71a"
     },
     {
       "name": "multitrack-schemas",
       "path": "forensics/tools/multitrack_schemas.py",
-      "sha256": "d7f7dab3831db1d89fe1667c0596754acdf5dbace37126563655fedec7ac2f87"
+      "sha256": "d3854de2340cee52139bd272735a1d2df5d9e68b039b0e6e4fc511396f64fb26"
     },
     {
       "name": "release-catalog",
@@ -839,6 +1389,16 @@
       "name": "historical-source-manifest",
       "path": "forensics/authorities/SOURCE_MANIFEST.0.9.8zh.json",
       "sha256": "c2628f2b50e17a354a2b686c4f23229edbcbfaafdc8a4bc786a8149db3256170"
+    },
+    {
+      "name": "semantic-courts",
+      "path": "forensics/multitrack/semantic-courts.json",
+      "sha256": "5744426f7c8989e92697b3b50acb504e66941eab8185f0dd8bcb1c54fd17da16"
+    },
+    {
+      "name": "semantic-probe",
+      "path": "courts/phase23/semantic_probe.c",
+      "sha256": "c1b0561e589cd12a2ac9cc5dc2153e140ce638c8e5774455462ad8848a0dfe4c"
     },
     {
       "name": "delta/openssl-3.6.3--openssl-3.6.4",
