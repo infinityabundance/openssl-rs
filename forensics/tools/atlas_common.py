@@ -62,11 +62,15 @@ PRODUCTION_AUTHORITY = "openssl-3.6.4-production"
 # contract over five contract units and no deferral, which a symbol-counting ledger would count
 # zero. **Phase 21 owns no export either**: the ownership atlas assigns `owner_phase == 21` no
 # row, and its unit is the maintenance delta contract over five contract units and no deferral,
-# which a symbol-counting ledger would count zero. The marker is a property
+# which a symbol-counting ledger would count zero. **Phase 23 owns no export either**: the
+# ownership atlas assigns `owner_phase == 23` no row, and its unit is the multitrack authority
+# contract over twelve contract units and no deferral, which a symbol-counting ledger would
+# count zero. The marker is a property
 # of the document rather than a phase number those tools know (`docs/PHASE-22-SUBPHASES.md`, D485;
 # `docs/PHASE-16-SUBPHASES.md`, section 1; `docs/PHASE-17-SUBPHASES.md`, section 1;
 # `docs/PHASE-18-SUBPHASES.md`, section 1; `docs/PHASE-19-SUBPHASES.md`, section 1;
-# `docs/PHASE-20-SUBPHASES.md`, section 1; `docs/PHASE-21-SUBPHASES.md`, section 1).
+# `docs/PHASE-20-SUBPHASES.md`, section 1; `docs/PHASE-21-SUBPHASES.md`, section 1;
+# `docs/PHASE-23-MULTITRACK-SUBPHASES.md`, section 1).
 NON_EXPORT_UNITS = {
     "compatibility plane",
     "cli-config contract",
@@ -75,6 +79,7 @@ NON_EXPORT_UNITS = {
     "performance dispatch contract",
     "custodian seal contract",
     "maintenance delta contract",
+    "multitrack authority contract",
 }
 HISTORICAL_AUTHORITY = "openssl-3.6.3-historical"
 
@@ -119,6 +124,11 @@ SEAL_DOCS: dict[int, str] = {
     # document and `phase_state.py` records its sha256 the same way. Its `evidence_for` branch is
     # its own because its ledger's unit is a compatibility plane, not a symbol (D485).
     22: "docs/PHASE-22-ATLAS-SEAL.md",
+    # Phase 23 is another non-export stratum (its unit is the multitrack authority contract), so it
+    # too is read by the generic `STRATUM_EVIDENCE` rule. Its seal is named from the day 23.0 lands
+    # the plan, so its absence is the record that the stratum is still open rather than a missing
+    # table row.
+    23: "docs/PHASE-23-MULTITRACK-SEAL.md",
 }
 
 

@@ -1,0 +1,185 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "No court is registered at activation: Phase 23 owns no exported symbol, so no differential probe over a symbol set is its evidence, and its twelve courts -- RT-RELEASE-NODES, RT-AUTHORITY-NODES, RT-LINEAGE-EDGES, RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, RT-COMPATIBILITY-VIEWS, RT-COMPATIBILITY-EDGES, RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with the subphases that land them (23.1 through 23.12). The stratum's record kinds are defined and self-tested in forensics/tools/multitrack_schemas.py, whose inventory this registry records: the release nodes and their two version schemes (the pre-3.0 MNNFFPPS encoding and the 3.0-plus MAJOR.MINOR.PATCH form), the authority nodes, the lineage edges, the entity lineage, the compatibility views, the compatibility edges, the negative obligations, the security lineage, the support-status ladder and the assembled matrix. The one thing the model forbids everywhere is a single boolean: compatibility is directional and dimension-specific, a cross-version receipt is never inherited, an authority is named explicitly and singularly, and a historical vulnerability is observed but never reintroduced. docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
+    "courts": [],
+    "pending_courts": {
+      "MULTITRACK-SEAL": "23.12 -- the full matrix, the FRF/Gemel chain and the seal",
+      "RT-AUTHORITY-NODES": "23.2 -- the authority-node registry",
+      "RT-COMPATIBILITY-EDGES": "23.7 -- the directional compatibility edges",
+      "RT-COMPATIBILITY-MATRIX": "23.11 -- the compatibility matrix",
+      "RT-COMPATIBILITY-VIEWS": "23.6 -- the compatibility views",
+      "RT-DELTA-ENGINE": "23.5 -- the delta engine",
+      "RT-ENTITY-LINEAGE": "23.4 -- the entity lineage",
+      "RT-LINEAGE-EDGES": "23.3 -- the lineage edges",
+      "RT-NEGATIVE-OBLIGATIONS": "23.8 -- the negative obligations",
+      "RT-RELEASE-NODES": "23.1 -- the release-node catalogue",
+      "RT-SECURITY-LINEAGE": "23.9 -- the security lineage",
+      "RT-SUPPORT-STATUS": "23.10 -- the support-status ladder"
+    },
+    "schemas": {
+      "authority_node": {
+        "fields": [
+          "authority_id",
+          "release_id",
+          "platform",
+          "arch",
+          "build_profile",
+          "toolchain",
+          "build_environment",
+          "binary_hashes",
+          "installed_hashes",
+          "metadata_provenance"
+        ],
+        "valid": "validate_authority_node"
+      },
+      "compatibility_edge": {
+        "fields": [
+          "edge_id",
+          "from_id",
+          "to_id",
+          "dimension",
+          "direction",
+          "status",
+          "evidence_kind",
+          "evidence"
+        ],
+        "valid": "validate_compatibility_edge"
+      },
+      "compatibility_matrix": {
+        "fields": [
+          "matrix_id",
+          "rows",
+          "generated_from"
+        ],
+        "valid": "validate_compatibility_matrix"
+      },
+      "compatibility_view": {
+        "fields": [
+          "view_id",
+          "subject_id",
+          "reference_id",
+          "dimension",
+          "direction",
+          "status",
+          "evidence",
+          "support_status",
+          "non_claims"
+        ],
+        "valid": "validate_compatibility_view"
+      },
+      "delta_receipt": {
+        "fields": [
+          "receipt_id",
+          "from_id",
+          "to_id",
+          "dimension",
+          "direction",
+          "added",
+          "removed",
+          "changed",
+          "evidence"
+        ],
+        "valid": "validate_delta_receipt"
+      },
+      "entity_lineage": {
+        "fields": [
+          "entity_id",
+          "relation",
+          "entity_kind",
+          "present_in",
+          "evidence"
+        ],
+        "valid": "validate_entity_lineage"
+      },
+      "lineage_edge": {
+        "fields": [
+          "edge_id",
+          "kind",
+          "from_id",
+          "to_id",
+          "direction",
+          "evidence",
+          "metadata_provenance"
+        ],
+        "valid": "validate_lineage_edge"
+      },
+      "negative_obligation": {
+        "fields": [
+          "obligation_id",
+          "kind",
+          "subject",
+          "scope",
+          "rationale",
+          "evidence",
+          "state"
+        ],
+        "valid": "validate_negative_obligation"
+      },
+      "release_node": {
+        "fields": [
+          "release_id",
+          "display_version",
+          "version_scheme",
+          "release_channel",
+          "release_date",
+          "public_or_extended",
+          "mainline_or_auxiliary",
+          "upstream_tag",
+          "upstream_commit",
+          "official_source_artifact",
+          "source_sha256",
+          "declared_support_class",
+          "declared_compatibility_family",
+          "licence_epoch",
+          "known_parent_edges",
+          "metadata_provenance"
+        ],
+        "valid": "validate_release_node"
+      },
+      "security_observation": {
+        "fields": [
+          "observation_id",
+          "release_id",
+          "affected",
+          "fixed_in",
+          "reference",
+          "evidence",
+          "reintroduced"
+        ],
+        "valid": "validate_security_observation"
+      },
+      "support_status": {
+        "fields": [
+          "subject_id",
+          "status",
+          "rungs_attained",
+          "evidence"
+        ],
+        "valid": "validate_support_status"
+      }
+    },
+    "summary": {
+      "fail": 0,
+      "pass": 0,
+      "total": 0
+    }
+  },
+  "generator": "forensics/tools/phase23_courts.py",
+  "inputs": [
+    {
+      "name": "phase-23-plan",
+      "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
+      "sha256": "ffc906e5d21bb9659d1bcfda8e494a3928211e4571db5a3e97dbff2b6bcd2dfa"
+    },
+    {
+      "name": "multitrack-schemas",
+      "path": "forensics/tools/multitrack_schemas.py",
+      "sha256": "ffe5b38f9d7c1345fb6cce41c5a6e8adb5b727e21c239a2b40caf9cbd70c74f5"
+    }
+  ],
+  "kind": "phase23-courts",
+  "schema": "openssl-rs/atlas/phase23-courts/v1"
+}
