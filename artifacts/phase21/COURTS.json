@@ -3,19 +3,71 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "Phase 21's five courts are named and `pending`; none is registered as passing at activation. `RT-AUTHORITY-ADMISSION` is 21.1's: the admission / identification of a new authority and the record of its identity and profile as the delta input pair, exercised on the already-admitted `openssl-3.6.3-historical` versus `openssl-3.6.4-production`. `RT-ATLAS-DELTA` is 21.2's: the added / removed / changed obligation delta between the two authorities across the atlas planes (exports, provider rows, prerequisite units), computed mechanically from committed artefacts. `RT-DELTA-DISPOSITION` is 21.3's: the disposition of every delta row with zero unexplained. `RT-AFFECTED-COURT-SELECTION` is 21.4's: the derivation of which courts a delta touches, recorded with the selection derivation. `MAINTENANCE-BOUNDARY-REGISTER` is 21.5's: the register of the explicit non-claims. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the delta between two admitted authorities, with no version-universality claim — OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4 — only the exercised delta claimed, and unknown left unknown. A 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced. docs/PHASE-21-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
-    "courts": [],
+    "claim": "`RT-AUTHORITY-ADMISSION` is 21.1's court: it stages no probe and admits the delta's input pair, recording each authority's identity and build profile as `{id, role, version, profile, manifest, checksum, admitted}` from forensics/authorities/AUTHORITIES.json, the two SOURCE_MANIFEST.{3.6.3,3.6.4}.json source identities, the build records and the differential that names the pair — `openssl-3.6.3-historical` versus `openssl-3.6.4-production`. It fails when an authority named as a delta input is not admitted, or when its identity disagrees between the registry and its manifest, and a synthetic view with an unadmitted authority in the pair and one with a manifest root hash drifted from the registry's are both detected. It records the pair's identity, not the delta between them. `RT-ATLAS-DELTA` is 21.2's: the added / removed / changed obligation delta between the two authorities across the atlas planes (exports, provider rows, prerequisite units), computed mechanically from committed artefacts. `RT-DELTA-DISPOSITION` is 21.3's: the disposition of every delta row with zero unexplained. `RT-AFFECTED-COURT-SELECTION` is 21.4's: the derivation of which courts a delta touches, recorded with the selection derivation. `MAINTENANCE-BOUNDARY-REGISTER` is 21.5's: the register of the explicit non-claims. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is the delta between two admitted authorities, with no version-universality claim — OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4 — only the exercised delta claimed, and unknown left unknown. A 3.6.3 behaviour that corresponds to an upstream security fix is not reintroduced. docs/PHASE-21-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "courts": [
+      {
+        "admission_authority": "docs/AUTHORITY_POLICY.md",
+        "control": {
+          "baseline_findings": 0,
+          "caught_identity_drift": true,
+          "caught_unadmitted_authority": true,
+          "honest": true,
+          "injected_identity_authority": "openssl-3.6.4-production",
+          "injected_identity_findings": 2,
+          "injected_unadmitted_authority": "openssl-0.0.0-unadmitted",
+          "injected_unadmitted_findings": 1,
+          "specificity_holds": true
+        },
+        "court": "RT-AUTHORITY-ADMISSION",
+        "divergence_authority": "docs/SECURITY_DIVERGENCE_POLICY.md",
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the admission court reads committed authority records and stages no artifacts/phase21/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it reads the committed authority records -- forensics/authorities/AUTHORITIES.json and the two SOURCE_MANIFEST.{3.6.3,3.6.4}.json source identities -- the build records that carry each authority's profile, and the differential that names the pair, and records `{id, role, version, profile, manifest, checksum, admitted}` per authority in the delta input pair. It fails when an authority the differential names is not admitted, or when its identity disagrees between the registry and its manifest (a manifest name that does not carry the registry's version, a file count, byte count or root hash the registry does not record, per-file digests that do not reproduce the manifest root hash, or an artifact checksum that is not the published one). A synthetic view with an unadmitted authority in the pair and one with a manifest root hash drifted from the registry's are both detected (docs/PHASE-21-SUBPHASES.md section 3.2).",
+        "pair": {
+          "from": {
+            "admitted": true,
+            "checksum": "243a86649cf6f23eeb6a2ff2456e09e5d77dd9018a54d3d96b0c6bdd6ba6c7f1",
+            "id": "openssl-3.6.3-historical",
+            "manifest": "SOURCE_MANIFEST.3.6.3.json",
+            "profile": "linux-x86_64-default-shared-legacy-notests",
+            "role": "historical",
+            "root_hash": "b996e7f0e239da1cafc8fd40c94e15032cc07dc5259303e0e5969e325b16d72d",
+            "version": "3.6.3"
+          },
+          "identity": {
+            "differential": "forensics/atlas/differential/openssl-3.6.3-historical-vs-openssl-3.6.4-production.json",
+            "differential_body_hash": "c67ffb42e29c95100fa3db94df920136c32a33fb3bb12397b28cc2cc5e2fb28a",
+            "direction": "added means present in 'to', absent in 'from'",
+            "from_authority": "openssl-3.6.3-historical",
+            "to_authority": "openssl-3.6.4-production"
+          },
+          "to": {
+            "admitted": true,
+            "checksum": "9bffaa1ad1e07b354c21bd3324ec02fa15579f45a7d0494b3e74bc449b7333ef",
+            "id": "openssl-3.6.4-production",
+            "manifest": "SOURCE_MANIFEST.3.6.4.json",
+            "profile": "linux-x86_64-default-shared-legacy-notests",
+            "role": "production",
+            "root_hash": "27d9917bd7c63d9bb056e674cc08c809b44cde50f9e474cd30041b8b66385432",
+            "version": "3.6.4"
+          }
+        },
+        "probe": "",
+        "problems": [],
+        "verdict": "pass"
+      }
+    ],
     "pending_courts": {
       "MAINTENANCE-BOUNDARY-REGISTER": "21.5 lands the register; it records the explicit non-claims — OpenSSL 4.x is a new compatibility profile and a 3.x receipt is never silently reinterpreted as evidence for 4, only the exercised delta is claimed, and unknown stays unknown — and checks that every recorded boundary still matches the evidence that establishes it",
       "RT-AFFECTED-COURT-SELECTION": "21.4 lands the affected-court selection; it derives which courts a delta touches, records the selection derivation, and re-runs or re-derives exactly those courts, so a delta reaches the courts its obligations do and no more",
       "RT-ATLAS-DELTA": "21.2 lands the atlas delta; it computes the added / removed / changed obligations between the two authorities across the atlas planes the procedure names — exports, provider registration rows and prerequisite units — from the committed differential and the per-authority atlases, never hand-listed, and names a plane it cannot yet compare `not-measured` rather than counting it as motionless",
-      "RT-AUTHORITY-ADMISSION": "21.1 lands the authority admission; it reads `forensics/authorities/AUTHORITIES.json` and the two `SOURCE_MANIFEST.{3.6.3,3.6.4}.json` files and records the delta's input pair — the identity and profile of `openssl-3.6.3-historical` and `openssl-3.6.4-production` — rather than typing a version, a checksum or a root hash",
       "RT-DELTA-DISPOSITION": "21.3 lands the delta disposition; it requires every delta row to be dispositioned (`implemented` / `deferred` / `not-in-profile` / `boundary`) with zero unexplained, so a newly discovered un-dispositioned delta row is a `fail`. A row whose disposition would re-adopt a historical behaviour against a security fix is a finding, not a disposition"
     },
     "summary": {
       "fail": 0,
-      "pass": 0,
-      "total": 0
+      "pass": 1,
+      "total": 1
     }
   },
   "generator": "forensics/tools/phase21_courts.py",
@@ -24,6 +76,41 @@
       "name": "phase-21-plan",
       "path": "docs/PHASE-21-SUBPHASES.md",
       "sha256": "a351f3690d9fdc507b879098eb0929ef7c908eab39cca78f097bf453b07c15c1"
+    },
+    {
+      "name": "authority-registry",
+      "path": "forensics/authorities/AUTHORITIES.json",
+      "sha256": "8885e8ecfe27c308d97ded8db8b197ff1b46177a1b8932535824d8a7d2b18944"
+    },
+    {
+      "name": "build-records",
+      "path": "forensics/atlas/BUILD_RECORDS.json",
+      "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0"
+    },
+    {
+      "name": "source-manifest-3.6.3",
+      "path": "forensics/authorities/SOURCE_MANIFEST.3.6.3.json",
+      "sha256": "2849ce1d61167b1fad510ba4e086903e339a85ecae9b3c61b5a349aac8c5f261"
+    },
+    {
+      "name": "source-manifest-3.6.4",
+      "path": "forensics/authorities/SOURCE_MANIFEST.3.6.4.json",
+      "sha256": "64535af39ae6732322cce6812534d3e13193771b76a0cd4e3cad06126bdd320e"
+    },
+    {
+      "name": "differential",
+      "path": "forensics/atlas/differential/openssl-3.6.3-historical-vs-openssl-3.6.4-production.json",
+      "sha256": "bfe481912c918864b0c7891388e6f0254b5546b15b2d65885c3b6ddecd2a9a88"
+    },
+    {
+      "name": "authority-policy",
+      "path": "docs/AUTHORITY_POLICY.md",
+      "sha256": "0cc6287f83377a1d7f19791d4e63649aa5efa19abe68452c8fb8854022bc50db"
+    },
+    {
+      "name": "security-divergence-policy",
+      "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
+      "sha256": "2c111361650e76f51ce76513dbd3e12effe9c6df05690e0fad90630ffb889026"
     }
   ],
   "kind": "phase21-courts",

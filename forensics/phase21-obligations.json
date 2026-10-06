@@ -6,10 +6,10 @@
         "closure": "the `RT-AUTHORITY-ADMISSION` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-AUTHORITY-ADMISSION is pending",
+        "measurement_state": "complete",
+        "observation": "RT-AUTHORITY-ADMISSION is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase21/COURTS.json",
         "unit": "authority-admission",
         "what": "the admission / identification of a new authority and the record of its identity and profile as the delta input pair, exercised on the already-admitted `openssl-3.6.3-historical` versus `openssl-3.6.4-production` (`forensics/authorities/AUTHORITIES.json`, the two `SOURCE_MANIFEST.{3.6.3,3.6.4}.json` files)"
@@ -68,8 +68,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 0,
-      "open_in_this_stratum": 5,
+      "implemented": 1,
+      "open_in_this_stratum": 4,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -110,7 +110,7 @@
     {
       "name": "phase-21-courts",
       "path": "artifacts/phase21/COURTS.json",
-      "sha256": "27ab2f3aa1871fb8ec567e6adfcfc2224d435af62193b7170b8d2d9f11f2ed45"
+      "sha256": "a3fd8548b132bec3f0cebac9aee5594d5f97ee4f585a329180fdecdad882ad17"
     }
   ],
   "kind": "phase21-obligations",
