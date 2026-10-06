@@ -75,7 +75,7 @@ Every figure below is read from `artifacts/phase20/COURTS.json`, not typed.
 | 20.1 | `RT-CUSTODIAN-MATURITY` | the L0–L9 ladder for `libcrypto` and `libssl` | `pass` | highest present **L8** for both libraries; **L9 the seal target, absent**, recorded as 1 finding; control honest (baseline L8, injected-core → L2, injected-downstream → L7) |
 | 20.2 | `RT-RECEIPT-CLOSURE` | every obligation joined to its FRF receipt | `pass` | **6,517/6,517** obligations joined (6,041 to a receipt, 476 to the reference basis), **140** receipts, **0** blockers, **0** gaps, 17 strata joined; 0 findings; control honest (missing receipt, injected blocker and stale identity all caught) |
 | 20.3 | `RT-CUSTODIAN-RESIDUALS` | every residual dispositioned | `pass` | **63,994** residual records across **16/16** sources, **0** un-dispositioned, **334** `UNKNOWN`, **0** `UNKNOWN` intersecting the claimed production profile; 0 findings; control honest (un-dispositioned and intersecting injections caught, clean `UNKNOWN` not) |
-| 20.4 | `RT-SUBSTITUTION-WITNESS` | the ABI and downstream witness chains | `pass` | **9/9** witnesses current and functional at candidate **0.0.24** — **3** ABI-substitution + **6** downstream (curl, git, haproxy, nginx, openssh, python); 0 findings; control honest (stale, non-functional and ABI-fail injections all caught) |
+| 20.4 | `RT-SUBSTITUTION-WITNESS` | the ABI and downstream witness chains | `pass` | **9/9** witnesses current and functional at candidate **0.0.25** — **3** ABI-substitution + **6** downstream (curl, git, haproxy, nginx, openssh, python); 0 findings; control honest (stale, non-functional and ABI-fail injections all caught) |
 | 20.5 | `CUSTODIAN-BOUNDARY-REGISTER` | the claimed and bounded surfaces | `pass` | **4** claimed + **4** bounded = **8** surfaces, 0 findings; control honest with specificity (a non-passing claimed court and a drifted bounded row both caught) |
 
 Each court reads the artefact that carries its subject and maintains no list of its own, so it
@@ -88,7 +88,7 @@ injects; a control that cannot fail is not evidence (§3.2).
 way. The
 FRF store carries **21 compiled claims**, every one with an empty blocker list — the `store`
 blocker count is 0 — and the 17 in-scope strata each have a zero-blocker `sensitivity-backed`
-claim recording candidate `openssl-rs 0.0.24` (`identity_hash e4f60d8b`), the identity
+claim recording candidate `openssl-rs 0.0.25` (`identity_hash e4f60d8b`), the identity
 `gen_frf_courts.py` names. A join over finite receipts is not a universal-parity claim: it is what
 `docs/CUSTODIAN_CONTRACT.md` §6 means by a closure over immutable receipts.
 
@@ -177,7 +177,7 @@ This stratum compiles exactly that, over the implementation Phases 3 through 19 
 > residual disposition of **63,994** records with **0** un-dispositioned and **0** `UNKNOWN`
 > intersecting the claimed production profile; **nine** current and functional substitution
 > witnesses (**3** ABI-substitution + **6** downstream, the downstream six at candidate
-> `openssl-rs 0.0.24`); and a boundary
+> `openssl-rs 0.0.25`); and a boundary
 > register of **four** claimed and **four** bounded surfaces — and is explicitly bounded by the
 > non-claims of §7, by the L9 gap the maturity instrument records, and by the three
 > declared-and-unobserved compatibility-root families (`runtime-behaviour`, `protocol`,
@@ -201,13 +201,13 @@ non-declarable meta-stratum — sealed without a chain entry.
 No `.frf` object and no Gemel change or checkpoint was created for Phase 20, because the mechanism
 requires none. The FRF store's chain status is recorded here rather than moved: the store carries
 **21 compiled claims with zero blockers**, the 17 in-scope strata each bind candidate
-`openssl-rs 0.0.24`, and `forensics/GEMEL_TRAJECTORY.md`'s `current:` is the **0.0.24** release
-checkpoint `K67` (`checkpoint.d4e52315f86d381e54c5c6d9cd0fd7283c73ac5ea35b244b7742344cad3d6178`),
-closing change `C113`. The store is **re-created at a release, not at a stratum seal**: the
-`0.0.25` release will remove and rebuild it at the new version, fold Phase 20's identity in, and
-record the Gemel change and checkpoint exactly as the `0.0.24` release did for Phase 19's three
-declarable courts (`docs/PHASE-19-PERFORMANCE-SEAL.md` §8; the `0.0.24` release commit
-`1b426a91`). This seal records the division: **the stratum records the chain status; the release
+`openssl-rs 0.0.25`, and `forensics/GEMEL_TRAJECTORY.md`'s `current:` is the **0.0.25** release
+checkpoint `K68` (`checkpoint.0cecb5dbe9a4c5e8cfab3c66c8777e2753b2d0b1bd9c8ad40034bfb73aea693a`),
+closing change `C114`. The store is **re-created at a release, not at a stratum seal**: the
+`0.0.25` release removed and rebuilt it at the new version, folded the now-complete Phase 20 into
+the release, and recorded the Gemel change and checkpoint exactly as the `0.0.24` release did for
+Phase 19's three declarable courts (`docs/PHASE-19-PERFORMANCE-SEAL.md` §8; the `0.0.24` release
+commit `1b426a91`). This seal records the division: **the stratum records the chain status; the release
 re-creates the store.**
 
 ## 7. Non-claims

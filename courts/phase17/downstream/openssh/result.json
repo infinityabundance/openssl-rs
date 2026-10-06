@@ -4,7 +4,7 @@
     "detail": "OpenSSH 10.5p1 (portable), libcrypto-only consumer",
     "ok": true
   },
-  "candidate": "0.0.24",
+  "candidate": "0.0.25",
   "concurrency": {
     "ok": 16,
     "total": 16
