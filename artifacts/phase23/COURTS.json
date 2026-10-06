@@ -3,8 +3,69 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "No court is registered at activation: Phase 23 owns no exported symbol, so no differential probe over a symbol set is its evidence, and its twelve courts -- RT-RELEASE-NODES, RT-AUTHORITY-NODES, RT-LINEAGE-EDGES, RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, RT-COMPATIBILITY-VIEWS, RT-COMPATIBILITY-EDGES, RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with the subphases that land them (23.1 through 23.12). The stratum's record kinds are defined and self-tested in forensics/tools/multitrack_schemas.py, whose inventory this registry records: the release nodes and their two version schemes (the pre-3.0 MNNFFPPS encoding and the 3.0-plus MAJOR.MINOR.PATCH form), the authority nodes, the lineage edges, the entity lineage, the compatibility views, the compatibility edges, the negative obligations, the security lineage, the support-status ladder and the assembled matrix. The one thing the model forbids everywhere is a single boolean: compatibility is directional and dimension-specific, a cross-version receipt is never inherited, an authority is named explicitly and singularly, and a historical vulnerability is observed but never reintroduced. docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
-    "courts": [],
+    "claim": "`RT-RELEASE-CATALOG` is 23.1's court: the release catalogue and its lineage. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, both derived from forensics/multitrack/release-archaeology.json -- the official OpenSSL release timeline, the git tag each release names and the commit it peels to, and the nearest release ancestor the git graph gives it. It establishes that the graph begins at OpenSSL 0.9.1c (23 December 1998), that every upstream mainline final is present with no unexplained gap, that a pre-release is classified and never promoted to final or to the `latest-stable` alias merely by sorting higher, that the lineage is a typed DAG whose parallel branches are branch_fork edges rather than a false linear mainline, that every node is schema-valid with provenance, and that SSLeay is provenance ancestry only. A deleted release, a `final` flipped to `beta`, a repointed parent edge and a `latest-stable` pointed at a beta are each detected with specificity holding on the honest catalogue. A passing catalogue is a catalogue, not a compatibility claim: no edge says any release is compatible with any other. Phase 23 owns no exported symbol, so no differential probe over a symbol set is its evidence, and its remaining eleven courts -- RT-AUTHORITY-NODES, RT-LINEAGE-EDGES, RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, RT-COMPATIBILITY-VIEWS, RT-COMPATIBILITY-EDGES, RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with the subphases that land them (23.2 through 23.12). The one thing the model forbids everywhere is a single boolean: compatibility is directional and dimension-specific, a cross-version receipt is never inherited, an authority is named explicitly and singularly, and a historical vulnerability is observed but never reintroduced. docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
+    "courts": [
+      {
+        "catalog_counts": {
+          "auxiliary": 41,
+          "channels": {
+            "alpha": 26,
+            "beta": 50,
+            "development": 15,
+            "final": 247,
+            "historical_auxiliary": 34
+          },
+          "mainline": 331,
+          "nodes": 372,
+          "series": 25,
+          "support_classes": {
+            "lts": 113,
+            "prerelease": 84,
+            "release": 134,
+            "unknown": 41
+          },
+          "unresolved": 16
+        },
+        "content_hash": "777a29cbdb9655db28be4ea2ce07bc24a591f2e7a2d8678e766a92e00a49f40b",
+        "control": {
+          "baseline_findings": 0,
+          "caught_deleted_release": true,
+          "caught_final_to_beta": true,
+          "caught_repointed_edge": true,
+          "caught_stable_beta": true,
+          "honest": true,
+          "injected_deleted_findings": 2,
+          "injected_deleted_release": "openssl-1.0.2u",
+          "injected_final_to_beta": "openssl-1.0.2u",
+          "injected_final_to_beta_findings": 1,
+          "injected_repointed_edge": "L-*-openssl-1.0.2t-openssl-1.0.2u -> openssl-1.0.2a",
+          "injected_repointed_findings": 1,
+          "injected_stable_beta": "openssl-4.1.0-beta1",
+          "injected_stable_beta_findings": 3,
+          "specificity_holds": true
+        },
+        "court": "RT-RELEASE-CATALOG",
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the catalogue court reads committed release records and stages no artifacts/phase23/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "latest_stable": "openssl-4.0.3",
+        "lineage_counts": {
+          "edges": 738,
+          "kinds": {
+            "branch_fork": 19,
+            "chronological_successor": 129,
+            "git_ancestry": 367,
+            "maintenance_successor": 223
+          },
+          "nodes": 372
+        },
+        "method": "stages no probe: it reads forensics/release-catalog.json and forensics/authority-lineage.json, both derived from forensics/multitrack/release-archaeology.json (the official timeline plus the git tags' commits and nearest-release ancestors), and establishes the graph's root at OpenSSL 0.9.1c, the presence of every upstream mainline final with no unexplained gap, the classification of pre-releases and the finality of latest-stable, the typed DAG with branch_fork edges for the parallel branches, the schema validity and provenance of every node, and that SSLeay is provenance ancestry rather than a release node. A deleted release, a final flipped to beta, a repointed parent edge and a latest-stable pointed at a beta are each detected (docs/PHASE-23-MULTITRACK-SUBPHASES.md section 3.2).",
+        "probe": "",
+        "problems": [],
+        "root": "openssl-0.9.1c",
+        "verdict": "pass"
+      }
+    ],
     "pending_courts": {
       "MULTITRACK-SEAL": "23.12 -- the full matrix, the FRF/Gemel chain and the seal",
       "RT-AUTHORITY-NODES": "23.2 -- the authority-node registry",
@@ -15,7 +76,6 @@
       "RT-ENTITY-LINEAGE": "23.4 -- the entity lineage",
       "RT-LINEAGE-EDGES": "23.3 -- the lineage edges",
       "RT-NEGATIVE-OBLIGATIONS": "23.8 -- the negative obligations",
-      "RT-RELEASE-NODES": "23.1 -- the release-node catalogue",
       "RT-SECURITY-LINEAGE": "23.9 -- the security lineage",
       "RT-SUPPORT-STATUS": "23.10 -- the support-status ladder"
     },
@@ -163,8 +223,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 0,
-      "total": 0
+      "pass": 1,
+      "total": 1
     }
   },
   "generator": "forensics/tools/phase23_courts.py",
@@ -172,12 +232,27 @@
     {
       "name": "phase-23-plan",
       "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
-      "sha256": "ffc906e5d21bb9659d1bcfda8e494a3928211e4571db5a3e97dbff2b6bcd2dfa"
+      "sha256": "7497bc2af484c1d8a8f45c805a3c1f4c852b81a2e413c3c8fab0fb46177f8787"
     },
     {
       "name": "multitrack-schemas",
       "path": "forensics/tools/multitrack_schemas.py",
       "sha256": "ffe5b38f9d7c1345fb6cce41c5a6e8adb5b727e21c239a2b40caf9cbd70c74f5"
+    },
+    {
+      "name": "release-catalog",
+      "path": "forensics/release-catalog.json",
+      "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b"
+    },
+    {
+      "name": "authority-lineage",
+      "path": "forensics/authority-lineage.json",
+      "sha256": "8a4c6037820e0da5b392d70eb9ffcfa71b1fce3ba6703b560ff2f838c9e11a80"
+    },
+    {
+      "name": "release-archaeology",
+      "path": "forensics/multitrack/release-archaeology.json",
+      "sha256": "434eb08168a5c6a5ce074ddc2bbef56e66ff1e81114a2c7b28e4c12fb20c7022"
     }
   ],
   "kind": "phase23-courts",

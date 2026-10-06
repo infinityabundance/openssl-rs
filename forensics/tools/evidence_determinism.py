@@ -139,6 +139,14 @@ GENERATORS_BEFORE_LEDGERS = [
     # into `forensics/STATUS.md`, so it must run before that renderer, and the register court in
     # `phase18_courts.py` re-scans against the authored bounds at court time.
     "forensics/tools/unsafe_footprint.py",
+    # Phase 23.1's release catalogue and lineage (D535). It reads the committed archaeology
+    # snapshot `forensics/multitrack/release-archaeology.json` and nothing else, so it has no
+    # position dependence beyond being after the sources are final; it is listed here so a stale
+    # committed catalogue is a failure rather than a silent divergence. The whole point of
+    # deriving the catalogue from the snapshot rather than typing it is that the lineage is a
+    # fact a reader can recompute, which a generator nothing re-runs would defeat. The court
+    # `RT-RELEASE-CATALOG` reads the two artefacts it writes.
+    "forensics/tools/authority_catalog.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -291,6 +299,12 @@ COMPARED = [
     # `.bin` fixtures are re-derived by the generator above and re-verified by the court, so the
     # compared artefact is the manifest that pins them.
     "courts/phase18/fixtures/hostile-x509/MANIFEST.json",
+    # Phase 23.1's release catalogue and its typed lineage: pure functions of the committed
+    # `forensics/multitrack/release-archaeology.json`, so a stale committed copy is a failure and
+    # not a silent divergence -- the whole point of deriving the catalogue rather than typing it
+    # is defeated by a generator nothing re-runs.
+    "forensics/release-catalog.json",
+    "forensics/authority-lineage.json",
 ]
 
 # ---------------------------------------------------------------------------

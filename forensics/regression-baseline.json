@@ -676,6 +676,10 @@
       "observations": 38,
       "verdict": "pass"
     },
+    "RT-RELEASE-CATALOG": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-RSA": {
       "observations": 1021,
       "verdict": "pass"
@@ -862,7 +866,7 @@
     "phase20": 0,
     "phase21": 0,
     "phase22": 0,
-    "phase23": 12,
+    "phase23": 11,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

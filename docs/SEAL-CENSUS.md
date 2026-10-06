@@ -48,7 +48,7 @@ declared owner; this is that assignment.
 | 20 | 3.6.4 custodian seal | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 21 | Maintenance delta machinery | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
-| 23 | Multitrack authority compatibility and OpenSSL lineage | `in-progress` | 0 | 12 | 0 | 0 | 12 |
+| 23 | Multitrack authority compatibility and OpenSSL lineage | `in-progress` | 0 | 12 | 1 | 0 | 11 |
 
 ## Phase 3 — Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects
 
@@ -746,20 +746,20 @@ The other 16 compare ELF structure rather than a transcript and observe nothing 
 ## Phase 23 — Multitrack authority compatibility and OpenSSL lineage
 
 * state: `in-progress`
-* blocking: 12 open obligation(s) of this stratum recorded in forensics/phase23-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase23-obligations.json` publishes `unit: multitrack authority contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the twelve contract units (`release-nodes`, `authority-nodes`, `lineage-edges`, `entity-lineage`, `delta-engine`, `compatibility-views`, `directional-compatibility-edges`, `negative-obligations`, `security-lineage`, `support-status`, `compatibility-matrix` and `multitrack-seal`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it emits compatibility views over releases and authorities that are already admitted. Its `artifacts/phase23/COURTS.json` registered no court at activation because it owns no symbol for a differential probe to observe; the twelve courts are `pending` with the subphases that land them. A passing court is an **instrument**, not a property claim: the property it names may still carry findings, so `measurement_state` says the instrument completed while `property_status`/`findings` say what is claimed. The stratum makes no one-boolean compatibility claim: compatibility is **directional and dimension-specific** (docs/PARITY_MODEL.md sections 3 and 4), a cross-version receipt is never inherited, an authority is named explicitly and singularly rather than selected by a Cargo feature, and a historical vulnerability is observed but never reintroduced (docs/SECURITY_DIVERGENCE_POLICY.md section 1). The stratum records six explicit non-claims: historical API compatibility is not security approval; reproducing an old algorithm is not recommending it; OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md); one platform/profile is not every platform/profile; an archaeological source node is not runtime parity; and upstream's ABI promise is not candidate evidence. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-23-MULTITRACK-SUBPHASES.md` sections 0 and 4 record the measurement
+* blocking: 11 open obligation(s) of this stratum recorded in forensics/phase23-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase23-obligations.json` publishes `unit: multitrack authority contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the twelve contract units (`release-nodes`, `authority-nodes`, `lineage-edges`, `entity-lineage`, `delta-engine`, `compatibility-views`, `directional-compatibility-edges`, `negative-obligations`, `security-lineage`, `support-status`, `compatibility-matrix` and `multitrack-seal`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it emits compatibility views over releases and authorities that are already admitted. Its courts stage no probe, because it owns no symbol for a differential probe to observe: `RT-RELEASE-CATALOG` (23.1, the release catalogue and its lineage) is registered, and the remaining eleven courts are `pending` with the subphases that land them. A passing court is an **instrument**, not a property claim: the property it names may still carry findings, so `measurement_state` says the instrument completed while `property_status`/`findings` say what is claimed. The stratum makes no one-boolean compatibility claim: compatibility is **directional and dimension-specific** (docs/PARITY_MODEL.md sections 3 and 4), a cross-version receipt is never inherited, an authority is named explicitly and singularly rather than selected by a Cargo feature, and a historical vulnerability is observed but never reintroduced (docs/SECURITY_DIVERGENCE_POLICY.md section 1). The stratum records six explicit non-claims: historical API compatibility is not security approval; reproducing an old algorithm is not recommending it; OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md); one platform/profile is not every platform/profile; an archaeological source node is not runtime parity; and upstream's ABI promise is not candidate evidence. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-23-MULTITRACK-SUBPHASES.md` sections 0 and 4 record the measurement
 * seal: none written yet (`docs/PHASE-23-MULTITRACK-SEAL.md`)
 * ledger: `forensics/phase23-obligations.json`
 * atlas-owned: 0
 * owned working set: 12
-* implemented: 0
+* implemented: 1
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 12**
+* **open in this stratum: 11**
 
 Contract units (measurement vs property):
 
 | unit | measurement_state | property_status | findings |
 |---|---|---|---|
-| release-nodes | `not_measured` | `not_claimed` | — |
+| release-nodes | `complete` | `not_claimed` | — |
 | authority-nodes | `not_measured` | `not_claimed` | — |
 | lineage-edges | `not_measured` | `not_claimed` | — |
 | entity-lineage | `not_measured` | `not_claimed` | — |
@@ -773,10 +773,13 @@ Contract units (measurement vs property):
 | multitrack-seal | `not_measured` | `not_claimed` | — |
 
 A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
-Courts: `all pass`, 0 court(s), **0** authority observation(s) over 0 transcript court(s).
+Courts: `all pass`, 1 court(s), **0** authority observation(s) over 0 transcript court(s).
+
+The other 1 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
+| RT-RELEASE-CATALOG | `pass` | — (structural) |
 
 ## Court coverage
 

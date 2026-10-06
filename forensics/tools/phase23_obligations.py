@@ -117,11 +117,12 @@ UNIT = "multitrack authority contract"
 # court passes; none of them is a symbol, because the model emits views over releases and
 # authorities that are already admitted. `(unit, court, closure, what)`.
 COURT_UNITS: tuple[tuple[str, str, str, str], ...] = (
-    ("release-nodes", "RT-RELEASE-NODES",
-     "the `RT-RELEASE-NODES` court passes",
+    ("release-nodes", "RT-RELEASE-CATALOG",
+     "the `RT-RELEASE-CATALOG` court passes",
      "one release node per upstream release from OpenSSL 0.9.1c forward, read from the committed "
-     "source manifests and the upstream lineage rather than typed, with the version parser and "
-     "scheme model in `forensics/tools/multitrack_schemas.py`"),
+     "archaeology snapshot (`forensics/multitrack/release-archaeology.json`) and the upstream "
+     "lineage rather than typed, with the version parser and scheme model in "
+     "`forensics/tools/multitrack_schemas.py`"),
     ("authority-nodes", "RT-AUTHORITY-NODES",
      "the `RT-AUTHORITY-NODES` court passes",
      "one authority node per built authority, recording platform, arch, build profile, toolchain, "
