@@ -1,0 +1,3692 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "authorities": [
+      "openssl-0.9.8zh-historical",
+      "openssl-1.0.2u-historical",
+      "openssl-1.1.1w-historical",
+      "openssl-3.0.0-historical",
+      "openssl-3.6.3-historical",
+      "openssl-3.6.4-production"
+    ],
+    "boundary": "23.13 derives the obligations the committed evidence supports: the provider planes of every censused authority, the public-layout and architecture façades, the 3.6.3 -> 3.6.4 delta's added entities and measured exports, and each authority's `.num` NOEXIST rows. A 4.x release carries no admitted authority or view, so its ENGINE obligation reads `unknown` rather than satisfied. An obligation is bounded to the authority or release it names; no obligation inherits another authority's evidence.",
+    "content_hash": "1262f9f4631869ed455a004cb75ed11605c55444a487201d557cf246d5d761f3",
+    "counts": {
+      "by_authority": {
+        "openssl-0.9.8zh-historical": 5,
+        "openssl-1.0.2u-historical": 2,
+        "openssl-1.1.1w-historical": 2,
+        "openssl-3.0.0-historical": 2,
+        "openssl-3.6.3-historical": 31,
+        "openssl-3.6.4-production": 36,
+        "openssl-4.0.3": 1
+      },
+      "by_kind": {
+        "must_be_exported": 40,
+        "must_be_opaque": 2,
+        "must_be_public": 2,
+        "must_exist": 8,
+        "must_not_be_exported": 18,
+        "must_not_exist": 9
+      },
+      "by_state": {
+        "satisfied": 78,
+        "unknown": 1
+      },
+      "negative": 29,
+      "obligations": 79,
+      "open": 0,
+      "positive": 50,
+      "unknown": 1
+    },
+    "expected_state_of_kind": {
+      "must_be_exported": "exported",
+      "must_be_opaque": "opaque",
+      "must_be_public": "public",
+      "must_exist": "present",
+      "must_not_be_exported": "not_exported",
+      "must_not_exist": "absent"
+    },
+    "kinds": [
+      "must_exist",
+      "must_not_exist",
+      "must_be_opaque",
+      "must_be_public",
+      "must_be_exported",
+      "must_not_be_exported"
+    ],
+    "non_claims": [
+      "an obligation records a surface that must exist, must be absent, must be opaque, must be public or must (not) be exported in one named authority or release; it is not a one-boolean compatibility claim",
+      "an obligation is bounded to the authority or release it names and the evidence it carries; a receipt from one authority is never inherited as evidence for another",
+      "an obligation that cannot be adjudicated reads `unknown`, never `satisfied`",
+      "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+    ],
+    "obligations": [
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-0.9.8zh-historical",
+              "evidence": [
+                "forensics/multitrack/abi-facades.json"
+              ],
+              "facade_id": "F-EVP_MD_CTX-0.9.8zh",
+              "field": "public_layout_epoch",
+              "rule": "layout-epoch",
+              "struct_tag": "env_md_ctx_st"
+            }
+          ],
+          "rules": [
+            "layout-epoch"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/multitrack/abi-facades.json",
+            "role": "authority",
+            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "what": "the EVP_MD_CTX public-layout façade: its measured layout epoch"
+          }
+        ],
+        "expected_state": "public",
+        "kind": "must_be_public",
+        "obligation_id": "NO-openssl-0.9.8zh-historical-must_be_public-EVP_MD_CTX",
+        "rationale": "EVP_MD_CTX is measured `transparent_pre_1_1_0` in openssl-0.9.8zh-historical: the pre-1.1.0 public `#[repr(C)]` layout is transparent, so the struct must be public and must not be opaque in its view",
+        "scope": {
+          "authority_id": "openssl-0.9.8zh-historical",
+          "release_id": "openssl-0.9.8zh"
+        },
+        "state": "satisfied",
+        "subject": "EVP_MD_CTX",
+        "subject_kind": "struct",
+        "view_id": "compat-view/openssl-0.9.8zh-historical/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-0.9.8zh-historical",
+              "evidence": [
+                "forensics/multitrack/abi-facades.json"
+              ],
+              "facade_id": "F-HMAC_CTX-0.9.8zh",
+              "field": "public_layout_epoch",
+              "rule": "layout-epoch",
+              "struct_tag": "hmac_ctx_st"
+            }
+          ],
+          "rules": [
+            "layout-epoch"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/multitrack/abi-facades.json",
+            "role": "authority",
+            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "what": "the HMAC_CTX public-layout façade: its measured layout epoch"
+          }
+        ],
+        "expected_state": "public",
+        "kind": "must_be_public",
+        "obligation_id": "NO-openssl-0.9.8zh-historical-must_be_public-HMAC_CTX",
+        "rationale": "HMAC_CTX is measured `transparent_pre_1_1_0` in openssl-0.9.8zh-historical: the pre-1.1.0 public `#[repr(C)]` layout is transparent, so the struct must be public and must not be opaque in its view",
+        "scope": {
+          "authority_id": "openssl-0.9.8zh-historical",
+          "release_id": "openssl-0.9.8zh"
+        },
+        "state": "satisfied",
+        "subject": "HMAC_CTX",
+        "subject_kind": "struct",
+        "view_id": "compat-view/openssl-0.9.8zh-historical/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-0.9.8zh-historical",
+              "evidence": [
+                "forensics/multitrack/abi-facades.json"
+              ],
+              "facade_id": "A-0.9.8zh",
+              "rule": "architecture-engine"
+            }
+          ],
+          "rules": [
+            "architecture-engine"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/multitrack/abi-facades.json",
+            "role": "authority",
+            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "what": "the authority's architecture façade: its engine/provider model"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-0.9.8zh-historical-must_exist-ENGINE",
+        "rationale": "the authority's architecture façade records `engine`, so the ENGINE surface must exist in its view",
+        "scope": {
+          "authority_id": "openssl-0.9.8zh-historical",
+          "release_id": "openssl-0.9.8zh"
+        },
+        "state": "satisfied",
+        "subject": "ENGINE",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-0.9.8zh-historical",
+              "evidence": [
+                "forensics/atlas/openssl-0.9.8zh-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-0.9.8zh-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "1d429160091840faddc7ac9e99aa4678afa91bc504fd76c60124ed56171c0f18",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-0.9.8zh-historical-must_not_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured measured_absence (count 0), so the provider-registration surface must be absent in its view",
+        "scope": {
+          "authority_id": "openssl-0.9.8zh-historical",
+          "release_id": "openssl-0.9.8zh"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-0.9.8zh-historical",
+              "evidence": [
+                "forensics/atlas/openssl-0.9.8zh-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            },
+            {
+              "authority_id": "openssl-0.9.8zh-historical",
+              "evidence": [
+                "forensics/multitrack/abi-facades.json"
+              ],
+              "facade_id": "A-0.9.8zh",
+              "rule": "architecture-provider"
+            }
+          ],
+          "rules": [
+            "architecture-provider",
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-0.9.8zh-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "1d429160091840faddc7ac9e99aa4678afa91bc504fd76c60124ed56171c0f18",
+            "what": "the authority's plane census, which measures its provider planes"
+          },
+          {
+            "kind": "build_records",
+            "path": "forensics/multitrack/abi-facades.json",
+            "role": "authority",
+            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "what": "the authority's architecture façade: its engine/provider model"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-0.9.8zh-historical-must_not_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured measured_absence (count 0), so the provider-store surface must be absent in its view",
+        "scope": {
+          "authority_id": "openssl-0.9.8zh-historical",
+          "release_id": "openssl-0.9.8zh"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-1.0.2u-historical",
+              "evidence": [
+                "forensics/atlas/openssl-1.0.2u-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-1.0.2u-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "ee15cea3124b11e3f20e92b9ca3cb862dd7503a64fe3f852ac14bff6e9885734",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-1.0.2u-historical-must_not_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured measured_absence (count 0), so the provider-registration surface must be absent in its view",
+        "scope": {
+          "authority_id": "openssl-1.0.2u-historical",
+          "release_id": "openssl-1.0.2u"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-1.0.2u-historical",
+              "evidence": [
+                "forensics/atlas/openssl-1.0.2u-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-1.0.2u-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "ee15cea3124b11e3f20e92b9ca3cb862dd7503a64fe3f852ac14bff6e9885734",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-1.0.2u-historical-must_not_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured measured_absence (count 0), so the provider-store surface must be absent in its view",
+        "scope": {
+          "authority_id": "openssl-1.0.2u-historical",
+          "release_id": "openssl-1.0.2u"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-1.1.1w-historical",
+              "evidence": [
+                "forensics/atlas/openssl-1.1.1w-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-1.1.1w-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "715bbcc0f27eb82a5cb5af9b2e9f234b67ffdb90c0025aa9279a9acd6cb56889",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-1.1.1w-historical-must_not_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured measured_absence (count 0), so the provider-registration surface must be absent in its view",
+        "scope": {
+          "authority_id": "openssl-1.1.1w-historical",
+          "release_id": "openssl-1.1.1w"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-1.1.1w-historical",
+              "evidence": [
+                "forensics/atlas/openssl-1.1.1w-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-1.1.1w-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "715bbcc0f27eb82a5cb5af9b2e9f234b67ffdb90c0025aa9279a9acd6cb56889",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-1.1.1w-historical-must_not_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured measured_absence (count 0), so the provider-store surface must be absent in its view",
+        "scope": {
+          "authority_id": "openssl-1.1.1w-historical",
+          "release_id": "openssl-1.1.1w"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.0.0-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.0.0-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.0.0-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "eceaea02e301ef050f30dcc6c255fe83161dd6b158b0c09eefb348ca1fe0dde7",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.0.0-historical-must_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured produced (count 1), so the provider-registration surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.0.0-historical",
+          "release_id": "openssl-3.0.0"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.0.0-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.0.0-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.0.0-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "eceaea02e301ef050f30dcc6c255fe83161dd6b158b0c09eefb348ca1fe0dde7",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.0.0-historical-must_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured produced (count 293), so the provider-store surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.0.0-historical",
+          "release_id": "openssl-3.0.0"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:ASN1_mbstring_ncopy",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:ASN1_mbstring_ncopy-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-ASN1_mbstring_ncopy",
+        "rationale": "the delta read `ASN1_mbstring_ncopy` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "ASN1_mbstring_ncopy",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:BN_consttime_swap",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:BN_consttime_swap-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-BN_consttime_swap",
+        "rationale": "the delta read `BN_consttime_swap` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "BN_consttime_swap",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:BN_uadd",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:BN_uadd-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-BN_uadd",
+        "rationale": "the delta read `BN_uadd` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "BN_uadd",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:BN_ucmp",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:BN_ucmp-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-BN_ucmp",
+        "rationale": "the delta read `BN_ucmp` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "BN_ucmp",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:BN_usub",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:BN_usub-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-BN_usub",
+        "rationale": "the delta read `BN_usub` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "BN_usub",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:CMS_RecipientInfo_decrypt",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:CMS_RecipientInfo_decrypt-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-CMS_RecipientInfo_decrypt",
+        "rationale": "the delta read `CMS_RecipientInfo_decrypt` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "CMS_RecipientInfo_decrypt",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:DH_check",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:DH_check-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-DH_check",
+        "rationale": "the delta read `DH_check` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "DH_check",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:DH_check_params",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:DH_check_params-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-DH_check_params",
+        "rationale": "the delta read `DH_check_params` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "DH_check_params",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:DH_check_pub_key",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:DH_check_pub_key-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-DH_check_pub_key",
+        "rationale": "the delta read `DH_check_pub_key` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "DH_check_pub_key",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:OPENSSL_uni2utf8",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:OPENSSL_uni2utf8-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-OPENSSL_uni2utf8",
+        "rationale": "the delta read `OPENSSL_uni2utf8` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "OPENSSL_uni2utf8",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:OSSL_CMP_validate_msg",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:OSSL_CMP_validate_msg-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-OSSL_CMP_validate_msg",
+        "rationale": "the delta read `OSSL_CMP_validate_msg` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "OSSL_CMP_validate_msg",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:OSSL_parse_url",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:OSSL_parse_url-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-OSSL_parse_url",
+        "rationale": "the delta read `OSSL_parse_url` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "OSSL_parse_url",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:PKCS12_unpack_authsafes",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:PKCS12_unpack_authsafes-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-PKCS12_unpack_authsafes",
+        "rationale": "the delta read `PKCS12_unpack_authsafes` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "PKCS12_unpack_authsafes",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:PKCS7_set_digest",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:PKCS7_set_digest-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-PKCS7_set_digest",
+        "rationale": "the delta read `PKCS7_set_digest` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "PKCS7_set_digest",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:PKCS7_stream",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:PKCS7_stream-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-PKCS7_stream",
+        "rationale": "the delta read `PKCS7_stream` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "PKCS7_stream",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "symbol:asn1_d2i_read_bio",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-symbol:asn1_d2i_read_bio-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-asn1_d2i_read_bio",
+        "rationale": "the delta read `asn1_d2i_read_bio` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "asn1_d2i_read_bio",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:SSL_CTX_add_session",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:SSL_CTX_add_session-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+            "role": "authority",
+            "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libssl-SSL_CTX_add_session",
+        "rationale": "the delta read `SSL_CTX_add_session` as an exported libssl symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "SSL_CTX_add_session",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:SSL_CTX_flush_sessions_ex",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:SSL_CTX_flush_sessions_ex-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+            "role": "authority",
+            "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libssl-SSL_CTX_flush_sessions_ex",
+        "rationale": "the delta read `SSL_CTX_flush_sessions_ex` as an exported libssl symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "SSL_CTX_flush_sessions_ex",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:SSL_CTX_remove_session",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:SSL_CTX_remove_session-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+            "role": "authority",
+            "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libssl-SSL_CTX_remove_session",
+        "rationale": "the delta read `SSL_CTX_remove_session` as an exported libssl symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "SSL_CTX_remove_session",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:SSL_dup",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:SSL_dup-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+            "role": "authority",
+            "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libssl-SSL_dup",
+        "rationale": "the delta read `SSL_dup` as an exported libssl symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.3-historical must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "SSL_dup",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.3-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "ERR_load_DSO_strings"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-ERR_load_DSO_strings",
+        "rationale": "the authority's `.num` declares `ERR_load_DSO_strings` NOEXIST, so it must not be exported by openssl-3.6.3-historical's view",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "ERR_load_DSO_strings",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.3-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "ERR_put_error"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-ERR_put_error",
+        "rationale": "the authority's `.num` declares `ERR_put_error` NOEXIST, so it must not be exported by openssl-3.6.3-historical's view",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "ERR_put_error",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.3-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "EVP_PKEY_get1_tls_encodedpoint"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-EVP_PKEY_get1_tls_encodedpoint",
+        "rationale": "the authority's `.num` declares `EVP_PKEY_get1_tls_encodedpoint` NOEXIST, so it must not be exported by openssl-3.6.3-historical's view",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "EVP_PKEY_get1_tls_encodedpoint",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.3-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "EVP_PKEY_set1_tls_encodedpoint"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-EVP_PKEY_set1_tls_encodedpoint",
+        "rationale": "the authority's `.num` declares `EVP_PKEY_set1_tls_encodedpoint` NOEXIST, so it must not be exported by openssl-3.6.3-historical's view",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "EVP_PKEY_set1_tls_encodedpoint",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.3-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "EVP_PKEY_set_alias_type"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-EVP_PKEY_set_alias_type",
+        "rationale": "the authority's `.num` declares `EVP_PKEY_set_alias_type` NOEXIST, so it must not be exported by openssl-3.6.3-historical's view",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "EVP_PKEY_set_alias_type",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.3-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "OPENSSL_memcmp"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-OPENSSL_memcmp",
+        "rationale": "the authority's `.num` declares `OPENSSL_memcmp` NOEXIST, so it must not be exported by openssl-3.6.3-historical's view",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "OPENSSL_memcmp",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.3-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "RSA_padding_add_SSLv23"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-RSA_padding_add_SSLv23",
+        "rationale": "the authority's `.num` declares `RSA_padding_add_SSLv23` NOEXIST, so it must not be exported by openssl-3.6.3-historical's view",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "RSA_padding_add_SSLv23",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.3-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "RSA_padding_check_SSLv23"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-RSA_padding_check_SSLv23",
+        "rationale": "the authority's `.num` declares `RSA_padding_check_SSLv23` NOEXIST, so it must not be exported by openssl-3.6.3-historical's view",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "RSA_padding_check_SSLv23",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.3-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json"
+              ],
+              "library": "libssl",
+              "rule": "symbol-export",
+              "symbol": "SSL_get_peer_certificate"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+            "role": "authority",
+            "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-SSL_get_peer_certificate",
+        "rationale": "the authority's `.num` declares `SSL_get_peer_certificate` NOEXIST, so it must not be exported by openssl-3.6.3-historical's view",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "SSL_get_peer_certificate",
+        "subject_kind": "symbol",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "added",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS-api_presence-entity",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "source_api",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_not_exist-SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+        "rationale": "`SSL_VALUE_QUIC_MAX_PENDING_CONNS` is added in openssl-3.6.4 and absent from openssl-3.6.3: it must not exist in openssl-3.6.3-historical's view",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+        "subject_kind": "macro",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "added",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "macro:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-macro:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH-api_presence-entity",
+              "rule": "delta-row",
+              "side": "from"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "source_api",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-3.6.3-historical-must_not_exist-X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+        "rationale": "`X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH` is added in openssl-3.6.4 and absent from openssl-3.6.3: it must not exist in openssl-3.6.3-historical's view",
+        "scope": {
+          "authority_id": "openssl-3.6.3-historical",
+          "release_id": "openssl-3.6.3"
+        },
+        "state": "satisfied",
+        "subject": "X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+        "subject_kind": "macro",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:ASN1_mbstring_ncopy",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:ASN1_mbstring_ncopy-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-ASN1_mbstring_ncopy",
+        "rationale": "the delta read `ASN1_mbstring_ncopy` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "ASN1_mbstring_ncopy",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:BN_consttime_swap",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:BN_consttime_swap-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-BN_consttime_swap",
+        "rationale": "the delta read `BN_consttime_swap` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "BN_consttime_swap",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:BN_uadd",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:BN_uadd-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-BN_uadd",
+        "rationale": "the delta read `BN_uadd` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "BN_uadd",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:BN_ucmp",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:BN_ucmp-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-BN_ucmp",
+        "rationale": "the delta read `BN_ucmp` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "BN_ucmp",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:BN_usub",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:BN_usub-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-BN_usub",
+        "rationale": "the delta read `BN_usub` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "BN_usub",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:CMS_RecipientInfo_decrypt",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:CMS_RecipientInfo_decrypt-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-CMS_RecipientInfo_decrypt",
+        "rationale": "the delta read `CMS_RecipientInfo_decrypt` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "CMS_RecipientInfo_decrypt",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:DH_check",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:DH_check-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-DH_check",
+        "rationale": "the delta read `DH_check` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "DH_check",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:DH_check_params",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:DH_check_params-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-DH_check_params",
+        "rationale": "the delta read `DH_check_params` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "DH_check_params",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:DH_check_pub_key",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:DH_check_pub_key-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-DH_check_pub_key",
+        "rationale": "the delta read `DH_check_pub_key` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "DH_check_pub_key",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:OPENSSL_uni2utf8",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:OPENSSL_uni2utf8-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-OPENSSL_uni2utf8",
+        "rationale": "the delta read `OPENSSL_uni2utf8` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "OPENSSL_uni2utf8",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:OSSL_CMP_validate_msg",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:OSSL_CMP_validate_msg-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-OSSL_CMP_validate_msg",
+        "rationale": "the delta read `OSSL_CMP_validate_msg` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "OSSL_CMP_validate_msg",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:OSSL_parse_url",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:OSSL_parse_url-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-OSSL_parse_url",
+        "rationale": "the delta read `OSSL_parse_url` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "OSSL_parse_url",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:PKCS12_unpack_authsafes",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:PKCS12_unpack_authsafes-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-PKCS12_unpack_authsafes",
+        "rationale": "the delta read `PKCS12_unpack_authsafes` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "PKCS12_unpack_authsafes",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:PKCS7_set_digest",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:PKCS7_set_digest-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-PKCS7_set_digest",
+        "rationale": "the delta read `PKCS7_set_digest` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "PKCS7_set_digest",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:PKCS7_stream",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:PKCS7_stream-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-PKCS7_stream",
+        "rationale": "the delta read `PKCS7_stream` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "PKCS7_stream",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "symbol:asn1_d2i_read_bio",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-symbol:asn1_d2i_read_bio-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-asn1_d2i_read_bio",
+        "rationale": "the delta read `asn1_d2i_read_bio` as an exported libcrypto symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "asn1_d2i_read_bio",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:SSL_CTX_add_session",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:SSL_CTX_add_session-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+            "role": "authority",
+            "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libssl-SSL_CTX_add_session",
+        "rationale": "the delta read `SSL_CTX_add_session` as an exported libssl symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "SSL_CTX_add_session",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:SSL_CTX_flush_sessions_ex",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:SSL_CTX_flush_sessions_ex-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+            "role": "authority",
+            "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libssl-SSL_CTX_flush_sessions_ex",
+        "rationale": "the delta read `SSL_CTX_flush_sessions_ex` as an exported libssl symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "SSL_CTX_flush_sessions_ex",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:SSL_CTX_remove_session",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:SSL_CTX_remove_session-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+            "role": "authority",
+            "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libssl-SSL_CTX_remove_session",
+        "rationale": "the delta read `SSL_CTX_remove_session` as an exported libssl symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "SSL_CTX_remove_session",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "changed",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "function:SSL_dup",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-function:SSL_dup-abi_symbol_presence-st_size",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+            "role": "authority",
+            "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634",
+            "what": "the authority's exported-symbol plane"
+          },
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "exported",
+        "kind": "must_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libssl-SSL_dup",
+        "rationale": "the delta read `SSL_dup` as an exported libssl symbol present in both openssl-3.6.3 and openssl-3.6.4, so openssl-3.6.4-production must export it",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "SSL_dup",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/multitrack/abi-facades.json",
+                "forensics/atlas/openssl-3.6.4-production/structs.json"
+              ],
+              "facade_id": "F-EVP_MD_CTX-0.9.8zh",
+              "field": "canonical_public_layout_epoch",
+              "rule": "layout-epoch",
+              "struct_tag": "evp_md_ctx_st",
+              "structs": "forensics/atlas/openssl-3.6.4-production/structs.json"
+            }
+          ],
+          "rules": [
+            "layout-epoch"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/structs.json",
+            "role": "authority",
+            "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893",
+            "what": "the canonical authority's struct plane, which marks EVP_MD_CTX incomplete (opaque)"
+          },
+          {
+            "kind": "build_records",
+            "path": "forensics/multitrack/abi-facades.json",
+            "role": "authority",
+            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "what": "the EVP_MD_CTX public-layout façade: its measured layout epoch"
+          }
+        ],
+        "expected_state": "opaque",
+        "kind": "must_be_opaque",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_opaque-EVP_MD_CTX",
+        "rationale": "EVP_MD_CTX is `opaque_post_1_1_0` in the canonical authority openssl-3.6.4-production (the 1.1.0 opacity transition): the post-1.1.0 layout is opaque, so the struct must be opaque and must not be public in its view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "EVP_MD_CTX",
+        "subject_kind": "struct",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/multitrack/abi-facades.json",
+                "forensics/atlas/openssl-3.6.4-production/structs.json"
+              ],
+              "facade_id": "F-HMAC_CTX-0.9.8zh",
+              "field": "canonical_public_layout_epoch",
+              "rule": "layout-epoch",
+              "struct_tag": "hmac_ctx_st",
+              "structs": "forensics/atlas/openssl-3.6.4-production/structs.json"
+            }
+          ],
+          "rules": [
+            "layout-epoch"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/structs.json",
+            "role": "authority",
+            "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893",
+            "what": "the canonical authority's struct plane, which marks HMAC_CTX incomplete (opaque)"
+          },
+          {
+            "kind": "build_records",
+            "path": "forensics/multitrack/abi-facades.json",
+            "role": "authority",
+            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "what": "the HMAC_CTX public-layout façade: its measured layout epoch"
+          }
+        ],
+        "expected_state": "opaque",
+        "kind": "must_be_opaque",
+        "obligation_id": "NO-openssl-3.6.4-production-must_be_opaque-HMAC_CTX",
+        "rationale": "HMAC_CTX is `opaque_post_1_1_0` in the canonical authority openssl-3.6.4-production (the 1.1.0 opacity transition): the post-1.1.0 layout is opaque, so the struct must be opaque and must not be public in its view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "HMAC_CTX",
+        "subject_kind": "struct",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/multitrack/abi-facades.json"
+              ],
+              "facade_id": "A-3.6.4",
+              "rule": "architecture-engine"
+            }
+          ],
+          "rules": [
+            "architecture-engine"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/multitrack/abi-facades.json",
+            "role": "authority",
+            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "what": "the authority's architecture façade: its engine/provider model"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.6.4-production-must_exist-ENGINE",
+        "rationale": "the authority's architecture façade records `deprecated_engine`, so the ENGINE surface must exist in its view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "ENGINE",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "added",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS-api_presence-entity",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "source_api",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.6.4-production-must_exist-SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+        "rationale": "`SSL_VALUE_QUIC_MAX_PENDING_CONNS` is added in openssl-3.6.4 and absent from openssl-3.6.3: it must exist in openssl-3.6.4-production's view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+        "subject_kind": "macro",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "classification": "added",
+              "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+              "entity_id": "macro:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+              "evidence": [
+                "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json"
+              ],
+              "row_id": "R-openssl-3.6.3-historical-openssl-3.6.4-production-macro:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH-api_presence-entity",
+              "rule": "delta-row",
+              "side": "to"
+            }
+          ],
+          "rules": [
+            "delta-row"
+          ]
+        },
+        "dimension": "source_api",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "role": "pair",
+            "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842",
+            "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.6.4-production-must_exist-X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+        "rationale": "`X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH` is added in openssl-3.6.4 and absent from openssl-3.6.3: it must exist in openssl-3.6.4-production's view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+        "subject_kind": "macro",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/atlas/parameterization-receipt.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/parameterization-receipt.json",
+            "role": "authority",
+            "sha256": "878b1fd6bb0fe33ab24ed90653089b0a44d10e6485ae4dbef051173a1f6574cb",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.6.4-production-must_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured produced (count 1), so the provider-registration surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/atlas/parameterization-receipt.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            },
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/multitrack/abi-facades.json"
+              ],
+              "facade_id": "A-3.6.4",
+              "rule": "architecture-provider"
+            }
+          ],
+          "rules": [
+            "architecture-provider",
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/parameterization-receipt.json",
+            "role": "authority",
+            "sha256": "878b1fd6bb0fe33ab24ed90653089b0a44d10e6485ae4dbef051173a1f6574cb",
+            "what": "the authority's plane census, which measures its provider planes"
+          },
+          {
+            "kind": "build_records",
+            "path": "forensics/multitrack/abi-facades.json",
+            "role": "authority",
+            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "what": "the authority's architecture façade: its engine/provider model"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.6.4-production-must_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured produced (count 388), so the provider-store surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "ERR_load_DSO_strings"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-ERR_load_DSO_strings",
+        "rationale": "the authority's `.num` declares `ERR_load_DSO_strings` NOEXIST, so it must not be exported by openssl-3.6.4-production's view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "ERR_load_DSO_strings",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "ERR_put_error"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-ERR_put_error",
+        "rationale": "the authority's `.num` declares `ERR_put_error` NOEXIST, so it must not be exported by openssl-3.6.4-production's view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "ERR_put_error",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "EVP_PKEY_get1_tls_encodedpoint"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-EVP_PKEY_get1_tls_encodedpoint",
+        "rationale": "the authority's `.num` declares `EVP_PKEY_get1_tls_encodedpoint` NOEXIST, so it must not be exported by openssl-3.6.4-production's view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "EVP_PKEY_get1_tls_encodedpoint",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "EVP_PKEY_set1_tls_encodedpoint"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-EVP_PKEY_set1_tls_encodedpoint",
+        "rationale": "the authority's `.num` declares `EVP_PKEY_set1_tls_encodedpoint` NOEXIST, so it must not be exported by openssl-3.6.4-production's view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "EVP_PKEY_set1_tls_encodedpoint",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "EVP_PKEY_set_alias_type"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-EVP_PKEY_set_alias_type",
+        "rationale": "the authority's `.num` declares `EVP_PKEY_set_alias_type` NOEXIST, so it must not be exported by openssl-3.6.4-production's view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "EVP_PKEY_set_alias_type",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "OPENSSL_memcmp"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-OPENSSL_memcmp",
+        "rationale": "the authority's `.num` declares `OPENSSL_memcmp` NOEXIST, so it must not be exported by openssl-3.6.4-production's view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "OPENSSL_memcmp",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "RSA_padding_add_SSLv23"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-RSA_padding_add_SSLv23",
+        "rationale": "the authority's `.num` declares `RSA_padding_add_SSLv23` NOEXIST, so it must not be exported by openssl-3.6.4-production's view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "RSA_padding_add_SSLv23",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json"
+              ],
+              "library": "libcrypto",
+              "rule": "symbol-export",
+              "symbol": "RSA_padding_check_SSLv23"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "role": "authority",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-RSA_padding_check_SSLv23",
+        "rationale": "the authority's `.num` declares `RSA_padding_check_SSLv23` NOEXIST, so it must not be exported by openssl-3.6.4-production's view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "RSA_padding_check_SSLv23",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.4-production",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json"
+              ],
+              "library": "libssl",
+              "rule": "symbol-export",
+              "symbol": "SSL_get_peer_certificate"
+            }
+          ],
+          "rules": [
+            "symbol-export"
+          ]
+        },
+        "dimension": "abi",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+            "role": "authority",
+            "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634",
+            "what": "the authority's symbols plane: the `.num` NOEXIST rows"
+          }
+        ],
+        "expected_state": "not_exported",
+        "kind": "must_not_be_exported",
+        "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-SSL_get_peer_certificate",
+        "rationale": "the authority's `.num` declares `SSL_get_peer_certificate` NOEXIST, so it must not be exported by openssl-3.6.4-production's view",
+        "scope": {
+          "authority_id": "openssl-3.6.4-production",
+          "release_id": "openssl-3.6.4"
+        },
+        "state": "satisfied",
+        "subject": "SSL_get_peer_certificate",
+        "subject_kind": "symbol",
+        "view_id": "compat-view/openssl-3.6.4-production/distribution_exported_symbols"
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "evidence": [
+                "forensics/multitrack/abi-facades.json",
+                "forensics/release-catalog.json"
+              ],
+              "release_id": "openssl-4.0.3",
+              "rule": "architecture-future"
+            }
+          ],
+          "rules": [
+            "architecture-future"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/multitrack/abi-facades.json",
+            "role": "model",
+            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "what": "the architecture model's highest measured epoch: the 3.6.4 `deprecated_engine` façade"
+          },
+          {
+            "kind": "manual_adjudication",
+            "path": "forensics/release-catalog.json",
+            "role": "release",
+            "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
+            "what": "the release node beyond the highest measured authority epoch"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-4.0.3-must_not_exist-ENGINE",
+        "rationale": "the architecture model moves ENGINE -> Provider -> no-ENGINE; 4.0.3 is beyond the highest measured authority epoch (3.6.4 `deprecated_engine`), so a 4.x view must not retain the ENGINE surface. No 4.x authority or view is admitted, so the obligation cannot be adjudicated and reads `unknown`",
+        "scope": {
+          "release_id": "openssl-4.0.3"
+        },
+        "state": "unknown",
+        "subject": "ENGINE",
+        "subject_kind": "surface",
+        "view_id": null
+      }
+    ],
+    "releases": [
+      "openssl-0.9.8zh",
+      "openssl-1.0.2u",
+      "openssl-1.1.1w",
+      "openssl-3.0.0",
+      "openssl-3.6.3",
+      "openssl-3.6.4",
+      "openssl-4.0.3"
+    ],
+    "rule": "one negative or positive obligation per surface a named authority or release must (not) carry, derived from the committed censuses, façades, deltas and symbols planes and never typed. Each record names its scope, subject, kind and expected state, and carries the evidence that establishes it; `state` is the reading `adjudicate` takes from that evidence -- `satisfied` where it affirms the obligation, `open` where it contradicts it, and `unknown` only where no authority or view exists to adjudicate it",
+    "states": [
+      "open",
+      "satisfied",
+      "unknown"
+    ]
+  },
+  "generator": "forensics/tools/negative_obligations.py",
+  "inputs": [
+    {
+      "name": "release-catalog",
+      "path": "forensics/release-catalog.json",
+      "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b"
+    },
+    {
+      "name": "authority-nodes",
+      "path": "forensics/authority-nodes.json",
+      "sha256": "bb9d188018293f625e87ef01577b8c7c6ddae967e88ed066d3434f3b74f35486"
+    },
+    {
+      "name": "parameterization-receipt",
+      "path": "forensics/atlas/parameterization-receipt.json",
+      "sha256": "878b1fd6bb0fe33ab24ed90653089b0a44d10e6485ae4dbef051173a1f6574cb"
+    },
+    {
+      "name": "abi-facades",
+      "path": "forensics/multitrack/abi-facades.json",
+      "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245"
+    },
+    {
+      "name": "compatibility-views",
+      "path": "forensics/multitrack/compatibility-views.json",
+      "sha256": "01ff789e0ab1e6c8e241013d67402e809e921bd67db3d3a89780bec4a52ff035"
+    },
+    {
+      "name": "delta-3.6.3-3.6.4",
+      "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+      "sha256": "a01ddfcdc4221985f051af62451428dba88c67db7637121af489375ff9412842"
+    }
+  ],
+  "kind": "negative-obligations",
+  "schema": "openssl-rs/atlas/negative-obligations/v1"
+}

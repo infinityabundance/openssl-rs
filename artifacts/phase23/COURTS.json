@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-RELEASE-CATALOG` is 23.1's court: the release catalogue and its lineage. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, both derived from forensics/multitrack/release-archaeology.json -- the official OpenSSL release timeline, the git tag each release names and the commit it peels to, and the nearest release ancestor the git graph gives it. It establishes that the graph begins at OpenSSL 0.9.1c (23 December 1998), that every upstream mainline final is present with no unexplained gap, that a pre-release is classified and never promoted to final or to the `latest-stable` alias merely by sorting higher, that the lineage is a typed DAG whose parallel branches are branch_fork edges rather than a false linear mainline, that every node is schema-valid with provenance, and that SSLeay is provenance ancestry only. A deleted release, a `final` flipped to `beta`, a repointed parent edge and a `latest-stable` pointed at a beta are each detected with specificity holding on the honest catalogue. A passing catalogue is a catalogue, not a compatibility claim: no edge says any release is compatible with any other. `RT-AUTHORITY-NODES` is 23.2's court: the authority-node registry. It stages no probe and reads forensics/authority-nodes.json and the records it is derived from -- the release catalogue, the admitted-authority registry, the build records and the historical acquisition and build receipts -- and establishes that every node is schema-valid, content-addressed and backed by an actual build receipt; that release identity (release_id, git) is proven against the catalogue and kept separate from platform/profile identity; that the admitted pair's source manifests still reproduce; and that an unavailable authority is recorded unavailable and is never a node. A built-authority claim with no receipt, a dropped required identity field, and a source digest asserting tag == tarball without proof are each detected with specificity holding. `RT-ATLAS-PARAMETERIZATION` is 23.3's court: the parameterized atlases. Its instrument is the generator itself: it reads forensics/atlas/parameterization-receipt.json, the committed default-authority alias and forensics/atlas/openssl-0.9.8zh-historical/plane-census.json, re-derives every census through the same generator, corroborates the historical authority's decisive absences (providers, provider registrations, QUIC) against its committed source manifest, and re-runs the authority-parameterized archaeology generators for the 3.6.4 production authority, asserting its committed plane is byte-identical. The default is the committed alias, never the catalogue's `latest-stable` (openssl-4.0.3); swapping the authority argument changes the produced census, so a hidden production fallback is caught, and a measured absence with no provenance or a nonzero count is refused. The one pre-existing, disclosed drift (parity-obligations.json) is measured live and undone, never applied. `RT-LINEAGE-EDGES` is 23.4's court: the typed lineage edges. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, and establishes that every edge is schema-valid, typed and directed, with its stated sense following the evidence's chronology and its provenance resolving; that the graph is a DAG whose parallel supported branches (1.0.2, 1.1.1, 3.x, 4.x) are typed branch_fork edges rather than a false linear mainline; that a date-order chronological_successor edge is never presented as an ABI proof; that the declared_abi_compatibility edges are marked declarations scoped to their declared family; and that every kind the vocabulary names but the evidence cannot settle is recorded absent with a reason. A reversed edge direction, a date-order edge relabelled declared_abi_compatibility, an introduced cycle and an edge stripped of provenance are each detected with specificity holding. A passing edge set is a set of relationships, not a compatibility claim. `RT-ENTITY-LINEAGE` is 23.5's court: the entity lineage. It stages no probe and reads forensics/multitrack/entity-lineage.json and the committed atlases it derives from, and establishes that every row is schema-valid, provenanced and names the two releases, both entities, the strong signals and a confidence; that a settled relation rests on a strong signal and never on a fuzzy nomination; that same_entity rows are the same entity and reproduce as such from the atlases; that no relation is settled on the authority-scoped install prefix moving; that no entity is dropped, silently merged or both renamed and split; and that the plane names its coverage boundary and its absent relations. The committed differential atlas corroborates the per-plane counts independently. A same_entity off name-only similarity, a renamed_to that is really a split, a settled relation with no strong signal and a silent merge are each detected with specificity holding. A passing entity plane records what became of each entity and says nothing about compatibility. `RT-DELTA-ENGINE` is 23.6's court: the semantic compatibility delta. It stages no probe and reads the committed edge deltas under forensics/deltas/ and the committed atlases and entity lineage they derive from, and establishes that every receipt is a schema-valid delta_receipt, every row is directed and dimension-specific with evidence, a confidence and an adjudication, every row reproduces from the atlases and the entity lineage, the measured and absent dimension sets are complete and disjoint, and no row or evidence path is a source-line diff standing in for the delta. A composed path equals the composition of its edge deltas, and a pairwise combination the plan forbids is recorded as a gap rather than committed. An unclassified change, a composed path that disagrees with its edges, a row with no evidence and a dimension the evidence cannot support are each detected with specificity holding. A passing delta records the changed surface between two named nodes; it is not a compatibility claim about either. `RT-ABI-HISTORY-FACADES` is 23.7's court: the compatibility-policy layer and the historical ABI/history façades. It stages no probe and reads forensics/multitrack/abi-facades.json, the generated src/compat/layout_generated.rs and the compat sources the build gating lives in, and establishes that every record is a schema-valid abi_facade naming an explicit adapter rather than a blind cast; that every historical layout is measured from the 0.9.8zh headers and its header hash resolves in the committed source manifest while the production authority marks the same struct opaque (the 1.1.0 opacity transition); that a prototype's eras genuinely differ and its canonical declaration is the production atlas's own; that the ENGINE -> Provider -> no-ENGINE architecture and the init/thread epochs are the census's own; and that the generated repr(C) size/alignment/offset assertions are exactly what the measurement yields. The default 3.6.4 production build is unaffected: every façade module is cfg-gated behind the non-default compatibility selection, which build.rs resolves through the committed default-authority alias. A perturbed struct offset, a provider in a pre-provider epoch and a blind-cast façade are each detected with specificity holding, and the plane names the boundary of what is not established (the 1.0.x epoch and the pre-1.1.0 aggregates it does not cover). A passing façade plane establishes a small historical epoch; it is not a source or binary compatibility claim about any release. `RT-SEMANTIC-COURTS` is 23.8's court: the semantic multitrack courts. It stages no probe at court time: the shared probe courts/phase23/semantic_probe.c is compiled and run against both authorities in the court venue, and the court re-runs the authority-to-authority comparison from the raw transcripts the committed plane preserves. It establishes that both sides emit the same normalized observation vocabulary; that the side-specific adapters for the declarations that differ across the pair preserve the difference rather than erasing it; that the committed observations reproduce from the raw bytes through the same adapter; that every observed difference is a classified release delta resolving in the committed 23.6 delta engine (or in a dimension it records absent with its reason); that the candidate-to-authority dimension is discharged by named, passing existing Phase-2 and Phase-17 courts rather than duplicated; and that a pair the venue cannot execute is recorded not-run with its reason. An adapter that normalizes away a real difference, a probe read against the wrong authority and a difference left unclassified are each detected with specificity holding. A passing semantic court is an instrument: it records the movement between two named authorities and is not a compatibility claim about either. `RT-COMPATIBILITY-VIEWS` is 23.9's court: the directional, dimension-specific compatibility views. It stages no probe and reads forensics/multitrack/compatibility-views.json, re-deriving the whole plane from the authorities' own committed evidence through the same generator. It establishes that every view is a schema-valid, directional, dimension-specific compatibility_view with an explicit evidence_kind that is never numeric ordering; that no view carries a bare `compatible` boolean; that every view names an admitted reference authority and a distribution facet and carries only that authority's reference evidence, so a view inherits no receipt across a version; that every evidence path is content-addressed; and that a dimension the evidence cannot support is recorded not-derivable with its reason. The 3.6.4 production view compares the authority's derived distribution/ABI shell (library names, SONAMEs, exported symbols/versions, static archives, link names, pkg-config metadata, installed layout, version identity) against the committed artifacts/phase2 distribution, and the 0.9.8zh historical views are `not_measured` because the epoch has no candidate build in this venue. Relaying authority A's evidence into authority B's view, a view collapsed to a boolean, a view citing numeric ordering and a view with no reference authority are each detected with specificity holding. `RT-HISTORICAL-POPULATION` is 23.10's court: the historical population. It stages no probe and reads forensics/multitrack/historical-population.json, re-deriving the whole record from the committed catalogue, authority nodes, acquisition and build receipts, atlases, compatibility views and semantic pair through the same generator. It establishes that every catalogue node has exactly one schema-valid support status over the ladder catalogued, admitted-source, built-authority, atlas-complete, candidate-view, runtime-evidenced, downstream-evidenced and maintained, with archaeological-only where a node is studied and not supported; that a built-authority rung is backed by an actual receipt; that an unavailable release is recorded unavailable and is never counted runtime-compatible; that runtime_compatible holds only where the runtime rung does; that each major ABI epoch -- pre-1.0, 1.0.x, 1.1.x, 3.x and 3.6+/4.x -- has at least one built representative (0.9.8zh, 1.0.2u, 1.1.1w, 3.0.0 and 3.6.3/3.6.4); that no status was typed; and that every evidence path is content-addressed. A release marked built with no receipt, an unavailable release marked runtime-compatible, a release with no status and an epoch with no representative are each detected with specificity holding. `RT-DOWNSTREAM-MULTITRACK` is 23.11's court: the unmodified downstream consumer per major compatibility epoch. It stages no probe and reads forensics/multitrack/downstream-multitrack.json, re-deriving every consumer record from the raw build/run outputs the artefact carries through the same generator. It establishes that every major ABI epoch -- pre-1.0, 1.0.x, 1.1.x, 3.x and 3.6+/4.x -- is covered by exactly one unmodified real downstream consumer built against that epoch's built authority and exercised against the authority's own s_server; that a passing consumer genuinely built and ran (its raw `ldd` output links the authority's prefix and its own SONAMEs and never the candidate distribution shell, and its version banner names the authority's OpenSSL); that a record is never relabelled across authorities; and that a `not_run` pair is honest unavailability carrying its measured reason and is never counted as passing. The Phase-17 candidate corpus is checked green and distinct: a candidate result is never relabelled as authority evidence. A consumer claiming a build with no artifact, an epoch counted passing while its consumer is `not_run`, and a result relabelled across authorities are each detected with specificity holding. `RT-COMPATIBILITY-EDGES` is 23.12's court: the directional compatibility edges. It stages no probe and reads forensics/multitrack/compatibility-edges.json, re-deriving the whole plane from the committed edge deltas, the entity lineage, the compatibility views and the Phase-2 ABI courts through the same generator. It establishes that every edge is a schema-valid, directional, dimension-specific compatibility_edge whose facet maps onto its coarse dimension; that each verdict is PASS/FAIL/UNKNOWN with the evidence that establishes it and never a single boolean; that a facet whose evidence is absent is UNKNOWN with its reason, never PASS by default; that every evidence entry is content-addressed and names the side it belongs to, so neither side's evidence is inherited from the other; and that no evidence kind is numeric ordering. The 3.6.3->3.6.4 edge is read both ways, and its API-source facet passes forward and fails backward because the two macros 3.6.4 added are absent from 3.6.3; the candidate's relation to its reference authority 3.6.4-production is read both ways, with the semantic facet UNKNOWN because no committed candidate-to-authority semantic measurement exists. A PASS with no evidence, a dimension collapsed to one boolean, evidence inherited across the two sides, a verdict defaulting to PASS and a numeric-ordering evidence kind are each detected with specificity holding. Phase 23 owns no exported symbol, so no differential probe over a symbol set is its evidence, and its remaining five courts -- RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with the subphases that land them (23.13 through 23.17). The one thing the model forbids everywhere is a single boolean: compatibility is directional and dimension-specific, a cross-version receipt is never inherited, an authority is named explicitly and singularly, and a historical vulnerability is observed but never reintroduced. docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "`RT-RELEASE-CATALOG` is 23.1's court: the release catalogue and its lineage. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, both derived from forensics/multitrack/release-archaeology.json -- the official OpenSSL release timeline, the git tag each release names and the commit it peels to, and the nearest release ancestor the git graph gives it. It establishes that the graph begins at OpenSSL 0.9.1c (23 December 1998), that every upstream mainline final is present with no unexplained gap, that a pre-release is classified and never promoted to final or to the `latest-stable` alias merely by sorting higher, that the lineage is a typed DAG whose parallel branches are branch_fork edges rather than a false linear mainline, that every node is schema-valid with provenance, and that SSLeay is provenance ancestry only. A deleted release, a `final` flipped to `beta`, a repointed parent edge and a `latest-stable` pointed at a beta are each detected with specificity holding on the honest catalogue. A passing catalogue is a catalogue, not a compatibility claim: no edge says any release is compatible with any other. `RT-AUTHORITY-NODES` is 23.2's court: the authority-node registry. It stages no probe and reads forensics/authority-nodes.json and the records it is derived from -- the release catalogue, the admitted-authority registry, the build records and the historical acquisition and build receipts -- and establishes that every node is schema-valid, content-addressed and backed by an actual build receipt; that release identity (release_id, git) is proven against the catalogue and kept separate from platform/profile identity; that the admitted pair's source manifests still reproduce; and that an unavailable authority is recorded unavailable and is never a node. A built-authority claim with no receipt, a dropped required identity field, and a source digest asserting tag == tarball without proof are each detected with specificity holding. `RT-ATLAS-PARAMETERIZATION` is 23.3's court: the parameterized atlases. Its instrument is the generator itself: it reads forensics/atlas/parameterization-receipt.json, the committed default-authority alias and forensics/atlas/openssl-0.9.8zh-historical/plane-census.json, re-derives every census through the same generator, corroborates the historical authority's decisive absences (providers, provider registrations, QUIC) against its committed source manifest, and re-runs the authority-parameterized archaeology generators for the 3.6.4 production authority, asserting its committed plane is byte-identical. The default is the committed alias, never the catalogue's `latest-stable` (openssl-4.0.3); swapping the authority argument changes the produced census, so a hidden production fallback is caught, and a measured absence with no provenance or a nonzero count is refused. The one pre-existing, disclosed drift (parity-obligations.json) is measured live and undone, never applied. `RT-LINEAGE-EDGES` is 23.4's court: the typed lineage edges. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, and establishes that every edge is schema-valid, typed and directed, with its stated sense following the evidence's chronology and its provenance resolving; that the graph is a DAG whose parallel supported branches (1.0.2, 1.1.1, 3.x, 4.x) are typed branch_fork edges rather than a false linear mainline; that a date-order chronological_successor edge is never presented as an ABI proof; that the declared_abi_compatibility edges are marked declarations scoped to their declared family; and that every kind the vocabulary names but the evidence cannot settle is recorded absent with a reason. A reversed edge direction, a date-order edge relabelled declared_abi_compatibility, an introduced cycle and an edge stripped of provenance are each detected with specificity holding. A passing edge set is a set of relationships, not a compatibility claim. `RT-ENTITY-LINEAGE` is 23.5's court: the entity lineage. It stages no probe and reads forensics/multitrack/entity-lineage.json and the committed atlases it derives from, and establishes that every row is schema-valid, provenanced and names the two releases, both entities, the strong signals and a confidence; that a settled relation rests on a strong signal and never on a fuzzy nomination; that same_entity rows are the same entity and reproduce as such from the atlases; that no relation is settled on the authority-scoped install prefix moving; that no entity is dropped, silently merged or both renamed and split; and that the plane names its coverage boundary and its absent relations. The committed differential atlas corroborates the per-plane counts independently. A same_entity off name-only similarity, a renamed_to that is really a split, a settled relation with no strong signal and a silent merge are each detected with specificity holding. A passing entity plane records what became of each entity and says nothing about compatibility. `RT-DELTA-ENGINE` is 23.6's court: the semantic compatibility delta. It stages no probe and reads the committed edge deltas under forensics/deltas/ and the committed atlases and entity lineage they derive from, and establishes that every receipt is a schema-valid delta_receipt, every row is directed and dimension-specific with evidence, a confidence and an adjudication, every row reproduces from the atlases and the entity lineage, the measured and absent dimension sets are complete and disjoint, and no row or evidence path is a source-line diff standing in for the delta. A composed path equals the composition of its edge deltas, and a pairwise combination the plan forbids is recorded as a gap rather than committed. An unclassified change, a composed path that disagrees with its edges, a row with no evidence and a dimension the evidence cannot support are each detected with specificity holding. A passing delta records the changed surface between two named nodes; it is not a compatibility claim about either. `RT-ABI-HISTORY-FACADES` is 23.7's court: the compatibility-policy layer and the historical ABI/history façades. It stages no probe and reads forensics/multitrack/abi-facades.json, the generated src/compat/layout_generated.rs and the compat sources the build gating lives in, and establishes that every record is a schema-valid abi_facade naming an explicit adapter rather than a blind cast; that every historical layout is measured from the 0.9.8zh headers and its header hash resolves in the committed source manifest while the production authority marks the same struct opaque (the 1.1.0 opacity transition); that a prototype's eras genuinely differ and its canonical declaration is the production atlas's own; that the ENGINE -> Provider -> no-ENGINE architecture and the init/thread epochs are the census's own; and that the generated repr(C) size/alignment/offset assertions are exactly what the measurement yields. The default 3.6.4 production build is unaffected: every façade module is cfg-gated behind the non-default compatibility selection, which build.rs resolves through the committed default-authority alias. A perturbed struct offset, a provider in a pre-provider epoch and a blind-cast façade are each detected with specificity holding, and the plane names the boundary of what is not established (the 1.0.x epoch and the pre-1.1.0 aggregates it does not cover). A passing façade plane establishes a small historical epoch; it is not a source or binary compatibility claim about any release. `RT-SEMANTIC-COURTS` is 23.8's court: the semantic multitrack courts. It stages no probe at court time: the shared probe courts/phase23/semantic_probe.c is compiled and run against both authorities in the court venue, and the court re-runs the authority-to-authority comparison from the raw transcripts the committed plane preserves. It establishes that both sides emit the same normalized observation vocabulary; that the side-specific adapters for the declarations that differ across the pair preserve the difference rather than erasing it; that the committed observations reproduce from the raw bytes through the same adapter; that every observed difference is a classified release delta resolving in the committed 23.6 delta engine (or in a dimension it records absent with its reason); that the candidate-to-authority dimension is discharged by named, passing existing Phase-2 and Phase-17 courts rather than duplicated; and that a pair the venue cannot execute is recorded not-run with its reason. An adapter that normalizes away a real difference, a probe read against the wrong authority and a difference left unclassified are each detected with specificity holding. A passing semantic court is an instrument: it records the movement between two named authorities and is not a compatibility claim about either. `RT-COMPATIBILITY-VIEWS` is 23.9's court: the directional, dimension-specific compatibility views. It stages no probe and reads forensics/multitrack/compatibility-views.json, re-deriving the whole plane from the authorities' own committed evidence through the same generator. It establishes that every view is a schema-valid, directional, dimension-specific compatibility_view with an explicit evidence_kind that is never numeric ordering; that no view carries a bare `compatible` boolean; that every view names an admitted reference authority and a distribution facet and carries only that authority's reference evidence, so a view inherits no receipt across a version; that every evidence path is content-addressed; and that a dimension the evidence cannot support is recorded not-derivable with its reason. The 3.6.4 production view compares the authority's derived distribution/ABI shell (library names, SONAMEs, exported symbols/versions, static archives, link names, pkg-config metadata, installed layout, version identity) against the committed artifacts/phase2 distribution, and the 0.9.8zh historical views are `not_measured` because the epoch has no candidate build in this venue. Relaying authority A's evidence into authority B's view, a view collapsed to a boolean, a view citing numeric ordering and a view with no reference authority are each detected with specificity holding. `RT-HISTORICAL-POPULATION` is 23.10's court: the historical population. It stages no probe and reads forensics/multitrack/historical-population.json, re-deriving the whole record from the committed catalogue, authority nodes, acquisition and build receipts, atlases, compatibility views and semantic pair through the same generator. It establishes that every catalogue node has exactly one schema-valid support status over the ladder catalogued, admitted-source, built-authority, atlas-complete, candidate-view, runtime-evidenced, downstream-evidenced and maintained, with archaeological-only where a node is studied and not supported; that a built-authority rung is backed by an actual receipt; that an unavailable release is recorded unavailable and is never counted runtime-compatible; that runtime_compatible holds only where the runtime rung does; that each major ABI epoch -- pre-1.0, 1.0.x, 1.1.x, 3.x and 3.6+/4.x -- has at least one built representative (0.9.8zh, 1.0.2u, 1.1.1w, 3.0.0 and 3.6.3/3.6.4); that no status was typed; and that every evidence path is content-addressed. A release marked built with no receipt, an unavailable release marked runtime-compatible, a release with no status and an epoch with no representative are each detected with specificity holding. `RT-DOWNSTREAM-MULTITRACK` is 23.11's court: the unmodified downstream consumer per major compatibility epoch. It stages no probe and reads forensics/multitrack/downstream-multitrack.json, re-deriving every consumer record from the raw build/run outputs the artefact carries through the same generator. It establishes that every major ABI epoch -- pre-1.0, 1.0.x, 1.1.x, 3.x and 3.6+/4.x -- is covered by exactly one unmodified real downstream consumer built against that epoch's built authority and exercised against the authority's own s_server; that a passing consumer genuinely built and ran (its raw `ldd` output links the authority's prefix and its own SONAMEs and never the candidate distribution shell, and its version banner names the authority's OpenSSL); that a record is never relabelled across authorities; and that a `not_run` pair is honest unavailability carrying its measured reason and is never counted as passing. The Phase-17 candidate corpus is checked green and distinct: a candidate result is never relabelled as authority evidence. A consumer claiming a build with no artifact, an epoch counted passing while its consumer is `not_run`, and a result relabelled across authorities are each detected with specificity holding. `RT-COMPATIBILITY-EDGES` is 23.12's court: the directional compatibility edges. It stages no probe and reads forensics/multitrack/compatibility-edges.json, re-deriving the whole plane from the committed edge deltas, the entity lineage, the compatibility views and the Phase-2 ABI courts through the same generator. It establishes that every edge is a schema-valid, directional, dimension-specific compatibility_edge whose facet maps onto its coarse dimension; that each verdict is PASS/FAIL/UNKNOWN with the evidence that establishes it and never a single boolean; that a facet whose evidence is absent is UNKNOWN with its reason, never PASS by default; that every evidence entry is content-addressed and names the side it belongs to, so neither side's evidence is inherited from the other; and that no evidence kind is numeric ordering. The 3.6.3->3.6.4 edge is read both ways, and its API-source facet passes forward and fails backward because the two macros 3.6.4 added are absent from 3.6.3; the candidate's relation to its reference authority 3.6.4-production is read both ways, with the semantic facet UNKNOWN because no committed candidate-to-authority semantic measurement exists. A PASS with no evidence, a dimension collapsed to one boolean, evidence inherited across the two sides, a verdict defaulting to PASS and a numeric-ordering evidence kind are each detected with specificity holding. `RT-NEGATIVE-OBLIGATIONS` is 23.13's court: the negative (and positive) obligations. It stages no probe and reads forensics/multitrack/negative-obligations.json, re-deriving every obligation from the committed censuses, ABI/history façades, edge deltas and symbols planes through the same generator. It establishes that every obligation is a schema-valid negative_obligation whose expected state is the polarity its kind asserts; that its scope names an admitted authority or a catalogued release; that everything it names is present and content-addressed and is the evidence the record's derivation checks actually read, so a negative obligation is checked against the named authority/view/plane rather than asserted; that its state is the reading that evidence establishes and never assumed, so an `open` obligation is a compatibility defect and `unknown` is only where no authority or view exists; and that both polarities and all six kinds -- must_not_exist, must_be_opaque and must_not_be_exported beside must_exist, must_be_public and must_be_exported -- are present. The plane covers the pre-provider authorities' provider absence (0.9.8zh, 1.0.2u, 1.1.1w) beside 3.0.0 and 3.6.4's presence, the pre-1.1.0 public layout (EVP_MD_CTX, HMAC_CTX) beside the 3.6.4 opacity transition, the 3.6.4-added macros' absence from 3.6.3, the exported symbols the 3.6.3 -> 3.6.4 delta read as present in both, each authority's `.num` NOEXIST rows, and a 4.x release's ENGINE absence, which is `unknown` because no 4.x authority or view is admitted. A provider symbol present in a pre-provider authority's view, a post-1.1.0 layout declared public, an ENGINE symbol retained in a 4.x view, an obligation with no evidence and a future symbol leaked into an earlier authority's view are each detected with specificity holding. Phase 23 owns no exported symbol, so no differential probe over a symbol set is its evidence, and its remaining four courts -- RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with the subphases that land them (23.14 through 23.17). The one thing the model forbids everywhere is a single boolean: compatibility is directional and dimension-specific, a cross-version receipt is never inherited, an authority is named explicitly and singularly, and a historical vulnerability is observed but never reintroduced. docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "catalog_counts": {
@@ -1748,6 +1748,745 @@
         ]
       },
       {
+        "authorities": [
+          "openssl-0.9.8zh-historical",
+          "openssl-1.0.2u-historical",
+          "openssl-1.1.1w-historical",
+          "openssl-3.0.0-historical",
+          "openssl-3.6.3-historical",
+          "openssl-3.6.4-production"
+        ],
+        "boundary": "23.13 derives the obligations the committed evidence supports: the provider planes of every censused authority, the public-layout and architecture façades, the 3.6.3 -> 3.6.4 delta's added entities and measured exports, and each authority's `.num` NOEXIST rows. A 4.x release carries no admitted authority or view, so its ENGINE obligation reads `unknown` rather than satisfied. An obligation is bounded to the authority or release it names; no obligation inherits another authority's evidence.",
+        "by_kind": {
+          "must_be_exported": 40,
+          "must_be_opaque": 2,
+          "must_be_public": 2,
+          "must_exist": 8,
+          "must_not_be_exported": 18,
+          "must_not_exist": 9
+        },
+        "control": {
+          "baseline_findings": 0,
+          "caught_engine_retained_in_4x_view": true,
+          "caught_leaked_future_symbol": true,
+          "caught_obligation_without_evidence": true,
+          "caught_opaque_layout_declared_public": true,
+          "caught_provider_in_pre_provider_view": true,
+          "honest": true,
+          "injected_engine_findings": 2,
+          "injected_engine_retained_in_4x_view": "NO-openssl-4.0.3-must_not_exist-ENGINE",
+          "injected_leaked_future_symbol": "NO-openssl-3.6.3-historical-must_not_exist-SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+          "injected_leaked_symbol_findings": 2,
+          "injected_no_evidence_findings": 5,
+          "injected_obligation_without_evidence": "NO-openssl-0.9.8zh-historical-must_be_public-EVP_MD_CTX",
+          "injected_opaque_layout_declared_public": "NO-openssl-3.6.4-production-must_be_opaque-EVP_MD_CTX",
+          "injected_opaque_layout_findings": 2,
+          "injected_provider_findings": 2,
+          "injected_provider_in_pre_provider_view": "NO-openssl-0.9.8zh-historical-must_not_exist-provider-store",
+          "specificity_holds": true
+        },
+        "counts": {
+          "by_authority": {
+            "openssl-0.9.8zh-historical": 5,
+            "openssl-1.0.2u-historical": 2,
+            "openssl-1.1.1w-historical": 2,
+            "openssl-3.0.0-historical": 2,
+            "openssl-3.6.3-historical": 31,
+            "openssl-3.6.4-production": 36,
+            "openssl-4.0.3": 1
+          },
+          "by_kind": {
+            "must_be_exported": 40,
+            "must_be_opaque": 2,
+            "must_be_public": 2,
+            "must_exist": 8,
+            "must_not_be_exported": 18,
+            "must_not_exist": 9
+          },
+          "by_state": {
+            "satisfied": 78,
+            "unknown": 1
+          },
+          "negative": 29,
+          "obligations": 79,
+          "open": 0,
+          "positive": 50,
+          "unknown": 1
+        },
+        "court": "RT-NEGATIVE-OBLIGATIONS",
+        "expected_state_of_kind": {
+          "must_be_exported": "exported",
+          "must_be_opaque": "opaque",
+          "must_be_public": "public",
+          "must_exist": "present",
+          "must_not_be_exported": "not_exported",
+          "must_not_exist": "absent"
+        },
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the negative-obligations court reads a committed evidence plane and writes no artifacts/phase23/probes/<probe>.{authority,candidate} pair, so it stages no transcript to diff and carries no FRF declaration",
+        "kinds": [
+          "must_exist",
+          "must_not_exist",
+          "must_be_opaque",
+          "must_be_public",
+          "must_be_exported",
+          "must_not_be_exported"
+        ],
+        "method": "stages no probe: it reads forensics/multitrack/negative-obligations.json and re-derives the whole plane from the committed censuses, ABI/history façades, edge deltas and symbols planes through the same generator. It establishes that every obligation is a schema-valid negative_obligation whose expected state is the polarity its kind asserts; that its scope names an admitted authority or a catalogued release; that everything it names is present and content-addressed and is the evidence the record's derivation checks actually read, so a negative obligation is checked against the named authority/view/plane; that its state is the reading that evidence establishes and never assumed, so `open` is a compatibility defect and `unknown` is only where no authority or view exists; and that both polarities and all six kinds are present. A provider symbol present in a pre-provider authority's view, a post-1.1.0 layout declared public, an ENGINE symbol retained in a 4.x view, an obligation with no evidence and a future symbol leaked into an earlier authority's view are each detected with specificity holding (docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 2 and 3.6).",
+        "obligations": [
+          {
+            "authority_id": "openssl-0.9.8zh-historical",
+            "kind": "must_be_public",
+            "obligation_id": "NO-openssl-0.9.8zh-historical-must_be_public-EVP_MD_CTX",
+            "release_id": "openssl-0.9.8zh",
+            "state": "satisfied",
+            "subject": "EVP_MD_CTX"
+          },
+          {
+            "authority_id": "openssl-0.9.8zh-historical",
+            "kind": "must_be_public",
+            "obligation_id": "NO-openssl-0.9.8zh-historical-must_be_public-HMAC_CTX",
+            "release_id": "openssl-0.9.8zh",
+            "state": "satisfied",
+            "subject": "HMAC_CTX"
+          },
+          {
+            "authority_id": "openssl-0.9.8zh-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-0.9.8zh-historical-must_exist-ENGINE",
+            "release_id": "openssl-0.9.8zh",
+            "state": "satisfied",
+            "subject": "ENGINE"
+          },
+          {
+            "authority_id": "openssl-0.9.8zh-historical",
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-0.9.8zh-historical-must_not_exist-provider-registration",
+            "release_id": "openssl-0.9.8zh",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-0.9.8zh-historical",
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-0.9.8zh-historical-must_not_exist-provider-store",
+            "release_id": "openssl-0.9.8zh",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-1.0.2u-historical",
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-1.0.2u-historical-must_not_exist-provider-registration",
+            "release_id": "openssl-1.0.2u",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-1.0.2u-historical",
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-1.0.2u-historical-must_not_exist-provider-store",
+            "release_id": "openssl-1.0.2u",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-1.1.1w-historical",
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-1.1.1w-historical-must_not_exist-provider-registration",
+            "release_id": "openssl-1.1.1w",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-1.1.1w-historical",
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-1.1.1w-historical-must_not_exist-provider-store",
+            "release_id": "openssl-1.1.1w",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-3.0.0-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.0.0-historical-must_exist-provider-registration",
+            "release_id": "openssl-3.0.0",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-3.0.0-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.0.0-historical-must_exist-provider-store",
+            "release_id": "openssl-3.0.0",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-ASN1_mbstring_ncopy",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "ASN1_mbstring_ncopy"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-BN_consttime_swap",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "BN_consttime_swap"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-BN_uadd",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "BN_uadd"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-BN_ucmp",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "BN_ucmp"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-BN_usub",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "BN_usub"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-CMS_RecipientInfo_decrypt",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "CMS_RecipientInfo_decrypt"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-DH_check",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "DH_check"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-DH_check_params",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "DH_check_params"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-DH_check_pub_key",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "DH_check_pub_key"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-OPENSSL_uni2utf8",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "OPENSSL_uni2utf8"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-OSSL_CMP_validate_msg",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "OSSL_CMP_validate_msg"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-OSSL_parse_url",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "OSSL_parse_url"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-PKCS12_unpack_authsafes",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "PKCS12_unpack_authsafes"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-PKCS7_set_digest",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "PKCS7_set_digest"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-PKCS7_stream",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "PKCS7_stream"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libcrypto-asn1_d2i_read_bio",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "asn1_d2i_read_bio"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libssl-SSL_CTX_add_session",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "SSL_CTX_add_session"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libssl-SSL_CTX_flush_sessions_ex",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "SSL_CTX_flush_sessions_ex"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libssl-SSL_CTX_remove_session",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "SSL_CTX_remove_session"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_be_exported-libssl-SSL_dup",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "SSL_dup"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-ERR_load_DSO_strings",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "ERR_load_DSO_strings"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-ERR_put_error",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "ERR_put_error"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-EVP_PKEY_get1_tls_encodedpoint",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "EVP_PKEY_get1_tls_encodedpoint"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-EVP_PKEY_set1_tls_encodedpoint",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "EVP_PKEY_set1_tls_encodedpoint"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-EVP_PKEY_set_alias_type",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "EVP_PKEY_set_alias_type"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-OPENSSL_memcmp",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "OPENSSL_memcmp"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-RSA_padding_add_SSLv23",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "RSA_padding_add_SSLv23"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-RSA_padding_check_SSLv23",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "RSA_padding_check_SSLv23"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_not_be_exported-SSL_get_peer_certificate",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "SSL_get_peer_certificate"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_not_exist-SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-3.6.3-historical-must_not_exist-X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+            "release_id": "openssl-3.6.3",
+            "state": "satisfied",
+            "subject": "X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-ASN1_mbstring_ncopy",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "ASN1_mbstring_ncopy"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-BN_consttime_swap",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "BN_consttime_swap"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-BN_uadd",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "BN_uadd"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-BN_ucmp",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "BN_ucmp"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-BN_usub",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "BN_usub"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-CMS_RecipientInfo_decrypt",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "CMS_RecipientInfo_decrypt"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-DH_check",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "DH_check"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-DH_check_params",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "DH_check_params"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-DH_check_pub_key",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "DH_check_pub_key"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-OPENSSL_uni2utf8",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "OPENSSL_uni2utf8"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-OSSL_CMP_validate_msg",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "OSSL_CMP_validate_msg"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-OSSL_parse_url",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "OSSL_parse_url"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-PKCS12_unpack_authsafes",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "PKCS12_unpack_authsafes"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-PKCS7_set_digest",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "PKCS7_set_digest"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-PKCS7_stream",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "PKCS7_stream"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libcrypto-asn1_d2i_read_bio",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "asn1_d2i_read_bio"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libssl-SSL_CTX_add_session",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "SSL_CTX_add_session"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libssl-SSL_CTX_flush_sessions_ex",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "SSL_CTX_flush_sessions_ex"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libssl-SSL_CTX_remove_session",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "SSL_CTX_remove_session"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_exported-libssl-SSL_dup",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "SSL_dup"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_opaque",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_opaque-EVP_MD_CTX",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "EVP_MD_CTX"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_be_opaque",
+            "obligation_id": "NO-openssl-3.6.4-production-must_be_opaque-HMAC_CTX",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "HMAC_CTX"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.6.4-production-must_exist-ENGINE",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "ENGINE"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.6.4-production-must_exist-SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.6.4-production-must_exist-X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.6.4-production-must_exist-provider-registration",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.6.4-production-must_exist-provider-store",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-ERR_load_DSO_strings",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "ERR_load_DSO_strings"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-ERR_put_error",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "ERR_put_error"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-EVP_PKEY_get1_tls_encodedpoint",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "EVP_PKEY_get1_tls_encodedpoint"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-EVP_PKEY_set1_tls_encodedpoint",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "EVP_PKEY_set1_tls_encodedpoint"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-EVP_PKEY_set_alias_type",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "EVP_PKEY_set_alias_type"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-OPENSSL_memcmp",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "OPENSSL_memcmp"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-RSA_padding_add_SSLv23",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "RSA_padding_add_SSLv23"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-RSA_padding_check_SSLv23",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "RSA_padding_check_SSLv23"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "must_not_be_exported",
+            "obligation_id": "NO-openssl-3.6.4-production-must_not_be_exported-SSL_get_peer_certificate",
+            "release_id": "openssl-3.6.4",
+            "state": "satisfied",
+            "subject": "SSL_get_peer_certificate"
+          },
+          {
+            "authority_id": null,
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-4.0.3-must_not_exist-ENGINE",
+            "release_id": "openssl-4.0.3",
+            "state": "unknown",
+            "subject": "ENGINE"
+          }
+        ],
+        "probe": "",
+        "problems": [],
+        "releases": [
+          "openssl-0.9.8zh",
+          "openssl-1.0.2u",
+          "openssl-1.1.1w",
+          "openssl-3.0.0",
+          "openssl-3.6.3",
+          "openssl-3.6.4",
+          "openssl-4.0.3"
+        ],
+        "states": [
+          "open",
+          "satisfied",
+          "unknown"
+        ],
+        "verdict": "pass"
+      },
+      {
         "content_hash": "cde69a04d56facb836988040741dc1e2ce499850b2021919de61fd0260db788f",
         "control": {
           "baseline_findings": 0,
@@ -2130,7 +2869,6 @@
     "pending_courts": {
       "MULTITRACK-SEAL": "23.17 -- the full matrix, the FRF/Gemel chain and the seal",
       "RT-COMPATIBILITY-MATRIX": "23.16 -- the compatibility matrix",
-      "RT-NEGATIVE-OBLIGATIONS": "23.13 -- the negative obligations",
       "RT-SECURITY-LINEAGE": "23.14 -- the security lineage",
       "RT-SUPPORT-STATUS": "23.15 -- the support-status ladder"
     },
@@ -2355,8 +3093,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 12,
-      "total": 12
+      "pass": 13,
+      "total": 13
     }
   },
   "generator": "forensics/tools/phase23_courts.py",
@@ -2485,6 +3223,11 @@
       "name": "compatibility-edges",
       "path": "forensics/multitrack/compatibility-edges.json",
       "sha256": "b94f3638ff51bbe02f8fe1a22c6641136ff2b0dc8e87009abd8644beffcb39f1"
+    },
+    {
+      "name": "negative-obligations",
+      "path": "forensics/multitrack/negative-obligations.json",
+      "sha256": "8eda46bdd6a8e78d5778e4f626958ae4cbabb0e0ab45635e2ff5e0606cfa97d4"
     },
     {
       "name": "historical-population",

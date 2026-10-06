@@ -26,7 +26,8 @@ typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage cou
 `RT-COMPATIBILITY-VIEWS`, the directional compatibility-view court, 23.10 lands
 `RT-HISTORICAL-POPULATION`, the historical-population court, 23.11 lands
 `RT-DOWNSTREAM-MULTITRACK`, the unmodified-downstream-consumer court, and 23.12 lands
-`RT-COMPATIBILITY-EDGES`, the directional compatibility-edge court; the other five courts are
+`RT-COMPATIBILITY-EDGES`, the directional compatibility-edge court, and 23.13 lands
+`RT-NEGATIVE-OBLIGATIONS`, the negative/positive-obligation court; the other four courts are
 named in
 `PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
@@ -53,7 +54,7 @@ The seventeen courts, and the subphase that lands each
   * `RT-HISTORICAL-POPULATION` -- 23.10, the historical population (registered).
   * `RT-DOWNSTREAM-MULTITRACK` -- 23.11, the downstream multitrack court (registered).
   * `RT-COMPATIBILITY-EDGES` -- 23.12, the directional compatibility edges (registered).
-  * `RT-NEGATIVE-OBLIGATIONS` -- 23.13, the negative obligations.
+  * `RT-NEGATIVE-OBLIGATIONS` -- 23.13, the negative obligations (registered).
   * `RT-SECURITY-LINEAGE` -- 23.14, the security lineage.
   * `RT-SUPPORT-STATUS` -- 23.15, the support-status ladder.
   * `RT-COMPATIBILITY-MATRIX` -- 23.16, the compatibility matrix.
@@ -62,8 +63,8 @@ The seventeen courts, and the subphase that lands each
 Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZATION`,
 `RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE`, `RT-DELTA-ENGINE`, `RT-ABI-HISTORY-FACADES`,
 `RT-SEMANTIC-COURTS`, `RT-COMPATIBILITY-VIEWS`, `RT-HISTORICAL-POPULATION`,
-`RT-DOWNSTREAM-MULTITRACK` and
-`RT-COMPATIBILITY-EDGES` is
+`RT-DOWNSTREAM-MULTITRACK`, `RT-COMPATIBILITY-EDGES` and
+`RT-NEGATIVE-OBLIGATIONS` is
 `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
@@ -138,6 +139,11 @@ import compat_views  # noqa: E402
 # produced by (never a second, drifting predicate) and checks each side's evidence provenance
 # against the side it names.
 import compat_edges  # noqa: E402
+# The Phase-23.13 negative-obligation generator, imported so the court re-derives the whole plane
+# from the committed censuses, façades, deltas and symbols planes through the same code path the
+# artefact was produced by (never a hand-listed obligation), and re-reads each record's named
+# evidence through `adjudicate` so a typed state is a finding rather than a plausible value.
+import negative_obligations  # noqa: E402
 # The Phase-23.10 historical-population generator, imported so the court re-derives every support
 # status from the committed catalogue, authority nodes and receipts through the same code path the
 # artefact was produced by (never a hand-listed status) and re-derives a mutated epoch's coverage.
@@ -212,6 +218,12 @@ COMPATIBILITY_VIEWS = REPO_ROOT / "forensics" / "multitrack" / "compatibility-vi
 # generator, and checks each side's evidence is its own.
 COMPATIBILITY_EDGES = REPO_ROOT / "forensics" / "multitrack" / "compatibility-edges.json"
 
+# 23.13's subject: the negative (and positive) obligations plane. The court reads it and re-derives
+# every obligation from the committed censuses, façades, deltas and symbols planes through the same
+# generator, and re-reads each record's named evidence so a leaked future symbol, a retained removed
+# surface or an assumed state is caught.
+NEGATIVE_OBLIGATIONS = REPO_ROOT / "forensics" / "multitrack" / "negative-obligations.json"
+
 # 23.10's subject: the historical-population record over the release catalogue, and the records it
 # is derived from -- the authority nodes, the acquisition and build receipts, the committed atlases
 # and the semantic pair the runtime rung is read from.
@@ -240,6 +252,7 @@ ABI_HISTORY_FACADES_COURT = "RT-ABI-HISTORY-FACADES"
 SEMANTIC_COURTS_COURT = "RT-SEMANTIC-COURTS"
 COMPATIBILITY_VIEWS_COURT = "RT-COMPATIBILITY-VIEWS"
 COMPATIBILITY_EDGES_COURT = "RT-COMPATIBILITY-EDGES"
+NEGATIVE_OBLIGATIONS_COURT = "RT-NEGATIVE-OBLIGATIONS"
 HISTORICAL_POPULATION_COURT = "RT-HISTORICAL-POPULATION"
 DOWNSTREAM_MULTITRACK_COURT = "RT-DOWNSTREAM-MULTITRACK"
 ROOT_RELEASE = "openssl-0.9.1c"
@@ -273,6 +286,7 @@ COURTS: list[tuple[str, str]] = [
     (SEMANTIC_COURTS_COURT, "_semantic_courts_court"),
     (COMPATIBILITY_VIEWS_COURT, "_compatibility_views_court"),
     (COMPATIBILITY_EDGES_COURT, "_compatibility_edges_court"),
+    (NEGATIVE_OBLIGATIONS_COURT, "_negative_obligations_court"),
     (HISTORICAL_POPULATION_COURT, "_historical_population_court"),
     (DOWNSTREAM_MULTITRACK_COURT, "_downstream_multitrack_court"),
 ]
@@ -280,7 +294,6 @@ COURTS: list[tuple[str, str]] = [
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-NEGATIVE-OBLIGATIONS": "23.13 -- the negative obligations",
     "RT-SECURITY-LINEAGE": "23.14 -- the security lineage",
     "RT-SUPPORT-STATUS": "23.15 -- the support-status ladder",
     "RT-COMPATIBILITY-MATRIX": "23.16 -- the compatibility matrix",
@@ -3405,6 +3418,313 @@ def _compatibility_edges_court(name: str) -> dict:
     }
 
 
+def negative_obligation_findings(body: dict) -> list[str]:
+    """Every way the committed negative-obligations plane fails this court's subject.
+
+    A pure function of the committed plane, so the sensitivity control mutates one and re-checks.
+    It establishes that every obligation is a schema-valid `negative_obligation` whose
+    `expected_state` is the polarity its kind asserts; that its scope names an admitted authority or
+    a catalogued release; that its evidence is present, content-addressed and the evidence its
+    derivation checks actually read, so a negative obligation is checked against the named
+    authority/view/plane rather than asserted; that its `state` is the reading `adjudicate` takes
+    from that evidence and never assumed -- `open` is a compatibility defect and `unknown` is only
+    where no authority or view exists; that both polarities and all six kinds are present; and that
+    the committed plane reproduces from the committed evidence through the same generator.
+    """
+    findings: list[str] = []
+    obligations = body.get("obligations") or []
+    authorities = set(body.get("authorities") or [])
+    releases = set(body.get("releases") or [])
+    expected = body.get("expected_state_of_kind") or {}
+    if not obligations:
+        findings.append("the negative-obligations plane carries no obligation")
+    if not authorities:
+        findings.append("the plane names no authority")
+
+    view_ids = {v.get("view_id") for v in (read_json(COMPATIBILITY_VIEWS).get("views") or [])} \
+        if COMPATIBILITY_VIEWS.is_file() else set()
+
+    ids: set[str] = set()
+    kinds_seen: set[str] = set()
+    for o in obligations:
+        oid = o.get("obligation_id") or "<no obligation_id>"
+        findings += [f"{oid}: {p}" for p in multitrack_schemas.validate_negative_obligation(o)]
+        if oid in ids:
+            findings.append(f"{oid}: duplicate obligation_id")
+        ids.add(oid)
+        kind = o.get("kind")
+        kinds_seen.add(kind)
+        if kind in expected and o.get("expected_state") != expected.get(kind):
+            findings.append(
+                f"{oid}: expected_state {o.get('expected_state')!r} is not the polarity its kind "
+                f"{kind!r} asserts ({expected.get(kind)!r})"
+            )
+        scope = o.get("scope")
+        if isinstance(scope, dict):
+            aid, rid = scope.get("authority_id"), scope.get("release_id")
+            if aid and aid not in authorities:
+                findings.append(f"{oid}: scope authority {aid!r} is not among the plane's "
+                                f"authorities")
+            if rid and rid not in releases:
+                findings.append(f"{oid}: scope release {rid!r} is not among the plane's releases")
+            if not aid and not rid:
+                findings.append(f"{oid}: scope names neither an authority nor a release")
+        if o.get("view_id") is not None and o.get("view_id") not in view_ids:
+            findings.append(f"{oid}: names view {o.get('view_id')!r}, which is not a committed "
+                            f"compatibility view")
+
+        entries = o.get("evidence") or []
+        if not entries:
+            findings.append(f"{oid}: cites no evidence")
+        paths: set[str] = set()
+        for entry in entries:
+            if not isinstance(entry, dict):
+                findings.append(f"{oid}: an evidence entry is not an object")
+                continue
+            if entry.get("role") not in ("authority", "view", "release", "pair", "model"):
+                findings.append(f"{oid}: evidence entry has role {entry.get('role')!r}")
+            path = entry.get("path")
+            paths.add(path)
+            p = REPO_ROOT / str(path or "")
+            if not p.is_file():
+                findings.append(f"{oid}: evidence path {path!r} is absent")
+            elif entry.get("sha256") != sha256_file(p):
+                findings.append(f"{oid}: evidence {path!r} is not content-addressed (recorded "
+                                f"sha256 does not match the file)")
+
+        checks = (o.get("derivation") or {}).get("checks") or []
+        if not checks:
+            findings.append(f"{oid}: carries no derivation check, so its state is not derived from "
+                            f"evidence")
+        for check in checks:
+            for ep in check.get("evidence") or []:
+                if ep not in paths:
+                    findings.append(
+                        f"{oid}: the check {check.get('rule')!r} reads {ep!r}, which is not among "
+                        f"the record's evidence, so the obligation is not checked against it"
+                    )
+            ca = check.get("authority_id")
+            if ca and isinstance(scope, dict) and scope.get("authority_id") \
+                    and ca != scope.get("authority_id"):
+                findings.append(
+                    f"{oid}: the check {check.get('rule')!r} is about {ca!r}, not the obligation's "
+                    f"authority {scope.get('authority_id')!r}"
+                )
+
+        state, detail = negative_obligations.adjudicate(o)
+        if o.get("state") != state:
+            findings.append(
+                f"{oid}: state {o.get('state')!r} is not the state its evidence establishes "
+                f"({state}: {detail})"
+            )
+        if o.get("state") == "open":
+            findings.append(f"{oid}: the obligation is open -- a compatibility defect")
+        if o.get("state") == "unknown":
+            rules = (o.get("derivation") or {}).get("rules") or []
+            if "architecture-future" not in rules:
+                findings.append(f"{oid}: reads `unknown` where the named evidence adjudicates")
+
+    for kind in multitrack_schemas.NEGATIVE_OBLIGATION_KINDS:
+        if kind not in kinds_seen:
+            findings.append(f"the plane carries no {kind} obligation, so it is not a contract")
+    if not (kinds_seen & set(negative_obligations.POSITIVE_KINDS)):
+        findings.append("the plane carries no positive obligation, so it is only prohibitions")
+
+    # The committed plane must reproduce from the committed evidence through the same generator: a
+    # typed state, a hand-listed obligation or a leaked/retained surface stops reproducing.
+    try:
+        derived = negative_obligations.derive_body()
+    except SystemExit as exc:
+        findings.append(f"the negative obligations could not be re-derived: {exc}")
+        derived = None
+    if derived is not None and derived != body:
+        findings.append(
+            "the committed obligations do not reproduce from the committed evidence through the "
+            "same generator: an obligation's state was typed, an obligation was hand-listed, or a "
+            "leaked/retained surface was recorded"
+        )
+    return findings
+
+
+def negative_obligations_sensitivity_control(body: dict) -> dict:
+    """Prove the court can fail: seed five mutations and require each caught.
+
+    The honest plane must yield **zero** findings (specificity), and each seeded mutation -- a
+    provider symbol present in a pre-provider authority's view, a post-1.1.0 layout declared
+    public, an ENGINE symbol retained in a 4.x view, an obligation with no evidence, and a future
+    symbol leaked into an earlier authority's view -- must be caught with specificity holding.
+    """
+    base = negative_obligation_findings(body)
+    specificity = not base
+
+    # (a) a provider symbol present in a pre-provider authority's view: flip the absent provider
+    #     store to `must_exist` while it still reads satisfied.
+    provider = copy.deepcopy(body)
+    prov_rec = next((o for o in provider["obligations"]
+                     if o["kind"] == "must_not_exist" and o["subject"] == "provider-store"
+                     and o["scope"].get("authority_id") == "openssl-0.9.8zh-historical"), None)
+    if prov_rec is None:
+        return {"honest": False, "reason": "the plane has no pre-provider provider obligation"}
+    prov_rec["kind"] = "must_exist"
+    prov_rec["expected_state"] = "present"
+    prov_id = prov_rec["obligation_id"]
+    prov_findings = negative_obligation_findings(provider)
+    caught_provider = any("not the state its evidence establishes" in f for f in prov_findings)
+
+    # (b) a post-1.1.0 layout declared public: flip the canonical opaque layout to `must_be_public`.
+    layout = copy.deepcopy(body)
+    lay_rec = next((o for o in layout["obligations"]
+                    if o["kind"] == "must_be_opaque" and o["subject"] == "EVP_MD_CTX"), None)
+    if lay_rec is None:
+        return {"honest": False, "reason": "the plane has no canonical opaque layout obligation"}
+    lay_rec["kind"] = "must_be_public"
+    lay_rec["expected_state"] = "public"
+    lay_id = lay_rec["obligation_id"]
+    lay_findings = negative_obligation_findings(layout)
+    caught_layout = any("not the state its evidence establishes" in f for f in lay_findings)
+
+    # (c) an ENGINE symbol retained in a 4.x view: the 4.x obligation is `unknown` because no 4.x
+    #     authority exists; assume it satisfied.
+    engine = copy.deepcopy(body)
+    eng_rec = next((o for o in engine["obligations"]
+                    if o["subject"] == "ENGINE"
+                    and o["scope"].get("release_id") == "openssl-4.0.3"), None)
+    if eng_rec is None:
+        return {"honest": False, "reason": "the plane has no 4.x ENGINE obligation"}
+    eng_rec["state"] = "satisfied"
+    eng_id = eng_rec["obligation_id"]
+    eng_findings = negative_obligation_findings(engine)
+    caught_engine = any("not the state its evidence establishes" in f for f in eng_findings)
+
+    # (d) an obligation with no evidence.
+    no_evidence = copy.deepcopy(body)
+    strip_rec = no_evidence["obligations"][0]
+    strip_rec["evidence"] = []
+    strip_rec["derivation"]["checks"] = []
+    strip_id = strip_rec["obligation_id"]
+    strip_findings = negative_obligation_findings(no_evidence)
+    caught_no_evidence = any("cites no evidence" in f for f in strip_findings)
+
+    # (e) a future symbol leaked into an earlier authority's view: the 3.6.3 must_not_exist macro
+    #     flipped to must_exist while it still reads satisfied.
+    leak = copy.deepcopy(body)
+    leak_rec = next((o for o in leak["obligations"]
+                     if o["kind"] == "must_not_exist"
+                     and o["subject"] == "SSL_VALUE_QUIC_MAX_PENDING_CONNS"), None)
+    if leak_rec is None:
+        return {"honest": False, "reason": "the plane has no added-macro obligation"}
+    leak_rec["kind"] = "must_exist"
+    leak_rec["expected_state"] = "present"
+    leak_id = leak_rec["obligation_id"]
+    leak_findings = negative_obligation_findings(leak)
+    caught_leak = any("not the state its evidence establishes" in f for f in leak_findings)
+
+    return {
+        "baseline_findings": len(base),
+        "injected_provider_in_pre_provider_view": prov_id,
+        "injected_provider_findings": len(prov_findings),
+        "injected_opaque_layout_declared_public": lay_id,
+        "injected_opaque_layout_findings": len(lay_findings),
+        "injected_engine_retained_in_4x_view": eng_id,
+        "injected_engine_findings": len(eng_findings),
+        "injected_obligation_without_evidence": strip_id,
+        "injected_no_evidence_findings": len(strip_findings),
+        "injected_leaked_future_symbol": leak_id,
+        "injected_leaked_symbol_findings": len(leak_findings),
+        "specificity_holds": specificity,
+        "caught_provider_in_pre_provider_view": caught_provider,
+        "caught_opaque_layout_declared_public": caught_layout,
+        "caught_engine_retained_in_4x_view": caught_engine,
+        "caught_obligation_without_evidence": caught_no_evidence,
+        "caught_leaked_future_symbol": caught_leak,
+        "honest": bool(specificity and caught_provider and caught_layout and caught_engine
+                       and caught_no_evidence and caught_leak),
+    }
+
+
+def _negative_obligations_court(name: str) -> dict:
+    """`RT-NEGATIVE-OBLIGATIONS`: 23.13's court, the negative (and positive) obligations.
+
+    Stages no probe. It reads `forensics/multitrack/negative-obligations.json` and re-derives the
+    whole plane from the committed censuses, façades, deltas and symbols planes through the same
+    generator, and establishes that every obligation is a schema-valid `negative_obligation` whose
+    expected state is the polarity its kind asserts; that its scope names an admitted authority or a
+    catalogued release; that every obligation is checked against the authority/view/plane evidence
+    it names; that its state is the reading that evidence establishes and never assumed, so an
+    `open` obligation is a compatibility defect and `unknown` is only where no authority or view
+    exists; and that both polarities and all six kinds are present. Five seeded mutations -- a
+    provider symbol present in a pre-provider authority's view, a post-1.1.0 layout declared public,
+    an ENGINE symbol retained in a 4.x view, an obligation with no evidence, and a future symbol
+    leaked into an earlier authority's view -- are each caught with specificity holding. A passing
+    obligation set is an **instrument**: it records what a named authority or release must (not)
+    carry, not a one-boolean compatibility claim.
+    """
+    problems: list[str] = []
+    if not NEGATIVE_OBLIGATIONS.is_file():
+        problems.append(f"the negative-obligations plane {rel(NEGATIVE_OBLIGATIONS)} is absent")
+    body: dict = {}
+    if not problems:
+        body = read_json(NEGATIVE_OBLIGATIONS)
+    findings = negative_obligation_findings(body) if body else []
+    control = negative_obligations_sensitivity_control(body) if body else {"honest": False}
+    verdict = "pass" if (not findings and not problems and control.get("honest")) else "fail"
+
+    inventory = []
+    for o in body.get("obligations") or []:
+        scope = o.get("scope") if isinstance(o.get("scope"), dict) else {}
+        inventory.append({
+            "obligation_id": o.get("obligation_id"),
+            "kind": o.get("kind"),
+            "subject": o.get("subject"),
+            "authority_id": scope.get("authority_id"),
+            "release_id": scope.get("release_id"),
+            "state": o.get("state"),
+        })
+    by_kind: dict[str, int] = {}
+    for o in inventory:
+        by_kind[o["kind"]] = by_kind.get(o["kind"], 0) + 1
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/multitrack/negative-obligations.json and "
+            "re-derives the whole plane from the committed censuses, ABI/history façades, edge "
+            "deltas and symbols planes through the same generator. It establishes that every "
+            "obligation is a schema-valid negative_obligation whose expected state is the polarity "
+            "its kind asserts; that its scope names an admitted authority or a catalogued release; "
+            "that everything it names is present and content-addressed and is the evidence the "
+            "record's derivation checks actually read, so a negative obligation is checked against "
+            "the named authority/view/plane; that its state is the reading that evidence "
+            "establishes and never assumed, so `open` is a compatibility defect and `unknown` is "
+            "only where no authority or view exists; and that both polarities and all six kinds "
+            "are present. A provider symbol present in a pre-provider authority's view, a "
+            "post-1.1.0 layout declared public, an ENGINE symbol retained in a 4.x view, an "
+            "obligation with no evidence and a future symbol leaked into an earlier authority's "
+            "view are each detected with specificity holding "
+            "(docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 2 and 3.6)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the negative-obligations court reads a committed evidence plane and writes no "
+            "artifacts/phase23/probes/<probe>.{authority,candidate} pair, so it stages no "
+            "transcript to diff and carries no FRF declaration"
+        ),
+        "kinds": body.get("kinds"),
+        "states": body.get("states"),
+        "expected_state_of_kind": body.get("expected_state_of_kind"),
+        "counts": body.get("counts"),
+        "authorities": body.get("authorities"),
+        "releases": body.get("releases"),
+        "by_kind": by_kind,
+        "obligations": inventory,
+        "boundary": body.get("boundary"),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def _reseal_population(body: dict) -> dict:
     """`body` with its content hash recomputed, so a mutation is caught on substance alone."""
     out = copy.deepcopy(body)
@@ -4389,12 +4709,35 @@ def main(argv: list[str]) -> int:
             "with the semantic facet UNKNOWN because no committed candidate-to-authority semantic "
             "measurement exists. A PASS with no evidence, a dimension collapsed to one boolean, "
             "evidence inherited across the two sides, a verdict defaulting to PASS and a "
-            "numeric-ordering evidence kind are each detected with specificity holding. Phase 23 "
+            "numeric-ordering evidence kind are each detected with specificity holding. "
+            "`RT-NEGATIVE-OBLIGATIONS` is 23.13's court: the negative (and positive) obligations. "
+            "It stages no probe and reads forensics/multitrack/negative-obligations.json, "
+            "re-deriving every obligation from the committed censuses, ABI/history façades, edge "
+            "deltas and symbols planes through the same generator. It establishes that every "
+            "obligation is a schema-valid negative_obligation whose expected state is the "
+            "polarity its kind asserts; that its scope names an admitted authority or a "
+            "catalogued release; that everything it names is present and content-addressed and is "
+            "the evidence the record's derivation checks actually read, so a negative obligation "
+            "is checked against the named authority/view/plane rather than asserted; that its "
+            "state is the reading that evidence establishes and never assumed, so an `open` "
+            "obligation is a compatibility defect and `unknown` is only where no authority or "
+            "view exists; and that both polarities and all six kinds -- must_not_exist, "
+            "must_be_opaque and must_not_be_exported beside must_exist, must_be_public and "
+            "must_be_exported -- are present. The plane covers the pre-provider authorities' "
+            "provider absence (0.9.8zh, 1.0.2u, 1.1.1w) beside 3.0.0 and 3.6.4's presence, the "
+            "pre-1.1.0 public layout (EVP_MD_CTX, HMAC_CTX) beside the 3.6.4 opacity transition, "
+            "the 3.6.4-added macros' absence from 3.6.3, the exported symbols the 3.6.3 -> 3.6.4 "
+            "delta read as present in both, each authority's `.num` NOEXIST rows, and a 4.x "
+            "release's ENGINE absence, which is `unknown` because no 4.x authority or view is "
+            "admitted. A provider symbol present in a pre-provider authority's view, a "
+            "post-1.1.0 layout declared public, an ENGINE symbol retained in a 4.x view, an "
+            "obligation with no evidence and a future symbol leaked into an earlier authority's "
+            "view are each detected with specificity holding. Phase 23 "
             "owns no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining five courts -- "
-            "RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, "
+            "over a symbol set is its evidence, and its remaining four courts -- "
+            "RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, "
             "RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
-            "the subphases that land them (23.13 through 23.17). The one thing the model forbids "
+            "the subphases that land them (23.14 through 23.17). The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "
@@ -4430,6 +4773,7 @@ def main(argv: list[str]) -> int:
         InputRef(name="semantic-probe", path=SEMANTIC_PROBE),
         InputRef(name="compatibility-views", path=COMPATIBILITY_VIEWS),
         InputRef(name="compatibility-edges", path=COMPATIBILITY_EDGES),
+        InputRef(name="negative-obligations", path=NEGATIVE_OBLIGATIONS),
         InputRef(name="historical-population", path=HISTORICAL_POPULATION),
         InputRef(name="downstream-multitrack", path=DOWNSTREAM_MULTITRACK),
         InputRef(name="phase17-downstream-corpus", path=PHASE17_CORPUS),
@@ -4638,6 +4982,28 @@ def main(argv: list[str]) -> int:
                       f"{m['facet']:<11} {m['verdict']}")
             for u in r["unknown"] or []:
                 print(f"      UNKNOWN {u['edge_id']}: {u['reason']}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == NEGATIVE_OBLIGATIONS_COURT:
+            c = r["control"]
+            counts = r["counts"] or {}
+            print(f"  {r['court']:<32} pass   (no probe, {counts.get('obligations')} obligation(s) "
+                  f"{counts.get('by_kind')}; state={counts.get('by_state')}; "
+                  f"positive={counts.get('positive')} negative={counts.get('negative')} "
+                  f"over {len(r['authorities'])} authority/ies; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"provider->{c['injected_provider_findings']} "
+                  f"opaque-public->{c['injected_opaque_layout_findings']} "
+                  f"engine-4x->{c['injected_engine_findings']} "
+                  f"no-evidence->{c['injected_no_evidence_findings']} "
+                  f"leaked->{c['injected_leaked_symbol_findings']} finding(s))")
+            by_kind = r["by_kind"]
+            for kind in sorted(by_kind):
+                print(f"      {kind:<20} {by_kind[kind]}")
+            for o in r["obligations"]:
+                where = o["authority_id"] or o["release_id"]
+                print(f"      {o['state']:<9} {o['kind']:<20} {o['subject']:<42} {where}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] == "pass" and r["court"] == HISTORICAL_POPULATION_COURT:
