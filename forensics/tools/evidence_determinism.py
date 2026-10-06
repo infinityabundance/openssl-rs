@@ -252,6 +252,15 @@ GENERATORS_AFTER_LEDGERS = [
     # court re-derives the whole plane through the same generator and re-reads every cited evidence
     # path.
     "forensics/tools/security_lineage.py",
+    # Phase 23.16's assembled compatibility matrix (D546). It is a pure function of the five
+    # committed planes -- the compatibility views, the directional edges, the negative obligations,
+    # the security lineage and the support-status ladder -- so a stale matrix, or a verdict that was
+    # typed rather than joined, is a failure rather than a silent divergence. It reads the security
+    # lineage, which this block generates just above, so it sits after it; it needs no authority and
+    # no compiler. The RT-COMPATIBILITY-MATRIX court re-derives the whole matrix through the same
+    # generator, re-reads every source record a cell references, and refuses a cell that contradicts
+    # the plane it joins.
+    "forensics/tools/compat_matrix.py",
     "forensics/tools/phase_state.py",
     # The prerequisite gate reads the phase states to decide whether a stratum has
     # sealed, so it sits after `phase_state.py` rather than beside it. It needs no
@@ -442,6 +451,11 @@ COMPARED = [
     # typed status or a row that disagrees with its population record is a failure rather than a
     # silent divergence.
     "forensics/multitrack/support-status.json",
+    # Phase 23.16's assembled compatibility matrix: a pure function of the five committed planes, so a
+    # stale cell, a typed verdict or a cell that contradicts the plane it joins is a failure rather
+    # than a silent divergence. Every cell references its source records rather than restating them,
+    # so the matrix cannot drift from the planes it joins.
+    "forensics/multitrack/compatibility-matrix.json",
     # Phase 23.11's downstream multitrack court: a pure function of the committed artefact's own
     # preserved raw outputs, so a stale record or a hand-typed outcome is a failure rather than a
     # silent divergence. The raw build/run outputs are carried inside the artefact, which is why the

@@ -284,6 +284,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "RT-COMPATIBILITY-MATRIX": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-COMPATIBILITY-VIEWS": {
       "observations": 0,
       "verdict": "pass"
@@ -922,7 +926,7 @@
     "phase20": 0,
     "phase21": 0,
     "phase22": 0,
-    "phase23": 2,
+    "phase23": 1,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
