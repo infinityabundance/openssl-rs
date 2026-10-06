@@ -46,7 +46,7 @@ declared owner; this is that assignment.
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 19 | Performance / CPU dispatch | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 20 | 3.6.4 custodian seal | `complete` | 0 | 5 | 5 | 0 | 0 |
-| 21 | Maintenance delta machinery | `in-progress` | 0 | 5 | 5 | 0 | 0 |
+| 21 | Maintenance delta machinery | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
 
 ## Phase 3 — Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects
@@ -676,9 +676,8 @@ The other 5 compare ELF structure rather than a transcript and observe nothing l
 
 ## Phase 21 — Maintenance delta machinery
 
-* state: `in-progress`
-* blocking: 1 required evidence file(s) absent, the first being docs/PHASE-21-MAINTENANCE-SEAL.md
-* seal: none written yet (`unnamed`)
+* state: `complete`
+* seal: `docs/PHASE-21-MAINTENANCE-SEAL.md`
 * ledger: `forensics/phase21-obligations.json`
 * atlas-owned: 0
 * owned working set: 5
