@@ -400,6 +400,40 @@ fifteen, and fifteen `pending` courts. The correction is recorded in `docs/DECIS
 checked by the ledger (which counts the seventeen units) and the runner (whose registry names a
 court and a landing subphase for each), not asserted here.
 
+**4.9 The delta engine corrects the record in three measured ways (23.6, D539).** Three corrections
+23.6 records against this plan, each checked by its court rather than asserted here.
+
+* **The delta's dimension is two-layered, and the schema's closed vocabulary is unchanged.** The
+  brief's delta dimensions are finer than the schema's compatibility vocabulary. Rather than widen
+  `multitrack_schemas.COMPAT_DIMENSIONS` -- which the views, edges and matrix also read -- a *row*
+  names a fine dimension (`DELTA_DIMENSIONS` in `forensics/tools/authority_delta.py`:
+  `api_presence`, `macro_value`, `public_layout`, `abi_symbol_version`, `deprecation_state`, ...)
+  and a *receipt* names the coarse dimension the fine one maps onto (`source_api`, `abi`, `...`).
+  Every receipt is still a `delta_receipt` validated against the schema's `COMPAT_DIMENSIONS`, so
+  no record kind or validator changed; the fine vocabulary lives with the engine and the court, not
+  in the schema. A dimension the evidence cannot support is recorded in `absent_dimensions` with
+  its reason, never asserted.
+* **The canonical delta is stored on the release-graph edge, not at the plan's aggregate path.**
+  §2's artefact table named `forensics/multitrack/delta-receipts.json`; 23.6 lands one file per
+  canonical lineage edge at `forensics/deltas/<from_release>--<to_release>.json`, each body carrying
+  its `delta_receipt` rows. A longer path is **composed** from the edge deltas it traverses
+  (`authority_delta compose`), and an edge whose pair is not covered is recorded as a gap rather
+  than recomputed, so no pairwise product is committed (the brief §11 rule). The record kind is
+  unchanged (`delta_receipt`), so this is a path and granularity correction, not a record-kind
+  split.
+* **One observable the brief's list does not name is recorded, with its provenance and its
+  adjudication.** An exported symbol's ELF symbol-table size (`st_size`) changes across the covered
+  pair without the symbol's presence, version node or prototype changing. It is recorded as the
+  `abi_symbol_presence` row's `st_size` facet, with the adjudication that it is an
+  implementation-size observation and **not an ABI contract change**, so the movement 23.5 records
+  as evidence is visible in the delta without being read as a compatibility obligation.
+
+The measured 3.6.3 -> 3.6.4 delta is: two macros added (`api_presence`), five version-stamp macros
+changed (`macro_value`) and twenty exported symbols whose machine-code size changed
+(`abi_symbol_presence`, `st_size`); every other measured dimension is present and unchanged, and
+nine dimensions the committed atlases carry no structured evidence for are recorded absent with
+their reason.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 21's process unchanged: a subphase lands its code, its court

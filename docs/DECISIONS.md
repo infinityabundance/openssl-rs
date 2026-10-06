@@ -35628,3 +35628,43 @@ The sensitivity control is honest: the same generator over a different court aut
 fallback is caught; a measured absence with no provenance, or with a nonzero count, or a census
 that renames its own authority, is each refused. `atlas-parameterization` moves to
 `implemented`/closed and the stratum's `open_in_this_stratum` falls from fifteen to fourteen.
+
+## D539 -- the delta engine computes the semantic compatibility delta over the canonical edges
+
+Phase 23.6 lands the semantic compatibility delta (`forensics/tools/authority_delta.py`, court
+`RT-DELTA-ENGINE`, unit `delta-engine`): the added / removed / changed surface between two
+authorities, computed mechanically from the per-authority atlases and the entity lineage, in the
+direction the lineage edge names, and never hand-listed. Three measured corrections are recorded in
+`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.9 and checked by the court.
+
+**The delta's dimension is two-layered, and the schema is unchanged.** The brief's delta dimensions
+are finer than `multitrack_schemas.COMPAT_DIMENSIONS`. Rather than widen a vocabulary the views,
+edges and matrix also read (section 4.5's hook), a *row* names a fine dimension (`DELTA_DIMENSIONS`:
+`api_presence`, `macro_value`, `public_layout`, `abi_symbol_version`, `deprecation_state`, ...) and a
+*receipt* names the coarse dimension the fine one maps onto. Every receipt is still a `delta_receipt`
+validated against `COMPAT_DIMENSIONS`, so no record kind or validator moved; a dimension the evidence
+cannot support is recorded in `absent_dimensions` with its reason, never asserted.
+
+**The canonical delta is one file per release-graph edge, and a longer path is composed.**
+`forensics/deltas/<from_release>--<to_release>.json` holds the `delta_receipt` rows for one canonical
+lineage edge; the plan's aggregate path `forensics/multitrack/delta-receipts.json` is superseded. A
+long-range query composes the edge deltas it traverses (`authority_delta <a> <b> --compose`) and an
+uncovered edge is a recorded gap, so the artefact set is the canonical edges and never their
+pairwise product (the brief section 11 rule against an O(N^2) delta database). The record kind is
+unchanged (`delta_receipt`).
+
+**A source-line diff is not the delta.** The engine never reads a patch and never shells out to
+`diff`: a delta row is keyed by entity and dimension, and the court refuses a row or an evidence path
+that is a source diff standing in for the compatibility delta. An exported symbol's `st_size` change
+-- which the brief's dimension list does not name -- is recorded under `abi_symbol_presence` with the
+`st_size` facet and the adjudication that it is an implementation-size observation, not an ABI
+contract change, so the movement 23.5 records as evidence is visible without being read as an
+obligation.
+
+The measured 3.6.3 -> 3.6.4 delta is two macros added (`api_presence`), five version-stamp macros
+changed (`macro_value`) and twenty symbol-size changes (`abi_symbol_presence` / `st_size`); nine
+dimensions the committed atlases carry no structured evidence for are recorded absent with their
+reason. The court's control seeds an unclassified change, a composed path that disagrees with its
+edges, a row with no evidence and a dimension the evidence cannot support, and requires each caught
+with specificity holding. `delta-engine` moves to `implemented`/closed and the stratum's
+`open_in_this_stratum` falls from fourteen to thirteen.
