@@ -136,7 +136,7 @@ live record and this section is the activation measurement.**
 | # | Subphase | Owns | Depends on | Courts |
 |---|---|---|---|---|
 | 23.0 | **The plan, the schemas, the ledger and the runner** | `docs/PHASE-23-MULTITRACK-SUBPHASES.md`, `forensics/tools/multitrack_schemas.py` and the measurement in §1. The ledger (`forensics/phase23-obligations.json`) and its generator land with it, together with the runner `forensics/tools/phase23_courts.py` and the registry it writes. **The runner cannot be deferred**: `run_courts.py` refuses a stratum in `in-progress` with no runner, and this stratum's obligations are not exports, so its first runnable court is a later subphase's. | 21 | — |
-| 23.1 | **The release-node catalogue** | one release node per upstream release, from OpenSSL 0.9.1c forward, read from the committed source manifests and the upstream lineage rather than typed, with the version parser and scheme model in `forensics/tools/multitrack_schemas.py`. | 23.0 | `RT-RELEASE-NODES` |
+| 23.1 | **The release catalogue and lineage query tooling** | one release node per upstream release, from OpenSSL 0.9.1c forward, read from the committed archaeology snapshot and the upstream lineage rather than typed, with the version parser and scheme model in `forensics/tools/multitrack_schemas.py`; the typed lineage between them (`forensics/authority-lineage.json`) and the query tool `forensics/tools/authority_graph.py`. | 23.0 | `RT-RELEASE-CATALOG` |
 | 23.2 | **The authority-node registry** | one authority node per built authority, over the releases an authority has been admitted for, recording platform, arch, build profile, toolchain, build environment and binary/installed hashes. | 23.1 | `RT-AUTHORITY-NODES` |
 | 23.3 | **The lineage edges** | the typed chronological / git-ancestry / branch-fork / maintenance-successor / security-backport edges between release nodes, each stating the direction it is read in. | 23.1 | `RT-LINEAGE-EDGES` |
 | 23.4 | **The entity lineage** | what became of each public entity across releases, with the relation vocabulary of §0 and `unknown_relationship` where the evidence does not settle it. | 23.1, 23.3 | `RT-ENTITY-LINEAGE` |
@@ -159,9 +159,9 @@ the **multitrack evidence plane**, each artefact validated against a record kind
 
 | artefact | record kind | schema |
 |---|---|---|
-| `forensics/multitrack/release-nodes.json` | release nodes | `release_node` |
+| `forensics/release-catalog.json` | release nodes | `release_node` |
 | `forensics/multitrack/authority-nodes.json` | authority nodes | `authority_node` |
-| `forensics/multitrack/lineage-edges.json` | lineage edges | `lineage_edge` |
+| `forensics/authority-lineage.json` | lineage edges | `lineage_edge` |
 | `forensics/multitrack/entity-lineage.json` | entity lineage | `entity_lineage` |
 | `forensics/multitrack/delta-receipts.json` | delta-engine records | `delta_receipt` |
 | `forensics/multitrack/compatibility-views.json` | compatibility views | `compatibility_view` |

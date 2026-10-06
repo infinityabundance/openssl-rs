@@ -3,16 +3,16 @@
   "body": {
     "contract_units": [
       {
-        "closure": "the `RT-RELEASE-NODES` court passes",
+        "closure": "the `RT-RELEASE-CATALOG` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-RELEASE-NODES is pending",
+        "measurement_state": "complete",
+        "observation": "RT-RELEASE-CATALOG is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "release-nodes",
-        "what": "one release node per upstream release from OpenSSL 0.9.1c forward, read from the committed source manifests and the upstream lineage rather than typed, with the version parser and scheme model in `forensics/tools/multitrack_schemas.py`"
+        "what": "one release node per upstream release from OpenSSL 0.9.1c forward, read from the committed archaeology snapshot (`forensics/multitrack/release-archaeology.json`) and the upstream lineage rather than typed, with the version parser and scheme model in `forensics/tools/multitrack_schemas.py`"
       },
       {
         "closure": "the `RT-AUTHORITY-NODES` court passes",
@@ -152,8 +152,8 @@
       "contract_units": 12,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 0,
-      "open_in_this_stratum": 12,
+      "implemented": 1,
+      "open_in_this_stratum": 11,
       "owned": 12,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -189,12 +189,12 @@
     {
       "name": "phase-23-plan",
       "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
-      "sha256": "ffc906e5d21bb9659d1bcfda8e494a3928211e4571db5a3e97dbff2b6bcd2dfa"
+      "sha256": "7497bc2af484c1d8a8f45c805a3c1f4c852b81a2e413c3c8fab0fb46177f8787"
     },
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "062b220cd790a785f575168b55117808ede887dc20466344de4124c52f8ceeab"
+      "sha256": "567c326e509d1c31bf4cf6b8b161f288d12829fc733f39988cd628d507cfff30"
     }
   ],
   "kind": "phase23-obligations",

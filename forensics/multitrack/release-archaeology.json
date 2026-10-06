@@ -1,0 +1,2757 @@
+{
+  "schema": "openssl-rs/release-archaeology/v1",
+  "source": {
+    "fetched": "2026-10-06",
+    "git_method": "git ls-remote --tags; bare partial clone (--filter=tree:0); git for-each-ref; git rev-list --all --parents plus nearest-release-ancestor walk",
+    "git_remote": "https://github.com/openssl/openssl",
+    "github_releases_latest": "openssl-4.0.3 (published 2026-09-29, not prerelease)",
+    "lts_series": [
+      "0.9.8",
+      "1.0.2",
+      "1.1.1",
+      "3.0",
+      "3.5"
+    ],
+    "release_strategy_url": "https://openssl-library.org/policies/releasestrat/",
+    "timeline_sha256": "cfe4e8011b7c38f8d3585b53ab06310fbaedf41c4268235c6c149582e9c075c1",
+    "timeline_url": "https://openssl-library.org/news/timeline/"
+  },
+  "ssleay": [
+    {
+      "commit": "38ab41c238bf51518d672272f03923a106554852",
+      "date": "1998-12-21",
+      "name": "OpenSSL SSLeay.0.8.1b",
+      "tag": "SSLeay_0_8_1b"
+    },
+    {
+      "commit": "eb43fa1a2ae03f179e486b8397066220fe697581",
+      "date": "1998-12-21",
+      "name": "OpenSSL SSLeay.0.9.0b",
+      "tag": "SSLeay_0_9_0b"
+    },
+    {
+      "commit": "162d5f30bead20c01854e892debf58fb3b237d75",
+      "date": "1998-12-21",
+      "name": "OpenSSL SSLeay.0.9.1b",
+      "tag": "SSLeay_0_9_1b"
+    }
+  ],
+  "timeline": [
+    {
+      "commit": "af1775b60dfa141a4ad762585052cabeb9f37e9e",
+      "date": "2026-09-29",
+      "git_parent_tag": "openssl-4.0.2",
+      "name": "OpenSSL 4.0.3",
+      "tag": "openssl-4.0.3"
+    },
+    {
+      "commit": "c8bd5a57108599ac650bbae77fcabe3109dab2e8",
+      "date": "2026-09-29",
+      "git_parent_tag": "openssl-3.6.4",
+      "name": "OpenSSL 3.6.5",
+      "tag": "openssl-3.6.5"
+    },
+    {
+      "commit": "45e844fa2a14ec92d146bd8f5778ac130b6625fb",
+      "date": "2026-09-29",
+      "git_parent_tag": "openssl-3.5.8",
+      "name": "OpenSSL 3.5.9",
+      "tag": "openssl-3.5.9"
+    },
+    {
+      "commit": "e72c946f6f6d94c8ba5119acb25340b7b6b2073f",
+      "date": "2026-09-29",
+      "git_parent_tag": "openssl-3.4.7",
+      "name": "OpenSSL 3.4.8",
+      "tag": "openssl-3.4.8"
+    },
+    {
+      "commit": "d7449eee1347dbbcba6a494168d886235ca35ac6",
+      "date": "2026-09-23",
+      "git_parent_tag": "openssl-4.1.0-alpha1",
+      "name": "OpenSSL 4.1.0-beta1",
+      "tag": "openssl-4.1.0-beta1"
+    },
+    {
+      "commit": "f42705198e92b4b969f05c973fff405880c7e80e",
+      "date": "2026-09-09",
+      "git_parent_tag": "openssl-3.4.0-alpha1",
+      "name": "OpenSSL 4.1.0-alpha1",
+      "tag": "openssl-4.1.0-alpha1"
+    },
+    {
+      "commit": "f089acdf4bc7ba94a79f4bf6eb7362c3e7d14aa9",
+      "date": "2026-08-25",
+      "git_parent_tag": "openssl-4.0.1",
+      "name": "OpenSSL 4.0.2",
+      "tag": "openssl-4.0.2"
+    },
+    {
+      "commit": "d3c1b1169b3569ff3069e5b399f47b2b28e03d79",
+      "date": "2026-08-25",
+      "git_parent_tag": "openssl-3.6.3",
+      "name": "OpenSSL 3.6.4",
+      "tag": "openssl-3.6.4"
+    },
+    {
+      "commit": "f4dc4d58b48d346a8270183f89acf826d459b0ca",
+      "date": "2026-08-25",
+      "git_parent_tag": "openssl-3.5.7",
+      "name": "OpenSSL 3.5.8",
+      "tag": "openssl-3.5.8"
+    },
+    {
+      "commit": "0c5d912057abf47505b4ad455da49fbab99b76f1",
+      "date": "2026-08-25",
+      "git_parent_tag": "openssl-3.4.6",
+      "name": "OpenSSL 3.4.7",
+      "tag": "openssl-3.4.7"
+    },
+    {
+      "commit": "a279090b9cd6b682a5a178410765a63e619fa2d9",
+      "date": "2026-08-25",
+      "git_parent_tag": "openssl-3.0.21",
+      "name": "OpenSSL 3.0.22",
+      "tag": "openssl-3.0.22"
+    },
+    {
+      "commit": "1e963a8680ec78ad2072792c7a1a71f3c530bd2e",
+      "date": "2026-06-09",
+      "git_parent_tag": "openssl-4.0.0",
+      "name": "OpenSSL 4.0.1",
+      "tag": "openssl-4.0.1"
+    },
+    {
+      "commit": "aae016bfd52fcad2bc9657c2c782cfdf73b1ed5f",
+      "date": "2026-06-09",
+      "git_parent_tag": "openssl-3.6.2",
+      "name": "OpenSSL 3.6.3",
+      "tag": "openssl-3.6.3"
+    },
+    {
+      "commit": "8cf17aaeb4599f8af87fefd810b5b5fee90fe69e",
+      "date": "2026-06-09",
+      "git_parent_tag": "openssl-3.5.6",
+      "name": "OpenSSL 3.5.7",
+      "tag": "openssl-3.5.7"
+    },
+    {
+      "commit": "c5ea1cc227fd60afae8ac4b9438690bbe4888f79",
+      "date": "2026-06-09",
+      "git_parent_tag": "openssl-3.4.5",
+      "name": "OpenSSL 3.4.6",
+      "tag": "openssl-3.4.6"
+    },
+    {
+      "commit": "51ea949dc1436e865935b47874b21a3bb31a102e",
+      "date": "2026-06-09",
+      "git_parent_tag": "openssl-3.0.20",
+      "name": "OpenSSL 3.0.21",
+      "tag": "openssl-3.0.21"
+    },
+    {
+      "commit": "11b7b6ea3b65a584e1d31408ed1bdb139465cffd",
+      "date": "2026-04-14",
+      "git_parent_tag": "openssl-4.0.0-beta1",
+      "name": "OpenSSL 4.0.0",
+      "tag": "openssl-4.0.0"
+    },
+    {
+      "commit": "fe686e15d84334b284f883118ed92f64b409b3aa",
+      "date": "2026-04-07",
+      "git_parent_tag": "openssl-3.6.1",
+      "name": "OpenSSL 3.6.2",
+      "tag": "openssl-3.6.2"
+    },
+    {
+      "commit": "286ddeaac037533bbdce65b3c689e3f7ffebf0f6",
+      "date": "2026-04-07",
+      "git_parent_tag": "openssl-3.5.5",
+      "name": "OpenSSL 3.5.6",
+      "tag": "openssl-3.5.6"
+    },
+    {
+      "commit": "03b8620d6e9b7b4d5701865edb6ad86101fe5517",
+      "date": "2026-04-07",
+      "git_parent_tag": "openssl-3.4.4",
+      "name": "OpenSSL 3.4.5",
+      "tag": "openssl-3.4.5"
+    },
+    {
+      "commit": "204165c1550d3aa0f49395af654124cec2bbabf9",
+      "date": "2026-04-07",
+      "git_parent_tag": "openssl-3.3.6",
+      "name": "OpenSSL 3.3.7",
+      "tag": "openssl-3.3.7"
+    },
+    {
+      "commit": "5aada9c299a3b28fc82348f4e2b93805fa0a0e9c",
+      "date": "2026-04-07",
+      "git_parent_tag": "openssl-3.0.19",
+      "name": "OpenSSL 3.0.20",
+      "tag": "openssl-3.0.20"
+    },
+    {
+      "commit": "470ad1757ee81b9a92ae02c26e6a6076b3027bd6",
+      "date": "2026-03-24",
+      "git_parent_tag": "openssl-4.0.0-alpha1",
+      "name": "OpenSSL 4.0.0-beta1",
+      "tag": "openssl-4.0.0-beta1"
+    },
+    {
+      "commit": "a2d14571eca4168fde11d21ec7c42945dc1b8bdf",
+      "date": "2026-03-10",
+      "git_parent_tag": "openssl-3.4.0-alpha1",
+      "name": "OpenSSL 4.0.0-alpha1",
+      "tag": "openssl-4.0.0-alpha1"
+    },
+    {
+      "commit": "c9a9e5b10105ad850b6e4d1122c645c67767c341",
+      "date": "2026-01-27",
+      "git_parent_tag": "openssl-3.6.0",
+      "name": "OpenSSL 3.6.1",
+      "tag": "openssl-3.6.1"
+    },
+    {
+      "commit": "67b5686b4419b4cb8caa502711c41815f5279751",
+      "date": "2026-01-27",
+      "git_parent_tag": "openssl-3.5.4",
+      "name": "OpenSSL 3.5.5",
+      "tag": "openssl-3.5.5"
+    },
+    {
+      "commit": "565bdcc41bbf89fcbaf962636469332689f0c9fd",
+      "date": "2026-01-27",
+      "git_parent_tag": "openssl-3.4.3",
+      "name": "OpenSSL 3.4.4",
+      "tag": "openssl-3.4.4"
+    },
+    {
+      "commit": "4601ff25acd6c2fe58a8bfe241e6c470e27b8074",
+      "date": "2026-01-27",
+      "git_parent_tag": "openssl-3.3.5",
+      "name": "OpenSSL 3.3.6",
+      "tag": "openssl-3.3.6"
+    },
+    {
+      "commit": "a22063cd69a077cc68bb4c10e9f351f75899b194",
+      "date": "2026-01-27",
+      "git_parent_tag": "openssl-3.0.18",
+      "name": "OpenSSL 3.0.19",
+      "tag": "openssl-3.0.19"
+    },
+    {
+      "commit": "7b371d80d959ec9ab4139d09d78e83c090de9779",
+      "date": "2025-10-01",
+      "git_parent_tag": "openssl-3.6.0-beta1",
+      "name": "OpenSSL 3.6.0",
+      "tag": "openssl-3.6.0"
+    },
+    {
+      "commit": "c1eeb9406b6142148f267594197d853403d10208",
+      "date": "2025-09-30",
+      "git_parent_tag": "openssl-3.5.3",
+      "name": "OpenSSL 3.5.4",
+      "tag": "openssl-3.5.4"
+    },
+    {
+      "commit": "474f0e27bc6b23bbc3ae18543ede9315adfddf1a",
+      "date": "2025-09-30",
+      "git_parent_tag": "openssl-3.4.2",
+      "name": "OpenSSL 3.4.3",
+      "tag": "openssl-3.4.3"
+    },
+    {
+      "commit": "f10934c46fef092d04788f01fd0a4eafe3ef715f",
+      "date": "2025-09-30",
+      "git_parent_tag": "openssl-3.3.4",
+      "name": "OpenSSL 3.3.5",
+      "tag": "openssl-3.3.5"
+    },
+    {
+      "commit": "86874e2ee18ccc14aa518bffa178ebada9c66c86",
+      "date": "2025-09-30",
+      "git_parent_tag": "openssl-3.2.5",
+      "name": "OpenSSL 3.2.6",
+      "tag": "openssl-3.2.6"
+    },
+    {
+      "commit": "c10e643222ce5a185f2980d7352d545afacb0fed",
+      "date": "2025-09-30",
+      "git_parent_tag": "openssl-3.0.17",
+      "name": "OpenSSL 3.0.18",
+      "tag": "openssl-3.0.18"
+    },
+    {
+      "commit": "c4da9ac23de497ce039a102e6715381047899447",
+      "date": "2025-09-16",
+      "git_parent_tag": "openssl-3.5.2",
+      "name": "OpenSSL 3.5.3",
+      "tag": "openssl-3.5.3"
+    },
+    {
+      "commit": "34c61a5df27d72e97f89bbed3f48aa8603c81d9b",
+      "date": "2025-09-16",
+      "git_parent_tag": "openssl-3.6.0-alpha1",
+      "name": "OpenSSL 3.6.0-beta1",
+      "tag": "openssl-3.6.0-beta1"
+    },
+    {
+      "commit": "eccb480c11c0220ab39acc3b06923979a7df1a9f",
+      "date": "2025-09-02",
+      "git_parent_tag": "openssl-3.4.0-alpha1",
+      "name": "OpenSSL 3.6.0-alpha1",
+      "tag": "openssl-3.6.0-alpha1"
+    },
+    {
+      "commit": "0893a62353583343eb712adef6debdfbe597c227",
+      "date": "2025-08-05",
+      "git_parent_tag": "openssl-3.5.1",
+      "name": "OpenSSL 3.5.2",
+      "tag": "openssl-3.5.2"
+    },
+    {
+      "commit": "aea7aaf2abb04789f5868cbabec406ea43aa84bf",
+      "date": "2025-07-01",
+      "git_parent_tag": "openssl-3.5.0",
+      "name": "OpenSSL 3.5.1",
+      "tag": "openssl-3.5.1"
+    },
+    {
+      "commit": "4292b5fd3dabb278c0094d53bf3a852593811417",
+      "date": "2025-07-01",
+      "git_parent_tag": "openssl-3.4.1",
+      "name": "OpenSSL 3.4.2",
+      "tag": "openssl-3.4.2"
+    },
+    {
+      "commit": "3a0a382ca4c41e514ef3161de516c54be2a73252",
+      "date": "2025-07-01",
+      "git_parent_tag": "openssl-3.3.3",
+      "name": "OpenSSL 3.3.4",
+      "tag": "openssl-3.3.4"
+    },
+    {
+      "commit": "8d1e59d307af4628de32459a36a868ddf159dbfc",
+      "date": "2025-07-01",
+      "git_parent_tag": "openssl-3.2.4",
+      "name": "OpenSSL 3.2.5",
+      "tag": "openssl-3.2.5"
+    },
+    {
+      "commit": "4d7dfa23be028f11e0f9189a7512a872c05938fa",
+      "date": "2025-07-01",
+      "git_parent_tag": "openssl-3.0.16",
+      "name": "OpenSSL 3.0.17",
+      "tag": "openssl-3.0.17"
+    },
+    {
+      "commit": "636dfadc70ce26f2473870570bfd9ec352806b1d",
+      "date": "2025-04-08",
+      "git_parent_tag": "openssl-3.5.0-beta1",
+      "name": "OpenSSL 3.5.0",
+      "tag": "openssl-3.5.0"
+    },
+    {
+      "commit": "0c6656a7a31492ddd61e3d0d8b0e66645f4b2d6f",
+      "date": "2025-03-25",
+      "git_parent_tag": "openssl-3.5.0-alpha1",
+      "name": "OpenSSL 3.5.0-beta1",
+      "tag": "openssl-3.5.0-beta1"
+    },
+    {
+      "commit": "8fabfd81094d1d9f8890df4bee083aa6f77d769d",
+      "date": "2025-03-12",
+      "git_parent_tag": "openssl-3.4.0-alpha1",
+      "name": "OpenSSL 3.5.0-alpha1",
+      "tag": "openssl-3.5.0-alpha1"
+    },
+    {
+      "commit": "a26d85337dbdcd33c971f38eb3fa5150e75cea87",
+      "date": "2025-02-11",
+      "git_parent_tag": "openssl-3.4.0",
+      "name": "OpenSSL 3.4.1",
+      "tag": "openssl-3.4.1"
+    },
+    {
+      "commit": "42768eafab40d3e2f0851caa84aa9801139c74ab",
+      "date": "2025-02-11",
+      "git_parent_tag": "openssl-3.3.2",
+      "name": "OpenSSL 3.3.3",
+      "tag": "openssl-3.3.3"
+    },
+    {
+      "commit": "8ac4271233ecec5aa0468a5e7ae38dd642ebf365",
+      "date": "2025-02-11",
+      "git_parent_tag": "openssl-3.2.3",
+      "name": "OpenSSL 3.2.4",
+      "tag": "openssl-3.2.4"
+    },
+    {
+      "commit": "77e6daafbad639584e1e4877172b3f9a777966dd",
+      "date": "2025-02-11",
+      "git_parent_tag": "openssl-3.1.7",
+      "name": "OpenSSL 3.1.8",
+      "tag": "openssl-3.1.8"
+    },
+    {
+      "commit": "fa1e5dfb142bb1c26c3c38a10aafa7a095df52e5",
+      "date": "2025-02-11",
+      "git_parent_tag": "openssl-3.0.15",
+      "name": "OpenSSL 3.0.16",
+      "tag": "openssl-3.0.16"
+    },
+    {
+      "commit": "98acb6b02839c609ef5b837794e08d906d965335",
+      "date": "2024-10-22",
+      "git_parent_tag": "openssl-3.4.0-beta1",
+      "name": "OpenSSL 3.4.0",
+      "tag": "openssl-3.4.0"
+    },
+    {
+      "commit": "ec6991fce08711b4c1737474d4ef1cd4c784fa47",
+      "date": "2024-10-07",
+      "git_parent_tag": "openssl-3.4.0-alpha1",
+      "name": "OpenSSL 3.4.0-beta1",
+      "tag": "openssl-3.4.0-beta1"
+    },
+    {
+      "commit": "2648f68f4c33b1a5b89ed6ba20051d7c5e7f8f0e",
+      "date": "2024-09-05",
+      "git_parent_tag": "openssl-3.2.0-alpha2",
+      "name": "OpenSSL 3.4.0-alpha1",
+      "tag": "openssl-3.4.0-alpha1"
+    },
+    {
+      "commit": "fb7fab9fa6f4869eaa8fbb97e0d593159f03ffe4",
+      "date": "2024-09-03",
+      "git_parent_tag": "openssl-3.3.1",
+      "name": "OpenSSL 3.3.2",
+      "tag": "openssl-3.3.2"
+    },
+    {
+      "commit": "45fda76bc1b9fd74d10e85e0ce9b65a12dcc58b0",
+      "date": "2024-09-03",
+      "git_parent_tag": "openssl-3.2.2",
+      "name": "OpenSSL 3.2.3",
+      "tag": "openssl-3.2.3"
+    },
+    {
+      "commit": "3c6a7a1c3b88d9afaf2828cff7adefba27b52493",
+      "date": "2024-09-03",
+      "git_parent_tag": "openssl-3.1.6",
+      "name": "OpenSSL 3.1.7",
+      "tag": "openssl-3.1.7"
+    },
+    {
+      "commit": "c523121f902fde2929909dc7f76b13ceb4961efe",
+      "date": "2024-09-03",
+      "git_parent_tag": "openssl-3.0.14",
+      "name": "OpenSSL 3.0.15",
+      "tag": "openssl-3.0.15"
+    },
+    {
+      "commit": "db2ac4f6ebd8f3d7b2a60882992fbea1269114e2",
+      "date": "2024-06-04",
+      "git_parent_tag": "openssl-3.3.0",
+      "name": "OpenSSL 3.3.1",
+      "tag": "openssl-3.3.1"
+    },
+    {
+      "commit": "cd1e967483577ec4a42ebe75942894c10655e2b6",
+      "date": "2024-06-04",
+      "git_parent_tag": "openssl-3.2.1",
+      "name": "OpenSSL 3.2.2",
+      "tag": "openssl-3.2.2"
+    },
+    {
+      "commit": "8ffa005476942fc89d247448f95077c104efadf1",
+      "date": "2024-06-04",
+      "git_parent_tag": "openssl-3.1.5",
+      "name": "OpenSSL 3.1.6",
+      "tag": "openssl-3.1.6"
+    },
+    {
+      "commit": "9cff14fd97814baf8a9a07d8447960a64d616ada",
+      "date": "2024-06-04",
+      "git_parent_tag": "openssl-3.0.13",
+      "name": "OpenSSL 3.0.14",
+      "tag": "openssl-3.0.14"
+    },
+    {
+      "commit": "4cb31128b5790819dfeea2739fbde265f71a10a2",
+      "date": "2024-04-09",
+      "git_parent_tag": "openssl-3.3.0-beta1",
+      "name": "OpenSSL 3.3.0",
+      "tag": "openssl-3.3.0"
+    },
+    {
+      "commit": "5bf7b7975f342032883ebf4cf2302870337c2fb3",
+      "date": "2024-03-29",
+      "git_parent_tag": "openssl-3.3.0-alpha1",
+      "name": "OpenSSL 3.3.0-beta1",
+      "tag": "openssl-3.3.0-beta1"
+    },
+    {
+      "commit": "9010cc0eeec6c80cc04ce09985bdcc69f4b8317b",
+      "date": "2024-03-20",
+      "git_parent_tag": "openssl-3.2.0-alpha2",
+      "name": "OpenSSL 3.3.0-alpha1",
+      "tag": "openssl-3.3.0-alpha1"
+    },
+    {
+      "commit": "a7e992847de83aa36be0c399c89db3fb827b0be2",
+      "date": "2024-01-30",
+      "git_parent_tag": "openssl-3.2.0",
+      "name": "OpenSSL 3.2.1",
+      "tag": "openssl-3.2.1"
+    },
+    {
+      "commit": "99e6624ebb8a5943ab9699ed4ab221e8b29a31dd",
+      "date": "2024-01-30",
+      "git_parent_tag": "openssl-3.1.4",
+      "name": "OpenSSL 3.1.5",
+      "tag": "openssl-3.1.5"
+    },
+    {
+      "commit": "85cf92f55d9e2ac5aacf92bedd33fb890b9f8b4c",
+      "date": "2024-01-30",
+      "git_parent_tag": "openssl-3.0.12",
+      "name": "OpenSSL 3.0.13",
+      "tag": "openssl-3.0.13"
+    },
+    {
+      "commit": "cf2877791ce7508684109664f467c9e40987692f",
+      "date": "2023-11-23",
+      "git_parent_tag": "openssl-3.2.0-beta1",
+      "name": "OpenSSL 3.2.0",
+      "tag": "openssl-3.2.0"
+    },
+    {
+      "commit": "26ecab1fd7fa7f5103ac57ef41ee0dd38fbe2ddc",
+      "date": "2023-10-26",
+      "git_parent_tag": "openssl-3.2.0-alpha2",
+      "name": "OpenSSL 3.2.0-beta1",
+      "tag": "openssl-3.2.0-beta1"
+    },
+    {
+      "commit": "01d5e2318405362b4de5e670c90d9b40a351d053",
+      "date": "2023-10-24",
+      "git_parent_tag": "openssl-3.1.3",
+      "name": "OpenSSL 3.1.4",
+      "tag": "openssl-3.1.4"
+    },
+    {
+      "commit": "c3cc0f1386b0544383a61244a4beeb762b67498f",
+      "date": "2023-10-24",
+      "git_parent_tag": "openssl-3.0.11",
+      "name": "OpenSSL 3.0.12",
+      "tag": "openssl-3.0.12"
+    },
+    {
+      "commit": "1e6b4baf546f46211e4f5c389c961d9878bbd198",
+      "date": "2023-09-28",
+      "git_parent_tag": "openssl-3.2.0-alpha1",
+      "name": "OpenSSL 3.2.0-alpha2",
+      "tag": "openssl-3.2.0-alpha2"
+    },
+    {
+      "commit": "7b649c73a2b99b52d45fc0600ee1ecf156113deb",
+      "date": "2023-09-19",
+      "git_parent_tag": "openssl-3.1.2",
+      "name": "OpenSSL 3.1.3",
+      "tag": "openssl-3.1.3"
+    },
+    {
+      "commit": "6ba3884c3235e1bb474b379026087f8216afacf4",
+      "date": "2023-09-19",
+      "git_parent_tag": "openssl-3.0.10",
+      "name": "OpenSSL 3.0.11",
+      "tag": "openssl-3.0.11"
+    },
+    {
+      "commit": "e04bd3433fd84e1861bf258ea37928d9845e6a86",
+      "date": "2023-09-12",
+      "git_parent_tag": "OpenSSL_1_1_1v",
+      "name": "OpenSSL 1.1.1w",
+      "tag": "OpenSSL_1_1_1w"
+    },
+    {
+      "commit": "6262ff748fe7e3487c86d6feeebd92f61c9ae76a",
+      "date": "2023-09-07",
+      "git_parent_tag": "openssl-3.0.0-beta2",
+      "name": "OpenSSL 3.2.0-alpha1",
+      "tag": "openssl-3.2.0-alpha1"
+    },
+    {
+      "commit": "17a2c5111864d8e016c5f2d29c40a3746b559e9d",
+      "date": "2023-08-01",
+      "git_parent_tag": "openssl-3.1.1",
+      "name": "OpenSSL 3.1.2",
+      "tag": "openssl-3.1.2"
+    },
+    {
+      "commit": "245cb0291e0db99d9ccf3692fa76f440b2b054c2",
+      "date": "2023-08-01",
+      "git_parent_tag": "openssl-3.0.9",
+      "name": "OpenSSL 3.0.10",
+      "tag": "openssl-3.0.10"
+    },
+    {
+      "commit": "9398e4038c27d5ef15111c61e984d4d2be8a52a8",
+      "date": "2023-08-01",
+      "git_parent_tag": "OpenSSL_1_1_1u",
+      "name": "OpenSSL 1.1.1v",
+      "tag": "OpenSSL_1_1_1v"
+    },
+    {
+      "commit": "2cf4e90eaaf7402bf038b158dbdacd0a15561fb7",
+      "date": "2023-05-30",
+      "git_parent_tag": "openssl-3.1.0",
+      "name": "OpenSSL 3.1.1",
+      "tag": "openssl-3.1.1"
+    },
+    {
+      "commit": "de90e54bbe82e5be4fb9608b6f5c308bb837d355",
+      "date": "2023-05-30",
+      "git_parent_tag": "openssl-3.0.8",
+      "name": "OpenSSL 3.0.9",
+      "tag": "openssl-3.0.9"
+    },
+    {
+      "commit": "70c2912f635aac8ab28629a2b5ea0c09740d2bda",
+      "date": "2023-05-30",
+      "git_parent_tag": "OpenSSL_1_1_1t",
+      "name": "OpenSSL 1.1.1u",
+      "tag": "OpenSSL_1_1_1u"
+    },
+    {
+      "commit": "a92271e03a8d0dee507b6f1e7f49512568b2c7ad",
+      "date": "2023-03-14",
+      "git_parent_tag": "openssl-3.1.0-beta1",
+      "name": "OpenSSL 3.1.0",
+      "tag": "openssl-3.1.0"
+    },
+    {
+      "commit": "830bf8e1e4749ad65c51b6a1d0d769ae689404ba",
+      "date": "2023-02-07",
+      "git_parent_tag": "OpenSSL_1_1_1s",
+      "name": "OpenSSL 1.1.1t",
+      "tag": "OpenSSL_1_1_1t"
+    },
+    {
+      "commit": "31157bc0b46e04227b8468d3e6915e4d0332777c",
+      "date": "2023-02-07",
+      "git_parent_tag": "openssl-3.0.7",
+      "name": "OpenSSL 3.0.8",
+      "tag": "openssl-3.0.8"
+    },
+    {
+      "commit": "84ae1c1fb94e28fe1eff8e3e3cfca62c01bbcd19",
+      "date": "2022-12-21",
+      "git_parent_tag": "openssl-3.1.0-alpha1",
+      "name": "OpenSSL 3.1.0-beta1",
+      "tag": "openssl-3.1.0-beta1"
+    },
+    {
+      "commit": "21037dfc280dda16028f90a820e2dc227f177f55",
+      "date": "2022-12-01",
+      "git_parent_tag": "openssl-3.0.6",
+      "name": "OpenSSL 3.1.0-alpha1",
+      "tag": "openssl-3.1.0-alpha1"
+    },
+    {
+      "commit": "129058165d195e43a0ad10111b0c2e29bdf65980",
+      "date": "2022-11-01",
+      "git_parent_tag": "OpenSSL_1_1_1r",
+      "name": "OpenSSL 1.1.1s",
+      "tag": "OpenSSL_1_1_1s"
+    },
+    {
+      "commit": "19cc035b6c6f2283573d29c7ea7f7d675cf750ce",
+      "date": "2022-11-01",
+      "git_parent_tag": "openssl-3.0.6",
+      "name": "OpenSSL 3.0.7",
+      "tag": "openssl-3.0.7"
+    },
+    {
+      "commit": "75a6bc17f32505421a78476a972d4d9b74f303b6",
+      "date": "2022-10-11",
+      "git_parent_tag": "openssl-3.0.5",
+      "name": "OpenSSL 3.0.6",
+      "tag": "openssl-3.0.6"
+    },
+    {
+      "commit": "fbda8a9e3b6266da377a6f57d597d657257d9cff",
+      "date": "2022-10-11",
+      "git_parent_tag": "OpenSSL_1_1_1q",
+      "name": "OpenSSL 1.1.1r",
+      "tag": "OpenSSL_1_1_1r"
+    },
+    {
+      "commit": "ad4910fad22d57c6d685b0ca83bdb7b2bf69d8fd",
+      "date": "2022-07-05",
+      "git_parent_tag": "openssl-3.0.4",
+      "name": "OpenSSL 3.0.5",
+      "tag": "openssl-3.0.5"
+    },
+    {
+      "commit": "29708a562a1887a91de0fa6ca668c71871accde9",
+      "date": "2022-07-05",
+      "git_parent_tag": "OpenSSL_1_1_1p",
+      "name": "OpenSSL 1.1.1q",
+      "tag": "OpenSSL_1_1_1q"
+    },
+    {
+      "commit": "54f5fca0d0b15f912e7355a378976cbff12d58fc",
+      "date": "2022-06-21",
+      "git_parent_tag": "openssl-3.0.3",
+      "name": "OpenSSL 3.0.4",
+      "tag": "openssl-3.0.4"
+    },
+    {
+      "commit": "8aaca20cf9996257d1ce2e6f4d3059b3698dde3d",
+      "date": "2022-06-21",
+      "git_parent_tag": "OpenSSL_1_1_1o",
+      "name": "OpenSSL 1.1.1p",
+      "tag": "OpenSSL_1_1_1p"
+    },
+    {
+      "commit": "4d346a188c27bdf78aa76590c641e1217732ca4b",
+      "date": "2022-05-03",
+      "git_parent_tag": "openssl-3.0.2",
+      "name": "OpenSSL 3.0.3",
+      "tag": "openssl-3.0.3"
+    },
+    {
+      "commit": "ca2e0784d2c38edcefd5d68028f4d954bd8faddb",
+      "date": "2022-05-03",
+      "git_parent_tag": "OpenSSL_1_1_1n",
+      "name": "OpenSSL 1.1.1o",
+      "tag": "OpenSSL_1_1_1o"
+    },
+    {
+      "commit": "1bf649b5998ac98511203f54ce954eccfaf75467",
+      "date": "2022-03-15",
+      "git_parent_tag": "openssl-3.0.1",
+      "name": "OpenSSL 3.0.2",
+      "tag": "openssl-3.0.2"
+    },
+    {
+      "commit": "d82e959e621a3d597f1e0d50ff8c2d8b96915fd7",
+      "date": "2022-03-15",
+      "git_parent_tag": "OpenSSL_1_1_1m",
+      "name": "OpenSSL 1.1.1n",
+      "tag": "OpenSSL_1_1_1n"
+    },
+    {
+      "commit": "ac3cef223a4c61d6bee34527b6d4c8c6432494a7",
+      "date": "2021-12-14",
+      "git_parent_tag": "OpenSSL_1_1_1l",
+      "name": "OpenSSL 1.1.1m",
+      "tag": "OpenSSL_1_1_1m"
+    },
+    {
+      "commit": "b4e83ed7cd99c12d27e0e220c3afa1745a68f921",
+      "date": "2021-12-14",
+      "git_parent_tag": "openssl-3.0.0",
+      "name": "OpenSSL 3.0.1",
+      "tag": "openssl-3.0.1"
+    },
+    {
+      "commit": "89cd17a031e022211684eb7eb41190cf1910f9fa",
+      "date": "2021-09-07",
+      "git_parent_tag": "openssl-3.0.0-beta2",
+      "name": "OpenSSL 3.0.0",
+      "tag": "openssl-3.0.0"
+    },
+    {
+      "commit": "fb047ebc87b18bdc4cf9ddee9ee1f5ed93e56aff",
+      "date": "2021-08-24",
+      "git_parent_tag": "OpenSSL_1_1_1k",
+      "name": "OpenSSL 1.1.1l",
+      "tag": "OpenSSL_1_1_1l"
+    },
+    {
+      "commit": "9f551541e84eead1d42604b7d5e61885e8e34be0",
+      "date": "2021-07-29",
+      "git_parent_tag": "openssl-3.0.0-beta1",
+      "name": "OpenSSL 3.0.0-beta2",
+      "tag": "openssl-3.0.0-beta2"
+    },
+    {
+      "commit": "f9bfdc3aa979eb32d4b8341999473f2ad202d889",
+      "date": "2021-06-17",
+      "git_parent_tag": "openssl-3.0.0-alpha17",
+      "name": "OpenSSL 3.0.0-beta1",
+      "tag": "openssl-3.0.0-beta1"
+    },
+    {
+      "commit": "036f8e71e39a9005cf55cd1f832dd7aafc06ae84",
+      "date": "2021-05-20",
+      "git_parent_tag": "openssl-3.0.0-alpha16",
+      "name": "OpenSSL 3.0.0-alpha17",
+      "tag": "openssl-3.0.0-alpha17"
+    },
+    {
+      "commit": "d0c041b13ad12c2c689313c607e2c001f3d5a1b7",
+      "date": "2021-05-06",
+      "git_parent_tag": "openssl-3.0.0-alpha15",
+      "name": "OpenSSL 3.0.0-alpha16",
+      "tag": "openssl-3.0.0-alpha16"
+    },
+    {
+      "commit": "b07412ef80ebbcdb8ce2c9fbf714802288fc7ee4",
+      "date": "2021-04-22",
+      "git_parent_tag": "openssl-3.0.0-alpha14",
+      "name": "OpenSSL 3.0.0-alpha15",
+      "tag": "openssl-3.0.0-alpha15"
+    },
+    {
+      "commit": "f510d614a7e981cbf69f11ae186c97d3fa00dda9",
+      "date": "2021-04-08",
+      "git_parent_tag": "openssl-3.0.0-alpha13",
+      "name": "OpenSSL 3.0.0-alpha14",
+      "tag": "openssl-3.0.0-alpha14"
+    },
+    {
+      "commit": "fd78df59b0f656aefe96e39533130454aa957c00",
+      "date": "2021-03-25",
+      "git_parent_tag": "OpenSSL_1_1_1j",
+      "name": "OpenSSL 1.1.1k",
+      "tag": "OpenSSL_1_1_1k"
+    },
+    {
+      "commit": "88df2c0b3d6162971304c06a240deb9320c9ae67",
+      "date": "2021-03-11",
+      "git_parent_tag": "openssl-3.0.0-alpha12",
+      "name": "OpenSSL 3.0.0-alpha13",
+      "tag": "openssl-3.0.0-alpha13"
+    },
+    {
+      "commit": "b467d394eb11ac94500d9f003426f5fa75d60c3c",
+      "date": "2021-02-18",
+      "git_parent_tag": "openssl-3.0.0-alpha11",
+      "name": "OpenSSL 3.0.0-alpha12",
+      "tag": "openssl-3.0.0-alpha12"
+    },
+    {
+      "commit": "52c587d60be67c337364b830dd3fdc15404a2f04",
+      "date": "2021-02-16",
+      "git_parent_tag": "OpenSSL_1_1_1i",
+      "name": "OpenSSL 1.1.1j",
+      "tag": "OpenSSL_1_1_1j"
+    },
+    {
+      "commit": "31a89254d8225bab5c33be88e08296786da6af6a",
+      "date": "2021-01-28",
+      "git_parent_tag": "openssl-3.0.0-alpha10",
+      "name": "OpenSSL 3.0.0-alpha11",
+      "tag": "openssl-3.0.0-alpha11"
+    },
+    {
+      "commit": "cae118f9382c3790359b3ff050d6e01c11579a7f",
+      "date": "2021-01-07",
+      "git_parent_tag": "openssl-3.0.0-alpha9",
+      "name": "OpenSSL 3.0.0-alpha10",
+      "tag": "openssl-3.0.0-alpha10"
+    },
+    {
+      "commit": "90cebd1b216e0a160fcfd8e0eddca47dad47c183",
+      "date": "2020-12-08",
+      "git_parent_tag": "OpenSSL_1_1_1h",
+      "name": "OpenSSL 1.1.1i",
+      "tag": "OpenSSL_1_1_1i"
+    },
+    {
+      "commit": "68ec3d4730a52d32edb35cb602f6580f27d64e8b",
+      "date": "2020-11-26",
+      "git_parent_tag": "openssl-3.0.0-alpha8",
+      "name": "OpenSSL 3.0.0-alpha9",
+      "tag": "openssl-3.0.0-alpha9"
+    },
+    {
+      "commit": "20d7295cb0529882306c370f5dd895f412bbf59b",
+      "date": "2020-11-05",
+      "git_parent_tag": "openssl-3.0.0-alpha7",
+      "name": "OpenSSL 3.0.0-alpha8",
+      "tag": "openssl-3.0.0-alpha8"
+    },
+    {
+      "commit": "f9a5682e5c0fbf8b17319d71b0040dba9f8b46ee",
+      "date": "2020-10-15",
+      "git_parent_tag": "openssl-3.0.0-alpha6",
+      "name": "OpenSSL 3.0.0-alpha7",
+      "tag": "openssl-3.0.0-alpha7"
+    },
+    {
+      "commit": "f123043faa15965c34947670ff3d3a7005d6bdb4",
+      "date": "2020-09-22",
+      "git_parent_tag": "OpenSSL_1_1_1g",
+      "name": "OpenSSL 1.1.1h",
+      "tag": "OpenSSL_1_1_1h"
+    },
+    {
+      "commit": "e3ec8020b433f9bccebb547889e43c4691eb8713",
+      "date": "2020-08-06",
+      "git_parent_tag": "openssl-3.0.0-alpha5",
+      "name": "OpenSSL 3.0.0-alpha6",
+      "tag": "openssl-3.0.0-alpha6"
+    },
+    {
+      "commit": "e70a2d9f139e69f0f8a0846a170623256e424dea",
+      "date": "2020-07-16",
+      "git_parent_tag": "openssl-3.0.0-alpha4",
+      "name": "OpenSSL 3.0.0-alpha5",
+      "tag": "openssl-3.0.0-alpha5"
+    },
+    {
+      "commit": "38778b78e02e7eb721880ee9e33e0c398e1e677f",
+      "date": "2020-06-25",
+      "git_parent_tag": "openssl-3.0.0-alpha3",
+      "name": "OpenSSL 3.0.0-alpha4",
+      "tag": "openssl-3.0.0-alpha4"
+    },
+    {
+      "commit": "3952c5a312bde6479578dcbc162ec6ce77318924",
+      "date": "2020-06-04",
+      "git_parent_tag": "openssl-3.0.0-alpha2",
+      "name": "OpenSSL 3.0.0-alpha3",
+      "tag": "openssl-3.0.0-alpha3"
+    },
+    {
+      "commit": "9e8604b891483e2d06bb994460ca18b93011fdde",
+      "date": "2020-05-15",
+      "git_parent_tag": "openssl-3.0.0-alpha1",
+      "name": "OpenSSL 3.0.0-alpha2",
+      "tag": "openssl-3.0.0-alpha2"
+    },
+    {
+      "commit": "05feb0a0f1fecb6839888bb7590fb92be70d8d3c",
+      "date": "2020-04-23",
+      "git_parent_tag": "OpenSSL_1_1_1",
+      "name": "OpenSSL 3.0.0-alpha1",
+      "tag": "openssl-3.0.0-alpha1"
+    },
+    {
+      "commit": "e2e09d9fba1187f8d6aafaa34d4172f56f1ffb72",
+      "date": "2020-04-21",
+      "git_parent_tag": "OpenSSL_1_1_1f",
+      "name": "OpenSSL 1.1.1g",
+      "tag": "OpenSSL_1_1_1g"
+    },
+    {
+      "commit": "36eadf1f84daa965041cce410b4ff32cbda4ef08",
+      "date": "2020-03-31",
+      "git_parent_tag": "OpenSSL_1_1_1e",
+      "name": "OpenSSL 1.1.1f",
+      "tag": "OpenSSL_1_1_1f"
+    },
+    {
+      "commit": "a61eba4814fb748ad67e90e81c005ffb09b67d3d",
+      "date": "2020-03-17",
+      "git_parent_tag": "OpenSSL_1_1_1d",
+      "name": "OpenSSL 1.1.1e",
+      "tag": "OpenSSL_1_1_1e"
+    },
+    {
+      "commit": "e818b74be2170fbe957a07b0da4401c2b694b3b8",
+      "date": "2019-12-20",
+      "git_parent_tag": "OpenSSL_1_0_2t",
+      "name": "OpenSSL 1.0.2u",
+      "tag": "OpenSSL_1_0_2u"
+    },
+    {
+      "commit": "894da2fb7ed5d314ee5c2fc9fd2d9b8b74111596",
+      "date": "2019-09-10",
+      "git_parent_tag": "OpenSSL_1_1_1c",
+      "name": "OpenSSL 1.1.1d",
+      "tag": "OpenSSL_1_1_1d"
+    },
+    {
+      "commit": "7ea5bd2b52d0e81eaef3d109b3b12545306f201c",
+      "date": "2019-09-10",
+      "git_parent_tag": "OpenSSL_1_1_0k",
+      "name": "OpenSSL 1.1.0l",
+      "tag": "OpenSSL_1_1_0l"
+    },
+    {
+      "commit": "cd7c7fc20b9feeb900632389401f514ac6b82f16",
+      "date": "2019-09-10",
+      "git_parent_tag": "OpenSSL_1_0_2s",
+      "name": "OpenSSL 1.0.2t",
+      "tag": "OpenSSL_1_0_2t"
+    },
+    {
+      "commit": "cf9143f945a67f3d540e2704fdbdf1bdc985233d",
+      "date": "2019-05-28",
+      "git_parent_tag": "OpenSSL_1_0_2r",
+      "name": "OpenSSL 1.0.2s",
+      "tag": "OpenSSL_1_0_2s"
+    },
+    {
+      "commit": "fb83aaf6a163438149570b344c6c75a6aa977ae9",
+      "date": "2019-05-28",
+      "git_parent_tag": "OpenSSL_1_1_0j",
+      "name": "OpenSSL 1.1.0k",
+      "tag": "OpenSSL_1_1_0k"
+    },
+    {
+      "commit": "97ace46e11dba4c4c2b7cb67140b6ec152cfaaf4",
+      "date": "2019-05-28",
+      "git_parent_tag": "OpenSSL_1_1_1b",
+      "name": "OpenSSL 1.1.1c",
+      "tag": "OpenSSL_1_1_1c"
+    },
+    {
+      "commit": "50eaac9f3337667259de725451f201e784599687",
+      "date": "2019-02-26",
+      "git_parent_tag": "OpenSSL_1_1_1a",
+      "name": "OpenSSL 1.1.1b",
+      "tag": "OpenSSL_1_1_1b"
+    },
+    {
+      "commit": "b34cf4eb616446a1ee7bd0db0a625edf25047342",
+      "date": "2019-02-26",
+      "git_parent_tag": "OpenSSL_1_0_2q",
+      "name": "OpenSSL 1.0.2r",
+      "tag": "OpenSSL_1_0_2r"
+    },
+    {
+      "commit": "d1c28d791a7391a8dc101713cd8646df96491d03",
+      "date": "2018-11-20",
+      "git_parent_tag": "OpenSSL_1_1_1",
+      "name": "OpenSSL 1.1.1a",
+      "tag": "OpenSSL_1_1_1a"
+    },
+    {
+      "commit": "74f2d9c1ec5f5510e1d3da5a9f03c28df0977762",
+      "date": "2018-11-20",
+      "git_parent_tag": "OpenSSL_1_1_0i",
+      "name": "OpenSSL 1.1.0j",
+      "tag": "OpenSSL_1_1_0j"
+    },
+    {
+      "commit": "5707219a6aae8052cb98aa361d115be01b8fd894",
+      "date": "2018-11-20",
+      "git_parent_tag": "OpenSSL_1_0_2p",
+      "name": "OpenSSL 1.0.2q",
+      "tag": "OpenSSL_1_0_2q"
+    },
+    {
+      "commit": "1708e3e85b4a86bae26860aa5d2913fc8eff6086",
+      "date": "2018-09-11",
+      "git_parent_tag": "OpenSSL_1_1_1-pre9",
+      "name": "OpenSSL 1.1.1",
+      "tag": "OpenSSL_1_1_1"
+    },
+    {
+      "commit": "bb20b3fd507b635607eddd895dbcad08e0ed8793",
+      "date": "2018-08-21",
+      "git_parent_tag": "OpenSSL_1_1_1-pre8",
+      "name": "OpenSSL 1.1.1-pre9",
+      "tag": "OpenSSL_1_1_1-pre9"
+    },
+    {
+      "commit": "97c0959f27b294fe1eb10b547145ebef2524b896",
+      "date": "2018-08-14",
+      "git_parent_tag": "OpenSSL_1_1_0h",
+      "name": "OpenSSL 1.1.0i",
+      "tag": "OpenSSL_1_1_0i"
+    },
+    {
+      "commit": "e71ebf275da66dfd601c92e0e80a35114c32f6f8",
+      "date": "2018-08-14",
+      "git_parent_tag": "OpenSSL_1_0_2o",
+      "name": "OpenSSL 1.0.2p",
+      "tag": "OpenSSL_1_0_2p"
+    },
+    {
+      "commit": "3098c3bd12530b11d2944e0bc8115f6471e4d41c",
+      "date": "2018-06-20",
+      "git_parent_tag": "OpenSSL_1_1_1-pre7",
+      "name": "OpenSSL 1.1.1-pre8",
+      "tag": "OpenSSL_1_1_1-pre8"
+    },
+    {
+      "commit": "77cdad318446ca8ea2ba8294d9e70891b59503e2",
+      "date": "2018-05-29",
+      "git_parent_tag": "OpenSSL_1_1_1-pre6",
+      "name": "OpenSSL 1.1.1-pre7",
+      "tag": "OpenSSL_1_1_1-pre7"
+    },
+    {
+      "commit": "a910a9e98f08c48c4ea24651a29872e71748f969",
+      "date": "2018-05-01",
+      "git_parent_tag": "OpenSSL_1_1_1-pre5",
+      "name": "OpenSSL 1.1.1-pre6",
+      "tag": "OpenSSL_1_1_1-pre6"
+    },
+    {
+      "commit": "4ff3df161c8b0caf0acac2e0a19980ccd4173a66",
+      "date": "2018-04-17",
+      "git_parent_tag": "OpenSSL_1_1_1-pre4",
+      "name": "OpenSSL 1.1.1-pre5",
+      "tag": "OpenSSL_1_1_1-pre5"
+    },
+    {
+      "commit": "facdcba99b4f7c1bcd209c9ecec9a9c595c064f5",
+      "date": "2018-04-03",
+      "git_parent_tag": "OpenSSL_1_1_1-pre3",
+      "name": "OpenSSL 1.1.1-pre4",
+      "tag": "OpenSSL_1_1_1-pre4"
+    },
+    {
+      "commit": "d4e4bd2a8163f355fa8a3884077eaec7adc75ff7",
+      "date": "2018-03-27",
+      "git_parent_tag": "OpenSSL_1_1_0g",
+      "name": "OpenSSL 1.1.0h",
+      "tag": "OpenSSL_1_1_0h"
+    },
+    {
+      "commit": "3ce7bc40a3c48da1c96c2d04c10045bd797c6aa3",
+      "date": "2018-03-27",
+      "git_parent_tag": "OpenSSL_1_0_2n",
+      "name": "OpenSSL 1.0.2o",
+      "tag": "OpenSSL_1_0_2o"
+    },
+    {
+      "commit": "be2df12a349eae53805dd3cb19aa18e3d022acd7",
+      "date": "2018-03-20",
+      "git_parent_tag": "OpenSSL_1_1_1-pre2",
+      "name": "OpenSSL 1.1.1-pre3",
+      "tag": "OpenSSL_1_1_1-pre3"
+    },
+    {
+      "commit": "6941960602658a52742786978fe8e677548f89bf",
+      "date": "2018-02-27",
+      "git_parent_tag": "OpenSSL_1_1_1-pre1",
+      "name": "OpenSSL 1.1.1-pre2",
+      "tag": "OpenSSL_1_1_1-pre2"
+    },
+    {
+      "commit": "dcfa88bb29686f485dbd0e3e3800a7f79b462546",
+      "date": "2018-02-15",
+      "git_parent_tag": "OpenSSL_1_1_0-pre6",
+      "name": "OpenSSL 1.1.1-pre1",
+      "tag": "OpenSSL_1_1_1-pre1"
+    },
+    {
+      "commit": "e5bba24cd8bb3e5127a578b85c6edf013a38ea6d",
+      "date": "2017-12-07",
+      "git_parent_tag": "OpenSSL_1_0_2m",
+      "name": "OpenSSL 1.0.2n",
+      "tag": "OpenSSL_1_0_2n"
+    },
+    {
+      "commit": "b2758a2292aceda93e9f44c219b94fe21bb9a650",
+      "date": "2017-11-02",
+      "git_parent_tag": "OpenSSL_1_1_0f",
+      "name": "OpenSSL 1.1.0g",
+      "tag": "OpenSSL_1_1_0g"
+    },
+    {
+      "commit": "8b1549a153a62e9878327d05aa3b6622b416ec10",
+      "date": "2017-11-02",
+      "git_parent_tag": "OpenSSL_1_0_2l",
+      "name": "OpenSSL 1.0.2m",
+      "tag": "OpenSSL_1_0_2m"
+    },
+    {
+      "commit": "d11e6a4410d5aae70ad545d085d344644c33d9cc",
+      "date": "2017-08-31",
+      "git_parent_tag": "OpenSSL-fips-2_0_15",
+      "name": "OpenSSL fips-2.0.16",
+      "tag": "OpenSSL-fips-2_0_16"
+    },
+    {
+      "commit": "e576b67e1a79a846d45b641b73ee378db212d763",
+      "date": "2017-08-30",
+      "git_parent_tag": "OpenSSL-fips-2_0_14",
+      "name": "OpenSSL fips-2.0.15",
+      "tag": "OpenSSL-fips-2_0_15"
+    },
+    {
+      "commit": "577d7010c6ffa98e8dc61d8826693db9d8f57bd5",
+      "date": "2017-05-25",
+      "git_parent_tag": "OpenSSL_1_1_0e",
+      "name": "OpenSSL 1.1.0f",
+      "tag": "OpenSSL_1_1_0f"
+    },
+    {
+      "commit": "b3a3bab05ce32964ee32cbfe97cbe3edee5cf4a9",
+      "date": "2017-05-25",
+      "git_parent_tag": "OpenSSL_1_0_2k",
+      "name": "OpenSSL 1.0.2l",
+      "tag": "OpenSSL_1_0_2l"
+    },
+    {
+      "commit": "0453163e9a9052884cce288ff3e2acb77725a239",
+      "date": "2017-02-16",
+      "git_parent_tag": "OpenSSL_1_1_0d",
+      "name": "OpenSSL 1.1.0e",
+      "tag": "OpenSSL_1_1_0e"
+    },
+    {
+      "commit": "e1a9268d81238aa12acfb9725a13c858c8937cd7",
+      "date": "2017-02-16",
+      "git_parent_tag": "OpenSSL-fips-2_0_13",
+      "name": "OpenSSL fips-2.0.14",
+      "tag": "OpenSSL-fips-2_0_14"
+    },
+    {
+      "commit": "8a4d96ac8227f39043735faa9e9a30e22818f5e8",
+      "date": "2017-01-26",
+      "git_parent_tag": "OpenSSL_1_1_0c",
+      "name": "OpenSSL 1.1.0d",
+      "tag": "OpenSSL_1_1_0d"
+    },
+    {
+      "commit": "081314d07705aa58912845c213a48414d8f616a9",
+      "date": "2017-01-26",
+      "git_parent_tag": "OpenSSL_1_0_2j",
+      "name": "OpenSSL 1.0.2k",
+      "tag": "OpenSSL_1_0_2k"
+    },
+    {
+      "commit": "894c04aa05ba1e64735d7beb9c2a1da93d288e31",
+      "date": "2016-11-14",
+      "git_parent_tag": "OpenSSL-fips-2_0_12",
+      "name": "OpenSSL fips-2.0.13",
+      "tag": "OpenSSL-fips-2_0_13"
+    },
+    {
+      "commit": "91eaf079b7430cb4ebb7f3ccabe74aa383b27c4e",
+      "date": "2016-11-10",
+      "git_parent_tag": "OpenSSL_1_1_0b",
+      "name": "OpenSSL 1.1.0c",
+      "tag": "OpenSSL_1_1_0c"
+    },
+    {
+      "commit": "16c34d4f74e16443cfdc99f2a49ebb1ba3c37db3",
+      "date": "2016-09-26",
+      "git_parent_tag": "OpenSSL_1_1_0a",
+      "name": "OpenSSL 1.1.0b",
+      "tag": "OpenSSL_1_1_0b"
+    },
+    {
+      "commit": "e216bf9d7ca761718f34e8b3094fcb32c7a143e4",
+      "date": "2016-09-26",
+      "git_parent_tag": "OpenSSL_1_0_2i",
+      "name": "OpenSSL 1.0.2j",
+      "tag": "OpenSSL_1_0_2j"
+    },
+    {
+      "commit": "ac2c44c6289f9716de4c4beeb284a818eacde517",
+      "date": "2016-09-22",
+      "git_parent_tag": "OpenSSL_1_1_0",
+      "name": "OpenSSL 1.1.0a",
+      "tag": "OpenSSL_1_1_0a"
+    },
+    {
+      "commit": "32c130160f7dac2cef5d0e30d94b335e4a87104d",
+      "date": "2016-09-22",
+      "git_parent_tag": "OpenSSL_1_0_2h",
+      "name": "OpenSSL 1.0.2i",
+      "tag": "OpenSSL_1_0_2i"
+    },
+    {
+      "commit": "888759a1d38197f29de7227876c3b58fbff8549f",
+      "date": "2016-09-22",
+      "git_parent_tag": "OpenSSL_1_0_1t",
+      "name": "OpenSSL 1.0.1u",
+      "tag": "OpenSSL_1_0_1u"
+    },
+    {
+      "commit": "abd30777cc72029e8a44e4b67201cae8ed3d19c1",
+      "date": "2016-08-25",
+      "git_parent_tag": "OpenSSL_1_1_0-pre6",
+      "name": "OpenSSL 1.1.0",
+      "tag": "OpenSSL_1_1_0"
+    },
+    {
+      "commit": "2f554efe20d1fe05b242f41f593362965ae89912",
+      "date": "2016-08-04",
+      "git_parent_tag": "OpenSSL_1_1_0-pre5",
+      "name": "OpenSSL 1.1.0-pre6",
+      "tag": "OpenSSL_1_1_0-pre6"
+    },
+    {
+      "commit": "5dd94f1847c744929a3bd24819f1c99644bb18c7",
+      "date": "2016-05-03",
+      "git_parent_tag": "OpenSSL_1_0_2g",
+      "name": "OpenSSL 1.0.2h",
+      "tag": "OpenSSL_1_0_2h"
+    },
+    {
+      "commit": "3d2e575b3f71b4d66c0b948d411d8e936f192127",
+      "date": "2016-05-03",
+      "git_parent_tag": "OpenSSL_1_0_1s",
+      "name": "OpenSSL 1.0.1t",
+      "tag": "OpenSSL_1_0_1t"
+    },
+    {
+      "commit": "68072bcfe1cea2c8026a76b01cdc4db3c1172d9c",
+      "date": "2016-04-19",
+      "git_parent_tag": "OpenSSL_1_1_0-pre4",
+      "name": "OpenSSL 1.1.0-pre5",
+      "tag": "OpenSSL_1_1_0-pre5"
+    },
+    {
+      "commit": "e711d13af3e3bee1c6423c27eeb48ad4921d4fc3",
+      "date": "2016-03-16",
+      "git_parent_tag": "OpenSSL_1_1_0-pre3",
+      "name": "OpenSSL 1.1.0-pre4",
+      "tag": "OpenSSL_1_1_0-pre4"
+    },
+    {
+      "commit": "902f3f50d051dfd6ebf009d352aaf581195caabf",
+      "date": "2016-03-01",
+      "git_parent_tag": "OpenSSL_1_0_2f",
+      "name": "OpenSSL 1.0.2g",
+      "tag": "OpenSSL_1_0_2g"
+    },
+    {
+      "commit": "57ac73fb5d0a878f282cbcd9e7951c77fdc59e3c",
+      "date": "2016-03-01",
+      "git_parent_tag": "OpenSSL_1_0_1r",
+      "name": "OpenSSL 1.0.1s",
+      "tag": "OpenSSL_1_0_1s"
+    },
+    {
+      "commit": "34f39b062c76fbd3082521b26edee7f53afc061d",
+      "date": "2016-02-15",
+      "git_parent_tag": "OpenSSL-fips-2_0_9",
+      "name": "OpenSSL fips-2.0.10",
+      "tag": "OpenSSL-fips-2_0_10"
+    },
+    {
+      "commit": "a0f8d282d728a3584f08ecb5f8321c37bb06dd28",
+      "date": "2016-02-15",
+      "git_parent_tag": "OpenSSL-fips-2_0_10",
+      "name": "OpenSSL fips-2.0.11",
+      "tag": "OpenSSL-fips-2_0_11"
+    },
+    {
+      "commit": "1278ce48a5c6afa1429b8e8cfd0f07ab0fc640bb",
+      "date": "2016-02-15",
+      "git_parent_tag": "OpenSSL-fips-2_0_11",
+      "name": "OpenSSL fips-2.0.12",
+      "tag": "OpenSSL-fips-2_0_12"
+    },
+    {
+      "commit": "c2bbf058736b8cb5b32e78a50d1410fa34cc8284",
+      "date": "2016-02-15",
+      "git_parent_tag": "OpenSSL_1_1_0-pre2",
+      "name": "OpenSSL 1.1.0-pre3",
+      "tag": "OpenSSL_1_1_0-pre3"
+    },
+    {
+      "commit": "95605f3ae1ec8857e8cb612ce35805a3b0207d21",
+      "date": "2016-01-28",
+      "git_parent_tag": "OpenSSL_1_0_2e",
+      "name": "OpenSSL 1.0.2f",
+      "tag": "OpenSSL_1_0_2f"
+    },
+    {
+      "commit": "09ccb58518e84f76939f7e69929723263a42ca2e",
+      "date": "2016-01-28",
+      "git_parent_tag": "OpenSSL_1_0_1q",
+      "name": "OpenSSL 1.0.1r",
+      "tag": "OpenSSL_1_0_1r"
+    },
+    {
+      "commit": "bd31d02e412f80f53073a1eb776dffe06ac91746",
+      "date": "2016-01-14",
+      "git_parent_tag": "OpenSSL_1_1_0-pre1",
+      "name": "OpenSSL 1.1.0-pre2",
+      "tag": "OpenSSL_1_1_0-pre2"
+    },
+    {
+      "commit": "22c21b60afb33bf32f91560e7c29c21588429420",
+      "date": "2015-12-10",
+      "git_parent_tag": "OpenSSL_0_9_6-beta3",
+      "name": "OpenSSL 1.1.0-pre1",
+      "tag": "OpenSSL_1_1_0-pre1"
+    },
+    {
+      "commit": "bfe07df40c13ea2564bb4577620180e3f4849e23",
+      "date": "2015-12-03",
+      "git_parent_tag": "OpenSSL_1_0_2d",
+      "name": "OpenSSL 1.0.2e",
+      "tag": "OpenSSL_1_0_2e"
+    },
+    {
+      "commit": "55615e8d48a4ddd684fcbfc7ba6523ed6414c8fc",
+      "date": "2015-12-03",
+      "git_parent_tag": "OpenSSL_1_0_1p",
+      "name": "OpenSSL 1.0.1q",
+      "tag": "OpenSSL_1_0_1q"
+    },
+    {
+      "commit": "ce052c8437fb97cbc57f034fa94b5bcd749dbf52",
+      "date": "2015-12-03",
+      "git_parent_tag": "OpenSSL_1_0_0s",
+      "name": "OpenSSL 1.0.0t",
+      "tag": "OpenSSL_1_0_0t"
+    },
+    {
+      "commit": "c2ef67100cd0ca2321b5f1a437abb93fc7e11e37",
+      "date": "2015-12-03",
+      "git_parent_tag": "OpenSSL_0_9_8zg",
+      "name": "OpenSSL 0.9.8zh",
+      "tag": "OpenSSL_0_9_8zh"
+    },
+    {
+      "commit": "33dd08320648ac71d7d9d732be774ed3818dccc5",
+      "date": "2015-07-09",
+      "git_parent_tag": "OpenSSL_1_0_2c",
+      "name": "OpenSSL 1.0.2d",
+      "tag": "OpenSSL_1_0_2d"
+    },
+    {
+      "commit": "5ab53da9fbc96b9740a48b318aab845d6616eee4",
+      "date": "2015-07-09",
+      "git_parent_tag": "OpenSSL_1_0_1o",
+      "name": "OpenSSL 1.0.1p",
+      "tag": "OpenSSL_1_0_1p"
+    },
+    {
+      "commit": "0ee5fcde06827b041023e5a596d58da98e53740c",
+      "date": "2015-06-12",
+      "git_parent_tag": "OpenSSL_1_0_2b",
+      "name": "OpenSSL 1.0.2c",
+      "tag": "OpenSSL_1_0_2c"
+    },
+    {
+      "commit": "2a8c2799e1227a020d60a32ff8d0a12544e35c50",
+      "date": "2015-06-12",
+      "git_parent_tag": "OpenSSL_1_0_1n",
+      "name": "OpenSSL 1.0.1o",
+      "tag": "OpenSSL_1_0_1o"
+    },
+    {
+      "commit": "7b560c174dcd569795f5be66e0c091d1be440614",
+      "date": "2015-06-11",
+      "git_parent_tag": "OpenSSL_1_0_2a",
+      "name": "OpenSSL 1.0.2b",
+      "tag": "OpenSSL_1_0_2b"
+    },
+    {
+      "commit": "517899e6c8af47d4972dcf9b375386631f6c93f1",
+      "date": "2015-06-11",
+      "git_parent_tag": "OpenSSL_1_0_1m",
+      "name": "OpenSSL 1.0.1n",
+      "tag": "OpenSSL_1_0_1n"
+    },
+    {
+      "commit": "a06ec5a26fdb24fd829abef54422d94521ddd14a",
+      "date": "2015-06-11",
+      "git_parent_tag": "OpenSSL_1_0_0r",
+      "name": "OpenSSL 1.0.0s",
+      "tag": "OpenSSL_1_0_0s"
+    },
+    {
+      "commit": "0823ddc56e9aaa1de6c4f57bb45457d5eeca404d",
+      "date": "2015-06-11",
+      "git_parent_tag": "OpenSSL_0_9_8zf",
+      "name": "OpenSSL 0.9.8zg",
+      "tag": "OpenSSL_0_9_8zg"
+    },
+    {
+      "commit": "7447e65fccc95fa2ee97b40e43dc46f97e7b958b",
+      "date": "2015-05-14",
+      "git_parent_tag": "OpenSSL-fips-2_0_8",
+      "name": "OpenSSL fips-2.0.9",
+      "tag": "OpenSSL-fips-2_0_9"
+    },
+    {
+      "commit": "3df69d3aefde7671053d4e3c242b228e5d79c83f",
+      "date": "2015-03-19",
+      "git_parent_tag": "OpenSSL_1_0_2",
+      "name": "OpenSSL 1.0.2a",
+      "tag": "OpenSSL_1_0_2a"
+    },
+    {
+      "commit": "506c1068801fdeef5cb00f2053854bf56150fb6d",
+      "date": "2015-03-19",
+      "git_parent_tag": "OpenSSL_1_0_1l",
+      "name": "OpenSSL 1.0.1m",
+      "tag": "OpenSSL_1_0_1m"
+    },
+    {
+      "commit": "81741de632c9952d8b25afd15a280ff6424931b3",
+      "date": "2015-03-19",
+      "git_parent_tag": "OpenSSL_1_0_0q",
+      "name": "OpenSSL 1.0.0r",
+      "tag": "OpenSSL_1_0_0r"
+    },
+    {
+      "commit": "db8334be06a6573203f29d12f00f45ed69a987cc",
+      "date": "2015-03-19",
+      "git_parent_tag": "OpenSSL_0_9_8ze",
+      "name": "OpenSSL 0.9.8zf",
+      "tag": "OpenSSL_0_9_8zf"
+    },
+    {
+      "commit": "4ac0329582829f5378d8078c8d314ad37db87736",
+      "date": "2015-01-22",
+      "git_parent_tag": "OpenSSL_1_0_2-beta3",
+      "name": "OpenSSL 1.0.2",
+      "tag": "OpenSSL_1_0_2"
+    },
+    {
+      "commit": "b83ceba7d51e846cf24433aa3c417bfd62b3ffa5",
+      "date": "2015-01-15",
+      "git_parent_tag": "OpenSSL_1_0_1k",
+      "name": "OpenSSL 1.0.1l",
+      "tag": "OpenSSL_1_0_1l"
+    },
+    {
+      "commit": "cdac2e8928ca483843bfa3b527efb16e7f83bd60",
+      "date": "2015-01-15",
+      "git_parent_tag": "OpenSSL_1_0_0p",
+      "name": "OpenSSL 1.0.0q",
+      "tag": "OpenSSL_1_0_0q"
+    },
+    {
+      "commit": "e8ccaee31caa9376dd752b45a8f1a62259a69867",
+      "date": "2015-01-15",
+      "git_parent_tag": "OpenSSL_0_9_8zd",
+      "name": "OpenSSL 0.9.8ze",
+      "tag": "OpenSSL_0_9_8ze"
+    },
+    {
+      "commit": "b4a57c4c419a578d1a16862a6b445c34003b4c52",
+      "date": "2015-01-08",
+      "git_parent_tag": "OpenSSL_1_0_1j",
+      "name": "OpenSSL 1.0.1k",
+      "tag": "OpenSSL_1_0_1k"
+    },
+    {
+      "commit": "225628f280d79dda31d135f96e231807d06e38c3",
+      "date": "2015-01-08",
+      "git_parent_tag": "OpenSSL_1_0_0o",
+      "name": "OpenSSL 1.0.0p",
+      "tag": "OpenSSL_1_0_0p"
+    },
+    {
+      "commit": "b873409efee1731171f78d8eb456b57aa4b7d0ff",
+      "date": "2015-01-08",
+      "git_parent_tag": "OpenSSL_0_9_8zc",
+      "name": "OpenSSL 0.9.8zd",
+      "tag": "OpenSSL_0_9_8zd"
+    },
+    {
+      "commit": "7fb7844f3b40b60c2df77e093398da55d7928e9d",
+      "date": "2014-10-24",
+      "git_parent_tag": "OpenSSL-fips-2_0_7",
+      "name": "OpenSSL fips-2.0.8",
+      "tag": "OpenSSL-fips-2_0_8"
+    },
+    {
+      "commit": "36216218ca1eeac5cc4ed4042283f4a3936bcbde",
+      "date": "2014-10-15",
+      "git_parent_tag": "OpenSSL_0_9_8zb",
+      "name": "OpenSSL 0.9.8zc",
+      "tag": "OpenSSL_0_9_8zc"
+    },
+    {
+      "commit": "41da9188cc1d7bb49831d2e27f7a5b8353d53024",
+      "date": "2014-10-15",
+      "git_parent_tag": "OpenSSL_1_0_0n",
+      "name": "OpenSSL 1.0.0o",
+      "tag": "OpenSSL_1_0_0o"
+    },
+    {
+      "commit": "872e681c00a713e840ebed77a4e05fa0e181f16f",
+      "date": "2014-10-15",
+      "git_parent_tag": "OpenSSL_1_0_1i",
+      "name": "OpenSSL 1.0.1j",
+      "tag": "OpenSSL_1_0_1j"
+    },
+    {
+      "commit": "2c5db8dac3a06fe5b2c889838a606138ee3542ed",
+      "date": "2014-09-25",
+      "git_parent_tag": "OpenSSL_1_0_2-beta2",
+      "name": "OpenSSL 1.0.2-beta3",
+      "tag": "OpenSSL_1_0_2-beta3"
+    },
+    {
+      "commit": "2b456034457b58454aae3998a2765b6a5b9bc837",
+      "date": "2014-08-06",
+      "git_parent_tag": "OpenSSL_1_0_1h",
+      "name": "OpenSSL 1.0.1i",
+      "tag": "OpenSSL_1_0_1i"
+    },
+    {
+      "commit": "bb505311c6abc8db675f384d396b318cb1007585",
+      "date": "2014-08-06",
+      "git_parent_tag": "OpenSSL_1_0_0m",
+      "name": "OpenSSL 1.0.0n",
+      "tag": "OpenSSL_1_0_0n"
+    },
+    {
+      "commit": "1c5f396d3658562cf2eb969d9cba769aa33a9b00",
+      "date": "2014-08-06",
+      "git_parent_tag": "OpenSSL_0_9_8za",
+      "name": "OpenSSL 0.9.8zb",
+      "tag": "OpenSSL_0_9_8zb"
+    },
+    {
+      "commit": "2f63ad1c6daa61614f3d58de0889bf68e9f75853",
+      "date": "2014-07-22",
+      "git_parent_tag": "OpenSSL_1_0_2-beta1",
+      "name": "OpenSSL 1.0.2-beta2",
+      "tag": "OpenSSL_1_0_2-beta2"
+    },
+    {
+      "commit": "005563bbce6e66b9c481fd39574b0ffcd2a34292",
+      "date": "2014-07-11",
+      "git_parent_tag": "OpenSSL-fips-2_0_6",
+      "name": "OpenSSL fips-2.0.7",
+      "tag": "OpenSSL-fips-2_0_7"
+    },
+    {
+      "commit": "047ec5d196bb7d41491e95b554f11154e27a931a",
+      "date": "2014-06-05",
+      "git_parent_tag": "OpenSSL_0_9_8y",
+      "name": "OpenSSL 0.9.8za",
+      "tag": "OpenSSL_0_9_8za"
+    },
+    {
+      "commit": "4bee980bb5d8f751a3a0500e6979983e40fd1bea",
+      "date": "2014-06-05",
+      "git_parent_tag": "OpenSSL_1_0_0l",
+      "name": "OpenSSL 1.0.0m",
+      "tag": "OpenSSL_1_0_0m"
+    },
+    {
+      "commit": "6b72417a00b803680edc9be214c1b3dd9dae203d",
+      "date": "2014-06-05",
+      "git_parent_tag": "OpenSSL_1_0_1g",
+      "name": "OpenSSL 1.0.1h",
+      "tag": "OpenSSL_1_0_1h"
+    },
+    {
+      "commit": "2659a2aa7ca8cf17cae05d119fc3caee0480ddd6",
+      "date": "2014-05-12",
+      "git_parent_tag": "OpenSSL-fips-2_0_5",
+      "name": "OpenSSL fips-2.0.6",
+      "tag": "OpenSSL-fips-2_0_6"
+    },
+    {
+      "commit": "b2d951e4232d2f90168f9a3dd0b7df9ecf2d81a8",
+      "date": "2014-04-07",
+      "git_parent_tag": "OpenSSL_1_0_1f",
+      "name": "OpenSSL 1.0.1g",
+      "tag": "OpenSSL_1_0_1g"
+    },
+    {
+      "commit": "94f416601754dbe65e287f8e1eca01fa32f74a7a",
+      "date": "2014-02-24",
+      "git_parent_tag": "OpenSSL_1_0_1",
+      "name": "OpenSSL 1.0.2-beta1",
+      "tag": "OpenSSL_1_0_2-beta1"
+    },
+    {
+      "commit": "0d8776344cd7965fadd870e361503985df9c45bb",
+      "date": "2014-01-06",
+      "git_parent_tag": "OpenSSL_1_0_1e",
+      "name": "OpenSSL 1.0.1f",
+      "tag": "OpenSSL_1_0_1f"
+    },
+    {
+      "commit": "7f94a3c3de881a876ccf945093ec451881ebec30",
+      "date": "2014-01-06",
+      "git_parent_tag": "OpenSSL_1_0_0k",
+      "name": "OpenSSL 1.0.0l",
+      "tag": "OpenSSL_1_0_0l"
+    },
+    {
+      "commit": "4089bd6080d41450adab1e0ac0d63cfeab4a78e7",
+      "date": "2013-12-16",
+      "git_parent_tag": "OpenSSL-fips-2_0_4",
+      "name": "OpenSSL fips-2.0.5",
+      "tag": "OpenSSL-fips-2_0_5"
+    },
+    {
+      "commit": "b0ee17ad475c97f068c7314efafdd8a53d92af54",
+      "date": "2013-12-16",
+      "git_parent_tag": "OpenSSL-fips-2_0_3",
+      "name": "OpenSSL fips-2.0.4",
+      "tag": "OpenSSL-fips-2_0_4"
+    },
+    {
+      "commit": "2d183e4c44b1d18fe515739ec72c76d471a4b669",
+      "date": "2013-04-10",
+      "git_parent_tag": "OpenSSL-fips-2_0_1",
+      "name": "OpenSSL fips-2.0.2",
+      "tag": "OpenSSL-fips-2_0_2"
+    },
+    {
+      "commit": "4f6c4c1896f1fea63053468bfc599d3cf7da93f5",
+      "date": "2013-04-10",
+      "git_parent_tag": "OpenSSL-fips-2_0_2",
+      "name": "OpenSSL fips-2.0.3",
+      "tag": "OpenSSL-fips-2_0_3"
+    },
+    {
+      "commit": "46ebd9e3bb623d3c15ef2203038956f3f7213620",
+      "date": "2013-02-11",
+      "git_parent_tag": "OpenSSL_1_0_1d",
+      "name": "OpenSSL 1.0.1e",
+      "tag": "OpenSSL_1_0_1e"
+    },
+    {
+      "commit": "d9e048ceac64d3f2cfa8b153271acd309e6a5edb",
+      "date": "2013-02-06",
+      "git_parent_tag": "OpenSSL_1_0_0j",
+      "name": "OpenSSL 1.0.0k",
+      "tag": "OpenSSL_1_0_0k"
+    },
+    {
+      "commit": "8964efc413f281a6cacaa83c1c642e8a531613ba",
+      "date": "2013-02-05",
+      "git_parent_tag": "OpenSSL_0_9_8x",
+      "name": "OpenSSL 0.9.8y",
+      "tag": "OpenSSL_0_9_8y"
+    },
+    {
+      "commit": "62f4033381a013c8a8edb6db5345da678495d94f",
+      "date": "2013-02-05",
+      "git_parent_tag": "OpenSSL_1_0_1c",
+      "name": "OpenSSL 1.0.1d",
+      "tag": "OpenSSL_1_0_1d"
+    },
+    {
+      "commit": "3b4f1f302dd1d3a8b71d82bf3900802945a0b431",
+      "date": "2012-10-19",
+      "git_parent_tag": "OpenSSL-fips-2_0",
+      "name": "OpenSSL fips-2.0-pl1",
+      "tag": "OpenSSL-fips-2_0-pl1"
+    },
+    {
+      "commit": "7049d13c5fffab33b70c00df87c769966256f0a8",
+      "date": "2012-10-04",
+      "git_parent_tag": "OpenSSL-fips-2_0",
+      "name": "OpenSSL fips-2.0.1",
+      "tag": "OpenSSL-fips-2_0_1"
+    },
+    {
+      "commit": "b71e69ad8e8e19337aa7b36bc1f921050dd5bff3",
+      "date": "2012-05-10",
+      "git_parent_tag": "OpenSSL_0_9_8w",
+      "name": "OpenSSL 0.9.8x",
+      "tag": "OpenSSL_0_9_8x"
+    },
+    {
+      "commit": "8fcb93613a72948de4e157d5516045743da2428a",
+      "date": "2012-05-10",
+      "git_parent_tag": "OpenSSL_1_0_0i",
+      "name": "OpenSSL 1.0.0j",
+      "tag": "OpenSSL_1_0_0j"
+    },
+    {
+      "commit": "f9885acc8cd1403afcd09570c89a009e8bd1dc19",
+      "date": "2012-05-10",
+      "git_parent_tag": "OpenSSL_1_0_1b",
+      "name": "OpenSSL 1.0.1c",
+      "tag": "OpenSSL_1_0_1c"
+    },
+    {
+      "commit": "88be4ebfbc2457881de43bacc1f38a0bce4420b0",
+      "date": "2012-04-26",
+      "git_parent_tag": "OpenSSL_1_0_1a",
+      "name": "OpenSSL 1.0.1b",
+      "tag": "OpenSSL_1_0_1b"
+    },
+    {
+      "commit": "e0c020334100e17adf1640c9b4ee27457e077633",
+      "date": "2012-04-23",
+      "git_parent_tag": "OpenSSL_0_9_8v",
+      "name": "OpenSSL 0.9.8w",
+      "tag": "OpenSSL_0_9_8w"
+    },
+    {
+      "commit": "d0e542fdc9c6ce31899c50ed6c0a3fbcbbb29f97",
+      "date": "2012-04-19",
+      "git_parent_tag": "OpenSSL_1_0_0h",
+      "name": "OpenSSL 1.0.0i",
+      "tag": "OpenSSL_1_0_0i"
+    },
+    {
+      "commit": "fef9e0793071cc0e6f2fd5942760e206d354adad",
+      "date": "2012-04-19",
+      "git_parent_tag": "OpenSSL_0_9_8u",
+      "name": "OpenSSL 0.9.8v",
+      "tag": "OpenSSL_0_9_8v"
+    },
+    {
+      "commit": "531c6fc8f3bc6c8413a1604562934fa77e49c39f",
+      "date": "2012-04-19",
+      "git_parent_tag": "OpenSSL_1_0_1",
+      "name": "OpenSSL 1.0.1a",
+      "tag": "OpenSSL_1_0_1a"
+    },
+    {
+      "commit": "49f6cb968ff63793f6671d9026fb2a7034dad79a",
+      "date": "2012-03-14",
+      "git_parent_tag": "OpenSSL_1_0_1-beta3",
+      "name": "OpenSSL 1.0.1",
+      "tag": "OpenSSL_1_0_1"
+    },
+    {
+      "commit": "215276243d74b89fc8c28509d16dd2a107c65946",
+      "date": "2012-03-12",
+      "git_parent_tag": "OpenSSL_0_9_8t",
+      "name": "OpenSSL 0.9.8u",
+      "tag": "OpenSSL_0_9_8u"
+    },
+    {
+      "commit": "dc95c53c6f3fc9007fea9376d02f7bd82d2a0fb4",
+      "date": "2012-03-12",
+      "git_parent_tag": "OpenSSL_1_0_0g",
+      "name": "OpenSSL 1.0.0h",
+      "tag": "OpenSSL_1_0_0h"
+    },
+    {
+      "commit": "08e4c7a967cc9d82264d125440d8b17b912bd250",
+      "date": "2012-02-23",
+      "git_parent_tag": "OpenSSL_1_0_1-beta2",
+      "name": "OpenSSL 1.0.1-beta3",
+      "tag": "OpenSSL_1_0_1-beta3"
+    },
+    {
+      "commit": "e2dfb655f798831ffb29242ad804013ddb0c5d5b",
+      "date": "2012-01-19",
+      "git_parent_tag": "OpenSSL_1_0_1-beta1",
+      "name": "OpenSSL 1.0.1-beta2",
+      "tag": "OpenSSL_1_0_1-beta2"
+    },
+    {
+      "commit": "f71d59c70ed65beaa51de719848901284bb1fd04",
+      "date": "2012-01-18",
+      "git_parent_tag": "OpenSSL_0_9_8s",
+      "name": "OpenSSL 0.9.8t",
+      "tag": "OpenSSL_0_9_8t"
+    },
+    {
+      "commit": "703ec840dcdacf62de576f1a67c789ca6b225e00",
+      "date": "2012-01-18",
+      "git_parent_tag": "OpenSSL_1_0_0f",
+      "name": "OpenSSL 1.0.0g",
+      "tag": "OpenSSL_1_0_0g"
+    },
+    {
+      "commit": "1de6a6222241850c8e3acc81d3c5f2e39b838713",
+      "date": "2012-01-18",
+      "git_parent_tag": "OpenSSL-fips-2_0-rc8",
+      "name": "OpenSSL fips-2.0",
+      "tag": "OpenSSL-fips-2_0"
+    },
+    {
+      "commit": "1de6a6222241850c8e3acc81d3c5f2e39b838713",
+      "date": "2012-01-18",
+      "git_parent_tag": "OpenSSL-fips-2_0-rc8",
+      "name": "OpenSSL fips-2.0-rc9",
+      "tag": "OpenSSL-fips-2_0-rc9"
+    },
+    {
+      "commit": "c90c41f09da5b0b0b56a3b3e1fe83f42ef590dee",
+      "date": "2012-01-04",
+      "git_parent_tag": "OpenSSL_1_0_0e",
+      "name": "OpenSSL 1.0.0f",
+      "tag": "OpenSSL_1_0_0f"
+    },
+    {
+      "commit": "a95808334e640bd112b6ded097407beb7e3923ef",
+      "date": "2012-01-04",
+      "git_parent_tag": "OpenSSL_0_9_8r",
+      "name": "OpenSSL 0.9.8s",
+      "tag": "OpenSSL_0_9_8s"
+    },
+    {
+      "commit": "ab585551c0a577d9a91825d446465905a5ea17e3",
+      "date": "2012-01-03",
+      "git_parent_tag": "OpenSSL_1_0_0a",
+      "name": "OpenSSL 1.0.1-beta1",
+      "tag": "OpenSSL_1_0_1-beta1"
+    },
+    {
+      "commit": "24fadf2a20f50d5623f61f2cc08f95c22b5ba75c",
+      "date": "2012-01-03",
+      "git_parent_tag": "OpenSSL-fips-2_0-rc7",
+      "name": "OpenSSL fips-2.0-rc8",
+      "tag": "OpenSSL-fips-2_0-rc8"
+    },
+    {
+      "commit": "49dbcbaa4b844dae21c368e2e13fef07b143b085",
+      "date": "2011-12-12",
+      "git_parent_tag": "OpenSSL-fips-2_0-rc6",
+      "name": "OpenSSL fips-2.0-rc7",
+      "tag": "OpenSSL-fips-2_0-rc7"
+    },
+    {
+      "commit": "81fc8cd029e2915b1d3d7dfaaaf4d246daa3a954",
+      "date": "2011-12-04",
+      "git_parent_tag": "OpenSSL-fips-2_0-rc5",
+      "name": "OpenSSL fips-2.0-rc6",
+      "tag": "OpenSSL-fips-2_0-rc6"
+    },
+    {
+      "commit": "9bd2dde42f59d60dfec149a28f8c91b6fb2cf717",
+      "date": "2011-11-25",
+      "git_parent_tag": "OpenSSL-fips-2_0-rc4",
+      "name": "OpenSSL fips-2.0-rc5",
+      "tag": "OpenSSL-fips-2_0-rc5"
+    },
+    {
+      "commit": "0e508c12e0233bcfa308cfd6481fdcfe6a19f6d1",
+      "date": "2011-11-19",
+      "git_parent_tag": "OpenSSL-fips-2_0-rc3",
+      "name": "OpenSSL fips-2.0-rc4",
+      "tag": "OpenSSL-fips-2_0-rc4"
+    },
+    {
+      "commit": "c08128acc2dc5c4c8c1083f0f2bded2e1f097a0d",
+      "date": "2011-11-18",
+      "git_parent_tag": "OpenSSL-fips-2_0-rc2",
+      "name": "OpenSSL fips-2.0-rc3",
+      "tag": "OpenSSL-fips-2_0-rc3"
+    },
+    {
+      "commit": "3b4fb53221cb13d3affd63477fc17a81978838f6",
+      "date": "2011-11-09",
+      "git_parent_tag": "OpenSSL_0_9_6-beta3",
+      "name": "OpenSSL fips-2.0-rc2",
+      "tag": "OpenSSL-fips-2_0-rc2"
+    },
+    {
+      "commit": "cea5540e3837767f42e2ef516fa36dfe1fec0f06",
+      "date": "2011-10-26",
+      "git_parent_tag": "OpenSSL_0_9_6-beta3",
+      "name": "OpenSSL fips-2.0-rc1",
+      "tag": "OpenSSL-fips-2_0-rc1"
+    },
+    {
+      "commit": "d1321464f6c609d106d6af9a4e599661bf6c59b7",
+      "date": "2011-09-25",
+      "git_parent_tag": "OpenSSL-fips-1_2_0",
+      "name": "OpenSSL fips-1.2.1",
+      "tag": "OpenSSL-fips-1_2_1"
+    },
+    {
+      "commit": "6d0a5219aaba3ad8727b17e0513c0bcf9e61661c",
+      "date": "2011-09-25",
+      "git_parent_tag": "OpenSSL-fips-1_2_1",
+      "name": "OpenSSL fips-1.2.2",
+      "tag": "OpenSSL-fips-1_2_2"
+    },
+    {
+      "commit": "0b603bcc34c1d903d7fa5201dbc041962ce238f2",
+      "date": "2011-09-25",
+      "git_parent_tag": "OpenSSL-fips-1_2_2",
+      "name": "OpenSSL fips-1.2.3",
+      "tag": "OpenSSL-fips-1_2_3"
+    },
+    {
+      "commit": "bba8456e65cf0316b2639f3c4f11eb501f36fa25",
+      "date": "2011-09-06",
+      "git_parent_tag": "OpenSSL_1_0_0d",
+      "name": "OpenSSL 1.0.0e",
+      "tag": "OpenSSL_1_0_0e"
+    },
+    {
+      "commit": "957ebe98fb0c66bf1fb241efd96a1160cd8cf5ce",
+      "date": "2011-02-08",
+      "git_parent_tag": "OpenSSL_0_9_8q",
+      "name": "OpenSSL 0.9.8r",
+      "tag": "OpenSSL_0_9_8r"
+    },
+    {
+      "commit": "6545372c249d287687bbb8dec80ee76b0e7cac43",
+      "date": "2011-02-08",
+      "git_parent_tag": "OpenSSL_1_0_0c",
+      "name": "OpenSSL 1.0.0d",
+      "tag": "OpenSSL_1_0_0d"
+    },
+    {
+      "commit": "76474e519fac0584bda39c8d7bbe0a1128239fa4",
+      "date": "2010-12-02",
+      "git_parent_tag": "OpenSSL_1_0_0b",
+      "name": "OpenSSL 1.0.0c",
+      "tag": "OpenSSL_1_0_0c"
+    },
+    {
+      "commit": "acd43bf38cfd0f5b7e85d7a8c7e2a8c9d45b40b1",
+      "date": "2010-12-02",
+      "git_parent_tag": "OpenSSL_0_9_8p",
+      "name": "OpenSSL 0.9.8q",
+      "tag": "OpenSSL_0_9_8q"
+    },
+    {
+      "commit": "ef024929082e8c2f9ec93a1ca5e7084bd38a4c04",
+      "date": "2010-11-16",
+      "git_parent_tag": "OpenSSL_1_0_0a",
+      "name": "OpenSSL 1.0.0b",
+      "tag": "OpenSSL_1_0_0b"
+    },
+    {
+      "commit": "82e0073624582bdfc503be66cf8526eb068ba603",
+      "date": "2010-11-16",
+      "git_parent_tag": "OpenSSL_0_9_8o",
+      "name": "OpenSSL 0.9.8p",
+      "tag": "OpenSSL_0_9_8p"
+    },
+    {
+      "commit": "9c7baca82035710d13f87bccef4f3c4a07b31d8c",
+      "date": "2010-06-01",
+      "git_parent_tag": "OpenSSL_1_0_0",
+      "name": "OpenSSL 1.0.0a",
+      "tag": "OpenSSL_1_0_0a"
+    },
+    {
+      "commit": "22872a536328f52f3cbed8607107d7afbc8881f0",
+      "date": "2010-06-01",
+      "git_parent_tag": "OpenSSL_0_9_8n",
+      "name": "OpenSSL 0.9.8o",
+      "tag": "OpenSSL_0_9_8o"
+    },
+    {
+      "commit": "91bad2b09eb2ad77da8aca29f80f2d0677e75423",
+      "date": "2010-03-29",
+      "git_parent_tag": "OpenSSL_1_0_0-beta5",
+      "name": "OpenSSL 1.0.0",
+      "tag": "OpenSSL_1_0_0"
+    },
+    {
+      "commit": "4fae868811dab819213b673fc82227d64bd6824b",
+      "date": "2010-03-24",
+      "git_parent_tag": "OpenSSL_0_9_8m",
+      "name": "OpenSSL 0.9.8n",
+      "tag": "OpenSSL_0_9_8n"
+    },
+    {
+      "commit": "7070cdba4e2008e10807928d9c7f8bd7d3af34b2",
+      "date": "2010-02-25",
+      "git_parent_tag": "OpenSSL_0_9_8m-beta1",
+      "name": "OpenSSL 0.9.8m",
+      "tag": "OpenSSL_0_9_8m"
+    },
+    {
+      "commit": "bc0ecd202ab37f02b9d7dd610cbb0cf98db9fb52",
+      "date": "2010-01-20",
+      "git_parent_tag": "OpenSSL_1_0_0-beta4",
+      "name": "OpenSSL 1.0.0-beta5",
+      "tag": "OpenSSL_1_0_0-beta5"
+    },
+    {
+      "commit": "8b8a2928afd00447b0f0e5942f93b61eb636e5e8",
+      "date": "2010-01-20",
+      "git_parent_tag": "OpenSSL_0_9_8j",
+      "name": "OpenSSL 0.9.8m-beta1",
+      "tag": "OpenSSL_0_9_8m-beta1"
+    },
+    {
+      "commit": "56327ebe6a7675001b382ca5e5531c598e1b2261",
+      "date": "2009-11-10",
+      "git_parent_tag": "OpenSSL_1_0_0-beta3",
+      "name": "OpenSSL 1.0.0-beta4",
+      "tag": "OpenSSL_1_0_0-beta4"
+    },
+    {
+      "commit": "1917fb6dd84e0a572f258a2931802224eb92b5c1",
+      "date": "2009-11-05",
+      "git_parent_tag": "OpenSSL_0_9_8k",
+      "name": "OpenSSL 0.9.8l",
+      "tag": "OpenSSL_0_9_8l"
+    },
+    {
+      "commit": "65fc4c55bea222e4ba542b383a32bdc7534e058b",
+      "date": "2009-07-15",
+      "git_parent_tag": "OpenSSL_1_0_0-beta2",
+      "name": "OpenSSL 1.0.0-beta3",
+      "tag": "OpenSSL_1_0_0-beta3"
+    },
+    {
+      "commit": "d8faad27b70ccab9aad1a4af815f4d07cc5da1b5",
+      "date": "2009-04-21",
+      "git_parent_tag": "OpenSSL_1_0_0-beta1",
+      "name": "OpenSSL 1.0.0-beta2",
+      "tag": "OpenSSL_1_0_0-beta2"
+    },
+    {
+      "commit": "e614ec476957b0b09a2b302c3d68003ed8395ed5",
+      "date": "2009-04-01",
+      "git_parent_tag": "OpenSSL_0_9_6-beta3",
+      "name": "OpenSSL 1.0.0-beta1",
+      "tag": "OpenSSL_1_0_0-beta1"
+    },
+    {
+      "commit": "67956bda58a1692d67a9ec0c75390a29e5ce27cd",
+      "date": "2009-03-25",
+      "git_parent_tag": "OpenSSL_0_9_8j",
+      "name": "OpenSSL 0.9.8k",
+      "tag": "OpenSSL_0_9_8k"
+    },
+    {
+      "commit": "6287fa53962a88881be5b5b8939491c384e0bdd2",
+      "date": "2009-01-07",
+      "git_parent_tag": "OpenSSL_0_9_8i",
+      "name": "OpenSSL 0.9.8j",
+      "tag": "OpenSSL_0_9_8j"
+    },
+    {
+      "commit": "0a4fda742b243025933b57ae4f931224722e0d22",
+      "date": "2008-09-15",
+      "git_parent_tag": "OpenSSL_0_9_8h",
+      "name": "OpenSSL 0.9.8i",
+      "tag": "OpenSSL_0_9_8i"
+    },
+    {
+      "commit": "0d01d8a7359e311b461cd1b964ce90d0699c2a2f",
+      "date": "2008-05-28",
+      "git_parent_tag": "OpenSSL_0_9_8e",
+      "name": "OpenSSL 0.9.8h",
+      "tag": "OpenSSL_0_9_8h"
+    },
+    {
+      "commit": "bfa33c7e91137770ad7e430968d9aa5ca0089714",
+      "date": "2007-10-19",
+      "git_parent_tag": "OpenSSL_0_9_8e",
+      "name": "OpenSSL 0.9.8g",
+      "tag": "OpenSSL_0_9_8g"
+    },
+    {
+      "commit": "2bf03f2389c44bdb40ca48fe6132343b8c71b64c",
+      "date": "2007-10-11",
+      "git_parent_tag": "OpenSSL_0_9_8e",
+      "name": "OpenSSL 0.9.8f",
+      "tag": "OpenSSL_0_9_8f"
+    },
+    {
+      "commit": "2f9048b8a13c25625168cf5944cb5c6d1e532583",
+      "date": "2007-10-05",
+      "git_parent_tag": "OpenSSL_0_9_8e",
+      "name": "OpenSSL fips-1.2.0",
+      "tag": "OpenSSL-fips-1_2_0"
+    },
+    {
+      "commit": "d2cb94952abb3e4d9fbdc5eb57dbac156f56110f",
+      "date": "2007-02-23",
+      "git_parent_tag": "OpenSSL_0_9_8d",
+      "name": "OpenSSL 0.9.8e",
+      "tag": "OpenSSL_0_9_8e"
+    },
+    {
+      "commit": "10626fac1569ea37839c37b105681cd08dbe6658",
+      "date": "2007-02-23",
+      "git_parent_tag": "OpenSSL_0_9_7l",
+      "name": "OpenSSL 0.9.7m",
+      "tag": "OpenSSL_0_9_7m"
+    },
+    {
+      "commit": "47c4bb2ddf5b7de325c7637d17bfb57277e79e30",
+      "date": "2006-09-28",
+      "git_parent_tag": "OpenSSL_0_9_8c",
+      "name": "OpenSSL 0.9.8d",
+      "tag": "OpenSSL_0_9_8d"
+    },
+    {
+      "commit": "c830c1a209b7159c21a4c609623ee1c723d1f5c9",
+      "date": "2006-09-28",
+      "git_parent_tag": "OpenSSL_0_9_7k",
+      "name": "OpenSSL 0.9.7l",
+      "tag": "OpenSSL_0_9_7l"
+    },
+    {
+      "commit": "975a7a483f8ea09c7b41b4246aef421c670c4414",
+      "date": "2006-09-05",
+      "git_parent_tag": "OpenSSL_0_9_7j",
+      "name": "OpenSSL 0.9.7k",
+      "tag": "OpenSSL_0_9_7k"
+    },
+    {
+      "commit": "0a0a10d127daab0ba138b6fdf746366d9247dc88",
+      "date": "2006-09-05",
+      "git_parent_tag": "OpenSSL_0_9_8b",
+      "name": "OpenSSL 0.9.8c",
+      "tag": "OpenSSL_0_9_8c"
+    },
+    {
+      "commit": "f871949efd831116c9e7b138c206f284f1278d61",
+      "date": "2006-05-04",
+      "git_parent_tag": "OpenSSL_0_9_8a",
+      "name": "OpenSSL 0.9.8b",
+      "tag": "OpenSSL_0_9_8b"
+    },
+    {
+      "commit": "d26d2361624e1e2d20fd093b099a7d4f1b004a5c",
+      "date": "2006-05-04",
+      "git_parent_tag": "OpenSSL_FIPS_1_0",
+      "name": "OpenSSL 0.9.7j",
+      "tag": "OpenSSL_0_9_7j"
+    },
+    {
+      "commit": "bf059c2efc4db5c09970fd3d2c392432b0ac6a12",
+      "date": "2006-02-07",
+      "git_parent_tag": "OpenSSL_0_9_7i",
+      "name": "OpenSSL FIPS.1.0",
+      "tag": "OpenSSL_FIPS_1_0"
+    },
+    {
+      "commit": "deab8d939291a7a4c6c66d60409e55a4e6357b19",
+      "date": "2005-10-14",
+      "git_parent_tag": "OpenSSL_0_9_7h",
+      "name": "OpenSSL 0.9.7i",
+      "tag": "OpenSSL_0_9_7i"
+    },
+    {
+      "commit": "a40916cbba82e54f632c5312b4c02248ba49760e",
+      "date": "2005-10-11",
+      "git_parent_tag": "OpenSSL_0_9_7g",
+      "name": "OpenSSL 0.9.7h",
+      "tag": "OpenSSL_0_9_7h"
+    },
+    {
+      "commit": "64932f9e4aab568f758ad8318ea99774bbcfbbbd",
+      "date": "2005-10-11",
+      "git_parent_tag": "OpenSSL_0_9_8",
+      "name": "OpenSSL 0.9.8a",
+      "tag": "OpenSSL_0_9_8a"
+    },
+    {
+      "commit": "f254b540b8746c24bd0bb2a5249c7b30004a42f2",
+      "date": "2005-07-05",
+      "git_parent_tag": "OpenSSL_0_9_8-beta6",
+      "name": "OpenSSL 0.9.8",
+      "tag": "OpenSSL_0_9_8"
+    },
+    {
+      "commit": "09a7f2e734f20a69184cc7747b377358955fa7c0",
+      "date": "2005-06-21",
+      "git_parent_tag": "OpenSSL_0_9_8-beta5",
+      "name": "OpenSSL 0.9.8-beta6",
+      "tag": "OpenSSL_0_9_8-beta6"
+    },
+    {
+      "commit": "d9dbd24db5e4675700478904cfdd1a3320502329",
+      "date": "2005-06-13",
+      "git_parent_tag": "OpenSSL_0_9_8-beta4",
+      "name": "OpenSSL 0.9.8-beta5",
+      "tag": "OpenSSL_0_9_8-beta5"
+    },
+    {
+      "commit": "fcd12fc0f13ea2f578260aafe357460b90b5e9ff",
+      "date": "2005-06-06",
+      "git_parent_tag": "OpenSSL_0_9_8-beta2",
+      "name": "OpenSSL 0.9.8-beta4",
+      "tag": "OpenSSL_0_9_8-beta4"
+    },
+    {
+      "commit": "51d355fac26c006fe2d1e62de3cfe101f10e48a6",
+      "date": "2005-05-30",
+      "git_parent_tag": "OpenSSL_0_9_8-beta2",
+      "name": "OpenSSL 0.9.8-beta3",
+      "tag": "OpenSSL_0_9_8-beta3"
+    },
+    {
+      "commit": "ce8945f35c4e5f38c6ed2d32ca55d26e79a12c61",
+      "date": "2005-05-24",
+      "git_parent_tag": "OpenSSL_0_9_8-beta1",
+      "name": "OpenSSL 0.9.8-beta2",
+      "tag": "OpenSSL_0_9_8-beta2"
+    },
+    {
+      "commit": "fa96ed06d2f6df5680e6c7cb80cb7f7194a22d69",
+      "date": "2005-05-19",
+      "git_parent_tag": "OpenSSL_0_9_6-beta3",
+      "name": "OpenSSL 0.9.8-beta1",
+      "tag": "OpenSSL_0_9_8-beta1"
+    },
+    {
+      "commit": "22e5a7935f23ec9568a79b024538580e54096e7b",
+      "date": "2005-04-11",
+      "git_parent_tag": "OpenSSL_0_9_7f",
+      "name": "OpenSSL 0.9.7g",
+      "tag": "OpenSSL_0_9_7g"
+    },
+    {
+      "commit": "d99382039c26a2abf057fca2c1bc4417af458f7a",
+      "date": "2005-03-22",
+      "git_parent_tag": "OpenSSL_0_9_7e",
+      "name": "OpenSSL 0.9.7f",
+      "tag": "OpenSSL_0_9_7f"
+    },
+    {
+      "commit": "bfb7bac83b98d57e163a6d2eceda9073761ac708",
+      "date": "2004-10-25",
+      "git_parent_tag": "OpenSSL_0_9_7c",
+      "name": "OpenSSL 0.9.7e",
+      "tag": "OpenSSL_0_9_7e"
+    },
+    {
+      "commit": "8ccf402239a07d23ab308c9dc11bfbe59bad3e65",
+      "date": "2004-03-17",
+      "git_parent_tag": "OpenSSL_0_9_6l",
+      "name": "OpenSSL 0.9.6m",
+      "tag": "OpenSSL_0_9_6m"
+    },
+    {
+      "commit": "36800c36d63da1fd32f04d62c4e421dfa96b7667",
+      "date": "2004-03-17",
+      "git_parent_tag": "OpenSSL-engine-0_9_6l",
+      "name": "OpenSSL engine-0.9.6m",
+      "tag": "OpenSSL-engine-0_9_6m"
+    },
+    {
+      "commit": "2e80b1fb49313ce9c31af1c990faf53c3862e14d",
+      "date": "2004-03-17",
+      "git_parent_tag": "OpenSSL_0_9_7c",
+      "name": "OpenSSL 0.9.7d",
+      "tag": "OpenSSL_0_9_7d"
+    },
+    {
+      "commit": "83f70d68d6c3086241c041ba26786fd822179f2e",
+      "date": "2003-11-04",
+      "git_parent_tag": "OpenSSL_0_9_6k",
+      "name": "OpenSSL 0.9.6l",
+      "tag": "OpenSSL_0_9_6l"
+    },
+    {
+      "commit": "99ed4cbb036ea9fa56725094584fec191feaa526",
+      "date": "2003-11-04",
+      "git_parent_tag": "OpenSSL-engine-0_9_6k",
+      "name": "OpenSSL engine-0.9.6l",
+      "tag": "OpenSSL-engine-0_9_6l"
+    },
+    {
+      "commit": "68f0bcfbc36d5180b62fd8e5971ad924e930355a",
+      "date": "2003-09-30",
+      "git_parent_tag": "OpenSSL_0_9_7b",
+      "name": "OpenSSL 0.9.7c",
+      "tag": "OpenSSL_0_9_7c"
+    },
+    {
+      "commit": "0a0a3ea3399989ab904e8dab15aa57c0f67e5146",
+      "date": "2003-09-30",
+      "git_parent_tag": "OpenSSL_0_9_6j",
+      "name": "OpenSSL 0.9.6k",
+      "tag": "OpenSSL_0_9_6k"
+    },
+    {
+      "commit": "166f9b6f39a06e1fdc90dad65180d90c9efda8ba",
+      "date": "2003-09-30",
+      "git_parent_tag": "OpenSSL-engine-0_9_6j",
+      "name": "OpenSSL engine-0.9.6k",
+      "tag": "OpenSSL-engine-0_9_6k"
+    },
+    {
+      "commit": "e352a9e6ecb320f849e41f8d349c2813729de6d3",
+      "date": "2003-04-10",
+      "git_parent_tag": "OpenSSL_0_9_6i",
+      "name": "OpenSSL 0.9.6j",
+      "tag": "OpenSSL_0_9_6j"
+    },
+    {
+      "commit": "110c6f72ecefe6afc8b5d2622af2c2dfa14b2323",
+      "date": "2003-04-10",
+      "git_parent_tag": "OpenSSL_0_9_7a",
+      "name": "OpenSSL 0.9.7b",
+      "tag": "OpenSSL_0_9_7b"
+    },
+    {
+      "commit": "5aeaff0bc05ec818b7549e7e12a3977c55f4c236",
+      "date": "2003-04-10",
+      "git_parent_tag": "OpenSSL-engine-0_9_6i",
+      "name": "OpenSSL engine-0.9.6j",
+      "tag": "OpenSSL-engine-0_9_6j"
+    },
+    {
+      "commit": "6fcf1dbc5042e5d0a1e16081d02d9fe500e76d86",
+      "date": "2003-02-19",
+      "git_parent_tag": "OpenSSL_0_9_7",
+      "name": "OpenSSL 0.9.7a",
+      "tag": "OpenSSL_0_9_7a"
+    },
+    {
+      "commit": "84c1d096e4a8d4b1748cf484421349e3e17f11c1",
+      "date": "2003-02-19",
+      "git_parent_tag": "OpenSSL_0_9_6h",
+      "name": "OpenSSL 0.9.6i",
+      "tag": "OpenSSL_0_9_6i"
+    },
+    {
+      "commit": "acc6c94a65e9b4124205096da5046ac0bdbdf9c4",
+      "date": "2003-02-19",
+      "git_parent_tag": "OpenSSL-engine-0_9_6h",
+      "name": "OpenSSL engine-0.9.6i",
+      "tag": "OpenSSL-engine-0_9_6i"
+    },
+    {
+      "commit": "04572965ea98f522b9992f1356c2ea4aaaa82875",
+      "date": "2002-12-30",
+      "git_parent_tag": "OpenSSL_0_9_7-beta6",
+      "name": "OpenSSL 0.9.7",
+      "tag": "OpenSSL_0_9_7"
+    },
+    {
+      "commit": "fcf8f4d4530d56f36ead7aa1064b6912a0739f4e",
+      "date": "2002-12-17",
+      "git_parent_tag": "OpenSSL_0_9_7-beta4",
+      "name": "OpenSSL 0.9.7-beta6",
+      "tag": "OpenSSL_0_9_7-beta6"
+    },
+    {
+      "commit": "2b61c272877e7cc4af5154b21116186628e0eb8f",
+      "date": "2002-12-06",
+      "git_parent_tag": "OpenSSL_0_9_7-beta4",
+      "name": "OpenSSL 0.9.7-beta5",
+      "tag": "OpenSSL_0_9_7-beta5"
+    },
+    {
+      "commit": "631cdb9f690e78d71e417e9315ef68acc87053b7",
+      "date": "2002-12-05",
+      "git_parent_tag": "OpenSSL_0_9_6g",
+      "name": "OpenSSL 0.9.6h",
+      "tag": "OpenSSL_0_9_6h"
+    },
+    {
+      "commit": "c086616c3e1cbde1a7f84a0beb188ea4770b03b0",
+      "date": "2002-12-05",
+      "git_parent_tag": "OpenSSL-engine-0_9_6g",
+      "name": "OpenSSL engine-0.9.6h",
+      "tag": "OpenSSL-engine-0_9_6h"
+    },
+    {
+      "commit": "782ded56e5f9f1c94486d1bed20e1f6718df6996",
+      "date": "2002-11-19",
+      "git_parent_tag": "OpenSSL_0_9_7-beta3",
+      "name": "OpenSSL 0.9.7-beta4",
+      "tag": "OpenSSL_0_9_7-beta4"
+    },
+    {
+      "commit": "4c68b3239bf44f8af71a9da8793e75e26b2432f0",
+      "date": "2002-08-09",
+      "git_parent_tag": "OpenSSL_0_9_6f",
+      "name": "OpenSSL 0.9.6g",
+      "tag": "OpenSSL_0_9_6g"
+    },
+    {
+      "commit": "e463adeff88ede9a954cadc8ea2a63e224e3319b",
+      "date": "2002-08-09",
+      "git_parent_tag": "OpenSSL-engine-0_9_6f",
+      "name": "OpenSSL engine-0.9.6g",
+      "tag": "OpenSSL-engine-0_9_6g"
+    },
+    {
+      "commit": "df75a709c9963972f7635ead20ff7b07b18f80b6",
+      "date": "2002-08-08",
+      "git_parent_tag": "OpenSSL_0_9_6e",
+      "name": "OpenSSL 0.9.6f",
+      "tag": "OpenSSL_0_9_6f"
+    },
+    {
+      "commit": "8246c0607ad7cb76dd333d8cf7512e5fcd609f23",
+      "date": "2002-08-08",
+      "git_parent_tag": "OpenSSL-engine-0_9_6e",
+      "name": "OpenSSL engine-0.9.6f",
+      "tag": "OpenSSL-engine-0_9_6f"
+    },
+    {
+      "commit": "05ebb1e7cfd8dd7b43f306dd0356097fefaf4159",
+      "date": "2002-07-30",
+      "git_parent_tag": "OpenSSL_0_9_6d",
+      "name": "OpenSSL 0.9.6e",
+      "tag": "OpenSSL_0_9_6e"
+    },
+    {
+      "commit": "6cae350ad1e6a484d748c6cec33ab69c6bb6593a",
+      "date": "2002-07-30",
+      "git_parent_tag": "OpenSSL-engine-0_9_6d",
+      "name": "OpenSSL engine-0.9.6e",
+      "tag": "OpenSSL-engine-0_9_6e"
+    },
+    {
+      "commit": "e970fa002278deb23221798aab53d8a1bb03a429",
+      "date": "2002-07-30",
+      "git_parent_tag": "OpenSSL_0_9_7-beta2",
+      "name": "OpenSSL 0.9.7-beta3",
+      "tag": "OpenSSL_0_9_7-beta3"
+    },
+    {
+      "commit": "48acb9e08a964cc0ad3babe66836f14fd83eeb93",
+      "date": "2002-06-16",
+      "git_parent_tag": "OpenSSL_0_9_7-beta1",
+      "name": "OpenSSL 0.9.7-beta2",
+      "tag": "OpenSSL_0_9_7-beta2"
+    },
+    {
+      "commit": "3ae184d31fa7c0b7e4ca4ac52fbfb40a912d9786",
+      "date": "2002-06-01",
+      "git_parent_tag": "OpenSSL_0_9_6-beta3",
+      "name": "OpenSSL 0.9.7-beta1",
+      "tag": "OpenSSL_0_9_7-beta1"
+    },
+    {
+      "commit": "5317543ada093f69dcb6f15f5dc0b5857b490e9e",
+      "date": "2002-05-09",
+      "git_parent_tag": "OpenSSL_0_9_6d-beta1",
+      "name": "OpenSSL 0.9.6d",
+      "tag": "OpenSSL_0_9_6d"
+    },
+    {
+      "commit": "e0b110267ddf7e00b5b6885c2634b4c07d4dc9ab",
+      "date": "2002-05-09",
+      "git_parent_tag": "OpenSSL-engine-0_9_6d-beta1",
+      "name": "OpenSSL engine-0.9.6d",
+      "tag": "OpenSSL-engine-0_9_6d"
+    },
+    {
+      "commit": "c387a61fdd62c0351e0334677589a95b9680ca68",
+      "date": "2002-04-17",
+      "git_parent_tag": "OpenSSL_0_9_6c",
+      "name": "OpenSSL 0.9.6d-beta1",
+      "tag": "OpenSSL_0_9_6d-beta1"
+    },
+    {
+      "commit": "a5232ab0a02f95350d4d1eebcec34feba065ba1d",
+      "date": "2002-04-17",
+      "git_parent_tag": "OpenSSL-engine-0_9_6b",
+      "name": "OpenSSL engine-0.9.6d-beta1",
+      "tag": "OpenSSL-engine-0_9_6d-beta1"
+    },
+    {
+      "commit": "02a473eeb99b4d46694bcb000d574a2190382334",
+      "date": "2002-02-15",
+      "git_parent_tag": "OpenSSL-engine-0_9_6b",
+      "name": "OpenSSL engine-0.9.6c",
+      "tag": "OpenSSL-engine-0_9_6c"
+    },
+    {
+      "commit": "b2f570ecbb0b2157167b496541306ed2c0070a24",
+      "date": "2001-12-21",
+      "git_parent_tag": "OpenSSL_0_9_6b",
+      "name": "OpenSSL 0.9.6c",
+      "tag": "OpenSSL_0_9_6c"
+    },
+    {
+      "commit": "483c4e0682d95e59369fe3e8839be0b25b2ea0a1",
+      "date": "2001-07-09",
+      "git_parent_tag": "OpenSSL_0_9_6a-beta3",
+      "name": "OpenSSL 0.9.6b",
+      "tag": "OpenSSL_0_9_6b"
+    },
+    {
+      "commit": "7b24a1a33b72e8303c41406bd458346f6be00f57",
+      "date": "2001-07-09",
+      "git_parent_tag": "OpenSSL-engine-0_9_6a",
+      "name": "OpenSSL engine-0.9.6b",
+      "tag": "OpenSSL-engine-0_9_6b"
+    },
+    {
+      "commit": "5a9c441c6e739ef0e3585e7aaa544fdf074a1ad4",
+      "date": "2001-04-05",
+      "git_parent_tag": "OpenSSL-engine-0_9_6a-beta3",
+      "name": "OpenSSL engine-0.9.6a",
+      "tag": "OpenSSL-engine-0_9_6a"
+    },
+    {
+      "commit": "82c680ac51ea9006d0f1843836102405f2625567",
+      "date": "2001-04-05",
+      "git_parent_tag": "OpenSSL_0_9_6a-beta3",
+      "name": "OpenSSL 0.9.6a",
+      "tag": "OpenSSL_0_9_6a"
+    },
+    {
+      "commit": "86cb01870c631271f540a7ccfa989bd9e802dd43",
+      "date": "2001-03-30",
+      "git_parent_tag": "OpenSSL_0_9_6a-beta2",
+      "name": "OpenSSL 0.9.6a-beta3",
+      "tag": "OpenSSL_0_9_6a-beta3"
+    },
+    {
+      "commit": "422830e17b4e5f533258cba458248977bdcef06a",
+      "date": "2001-03-30",
+      "git_parent_tag": "OpenSSL-engine-0_9_6a-beta2",
+      "name": "OpenSSL engine-0.9.6a-beta3",
+      "tag": "OpenSSL-engine-0_9_6a-beta3"
+    },
+    {
+      "commit": "f14aa3011883cde5c7a13be2caaf46fb4fe06506",
+      "date": "2001-03-21",
+      "git_parent_tag": "OpenSSL_0_9_6a-beta1",
+      "name": "OpenSSL 0.9.6a-beta2",
+      "tag": "OpenSSL_0_9_6a-beta2"
+    },
+    {
+      "commit": "a307eeba84e1a60279e22cef77758af1f78b2bb4",
+      "date": "2001-03-21",
+      "git_parent_tag": "OpenSSL-engine-0_9_6a-beta1",
+      "name": "OpenSSL engine-0.9.6a-beta2",
+      "tag": "OpenSSL-engine-0_9_6a-beta2"
+    },
+    {
+      "commit": "15922ccdf6ec84eee23e1dad8e84d6a5dd7c6166",
+      "date": "2001-03-13",
+      "git_parent_tag": "OpenSSL_0_9_6-beta3",
+      "name": "OpenSSL 0.9.6a-beta1",
+      "tag": "OpenSSL_0_9_6a-beta1"
+    },
+    {
+      "commit": "c4af8daf34aa3a6e56214a6cca66e47e04139680",
+      "date": "2001-03-13",
+      "git_parent_tag": "OpenSSL-engine-0_9_6",
+      "name": "OpenSSL engine-0.9.6a-beta1",
+      "tag": "OpenSSL-engine-0_9_6a-beta1"
+    },
+    {
+      "commit": "ca1b56f3d03e4aeb729bfdb7aa32042d27770043",
+      "date": "2000-10-10",
+      "git_parent_tag": "OpenSSL_0_9_6-beta3",
+      "name": "OpenSSL 0.9.6",
+      "tag": "OpenSSL_0_9_6"
+    },
+    {
+      "commit": "690dba1a9f032ed803be54e0b2c1b4622b1ebdb9",
+      "date": "2000-10-10",
+      "git_parent_tag": "OpenSSL_0_9_6-beta3",
+      "name": "OpenSSL 0.9.6-beta1",
+      "tag": "OpenSSL_0_9_6-beta1"
+    },
+    {
+      "commit": "978ac5339837285a9e2f5970d308f1de8eae2b2c",
+      "date": "2000-10-10",
+      "git_parent_tag": "OpenSSL_0_9_6-beta3",
+      "name": "OpenSSL 0.9.6-beta2",
+      "tag": "OpenSSL_0_9_6-beta2"
+    },
+    {
+      "commit": "47dc5a132191c01536610063c5a4979e09319912",
+      "date": "2000-09-24",
+      "git_parent_tag": "OpenSSL_0_9_6-beta3",
+      "name": "OpenSSL engine-0.9.6",
+      "tag": "OpenSSL-engine-0_9_6"
+    },
+    {
+      "commit": "d40898dfabe3b888f752a2a61e1bbcf06264e604",
+      "date": "2000-09-21",
+      "git_parent_tag": "OpenSSL_0_9_5a",
+      "name": "OpenSSL 0.9.6-beta3",
+      "tag": "OpenSSL_0_9_6-beta3"
+    },
+    {
+      "commit": "27f00db152edd80af8611e8f0d214988d8e9953a",
+      "date": "2000-09-21",
+      "git_parent_tag": "OpenSSL-engine-0_9_6-beta2",
+      "name": "OpenSSL engine-0.9.6-beta3",
+      "tag": "OpenSSL-engine-0_9_6-beta3"
+    },
+    {
+      "commit": "ce6990739eaa9f8a4a232cdb2fa008ce08480fec",
+      "date": "2000-09-17",
+      "git_parent_tag": "OpenSSL-engine-0_9_6-beta1",
+      "name": "OpenSSL engine-0.9.6-beta2",
+      "tag": "OpenSSL-engine-0_9_6-beta2"
+    },
+    {
+      "commit": "da867a51a0052613349fc1190dd577398bc70d3d",
+      "date": "2000-09-11",
+      "git_parent_tag": "OpenSSL_0_9_5a",
+      "name": "OpenSSL engine-0.9.6-beta1",
+      "tag": "OpenSSL-engine-0_9_6-beta1"
+    },
+    {
+      "commit": "b6079a7835f61daa9fb2cbf9addfa86049523933",
+      "date": "2000-05-25",
+      "git_parent_tag": "OpenSSL_0_9_5a",
+      "name": "OpenSSL 0.9.5",
+      "tag": "OpenSSL_0_9_5"
+    },
+    {
+      "commit": "5e61580bbd2ee37a30e8d0afdcc45be1555592d8",
+      "date": "2000-04-01",
+      "git_parent_tag": "OpenSSL_0_9_5a-beta2",
+      "name": "OpenSSL 0.9.5a",
+      "tag": "OpenSSL_0_9_5a"
+    },
+    {
+      "commit": "97197984aafa9f9fdbf1ea96c7d39ef8226ccee7",
+      "date": "2000-03-23",
+      "git_parent_tag": "OpenSSL_0_9_5a-beta1",
+      "name": "OpenSSL 0.9.5a-beta2",
+      "tag": "OpenSSL_0_9_5a-beta2"
+    },
+    {
+      "commit": "fc450b24b4e1d6e8602905290af5aa6de9f46b8c",
+      "date": "2000-03-20",
+      "git_parent_tag": "OpenSSL_0_9_5beta2",
+      "name": "OpenSSL 0.9.5a-beta1",
+      "tag": "OpenSSL_0_9_5a-beta1"
+    },
+    {
+      "commit": "a1a426ea206ffa5ad8aea089f7d70d8d04a3a210",
+      "date": "2000-02-27",
+      "git_parent_tag": "OpenSSL_0_9_5beta1",
+      "name": "OpenSSL 0.9.5beta2",
+      "tag": "OpenSSL_0_9_5beta2"
+    },
+    {
+      "commit": "5921ea3bcf01cb8997ab823cb21a2f4390932a20",
+      "date": "2000-02-24",
+      "git_parent_tag": "OpenSSL_0_9_4",
+      "name": "OpenSSL 0.9.5beta1",
+      "tag": "OpenSSL_0_9_5beta1"
+    },
+    {
+      "commit": "2c720c746b18fa2eef4be4ad21c9352a5417b583",
+      "date": "1999-08-09",
+      "git_parent_tag": "OpenSSL_0_9_3a",
+      "name": "OpenSSL 0.9.4",
+      "tag": "OpenSSL_0_9_4"
+    },
+    {
+      "commit": "033d858cc22eaca6ee6a6414e378be359ab112ca",
+      "date": "1999-05-29",
+      "git_parent_tag": "OpenSSL_0_9_3",
+      "name": "OpenSSL 0.9.3a",
+      "tag": "OpenSSL_0_9_3a"
+    },
+    {
+      "commit": "09befa19058989c75fbdf580a263d7aa6be8ec8b",
+      "date": "1999-05-24",
+      "git_parent_tag": "OpenSSL_0_9_3beta2",
+      "name": "OpenSSL 0.9.3",
+      "tag": "OpenSSL_0_9_3"
+    },
+    {
+      "commit": "24abc46963e72f625edd0e60f50f98ce3b5cb3a4",
+      "date": "1999-05-23",
+      "git_parent_tag": "OpenSSL_0_9_2b",
+      "name": "OpenSSL 0.9.3beta2",
+      "tag": "OpenSSL_0_9_3beta2"
+    },
+    {
+      "commit": "35b351549024d86e56af3ea8456b9ccd1d67add0",
+      "date": "1999-05-20",
+      "git_parent_tag": "OpenSSL_0_9_2b",
+      "name": "OpenSSL 0.9.3beta1",
+      "tag": "OpenSSL_0_9_3beta1"
+    },
+    {
+      "commit": "8af354d44907dc89fbc41a03af4e5d71b8bcd7b9",
+      "date": "1999-03-22",
+      "git_parent_tag": "OpenSSL_0_9_1c",
+      "name": "OpenSSL 0.9.2b",
+      "tag": "OpenSSL_0_9_2b"
+    },
+    {
+      "commit": "320a14cb5b12cbdd2ff4d81c1e9a2ea7a139a038",
+      "date": "1998-12-23",
+      "git_parent_tag": null,
+      "name": "OpenSSL 0.9.1c",
+      "tag": "OpenSSL_0_9_1c"
+    }
+  ]
+}
