@@ -42,10 +42,10 @@
         "closure": "the `RT-LINEAGE-EDGES` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-LINEAGE-EDGES is pending",
+        "measurement_state": "complete",
+        "observation": "RT-LINEAGE-EDGES is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "lineage-edges",
         "what": "the typed chronological / git-ancestry / branch-fork / maintenance-successor / security-backport edges between release nodes, each stating the direction it is read in"
@@ -212,8 +212,8 @@
       "contract_units": 17,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 3,
-      "open_in_this_stratum": 14,
+      "implemented": 4,
+      "open_in_this_stratum": 13,
       "owned": 17,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -254,7 +254,7 @@
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "839748b37301c0b0644207b3c21fdd4e60c0596c40bee15441c27326dc5c33fc"
+      "sha256": "16c74924ddcf6fd70cbf3462cfec014d0708bfe0b77479e7de75fa7e62fac0af"
     }
   ],
   "kind": "phase23-obligations",

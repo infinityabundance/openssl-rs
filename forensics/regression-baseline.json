@@ -512,6 +512,10 @@
       "observations": 124,
       "verdict": "pass"
     },
+    "RT-LINEAGE-EDGES": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-MEM": {
       "observations": 82,
       "verdict": "pass"
@@ -874,7 +878,7 @@
     "phase20": 0,
     "phase21": 0,
     "phase22": 0,
-    "phase23": 14,
+    "phase23": 13,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

@@ -108,6 +108,28 @@ KNOWN_ARTIFACT = {
 
 PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
 
+# The kinds the lineage vocabulary names but the catalogue's evidence cannot yet settle. Each is
+# recorded with the reason it is absent, so an omitted relationship is a stated gap rather than a
+# silent default (the plan's section 3.6 discipline applied to a missing edge).
+ABSENT_EDGE_KINDS: dict[str, str] = {
+    "observed_compatibility": (
+        "no candidate-to-authority measurement exists at 23.4; the compatibility courts and views "
+        "land at 23.9 and 23.12, so no observed relationship is asserted"
+    ),
+    "security_backport": (
+        "the security lineage lands at 23.14; until a vulnerability observation names a fixed-in "
+        "release there is no backport to assert, so the kind is absent rather than guessed"
+    ),
+}
+
+# The lineage body's content hash is taken over these keys, so the direction model and the stated
+# absences are content-addressed alongside the edges. The court imports this tuple and re-seals a
+# mutated body with it, so a sensitivity control isolates the semantic check.
+LINEAGE_HASH_KEYS: tuple[str, ...] = (
+    "root", "canonical_kinds", "edges", "edge_kinds", "absent_kinds", "direction_model",
+    "date_order_is_not_abi", "declared_abi_family_field",
+)
+
 
 def load_snapshot() -> dict:
     if not SNAPSHOT.is_file():
@@ -304,9 +326,24 @@ def build_catalog() -> tuple[dict, dict]:
         "unresolved": catalog_body["unresolved"],
     })
 
+    present = {e["kind"] for e in edges["edges"]}
+    absent = {k: v for k, v in ABSENT_EDGE_KINDS.items() if k not in present}
+    unaccounted = sorted(set(mts.LINEAGE_EDGE_KINDS) - present - set(absent))
+    if unaccounted:
+        raise SystemExit(
+            f"authority-catalog: the lineage omits {unaccounted} but records no reason; a kind "
+            f"that is neither present nor stated absent is a dropped relationship"
+        )
+
     lineage_body = {
         "root": root["release_id"],
         "canonical_kinds": ["branch_fork", "chronological_successor", "maintenance_successor"],
+        "edge_kinds": list(mts.LINEAGE_EDGE_KINDS),
+        "absent_kinds": {k: absent[k] for k in sorted(absent)},
+        "direction_model": ("forward: the edge is read from `from_id` to `to_id`; reverse: it is "
+                            "read from `to_id` to `from_id`"),
+        "date_order_is_not_abi": True,
+        "declared_abi_family_field": "declared_compatibility_family",
         "edges": edges["edges"],
         "topological_order": edges["topological_order"],
         "counts": {
@@ -316,10 +353,7 @@ def build_catalog() -> tuple[dict, dict]:
         },
         "dag": edges["dag"],
     }
-    lineage_body["content_hash"] = content_hash({
-        "root": lineage_body["root"],
-        "edges": lineage_body["edges"],
-    })
+    lineage_body["content_hash"] = content_hash({k: lineage_body.get(k) for k in LINEAGE_HASH_KEYS})
     return catalog_body, lineage_body
 
 
@@ -390,20 +424,23 @@ def build_lineage(nodes: list[dict], by_series: dict[str, list[dict]],
     edges: list[dict] = []
     seen_ids: set[str] = set()
 
-    def add(kind: str, parent: dict, child: dict, evidence: list[str]) -> None:
+    def add(kind: str, parent: dict, child: dict, evidence: list[str],
+            provenance: list[str] | None = None, **extra: object) -> None:
         edge_id = f"L-{kind}-{parent['release_id']}-{child['release_id']}"
         if edge_id in seen_ids:
             return
         seen_ids.add(edge_id)
-        edges.append({
+        edge = {
             "edge_id": edge_id,
             "kind": kind,
             "from_id": parent["release_id"],
             "to_id": child["release_id"],
             "direction": "forward",
             "evidence": evidence,
-            "metadata_provenance": [rel(SNAPSHOT), source["timeline_url"]],
-        })
+            "metadata_provenance": provenance or [rel(SNAPSHOT), source["timeline_url"]],
+        }
+        edge.update(extra)
+        edges.append(edge)
 
     for series, members in sorted(by_series.items()):
         for i, child in enumerate(members):
@@ -451,6 +488,31 @@ def build_lineage(nodes: list[dict], by_series: dict[str, list[dict]],
             f"git ancestry: {parent_tag} ({parent['upstream_commit']}) is the nearest release "
             f"ancestor of {node['upstream_tag']} ({node['upstream_commit']})",
         ])
+
+    # The declared relationship, kept apart from the date-order chain: upstream's own ABI promise
+    # for a declared compatibility family. It is scoped to the family the catalogue records, marked
+    # `declared`, and is a **declaration**, never a measurement -- the non-claim "upstream's ABI
+    # promise is not candidate evidence" is why it is a separate kind and never backs a view. The
+    # declared ABI reference is the family's earliest final; each later final is declared compatible
+    # with it in that direction. This is deliberately not the `chronological_successor` chain (D535:
+    # a date order is not an ABI proof), which is why the two edge sets are distinct.
+    finals_by_family: dict[str, list[dict]] = {}
+    for node in nodes:
+        if node["release_channel"] != "final" or node["mainline_or_auxiliary"] != "mainline":
+            continue
+        finals_by_family.setdefault(node["declared_compatibility_family"], []).append(node)
+    for family, members in sorted(finals_by_family.items()):
+        if len(members) < 2:
+            continue
+        ordered = sorted(members, key=_order_key)
+        base = ordered[0]
+        for later in ordered[1:]:
+            add("declared_abi_compatibility", base, later, [
+                f"upstream's declared compatibility family {family}: {base['release_id']} "
+                f"({base['release_date']}) is the declared ABI reference for {later['release_id']}",
+                "a declared relationship (upstream's ABI promise), never a candidate measurement",
+            ], provenance=[rel(SNAPSHOT), source["timeline_url"], source["release_strategy_url"],
+                           "docs/ABI_POLICY.md"], dimension="abi", declared=True)
 
     # Canonical parents are the version-structural edges; git_ancestry corroborates them.
     incoming: dict[str, list[dict]] = {}
