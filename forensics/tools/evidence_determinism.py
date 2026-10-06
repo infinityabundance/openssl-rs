@@ -197,19 +197,30 @@ GENERATORS_BEFORE_LEDGERS = [
     # rather than a silent divergence. The RT-NEGATIVE-OBLIGATIONS court re-derives the whole plane
     # through the same generator and re-reads each record's named evidence through `adjudicate`.
     "forensics/tools/negative_obligations.py",
-    # Phase 23.10's historical population. It is a pure function of the committed catalogue, the
-    # authority-node registry, the acquisition and build receipts, the committed atlases, the
-    # compatibility views and the semantic pair, so a stale committed record -- or a hand-typed
-    # status -- is a failure rather than a silent divergence. The RT-HISTORICAL-POPULATION court
-    # re-derives the whole record through the same generator and refuses a typed status.
-    "forensics/tools/historical_population.py",
+    # Phase 23.14's security lineage. It is a pure function of the committed source snapshot, the
+    # release catalogue, the default-authority alias, the divergence register and the negative
+    # obligations plane, so a stale committed plane -- or a typed disposition, a hand-listed fix or
+    # a re-adopted vulnerable behaviour -- is a failure rather than a silent divergence. It also
+    # supplies the `security_backport` lineage edges `authority_catalog.py` merges, so it runs
+    # after that generator. The RT-SECURITY-LINEAGE court re-derives the whole plane through the
+    # same generator and re-reads every cited evidence path.
+    "forensics/tools/security_lineage.py",
     # Phase 23.11's downstream multitrack court. Its default run is a pure function of the committed
     # artefact's own preserved raw outputs: it re-derives every consumer record from the raw build
     # and run bytes through the same code, so a stale committed record -- or a hand-typed outcome --
     # is a failure rather than a silent divergence. (`--measure` builds and runs the consumers
     # against the authority prefixes and runs only in the historical and forensic venues, one venue
-    # per set of trials; the court and this re-derivation need neither a compiler nor a prefix.)
+    # per set of trials; the court and this re-derivation need neither a compiler nor a prefix.) It
+    # sits **before** `historical_population.py`, which reads its `downstream-evidenced` rung, so a
+    # plan change propagates in one pass rather than leaving the population stale.
     "forensics/tools/downstream_multitrack.py",
+    # Phase 23.10's historical population. It is a pure function of the committed catalogue, the
+    # authority-node registry, the acquisition and build receipts, the committed atlases, the
+    # compatibility views, the semantic pair and the downstream-multitrack plane, so a stale
+    # committed record -- or a hand-typed status -- is a failure rather than a silent divergence.
+    # The RT-HISTORICAL-POPULATION court re-derives the whole record through the same generator and
+    # refuses a typed status.
+    "forensics/tools/historical_population.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -407,6 +418,13 @@ COMPARED = [
     # ABI/history façades, edge deltas and symbols planes, so a stale plane -- or an obligation
     # whose state was not read from its evidence -- is a failure rather than a silent divergence.
     "forensics/multitrack/negative-obligations.json",
+    # Phase 23.14's security lineage: a pure function of the frozen source snapshot, the release
+    # catalogue, the default-authority alias, the divergence register and the negative obligations
+    # plane, so a stale plane -- or a typed disposition, a hand-listed fix or a re-adopted
+    # vulnerable behaviour -- is a failure rather than a silent divergence. The source snapshot
+    # itself (`forensics/multitrack/security-source.json`) is an acquisition, not a derivation, so
+    # it is the input this plane binds rather than an artefact compared here.
+    "forensics/multitrack/security-lineage.json",
     # Phase 23.10's historical population: a pure function of the committed catalogue, authority
     # nodes, receipts, atlases, compatibility views and semantic pair, so a stale record or a typed
     # status is a failure rather than a silent divergence.

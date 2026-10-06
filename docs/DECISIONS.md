@@ -35845,3 +35845,57 @@ The court requires each major epoch to hold at least one built representative.
 regenerated in this commit and their courts re-derive them and pass; no committed evidence is
 suppressed to keep an earlier artefact unchanged. `historical-population` moves to
 `implemented`/closed and the stratum's `open_in_this_stratum` falls from eight to seven.
+
+## D544 -- the security lineage observes a documented selection, and the candidate disposition is derived
+
+Phase 23.14 lands the security lineage (`forensics/multitrack/security-lineage.json` with the
+record kind `security_observation`, extended), the acquisition tool
+`forensics/tools/security_acquire.py`, the frozen source snapshot
+`forensics/multitrack/security-source.json`, the generator
+`forensics/tools/security_lineage.py` and the court `RT-SECURITY-LINEAGE`, unit
+`security-lineage`. The measured corrections are recorded in
+`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.14 and checked by the court.
+
+**The source is frozen rather than fetched at generation time.** The acquisition tool reads the
+official OpenSSL vulnerability index and each observed advisory, records the URL, the fetch date
+and the SHA-256 of the bytes, and freezes them into a committed snapshot the generator reads; the
+generator never touches the network. The index carries 297 CVE records and the plane binds a
+documented selection of ten, spanning every severity class, every maintained branch the catalogue
+carries and both the public and the premium fix identifiers; the other 287 are named as
+`unobserved` findings rather than fabricated. Widening the selection changes only the acquisition
+tool.
+
+**One identity per vulnerability, and separate branch-fix rows.** The plane carries
+`vulnerabilities` (one identity per CVE: upstream's severity, affected range, subsystem, FIPS
+impact and candidate disposition) and `observations` (one `security_observation` per
+(vulnerability, maintained branch): the affected range, the fixed release, the branch it maps to,
+and the external-reference flag). The `security_observation` schema now requires the
+vulnerability identity, the branch, the severity, the subsystem, the FIPS impact, the candidate
+disposition and the external flag; a `preserve_vulnerable_behaviour` disposition is refused by
+name and `reintroduced` must be the literal false, so the no-reintroduction rule is a validator
+and a court check rather than a prose rule.
+
+**The candidate disposition is derived from the reference authority and the divergence register.**
+The reference is the committed `default-authority.json` alias (`openssl-3.6.4-production`): a
+vulnerability whose reference lies inside an affected range is `unresolved` because the fix
+postdates the reference (`CVE-2026-84782`, fixed in `3.6.5`), an affected subsystem with a
+recorded safety divergence is `safe_divergence` and cites it (`D-GF2M-1`/`D-GF2M-2` and
+`D-EC-1`/`D-EC-2` in `forensics/divergence-obligations.json`, referenced rather than restated),
+and every other is `never_contained`. The court fails if any disposition would reintroduce a
+fixed behaviour, and its control proves that a `preserve_vulnerable_behaviour` disposition and a
+`safe_divergence` with no recorded divergence are each caught.
+
+**An unavailable-source identifier is an external release reference, never an authority.** Of the
+52 branch fixes, 37 resolve in the release catalogue and 15 do not: `1.0.2zd`, `1.1.1zj`, `3.0.23`
+and the rest are named by upstream's advisories but are not catalogue nodes, so each is recorded
+`external_release_reference: true` with `source_available: false` and a null `authority_id`. The
+court refuses a fix whose external flag disagrees with the catalogue and refuses an external
+identifier that names an admitted authority.
+
+**The `security_backport` edges land.** `security_lineage.security_backport_edges` types the
+relationship between the catalogued fixes of one vulnerability, read forward in time, and
+`authority_catalog.py` merges them into `forensics/authority-lineage.json` -- 27 edges over the
+observed set -- retiring 23.4's absent-with-reason for the kind. `security-lineage` moves to
+`implemented`/closed and the stratum's `open_in_this_stratum` falls from four to three. The
+court's property is `NOT_CLAIMED` with the unobserved source records named as findings, so a
+passing `RT-SECURITY-LINEAGE` must never be read as "the lineage is secure".

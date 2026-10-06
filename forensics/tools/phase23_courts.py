@@ -16,7 +16,7 @@ carries the expectation: each court reads the artefact that holds its subject ra
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
-**Twelve courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
+**Fourteen courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
 lineage court, 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court, 23.3 lands
 `RT-ATLAS-PARAMETERIZATION`, the parameterized-atlas court, 23.4 lands `RT-LINEAGE-EDGES`, the
 typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage court, 23.6 lands
@@ -27,7 +27,8 @@ typed-lineage-edge court, 23.5 lands `RT-ENTITY-LINEAGE`, the entity-lineage cou
 `RT-HISTORICAL-POPULATION`, the historical-population court, 23.11 lands
 `RT-DOWNSTREAM-MULTITRACK`, the unmodified-downstream-consumer court, and 23.12 lands
 `RT-COMPATIBILITY-EDGES`, the directional compatibility-edge court, and 23.13 lands
-`RT-NEGATIVE-OBLIGATIONS`, the negative/positive-obligation court; the other four courts are
+`RT-NEGATIVE-OBLIGATIONS`, the negative/positive-obligation court, and 23.14 lands
+`RT-SECURITY-LINEAGE`, the security-lineage court; the other three courts are
 named in
 `PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
@@ -55,7 +56,7 @@ The seventeen courts, and the subphase that lands each
   * `RT-DOWNSTREAM-MULTITRACK` -- 23.11, the downstream multitrack court (registered).
   * `RT-COMPATIBILITY-EDGES` -- 23.12, the directional compatibility edges (registered).
   * `RT-NEGATIVE-OBLIGATIONS` -- 23.13, the negative obligations (registered).
-  * `RT-SECURITY-LINEAGE` -- 23.14, the security lineage.
+  * `RT-SECURITY-LINEAGE` -- 23.14, the security lineage (registered).
   * `RT-SUPPORT-STATUS` -- 23.15, the support-status ladder.
   * `RT-COMPATIBILITY-MATRIX` -- 23.16, the compatibility matrix.
   * `MULTITRACK-SEAL` -- 23.17, the full matrix, the FRF/Gemel chain and the seal.
@@ -63,8 +64,8 @@ The seventeen courts, and the subphase that lands each
 Every one but `RT-RELEASE-CATALOG`, `RT-AUTHORITY-NODES`, `RT-ATLAS-PARAMETERIZATION`,
 `RT-LINEAGE-EDGES`, `RT-ENTITY-LINEAGE`, `RT-DELTA-ENGINE`, `RT-ABI-HISTORY-FACADES`,
 `RT-SEMANTIC-COURTS`, `RT-COMPATIBILITY-VIEWS`, `RT-HISTORICAL-POPULATION`,
-`RT-DOWNSTREAM-MULTITRACK`, `RT-COMPATIBILITY-EDGES` and
-`RT-NEGATIVE-OBLIGATIONS` is
+`RT-DOWNSTREAM-MULTITRACK`, `RT-COMPATIBILITY-EDGES`,
+`RT-NEGATIVE-OBLIGATIONS` and `RT-SECURITY-LINEAGE` is
 `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
 directional and dimension-specific, cross-version receipts are never inherited, and a historical
@@ -152,6 +153,11 @@ import historical_population  # noqa: E402
 # record from the raw build/run outputs the artefact carries through the same code path the artefact
 # was produced by (never a hand-typed outcome) and re-derives the epoch coverage a mutation moves.
 import downstream_multitrack  # noqa: E402
+# The Phase-23.14 security-lineage generator, imported so the court re-derives the whole plane from
+# the committed source, catalogue, default-authority alias and divergence register through the same
+# code path the artefact was produced by (never a typed disposition, a hand-listed fix or a
+# re-adopted behaviour) and re-reads every cited evidence path.
+import security_lineage  # noqa: E402
 # The candidate version the Phase-17 corpus names, read from the one manifest knob so the
 # distinctness check cannot drift from `Cargo.toml`.
 import gen_frf_courts  # noqa: E402
@@ -238,6 +244,14 @@ DOWNSTREAM_MULTITRACK = REPO_ROOT / "forensics" / "multitrack" / "downstream-mul
 PHASE17_CORPUS = REPO_ROOT / "forensics" / "atlas" / "downstream-corpus.json"
 PHASE17_PROGRAMS = ("curl", "git", "haproxy", "nginx", "openssh", "python")
 
+# 23.14's subject: the security-lineage plane, the frozen source snapshot it is derived from, the
+# divergence register and policy it references, and the default-authority alias it reasons about
+# (that alias is `DEFAULT_AUTHORITY_ALIAS`, defined with 23.3's subject above).
+SECURITY_LINEAGE = REPO_ROOT / "forensics" / "multitrack" / "security-lineage.json"
+SECURITY_SOURCE = REPO_ROOT / "forensics" / "multitrack" / "security-source.json"
+SECURITY_DIVERGENCE = REPO_ROOT / "forensics" / "divergence-obligations.json"
+SECURITY_POLICY = REPO_ROOT / "docs" / "SECURITY_DIVERGENCE_POLICY.md"
+
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 # 23.1's court, and the identity its subject must begin at. The root is upstream's first real
@@ -253,6 +267,7 @@ SEMANTIC_COURTS_COURT = "RT-SEMANTIC-COURTS"
 COMPATIBILITY_VIEWS_COURT = "RT-COMPATIBILITY-VIEWS"
 COMPATIBILITY_EDGES_COURT = "RT-COMPATIBILITY-EDGES"
 NEGATIVE_OBLIGATIONS_COURT = "RT-NEGATIVE-OBLIGATIONS"
+SECURITY_LINEAGE_COURT = "RT-SECURITY-LINEAGE"
 HISTORICAL_POPULATION_COURT = "RT-HISTORICAL-POPULATION"
 DOWNSTREAM_MULTITRACK_COURT = "RT-DOWNSTREAM-MULTITRACK"
 ROOT_RELEASE = "openssl-0.9.1c"
@@ -287,6 +302,7 @@ COURTS: list[tuple[str, str]] = [
     (COMPATIBILITY_VIEWS_COURT, "_compatibility_views_court"),
     (COMPATIBILITY_EDGES_COURT, "_compatibility_edges_court"),
     (NEGATIVE_OBLIGATIONS_COURT, "_negative_obligations_court"),
+    (SECURITY_LINEAGE_COURT, "_security_lineage_court"),
     (HISTORICAL_POPULATION_COURT, "_historical_population_court"),
     (DOWNSTREAM_MULTITRACK_COURT, "_downstream_multitrack_court"),
 ]
@@ -294,7 +310,6 @@ COURTS: list[tuple[str, str]] = [
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-SECURITY-LINEAGE": "23.14 -- the security lineage",
     "RT-SUPPORT-STATUS": "23.15 -- the support-status ladder",
     "RT-COMPATIBILITY-MATRIX": "23.16 -- the compatibility matrix",
     "MULTITRACK-SEAL": "23.17 -- the full matrix, the FRF/Gemel chain and the seal",
@@ -3725,6 +3740,416 @@ def _negative_obligations_court(name: str) -> dict:
     }
 
 
+def _security_evidence_problems(oid: str, entry: object) -> list[str]:
+    """Every way one security evidence entry fails: it is not an object, or it names no source, or
+    a repo-relative path is absent or not content-addressed. A URL entry carries the SHA-256 of the
+    bytes fetched at acquisition time and is bound by the frozen snapshot, so it is not re-read."""
+    if not isinstance(entry, dict):
+        return [f"{oid}: an evidence entry is not an object"]
+    path = entry.get("path")
+    url = entry.get("url")
+    if path is not None:
+        p = REPO_ROOT / str(path)
+        if not p.is_file():
+            return [f"{oid}: evidence path {path!r} is absent"]
+        if entry.get("sha256") != sha256_file(p):
+            return [f"{oid}: evidence {path!r} is not content-addressed (recorded sha256 does not "
+                    f"match the file)"]
+        return []
+    if url is None:
+        return [f"{oid}: an evidence entry names neither a repo path nor a URL"]
+    return []
+
+
+def security_lineage_problems(body: dict, catalog: dict, lineage: dict, source: dict,
+                              divergence: dict, authority_ids: set[str],
+                              authority_node_releases: set[str]) -> list[str]:
+    """Every way the committed security-lineage plane fails this court's subject.
+
+    A pure function of the committed evidence, so the sensitivity control mutates one and
+    re-checks. It establishes that every vulnerability identity carries an affected range, at
+    least one branch fix and a disposition from the closed vocabulary; that every branch-fix
+    observation is schema-valid, maps to the maintained branch of the release it fixes, and
+    records an unavailable-source identifier as an external reference and **never** as an
+    authority; that no disposition re-adopts a fixed behaviour (a `preserve_vulnerable_behaviour`
+    disposition, or a `safe_divergence` with no recorded divergence to rest on, is a finding); that
+    the `security_backport` edges the observed fixes establish are present in the authority
+    lineage with their `security_reference`; that the reference authority is the committed alias;
+    and that the whole plane reproduces from the committed evidence through the same generator.
+    """
+    problems: list[str] = []
+    observations = body.get("observations") or []
+    vulnerabilities = body.get("vulnerabilities") or []
+    by_id = {o.get("observation_id"): o for o in observations}
+    if not observations:
+        problems.append("the security-lineage plane carries no branch-fix observation")
+    if not vulnerabilities:
+        problems.append("the security-lineage plane carries no vulnerability identity")
+
+    catalog_by_id = {n["release_id"]: n for n in catalog.get("nodes", [])}
+    catalog_by_version = {n["display_version"]: n for n in catalog.get("nodes", [])}
+    divergence_ids = {row.get("id") for row in divergence.get("rows", [])}
+
+    # 1. every vulnerability identity: a range, a fix, a disposition that does not reintroduce.
+    seen: set[str] = set()
+    for v in vulnerabilities:
+        vid = v.get("vulnerability_id") or "<no vulnerability_id>"
+        if vid in seen:
+            problems.append(f"{vid}: duplicate vulnerability identity")
+        seen.add(vid)
+        ranges = v.get("affected_ranges") or []
+        if not ranges:
+            problems.append(f"{vid}: carries no affected range")
+        for r in ranges:
+            if security_lineage.parse_range(r) is None:
+                problems.append(f"{vid}: affected range {r!r} is not a `from ... before ...` range")
+        fixes = v.get("branch_fixes") or []
+        if not fixes:
+            problems.append(f"{vid}: carries no branch fix")
+        for fid in fixes:
+            if fid not in by_id:
+                problems.append(f"{vid}: names branch fix {fid!r}, which is not an observation")
+        if v.get("severity") not in multitrack_schemas.SECURITY_SEVERITIES:
+            problems.append(f"{vid}: severity {v.get('severity')!r} is outside the vocabulary")
+        disp = v.get("candidate_disposition")
+        basis = v.get("candidate_disposition_basis") or {}
+        if disp == security_lineage.FORBIDDEN_DISPOSITION:
+            problems.append(f"{vid}: candidate disposition {disp!r} would reintroduce a fixed "
+                            f"behaviour -- the no-reintroduction rule is failed")
+        elif disp not in multitrack_schemas.SECURITY_DISPOSITIONS:
+            problems.append(f"{vid}: candidate disposition {disp!r} is outside the vocabulary")
+        if disp == "safe_divergence":
+            refs = basis.get("divergence_references") or []
+            if not refs:
+                problems.append(f"{vid}: a safe divergence is asserted with no recorded "
+                                f"divergence to rest on")
+            for d in refs:
+                if d not in divergence_ids:
+                    problems.append(f"{vid}: names divergence {d!r}, which the register does not "
+                                    f"carry")
+        elif disp == "unresolved" and not basis.get("reason"):
+            problems.append(f"{vid}: an unresolved disposition carries no reason")
+        elif disp == "never_contained" and (basis.get("divergence_references") or []):
+            problems.append(f"{vid}: a never_contained disposition cites a divergence")
+        if v.get("reintroduced") is not False:
+            problems.append(f"{vid}: reintroduced is not the literal false")
+
+    # 2. every branch fix: schema-valid, the right branch, an external reference or a node.
+    for o in observations:
+        oid = o.get("observation_id") or "<no observation_id>"
+        problems += [f"{oid}: {p}" for p in
+                     multitrack_schemas.validate_security_observation(o)]
+        vid = o.get("vulnerability_id")
+        if vid not in seen:
+            problems.append(f"{oid}: vulnerability {vid!r} is not an identity the plane carries")
+        if o.get("reference") != vid:
+            problems.append(f"{oid}: reference {o.get('reference')!r} disagrees with its "
+                            f"vulnerability {vid!r}")
+        if o.get("authority_id") is not None:
+            problems.append(f"{oid}: a branch fix names an authority {o.get('authority_id')!r}; a "
+                            f"fix release is a release reference, not an authority")
+        node = catalog_by_id.get(o.get("release_id")) or catalog_by_version.get(o.get("fixed_in"))
+        try:
+            expected = (security_lineage.branch_of(node["display_version"]) if node
+                        else security_lineage.branch_of(str(o.get("fixed_in"))))
+        except Exception as exc:  # noqa: BLE001 -- a fixed string the model cannot decode
+            problems.append(f"{oid}: fixed_in {o.get('fixed_in')!r} is not a decodable version: "
+                            f"{exc}")
+            expected = None
+        if expected is not None and o.get("branch") != expected:
+            problems.append(f"{oid}: branch {o.get('branch')!r} does not map to the maintained "
+                            f"branch {expected!r} of fixed release {o.get('fixed_in')!r}")
+        rng = security_lineage.parse_range(o.get("affected") or "")
+        if rng is None:
+            problems.append(f"{oid}: affected {o.get('affected')!r} is not a `from ... before ...` "
+                            f"range")
+        elif rng[1] != o.get("fixed_in"):
+            problems.append(f"{oid}: affected range fixes {rng[1]!r} but the row records "
+                            f"fixed_in {o.get('fixed_in')!r}")
+        external = node is None
+        if o.get("external_release_reference") is not external:
+            problems.append(
+                f"{oid}: external_release_reference is "
+                f"{o.get('external_release_reference')!r} but fixed release "
+                f"{o.get('fixed_in')!r} is {'not ' if external else ''}a catalogue node; an "
+                f"unavailable-source identifier is an external reference, never admitted as an "
+                f"authority")
+        if external:
+            rid = o.get("release_id")
+            if rid in authority_node_releases or rid in authority_ids:
+                problems.append(f"{oid}: external identifier {rid!r} is admitted as an authority")
+            if o.get("source_available") is not False:
+                problems.append(f"{oid}: an external reference records source_available true")
+        elif o.get("release_id") != node["release_id"]:
+            problems.append(f"{oid}: release_id {o.get('release_id')!r} is not the catalogue node "
+                            f"{node['release_id']!r} its fixed version resolves to")
+        vrec = next((v for v in vulnerabilities if v.get("vulnerability_id") == vid), None)
+        if vrec is not None and o.get("candidate_disposition") != vrec.get("candidate_disposition"):
+            problems.append(f"{oid}: candidate disposition disagrees with its vulnerability "
+                            f"identity")
+        for entry in o.get("evidence") or []:
+            problems += _security_evidence_problems(oid, entry)
+
+    # 3. the security_backport edges the observed fixes establish are in the lineage.
+    expected_edges = {e["edge_id"]: e for e in security_lineage.security_backport_edges(
+        catalog.get("nodes", []))}
+    lineage_security = {e["edge_id"]: e for e in lineage.get("edges", [])
+                        if e.get("kind") == "security_backport"}
+    if set(body.get("backport_edges") or []) != set(expected_edges):
+        problems.append("the plane's backport_edges do not reproduce from the committed source "
+                        "and catalogue")
+    for eid, e in expected_edges.items():
+        le = lineage_security.get(eid)
+        if le is None:
+            problems.append(f"backport edge {eid} the observed fixes establish is absent from the "
+                            f"authority lineage")
+        elif le.get("security_reference") != e["security_reference"]:
+            problems.append(f"backport edge {eid} names security_reference "
+                            f"{le.get('security_reference')!r}, not {e['security_reference']!r}")
+    for eid in sorted(set(lineage_security) - set(expected_edges)):
+        problems.append(f"the lineage carries security_backport edge {eid}, which no observed "
+                        f"vulnerability establishes")
+
+    # 4. counts and the reference authority agree with the rows.
+    counts = body.get("counts") or {}
+    if counts.get("vulnerabilities") != len(vulnerabilities):
+        problems.append("counts.vulnerabilities does not match the identity rows")
+    if counts.get("branch_fixes") != len(observations):
+        problems.append("counts.branch_fixes does not match the observation rows")
+    alias = read_json(DEFAULT_AUTHORITY_ALIAS)
+    ra = body.get("reference_authority") or {}
+    if (ra.get("authority_id") != alias.get("authority_id")
+            or ra.get("release_id") != alias.get("maintained_candidate")):
+        problems.append("the plane's reference authority is not the committed default-authority "
+                        "alias")
+
+    # 5. the whole plane reproduces from the committed evidence through the same generator.
+    try:
+        derived = security_lineage.derive_body()
+    except SystemExit as exc:
+        problems.append(f"the security lineage could not be re-derived: {exc}")
+        derived = None
+    if derived is not None and derived != body:
+        problems.append("the committed security lineage does not reproduce from the committed "
+                        "evidence through the same generator: a disposition, a fix or a subsystem "
+                        "was typed")
+    return problems
+
+
+def security_lineage_property_findings(body: dict, source: dict) -> list[str]:
+    """The property findings: every source vulnerability the plane did not bind, and every
+    unresolved observation. These are findings about the *property* the unit names -- the whole
+    lineage observed and bound -- and they are why a passing `RT-SECURITY-LINEAGE` is an instrument,
+    never a statement that the lineage is secure."""
+    findings: list[str] = []
+    observed = {v.get("vulnerability_id") for v in body.get("vulnerabilities") or []}
+    for ref in sorted(set(source["source"]["all_references"]) - observed):
+        findings.append(f"unobserved vulnerability {ref}: the source records it and this plane "
+                        f"does not bind it")
+    for v in body.get("vulnerabilities") or []:
+        if v.get("candidate_disposition") == "unresolved":
+            basis = v.get("candidate_disposition_basis") or {}
+            findings.append(f"vulnerability {v.get('vulnerability_id')} is unresolved: "
+                            f"{basis.get('reason', '')}")
+    return findings
+
+
+def security_lineage_sensitivity_control(body: dict, catalog: dict, lineage: dict, source: dict,
+                                         divergence: dict, authority_ids: set[str],
+                                         authority_node_releases: set[str]) -> dict:
+    """Prove the court can fail: seed five mutations and require each caught.
+
+    The honest plane must yield **zero** problems (specificity), and each seeded mutation -- a CVE
+    fix mapped to the wrong branch, a vulnerable behaviour marked preserved, a safe divergence
+    asserted with no recorded divergence, an extended-support identifier admitted as an authority,
+    and a vulnerability with its branch fix dropped -- must be caught.
+    """
+    def check(b: dict) -> list[str]:
+        return security_lineage_problems(b, catalog, lineage, source, divergence, authority_ids,
+                                         authority_node_releases)
+
+    base = check(body)
+    specificity = not base
+
+    # (a) map a CVE fix to the wrong maintained branch.
+    wrong_branch = copy.deepcopy(body)
+    obs = next((o for o in wrong_branch["observations"] if o["branch"] == "1.0.2"), None)
+    if obs is None:
+        obs = wrong_branch["observations"][0]
+    obs["branch"] = "3.0" if obs["branch"] != "3.0" else "1.0.2"
+    wrong_branch_id = obs["observation_id"]
+    wrong_branch_findings = check(wrong_branch)
+    caught_branch = any("does not map to the maintained branch" in f for f in wrong_branch_findings)
+
+    # (b) mark a vulnerable behaviour as preserved.
+    preserved = copy.deepcopy(body)
+    preserved["vulnerabilities"][0]["candidate_disposition"] = \
+        security_lineage.FORBIDDEN_DISPOSITION
+    preserved_id = preserved["vulnerabilities"][0]["vulnerability_id"]
+    preserved_findings = check(preserved)
+    caught_preserve = any("would reintroduce a fixed behaviour" in f for f in preserved_findings)
+
+    # (c) assert a safe divergence with no recorded divergence to rest on.
+    nodiv = copy.deepcopy(body)
+    target = next((v for v in nodiv["vulnerabilities"]
+                   if v["candidate_disposition"] == "never_contained"), None)
+    if target is None:
+        return {"honest": False, "reason": "the plane has no never_contained vulnerability"}
+    target["candidate_disposition"] = "safe_divergence"
+    target["candidate_disposition_basis"] = {"disposition": "safe_divergence",
+                                             "basis": "injected", "reason": "injected",
+                                             "divergence_references": []}
+    nodiv_id = target["vulnerability_id"]
+    nodiv_findings = check(nodiv)
+    caught_nodiv = any("no recorded divergence to rest on" in f for f in nodiv_findings)
+
+    # (d) admit an extended-support identifier as an authority.
+    admitted = copy.deepcopy(body)
+    ext = next((o for o in admitted["observations"] if o["external_release_reference"]), None)
+    if ext is None:
+        return {"honest": False, "reason": "the plane has no external release reference"}
+    ext["authority_id"] = sorted(authority_ids)[0] if authority_ids else "openssl-3.6.4-production"
+    admitted_id = ext["observation_id"]
+    admitted_findings = check(admitted)
+    caught_authority = any("is admitted as an authority" in f or "names an authority" in f
+                           for f in admitted_findings)
+
+    # (e) drop a vulnerability's branch fix.
+    dropped = copy.deepcopy(body)
+    dropped["vulnerabilities"][0]["branch_fixes"] = []
+    dropped_id = dropped["vulnerabilities"][0]["vulnerability_id"]
+    dropped_findings = check(dropped)
+    caught_nofix = any("carries no branch fix" in f for f in dropped_findings)
+
+    return {
+        "baseline_problems": len(base),
+        "injected_wrong_branch": wrong_branch_id,
+        "injected_wrong_branch_findings": len(wrong_branch_findings),
+        "injected_preserved_behaviour": preserved_id,
+        "injected_preserved_behaviour_findings": len(preserved_findings),
+        "injected_safe_divergence_without_record": nodiv_id,
+        "injected_safe_divergence_without_record_findings": len(nodiv_findings),
+        "injected_external_as_authority": admitted_id,
+        "injected_external_as_authority_findings": len(admitted_findings),
+        "injected_dropped_branch_fix": dropped_id,
+        "injected_dropped_branch_fix_findings": len(dropped_findings),
+        "specificity_holds": specificity,
+        "caught_wrong_branch": caught_branch,
+        "caught_preserved_behaviour": caught_preserve,
+        "caught_safe_divergence_without_record": caught_nodiv,
+        "caught_external_as_authority": caught_authority,
+        "caught_dropped_branch_fix": caught_nofix,
+        "honest": bool(specificity and caught_branch and caught_preserve and caught_nodiv
+                       and caught_authority and caught_nofix),
+    }
+
+
+def _security_lineage_court(name: str) -> dict:
+    """`RT-SECURITY-LINEAGE`: 23.14's court, the historical security lineage.
+
+    Stages no probe. It reads `forensics/multitrack/security-lineage.json`, re-deriving the whole
+    plane from the committed source, catalogue, default-authority alias and divergence register
+    through the same generator, and establishes that every vulnerability carries an affected
+    range, per-branch fixes and a candidate disposition; that each branch fix maps to the correct
+    maintained branch; that no disposition re-adopts a fixed behaviour (a preserved vulnerable
+    behaviour, or a safe divergence with no recorded divergence, is a finding); that an
+    unavailable-source identifier is an external release reference and is never admitted as an
+    authority; and that the `security_backport` edges the observed fixes establish are present in
+    the authority lineage. Five seeded mutations are each caught with specificity holding. The
+    property -- the whole lineage observed and bound -- is NOT_CLAIMED and the unobserved source
+    records are named as findings, so a passing `RT-SECURITY-LINEAGE` is an instrument, never a
+    statement that the lineage is secure.
+    """
+    problems: list[str] = []
+    for path, label in (
+        (SECURITY_LINEAGE, "security-lineage plane"),
+        (SECURITY_SOURCE, "security source snapshot"),
+        (CATALOG, "release catalogue"),
+        (LINEAGE, "authority lineage"),
+        (SECURITY_DIVERGENCE, "divergence register"),
+        (SECURITY_POLICY, "security divergence policy"),
+        (DEFAULT_AUTHORITY_ALIAS, "default authority alias"),
+    ):
+        if not path.is_file():
+            problems.append(f"the {label} {rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    body = read_json(SECURITY_LINEAGE)
+    catalog = read_json(CATALOG)
+    lineage = read_json(LINEAGE)
+    source = read_json(SECURITY_SOURCE)
+    divergence = read_json(SECURITY_DIVERGENCE)
+    authority_ids = {a["id"] for a in read_json(AUTHORITY_REGISTRY).get("authorities", [])}
+    authority_node_releases = {n["release_id"]
+                               for n in read_json(AUTHORITY_NODES).get("nodes", [])}
+    problems += security_lineage_problems(body, catalog, lineage, source, divergence, authority_ids,
+                                          authority_node_releases)
+    control = security_lineage_sensitivity_control(body, catalog, lineage, source, divergence,
+                                                   authority_ids, authority_node_releases)
+    findings = security_lineage_property_findings(body, source)
+    verdict = "pass" if (not problems and control.get("honest")) else "fail"
+
+    counts = body.get("counts") or {}
+    inventory = [{
+        "observation_id": o.get("observation_id"),
+        "vulnerability_id": o.get("vulnerability_id"),
+        "branch": o.get("branch"),
+        "fixed_in": o.get("fixed_in"),
+        "release_id": o.get("release_id"),
+        "external": o.get("external_release_reference"),
+    } for o in body.get("observations") or []]
+    identities = [{
+        "vulnerability_id": v.get("vulnerability_id"),
+        "severity": v.get("severity"),
+        "branches": v.get("branches"),
+        "candidate_disposition": v.get("candidate_disposition"),
+        "subsystem": (v.get("subsystem") or {}).get("token"),
+        "fips_impact": (v.get("fips_impact") or {}).get("impact"),
+        "branch_fixes": len(v.get("branch_fixes") or []),
+    } for v in body.get("vulnerabilities") or []]
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/multitrack/security-lineage.json and re-derives "
+            "the whole plane from the frozen source snapshot, the release catalogue, the "
+            "default-authority alias and the divergence register through the same generator. It "
+            "establishes that every vulnerability identity carries an affected range, per-branch "
+            "fixes and a candidate disposition; that a branch fix maps to the correct maintained "
+            "branch; that no disposition re-adopts a fixed behaviour, so a preserved vulnerable "
+            "behaviour or a safe divergence with no recorded divergence is a finding; that an "
+            "unavailable-source (extended-support) identifier is an external release reference "
+            "and is never admitted as an authority; and that the security_backport edges the "
+            "observed fixes establish are present in the authority lineage. A CVE fix mapped to "
+            "the wrong branch, a vulnerable behaviour marked preserved, a safe divergence with "
+            "no recorded divergence, an extended-support identifier admitted as an authority and "
+            "a dropped branch fix are each detected with specificity holding "
+            "(docs/SECURITY_DIVERGENCE_POLICY.md sections 1 and 3; "
+            "docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 0, 3.7 and 4.6)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the security-lineage court reads a committed evidence plane and stages no "
+            "artifacts/phase23/probes/<probe>.{authority,candidate} pair, so it takes no "
+            "transcript to diff and carries no FRF declaration"
+        ),
+        "reference_authority": body.get("reference_authority"),
+        "counts": counts,
+        "coverage": body.get("coverage"),
+        "dispositions": body.get("dispositions"),
+        "identities": identities,
+        "observations": inventory,
+        "backport_edges": body.get("backport_edges"),
+        "boundary": body.get("boundary"),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def _reseal_population(body: dict) -> dict:
     """`body` with its content hash recomputed, so a mutation is caught on substance alone."""
     out = copy.deepcopy(body)
@@ -4732,12 +5157,29 @@ def main(argv: list[str]) -> int:
             "admitted. A provider symbol present in a pre-provider authority's view, a "
             "post-1.1.0 layout declared public, an ENGINE symbol retained in a 4.x view, an "
             "obligation with no evidence and a future symbol leaked into an earlier authority's "
-            "view are each detected with specificity holding. Phase 23 "
+            "view are each detected with specificity holding. "
+            "`RT-SECURITY-LINEAGE` is 23.14's court: the historical security lineage. It stages no "
+            "probe and reads forensics/multitrack/security-lineage.json, re-deriving the whole "
+            "plane from the frozen source snapshot, the release catalogue, the default-authority "
+            "alias and the divergence register through the same generator. It establishes that "
+            "every vulnerability carries an affected range, per-branch fixes and a candidate "
+            "disposition; that a branch fix maps to the correct maintained branch; that no "
+            "disposition re-adopts a fixed behaviour, so a preserved vulnerable behaviour or a "
+            "safe divergence with no recorded divergence is a finding; that an unavailable-source "
+            "(extended-support) identifier is an external release reference and is never admitted "
+            "as an authority; and that the security_backport edges the observed fixes establish "
+            "are present in the authority lineage. A CVE fix mapped to the wrong branch, a "
+            "vulnerable behaviour marked preserved, a safe divergence with no recorded "
+            "divergence, an extended-support identifier admitted as an authority and a dropped "
+            "branch fix are each detected with specificity holding. The property -- the whole "
+            "lineage observed and bound -- is NOT_CLAIMED and the unobserved source records are "
+            "named as property findings, so a passing RT-SECURITY-LINEAGE is an instrument, never "
+            "a statement that the lineage is secure. Phase 23 "
             "owns no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining four courts -- "
-            "RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, "
+            "over a symbol set is its evidence, and its remaining three courts -- "
+            "RT-SUPPORT-STATUS, "
             "RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
-            "the subphases that land them (23.14 through 23.17). The one thing the model forbids "
+            "the subphases that land them (23.15 through 23.17). The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "
@@ -4774,6 +5216,10 @@ def main(argv: list[str]) -> int:
         InputRef(name="compatibility-views", path=COMPATIBILITY_VIEWS),
         InputRef(name="compatibility-edges", path=COMPATIBILITY_EDGES),
         InputRef(name="negative-obligations", path=NEGATIVE_OBLIGATIONS),
+        InputRef(name="security-lineage", path=SECURITY_LINEAGE),
+        InputRef(name="security-source", path=SECURITY_SOURCE),
+        InputRef(name="security-divergence-register", path=SECURITY_DIVERGENCE),
+        InputRef(name="security-divergence-policy", path=SECURITY_POLICY),
         InputRef(name="historical-population", path=HISTORICAL_POPULATION),
         InputRef(name="downstream-multitrack", path=DOWNSTREAM_MULTITRACK),
         InputRef(name="phase17-downstream-corpus", path=PHASE17_CORPUS),
@@ -5056,6 +5502,36 @@ def main(argv: list[str]) -> int:
                       f"{row['reason']}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == SECURITY_LINEAGE_COURT:
+            c = r["control"]
+            counts = r["counts"] or {}
+            print(f"  {r['court']:<32} pass   (no probe, {counts.get('vulnerabilities')} "
+                  f"vulnerabilit(y/ies), {counts.get('branch_fixes')} branch fix(es) "
+                  f"{counts.get('by_branch')}; dispositions={counts.get('by_disposition')}; "
+                  f"external={counts.get('external_release_references')} "
+                  f"catalogued={counts.get('catalogued_fixes')}; "
+                  f"backport_edges={counts.get('backport_edges')}; "
+                  f"observed={r['coverage'].get('observed')}/{r['coverage'].get('source_records')}; "
+                  f"{len(r['findings'])} property finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"wrong-branch->{c['injected_wrong_branch_findings']} "
+                  f"preserved->{c['injected_preserved_behaviour_findings']} "
+                  f"no-divergence->{c['injected_safe_divergence_without_record_findings']} "
+                  f"external-authority->{c['injected_external_as_authority_findings']} "
+                  f"dropped-fix->{c['injected_dropped_branch_fix_findings']} problem(s))")
+            for ident in r["identities"]:
+                print(f"      {ident['vulnerability_id']:<16} {ident['severity']:<8} "
+                      f"{ident['candidate_disposition']:<16} "
+                      f"{ident['subsystem']:<14} fips={ident['fips_impact']:<10} "
+                      f"fixes={ident['branch_fixes']:<2} branches={','.join(ident['branches'])}")
+            for o in r["observations"]:
+                tag = "EXTERNAL" if o["external"] else (o["release_id"] or "")
+                print(f"      branch-fix {o['vulnerability_id']:<16} {o['branch']:<7} "
+                      f"{o['fixed_in']:<10} {tag}")
+            for f in r["findings"][:3]:
+                print(f"      property finding: {f}")
+            if len(r["findings"]) > 3:
+                print(f"      property finding: ... and {len(r['findings']) - 3} more")
         elif r["verdict"] != "pass":
             print(f"  {r['court']:<32} FAIL   stage={r.get('stage', 'derive')}")
             for p in (r.get("problems") or [])[:12]:

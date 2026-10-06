@@ -740,6 +740,10 @@
       "observations": 32,
       "verdict": "pass"
     },
+    "RT-SECURITY-LINEAGE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-SELFTEST": {
       "observations": 71,
       "verdict": "pass"
@@ -914,7 +918,7 @@
     "phase20": 0,
     "phase21": 0,
     "phase22": 0,
-    "phase23": 4,
+    "phase23": 3,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

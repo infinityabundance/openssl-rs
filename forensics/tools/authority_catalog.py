@@ -76,6 +76,11 @@ from atlas_common import (  # noqa: E402
 )
 
 import multitrack_schemas as mts  # noqa: E402
+# 23.14's security-backport edge builder. The security lineage is where a `security_backport` edge
+# comes from: a vulnerability fixed in two or more catalogued releases types the relationship
+# between them. Importing the builder keeps the edge and its observation one derived fact rather
+# than two, so they cannot disagree.
+import security_lineage  # noqa: E402
 
 SNAPSHOT = REPO_ROOT / "forensics" / "multitrack" / "release-archaeology.json"
 OUT_CATALOG = REPO_ROOT / "forensics" / "release-catalog.json"
@@ -111,14 +116,12 @@ PRERELEASE_MARKERS = ("alpha", "beta", "rc", "pre")
 # The kinds the lineage vocabulary names but the catalogue's evidence cannot yet settle. Each is
 # recorded with the reason it is absent, so an omitted relationship is a stated gap rather than a
 # silent default (the plan's section 3.6 discipline applied to a missing edge).
+# `security_backport` is **not** here: 23.14's security lineage names the vulnerabilities fixed in
+# two or more catalogued releases, and `build_lineage` lands those edges, so the kind is present.
 ABSENT_EDGE_KINDS: dict[str, str] = {
     "observed_compatibility": (
         "no candidate-to-authority measurement exists at 23.4; the compatibility courts and views "
         "land at 23.9 and 23.12, so no observed relationship is asserted"
-    ),
-    "security_backport": (
-        "the security lineage lands at 23.14; until a vulnerability observation names a fixed-in "
-        "release there is no backport to assert, so the kind is absent rather than guessed"
     ),
 }
 
@@ -513,6 +516,17 @@ def build_lineage(nodes: list[dict], by_series: dict[str, list[dict]],
                 "a declared relationship (upstream's ABI promise), never a candidate measurement",
             ], provenance=[rel(SNAPSHOT), source["timeline_url"], source["release_strategy_url"],
                            "docs/ABI_POLICY.md"], dimension="abi", declared=True)
+
+    # The security lineage's backport edges, landed by 23.14. A vulnerability fixed in two or more
+    # catalogued releases types a `security_backport` edge between them, read forward in time; the
+    # fixed identifier whose source is not publicly available is an external reference and is not
+    # an endpoint. This is the kind 23.4 recorded absent-with-reason until a vulnerability
+    # observation named a fixed release.
+    for e in security_lineage.security_backport_edges(nodes):
+        if e["edge_id"] in seen_ids:
+            continue
+        seen_ids.add(e["edge_id"])
+        edges.append(e)
 
     # Canonical parents are the version-structural edges; git_ancestry corroborates them.
     incoming: dict[str, list[dict]] = {}

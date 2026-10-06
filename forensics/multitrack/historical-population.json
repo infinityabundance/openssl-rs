@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "boundary": "the population covers the catalogue and records a status per node; it is not a compatibility claim about any release. The `downstream-evidenced` rung is read from forensics/multitrack/downstream-multitrack.json (23.11): a node attains it when an unmodified real downstream consumer was built against its authority and ran a real workload, and it may be attained without the oracle-to-oracle `runtime-evidenced` rung, because the two are independent evidence planes rather than a contiguous prefix. An unavailable release is archaeology -- studied, catalogued, and never runtime-compatible -- and each major ABI epoch carries at least one built representative: 0.9.8zh (pre-1.0), 1.0.2u (1.0.x), 1.1.1w (1.1.x), 3.0.0 (3.x) and 3.6.3/3.6.4 (3.6+/4.x). The epoch representatives are built in the historical and forensic venues; the profile each was built with is a property of its authority node, not of its release identity",
-    "content_hash": "cde69a04d56facb836988040741dc1e2ce499850b2021919de61fd0260db788f",
+    "content_hash": "9f0093cee11bdaeb9c36029576fd2fa45e080f57e526c057922da371f8e44e54",
     "counts": {
       "built": 6,
       "by_epoch": {
@@ -1974,7 +1974,7 @@
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "02cd32b83ab97fdb56e8b46ba6ad4b5e84e97796c99e22d34f6427f3711c9f9b",
+            "sha256": "4e1c5a25198651819e2db19aeb010c3e808b7162f4c4803d29c2b37dfa092c73",
             "what": "the downstream consumer that exercised this authority"
           }
         ],
@@ -3572,7 +3572,7 @@
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "02cd32b83ab97fdb56e8b46ba6ad4b5e84e97796c99e22d34f6427f3711c9f9b",
+            "sha256": "4e1c5a25198651819e2db19aeb010c3e808b7162f4c4803d29c2b37dfa092c73",
             "what": "the downstream consumer that exercised this authority"
           }
         ],
@@ -4658,7 +4658,7 @@
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "02cd32b83ab97fdb56e8b46ba6ad4b5e84e97796c99e22d34f6427f3711c9f9b",
+            "sha256": "4e1c5a25198651819e2db19aeb010c3e808b7162f4c4803d29c2b37dfa092c73",
             "what": "the downstream consumer that exercised this authority"
           }
         ],
@@ -4703,7 +4703,7 @@
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "02cd32b83ab97fdb56e8b46ba6ad4b5e84e97796c99e22d34f6427f3711c9f9b",
+            "sha256": "4e1c5a25198651819e2db19aeb010c3e808b7162f4c4803d29c2b37dfa092c73",
             "what": "the downstream consumer that exercised this authority"
           }
         ],
@@ -6784,7 +6784,7 @@
           },
           {
             "path": "forensics/multitrack/semantic-courts.json",
-            "sha256": "1bffd84356beb744520695f1b4b10cbf2cc24ee3314f7f95610feda903847eb6",
+            "sha256": "945f81f608438a84744ccaa949f651fbce13395a9172567b096f66411658828e",
             "what": "the oracle-to-oracle semantic court that executed this authority"
           }
         ],
@@ -6834,12 +6834,12 @@
           },
           {
             "path": "forensics/multitrack/semantic-courts.json",
-            "sha256": "1bffd84356beb744520695f1b4b10cbf2cc24ee3314f7f95610feda903847eb6",
+            "sha256": "945f81f608438a84744ccaa949f651fbce13395a9172567b096f66411658828e",
             "what": "the oracle-to-oracle semantic court that executed this authority"
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "02cd32b83ab97fdb56e8b46ba6ad4b5e84e97796c99e22d34f6427f3711c9f9b",
+            "sha256": "4e1c5a25198651819e2db19aeb010c3e808b7162f4c4803d29c2b37dfa092c73",
             "what": "the downstream consumer that exercised this authority"
           },
           {
@@ -7882,7 +7882,7 @@
     {
       "name": "semantic-courts",
       "path": "forensics/multitrack/semantic-courts.json",
-      "sha256": "1bffd84356beb744520695f1b4b10cbf2cc24ee3314f7f95610feda903847eb6"
+      "sha256": "945f81f608438a84744ccaa949f651fbce13395a9172567b096f66411658828e"
     },
     {
       "name": "default-authority",
