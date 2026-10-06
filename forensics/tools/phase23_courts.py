@@ -5,17 +5,20 @@ Each court is an instrument that makes the multitrack authority model of
 `docs/RELEASE_GATES.md` section 1 mechanical over releases and authorities that are already
 admitted, not a differential probe over a symbol set. This stratum owns no exported symbol: it
 emits independently-evidenced compatibility *views*, so its evidence is about the model -- the
-release nodes and their chronology, the authority nodes and their builds, the lineage and entity
-relations between releases, the delta between two nodes, the directional and dimension-specific
-compatibility views and edges, the negative obligations, the security lineage, the support status
-of each node, and the assembled matrix. The method is Phases 3 through 21's where an artefact
+release nodes and their chronology, the authority nodes and their builds, the parameterized atlases
+and their byte-identical proof, the lineage and entity relations between releases, the delta between
+two nodes, the ABI/history façades, the oracle-to-oracle and candidate-to-authority semantic courts,
+the directional and dimension-specific compatibility views and edges, the historical population, the
+downstream consumer per compatibility epoch, the negative obligations, the security lineage, the
+support status of each node, and the assembled matrix. The method is Phases 3 through 21's where an
+artefact
 carries the expectation: each court reads the artefact that holds its subject rather than typing the
 expectation beside it, so the two cannot disagree, and a court whose control is not honest is
 `fail` rather than `pass`.
 
 **Two courts are registered.** 23.1 lands `RT-RELEASE-CATALOG`, the release catalogue and
 lineage court, and 23.2 lands `RT-AUTHORITY-NODES`, the authority-node registry court; the other
-ten courts are named in `PENDING_COURTS` and land with the subphases that
+fifteen courts are named in `PENDING_COURTS` and land with the subphases that
 build the instruments they drive. The registry is the file `run_courts.py` checks is
 reproduced, so a court silently dropped is a finding rather than a smaller green run. This is
 the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this registry,
@@ -25,20 +28,25 @@ The record kinds these courts will populate are defined and self-tested in
 `forensics/tools/multitrack_schemas.py`; the registry records that schema inventory so the record
 kinds are a file the evidence points at rather than prose the plan would have to restate.
 
-The twelve courts, and the subphase that lands each
----------------------------------------------------
+The seventeen courts, and the subphase that lands each
+------------------------------------------------------
   * `RT-RELEASE-CATALOG` -- 23.1, the release-node catalogue and its lineage (registered).
   * `RT-AUTHORITY-NODES` -- 23.2, the authority-node registry (registered).
-  * `RT-LINEAGE-EDGES` -- 23.3, the lineage edges.
-  * `RT-ENTITY-LINEAGE` -- 23.4, the entity lineage.
-  * `RT-DELTA-ENGINE` -- 23.5, the delta engine.
-  * `RT-COMPATIBILITY-VIEWS` -- 23.6, the compatibility views.
-  * `RT-COMPATIBILITY-EDGES` -- 23.7, the directional compatibility edges.
-  * `RT-NEGATIVE-OBLIGATIONS` -- 23.8, the negative obligations.
-  * `RT-SECURITY-LINEAGE` -- 23.9, the security lineage.
-  * `RT-SUPPORT-STATUS` -- 23.10, the support-status ladder.
-  * `RT-COMPATIBILITY-MATRIX` -- 23.11, the compatibility matrix.
-  * `MULTITRACK-SEAL` -- 23.12, the full matrix, the FRF/Gemel chain and the seal.
+  * `RT-ATLAS-PARAMETERIZATION` -- 23.3, the parameterized atlases and the byte-identical proof.
+  * `RT-LINEAGE-EDGES` -- 23.4, the lineage edges.
+  * `RT-ENTITY-LINEAGE` -- 23.5, the entity lineage.
+  * `RT-DELTA-ENGINE` -- 23.6, the delta engine.
+  * `RT-ABI-HISTORY-FACADES` -- 23.7, the ABI / history façades.
+  * `RT-SEMANTIC-COURTS` -- 23.8, the semantic multitrack courts.
+  * `RT-COMPATIBILITY-VIEWS` -- 23.9, the compatibility views.
+  * `RT-HISTORICAL-POPULATION` -- 23.10, the historical population.
+  * `RT-DOWNSTREAM-MULTITRACK` -- 23.11, the downstream multitrack court.
+  * `RT-COMPATIBILITY-EDGES` -- 23.12, the directional compatibility edges.
+  * `RT-NEGATIVE-OBLIGATIONS` -- 23.13, the negative obligations.
+  * `RT-SECURITY-LINEAGE` -- 23.14, the security lineage.
+  * `RT-SUPPORT-STATUS` -- 23.15, the support-status ladder.
+  * `RT-COMPATIBILITY-MATRIX` -- 23.16, the compatibility matrix.
+  * `MULTITRACK-SEAL` -- 23.17, the full matrix, the FRF/Gemel chain and the seal.
 
 Every one but `RT-RELEASE-CATALOG` and `RT-AUTHORITY-NODES` is `pending`. A passing court is an instrument, not a property
 claim, and this stratum makes no one-boolean compatibility claim anywhere: compatibility is
@@ -119,16 +127,21 @@ COURTS: list[tuple[str, str]] = [
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order.
 PENDING_COURTS: dict[str, str] = {
-    "RT-LINEAGE-EDGES": "23.3 -- the lineage edges",
-    "RT-ENTITY-LINEAGE": "23.4 -- the entity lineage",
-    "RT-DELTA-ENGINE": "23.5 -- the delta engine",
-    "RT-COMPATIBILITY-VIEWS": "23.6 -- the compatibility views",
-    "RT-COMPATIBILITY-EDGES": "23.7 -- the directional compatibility edges",
-    "RT-NEGATIVE-OBLIGATIONS": "23.8 -- the negative obligations",
-    "RT-SECURITY-LINEAGE": "23.9 -- the security lineage",
-    "RT-SUPPORT-STATUS": "23.10 -- the support-status ladder",
-    "RT-COMPATIBILITY-MATRIX": "23.11 -- the compatibility matrix",
-    "MULTITRACK-SEAL": "23.12 -- the full matrix, the FRF/Gemel chain and the seal",
+    "RT-ATLAS-PARAMETERIZATION": "23.3 -- parameterize the atlases",
+    "RT-LINEAGE-EDGES": "23.4 -- the lineage edges",
+    "RT-ENTITY-LINEAGE": "23.5 -- the entity lineage",
+    "RT-DELTA-ENGINE": "23.6 -- the delta engine",
+    "RT-ABI-HISTORY-FACADES": "23.7 -- the ABI / history façades",
+    "RT-SEMANTIC-COURTS": "23.8 -- the semantic multitrack courts",
+    "RT-COMPATIBILITY-VIEWS": "23.9 -- the compatibility views",
+    "RT-HISTORICAL-POPULATION": "23.10 -- the historical population",
+    "RT-DOWNSTREAM-MULTITRACK": "23.11 -- the downstream multitrack court",
+    "RT-COMPATIBILITY-EDGES": "23.12 -- the directional compatibility edges",
+    "RT-NEGATIVE-OBLIGATIONS": "23.13 -- the negative obligations",
+    "RT-SECURITY-LINEAGE": "23.14 -- the security lineage",
+    "RT-SUPPORT-STATUS": "23.15 -- the support-status ladder",
+    "RT-COMPATIBILITY-MATRIX": "23.16 -- the compatibility matrix",
+    "MULTITRACK-SEAL": "23.17 -- the full matrix, the FRF/Gemel chain and the seal",
 }
 
 
@@ -793,11 +806,13 @@ def main(argv: list[str]) -> int:
             "never a node. A built-authority claim with no receipt, a dropped required identity "
             "field, and a source digest asserting tag == tarball without proof are each detected "
             "with specificity holding. Phase 23 owns no exported symbol, so no differential probe "
-            "over a symbol set is its evidence, and its remaining ten courts -- RT-LINEAGE-EDGES, "
-            "RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, RT-COMPATIBILITY-VIEWS, "
-            "RT-COMPATIBILITY-EDGES, RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, "
-            "RT-SUPPORT-STATUS, RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
-            "the subphases that land them (23.3 through 23.12). The one thing the model forbids "
+            "over a symbol set is its evidence, and its remaining fifteen courts -- "
+            "RT-ATLAS-PARAMETERIZATION, RT-LINEAGE-EDGES, RT-ENTITY-LINEAGE, RT-DELTA-ENGINE, "
+            "RT-ABI-HISTORY-FACADES, RT-SEMANTIC-COURTS, RT-COMPATIBILITY-VIEWS, "
+            "RT-HISTORICAL-POPULATION, RT-DOWNSTREAM-MULTITRACK, RT-COMPATIBILITY-EDGES, "
+            "RT-NEGATIVE-OBLIGATIONS, RT-SECURITY-LINEAGE, RT-SUPPORT-STATUS, "
+            "RT-COMPATIBILITY-MATRIX and MULTITRACK-SEAL -- are pending with "
+            "the subphases that land them (23.3 through 23.17). The one thing the model forbids "
             "everywhere is a single boolean: compatibility is directional and "
             "dimension-specific, a cross-version receipt is never inherited, an authority is "
             "named explicitly and singularly, and a historical vulnerability is observed but "

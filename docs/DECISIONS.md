@@ -35531,3 +35531,54 @@ negative obligations as a first-class record kind -- `must_exist`, `must_not_exi
 opaque, or must not exist is a checkable claim rather than an omission. This is the discipline the
 project already applies where absence is load-bearing (a `NOEXIST` `.num` row, a deliberately
 absent feature); Phase 23 gives it the same vocabulary as presence.
+
+## D537 -- the Phase-23 stratum is reconciled to the brief: five dropped slices are restored, and the plan is corrected by measurement
+
+Phase 23's first plan (`docs/PHASE-23-MULTITRACK-SUBPHASES.md`), its contract ledger
+(`forensics/phase23-obligations.json` with its generator `forensics/tools/phase23_obligations.py`)
+and its runner (`forensics/tools/phase23_courts.py` with the registry `artifacts/phase23/COURTS.json`)
+organized the stratum into **twelve** units. The phase brief's execution order (its §52) requires
+**seventeen**: the twelve plus five capabilities the first draft never numbered. This entry records
+the reconciliation and its reason.
+
+**The rule the reconciliation applies: a brief-required slice is never silently dropped.** The five
+omitted slices are, with the brief section each came from:
+
+1. **Parameterize the atlases** (brief §52 23.3, §8) -- the Phase 1 / Phase 22 archaeology generators
+generalized to be parameterized by authority identity (no `phase1_old.py` per version), with the
+current 3.6.4 atlas proved **byte-identical** under the parameterization.
+2. **ABI / history façades** (brief §52 23.7, §18/§19/§21/§22) -- the historical public-layout
+(`#[repr(C)]`) façades, the prototype wrappers, the initialization/threading epochs and the
+ENGINE -> Provider -> no-ENGINE architecture model, as narrow adapters over the shared
+implementation.
+3. **Semantic multitrack courts** (brief §52 23.8, §12) -- oracle-to-oracle (authority A vs authority
+B) and candidate-to-authority courts, with side-specific adapters that emit the same normalized
+observation vocabulary.
+4. **Historical population** (brief §52 23.10, §31) -- the systematic admission and courting of the
+public final-release lineage forward from the first release, recording honest unavailability where a
+release cannot be reproducibly built.
+5. **Downstream multitrack court** (brief §52 23.11, §34) -- at least one meaningful unmodified real
+downstream consumer per major compatibility epoch.
+
+**The correction is made by measurement, not by preference.** The brief's slice list was read against
+the ledger's unit set and the runner's registry; the same measurement that showed the omission
+restores the slices at the brief's own numbers and renumbers only phase 23's remaining capabilities.
+`release-nodes` (23.1) and `authority-nodes` (23.2) are unchanged and stay closed. The ten shifted
+capabilities move to `lineage-edges` 23.4, `entity-lineage` 23.5, `delta-engine` 23.6,
+`compatibility-views` 23.9, `directional-compatibility-edges` 23.12, `negative-obligations` 23.13,
+`security-lineage` 23.14, `support-status` 23.15, `compatibility-matrix` 23.16 and `multitrack-seal`
+23.17. No other phase is renumbered.
+
+**What moves, and where it is recorded.** `docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 1 now
+measures seventeen units; section 2 carries the seventeen-row subphase table, an explicit brief
+§52 slice -> subphase -> court/unit map and a brief §49 seal-requirement map; and section 4.8
+records this reconciliation as a measured correction. The ledger's unit set is seventeen (two
+implemented, `open_in_this_stratum` fifteen, so the open count equals the number of still-open
+units), and the runner registers the same two courts as before with fifteen `pending`, each naming
+the subphase that lands it. The Phase-23 `ledger_note` in `forensics/tools/phase_state.py` names the
+seventeen units and the fifteen pending courts. The ledger -> courts edge is unchanged, and the
+runner still binds no ledger. The stratum's load-bearing non-claims are untouched: no slice the
+existing plan had is lost, and nothing is weakened.
+
+This is an additive correction: it restores required structure the first draft dropped, and it does
+not commit or push.
