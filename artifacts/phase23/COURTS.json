@@ -4247,7 +4247,7 @@
         "verdict": "pass"
       },
       {
-        "content_hash": "389c409664a0c870b814b45c1cd49d8418290ee7c5a1dd7e6db164ec298889f2",
+        "content_hash": "6609a78c22bdd3b3c2b11b710b3be9b954f451810d9d3f31663af68aa06b6e3a",
         "control": {
           "baseline_findings": 0,
           "caught_built_without_receipt": true,
@@ -4540,7 +4540,7 @@
           "openssl-fips-2.0.8",
           "openssl-fips-2.0.9"
         ],
-        "content_hash": "61bef684969c1ea65a716dd9340771df52f4755ae17efd77f10bc2af13872b2a",
+        "content_hash": "6dfe5637f416c5a4d75cbd8488d2f42640947a8bbfdb9d94ab28cd9174e6832f",
         "control": {
           "baseline_findings": 0,
           "caught_archaeology_counted_supported": true,
@@ -4714,12 +4714,12 @@
           {
             "name": "security_lineage",
             "record_count": 52,
-            "sha256": "7ab23c22946463a750c5ecd8a1b0480724f3fa95150469373c788efcf5e84b69"
+            "sha256": "dd6f2babd2b21cc44c7f99407d38778174432383643380722b6720d006434609"
           },
           {
             "name": "support_status",
             "record_count": 372,
-            "sha256": "03747b1302b3a9947a60b0e29c4ca7313241cf59baa61db04e5d11cab7428aec"
+            "sha256": "0d9ad7b43a915a5d00e17df10091e0b41fbb272ba698576436596b40d5d34edd"
           }
         ],
         "probe": "",
@@ -6329,7 +6329,7 @@
       {
         "chain": {
           "frf_declarable_courts": 0,
-          "gemel_current": "checkpoint.3c8555fe60fc46b625742b76e310e697db4d7817ee67681b5ca5fc93a02bf8dc",
+          "gemel_current": "checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d",
           "vacuous": true
         },
         "closure": {
@@ -6829,7 +6829,7 @@
     {
       "name": "security-lineage",
       "path": "forensics/multitrack/security-lineage.json",
-      "sha256": "7ab23c22946463a750c5ecd8a1b0480724f3fa95150469373c788efcf5e84b69"
+      "sha256": "dd6f2babd2b21cc44c7f99407d38778174432383643380722b6720d006434609"
     },
     {
       "name": "security-source",
@@ -6839,7 +6839,7 @@
     {
       "name": "security-divergence-register",
       "path": "forensics/divergence-obligations.json",
-      "sha256": "3e8a199c68d75d61db8cbf79d64ce1fb29414b96ddb623ccfb9d2fcc4356883b"
+      "sha256": "b5e0ea6f90652c32e3b8355a204c5b1b3e7bee8d2f86bdcf8fede9e70b4aec31"
     },
     {
       "name": "security-divergence-policy",
@@ -6849,37 +6849,37 @@
     {
       "name": "historical-population",
       "path": "forensics/multitrack/historical-population.json",
-      "sha256": "1435ced773319063d13dbac61d40a601abc1ddeb84c48a70d650dd92290ce1e5"
+      "sha256": "4ac5e33705c0962405202cf343f1ce231a97f8af9284a31163c18d7a07c73e58"
     },
     {
       "name": "support-status",
       "path": "forensics/multitrack/support-status.json",
-      "sha256": "03747b1302b3a9947a60b0e29c4ca7313241cf59baa61db04e5d11cab7428aec"
+      "sha256": "0d9ad7b43a915a5d00e17df10091e0b41fbb272ba698576436596b40d5d34edd"
     },
     {
       "name": "compatibility-matrix",
       "path": "forensics/multitrack/compatibility-matrix.json",
-      "sha256": "bd49dc97bce061657dbb6ef898d5bb3102f4fcdcdff1eab6562b65d2357c77cd"
+      "sha256": "a1fcc375a2d65cf57c368328abddd67b472805f04b37d71bcf894289a97c7f43"
     },
     {
       "name": "downstream-multitrack",
       "path": "forensics/multitrack/downstream-multitrack.json",
-      "sha256": "606ebc7fcd3fc9e8b82fbba4622cc2602d7e8083e686f7921bab29e9f45e1295"
+      "sha256": "efe73c6e30c3abd7af2063cdc60c10359261b672fa15f39cd101c0917704da43"
     },
     {
       "name": "phase17-downstream-corpus",
       "path": "forensics/atlas/downstream-corpus.json",
-      "sha256": "698f988ac1d78caf6011c7fa3c423e899dd6c6336eab04bb4243b147d8bf492e"
+      "sha256": "b54149bbbbbe5e2282f058d7624e9559bc163114e08c6017e88a102909fb55da"
     },
     {
       "name": "phase-23-seal",
       "path": "docs/PHASE-23-MULTITRACK-SEAL.md",
-      "sha256": "fa8de40319a59f236f89a7266ca7e0546754ff15d63c2210df04f0bf93c82971"
+      "sha256": "ae74b4d9726b0abe8a1e74a81124eed52a1dc37edeb731794c58bfbe4585ed7e"
     },
     {
       "name": "gemel-trajectory",
       "path": "forensics/GEMEL_TRAJECTORY.md",
-      "sha256": "6ae42fa440d91428a07faf4ed9abc5f32366742013028976e2e8f348280c7393"
+      "sha256": "02d0faf30973faaa59f66098ff85d399df4ee9f2746f9ef73c8b117fa99db6b1"
     },
     {
       "name": "non-claims",
