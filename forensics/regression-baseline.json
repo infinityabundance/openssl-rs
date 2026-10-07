@@ -165,6 +165,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "RT-AUTHORITY-CENSUS": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-AUTHORITY-NODES": {
       "observations": 0,
       "verdict": "pass"
@@ -941,7 +945,7 @@
     "phase21": 0,
     "phase22": 0,
     "phase23": 0,
-    "phase24": 13,
+    "phase24": 12,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

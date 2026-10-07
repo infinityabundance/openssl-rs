@@ -1836,7 +1836,7 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "*export* lists are empty by measurement, while "
                             "`open_in_this_stratum` counts the fifteen contract units "
                             "(`ranking-sources`, `candidate-universe`, "
-                            "`authority-baseline-census`, `family-freeze`, `holdout-partition`, "
+                            "`authority-census`, `family-freeze`, `holdout-partition`, "
                             "`build-link-atlas`, `runtime-functional-atlas`, "
                             "`failure-minimization`, `high-value-tier`, "
                             "`hostility-augmentation`, `candidate-freeze`, `p1000-run`, "
