@@ -1,0 +1,20 @@
+{
+  "schema": "openssl-rs/phase24/container/v1",
+  "container": "openssl-rs-court",
+  "image": "openssl-rs-court:1",
+  "platform": "linux",
+  "marker": "/.dockerenv",
+  "env_flag": "PHASE24_CONTAINER",
+  "env_image": "PHASE24_IMAGE",
+  "env_platform": "PHASE24_PLATFORM",
+  "metadata_only": [
+    "phase24_obligations.py"
+  ],
+  "selection_rule": "Phase 24 executes only inside the admitted court container. This committed manifest records the one admitted venue -- the container marker, the opt-in environment flag, and the image identity and platform the venue records in the environment -- and `forensics/tools/phase24_guard.py` fails closed unless every one of them is present and matches. Nothing about the downstream-1000 atlas is built, run or probed outside this venue (docs/REPRODUCIBILITY.md section 1).",
+  "metadata_only_rule": "`metadata_only` names the Phase-24 generators that read committed atlases and write a ledger -- they execute nothing, no compiler, no probe, no downstream build -- so the guard admits them on any host exactly as the other strata's obligation generators run host-side in CI's static job. Every execution entry point (the runner `phase24_courts.py`, and every later subphase tool that configures, builds, links or runs a downstream project) is deliberately absent from this list, so a host invocation of one is refused.",
+  "non_claims": [
+    "the admitted venue is a container identity, not a security boundary: it records where Phase 24 runs, not what it may claim",
+    "the manifest is authored evidence, not proof the container is unmodified: it binds the venue a receipt names, and the image digest is the stronger binding a later subphase may add",
+    "admitting a metadata-only generator on the host is not admitting host execution: that generator runs no command and produces no runtime evidence"
+  ]
+}

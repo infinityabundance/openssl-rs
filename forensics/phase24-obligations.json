@@ -1,0 +1,248 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "contract_units": [
+      {
+        "closure": "the `RT-RANKING-SOURCES` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-RANKING-SOURCES is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "ranking-sources",
+        "what": "the frozen, multi-source ranking evidence acquired and content-addressed **before** any candidate result exists, so the population cannot be selected by what the candidate happens to pass (the pre-commitment rule)"
+      },
+      {
+        "closure": "the `RT-CANDIDATE-UNIVERSE` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-CANDIDATE-UNIVERSE is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "candidate-universe",
+        "what": "one family node per real downstream project **family** -- never a package alias -- with its specimens kept separate, its OpenSSL linkage (direct or transitive) named, and its ranking provenance recorded"
+      },
+      {
+        "closure": "the `RT-AUTHORITY-BASELINE` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-AUTHORITY-BASELINE is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "authority-baseline-census",
+        "what": "one authority-baseline census per specimen, recording the level the pristine-source build reached against the admitted authority, so a candidate pass is normalized against what the authority itself achieved"
+      },
+      {
+        "closure": "the `RT-FAMILY-FREEZE` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-FAMILY-FREEZE is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "family-freeze",
+        "what": "the frozen P1000 population of 1,000 counted families plus the reserve, selected from the precommitted ranking evidence and content-addressed before any candidate result"
+      },
+      {
+        "closure": "the `RT-HOLDOUT-PARTITION` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-HOLDOUT-PARTITION is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "holdout-partition",
+        "what": "the precommitted holdout partition, fixed before the candidate was run against the development population and never used to choose a patch"
+      },
+      {
+        "closure": "the `RT-BUILD-LINK-ATLAS` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-BUILD-LINK-ATLAS is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "build-link-atlas",
+        "what": "one build/link run per specimen per subject (authority and candidate), reaching the configured, built and linked levels with candidate linkage proven"
+      },
+      {
+        "closure": "the `RT-RUNTIME-FUNCTIONAL-ATLAS` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-RUNTIME-FUNCTIONAL-ATLAS is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "runtime-functional-atlas",
+        "what": "one runtime/functional run per specimen that reached the build/link levels, reaching the loaded, runtime and functional levels where the authority baseline did"
+      },
+      {
+        "closure": "the `RT-FAILURE-MINIMIZATION` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-FAILURE-MINIMIZATION is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "failure-minimization",
+        "what": "every discovered failure classified from the failure taxonomy, preserved and minimized, so a failure is a named, reproducible record rather than a discarded run"
+      },
+      {
+        "closure": "the `RT-HIGH-VALUE-TIER` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-HIGH-VALUE-TIER is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "high-value-tier",
+        "what": "the high-value deep tier: the families that depend on OpenSSL most deeply are measured past the shallow levels, to the functional level, where they can be"
+      },
+      {
+        "closure": "the `RT-HOSTILITY-AUGMENTATION` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-HOSTILITY-AUGMENTATION is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "hostility-augmentation",
+        "what": "the separate hostility-augmentation corpus, kept apart from the counted P1000 families and never mixed into the population's rates"
+      },
+      {
+        "closure": "the `RT-CANDIDATE-FREEZE` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-CANDIDATE-FREEZE is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "candidate-freeze",
+        "what": "the candidate identity frozen and content-addressed, and the precommitted holdout run against it exactly once, so the holdout is a real out-of-sample measurement"
+      },
+      {
+        "closure": "the `RT-P1000-RUN` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-P1000-RUN is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "p1000-run",
+        "what": "the final full P1000 run over the frozen population at the frozen candidate, so every family's drop-in verdict is measured against the same candidate rather than a moving one"
+      },
+      {
+        "closure": "the `RT-ATLAS-RECONCILIATION` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-ATLAS-RECONCILIATION is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "atlas-reconciliation",
+        "what": "the reconciliation of the atlas: every counted family has a verdict, every residual is classified, every failure is preserved and minimized, and the drop-in rates are computed over the frozen population rather than typed"
+      },
+      {
+        "closure": "the `RT-FRF-CLOSURE` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "RT-FRF-CLOSURE is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "frf-gemel-closure",
+        "what": "the FRF/Gemel chain closure where the stratum stages a declarable court, so a passing atlas is not read as a chain that never ran"
+      },
+      {
+        "closure": "the `DOWNSTREAM-1000-SEAL` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "DOWNSTREAM-1000-SEAL is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase24/COURTS.json",
+        "unit": "downstream-1000-seal",
+        "what": "the seal `docs/PHASE-24-DOWNSTREAM-1000-SEAL.md`, which closes the atlas as the stratum's claim and records the four non-claims it never exceeds"
+      }
+    ],
+    "counts": {
+      "atlas_owned": 0,
+      "contract_units": 15,
+      "deferrals_received": 0,
+      "deferred_to_later_phase": 0,
+      "implemented": 0,
+      "open_in_this_stratum": 15,
+      "owned": 15,
+      "provider_rows_open": 0,
+      "provider_rows_owned": 0,
+      "unit_deferrals_received": 0
+    },
+    "deferrals": [],
+    "deferred": [],
+    "implemented": [],
+    "note": "`open` is the only list that blocks this stratum, and its count is over the downstream 1000 contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. Phase 24 owns no provider registration row and no export: it activates no provider and adds no library surface, because it measures runs over a frozen population of downstream project families. Its fifteen contract units are the downstream 1000 contract docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md section 1 names -- the ranking-source acquisition, the candidate universe, the authority-baseline census, the P1000+reserve freeze, the holdout partition, the build/link atlas, the runtime/functional atlas, the failure discovery/minimization loop, the high-value deep tier, the hostility augmentation, the candidate freeze and holdout, the final full P1000 run, the atlas reconciliation, the FRF/Gemel closure and the downstream-1000 seal -- and its `counts` block is the live record of which of them are implemented: at activation none has a court, so `open_in_this_stratum` is fifteen. Every entry point calls the Docker-only execution guard (`forensics/tools/phase24_guard.py`) first, so on the host the stratum refuses rather than compiling or running anything (docs/REPRODUCIBILITY.md section 1). The stratum's explicit non-claims are: a selected empirical population is not a random sample, so its rates do not generalise to all downstream software; 1000/1000 is not a security proof, so a full pass is not a guarantee that any consumer is safe; a build is not a functional proof, so compiling and linking is not behaving; and transitive and direct consumers are different evidence, so a project that only links a library transitively is a different measurement from one that calls the API directly. `DROP_IN_PASS` is baseline-normalized and never a boolean of its own: it requires the same pristine source, the authority baseline succeeded, the candidate reached the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches; residuals are classified from the residual classes and failures preserved and minimized from the failure taxonomy. Each contract unit records its two axes separately: `measurement_state` says the instrument completed, and `property_status`/`findings` say what is claimed. The `downstream-1000-seal` unit's property is `NOT_CLAIMED` with the four non-claims named as findings, so a passing `DOWNSTREAM-1000-SEAL` is an instrument plus an observation record and must never be read as 'the downstream ecosystem is safe'.",
+    "open": [],
+    "provider_rows": [],
+    "rule": "this stratum's working set is not a set of exported symbols: Phase 24 owns no export, no provider registration row and no prerequisite deferral, so its working set is exactly the downstream 1000 contract units docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md names, each measured by the Phase-24 courts registry. Every row is read from those atlases; the ledger types none of them, and `main` fails closed if the ownership atlas assigns this stratum an export, the provider census assigns it a row, or the prerequisite plane assigns it a deferral or unit",
+    "unit": "downstream 1000 contract",
+    "unit_deferrals": []
+  },
+  "generator": "forensics/tools/phase24_obligations.py",
+  "inputs": [
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "provider-algorithms",
+      "path": "forensics/atlas/provider-algorithms.json",
+      "sha256": "8a767c9f5c456e1b3b8e2d01a88f0b17f2184313d421c0a9e513c1dd2d118589"
+    },
+    {
+      "name": "prerequisites",
+      "path": "forensics/prerequisites.json",
+      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+    },
+    {
+      "name": "phase-24-plan",
+      "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
+      "sha256": "63637bb989483e8b072edd1fa12c5a1c81d2a440f2416b805feb75e633a782d3"
+    },
+    {
+      "name": "phase-24-courts",
+      "path": "artifacts/phase24/COURTS.json",
+      "sha256": "f5489d77fa8891c3da1a683ff9ae49f315edfbebf4c44d7c63717dfa8444d445"
+    },
+    {
+      "name": "phase24-guard",
+      "path": "forensics/tools/phase24_guard.py",
+      "sha256": "94ea35a66565d01f3a82dc7113e571e7f59eb5c5f378911196c0783600b41192"
+    },
+    {
+      "name": "downstream-schemas",
+      "path": "forensics/tools/downstream_schemas.py",
+      "sha256": "87fcdace29d8e866cd333f8cde7abbcbe2dbd9f8b8b7467407612bb95ae79797"
+    }
+  ],
+  "kind": "phase24-obligations",
+  "schema": "openssl-rs/atlas/phase24-obligations/v1"
+}
