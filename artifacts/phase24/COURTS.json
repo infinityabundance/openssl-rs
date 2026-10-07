@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-RANKING-SOURCES` is 24.1's court: the frozen ranking-source acquisition. It stages no probe and reads forensics/downstream/ranking-sources.json and the committed normalized inputs under forensics/downstream/ranking/normalized/, re-running the 24.1 validation and sensitivity control without fetching. It establishes that every acquired ranking / reverse-dependency source -- the Debian reverse-dependency graph and Popcon counts, the Fedora and Alpine reverse package dependencies, Homebrew openssl@3's dependency relationships and analytics, the OpenSSF Scorecard and the crates.io reverse-dependency count -- is content-addressed by its raw payload SHA-256 and its normalization SHA-256, carries a retrieval timestamp and a parser version, and is reproducible from its deterministic retrieval recipe; that the frozen selection_input_root_hash reproduces from the present sources; and that an unavailable source (the OpenSSF Criticality Score, which has no reproducible public endpoint) carries a reason and is not counted present. A source stripped of its hash, a mutated normalized payload, an unavailable source counted present and a missing retrieval timestamp are each detected with specificity holding. A passing ranking-source manifest is a precommitment, not a ranking claim: it says the selection input was frozen before any candidate result. `RT-CANDIDATE-UNIVERSE` is 24.2's court: the candidate family universe. It stages no probe and reads forensics/downstream/candidates.json and forensics/downstream/families.json, re-deriving both from the committed forensics/downstream/ranking/normalized/ inputs. It establishes that every family is schema-valid (kind `family`) and provenance-backed; that aliases of one upstream collapse to one family (the libcurl4/curl/curl-dev/curl-doc set is one family, not four); that the OpenSSL providers and a name collision (`libcrypto++`) are not counted as consumers; that a fork is not independent without explicit evidence of materially different OpenSSL integration; that a transitive consumer is not counted as direct; and that the universe is substantially larger than 1,000 before deduplication. A double-counted distro alias, a transitive consumer promoted to direct, a fork counted independent with no evidence and a family with no provenance are each detected with specificity holding. `RT-AUTHORITY-CENSUS` is 24.3's court: the authority-baseline census. It stages no probe and reads forensics/downstream/authority-baselines.jsonl and forensics/downstream/usage-fingerprints.json, re-deriving the provisional census cohort from the committed families. It establishes that every cohort member has an authority result classified; that an `AUTHORITY_BASELINE_FAIL` carries an authority failure class from the taxonomy and a reason, and is never counted as a candidate failure; that a `AUTHORITY_BASELINE_PASS`'s linkage proof resolves the admitted authority's own libssl/libcrypto and never a system one; that the cohort selection rule is recorded and reproduces from the frozen sources; and that no candidate execution occurred. A build claiming authority linkage while resolving a system libssl, an authority failure counted as a candidate failure, a cohort member with no source hash and a fingerprint with no imported symbols claimed as a pass are each detected with specificity holding. A passing census is a measurement, not a candidate result: the authority side reached the level it records, and no candidate ran. The remaining twelve courts -- RT-FAMILY-FREEZE, RT-HOLDOUT-PARTITION, RT-BUILD-LINK-ATLAS, RT-RUNTIME-FUNCTIONAL-ATLAS, RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.4 through 24.15). Phase 24 owns no exported symbol, so no differential probe over a symbol set is its evidence. The stratum's record kinds are defined and self-tested in forensics/tools/downstream_schemas.py, whose inventory this registry records: the family (the counted unit, never a package alias), the separate specimen, the variant, the frozen ranking-source row, the execution-level row over the L0-L8 ladder, the run, the classified residual, the preserved-and-minimized failure and the baseline-normalized drop-in verdict. Every entry point calls the Docker-only execution guard (forensics/tools/phase24_guard.py) first, so nothing in this stratum executes on the host. The four things the model never claims are: a selected empirical population is not a random sample; 1000/1000 is not a security proof; a build is not a functional proof; and transitive and direct consumers are different evidence. DROP_IN_PASS is baseline-normalized -- the same pristine source, a succeeded authority baseline, the candidate reaching the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches. docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "`RT-RANKING-SOURCES` is 24.1's court: the frozen ranking-source acquisition. It stages no probe and reads forensics/downstream/ranking-sources.json and the committed normalized inputs under forensics/downstream/ranking/normalized/, re-running the 24.1 validation and sensitivity control without fetching. It establishes that every acquired ranking / reverse-dependency source -- the Debian reverse-dependency graph and Popcon counts, the Fedora and Alpine reverse package dependencies, Homebrew openssl@3's dependency relationships and analytics, the OpenSSF Scorecard and the crates.io reverse-dependency count -- is content-addressed by its raw payload SHA-256 and its normalization SHA-256, carries a retrieval timestamp and a parser version, and is reproducible from its deterministic retrieval recipe; that the frozen selection_input_root_hash reproduces from the present sources; and that an unavailable source (the OpenSSF Criticality Score, which has no reproducible public endpoint) carries a reason and is not counted present. A source stripped of its hash, a mutated normalized payload, an unavailable source counted present and a missing retrieval timestamp are each detected with specificity holding. A passing ranking-source manifest is a precommitment, not a ranking claim: it says the selection input was frozen before any candidate result. `RT-CANDIDATE-UNIVERSE` is 24.2's court: the candidate family universe. It stages no probe and reads forensics/downstream/candidates.json and forensics/downstream/families.json, re-deriving both from the committed forensics/downstream/ranking/normalized/ inputs. It establishes that every family is schema-valid (kind `family`) and provenance-backed; that aliases of one upstream collapse to one family (the libcurl4/curl/curl-dev/curl-doc set is one family, not four); that the OpenSSL providers and a name collision (`libcrypto++`) are not counted as consumers; that a fork is not independent without explicit evidence of materially different OpenSSL integration; that a transitive consumer is not counted as direct; and that the universe is substantially larger than 1,000 before deduplication. A double-counted distro alias, a transitive consumer promoted to direct, a fork counted independent with no evidence and a family with no provenance are each detected with specificity holding. `RT-AUTHORITY-CENSUS` is 24.3's court: the authority-baseline census. It stages no probe and reads forensics/downstream/authority-baselines.jsonl and forensics/downstream/usage-fingerprints.json, re-deriving the provisional census cohort from the committed families. It establishes that every cohort member has an authority result classified; that an `AUTHORITY_BASELINE_FAIL` carries an authority failure class from the taxonomy and a reason, and is never counted as a candidate failure; that a `AUTHORITY_BASELINE_PASS`'s linkage proof resolves the admitted authority's own libssl/libcrypto and never a system one; that the cohort selection rule is recorded and reproduces from the frozen sources; and that no candidate execution occurred. A build claiming authority linkage while resolving a system libssl, an authority failure counted as a candidate failure, a cohort member with no source hash and a fingerprint with no imported symbols claimed as a pass are each detected with specificity holding. A passing census is a measurement, not a candidate result: the authority side reached the level it records, and no candidate ran. `RT-FAMILY-FREEZE` is 24.4's court: the P1000 + reserve freeze. It stages no probe and reads forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-deriving the ranked universe from the committed families by the frozen selection rule (source breadth, then distro breadth, then popularity, then canonical name, then family_id). It establishes that the recorded P1000 is exactly the derived top-1,000 and the reserve the derived remainder in rank order; that the P1000 is distinct and disjoint from the reserve; that both are a subset of the universe; that ranks are positions and the recorded signal is each family's own; that the recorded selection root reproduces and its selection_input_root_hash, families sha256 and rule sha256 match the committed files; and that no candidate-subject run exists anywhere in the downstream plane, so the population is frozen before any candidate result. Two P1000 members' order swapped, a P1000 member deleted so the count is wrong, a family id shared between the P1000 and the reserve, a mutated selection root, and a fabricated candidate-subject run row in the downstream plane are each detected with specificity holding. A passing freeze is a precommitment, not a result, and it refuses the anti-pattern of a family typed into the 1,000 because a candidate passed it. The remaining eleven courts -- RT-HOLDOUT-PARTITION, RT-BUILD-LINK-ATLAS, RT-RUNTIME-FUNCTIONAL-ATLAS, RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.5 through 24.15). Phase 24 owns no exported symbol, so no differential probe over a symbol set is its evidence. The stratum's record kinds are defined and self-tested in forensics/tools/downstream_schemas.py, whose inventory this registry records: the family (the counted unit, never a package alias), the separate specimen, the variant, the frozen ranking-source row, the execution-level row over the L0-L8 ladder, the run, the classified residual, the preserved-and-minimized failure and the baseline-normalized drop-in verdict. Every entry point calls the Docker-only execution guard (forensics/tools/phase24_guard.py) first, so nothing in this stratum executes on the host. The four things the model never claims are: a selected empirical population is not a random sample; 1000/1000 is not a security proof; a build is not a functional proof; and transitive and direct consumers are different evidence. DROP_IN_PASS is baseline-normalized -- the same pristine source, a succeeded authority baseline, the candidate reaching the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches. docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -676,6 +676,168 @@
         "probe": "",
         "problems": [],
         "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught_candidate_result_present": true,
+          "caught_mutated_selection_root": true,
+          "caught_p1000_order_swapped": true,
+          "caught_p1000_reserve_overlap": true,
+          "caught_p1000_short": true,
+          "honest": true,
+          "injected_candidate_result_present": "candidate_result_present",
+          "injected_mutated_selection_root": "mutated_selection_root",
+          "injected_p1000_order_swapped": "p1000_order_swapped",
+          "injected_p1000_reserve_overlap": "p1000_reserve_overlap",
+          "injected_p1000_short": "p1000_short",
+          "specificity_holds": true
+        },
+        "counts": {
+          "candidate_results_present": false,
+          "direct": 1000,
+          "p1000": 1000,
+          "reserve": 1100,
+          "transitive": 0,
+          "universe": 2100
+        },
+        "court": "RT-FAMILY-FREEZE",
+        "examples": {
+          "candidate_rows": [],
+          "p1000_head": [
+            {
+              "canonical_name": "libssh",
+              "directness_class": "DIRECT_OPENSSL_CONSUMER",
+              "distro_breadth": 3,
+              "family_id": "family:libssh",
+              "family_role": "p1000",
+              "openssl_linkage": "direct",
+              "p1000_rank": 1,
+              "popularity": 0,
+              "selection_status": "selected",
+              "source_breadth": 5
+            },
+            {
+              "canonical_name": "jwt",
+              "directness_class": "DIRECT_OPENSSL_CONSUMER",
+              "distro_breadth": 3,
+              "family_id": "family:jwt",
+              "family_role": "p1000",
+              "openssl_linkage": "direct",
+              "p1000_rank": 2,
+              "popularity": 14274078,
+              "selection_status": "selected",
+              "source_breadth": 4
+            },
+            {
+              "canonical_name": "cargo",
+              "directness_class": "DIRECT_OPENSSL_CONSUMER",
+              "distro_breadth": 3,
+              "family_id": "family:cargo",
+              "family_role": "p1000",
+              "openssl_linkage": "direct",
+              "p1000_rank": 3,
+              "popularity": 1899,
+              "selection_status": "selected",
+              "source_breadth": 4
+            },
+            {
+              "canonical_name": "alpine",
+              "directness_class": "DIRECT_OPENSSL_CONSUMER",
+              "distro_breadth": 3,
+              "family_id": "family:alpine",
+              "family_role": "p1000",
+              "openssl_linkage": "direct",
+              "p1000_rank": 4,
+              "popularity": 0,
+              "selection_status": "selected",
+              "source_breadth": 4
+            },
+            {
+              "canonical_name": "borgbackup",
+              "directness_class": "DIRECT_OPENSSL_CONSUMER",
+              "distro_breadth": 3,
+              "family_id": "family:borgbackup",
+              "family_role": "p1000",
+              "openssl_linkage": "direct",
+              "p1000_rank": 5,
+              "popularity": 0,
+              "selection_status": "selected",
+              "source_breadth": 4
+            }
+          ],
+          "reserve_head": [
+            {
+              "canonical_name": "libghc-hsopenssl-x509-system-dev",
+              "directness_class": "DIRECT_OPENSSL_CONSUMER",
+              "distro_breadth": 1,
+              "family_id": "family:libghc-hsopenssl-x509-system-dev",
+              "family_role": "reserve",
+              "openssl_linkage": "direct",
+              "popularity": 0,
+              "replacement_cursor": 0,
+              "reserve_rank": 1,
+              "source_breadth": 1
+            },
+            {
+              "canonical_name": "libghc-http-streams-dev",
+              "directness_class": "DIRECT_OPENSSL_CONSUMER",
+              "distro_breadth": 1,
+              "family_id": "family:libghc-http-streams-dev",
+              "family_role": "reserve",
+              "openssl_linkage": "direct",
+              "popularity": 0,
+              "replacement_cursor": 1,
+              "reserve_rank": 2,
+              "source_breadth": 1
+            },
+            {
+              "canonical_name": "libghc-openssl-streams-dev",
+              "directness_class": "DIRECT_OPENSSL_CONSUMER",
+              "distro_breadth": 1,
+              "family_id": "family:libghc-openssl-streams-dev",
+              "family_role": "reserve",
+              "openssl_linkage": "direct",
+              "popularity": 0,
+              "replacement_cursor": 2,
+              "reserve_rank": 3,
+              "source_breadth": 1
+            }
+          ],
+          "reserve_size": 1100,
+          "rule": {
+            "constants": {
+              "p1000_size": 1000
+            },
+            "id": "downstream-p1000-freeze/1",
+            "name": "the downstream-1000 P1000 + reserve freeze",
+            "p1000_size": 1000,
+            "rank_key": [
+              "-source_breadth",
+              "-distro_breadth",
+              "-popularity",
+              "canonical_name",
+              "family_id"
+            ],
+            "reserve_rule": "the remaining ranked tail",
+            "signal": "downstream_census.consensus_signal: source_breadth = number of distinct source_id in selection_provenance, distro_breadth = number of distinct ecosystem in distro_packages, popularity = sum of value over popularity_signals",
+            "tiebreak": "canonical_name then family_id last, so the ranked order is total"
+          },
+          "selection_input_root": {
+            "families_sha256": "4682c5c2523be6f64ca4be9d349747d4055b2a777d0441fee801448b3a17b60a",
+            "rule_sha256": "e146cad57fedaebe98ffd9ad5744b05bb39a448f9159ccdc220c7b0a72a89c52",
+            "selection_input_root_hash": "569d28319e6724bf76f1db37e7daf2bf456bd3e4c459a838619ff31275a1f856"
+          },
+          "selection_root_hash": "f2a0454fe4dca98556da2e958b6e70cebaf76becbebba69b2abd752e63deba4e"
+        },
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the family-freeze court re-derives the population from committed inputs and stages no artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it reads forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-derives the ranked universe from the committed families by the frozen selection rule (source breadth, then distro breadth, then popularity, then canonical name, then family_id), and re-runs the 24.4 validation and sensitivity control over the committed artefact without selecting or running anything. It establishes that the recorded P1000 is exactly the derived top-1,000 and the reserve the derived remainder in rank order; that the P1000 is distinct and disjoint from the reserve; that both are a subset of the universe; that ranks are positions and the recorded signal is each family's own; that the recorded selection root reproduces and its selection_input_root_hash, families sha256 and rule sha256 match the committed files; and that no candidate-subject run exists anywhere in the downstream plane. The five seeded mutations -- two P1000 members' order swapped, a P1000 member deleted so the count is wrong, a family id shared between the P1000 and the reserve, a mutated selection root, and a fabricated candidate-subject run row in the downstream plane -- are each detected with specificity holding. The anti-pattern it refuses is a family typed into the 1,000 because a candidate passed it: the population is frozen before any candidate result (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2, 3.1, 3.4 and 3.6).",
+        "probe": "",
+        "problems": [],
+        "selection_root_hash": "f2a0454fe4dca98556da2e958b6e70cebaf76becbebba69b2abd752e63deba4e",
+        "verdict": "pass"
       }
     ],
     "drop_in_verdicts": [
@@ -718,7 +880,6 @@
       "RT-BUILD-LINK-ATLAS": "24.6 -- the build/link atlas",
       "RT-CANDIDATE-FREEZE": "24.11 -- the candidate freeze and holdout",
       "RT-FAILURE-MINIMIZATION": "24.8 -- the failure discovery/minimization loop",
-      "RT-FAMILY-FREEZE": "24.4 -- the P1000 + reserve freeze",
       "RT-FRF-CLOSURE": "24.14 -- the FRF/Gemel closure",
       "RT-HIGH-VALUE-TIER": "24.9 -- the high-value deep tier",
       "RT-HOLDOUT-PARTITION": "24.5 -- the precommitted holdout partition",
@@ -866,8 +1027,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 3,
-      "total": 3
+      "pass": 4,
+      "total": 4
     }
   },
   "generator": "forensics/tools/phase24_courts.py",
@@ -981,6 +1142,16 @@
       "name": "downstream-census",
       "path": "forensics/tools/downstream_census.py",
       "sha256": "025921fa1197d6e56d5c6e664b3685150bf31a270a7b3150f719c27d85807875"
+    },
+    {
+      "name": "family-freeze",
+      "path": "forensics/downstream/family-freeze.json",
+      "sha256": "76bd60c33da6ac21eeafef3f319c7ef279d018685c29747d6f85614e89f11ec5"
+    },
+    {
+      "name": "downstream-freeze",
+      "path": "forensics/tools/downstream_freeze.py",
+      "sha256": "a8c73b3d7909c682bf3c8a714ef600545278d7853c10a030d142c3e317c3a87b"
     }
   ],
   "kind": "phase24-courts",

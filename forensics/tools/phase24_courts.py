@@ -19,7 +19,8 @@ first runnable court is a later subphase's, and `run_courts.py` would refuse a s
 `in-progress` with no runner at all -- so this runner lands at activation with an empty registry
 and names the fifteen courts it will stage. **24.1 registers `RT-RANKING-SOURCES`**, the frozen
 ranking-source acquisition, **24.2 registers `RT-CANDIDATE-UNIVERSE`**, the candidate family
-universe, and **24.3 registers `RT-AUTHORITY-CENSUS`**, the authority-baseline census. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
+universe, **24.3 registers `RT-AUTHORITY-CENSUS`**, the authority-baseline census, and **24.4
+registers `RT-FAMILY-FREEZE`**, the P1000 + reserve freeze. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
 normalized inputs under `forensics/downstream/ranking/normalized/`, re-derives the frozen
 `selection_input_root_hash`, and checks every source is content-addressed with a retrieval
 timestamp and a parser version, that an unavailable source carries a reason and is not counted
@@ -37,7 +38,15 @@ committed families, and checks every cohort member has an authority result class
 `AUTHORITY_BASELINE_FAIL` carries an authority failure class and a reason and is never a candidate
 failure, that a `AUTHORITY_BASELINE_PASS`'s linkage proof resolves the admitted authority and not a
 system libssl, and that no candidate execution occurred -- with an instrument-sensitivity control
-that seeds four mutations and requires each caught. The registry is the file `run_courts.py`
+that seeds four mutations and requires each caught. `RT-FAMILY-FREEZE` reads the committed
+`forensics/downstream/family-freeze.json` and the committed `forensics/downstream/families.json`,
+re-derives the ranked universe from those families by the frozen selection rule, and checks that
+atlas. It establishes that the recorded P1000 is exactly the derived top-1,000 and the reserve the
+derived remainder in rank order; that the P1000 is distinct and disjoint from the reserve; that both
+are a subset of the universe; that the recorded selection root reproduces and its input hashes match
+the committed files; and that no candidate-subject run exists anywhere in the downstream plane --
+with an instrument-sensitivity control that seeds five mutations and requires each caught. The
+registry is the file `run_courts.py`
 checks is reproduced, so a court silently dropped is a finding rather than a smaller green run.
 This is the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this
 registry, so this runner does **not** bind the obligations ledger as an input.
@@ -58,7 +67,7 @@ The fifteen courts, and the subphase that lands each
   * `RT-RANKING-SOURCES` -- 24.1, the frozen ranking-source acquisition (registered).
   * `RT-CANDIDATE-UNIVERSE` -- 24.2, the candidate family universe (registered).
   * `RT-AUTHORITY-CENSUS` -- 24.3, the authority-baseline census (registered).
-  * `RT-FAMILY-FREEZE` -- 24.4, the P1000 + reserve freeze.
+  * `RT-FAMILY-FREEZE` -- 24.4, the P1000 + reserve freeze (registered).
   * `RT-HOLDOUT-PARTITION` -- 24.5, the precommitted holdout.
   * `RT-BUILD-LINK-ATLAS` -- 24.6, the build/link atlas.
   * `RT-RUNTIME-FUNCTIONAL-ATLAS` -- 24.7, the runtime/functional atlas.
@@ -72,7 +81,8 @@ The fifteen courts, and the subphase that lands each
   * `DOWNSTREAM-1000-SEAL` -- 24.15, the seal.
 
 Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2 registers
-`RT-CANDIDATE-UNIVERSE` and 24.3 registers `RT-AUTHORITY-CENSUS`, and the remaining twelve are
+`RT-CANDIDATE-UNIVERSE`, 24.3 registers `RT-AUTHORITY-CENSUS` and 24.4 registers
+`RT-FAMILY-FREEZE`, and the remaining eleven are
 pending. A passing court is an instrument,
 not a property claim, and this stratum makes no property claim beyond the atlas: a selected
 empirical population is not a random sample, 1000/1000 is not a security proof, a build is not a
@@ -129,6 +139,11 @@ import downstream_universe  # noqa: E402
 # the same code path the artefacts were produced by.
 import downstream_census  # noqa: E402
 
+# The 24.4 P1000 + reserve freeze tool, imported so the court re-derives the population from the
+# committed families and re-runs its validation and sensitivity control over the committed freeze
+# (never re-selecting) through the same code path the artefact was produced by.
+import downstream_freeze  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -153,20 +168,27 @@ AUTHORITY_BASELINES = REPO_ROOT / "forensics" / "downstream" / "authority-baseli
 USAGE_FINGERPRINTS = REPO_ROOT / "forensics" / "downstream" / "usage-fingerprints.json"
 AUTHORITY_CENSUS_COURT = "RT-AUTHORITY-CENSUS"
 
-# The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES` and 24.2 `RT-CANDIDATE-UNIVERSE`;
-# each later subphase appends its court here in the commit that lands its instrument, and a court
-# removed from the table leaves the registry and fails `run_courts.py`.
+# 24.4's subject: the frozen P1000 + reserve, re-derived from the committed families and the frozen
+# 24.1 ranking evidence. The court reads it; it never selects a population and never runs a
+# candidate.
+FAMILY_FREEZE = REPO_ROOT / "forensics" / "downstream" / "family-freeze.json"
+FAMILY_FREEZE_COURT = "RT-FAMILY-FREEZE"
+
+# The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES`, 24.2 `RT-CANDIDATE-UNIVERSE`,
+# 24.3 `RT-AUTHORITY-CENSUS` and 24.4 `RT-FAMILY-FREEZE`; each later subphase appends its court here
+# in the commit that lands its instrument, and a court removed from the table leaves the registry and
+# fails `run_courts.py`.
 COURTS: list[tuple[str, str]] = [
     (RANKING_SOURCES_COURT, "_ranking_sources_court"),
     (CANDIDATE_UNIVERSE_COURT, "_candidate_universe_court"),
     (AUTHORITY_CENSUS_COURT, "_authority_census_court"),
+    (FAMILY_FREEZE_COURT, "_family_freeze_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order. A court moves out of this table
 # and into `COURTS` in the commit that lands its instrument.
 PENDING_COURTS: dict[str, str] = {
-    "RT-FAMILY-FREEZE": "24.4 -- the P1000 + reserve freeze",
     "RT-HOLDOUT-PARTITION": "24.5 -- the precommitted holdout partition",
     "RT-BUILD-LINK-ATLAS": "24.6 -- the build/link atlas",
     "RT-RUNTIME-FUNCTIONAL-ATLAS": "24.7 -- the runtime/functional atlas",
@@ -463,6 +485,94 @@ def _authority_census_court(name: str) -> dict:
     }
 
 
+def _family_freeze_court(name: str) -> dict:
+    """`RT-FAMILY-FREEZE`: 24.4's court, the P1000 + reserve freeze.
+
+    Stages no probe. It reads the committed freeze `forensics/downstream/family-freeze.json` and the
+    committed families `forensics/downstream/families.json`, re-derives the ranked universe from
+    those families by the frozen selection rule, and establishes that the recorded P1000 is exactly
+    the derived top-1,000 and the reserve the derived remainder in rank order; that the P1000 is
+    distinct and disjoint from the reserve; that both are a subset of the universe; that ranks are
+    positions and the recorded signal is each family's own; that the recorded selection root
+    reproduces and its `selection_input_root_hash` and input hashes match the committed files; and
+    that **no candidate-subject run exists anywhere in the downstream plane**, so the population is
+    frozen before any candidate result. Five seeded mutations are each caught with specificity
+    holding. A passing freeze is a **precommitment**, not a result: it says the population was
+    selected from the frozen ranking evidence before any candidate ran. The anti-pattern it refuses
+    is a family **typed into the 1,000 because a candidate passed it** -- a rigged population.
+    """
+    if not FAMILY_FREEZE.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the family-freeze artefact {rel(FAMILY_FREEZE)} is absent"],
+                "findings": [], "control": {}}
+
+    families_body = json.loads(FAMILIES.read_text(encoding="utf-8"))["body"]
+    freeze_body = json.loads(FAMILY_FREEZE.read_text(encoding="utf-8"))["body"]
+    findings = downstream_freeze.freeze_findings(families_body, freeze_body)
+    control = downstream_freeze.freeze_sensitivity_control(families_body, freeze_body)
+
+    counts = freeze_body.get("counts") or {}
+    p1000 = freeze_body.get("p1000") or []
+    reserve = freeze_body.get("reserve") or []
+    examples = {
+        "rule": freeze_body.get("rule"),
+        "selection_input_root": freeze_body.get("selection_input_root"),
+        "selection_root_hash": freeze_body.get("selection_root_hash"),
+        "p1000_head": p1000[:5],
+        "reserve_head": reserve[:3],
+        "reserve_size": len(reserve),
+        "candidate_rows": [
+            hit for where, doc in downstream_freeze.load_plane()
+            for hit in downstream_freeze._candidate_rows(doc, where)],
+    }
+
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/family-freeze.json and "
+            "forensics/downstream/families.json, re-derives the ranked universe from the committed "
+            "families by the frozen selection rule (source breadth, then distro breadth, then "
+            "popularity, then canonical name, then family_id), and re-runs the 24.4 validation and "
+            "sensitivity control over the committed artefact without selecting or running "
+            "anything. It establishes that the recorded P1000 is exactly the derived top-1,000 and "
+            "the reserve the derived remainder in rank order; that the P1000 is distinct and "
+            "disjoint from the reserve; that both are a subset of the universe; that ranks are "
+            "positions and the recorded signal is each family's own; that the recorded selection "
+            "root reproduces and its selection_input_root_hash, families sha256 and rule sha256 "
+            "match the committed files; and that no candidate-subject run exists anywhere in the "
+            "downstream plane. The five seeded mutations -- two P1000 members' order swapped, a "
+            "P1000 member deleted so the count is wrong, a family id shared between the P1000 and "
+            "the reserve, a mutated selection root, and a fabricated candidate-subject run row in "
+            "the downstream plane -- are each detected with specificity holding. The anti-pattern "
+            "it refuses is a family typed into the 1,000 because a candidate passed it: the "
+            "population is frozen before any candidate result "
+            "(docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2, 3.1, 3.4 and 3.6)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the family-freeze court re-derives the population from committed inputs and stages no "
+            "artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF "
+            "declaration"
+        ),
+        "selection_root_hash": freeze_body.get("selection_root_hash"),
+        "counts": {
+            "p1000": counts.get("p1000", len(p1000)),
+            "reserve": counts.get("reserve", len(reserve)),
+            "universe": counts.get("universe", 0),
+            "direct": (counts.get("by_directness") or {}).get("direct", 0),
+            "transitive": (counts.get("by_directness") or {}).get("transitive", 0),
+            "candidate_results_present": counts.get("candidate_results_present", False),
+        },
+        "examples": examples,
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -566,12 +676,30 @@ def main(argv: list[str]) -> int:
             "no source hash and a fingerprint with no imported symbols claimed as a pass are each "
             "detected with specificity holding. A passing census is a measurement, not a "
             "candidate result: the authority side reached the level it records, and no candidate "
-            "ran. The remaining "
-            "twelve courts -- RT-FAMILY-FREEZE, RT-HOLDOUT-PARTITION, RT-BUILD-LINK-ATLAS, "
+            "ran. "
+            "`RT-FAMILY-FREEZE` is 24.4's court: the P1000 + reserve freeze. It stages no probe "
+            "and reads forensics/downstream/family-freeze.json and "
+            "forensics/downstream/families.json, re-deriving the ranked universe from the "
+            "committed families by the frozen selection rule (source breadth, then distro "
+            "breadth, then popularity, then canonical name, then family_id). It establishes that "
+            "the recorded P1000 is exactly the derived top-1,000 and the reserve the derived "
+            "remainder in rank order; that the P1000 is distinct and disjoint from the reserve; "
+            "that both are a subset of the universe; that ranks are positions and the recorded "
+            "signal is each family's own; that the recorded selection root reproduces and its "
+            "selection_input_root_hash, families sha256 and rule sha256 match the committed "
+            "files; and that no candidate-subject run exists anywhere in the downstream plane, so "
+            "the population is frozen before any candidate result. Two P1000 members' order "
+            "swapped, a P1000 member deleted so the count is wrong, a family id shared between "
+            "the P1000 and the reserve, a mutated selection root, and a fabricated "
+            "candidate-subject run row in the downstream plane are each detected with specificity "
+            "holding. A passing freeze is a precommitment, not a result, and it refuses the "
+            "anti-pattern of a family typed into the 1,000 because a candidate passed it. "
+            "The remaining "
+            "eleven courts -- RT-HOLDOUT-PARTITION, RT-BUILD-LINK-ATLAS, "
             "RT-RUNTIME-FUNCTIONAL-ATLAS, RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, "
             "RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, "
             "RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending "
-            "with the subphases that land them (24.4 through 24.15). Phase 24 owns no exported "
+            "with the subphases that land them (24.5 through 24.15). Phase 24 owns no exported "
             "symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
@@ -624,6 +752,13 @@ def main(argv: list[str]) -> int:
                            ("usage-fingerprints", USAGE_FINGERPRINTS),
                            ("downstream-census", REPO_ROOT / "forensics" / "tools"
                             / "downstream_census.py")):
+        if path.is_file():
+            inputs.append(InputRef(name=ref_name, path=path))
+    # 24.4's subject: the committed frozen P1000 + reserve and the tool that derived it, bound so a
+    # population row the court reads is content-addressed rather than restated.
+    for ref_name, path in (("family-freeze", FAMILY_FREEZE),
+                           ("downstream-freeze", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_freeze.py")):
         if path.is_file():
             inputs.append(InputRef(name=ref_name, path=path))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
@@ -699,6 +834,35 @@ def main(argv: list[str]) -> int:
                 son = ", ".join(f"{k}->{v['resolved']}"
                                 for k, v in sorted(proof["sonames"].items()))
                 print(f"      authority-linkage {fam:<12} {son}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == FAMILY_FREEZE_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            ex = r["examples"]
+            print(f"  {r['court']:<32} pass   (no probe, universe={counts['universe']} "
+                  f"p1000={counts['p1000']} reserve={counts['reserve']} "
+                  f"direct={counts['direct']} transitive={counts['transitive']}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"order->{c['caught_p1000_order_swapped']} "
+                  f"short->{c['caught_p1000_short']} "
+                  f"overlap->{c['caught_p1000_reserve_overlap']} "
+                  f"root->{c['caught_mutated_selection_root']} "
+                  f"candidate->{c['caught_candidate_result_present']})")
+            print(f"      rule: id={ex['rule']['id']} rank_key={ex['rule']['rank_key']} "
+                  f"p1000_size={ex['rule']['p1000_size']} reserve_rule={ex['rule']['reserve_rule']!r}")
+            print(f"      selection_root_hash={ex['selection_root_hash']} "
+                  f"inputs={ex['selection_input_root']}")
+            for row in ex["p1000_head"]:
+                print(f"      p1000[{row['p1000_rank']:>4}] {row['family_id']:<34} "
+                      f"{row['openssl_linkage']:<10} sb={row['source_breadth']} "
+                      f"db={row['distro_breadth']} pop={row['popularity']}")
+            for row in ex["reserve_head"]:
+                print(f"      reserve[{row['reserve_rank']:>4}] {row['family_id']:<34} "
+                      f"cursor={row['replacement_cursor']} "
+                      f"{row['openssl_linkage']:<10} sb={row['source_breadth']}")
+            print(f"      candidate-subject rows in the downstream plane: {ex['candidate_rows']}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

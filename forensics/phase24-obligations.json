@@ -42,10 +42,10 @@
         "closure": "the `RT-FAMILY-FREEZE` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-FAMILY-FREEZE is pending",
+        "measurement_state": "complete",
+        "observation": "RT-FAMILY-FREEZE is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "family-freeze",
         "what": "the frozen P1000 population of 1,000 counted families plus the reserve, selected from the precommitted ranking evidence and content-addressed before any candidate result"
@@ -188,8 +188,8 @@
       "contract_units": 15,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 3,
-      "open_in_this_stratum": 12,
+      "implemented": 4,
+      "open_in_this_stratum": 11,
       "owned": 15,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -230,7 +230,7 @@
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "9b92fc3688754e9231f236fc758d9c32762fd422905e3aabb60b22a93cb97680"
+      "sha256": "6e3374527c749fb47640667d62b8d61377cc5f1db57276e304e933774e46cd95"
     },
     {
       "name": "phase24-guard",
