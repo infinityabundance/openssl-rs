@@ -26,7 +26,8 @@ registers `RT-HOLDOUT-PARTITION`**, the precommitted holdout partition, and **24
 `RT-RUNTIME-FUNCTIONAL-ATLAS`**, the runtime/functional atlas, and **24.8 registers
 `RT-FAILURE-MINIMIZATION`**, the failure discovery/minimization loop, and **24.9 registers
 `RT-HIGH-VALUE-TIER`**, the high-value deep tier, and **24.10 registers
-`RT-HOSTILITY-AUGMENTATION`**, the separate hostility-augmentation corpus. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
+`RT-HOSTILITY-AUGMENTATION`**, the separate hostility-augmentation corpus, and **24.11 registers
+`RT-CANDIDATE-FREEZE`**, the candidate freeze and the once-run holdout. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
 normalized inputs under `forensics/downstream/ranking/normalized/`, re-derives the frozen
 `selection_input_root_hash`, and checks every source is content-addressed with a retrieval
 timestamp and a parser version, that an unavailable source carries a reason and is not counted
@@ -62,7 +63,21 @@ frozen P1000; that they are disjoint and each family_id appears exactly once; th
 is a real committed family; that each band of 100 contributes exactly 20 holdout / 80 development;
 that the cohorts reproduce from the frozen rule; that the partition root reproduces; and that no
 candidate-subject run exists anywhere in the downstream plane -- with an instrument-sensitivity
-control that seeds six mutations and requires each caught. The
+control that seeds six mutations and requires each caught. `RT-CANDIDATE-FREEZE` reads the committed
+`forensics/downstream/candidate-freeze.json`, the committed `forensics/downstream/holdout.json`, the
+frozen `forensics/downstream/family-freeze.json`, the committed 24.6 build/link atlas, the committed
+24.7 runtime/functional atlas, the committed 24.8 failures plane, the committed 24.9 high-value tier
+and the committed 24.10 hostility corpus, re-deriving the frozen candidate identity from the
+committed install and the precommitted holdout set from the frozen P1000 by the 24.5 rule without
+re-running the holdout and without rebuilding anything. It establishes that the candidate identity
+reproduces from the committed install; that the holdout set equals the precommitted partition and
+carries a matching `partition_root_hash`; that `first_run` is present, equals the summary derived
+from the holdout run, and is attested unchanged by every rerun; that every holdout family has an
+accounting row; that a candidate row never claims a level above the authority-applicable baseline;
+that a family's verdict is the derived baseline-normalized one; that `candidate_specific_patch_count`
+is 0; that the counts are derived rather than typed; and that no holdout family is a source of a fix
+in the development-side failure plane -- with an instrument-sensitivity control that seeds six
+mutations and requires each caught. The
 registry is the file `run_courts.py`
 checks is reproduced, so a court silently dropped is a finding rather than a smaller green run.
 This is the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this
@@ -91,7 +106,7 @@ The fifteen courts, and the subphase that lands each
   * `RT-FAILURE-MINIMIZATION` -- 24.8, the failure discovery/minimization loop (registered).
   * `RT-HIGH-VALUE-TIER` -- 24.9, the high-value deep tier (registered).
   * `RT-HOSTILITY-AUGMENTATION` -- 24.10, the separate hostility corpus (registered).
-  * `RT-CANDIDATE-FREEZE` -- 24.11, the candidate freeze and holdout.
+  * `RT-CANDIDATE-FREEZE` -- 24.11, the candidate freeze and holdout (registered).
   * `RT-P1000-RUN` -- 24.12, the final full P1000 run.
   * `RT-ATLAS-RECONCILIATION` -- 24.13, the atlas reconciliation.
   * `RT-FRF-CLOSURE` -- 24.14, the FRF/Gemel closure.
@@ -101,8 +116,8 @@ Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2
 `RT-CANDIDATE-UNIVERSE`, 24.3 registers `RT-AUTHORITY-CENSUS`, 24.4 registers
 `RT-FAMILY-FREEZE`, 24.5 registers `RT-HOLDOUT-PARTITION`, 24.6 registers
 `RT-BUILD-LINK-ATLAS`, 24.7 registers `RT-RUNTIME-FUNCTIONAL-ATLAS`, 24.8 registers
-`RT-FAILURE-MINIMIZATION`, 24.9 registers `RT-HIGH-VALUE-TIER` and 24.10 registers
-`RT-HOSTILITY-AUGMENTATION`, and the remaining five are
+`RT-FAILURE-MINIMIZATION`, 24.9 registers `RT-HIGH-VALUE-TIER`, 24.10 registers
+`RT-HOSTILITY-AUGMENTATION` and 24.11 registers `RT-CANDIDATE-FREEZE`, and the remaining four are
 pending. A passing court is an instrument,
 not a property claim, and this stratum makes no property claim beyond the atlas: a selected
 empirical population is not a random sample, 1000/1000 is not a security proof, a build is not a
@@ -195,6 +210,12 @@ import downstream_high_value  # noqa: E402
 # through the same code path the artefact was produced by.
 import downstream_hostility  # noqa: E402
 
+# The 24.11 candidate-freeze tool, imported so the court re-derives the frozen candidate identity from
+# the committed install, the precommitted holdout set from 24.5, and re-runs the validation and
+# sensitivity control over the committed freeze (never re-running the holdout) through the same code
+# path the artefact was produced by.
+import downstream_candidate_freeze  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -261,12 +282,18 @@ HIGH_VALUE_TIER_COURT = "RT-HIGH-VALUE-TIER"
 HOSTILITY_CORPUS = REPO_ROOT / "forensics" / "downstream" / "hostility-corpus.json"
 HOSTILITY_AUGMENTATION_COURT = "RT-HOSTILITY-AUGMENTATION"
 
+# 24.11's subject: the frozen candidate identity and the precommitted holdout run against it exactly
+# once. The court reads it and re-runs the pure validation; it re-derives the candidate identity from
+# the committed install and never re-runs the holdout.
+CANDIDATE_FREEZE = REPO_ROOT / "forensics" / "downstream" / "candidate-freeze.json"
+CANDIDATE_FREEZE_COURT = "RT-CANDIDATE-FREEZE"
+
 # The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES`, 24.2 `RT-CANDIDATE-UNIVERSE`,
 # 24.3 `RT-AUTHORITY-CENSUS`, 24.4 `RT-FAMILY-FREEZE`, 24.5 `RT-HOLDOUT-PARTITION`, 24.6
 # `RT-BUILD-LINK-ATLAS`, 24.7 `RT-RUNTIME-FUNCTIONAL-ATLAS`, 24.8 `RT-FAILURE-MINIMIZATION`, 24.9
-# `RT-HIGH-VALUE-TIER` and 24.10 `RT-HOSTILITY-AUGMENTATION`; each later subphase appends its court
-# here in the commit that lands its instrument, and a court removed from the table leaves the
-# registry and fails `run_courts.py`.
+# `RT-HIGH-VALUE-TIER`, 24.10 `RT-HOSTILITY-AUGMENTATION` and 24.11 `RT-CANDIDATE-FREEZE`; each later
+# subphase appends its court here in the commit that lands its instrument, and a court removed from
+# the table leaves the registry and fails `run_courts.py`.
 COURTS: list[tuple[str, str]] = [
     (RANKING_SOURCES_COURT, "_ranking_sources_court"),
     (CANDIDATE_UNIVERSE_COURT, "_candidate_universe_court"),
@@ -278,13 +305,13 @@ COURTS: list[tuple[str, str]] = [
     (FAILURE_MINIMIZATION_COURT, "_failure_minimization_court"),
     (HIGH_VALUE_TIER_COURT, "_high_value_tier_court"),
     (HOSTILITY_AUGMENTATION_COURT, "_hostility_augmentation_court"),
+    (CANDIDATE_FREEZE_COURT, "_candidate_freeze_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order. A court moves out of this table
 # and into `COURTS` in the commit that lands its instrument.
 PENDING_COURTS: dict[str, str] = {
-    "RT-CANDIDATE-FREEZE": "24.11 -- the candidate freeze and holdout",
     "RT-P1000-RUN": "24.12 -- the final full P1000 run",
     "RT-ATLAS-RECONCILIATION": "24.13 -- the atlas reconciliation",
     "RT-FRF-CLOSURE": "24.14 -- the FRF/Gemel closure",
@@ -1341,6 +1368,132 @@ def _hostility_augmentation_court(name: str) -> dict:
     }
 
 
+def _candidate_freeze_court(name: str) -> dict:
+    """`RT-CANDIDATE-FREEZE`: 24.11's court, the candidate freeze and the once-run holdout.
+
+    Stages no probe. It reads the committed freeze `forensics/downstream/candidate-freeze.json`, the
+    committed precommitted holdout `forensics/downstream/holdout.json`, the frozen P1000
+    `forensics/downstream/family-freeze.json`, the committed 24.6 build/link atlas, the committed 24.7
+    runtime/functional atlas, the committed 24.8 failures plane, the committed 24.9 high-value tier
+    and the committed 24.10 hostility corpus, and re-runs the 24.11 validation and sensitivity control
+    over the committed artefact **without re-running the holdout and without rebuilding anything**.
+    It establishes that the frozen candidate identity reproduces from the committed install (the
+    libssl/libcrypto digests, the headers, pkg-config, provider modules, the crate version and the
+    source commit); that the holdout set equals the precommitted partition, reproduces from the frozen
+    P1000 by the 24.5 rule, and carries a matching `partition_root_hash`; that `first_run` is present,
+    equals the summary derived from the holdout run, and is attested unchanged by every rerun; that
+    every holdout family has an accounting row; that a candidate row never claims a level above the
+    authority-applicable baseline; that a family's verdict is the derived baseline-normalized one;
+    that `candidate_specific_patch_count` is 0; that the counts are derived rather than typed; and
+    that no holdout family is a source of a fix in the development-side failure plane. Six seeded
+    mutations are each caught with specificity holding. A passing freeze is a **measurement**, not a
+    security proof: a holdout result over a selected population is an out-of-sample measurement of
+    that population, not of all downstream software, and a venue-limited holdout member is neither a
+    pass nor a fail.
+    """
+    if not CANDIDATE_FREEZE.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the candidate-freeze artefact {rel(CANDIDATE_FREEZE)} is absent"],
+                "findings": [], "control": {}}
+
+    inputs = downstream_candidate_freeze.load_inputs()
+    body = json.loads(CANDIDATE_FREEZE.read_text(encoding="utf-8"))["body"]
+    findings = downstream_candidate_freeze.candidate_freeze_findings(inputs, body)
+    control = downstream_candidate_freeze.candidate_freeze_sensitivity_control(inputs, body)
+
+    counts = body.get("counts") or {}
+    by = counts.get("by_subject") or {}
+    ident = body.get("candidate_identity") or {}
+    hb = body.get("holdout") or {}
+    fr = body.get("first_run") or {}
+    account = body.get("accounting") or []
+    rows = (body.get("holdout_run") or {}).get("runs") or []
+    verdicts = (body.get("holdout_run") or {}).get("verdicts") or []
+    examples = {
+        "rule": body.get("rule"),
+        "candidate_identity": ident,
+        "holdout": hb,
+        "first_run": fr,
+        "learning_curve": body.get("learning_curve"),
+        "reruns": [{"rerun_index": r.get("rerun_index"),
+                    "candidate_identity_hash": r.get("candidate_identity_hash"),
+                    "first_run_hash": r.get("first_run_hash")} for r in body.get("reruns") or []],
+        "accounting_head": account[:6],
+        "accounting_venue_limited": sum(1 for a in account
+                                        if a.get("selection") == "venue_limited"),
+        "heldout_runs": [{"family": r.get("canonical_name"), "subject": r.get("subject"),
+                          "level": r.get("level"), "outcome": r.get("outcome"),
+                          "residual_class": r.get("residual_class"),
+                          "failure_class": r.get("failure_class")} for r in rows
+                         if str(r.get("level")) != downstream_candidate_freeze.L0],
+        "verdicts": [{"family": v.get("canonical_name"), "verdict": v.get("verdict"),
+                      "authority_applicable_level": v.get("authority_applicable_level"),
+                      "candidate_level": v.get("candidate_level")} for v in verdicts],
+        "candidate_specific_patch_count": counts.get("candidate_specific_patch_count", 0),
+    }
+
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/candidate-freeze.json, "
+            "forensics/downstream/holdout.json, forensics/downstream/family-freeze.json, the 24.6 "
+            "build/link atlas, the 24.7 runtime/functional atlas, the 24.8 failures plane, the 24.9 "
+            "high-value tier and the 24.10 hostility corpus, and re-runs the 24.11 validation and "
+            "sensitivity control over the committed artefact without re-running the holdout and "
+            "without rebuilding anything. It establishes that the frozen candidate identity "
+            "reproduces from the committed install (the libssl/libcrypto digests, the exported "
+            "headers, pkg-config metadata, provider modules, the crate version and the source "
+            "commit); that the holdout set equals the precommitted partition, reproduces from the "
+            "frozen P1000 by the 24.5 rule and carries a matching partition_root_hash; that "
+            "first_run is present, equals the summary derived from the holdout run, and is attested "
+            "unchanged by every rerun; that every holdout family has an accounting row; that a "
+            "candidate row never claims a level above the authority-applicable baseline; that a "
+            "family's verdict is the derived baseline-normalized one; that "
+            "candidate_specific_patch_count is 0; that the counts are derived rather than typed; "
+            "and that no holdout family is a source of a fix in the development-side failure plane. "
+            "The six seeded mutations -- a precommitted holdout member swapped for a development "
+            "member, a mutated partition root, a first_run rewritten after a rerun, a candidate "
+            "level above the authority-applicable baseline, a holdout family cited as a fix source, "
+            "and a mutated count -- are each detected with specificity holding. A passing freeze is "
+            "a measurement, not a security proof: a holdout result over a selected population is an "
+            "out-of-sample measurement of that population, not of all downstream software, and a "
+            "venue-limited holdout member is neither a pass nor a fail "
+            "(docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 3.4 and 4.9 and the brief's "
+            "sections 41, 42 and 46)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the candidate-freeze court reads committed artefacts and brings no "
+            "artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF "
+            "declaration"
+        ),
+        "candidate_identity": ident,
+        "counts": {
+            "holdout_families": counts.get("holdout_families", 0),
+            "recipe_backed_families": counts.get("recipe_backed_families", 0),
+            "measurable_families": counts.get("measurable_families", 0),
+            "venue_limited_families": counts.get("venue_limited_families", 0),
+            "rows": counts.get("rows", len(rows)),
+            "accounting_measured": (counts.get("accounting") or {}).get("measured", 0),
+            "accounting_venue_limited": (counts.get("accounting") or {}).get("venue_limited", 0),
+            "authority_functional": (by.get("authority") or {}).get("functional", 0),
+            "candidate_functional": (by.get("candidate") or {}).get("functional", 0),
+            "candidate_reaches_baseline": counts.get("candidate_reaches_baseline", 0),
+            "candidate_failures": counts.get("candidate_failures") or {},
+            "verdicts": counts.get("verdicts") or {},
+            "reruns": len(body.get("reruns") or []),
+            "candidate_specific_patch_count": counts.get("candidate_specific_patch_count", 0),
+        },
+        "examples": examples,
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1584,11 +1737,34 @@ def main(argv: list[str]) -> int:
             "an unnormalised transcript and a corpus member beyond the bound are each detected with "
             "specificity holding. A passing corpus is a separate instrument, not a rate: its "
             "results are never mixed into the counted population's rates. "
+            "`RT-CANDIDATE-FREEZE` is 24.11's court: the candidate freeze and the once-run holdout. "
+            "It stages no probe and reads forensics/downstream/candidate-freeze.json, "
+            "forensics/downstream/holdout.json, forensics/downstream/family-freeze.json, the 24.6 "
+            "build/link atlas, the 24.7 runtime/functional atlas, the 24.8 failures plane, the 24.9 "
+            "high-value tier and the 24.10 hostility corpus, re-deriving the frozen candidate "
+            "identity from the committed install and the precommitted holdout set from the frozen "
+            "P1000 by the 24.5 rule without re-running the holdout and without rebuilding anything. "
+            "It establishes that the candidate identity reproduces from the committed install (the "
+            "libssl/libcrypto digests, the exported headers, pkg-config metadata, provider modules, "
+            "the crate version and the source commit); that the holdout set equals the precommitted "
+            "partition and carries a matching partition_root_hash; that first_run is present, equals "
+            "the summary derived from the holdout run, and is attested unchanged by every rerun; "
+            "that every holdout family has an accounting row; that a candidate row never claims a "
+            "level above the authority-applicable baseline; that a family's verdict is the derived "
+            "baseline-normalized one; that candidate_specific_patch_count is 0; that the counts are "
+            "derived rather than typed; and that no holdout family is a source of a fix in the "
+            "development-side failure plane. A precommitted holdout member swapped for a development "
+            "member, a mutated partition root, a first_run rewritten after a rerun, a candidate "
+            "level above the authority baseline, a holdout family cited as a fix source and a "
+            "mutated count are each detected with specificity holding. A passing freeze is a "
+            "measurement, not a security proof: a holdout result over a selected population is an "
+            "out-of-sample measurement of that population, not of all downstream software, and a "
+            "venue-limited holdout member is neither a pass nor a fail. "
             "The remaining "
-            "five courts -- "
-            "RT-CANDIDATE-FREEZE, RT-P1000-RUN, "
+            "four courts -- "
+            "RT-P1000-RUN, "
             "RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending "
-            "with the subphases that land them (24.11 through 24.15). Phase 24 owns no exported "
+            "with the subphases that land them (24.12 through 24.15). Phase 24 owns no exported "
             "symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
@@ -1711,6 +1887,13 @@ def main(argv: list[str]) -> int:
     for probe in sorted((REPO_ROOT / "forensics" / "downstream" / "hostility").glob("*")):
         if probe.is_file():
             inputs.append(InputRef(name=f"hostility-probe/{probe.name}", path=probe))
+    # 24.11's subject: the committed candidate freeze and the tool that produced it, bound so a
+    # holdout row and an accounting row the court reads are content-addressed rather than restated.
+    for ref_name, path in (("candidate-freeze", CANDIDATE_FREEZE),
+                           ("downstream-candidate-freeze", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_candidate_freeze.py")):
+        if path.is_file():
+            inputs.append(InputRef(name=ref_name, path=path))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
@@ -2010,6 +2193,51 @@ def main(argv: list[str]) -> int:
                       f"div={row.get('divergence')}")
             print(f"      candidate_failures: {counts['candidate_failures']}")
             print(f"      not_selected: {[m['surface_id'] for m in ex.get('not_selected') or []]}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == CANDIDATE_FREEZE_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            ex = r["examples"]
+            ident = r["candidate_identity"]
+            print(f"  {r['court']:<32} pass   (no probe, holdout={counts['holdout_families']} "
+                  f"recipe_backed={counts['recipe_backed_families']} "
+                  f"measurable={counts['measurable_families']} "
+                  f"venue_limited={counts['venue_limited_families']} "
+                  f"reach_baseline={counts['candidate_reaches_baseline']} "
+                  f"verdicts={counts['verdicts']} reruns={counts['reruns']} "
+                  f"patches={counts['candidate_specific_patch_count']}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"swapped->{c['caught_holdout_member_swapped_for_development']} "
+                  f"root->{c['caught_mutated_partition_root']} "
+                  f"rewritten->{c['caught_first_run_rewritten_after_rerun']} "
+                  f"above-baseline->{c['caught_candidate_level_above_authority_baseline']} "
+                  f"fix-source->{c['caught_holdout_family_cited_as_fix']} "
+                  f"counts->{c['caught_mutated_count']})")
+            print(f"      candidate identity: libssl={str(ident.get('libssl_sha256'))[:12]} "
+                  f"libcrypto={str(ident.get('libcrypto_sha256'))[:12]} "
+                  f"headers={(ident.get('headers') or {}).get('count')} "
+                  f"pkgconfig={(ident.get('pkgconfig') or {}).get('count')} "
+                  f"modules={(ident.get('ossl_modules') or {}).get('count')} "
+                  f"version={ident.get('crate_version')} "
+                  f"commit={str(ident.get('source_commit'))[:12]} "
+                  f"image={(ident.get('container') or {}).get('image')} "
+                  f"platform={(ident.get('container') or {}).get('platform')}")
+            print(f"      identity_hash={ident.get('identity_hash')}")
+            hb = ex.get("holdout") or {}
+            print(f"      holdout: partition_root_hash={hb.get('partition_root_hash')} "
+                  f"set_hash={hb.get('set_hash')} families={hb.get('family_count')}")
+            fr = ex.get("first_run") or {}
+            print(f"      first_run: reaches_baseline={fr.get('candidate_reaches_baseline')} "
+                  f"verdicts={fr.get('verdicts')} candidate_failures={fr.get('candidate_failures')}")
+            for row in ex.get("heldout_runs") or []:
+                print(f"      holdout-run {row['subject']:<9} {row['family']:<12} {row['level']:<16} "
+                      f"{row['outcome']:<8} {str(row.get('residual_class') or '')}")
+            for v in ex.get("verdicts") or []:
+                print(f"      verdict {v['family']:<12} {v['verdict']:<24} "
+                      f"baseline={v['authority_applicable_level']} candidate={v['candidate_level']}")
+            print(f"      candidate_failures: {counts['candidate_failures']}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

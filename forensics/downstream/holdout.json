@@ -7,7 +7,7 @@
       "p1000": 1000,
       "per_band_holdout": 20
     },
-    "holdout_status": "unopened",
+    "holdout_status": "opened",
     "non_claims": [
       "a selected population is not a random sample: the 1,000 families chosen from frozen ranking evidence are a selected population, and their rates do not generalise to all downstream software",
       "1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and it makes no statement about an unmeasured consumer",
@@ -8050,7 +8050,7 @@
       "usage_cluster_stratification": "unavailable at freeze time: usage clusters are computed later, in the runtime/functional atlas, so the partition is stratified by rank band only and no usage cluster is invented"
     }
   },
-  "body_hash": "723b5efe348f755861798b85d893077b768abce240dac45316c7ca46314c092c",
+  "body_hash": "6826695fc6dbeb78994320c07e8b35f529359d26ca9eed88946269e2352080da",
   "generator": "forensics/tools/downstream_holdout.py",
   "inputs": [
     {

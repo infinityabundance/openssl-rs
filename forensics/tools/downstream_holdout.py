@@ -40,6 +40,15 @@ the partition references **any family outside the frozen P1000**, and reuses
 uses -- to fail if **any candidate-subject run exists in the downstream plane**, so a candidate
 result existing at freeze time is a finding, not a silent influence.
 
+The holdout status is derived, and 24.11 opens it
+-------------------------------------------------
+The partition carries a `holdout_status` field that reads `unopened` until the holdout has been run
+against the frozen candidate -- which is 24.11's once-only run. To keep the precommitment editable
+without a hand edit, the status is **derived** from whether 24.11's `candidate-freeze.json` artefact
+exists (its existence only, never its bytes), so the partition cannot claim to be open before the
+freeze lands, and reads `opened` once it has -- `holdout_findings` fails if the recorded status is
+not the derived one.
+
 The Docker-only guard is called first
 --------------------------------------
 This module reads committed evidence and writes one artefact; it executes nothing. Its `main` still
@@ -94,6 +103,13 @@ FAMILY_FREEZE = REPO_ROOT / "forensics" / "downstream" / "family-freeze.json"
 OUT = REPO_ROOT / "forensics" / "downstream" / "holdout.json"
 DOWNSTREAM = REPO_ROOT / "forensics" / "downstream"
 GENERATOR = "forensics/tools/downstream_holdout.py"
+
+# The candidate-freeze artefact 24.11 writes. Its **existence** -- never its content -- is what marks
+# the holdout as `opened`, so there is no digest cycle: `candidate-freeze.json` binds this holdout
+# artefact as an input, while this status reads only whether that artefact exists. Before 24.11 lands,
+# the artefact is absent and the holdout reads `unopened`; once it exists the holdout has been opened
+# and run exactly once (the brief's section 41).
+CANDIDATE_FREEZE = REPO_ROOT / "forensics" / "downstream" / "candidate-freeze.json"
 
 # The frozen partition constants, recorded verbatim in the artefact (rule) and re-derived by the
 # court. `PARTITION_SEED` salts the content hash that orders each band; `HOLDOUT_PER_BAND` is the
@@ -238,6 +254,15 @@ def _partition_root(rule: dict, development: list[dict], holdout: list[dict], ta
     })
 
 
+def holdout_status() -> str:
+    """`opened` once 24.11's candidate-freeze artefact exists, `unopened` before.
+
+    The derivation reads the candidate-freeze artefact's **existence only**, never its bytes, so
+    `candidate-freeze.json` can bind this partition as an input without a digest cycle forming.
+    """
+    return "opened" if CANDIDATE_FREEZE.is_file() else "unopened"
+
+
 def derive_holdout(freeze_body: dict) -> dict:
     """The `body` of the precommitted holdout partition, a pure function of the frozen P1000."""
     development, holdout = derive_partition(freeze_body)
@@ -254,7 +279,7 @@ def derive_holdout(freeze_body: dict) -> dict:
         "partition": {"development": development, "holdout": holdout},
         "partition_root_hash": _partition_root(RULE, development, holdout, tag),
         "counts": counts,
-        "holdout_status": "unopened",
+        "holdout_status": holdout_status(),
         "non_claims": NON_CLAIMS,
     }
 
@@ -406,10 +431,13 @@ def holdout_findings(families_body: dict, freeze_body: dict, holdout_body: dict,
         findings.append(f"counts.per_band_holdout {counts.get('per_band_holdout')!r} is not the "
                         f"frozen {HOLDOUT_PER_BAND}")
 
-    # The holdout has not been run against any candidate yet, and the model's non-claims hold.
-    if holdout_body.get("holdout_status") != "unopened":
-        findings.append(f"the holdout_status is {holdout_body.get('holdout_status')!r}, not "
-                        f"`unopened`: the holdout is run exactly once, and only in 24.11")
+    # The holdout has not been run against any candidate until 24.11's candidate-freeze artefact
+    # exists, and the model's non-claims hold.
+    derived_status = holdout_status()
+    if holdout_body.get("holdout_status") != derived_status:
+        findings.append(f"the holdout_status is {holdout_body.get('holdout_status')!r}, not the "
+                        f"derived {derived_status!r}: the holdout is run exactly once, and only in "
+                        f"24.11, so its status follows whether the candidate-freeze artefact exists")
     if holdout_body.get("non_claims") != NON_CLAIMS:
         findings.append("the recorded non_claims are not the stratum's four non-claims plus the "
                         "holdout-specific non-claim")
