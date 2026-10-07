@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-RANKING-SOURCES` is 24.1's court: the frozen ranking-source acquisition. It stages no probe and reads forensics/downstream/ranking-sources.json and the committed normalized inputs under forensics/downstream/ranking/normalized/, re-running the 24.1 validation and sensitivity control without fetching. It establishes that every acquired ranking / reverse-dependency source -- the Debian reverse-dependency graph and Popcon counts, the Fedora and Alpine reverse package dependencies, Homebrew openssl@3's dependency relationships and analytics, the OpenSSF Scorecard and the crates.io reverse-dependency count -- is content-addressed by its raw payload SHA-256 and its normalization SHA-256, carries a retrieval timestamp and a parser version, and is reproducible from its deterministic retrieval recipe; that the frozen selection_input_root_hash reproduces from the present sources; and that an unavailable source (the OpenSSF Criticality Score, which has no reproducible public endpoint) carries a reason and is not counted present. A source stripped of its hash, a mutated normalized payload, an unavailable source counted present and a missing retrieval timestamp are each detected with specificity holding. A passing ranking-source manifest is a precommitment, not a ranking claim: it says the selection input was frozen before any candidate result. `RT-CANDIDATE-UNIVERSE` is 24.2's court: the candidate family universe. It stages no probe and reads forensics/downstream/candidates.json and forensics/downstream/families.json, re-deriving both from the committed forensics/downstream/ranking/normalized/ inputs. It establishes that every family is schema-valid (kind `family`) and provenance-backed; that aliases of one upstream collapse to one family (the libcurl4/curl/curl-dev/curl-doc set is one family, not four); that the OpenSSL providers and a name collision (`libcrypto++`) are not counted as consumers; that a fork is not independent without explicit evidence of materially different OpenSSL integration; that a transitive consumer is not counted as direct; and that the universe is substantially larger than 1,000 before deduplication. A double-counted distro alias, a transitive consumer promoted to direct, a fork counted independent with no evidence and a family with no provenance are each detected with specificity holding. `RT-AUTHORITY-CENSUS` is 24.3's court: the authority-baseline census. It stages no probe and reads forensics/downstream/authority-baselines.jsonl and forensics/downstream/usage-fingerprints.json, re-deriving the provisional census cohort from the committed families. It establishes that every cohort member has an authority result classified; that an `AUTHORITY_BASELINE_FAIL` carries an authority failure class from the taxonomy and a reason, and is never counted as a candidate failure; that a `AUTHORITY_BASELINE_PASS`'s linkage proof resolves the admitted authority's own libssl/libcrypto and never a system one; that the cohort selection rule is recorded and reproduces from the frozen sources; and that no candidate execution occurred. A build claiming authority linkage while resolving a system libssl, an authority failure counted as a candidate failure, a cohort member with no source hash and a fingerprint with no imported symbols claimed as a pass are each detected with specificity holding. A passing census is a measurement, not a candidate result: the authority side reached the level it records, and no candidate ran. `RT-FAMILY-FREEZE` is 24.4's court: the P1000 + reserve freeze. It stages no probe and reads forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-deriving the ranked universe from the committed families by the frozen selection rule (source breadth, then distro breadth, then popularity, then canonical name, then family_id). It establishes that the recorded P1000 is exactly the derived top-1,000 and the reserve the derived remainder in rank order; that the P1000 is distinct and disjoint from the reserve; that both are a subset of the universe; that ranks are positions and the recorded signal is each family's own; that the recorded selection root reproduces and its selection_input_root_hash, families sha256 and rule sha256 match the committed files; and that no candidate-subject run exists in the pre-freeze plane (the candidate-result artefacts the stratum produces after the freeze -- 24.6's build/link atlas onward -- are excluded), so the population is frozen before any candidate result. Two P1000 members' order swapped, a P1000 member deleted so the count is wrong, a family id shared between the P1000 and the reserve, a mutated selection root, and a fabricated candidate-subject run row in the downstream plane are each detected with specificity holding. A passing freeze is a precommitment, not a result, and it refuses the anti-pattern of a family typed into the 1,000 because a candidate passed it. `RT-HOLDOUT-PARTITION` is 24.5's court: the precommitted holdout partition. It stages no probe and reads forensics/downstream/holdout.json, forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-deriving the partition from the committed frozen P1000 by the frozen rank-band rule (bands of 100, each band ordered by content_hash('phase24-holdout-v1:'+family_id) ascending, tiebreak by family_id, the first 20 holdout and the remaining 80 development). It establishes that the two cohorts union to exactly the frozen P1000; that they are disjoint and each family_id appears exactly once; that every family_id is a real committed family; that each band contributes exactly 20 holdout / 80 development; that the cohorts reproduce from the frozen rule; that the partition root reproduces; that the counts are read rather than typed; that the partition is a pure function of the frozen P1000 (no family outside it); and that no candidate-subject run exists anywhere in the downstream plane, so the split is fixed before any candidate result. One development family moved into the holdout cohort, one holdout member deleted, a family_id duplicated into both cohorts, a P1000-external family added, a mutated partition root, and a fabricated candidate-subject run row in the downstream plane are each detected with specificity holding. A passing partition is a precommitment, not a result, and it refuses the anti-pattern of a holdout chosen after seeing a candidate failure -- a holdout that is no longer out-of-sample. `RT-BUILD-LINK-ATLAS` is 24.6's court: the build/link atlas. It stages no probe and reads forensics/downstream/build-link-atlas.json, forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-running the 24.6 validation and sensitivity control over the committed artefact without rebuilding. It establishes that every frozen P1000 family is accounted for under both subjects; that every recipe-backed family has both an authority and a candidate row for the same specimen and the same recipe (identical build intent); that a candidate L4-linked row's linkage proof resolves the candidate install and never the authority prefix nor a system library; that an authority L4-linked row resolves the authority; that candidate_specific_patch_count is 0; that every non-measured row carries a reason and a schema-valid residual/failure class; and that the counts are derived rather than typed. A candidate L4 row whose linkage resolves the authority, a recipe-backed family missing its authority row, a positive candidate-specific patch count, a non-measured row with no residual class, and a candidate L4 row whose linkage resolves a system library are each detected with specificity holding. A passing atlas is a measurement, not a functional proof: the linkage proof says the candidate's libssl/libcrypto resolved, not that any consumer works. The remaining nine courts -- RT-RUNTIME-FUNCTIONAL-ATLAS, RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.7 through 24.15). Phase 24 owns no exported symbol, so no differential probe over a symbol set is its evidence. The stratum's record kinds are defined and self-tested in forensics/tools/downstream_schemas.py, whose inventory this registry records: the family (the counted unit, never a package alias), the separate specimen, the variant, the frozen ranking-source row, the execution-level row over the L0-L8 ladder, the run, the classified residual, the preserved-and-minimized failure and the baseline-normalized drop-in verdict. Every entry point calls the Docker-only execution guard (forensics/tools/phase24_guard.py) first, so nothing in this stratum executes on the host. The four things the model never claims are: a selected empirical population is not a random sample; 1000/1000 is not a security proof; a build is not a functional proof; and transitive and direct consumers are different evidence. DROP_IN_PASS is baseline-normalized -- the same pristine source, a succeeded authority baseline, the candidate reaching the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches. docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "`RT-RANKING-SOURCES` is 24.1's court: the frozen ranking-source acquisition. It stages no probe and reads forensics/downstream/ranking-sources.json and the committed normalized inputs under forensics/downstream/ranking/normalized/, re-running the 24.1 validation and sensitivity control without fetching. It establishes that every acquired ranking / reverse-dependency source -- the Debian reverse-dependency graph and Popcon counts, the Fedora and Alpine reverse package dependencies, Homebrew openssl@3's dependency relationships and analytics, the OpenSSF Scorecard and the crates.io reverse-dependency count -- is content-addressed by its raw payload SHA-256 and its normalization SHA-256, carries a retrieval timestamp and a parser version, and is reproducible from its deterministic retrieval recipe; that the frozen selection_input_root_hash reproduces from the present sources; and that an unavailable source (the OpenSSF Criticality Score, which has no reproducible public endpoint) carries a reason and is not counted present. A source stripped of its hash, a mutated normalized payload, an unavailable source counted present and a missing retrieval timestamp are each detected with specificity holding. A passing ranking-source manifest is a precommitment, not a ranking claim: it says the selection input was frozen before any candidate result. `RT-CANDIDATE-UNIVERSE` is 24.2's court: the candidate family universe. It stages no probe and reads forensics/downstream/candidates.json and forensics/downstream/families.json, re-deriving both from the committed forensics/downstream/ranking/normalized/ inputs. It establishes that every family is schema-valid (kind `family`) and provenance-backed; that aliases of one upstream collapse to one family (the libcurl4/curl/curl-dev/curl-doc set is one family, not four); that the OpenSSL providers and a name collision (`libcrypto++`) are not counted as consumers; that a fork is not independent without explicit evidence of materially different OpenSSL integration; that a transitive consumer is not counted as direct; and that the universe is substantially larger than 1,000 before deduplication. A double-counted distro alias, a transitive consumer promoted to direct, a fork counted independent with no evidence and a family with no provenance are each detected with specificity holding. `RT-AUTHORITY-CENSUS` is 24.3's court: the authority-baseline census. It stages no probe and reads forensics/downstream/authority-baselines.jsonl and forensics/downstream/usage-fingerprints.json, re-deriving the provisional census cohort from the committed families. It establishes that every cohort member has an authority result classified; that an `AUTHORITY_BASELINE_FAIL` carries an authority failure class from the taxonomy and a reason, and is never counted as a candidate failure; that a `AUTHORITY_BASELINE_PASS`'s linkage proof resolves the admitted authority's own libssl/libcrypto and never a system one; that the cohort selection rule is recorded and reproduces from the frozen sources; and that no candidate execution occurred. A build claiming authority linkage while resolving a system libssl, an authority failure counted as a candidate failure, a cohort member with no source hash and a fingerprint with no imported symbols claimed as a pass are each detected with specificity holding. A passing census is a measurement, not a candidate result: the authority side reached the level it records, and no candidate ran. `RT-FAMILY-FREEZE` is 24.4's court: the P1000 + reserve freeze. It stages no probe and reads forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-deriving the ranked universe from the committed families by the frozen selection rule (source breadth, then distro breadth, then popularity, then canonical name, then family_id). It establishes that the recorded P1000 is exactly the derived top-1,000 and the reserve the derived remainder in rank order; that the P1000 is distinct and disjoint from the reserve; that both are a subset of the universe; that ranks are positions and the recorded signal is each family's own; that the recorded selection root reproduces and its selection_input_root_hash, families sha256 and rule sha256 match the committed files; and that no candidate-subject run exists in the pre-freeze plane (the candidate-result artefacts the stratum produces after the freeze -- 24.6's build/link atlas onward -- are excluded), so the population is frozen before any candidate result. Two P1000 members' order swapped, a P1000 member deleted so the count is wrong, a family id shared between the P1000 and the reserve, a mutated selection root, and a fabricated candidate-subject run row in the downstream plane are each detected with specificity holding. A passing freeze is a precommitment, not a result, and it refuses the anti-pattern of a family typed into the 1,000 because a candidate passed it. `RT-HOLDOUT-PARTITION` is 24.5's court: the precommitted holdout partition. It stages no probe and reads forensics/downstream/holdout.json, forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-deriving the partition from the committed frozen P1000 by the frozen rank-band rule (bands of 100, each band ordered by content_hash('phase24-holdout-v1:'+family_id) ascending, tiebreak by family_id, the first 20 holdout and the remaining 80 development). It establishes that the two cohorts union to exactly the frozen P1000; that they are disjoint and each family_id appears exactly once; that every family_id is a real committed family; that each band contributes exactly 20 holdout / 80 development; that the cohorts reproduce from the frozen rule; that the partition root reproduces; that the counts are read rather than typed; that the partition is a pure function of the frozen P1000 (no family outside it); and that no candidate-subject run exists anywhere in the downstream plane, so the split is fixed before any candidate result. One development family moved into the holdout cohort, one holdout member deleted, a family_id duplicated into both cohorts, a P1000-external family added, a mutated partition root, and a fabricated candidate-subject run row in the downstream plane are each detected with specificity holding. A passing partition is a precommitment, not a result, and it refuses the anti-pattern of a holdout chosen after seeing a candidate failure -- a holdout that is no longer out-of-sample. `RT-BUILD-LINK-ATLAS` is 24.6's court: the build/link atlas. It stages no probe and reads forensics/downstream/build-link-atlas.json, forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-running the 24.6 validation and sensitivity control over the committed artefact without rebuilding. It establishes that every frozen P1000 family is accounted for under both subjects; that every recipe-backed family has both an authority and a candidate row for the same specimen and the same recipe (identical build intent); that a candidate L4-linked row's linkage proof resolves the candidate install and never the authority prefix nor a system library; that an authority L4-linked row resolves the authority; that candidate_specific_patch_count is 0; that every non-measured row carries a reason and a schema-valid residual/failure class; and that the counts are derived rather than typed. A candidate L4 row whose linkage resolves the authority, a recipe-backed family missing its authority row, a positive candidate-specific patch count, a non-measured row with no residual class, and a candidate L4 row whose linkage resolves a system library are each detected with specificity holding. A passing atlas is a measurement, not a functional proof: the linkage proof says the candidate's libssl/libcrypto resolved, not that any consumer works. `RT-RUNTIME-FUNCTIONAL-ATLAS` is 24.7's court: the runtime/functional atlas. It stages no probe and reads forensics/downstream/runtime-functional-atlas.json, forensics/downstream/family-freeze.json, forensics/downstream/families.json and the 24.6 build/link atlas, re-running the 24.7 validation and sensitivity control over the committed artefact without rebuilding and without launching anything. It establishes that every frozen P1000 family is accounted for under both subjects; that a family that reached L4-linked in 24.6 has runtime rows under both subjects; that a runtime row never reaches above the level its build/link row permits; that an L5+ row is backed by a real load proof resolving the subject prefix and never the authority's; that an L6/L7 row carries a non-empty normalised transcript hash and a normalisation tag that erases no evidence; that the candidate's authority-applicable baseline is re-derived from the authority rows rather than inflated to justify a pass; that candidate_specific_patch_count is 0; and that the counts are derived rather than typed. A candidate row whose level passes only by inflating its authority baseline, an L5 row with no load proof, an L6 row with an empty transcript, a missing authority runtime row for an L4 family, a normalisation that erases a return code, and a runtime row above its build/link permit are each detected with specificity holding. A passing atlas is a measurement, not a security proof: it says a pristine downstream program loaded the subject's libssl/libcrypto and completed one deterministic local workload, not that any consumer is safe. The remaining eight courts -- RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.8 through 24.15). Phase 24 owns no exported symbol, so no differential probe over a symbol set is its evidence. The stratum's record kinds are defined and self-tested in forensics/tools/downstream_schemas.py, whose inventory this registry records: the family (the counted unit, never a package alias), the separate specimen, the variant, the frozen ranking-source row, the execution-level row over the L0-L8 ladder, the run, the classified residual, the preserved-and-minimized failure and the baseline-normalized drop-in verdict. Every entry point calls the Docker-only execution guard (forensics/tools/phase24_guard.py) first, so nothing in this stratum executes on the host. The four things the model never claims are: a selected empirical population is not a random sample; 1000/1000 is not a security proof; a build is not a functional proof; and transitive and direct consumers are different evidence. DROP_IN_PASS is baseline-normalized -- the same pristine source, a succeeded authority baseline, the candidate reaching the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches. docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -1176,6 +1176,268 @@
         "probe": "",
         "problems": [],
         "verdict": "pass"
+      },
+      {
+        "candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "33f6210e368c968a46d3ddeab3184f636bd36215ff929672864a387303b9e4c8",
+          "libssl_so_3_sha256": "0f3834cad97351a47bee807b85c628882e6722b188104cbc1d26c88d1464c038"
+        },
+        "control": {
+          "baseline_findings": 0,
+          "caught_candidate_level_above_authority_baseline": true,
+          "caught_loaded_row_without_proof": true,
+          "caught_missing_authority_runtime_row": true,
+          "caught_normalisation_erases_return_code": true,
+          "caught_runtime_above_build_link_permit": true,
+          "caught_runtime_row_without_transcript": true,
+          "honest": true,
+          "injected_candidate_level_above_authority_baseline": "candidate_level_above_authority_baseline",
+          "injected_loaded_row_without_proof": "loaded_row_without_proof",
+          "injected_missing_authority_runtime_row": "missing_authority_runtime_row",
+          "injected_normalisation_erases_return_code": "normalisation_erases_return_code",
+          "injected_runtime_above_build_link_permit": "runtime_above_build_link_permit",
+          "injected_runtime_row_without_transcript": "runtime_row_without_transcript",
+          "specificity_holds": true
+        },
+        "counts": {
+          "authority_functional": 6,
+          "authority_loaded": 7,
+          "authority_runtime": 7,
+          "candidate_baseline_not_linked": 5,
+          "candidate_below_baseline": 0,
+          "candidate_functional": 6,
+          "candidate_loaded": 8,
+          "candidate_reaches_baseline": 12,
+          "candidate_reaches_linked_baseline": 7,
+          "candidate_runtime": 7,
+          "candidate_specific_patch_count": 0,
+          "no_recipe": 988,
+          "p1000": 1000,
+          "rows": 2000,
+          "with_recipe": 12
+        },
+        "court": "RT-RUNTIME-FUNCTIONAL-ATLAS",
+        "examples": {
+          "authority_applicable_level": {
+            "family:curl": "L7-functional",
+            "family:haproxy": "L7-functional",
+            "family:isync": "L1-admitted-source",
+            "family:kmod": "L1-admitted-source",
+            "family:libssh": "L1-admitted-source",
+            "family:lighttpd": "L1-admitted-source",
+            "family:monit": "L7-functional",
+            "family:nginx": "L7-functional",
+            "family:openssh": "L7-functional",
+            "family:openvpn": "L1-admitted-source",
+            "family:pure-ftpd": "L6-runtime",
+            "family:redis": "L7-functional"
+          },
+          "candidate_failures": [
+            {
+              "failure_class": "link-failure",
+              "family": "kmod",
+              "level": "L1-admitted-source",
+              "reason": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+            },
+            {
+              "failure_class": "link-failure",
+              "family": "libssh",
+              "level": "L1-admitted-source",
+              "reason": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+            },
+            {
+              "failure_class": "link-failure",
+              "family": "lighttpd",
+              "level": "L1-admitted-source",
+              "reason": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+            },
+            {
+              "failure_class": "link-failure",
+              "family": "openvpn",
+              "level": "L1-admitted-source",
+              "reason": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+            }
+          ],
+          "candidate_identity": {
+            "install_prefix": "artifacts/phase2/install",
+            "libcrypto_so_3_sha256": "33f6210e368c968a46d3ddeab3184f636bd36215ff929672864a387303b9e4c8",
+            "libssl_so_3_sha256": "0f3834cad97351a47bee807b85c628882e6722b188104cbc1d26c88d1464c038"
+          },
+          "candidate_specific_patch_count": 0,
+          "loaded": [
+            {
+              "family": "curl",
+              "level": "L7-functional",
+              "outcome": "reached",
+              "residual_class": "none",
+              "subject": "authority",
+              "workload": "curl: verified TLS1.3 fetch + unrelated-CA reject"
+            },
+            {
+              "family": "curl",
+              "level": "L7-functional",
+              "outcome": "reached",
+              "residual_class": "none",
+              "subject": "candidate",
+              "workload": "curl: verified TLS1.3 fetch + unrelated-CA reject"
+            },
+            {
+              "family": "haproxy",
+              "level": "L7-functional",
+              "outcome": "reached",
+              "residual_class": "none",
+              "subject": "authority",
+              "workload": "haproxy: TLS terminator with a verified response"
+            },
+            {
+              "family": "haproxy",
+              "level": "L7-functional",
+              "outcome": "reached",
+              "residual_class": "none",
+              "subject": "candidate",
+              "workload": "haproxy: TLS terminator with a verified response"
+            },
+            {
+              "family": "isync",
+              "level": "L5-loaded",
+              "outcome": "reached",
+              "residual_class": "out-of-scope",
+              "subject": "candidate",
+              "workload": null
+            },
+            {
+              "family": "monit",
+              "level": "L7-functional",
+              "outcome": "reached",
+              "residual_class": "none",
+              "subject": "authority",
+              "workload": "monit: TLS httpd handshake + HTTP response"
+            },
+            {
+              "family": "monit",
+              "level": "L7-functional",
+              "outcome": "reached",
+              "residual_class": "none",
+              "subject": "candidate",
+              "workload": "monit: TLS httpd handshake + HTTP response"
+            },
+            {
+              "family": "nginx",
+              "level": "L7-functional",
+              "outcome": "reached",
+              "residual_class": "none",
+              "subject": "authority",
+              "workload": "nginx: verified TLS1.3 server response"
+            },
+            {
+              "family": "nginx",
+              "level": "L7-functional",
+              "outcome": "reached",
+              "residual_class": "none",
+              "subject": "candidate",
+              "workload": "nginx: verified TLS1.3 server response"
+            },
+            {
+              "family": "openssh",
+              "level": "L7-functional",
+              "outcome": "reached",
+              "residual_class": "none",
+              "subject": "authority",
+              "workload": "openssh: ssh-keygen Ed25519 sign/verify (libcrypto)"
+            },
+            {
+              "family": "openssh",
+              "level": "L7-functional",
+              "outcome": "reached",
+              "residual_class": "none",
+              "subject": "candidate",
+              "workload": "openssh: ssh-keygen Ed25519 sign/verify (libcrypto)"
+            },
+            {
+              "family": "pure-ftpd",
+              "level": "L6-runtime",
+              "outcome": "reached",
+              "residual_class": "out-of-scope",
+              "subject": "authority",
+              "workload": "pure-ftpd: FTPS control-connection AUTH TLS handshake"
+            },
+            {
+              "family": "pure-ftpd",
+              "level": "L6-runtime",
+              "outcome": "reached",
+              "residual_class": "out-of-scope",
+              "subject": "candidate",
+              "workload": "pure-ftpd: FTPS control-connection AUTH TLS handshake"
+            },
+            {
+              "family": "redis",
+              "level": "L7-functional",
+              "outcome": "reached",
+              "residual_class": "none",
+              "subject": "authority",
+              "workload": "redis: TLS handshake + encrypted PING/+PONG"
+            },
+            {
+              "family": "redis",
+              "level": "L7-functional",
+              "outcome": "reached",
+              "residual_class": "none",
+              "subject": "candidate",
+              "workload": "redis: TLS handshake + encrypted PING/+PONG"
+            }
+          ],
+          "rule": {
+            "accounting": "all 1000 frozen families are emitted under both subjects; a family with no admitted recipe, or whose build/link row never reached L4-linked, is `not_attempted` with a reason, never omitted and never fabricated into a pass",
+            "authority_applicable_baseline": "a specimen's authority-applicable baseline is the highest level its authority runtime rows reached; a candidate run is DROP_IN-relevant only when its own level rank is at least that rank, and the candidate is judged against what the authority itself achieved, never a higher aspirational level. The baseline is recorded on every candidate row and re-derived from the authority rows by the court",
+            "confinement": "each fetch, build and run runs inside the admitted court container under its cgroup caps and this tool's own wall-clock bounds; scratch is under /work/court and removed afterwards",
+            "constants": {
+              "launch_timeout_seconds": 60,
+              "make_jobs": "-j8",
+              "step_timeout_seconds": 900
+            },
+            "id": "downstream-runtime-functional-atlas/1",
+            "ladder": "L5-loaded: the built program starts under LD_LIBRARY_PATH=<subject>/lib and the subject's libssl/libcrypto are actually loaded -- the program's own ldd resolution of every OpenSSL soname is under the subject prefix (and never the authority's), and the loader initialises the subject library (an LD_DEBUG=libs dynamic-load trace); a version banner alone is not a load proof. L6-runtime: the program executes a real, local OpenSSL code path without failure (a TLS handshake, a key generation). L7-functional: the workload completes its intended effect -- a verified transfer, a verified TLS server response, a verified signature, a protocol round-trip over TLS",
+            "levels": [
+              "L5-loaded",
+              "L6-runtime",
+              "L7-functional"
+            ],
+            "local_only": "every L6/L7 workload runs against local peers only -- the admitted authority's own openssl CLI and the subject-linked program, on loopback; no run touches the public internet. The network is used only to acquire a pristine source, exactly as 24.6 fetched it",
+            "name": "the local-only runtime/functional atlas",
+            "normalisation": {
+              "never": [
+                "return_codes",
+                "error_classes",
+                "certificate_decisions",
+                "protocol_choices",
+                "algorithm_choices"
+              ],
+              "normalises": [
+                "absolute_paths",
+                "ports",
+                "pids",
+                "timestamps",
+                "addresses"
+              ],
+              "policy": "the same normaliser is applied to both subjects; it replaces only absolute paths, ports, PIDs, timestamps and addresses, and never a return code, an error class, a certificate decision, or a protocol/algorithm choice",
+              "tag": "runtime-transcript-normalisation/1"
+            },
+            "permit": "a runtime row may not reach a level above the level its build/link row reached: a subject that never linked cannot load",
+            "subjects": [
+              "authority",
+              "candidate"
+            ],
+            "workload_policy": "only a workload meaningful to the program is driven, never a manufactured one; where a program's workload needs a peer or dependency this venue does not admit, the exclusion is recorded with a reason and the level reached is stated honestly rather than faked"
+          }
+        },
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the runtime/functional atlas court reads committed artefacts and brings no artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it reads forensics/downstream/runtime-functional-atlas.json, forensics/downstream/family-freeze.json, forensics/downstream/families.json and forensics/downstream/build-link-atlas.json and re-runs the 24.7 validation and sensitivity control over the committed artefact without rebuilding and without launching anything. It establishes that every frozen P1000 family is accounted for under both subjects; that a family that reached L4-linked in 24.6 has runtime rows under both subjects; that a runtime row never reaches above the level its build/link row permits; that an L5+ row is backed by a real load proof resolving the subject prefix and never the authority's; that an L6/L7 row carries a non-empty normalised transcript hash and a normalisation tag that erases no evidence; that the candidate's authority-applicable baseline is re-derived from the authority rows; that candidate_specific_patch_count is 0; and that the counts are derived rather than typed. The six seeded mutations -- a candidate row whose level passes only by inflating its authority baseline, an L5 row with no load proof, an L6 row with an empty transcript hash, a missing authority runtime row for a family that reached L4, a normalisation that erases a return code, and a runtime row reaching above its build/link permit -- are each detected with specificity holding. A passing atlas is a measurement, not a security proof: it says a pristine downstream program loaded the subject's libssl/libcrypto and completed one deterministic local workload (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 3.1, 3.2, 3.6 and the brief's sections 18, 43 and 46).",
+        "probe": "",
+        "problems": [],
+        "verdict": "pass"
       }
     ],
     "drop_in_verdicts": [
@@ -1220,8 +1482,7 @@
       "RT-FRF-CLOSURE": "24.14 -- the FRF/Gemel closure",
       "RT-HIGH-VALUE-TIER": "24.9 -- the high-value deep tier",
       "RT-HOSTILITY-AUGMENTATION": "24.10 -- the separate hostility-augmentation corpus",
-      "RT-P1000-RUN": "24.12 -- the final full P1000 run",
-      "RT-RUNTIME-FUNCTIONAL-ATLAS": "24.7 -- the runtime/functional atlas"
+      "RT-P1000-RUN": "24.12 -- the final full P1000 run"
     },
     "residual_classes": [
       "none",
@@ -1363,8 +1624,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 6,
-      "total": 6
+      "pass": 7,
+      "total": 7
     }
   },
   "generator": "forensics/tools/phase24_courts.py",
@@ -1482,7 +1743,7 @@
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "76bd60c33da6ac21eeafef3f319c7ef279d018685c29747d6f85614e89f11ec5"
+      "sha256": "54849dafe35a8741a9a7c4805ffab2aacf5c29dd2c8835fcc13e864464a0826a"
     },
     {
       "name": "downstream-freeze",
@@ -1492,7 +1753,7 @@
     {
       "name": "holdout",
       "path": "forensics/downstream/holdout.json",
-      "sha256": "3fc0ce5f49de13feab50e82402856791b52415ebea9d72e669f4ab9a9a20cc6f"
+      "sha256": "b00054925e7dbe8b02e74982d8f7d1d7e88e0ca8c104711586ffb28de0e1836b"
     },
     {
       "name": "downstream-holdout",
@@ -1508,6 +1769,16 @@
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
       "sha256": "f13829868dc917601b369760983c6113d4b7eddecf8f9a1f17ed94c8fc8942af"
+    },
+    {
+      "name": "runtime-functional-atlas",
+      "path": "forensics/downstream/runtime-functional-atlas.json",
+      "sha256": "2904cc61b06aec31edfe58dd6263ac4747ed9097d5f30c0807885b3a32df98eb"
+    },
+    {
+      "name": "downstream-runtime",
+      "path": "forensics/tools/downstream_runtime.py",
+      "sha256": "15739bd787925b78a19e379d6fbf34a95662efef12cc3b50fcd10d3af70f45b5"
     }
   ],
   "kind": "phase24-courts",
