@@ -90,10 +90,10 @@
         "closure": "the `RT-FAILURE-MINIMIZATION` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-FAILURE-MINIMIZATION is pending",
+        "measurement_state": "complete",
+        "observation": "RT-FAILURE-MINIMIZATION is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "failure-minimization",
         "what": "every discovered failure classified from the failure taxonomy, preserved and minimized, so a failure is a named, reproducible record rather than a discarded run"
@@ -188,8 +188,8 @@
       "contract_units": 15,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 7,
-      "open_in_this_stratum": 8,
+      "implemented": 8,
+      "open_in_this_stratum": 7,
       "owned": 15,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -230,7 +230,7 @@
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "f3a0e79c607033896b0a32ed4907a06a407ccc20585d6939cceec4f24a2a3332"
+      "sha256": "e914f8c5f50fad50dc6cd955a826b92294f1960ce47e735f23c72a11ae14adc8"
     },
     {
       "name": "phase24-guard",

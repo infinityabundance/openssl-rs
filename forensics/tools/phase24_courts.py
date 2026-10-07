@@ -21,9 +21,10 @@ and names the fifteen courts it will stage. **24.1 registers `RT-RANKING-SOURCES
 ranking-source acquisition, **24.2 registers `RT-CANDIDATE-UNIVERSE`**, the candidate family
 universe, **24.3 registers `RT-AUTHORITY-CENSUS`**, the authority-baseline census, and **24.4
 registers `RT-FAMILY-FREEZE`**, the P1000 + reserve freeze, and **24.5 registers
-`RT-HOLDOUT-PARTITION`**, the precommitted holdout partition, and **24.6 registers
+registers `RT-HOLDOUT-PARTITION`**, the precommitted holdout partition, and **24.6 registers
 `RT-BUILD-LINK-ATLAS`**, the build/link atlas, and **24.7 registers
-`RT-RUNTIME-FUNCTIONAL-ATLAS`**, the runtime/functional atlas. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
+`RT-RUNTIME-FUNCTIONAL-ATLAS`**, the runtime/functional atlas, and **24.8 registers
+`RT-FAILURE-MINIMIZATION`**, the failure discovery/minimization loop. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
 normalized inputs under `forensics/downstream/ranking/normalized/`, re-derives the frozen
 `selection_input_root_hash`, and checks every source is content-addressed with a retrieval
 timestamp and a parser version, that an unavailable source carries a reason and is not counted
@@ -85,7 +86,7 @@ The fifteen courts, and the subphase that lands each
   * `RT-HOLDOUT-PARTITION` -- 24.5, the precommitted holdout (registered).
   * `RT-BUILD-LINK-ATLAS` -- 24.6, the build/link atlas (registered).
   * `RT-RUNTIME-FUNCTIONAL-ATLAS` -- 24.7, the runtime/functional atlas (registered).
-  * `RT-FAILURE-MINIMIZATION` -- 24.8, the failure discovery/minimization loop.
+  * `RT-FAILURE-MINIMIZATION` -- 24.8, the failure discovery/minimization loop (registered).
   * `RT-HIGH-VALUE-TIER` -- 24.9, the high-value deep tier.
   * `RT-HOSTILITY-AUGMENTATION` -- 24.10, the separate hostility corpus.
   * `RT-CANDIDATE-FREEZE` -- 24.11, the candidate freeze and holdout.
@@ -97,7 +98,8 @@ The fifteen courts, and the subphase that lands each
 Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2 registers
 `RT-CANDIDATE-UNIVERSE`, 24.3 registers `RT-AUTHORITY-CENSUS`, 24.4 registers
 `RT-FAMILY-FREEZE`, 24.5 registers `RT-HOLDOUT-PARTITION`, 24.6 registers
-`RT-BUILD-LINK-ATLAS` and 24.7 registers `RT-RUNTIME-FUNCTIONAL-ATLAS`, and the remaining eight are
+`RT-BUILD-LINK-ATLAS`, 24.7 registers `RT-RUNTIME-FUNCTIONAL-ATLAS` and 24.8 registers
+`RT-FAILURE-MINIMIZATION`, and the remaining seven are
 pending. A passing court is an instrument,
 not a property claim, and this stratum makes no property claim beyond the atlas: a selected
 empirical population is not a random sample, 1000/1000 is not a security proof, a build is not a
@@ -175,6 +177,11 @@ import downstream_build_link  # noqa: E402
 # launching a downstream program) through the same code path the artefact was produced by.
 import downstream_runtime  # noqa: E402
 
+# The 24.8 failure discovery/minimization tool, imported so the court re-runs its pure validation and
+# sensitivity control over the committed failures plane (never rebuilding and never launching
+# anything) through the same code path the artefact was produced by.
+import downstream_failures  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -220,11 +227,18 @@ BUILD_LINK_ATLAS_COURT = "RT-BUILD-LINK-ATLAS"
 RUNTIME_FUNCTIONAL_ATLAS = REPO_ROOT / "forensics" / "downstream" / "runtime-functional-atlas.json"
 RUNTIME_FUNCTIONAL_ATLAS_COURT = "RT-RUNTIME-FUNCTIONAL-ATLAS"
 
+# 24.8's subject: the classified, preserved, minimized failures plane and the minimized fixtures it
+# references. The court reads both and re-runs the pure validation; it never rebuilds, launches or
+# minimizes anything.
+DOWNSTREAM_FAILURES = REPO_ROOT / "forensics" / "downstream" / "failures.json"
+DOWNSTREAM_FAILURES_DIR = REPO_ROOT / "forensics" / "downstream" / "failures"
+FAILURE_MINIMIZATION_COURT = "RT-FAILURE-MINIMIZATION"
+
 # The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES`, 24.2 `RT-CANDIDATE-UNIVERSE`,
-# 24.3 `RT-AUTHORITY-CENSUS`, 24.4 `RT-FAMILY-FREEZE`, 24.5 `RT-HOLDOUT-PARTITION` and 24.6
-# `RT-BUILD-LINK-ATLAS`; each later
-# subphase appends its court here in the commit that lands its instrument, and a court removed from
-# the table leaves the registry and fails `run_courts.py`.
+# 24.3 `RT-AUTHORITY-CENSUS`, 24.4 `RT-FAMILY-FREEZE`, 24.5 `RT-HOLDOUT-PARTITION`, 24.6
+# `RT-BUILD-LINK-ATLAS`, 24.7 `RT-RUNTIME-FUNCTIONAL-ATLAS` and 24.8 `RT-FAILURE-MINIMIZATION`; each
+# later subphase appends its court here in the commit that lands its instrument, and a court removed
+# from the table leaves the registry and fails `run_courts.py`.
 COURTS: list[tuple[str, str]] = [
     (RANKING_SOURCES_COURT, "_ranking_sources_court"),
     (CANDIDATE_UNIVERSE_COURT, "_candidate_universe_court"),
@@ -233,13 +247,13 @@ COURTS: list[tuple[str, str]] = [
     (HOLDOUT_PARTITION_COURT, "_holdout_partition_court"),
     (BUILD_LINK_ATLAS_COURT, "_build_link_atlas_court"),
     (RUNTIME_FUNCTIONAL_ATLAS_COURT, "_runtime_functional_atlas_court"),
+    (FAILURE_MINIMIZATION_COURT, "_failure_minimization_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order. A court moves out of this table
 # and into `COURTS` in the commit that lands its instrument.
 PENDING_COURTS: dict[str, str] = {
-    "RT-FAILURE-MINIMIZATION": "24.8 -- the failure discovery/minimization loop",
     "RT-HIGH-VALUE-TIER": "24.9 -- the high-value deep tier",
     "RT-HOSTILITY-AUGMENTATION": "24.10 -- the separate hostility-augmentation corpus",
     "RT-CANDIDATE-FREEZE": "24.11 -- the candidate freeze and holdout",
@@ -949,6 +963,108 @@ def _runtime_functional_atlas_court(name: str) -> dict:
     }
 
 
+def _failure_minimization_court(name: str) -> dict:
+    """`RT-FAILURE-MINIMIZATION`: 24.8's court, the failure discovery/minimization loop.
+
+    Stages no probe. It reads the committed failures plane `forensics/downstream/failures.json`, its
+    minimized fixtures under `forensics/downstream/failures/`, the committed 24.6 build/link atlas,
+    the committed 24.7 runtime/functional atlas, the committed frozen P1000 and the committed
+    families, and re-runs the 24.8 validation and sensitivity control over the committed artefact
+    **without rebuilding, launching or minimizing anything**. It establishes that every non-resolved
+    leftover the two atlases record has exactly one classified record and that no record is
+    fabricated; that a `candidate-specific` record's ruling really derives from the
+    authority-applicable baseline (the candidate fell below a level the authority reached) and a
+    `venue-limited` one really has an authority failure at the same or a lower level in the same
+    admitted venue; that every candidate-specific record carries a minimized fixture on disk that
+    hashes to its record and a runnable command; that `unclassified` is 0; that the genealogy
+    references only real failures and never asserts a fix commit that nothing establishes; and that
+    the counts are derived rather than typed. Six seeded mutations are each caught with specificity
+    holding. A passing court is an **instrument**: it says every discovered failure is a named,
+    reproducible record, not that any consumer is safe, and it makes no claim to have fixed
+    anything.
+    """
+    if not DOWNSTREAM_FAILURES.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the failures artefact {rel(DOWNSTREAM_FAILURES)} is absent"],
+                "findings": [], "control": {}}
+
+    freeze_body = json.loads(FAMILY_FREEZE.read_text(encoding="utf-8"))["body"]
+    build_link_body = downstream_build_link._load_atlas()
+    runtime_body = downstream_runtime._load_atlas()
+    failures_body = downstream_failures._load_json(DOWNSTREAM_FAILURES)
+    findings = downstream_failures.failure_findings(freeze_body, build_link_body, runtime_body,
+                                                   failures_body)
+    control = downstream_failures.failure_sensitivity_control(
+        freeze_body, build_link_body, runtime_body, failures_body)
+
+    counts = failures_body.get("counts") or {}
+    planned = next((r for r in failures_body.get("failures") or []
+                    if r.get("disposition") == "candidate-specific"), None)
+    examples = {
+        "rule": failures_body.get("rule"),
+        "by_disposition": counts.get("by_disposition"),
+        "by_failure_class": counts.get("by_failure_class"),
+        "by_residual_class": counts.get("by_residual_class"),
+        "divergences": failures_body.get("divergences"),
+        "candidate_specific_families": counts.get("candidate_specific_families"),
+        "first_candidate_specific": ({k: planned.get(k) for k in
+                                      ("failure_id", "consumer", "residual_class",
+                                       "failure_class", "first_divergent_observation")}
+                                     if planned else None),
+        "genealogy_head": (failures_body.get("genealogy") or [])[:3],
+    }
+
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/failures.json and its minimized "
+            "fixtures under forensics/downstream/failures/, the 24.6 build/link atlas, the 24.7 "
+            "runtime/functional atlas, forensics/downstream/family-freeze.json and "
+            "forensics/downstream/families.json, and re-runs the 24.8 validation and sensitivity "
+            "control over the committed plane without rebuilding, launching or minimizing "
+            "anything. It establishes that every non-resolved leftover the two atlases record has "
+            "exactly one classified record and that none is fabricated; that a candidate-specific "
+            "record derives from the authority-applicable baseline (the candidate fell below a "
+            "level the authority reached) and a venue-limited record has an authority failure at "
+            "the same or a lower level in the same admitted venue, so a venue limitation is never "
+            "counted as a candidate defect (the brief's section 44); that every candidate-specific "
+            "record carries a minimized fixture on disk that hashes to its record and a runnable "
+            "command; that unclassified is 0; that the genealogy references only real failures and "
+            "asserts no fix commit; and that the counts are derived rather than typed. The six "
+            "seeded mutations -- a candidate failure mislabeled candidate-specific without an "
+            "authority failure to justify it, a venue-limited failure with no authority failure "
+            "behind it, a settled leftover marked unclassified, a settled leftover omitted, a "
+            "minimized claim whose fixture is missing on disk, and a fabricated fix commit -- are "
+            "each detected with specificity holding. A passing court is an instrument: a "
+            "discovered-and-minimized failure is a preserved record, not a fix, and a minimized "
+            "reproducer is not the consumer (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections "
+            "2, 3.5 and 4.9 and the brief's sections 30, 31, 32, 44, 46 and 72)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the failure-minimization court reads committed artefacts and fixtures and brings no "
+            "artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF "
+            "declaration"
+        ),
+        "counts": {
+            "leftovers": counts.get("leftovers", 0),
+            "candidate_specific": counts.get("candidate_specific", 0),
+            "venue_limited": counts.get("venue_limited", 0),
+            "intentional_out_of_scope": counts.get("intentional_out_of_scope", 0),
+            "minimized": counts.get("minimized", 0),
+            "unclassified": counts.get("unclassified", 0),
+            "divergences": counts.get("divergences", 0),
+        },
+        "examples": examples,
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1129,12 +1245,33 @@ def main(argv: list[str]) -> int:
             "specificity holding. A passing atlas is a measurement, not a security proof: it says "
             "a pristine downstream program loaded the subject's libssl/libcrypto and completed "
             "one deterministic local workload, not that any consumer is safe. "
+            "`RT-FAILURE-MINIMIZATION` is 24.8's court: the failure discovery/minimization loop. It "
+            "stages no probe and reads forensics/downstream/failures.json and its minimized "
+            "fixtures under forensics/downstream/failures/, the 24.6 build/link atlas, the 24.7 "
+            "runtime/functional atlas, forensics/downstream/family-freeze.json and "
+            "forensics/downstream/families.json, re-running the 24.8 validation and sensitivity "
+            "control over the committed plane without rebuilding, launching or minimizing "
+            "anything. It establishes that every non-resolved leftover the two atlases record has "
+            "exactly one classified record and that none is fabricated; that a candidate-specific "
+            "record derives from the authority-applicable baseline (the candidate fell below a "
+            "level the authority reached) and a venue-limited record has an authority failure at "
+            "the same or a lower level in the same admitted venue, so a venue/environment "
+            "limitation is never counted as a candidate defect; that every candidate-specific "
+            "record carries a minimized fixture on disk that hashes to its record and a runnable "
+            "command; that unclassified is 0; that the genealogy references only real failures and "
+            "asserts no fix commit; and that the counts are derived rather than typed. A candidate "
+            "failure mislabeled candidate-specific without an authority failure to justify it, a "
+            "venue-limited failure with no authority failure behind it, a settled leftover marked "
+            "unclassified, a settled leftover omitted, a minimized claim whose fixture is missing "
+            "on disk, and a fabricated fix commit are each detected with specificity holding. A "
+            "passing court is an instrument: a discovered-and-minimized failure is a preserved "
+            "record, not a fix, and a minimized reproducer is not the consumer. "
             "The remaining "
-            "eight courts -- "
-            "RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, "
+            "seven courts -- "
+            "RT-HIGH-VALUE-TIER, "
             "RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, "
             "RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending "
-            "with the subphases that land them (24.8 through 24.15). Phase 24 owns no exported "
+            "with the subphases that land them (24.9 through 24.15). Phase 24 owns no exported "
             "symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
@@ -1217,6 +1354,26 @@ def main(argv: list[str]) -> int:
                             / "downstream_runtime.py")):
         if path.is_file():
             inputs.append(InputRef(name=ref_name, path=path))
+    # 24.8's subject: the committed failures plane (the classified, preserved, minimized leftovers)
+    # and the tool that produced it, plus every minimized fixture it references, bound so a record and
+    # its reproducer the court reads are content-addressed rather than restated.
+    for ref_name, path in (("failures", DOWNSTREAM_FAILURES),
+                           ("downstream-failures", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_failures.py")):
+        if path.is_file():
+            inputs.append(InputRef(name=ref_name, path=path))
+    if DOWNSTREAM_FAILURES.is_file():
+        fbody = downstream_failures._load_json(DOWNSTREAM_FAILURES)
+        for rec in (fbody.get("failures") or []):
+            rep = rec.get("reproducer") or {}
+            d = rep.get("dir")
+            if d:
+                for name in sorted(rep.get("files") or {}):
+                    fp = REPO_ROOT / d / name
+                    if fp.is_file():
+                        inputs.append(InputRef(
+                            name=f"fixture/{downstream_failures._sanitize(rec['failure_id'])}/{name}",
+                            path=fp))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
@@ -1416,6 +1573,35 @@ def main(argv: list[str]) -> int:
             for f in ex.get("candidate_failures") or []:
                 print(f"      candidate-failure {f['family']:<12} {f['level']:<16} "
                       f"{str(f['failure_class']):<20} {(f['reason'] or '')[:70]}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == FAILURE_MINIMIZATION_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            ex = r["examples"]
+            print(f"  {r['court']:<32} pass   (no probe, leftovers={counts['leftovers']} "
+                  f"candidate_specific={counts['candidate_specific']} "
+                  f"venue_limited={counts['venue_limited']} "
+                  f"out_of_scope={counts['intentional_out_of_scope']} "
+                  f"minimized={counts['minimized']} unclassified={counts['unclassified']} "
+                  f"divergences={counts['divergences']}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"not-derived->{c['caught_candidate_specific_not_derived']} "
+                  f"no-authority-failure->{c['caught_venue_limited_without_authority_failure']} "
+                  f"unclassified->{c['caught_leftover_marked_unclassified']} "
+                  f"omitted->{c['caught_leftover_omitted']} "
+                  f"missing-fixture->{c['caught_minimized_fixture_missing']} "
+                  f"fix-commit->{c['caught_fabricated_fix_commit']})")
+            print(f"      by_disposition: {ex.get('by_disposition')}")
+            print(f"      by_failure_class: {ex.get('by_failure_class')}")
+            print(f"      by_residual_class: {ex.get('by_residual_class')}")
+            print(f"      candidate-specific families: {ex.get('candidate_specific_families')} "
+                  f"(a discovered-and-minimized failure is a preserved record, not a fix)")
+            for d in ex.get("divergences") or []:
+                print(f"      divergence {d['atlas']} {d['consumer']}: "
+                      f"authority={d['authority_failure_class']} "
+                      f"candidate={d['candidate_failure_class']}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":
