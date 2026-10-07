@@ -78,6 +78,32 @@ SOURCE_ECOSYSTEMS: tuple[str, ...] = (
 )
 OPENSSL_LINKAGE: tuple[str, ...] = ("direct", "transitive")
 
+# The **directness classes** (brief section 8), the value a family's `directness_class` carries.
+# 24.2 widens the two-value `openssl_linkage` -- which says whether a *consumer* links OpenSSL
+# directly or transitively -- into this seven-class *classification*, so a discovered candidate
+# identity that is not a consumer at all (the OpenSSL provider packages themselves, a name
+# collision) is representable rather than forced into `transitive`. Every family that consumes
+# OpenSSL keeps its `openssl_linkage` and names which consumer it is in `directness_class`; the
+# two are checked against each other, so a family cannot claim a linkage its class contradicts
+# (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md section 4.5, the correction mechanism).
+DIRECTNESS_CLASSES: tuple[str, ...] = (
+    "DIRECT_OPENSSL_CONSUMER",
+    "TRANSITIVE_OPENSSL_CONSUMER",
+    "OPTIONAL_OPENSSL_CONSUMER",
+    "BUILD_ONLY_OPENSSL_CONSUMER",
+    "VENDORED_OPENSSL",
+    "NOT_ACTUALLY_OPENSSL",
+    "UNKNOWN",
+)
+# The directness classes that name a **consumer** family, and the linkage each implies. A class
+# outside this map is not a consuming family, so the `family` schema does not constrain its
+# linkage from it: the provider and name-collision classes are carried on candidate identities,
+# which are not family nodes.
+DIRECTNESS_LINKAGE: dict[str, str] = {
+    "DIRECT_OPENSSL_CONSUMER": "direct",
+    "TRANSITIVE_OPENSSL_CONSUMER": "transitive",
+}
+
 # A ranking source is a frozen, multi-source evidence row: it is acquired and content-addressed
 # **before** any candidate result exists, so the population cannot be selected by what the
 # candidate happens to pass.
@@ -215,15 +241,43 @@ def _int(rec: dict, field: str) -> list[str]:
 # --------------------------------------------------------------------------------------------
 
 def validate_family(rec: dict) -> list[str]:
-    """A family: the counted unit, a downstream project family rather than a package alias."""
-    fields = ("family_id", "name", "source_ecosystem", "project_url", "openssl_linkage",
-              "primary_language", "category", "ranking_source_id", "evidence")
+    """A family: the counted unit, a downstream project family rather than a package alias.
+
+    24.2 extends this record to carry the brief's section 9 fields -- the canonical name, the
+    upstream repository and homepage (where the frozen evidence names them), the alias set a
+    family's identities collapsed to, the distro/ecosystem package listings, the licence, the
+    directness class, the popularity/criticality signals and the selection provenance -- so a
+    family is provenance-backed and classified rather than a bare name. `directness_class` and
+    `openssl_linkage` must agree: a family that names itself a direct consumer may not record a
+    transitive linkage, and vice versa. `aliases` and `selection_provenance` must be non-empty, so
+    a family is always an alias-collapsed, provenance-backed record (docs/PHASE-24-DOWNSTREAM-1000-
+    SUBPHASES.md sections 3.1, 3.6 and 4.5).
+    """
+    fields = ("family_id", "name", "canonical_name", "source_ecosystem", "project_url",
+              "upstream_repository", "homepage", "aliases", "distro_packages",
+              "ecosystem_packages", "licence", "openssl_linkage", "directness_class",
+              "primary_language", "category", "ranking_source_id", "popularity_signals",
+              "criticality_signals", "selection_provenance", "evidence")
     problems = _missing(rec, fields)
     problems += _nonempty(rec, "family_id")
     problems += _nonempty(rec, "name")
+    problems += _nonempty(rec, "canonical_name")
     problems += _enum(rec, "source_ecosystem", SOURCE_ECOSYSTEMS)
     problems += _enum(rec, "openssl_linkage", OPENSSL_LINKAGE)
+    problems += _enum(rec, "directness_class", DIRECTNESS_CLASSES)
     problems += _nonempty(rec, "ranking_source_id")
+    problems += _nonempty(rec, "aliases")
+    problems += _nonempty(rec, "selection_provenance")
+    for field in ("aliases", "distro_packages", "ecosystem_packages", "popularity_signals",
+                  "criticality_signals", "selection_provenance", "evidence"):
+        if field in rec and not isinstance(rec[field], list):
+            problems.append(f"{field} must be a list")
+    expected = DIRECTNESS_LINKAGE.get(rec.get("directness_class"))
+    if expected is not None and rec.get("openssl_linkage") != expected:
+        problems.append(
+            f"openssl_linkage {rec.get('openssl_linkage')!r} disagrees with directness_class "
+            f"{rec.get('directness_class')!r}, which is a {expected!r} consumer"
+        )
     return problems
 
 
@@ -387,8 +441,11 @@ def validate_drop_in_verdict(rec: dict) -> list[str]:
 # The registries the ledger, the runner and the later subphases read. `SCHEMAS` names each record
 # kind and its validator; `REQUIRED_FIELDS` is what the inventory publishes.
 REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
-    "family": ("family_id", "name", "source_ecosystem", "project_url", "openssl_linkage",
-               "primary_language", "category", "ranking_source_id", "evidence"),
+    "family": ("family_id", "name", "canonical_name", "source_ecosystem", "project_url",
+               "upstream_repository", "homepage", "aliases", "distro_packages",
+               "ecosystem_packages", "licence", "openssl_linkage", "directness_class",
+               "primary_language", "category", "ranking_source_id", "popularity_signals",
+               "criticality_signals", "selection_provenance", "evidence"),
     "specimen": ("specimen_id", "family_id", "version", "upstream_ref", "pristine_source_sha256",
                  "licence", "evidence"),
     "variant": ("variant_id", "specimen_id", "build_profile", "platform", "arch", "patch_set",
@@ -444,12 +501,32 @@ _GOOD: dict[str, dict] = {
     "family": {
         "family_id": "f-curl",
         "name": "curl",
+        "canonical_name": "curl",
         "source_ecosystem": "github",
         "project_url": "https://github.com/curl/curl",
+        "upstream_repository": "https://github.com/curl/curl",
+        "homepage": "https://curl.se/",
+        "aliases": ["curl", "libcurl", "libcurl4"],
+        "distro_packages": [
+            {"ecosystem": "debian", "package": "libcurl4"},
+            {"ecosystem": "fedora", "package": "libcurl"},
+        ],
+        "ecosystem_packages": [
+            {"ecosystem": "debian", "package": "libcurl4"},
+            {"ecosystem": "homebrew", "package": "curl"},
+        ],
+        "licence": "curl",
         "openssl_linkage": "direct",
+        "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "primary_language": "c",
         "category": "http-client",
         "ranking_source_id": "rank-distro-debian-bookworm",
+        "popularity_signals": [],
+        "criticality_signals": [],
+        "selection_provenance": [
+            {"source_id": "rank-distro-debian-bookworm", "package": "libcurl4",
+             "ecosystem": "debian"},
+        ],
         "evidence": ["forensics/downstream/ranking-sources.json"],
     },
     "specimen": {
@@ -536,7 +613,7 @@ def _bad(kind: str) -> dict:
 
     rec = copy.deepcopy(_GOOD[kind])
     if kind == "family":
-        rec["openssl_linkage"] = "sometimes"  # not one of direct/transitive
+        rec["openssl_linkage"] = "sometimes"  # not one of the linkage classes
     elif kind == "specimen":
         rec["pristine_source_sha256"] = "not-a-digest"  # neither 64-hex nor `unknown`
     elif kind == "variant":

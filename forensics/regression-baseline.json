@@ -245,6 +245,10 @@
       "observations": 487,
       "verdict": "pass"
     },
+    "RT-CANDIDATE-UNIVERSE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-CIPHER": {
       "observations": 7291,
       "verdict": "pass"
@@ -937,7 +941,7 @@
     "phase21": 0,
     "phase22": 0,
     "phase23": 0,
-    "phase24": 14,
+    "phase24": 13,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

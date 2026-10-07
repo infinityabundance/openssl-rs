@@ -96,7 +96,7 @@
         "name": "security_lineage",
         "path": "forensics/multitrack/security-lineage.json",
         "record_count": 52,
-        "sha256": "e2dc78add434827d3237819298e5cd79f1fe037f6958b58307e5f9fba81c92cb"
+        "sha256": "d8417639729ec496d43fe40bf01199b0966fbf557d9767f310877b10cc3339b4"
       },
       {
         "id_key": "subject_id",
@@ -10274,7 +10274,7 @@
     {
       "name": "security-lineage",
       "path": "forensics/multitrack/security-lineage.json",
-      "sha256": "e2dc78add434827d3237819298e5cd79f1fe037f6958b58307e5f9fba81c92cb"
+      "sha256": "d8417639729ec496d43fe40bf01199b0966fbf557d9767f310877b10cc3339b4"
     },
     {
       "name": "support-status",
