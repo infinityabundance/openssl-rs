@@ -1,0 +1,406 @@
+{
+  "row_count": 80,
+  "rows": [
+    {
+      "package": "libcrypto++-dev",
+      "recent": "770",
+      "vote": "36"
+    },
+    {
+      "package": "libcrypto++-doc",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libcrypto++-utils",
+      "recent": "124",
+      "vote": "13"
+    },
+    {
+      "package": "libcrypto++-utils-dbgsym",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libcrypto++5.2c2a",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libcrypto++6",
+      "recent": "0",
+      "vote": "9"
+    },
+    {
+      "package": "libcrypto++6-dbg",
+      "recent": "8",
+      "vote": "1"
+    },
+    {
+      "package": "libcrypto++7",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libcrypto++8",
+      "recent": "3",
+      "vote": "75"
+    },
+    {
+      "package": "libcrypto++8-dbg",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libcrypto++8-dbgsym",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libcrypto++8t64",
+      "recent": "878",
+      "vote": "2285"
+    },
+    {
+      "package": "libcrypto++9",
+      "recent": "0",
+      "vote": "1"
+    },
+    {
+      "package": "libcrypto++9-dbg",
+      "recent": "5",
+      "vote": "0"
+    },
+    {
+      "package": "libcrypto++9v5",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libcrypto-equality-clojure",
+      "recent": "10",
+      "vote": "33"
+    },
+    {
+      "package": "libcrypto-mb-dev",
+      "recent": "4",
+      "vote": "1"
+    },
+    {
+      "package": "libcrypto-mb11",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libcrypto-mb12",
+      "recent": "0",
+      "vote": "1"
+    },
+    {
+      "package": "libcrypto-random-clojure",
+      "recent": "10",
+      "vote": "33"
+    },
+    {
+      "package": "libcryptocurrency-catalog-perl",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libcryptoexchange-catalog-perl",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libcryptoki",
+      "recent": "0",
+      "vote": "3"
+    },
+    {
+      "package": "libcryptokit-ocaml",
+      "recent": "86",
+      "vote": "2"
+    },
+    {
+      "package": "libcryptokit-ocaml-dev",
+      "recent": "33",
+      "vote": "2"
+    },
+    {
+      "package": "libcryptominisat5-5.11",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libcryptominisat5-5.11t64",
+      "recent": "62",
+      "vote": "6"
+    },
+    {
+      "package": "libcryptominisat5-5.8",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libcryptominisat5-dev",
+      "recent": "20",
+      "vote": "0"
+    },
+    {
+      "package": "libcryptopant-dev",
+      "recent": "2",
+      "vote": "0"
+    },
+    {
+      "package": "libcryptopant1",
+      "recent": "2",
+      "vote": "0"
+    },
+    {
+      "package": "libcryptoplus2",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libcryptopp-dev",
+      "recent": "3",
+      "vote": "0"
+    },
+    {
+      "package": "libssl-awslc",
+      "recent": "0",
+      "vote": "12"
+    },
+    {
+      "package": "libssl-awslc-dev",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libssl-dev",
+      "recent": "37730",
+      "vote": "4735"
+    },
+    {
+      "package": "libssl-dev-armel-cross",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libssl-dev-powerpc-cross",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libssl-djgpp-dev",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libssl-doc",
+      "recent": "2138",
+      "vote": "64"
+    },
+    {
+      "package": "libssl-nginx",
+      "recent": "0",
+      "vote": "6"
+    },
+    {
+      "package": "libssl-ocaml",
+      "recent": "53",
+      "vote": "2"
+    },
+    {
+      "package": "libssl-ocaml-dbgsym",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libssl-ocaml-dev",
+      "recent": "44",
+      "vote": "2"
+    },
+    {
+      "package": "libssl-ocaml-dev-dbgsym",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libssl-r-dev",
+      "recent": "0",
+      "vote": "1"
+    },
+    {
+      "package": "libssl-utils-clojure",
+      "recent": "12",
+      "vote": "36"
+    },
+    {
+      "package": "libssl0.9.6",
+      "recent": "11",
+      "vote": "0"
+    },
+    {
+      "package": "libssl0.9.7",
+      "recent": "24",
+      "vote": "3"
+    },
+    {
+      "package": "libssl0.9.7-dbg",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libssl0.9.8",
+      "recent": "2247",
+      "vote": "650"
+    },
+    {
+      "package": "libssl0.9.8-armel-cross",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libssl0.9.8-dbg",
+      "recent": "8",
+      "vote": "0"
+    },
+    {
+      "package": "libssl09",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libssl095a",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libssl1.0-dev",
+      "recent": "147",
+      "vote": "5"
+    },
+    {
+      "package": "libssl1.0.0",
+      "recent": "17",
+      "vote": "963"
+    },
+    {
+      "package": "libssl1.0.0-armel-cross",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libssl1.0.0-compat",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libssl1.0.0-dbg",
+      "recent": "24",
+      "vote": "0"
+    },
+    {
+      "package": "libssl1.0.0-powerpc-cross",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libssl1.0.0-r",
+      "recent": "1",
+      "vote": "1"
+    },
+    {
+      "package": "libssl1.0.2",
+      "recent": "0",
+      "vote": "297"
+    },
+    {
+      "package": "libssl1.0.2-dbgsym",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libssl1.1",
+      "recent": "6",
+      "vote": "29974"
+    },
+    {
+      "package": "libssl1.1-dbgsym",
+      "recent": "7",
+      "vote": "1"
+    },
+    {
+      "package": "libssl1.1-dev",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libssl1.1-doc",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libssl1.1.1",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libssl1.1.1-dev",
+      "recent": "1",
+      "vote": "0"
+    },
+    {
+      "package": "libssl1.1.1-doc",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libssl10-redhat-compat",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libssl3",
+      "recent": "3",
+      "vote": "74249"
+    },
+    {
+      "package": "libssl3t64",
+      "recent": "1",
+      "vote": "143420"
+    },
+    {
+      "package": "libssl3t64-dbgsym",
+      "recent": "3",
+      "vote": "2"
+    },
+    {
+      "package": "libssl4",
+      "recent": "0",
+      "vote": "22"
+    },
+    {
+      "package": "libssl81.1.1",
+      "recent": "0",
+      "vote": "1"
+    },
+    {
+      "package": "libsslcommon2",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "libsslcommon2-dev",
+      "recent": "0",
+      "vote": "0"
+    },
+    {
+      "package": "openssl",
+      "recent": "18755",
+      "vote": "246579"
+    }
+  ],
+  "source_id": "debian-popcon"
+}

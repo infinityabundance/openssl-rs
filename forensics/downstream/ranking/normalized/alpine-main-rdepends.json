@@ -1,0 +1,1545 @@
+{
+  "row_count": 237,
+  "rows": [
+    {
+      "dependent": "abuild",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "acf-alpine-conf",
+      "requires": [
+        "openssl"
+      ]
+    },
+    {
+      "dependent": "acf-openssl",
+      "requires": [
+        "openssl"
+      ]
+    },
+    {
+      "dependent": "apache2-http2",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "apache2-ssl",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "apache2-utils",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "apk-tools",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "apr-util",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "arm-trusted-firmware-tools",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "asterisk",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "asterisk-srtp",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "axel",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "bacula-libs",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "bind",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "bind-libs",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "c-client",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "ca-certificates",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "cargo",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "ccmake",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "cmake",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "coreutils",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "coreutils-sha512sum",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "cryptsetup-libs",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "cups",
+      "requires": [
+        "openssl"
+      ]
+    },
+    {
+      "dependent": "cups-dbg",
+      "requires": [
+        "openssl"
+      ]
+    },
+    {
+      "dependent": "cyrus-sasl-digestmd5",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "cyrus-sasl-ntlm",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "cyrus-sasl-scram",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "dovecot",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "efitools",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "eggdrop",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "elinks",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "fido2",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "freeradius",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "freeradius-eap",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "freeradius-lib",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "freeradius-utils",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "freeswitch",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "freetds",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "git-email",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "gvpe",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "haproxy",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "hiredis-ssl",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "hostapd",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "icecast",
+      "requires": [
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "imap",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "iperf3",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "kamailio-authephemeral",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "kamailio-ims",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "kamailio-outbound",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "kamailio-tls",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "kamailio-websocket",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "kmod",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "kmod-libs",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "krb5-libs",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "krb5-pkinit",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "ldapvi",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "ldns",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "ldns-tools",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lftp",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "libarchive",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "libarchive-tools",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "libcurl",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "libevent",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "libfido2",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "libks",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "libldap",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "libnvme",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "libpq",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "librelp",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "libretls",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "libshout",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "libsrtp",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "libssh2",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "libssl3",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "libwebsockets",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "libwebsockets-test",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lighttpd",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lighttpd-mod_auth",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "links",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "linux-lts-dev",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "linux-virt-dev",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "lua5.1-cqueues",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lua5.1-ossl",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lua5.1-sec",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lua5.2-cqueues",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lua5.2-ossl",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lua5.2-sec",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lua5.3-cqueues",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lua5.3-ossl",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lua5.3-sec",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lua5.4-cqueues",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lua5.4-ossl",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lua5.4-sec",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "lynx",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "mariadb",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "mariadb-backup",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "mariadb-client",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "mariadb-connector-c",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "mariadb-embedded",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "mariadb-test",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "mini_httpd",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "monit",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "mosh-client",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "mosh-server",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "mosquitto",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "mosquitto-libs",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "mtd-utils-ubi",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-by_ssh",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-cluster",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-dbi",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-dhcp",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-dig",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-disk",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-dns",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-dummy",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-fping",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-hpjd",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-http",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-icmp",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-ide_smart",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-ldap",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-load",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-mrtg",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-mrtgtraf",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-mysql",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-nagios",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-nt",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-ntp",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-nwstat",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-overcr",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-pgsql",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-ping",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-procs",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-radius",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-real",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-smtp",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-snmp",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-ssh",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-swap",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-tcp",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-time",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-ups",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-uptime",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nagios-plugins-users",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "neon",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "net-snmp-libs",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "net-snmp-tools",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nghttp2",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nginx",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nginx-debug",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nginx-mod-http-auth-jwt",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "nginx-mod-http-vod",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "ngircd",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nmap",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nmap-ncat",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nmap-nping",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nodejs",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nodejs-libs",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nrpe",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nrpe-plugin",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "nsd",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "open-iscsi",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "open-isns",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "open-isns-lib",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "openldap-overlay-autoca",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "openldap-overlay-otp",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "openldap-passwd-pbkdf2",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "openssh",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "openssh-client-common",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "openssh-client-default",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "openssh-client-krb5",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "openssh-keygen",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "openssh-keysign",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "openssh-server",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "openssh-server-krb5",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "openssh-server-pam",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "openssh-sk-helper",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "openssl",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "openssl-misc",
+      "requires": [
+        "openssl"
+      ]
+    },
+    {
+      "dependent": "openvpn",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "opusfile",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "perdition",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "perl-crypt-openssl-random",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "perl-crypt-openssl-rsa",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "perl-crypt-ssleay",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "perl-net-ssleay",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "pgpool",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "pjproject",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "postfix",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "postgresql15",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "postgresql15-client",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "postgresql15-contrib",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "postgresql16",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "postgresql16-client",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "postgresql16-contrib",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "ppp-daemon",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "python3",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "rabbitmq-c",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "rhash-libs",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "rng-tools",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "rng-tools-extra",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "ruby-libs",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "sbsigntool",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "serf",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "sipp",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "sipsak",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "snort",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "socat",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "sofia-sip",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "spice",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "squid",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "ssl_client",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "ssmtp",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "strongswan",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "syslog-ng",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "syslog-ng-examples",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "syslog-ng-sql",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "tcl-tls",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "tcpdump",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "tcpflow",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "tinc",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "u-boot-tools",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "umurmur",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "unbound",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "unbound-libs",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "uwsgi",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "valkey",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "valkey-benchmark",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "valkey-cli",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "wget",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "wpa_supplicant",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "xmlrpc-c-abyss",
+      "requires": [
+        "so:libcrypto.so.3",
+        "so:libssl.so.3"
+      ]
+    },
+    {
+      "dependent": "zfs",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    },
+    {
+      "dependent": "zfs-libs",
+      "requires": [
+        "so:libcrypto.so.3"
+      ]
+    }
+  ],
+  "source_id": "alpine-main-rdepends"
+}

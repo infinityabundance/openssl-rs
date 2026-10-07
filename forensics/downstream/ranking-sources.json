@@ -1,0 +1,435 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "counts": {
+      "available": 9,
+      "normalized_rows": 3450,
+      "sources": 10,
+      "unavailable": 1
+    },
+    "rule": "the P1000 population is selected from these frozen, multi-source ranking inputs and never from a candidate result: each available source is content-addressed by its raw payload SHA-256 and its committed normalized-input SHA-256, and the selection_input_root_hash binds every available source's identity. An unavailable source carries a reason and is excluded from the root, so it cannot influence the selection. Raw GitHub stars are never the usage definition.",
+    "selection_input_root_hash": "569d28319e6724bf76f1db37e7daf2bf456bd3e4c459a838619ff31275a1f856",
+    "sources": [
+      {
+        "availability": "available",
+        "content_type": "application/octet-stream",
+        "evidence": [
+          "normalized:forensics/downstream/ranking/normalized/alpine-community-rdepends.json",
+          "raw:815ef15704e3ec3a47688bb339d0b2c1dc674827f3025db2dd41e16de19468a9"
+        ],
+        "fetch_date": "2026-10-07",
+        "frozen": true,
+        "kind": "distro-package",
+        "normalization_sha256": "438617e95451183c7e8a5996ec30a31bf6f0df2bb8abd8f010c254db0a20e715",
+        "normalized_path": "forensics/downstream/ranking/normalized/alpine-community-rdepends.json",
+        "normalized_row_count": 466,
+        "notes": "Alpine v3.20 community APKINDEX: reverse dependencies of so:libssl.so.3",
+        "parser_version": "downstream-sources/1",
+        "raw_payloads": [
+          {
+            "committed_path": null,
+            "content_type": "application/octet-stream",
+            "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://dl-cdn.alpinelinux.org/alpine/v3.20/community/x86_64/APKINDEX.tar.gz'",
+            "role": "apkindex",
+            "sha256": "815ef15704e3ec3a47688bb339d0b2c1dc674827f3025db2dd41e16de19468a9",
+            "size_bytes": 1848333,
+            "url": "https://dl-cdn.alpinelinux.org/alpine/v3.20/community/x86_64/APKINDEX.tar.gz"
+          }
+        ],
+        "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://dl-cdn.alpinelinux.org/alpine/v3.20/community/x86_64/APKINDEX.tar.gz'",
+        "repository_timestamp": "alpine-v3.20",
+        "retrieved_at": "2026-10-07T13:06:07Z",
+        "row_count": 466,
+        "sha256": "815ef15704e3ec3a47688bb339d0b2c1dc674827f3025db2dd41e16de19468a9",
+        "size_bytes": 1848333,
+        "source_id": "alpine-community-rdepends",
+        "url": "https://dl-cdn.alpinelinux.org/alpine/v3.20/community/x86_64/APKINDEX.tar.gz"
+      },
+      {
+        "availability": "available",
+        "content_type": "application/octet-stream",
+        "evidence": [
+          "normalized:forensics/downstream/ranking/normalized/alpine-main-rdepends.json",
+          "raw:fe41d27859fabe0dfc156dcb83ffdaebda493f98af686c6d22ed9a0f96abe5eb"
+        ],
+        "fetch_date": "2026-10-07",
+        "frozen": true,
+        "kind": "distro-package",
+        "normalization_sha256": "2b5a8961231dfd966d0758ac41a478639f25a4b38c3d543c1dc7694fa1147479",
+        "normalized_path": "forensics/downstream/ranking/normalized/alpine-main-rdepends.json",
+        "normalized_row_count": 237,
+        "notes": "Alpine v3.20 main APKINDEX: reverse dependencies of so:libssl.so.3",
+        "parser_version": "downstream-sources/1",
+        "raw_payloads": [
+          {
+            "committed_path": null,
+            "content_type": "application/octet-stream",
+            "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://dl-cdn.alpinelinux.org/alpine/v3.20/main/x86_64/APKINDEX.tar.gz'",
+            "role": "apkindex",
+            "sha256": "fe41d27859fabe0dfc156dcb83ffdaebda493f98af686c6d22ed9a0f96abe5eb",
+            "size_bytes": 473603,
+            "url": "https://dl-cdn.alpinelinux.org/alpine/v3.20/main/x86_64/APKINDEX.tar.gz"
+          }
+        ],
+        "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://dl-cdn.alpinelinux.org/alpine/v3.20/main/x86_64/APKINDEX.tar.gz'",
+        "repository_timestamp": "alpine-v3.20",
+        "retrieved_at": "2026-10-07T13:06:07Z",
+        "row_count": 237,
+        "sha256": "fe41d27859fabe0dfc156dcb83ffdaebda493f98af686c6d22ed9a0f96abe5eb",
+        "size_bytes": 473603,
+        "source_id": "alpine-main-rdepends",
+        "url": "https://dl-cdn.alpinelinux.org/alpine/v3.20/main/x86_64/APKINDEX.tar.gz"
+      },
+      {
+        "availability": "available",
+        "content_type": "application/json",
+        "evidence": [
+          "normalized:forensics/downstream/ranking/normalized/crates-rdepends.json",
+          "raw:304b85deb9c6320408eb3725ff05136aa86461ce675e8f4fd71f741607deb691"
+        ],
+        "fetch_date": "2026-10-07",
+        "frozen": true,
+        "kind": "language-registry",
+        "normalization_sha256": "3a50be3ca0b796758c21f6a9cfdd51d760e9e83410baeb3141503cd37ae275ed",
+        "normalized_path": "forensics/downstream/ranking/normalized/crates-rdepends.json",
+        "normalized_row_count": 100,
+        "notes": "crates.io reverse dependencies of the openssl crate (the Rust OpenSSL binding): the dependent-crate count and the first page of dependent crate names, the supported-ecosystem dependent-count data for a wrapper/binding",
+        "parser_version": "downstream-sources/1",
+        "raw_payloads": [
+          {
+            "committed_path": "forensics/downstream/ranking/raw/crates-rdepends-304b85deb9c6320408eb3725ff05136aa86461ce675e8f4fd71f741607deb691.json",
+            "content_type": "application/json",
+            "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://crates.io/api/v1/crates/openssl/reverse_dependencies?per_page=100'",
+            "role": "reverse-dependencies",
+            "sha256": "304b85deb9c6320408eb3725ff05136aa86461ce675e8f4fd71f741607deb691",
+            "size_bytes": 219157,
+            "url": "https://crates.io/api/v1/crates/openssl/reverse_dependencies?per_page=100"
+          }
+        ],
+        "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://crates.io/api/v1/crates/openssl/reverse_dependencies?per_page=100'",
+        "repository_timestamp": "openssl on crates.io (live)",
+        "retrieved_at": "2026-10-07T13:06:07Z",
+        "row_count": 100,
+        "sha256": "304b85deb9c6320408eb3725ff05136aa86461ce675e8f4fd71f741607deb691",
+        "size_bytes": 219157,
+        "source_id": "crates-rdepends",
+        "url": "https://crates.io/api/v1/crates/openssl/reverse_dependencies?per_page=100"
+      },
+      {
+        "availability": "available",
+        "content_type": "application/x-gzip",
+        "evidence": [
+          "normalized:forensics/downstream/ranking/normalized/debian-popcon.json",
+          "raw:2054d46f3609257c29612c60103bdb44a9ed8eb7563102e2eb6d0e6af51e0b11"
+        ],
+        "fetch_date": "2026-10-07",
+        "frozen": true,
+        "kind": "popularity",
+        "normalization_sha256": "a624c7dd91978b4f0af91debcfa9c9c8fc0eada02c18c9cc68a8e5f2d794c1a8",
+        "normalized_path": "forensics/downstream/ranking/normalized/debian-popcon.json",
+        "normalized_row_count": 80,
+        "notes": "Debian Popcon install/vote counts; Popcon is a moving snapshot, so the payload hash plus the retrieval timestamp and the gzip header mtime pin the exact bytes rather than a date",
+        "parser_version": "downstream-sources/1",
+        "raw_payloads": [
+          {
+            "committed_path": null,
+            "content_type": "application/x-gzip",
+            "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://popcon.debian.org/all-popcon-results.txt.gz'",
+            "role": "popcon",
+            "sha256": "2054d46f3609257c29612c60103bdb44a9ed8eb7563102e2eb6d0e6af51e0b11",
+            "size_bytes": 2051669,
+            "url": "https://popcon.debian.org/all-popcon-results.txt.gz"
+          }
+        ],
+        "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://popcon.debian.org/all-popcon-results.txt.gz'",
+        "repository_timestamp": "2026-10-06T13:54:54Z",
+        "retrieved_at": "2026-10-07T13:06:07Z",
+        "row_count": 80,
+        "sha256": "2054d46f3609257c29612c60103bdb44a9ed8eb7563102e2eb6d0e6af51e0b11",
+        "size_bytes": 2051669,
+        "source_id": "debian-popcon",
+        "url": "https://popcon.debian.org/all-popcon-results.txt.gz"
+      },
+      {
+        "availability": "available",
+        "content_type": "text/html; charset=utf-8",
+        "evidence": [
+          "normalized:forensics/downstream/ranking/normalized/debian-rdepends.json",
+          "raw:aea3ea5e8161c894b6374538a9f81f5e334b9a5d4f01e40e3e6f636e75023de0"
+        ],
+        "fetch_date": "2026-10-07",
+        "frozen": true,
+        "kind": "distro-package",
+        "normalization_sha256": "5507da47661ab5072671a733dd07316b92db0838401c8747b88c188f3d8ae1dc",
+        "normalized_path": "forensics/downstream/ranking/normalized/debian-rdepends.json",
+        "normalized_row_count": 943,
+        "notes": "Debian bookworm main binary-amd64 Packages, pinned to the snapshot.debian.org timestamp 20241001T000000Z; reverse dependencies of libssl3/libcrypto3/openssl computed from the Depends/Pre-Depends/Recommends fields",
+        "parser_version": "downstream-sources/1",
+        "raw_payloads": [
+          {
+            "committed_path": null,
+            "content_type": "text/html; charset=utf-8",
+            "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://snapshot.debian.org/archive/debian/20241001T000000Z/dists/bookworm/main/binary-amd64/Packages.xz'",
+            "role": "packages",
+            "sha256": "aea3ea5e8161c894b6374538a9f81f5e334b9a5d4f01e40e3e6f636e75023de0",
+            "size_bytes": 8787100,
+            "url": "https://snapshot.debian.org/archive/debian/20241001T000000Z/dists/bookworm/main/binary-amd64/Packages.xz"
+          }
+        ],
+        "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://snapshot.debian.org/archive/debian/20241001T000000Z/dists/bookworm/main/binary-amd64/Packages.xz'",
+        "repository_timestamp": "2024-10-01T00:00:00Z",
+        "retrieved_at": "2026-10-07T13:06:07Z",
+        "row_count": 943,
+        "sha256": "aea3ea5e8161c894b6374538a9f81f5e334b9a5d4f01e40e3e6f636e75023de0",
+        "size_bytes": 8787100,
+        "source_id": "debian-rdepends",
+        "url": "https://snapshot.debian.org/archive/debian/20241001T000000Z/dists/bookworm/main/binary-amd64/Packages.xz"
+      },
+      {
+        "availability": "available",
+        "content_type": "application/x-gzip",
+        "evidence": [
+          "normalized:forensics/downstream/ranking/normalized/fedora-rdepends.json",
+          "raw:e681f4dcf1aa9814a1393a685d70b94210232b8997d2bc8a02c080e0ba8e51e3",
+          "raw:498099e3b0551363a6ec8ecbb81925f53a97969818422ec21c34b86e00f01009"
+        ],
+        "fetch_date": "2026-10-07",
+        "frozen": true,
+        "kind": "distro-package",
+        "normalization_sha256": "10392f5290a6f7aed91b4a5d698d87ee451b1ce94a8b7d46e672750816612e58",
+        "normalized_path": "forensics/downstream/ranking/normalized/fedora-rdepends.json",
+        "normalized_row_count": 1220,
+        "notes": "Fedora 39 Everything x86_64 primary metadata (the newest archived Fedora release whose repodata is gzip rather than zstd, so it regenerates without a zstd dependency); reverse dependencies of openssl-libs / libssl.so.3 / libcrypto.so.3",
+        "parser_version": "downstream-sources/1",
+        "raw_payloads": [
+          {
+            "committed_path": null,
+            "content_type": "application/x-gzip",
+            "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://dl.fedoraproject.org/pub/archive/fedora/linux/releases/39/Everything/x86_64/os/repodata/e681f4dcf1aa9814a1393a685d70b94210232b8997d2bc8a02c080e0ba8e51e3-primary.xml.gz'",
+            "role": "primary",
+            "sha256": "e681f4dcf1aa9814a1393a685d70b94210232b8997d2bc8a02c080e0ba8e51e3",
+            "size_bytes": 18464964,
+            "url": "https://dl.fedoraproject.org/pub/archive/fedora/linux/releases/39/Everything/x86_64/os/repodata/e681f4dcf1aa9814a1393a685d70b94210232b8997d2bc8a02c080e0ba8e51e3-primary.xml.gz"
+          },
+          {
+            "committed_path": "forensics/downstream/ranking/raw/fedora-rdepends-498099e3b0551363a6ec8ecbb81925f53a97969818422ec21c34b86e00f01009.xml",
+            "content_type": "text/xml",
+            "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://dl.fedoraproject.org/pub/archive/fedora/linux/releases/39/Everything/x86_64/os/repodata/repomd.xml'",
+            "role": "repomd",
+            "sha256": "498099e3b0551363a6ec8ecbb81925f53a97969818422ec21c34b86e00f01009",
+            "size_bytes": 6285,
+            "url": "https://dl.fedoraproject.org/pub/archive/fedora/linux/releases/39/Everything/x86_64/os/repodata/repomd.xml"
+          }
+        ],
+        "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://dl.fedoraproject.org/pub/archive/fedora/linux/releases/39/Everything/x86_64/os/repodata/e681f4dcf1aa9814a1393a685d70b94210232b8997d2bc8a02c080e0ba8e51e3-primary.xml.gz'",
+        "repository_timestamp": "2023-11-01T00:12:44Z",
+        "retrieved_at": "2026-10-07T13:06:07Z",
+        "row_count": 1220,
+        "sha256": "e681f4dcf1aa9814a1393a685d70b94210232b8997d2bc8a02c080e0ba8e51e3",
+        "size_bytes": 18464964,
+        "source_id": "fedora-rdepends",
+        "url": "https://dl.fedoraproject.org/pub/archive/fedora/linux/releases/39/Everything/x86_64/os/repodata/e681f4dcf1aa9814a1393a685d70b94210232b8997d2bc8a02c080e0ba8e51e3-primary.xml.gz"
+      },
+      {
+        "availability": "available",
+        "content_type": "application/json; charset=utf-8",
+        "evidence": [
+          "normalized:forensics/downstream/ranking/normalized/homebrew-analytics.json",
+          "raw:406470413e47e3c9414a39277100a1b1aee3091ec02e5f99eab61195008a3aa7"
+        ],
+        "fetch_date": "2026-10-07",
+        "frozen": true,
+        "kind": "popularity",
+        "normalization_sha256": "3a42f75683c6d070b384781c759d4f4789d6aa3cd9fc055c1dc18b3824b1a653",
+        "normalized_path": "forensics/downstream/ranking/normalized/homebrew-analytics.json",
+        "normalized_row_count": 3,
+        "notes": "Homebrew 365-day install-on-request analytics: the install counts for the openssl formulae, the usage signal the selection ranks on (never GitHub stars)",
+        "parser_version": "downstream-sources/1",
+        "raw_payloads": [
+          {
+            "committed_path": null,
+            "content_type": "application/json; charset=utf-8",
+            "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://formulae.brew.sh/api/analytics/install-on-request/365d.json'",
+            "role": "analytics",
+            "sha256": "406470413e47e3c9414a39277100a1b1aee3091ec02e5f99eab61195008a3aa7",
+            "size_bytes": 3984600,
+            "url": "https://formulae.brew.sh/api/analytics/install-on-request/365d.json"
+          }
+        ],
+        "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://formulae.brew.sh/api/analytics/install-on-request/365d.json'",
+        "repository_timestamp": "2025-10-07..2026-10-07",
+        "retrieved_at": "2026-10-07T13:06:07Z",
+        "row_count": 3,
+        "sha256": "406470413e47e3c9414a39277100a1b1aee3091ec02e5f99eab61195008a3aa7",
+        "size_bytes": 3984600,
+        "source_id": "homebrew-analytics",
+        "url": "https://formulae.brew.sh/api/analytics/install-on-request/365d.json"
+      },
+      {
+        "availability": "available",
+        "content_type": "application/json; charset=utf-8",
+        "evidence": [
+          "normalized:forensics/downstream/ranking/normalized/homebrew-dependencies.json",
+          "raw:a15ae3e386bb0397a99689d8dfb064b1002064b5ec1acc92531fccec3d02f783"
+        ],
+        "fetch_date": "2026-10-07",
+        "frozen": true,
+        "kind": "language-registry",
+        "normalization_sha256": "df2f2fa5c0a955c64971f2c3d2af51fa347f48421ec4e63bf2df0ad6e253018c",
+        "normalized_path": "forensics/downstream/ranking/normalized/homebrew-dependencies.json",
+        "normalized_row_count": 387,
+        "notes": "Homebrew formulae metadata: the reverse dependency relationships of openssl@3 (the formulae that depend on it) and openssl@3's own forward dependencies and version",
+        "parser_version": "downstream-sources/1",
+        "raw_payloads": [
+          {
+            "committed_path": null,
+            "content_type": "application/json; charset=utf-8",
+            "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://formulae.brew.sh/api/formula.json'",
+            "role": "formulae",
+            "sha256": "a15ae3e386bb0397a99689d8dfb064b1002064b5ec1acc92531fccec3d02f783",
+            "size_bytes": 32032062,
+            "url": "https://formulae.brew.sh/api/formula.json"
+          }
+        ],
+        "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://formulae.brew.sh/api/formula.json'",
+        "repository_timestamp": "formulae.brew.sh formula.json (live)",
+        "retrieved_at": "2026-10-07T13:06:07Z",
+        "row_count": 387,
+        "sha256": "a15ae3e386bb0397a99689d8dfb064b1002064b5ec1acc92531fccec3d02f783",
+        "size_bytes": 32032062,
+        "source_id": "homebrew-dependencies",
+        "url": "https://formulae.brew.sh/api/formula.json"
+      },
+      {
+        "availability": "unavailable",
+        "content_type": "none",
+        "evidence": [
+          "unavailable:no reproducibly-obtainable public endpoint: ossf/criticality_score is a local CLI over a BigQuery snapshot, and deps.dev (which wraps OpenSSF Scorecard) exposes no criticality field, so a criticality payload cannot be regenerated from a committed recipe"
+        ],
+        "fetch_date": "2026-10-07",
+        "frozen": true,
+        "kind": "security-advisory",
+        "normalization_sha256": "unknown",
+        "normalized_path": null,
+        "normalized_row_count": 0,
+        "notes": "",
+        "parser_version": "downstream-sources/1",
+        "raw_payloads": [],
+        "recipe": "",
+        "repository_timestamp": "unavailable",
+        "retrieved_at": "2026-10-07T13:06:07Z",
+        "row_count": 0,
+        "sha256": "unknown",
+        "size_bytes": 0,
+        "source_id": "openssf-criticality",
+        "unavailable_reason": "no reproducibly-obtainable public endpoint: ossf/criticality_score is a local CLI over a BigQuery snapshot, and deps.dev (which wraps OpenSSF Scorecard) exposes no criticality field, so a criticality payload cannot be regenerated from a committed recipe",
+        "url": "https://github.com/ossf/criticality_score"
+      },
+      {
+        "availability": "available",
+        "content_type": "application/json",
+        "evidence": [
+          "normalized:forensics/downstream/ranking/normalized/openssf-scorecard.json",
+          "raw:f821ca5c4324c40d80ceb14c41dee94dea52540bfe57905dd0420b84f94dd851"
+        ],
+        "fetch_date": "2026-10-07",
+        "frozen": true,
+        "kind": "security-advisory",
+        "normalization_sha256": "bf3b95c1708ed9750d91e38c9422f5937df25f4a39e3fc90fea26fe6142466db",
+        "normalized_path": "forensics/downstream/ranking/normalized/openssf-scorecard.json",
+        "normalized_row_count": 14,
+        "notes": "OpenSSF Scorecard for openssl/openssl: the obtainable OpenSSF security signal, recorded as Scorecard (not the Criticality Score, which has no reproducible public endpoint and is recorded unavailable below)",
+        "parser_version": "downstream-sources/1",
+        "raw_payloads": [
+          {
+            "committed_path": "forensics/downstream/ranking/raw/openssf-scorecard-f821ca5c4324c40d80ceb14c41dee94dea52540bfe57905dd0420b84f94dd851.json",
+            "content_type": "application/json",
+            "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://api.securityscorecards.dev/projects/github.com/openssl/openssl'",
+            "role": "scorecard",
+            "sha256": "f821ca5c4324c40d80ceb14c41dee94dea52540bfe57905dd0420b84f94dd851",
+            "size_bytes": 7764,
+            "url": "https://api.securityscorecards.dev/projects/github.com/openssl/openssl"
+          }
+        ],
+        "recipe": "curl -sSL --fail -A openssl-rs-forensics/1 -o <out> 'https://api.securityscorecards.dev/projects/github.com/openssl/openssl'",
+        "repository_timestamp": "2026-10-05",
+        "retrieved_at": "2026-10-07T13:06:07Z",
+        "row_count": 14,
+        "sha256": "f821ca5c4324c40d80ceb14c41dee94dea52540bfe57905dd0420b84f94dd851",
+        "size_bytes": 7764,
+        "source_id": "openssf-scorecard",
+        "url": "https://api.securityscorecards.dev/projects/github.com/openssl/openssl"
+      }
+    ]
+  },
+  "generator": "forensics/tools/downstream_sources.py",
+  "inputs": [
+    {
+      "name": "downstream-schemas",
+      "path": "forensics/tools/downstream_schemas.py",
+      "sha256": "87fcdace29d8e866cd333f8cde7abbcbe2dbd9f8b8b7467407612bb95ae79797"
+    },
+    {
+      "name": "normalized/alpine-community-rdepends",
+      "path": "forensics/downstream/ranking/normalized/alpine-community-rdepends.json",
+      "sha256": "438617e95451183c7e8a5996ec30a31bf6f0df2bb8abd8f010c254db0a20e715"
+    },
+    {
+      "name": "normalized/alpine-main-rdepends",
+      "path": "forensics/downstream/ranking/normalized/alpine-main-rdepends.json",
+      "sha256": "2b5a8961231dfd966d0758ac41a478639f25a4b38c3d543c1dc7694fa1147479"
+    },
+    {
+      "name": "normalized/crates-rdepends",
+      "path": "forensics/downstream/ranking/normalized/crates-rdepends.json",
+      "sha256": "3a50be3ca0b796758c21f6a9cfdd51d760e9e83410baeb3141503cd37ae275ed"
+    },
+    {
+      "name": "raw/crates-rdepends/reverse-dependencies",
+      "path": "forensics/downstream/ranking/raw/crates-rdepends-304b85deb9c6320408eb3725ff05136aa86461ce675e8f4fd71f741607deb691.json",
+      "sha256": "304b85deb9c6320408eb3725ff05136aa86461ce675e8f4fd71f741607deb691"
+    },
+    {
+      "name": "normalized/debian-popcon",
+      "path": "forensics/downstream/ranking/normalized/debian-popcon.json",
+      "sha256": "a624c7dd91978b4f0af91debcfa9c9c8fc0eada02c18c9cc68a8e5f2d794c1a8"
+    },
+    {
+      "name": "normalized/debian-rdepends",
+      "path": "forensics/downstream/ranking/normalized/debian-rdepends.json",
+      "sha256": "5507da47661ab5072671a733dd07316b92db0838401c8747b88c188f3d8ae1dc"
+    },
+    {
+      "name": "normalized/fedora-rdepends",
+      "path": "forensics/downstream/ranking/normalized/fedora-rdepends.json",
+      "sha256": "10392f5290a6f7aed91b4a5d698d87ee451b1ce94a8b7d46e672750816612e58"
+    },
+    {
+      "name": "raw/fedora-rdepends/repomd",
+      "path": "forensics/downstream/ranking/raw/fedora-rdepends-498099e3b0551363a6ec8ecbb81925f53a97969818422ec21c34b86e00f01009.xml",
+      "sha256": "498099e3b0551363a6ec8ecbb81925f53a97969818422ec21c34b86e00f01009"
+    },
+    {
+      "name": "normalized/homebrew-analytics",
+      "path": "forensics/downstream/ranking/normalized/homebrew-analytics.json",
+      "sha256": "3a42f75683c6d070b384781c759d4f4789d6aa3cd9fc055c1dc18b3824b1a653"
+    },
+    {
+      "name": "normalized/homebrew-dependencies",
+      "path": "forensics/downstream/ranking/normalized/homebrew-dependencies.json",
+      "sha256": "df2f2fa5c0a955c64971f2c3d2af51fa347f48421ec4e63bf2df0ad6e253018c"
+    },
+    {
+      "name": "normalized/openssf-scorecard",
+      "path": "forensics/downstream/ranking/normalized/openssf-scorecard.json",
+      "sha256": "bf3b95c1708ed9750d91e38c9422f5937df25f4a39e3fc90fea26fe6142466db"
+    },
+    {
+      "name": "raw/openssf-scorecard/scorecard",
+      "path": "forensics/downstream/ranking/raw/openssf-scorecard-f821ca5c4324c40d80ceb14c41dee94dea52540bfe57905dd0420b84f94dd851.json",
+      "sha256": "f821ca5c4324c40d80ceb14c41dee94dea52540bfe57905dd0420b84f94dd851"
+    }
+  ],
+  "kind": "downstream-ranking-sources",
+  "schema": "openssl-rs/atlas/downstream-ranking-sources/v1"
+}

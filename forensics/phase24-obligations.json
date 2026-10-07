@@ -6,10 +6,10 @@
         "closure": "the `RT-RANKING-SOURCES` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-RANKING-SOURCES is pending",
+        "measurement_state": "complete",
+        "observation": "RT-RANKING-SOURCES is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "ranking-sources",
         "what": "the frozen, multi-source ranking evidence acquired and content-addressed **before** any candidate result exists, so the population cannot be selected by what the candidate happens to pass (the pre-commitment rule)"
@@ -188,8 +188,8 @@
       "contract_units": 15,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 0,
-      "open_in_this_stratum": 15,
+      "implemented": 1,
+      "open_in_this_stratum": 14,
       "owned": 15,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -230,7 +230,7 @@
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "f5489d77fa8891c3da1a683ff9ae49f315edfbebf4c44d7c63717dfa8444d445"
+      "sha256": "8dc02043451f4653b91b4da04f283bb4eb0786f61455d7de04983cf56a3a7452"
     },
     {
       "name": "phase24-guard",

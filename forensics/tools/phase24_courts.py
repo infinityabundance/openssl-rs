@@ -14,13 +14,19 @@ artefact carries the expectation: each court reads the artefact that holds its s
 typing the expectation beside it, so the two cannot disagree, and a court whose control is not
 honest is `fail` rather than `pass`.
 
-**No court is registered at activation.** The stratum's obligations are not exports, so its first
-runnable court is a later subphase's, and `run_courts.py` would refuse a stratum in `in-progress`
-with no runner at all -- so this runner lands with an empty registry and names the fifteen courts
-it will stage, each with the subphase that lands it. The registry is the file `run_courts.py`
-checks is reproduced, so a court silently dropped is a finding rather than a smaller green run.
-This is the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this
-registry, so this runner does **not** bind the obligations ledger as an input.
+**The first court is registered by 24.1.** The stratum's obligations are not exports, so its
+first runnable court is a later subphase's, and `run_courts.py` would refuse a stratum in
+`in-progress` with no runner at all -- so this runner lands at activation with an empty registry
+and names the fifteen courts it will stage. **24.1 registers `RT-RANKING-SOURCES`**, the frozen
+ranking-source acquisition: it reads `forensics/downstream/ranking-sources.json` and the committed
+normalized inputs under `forensics/downstream/ranking/normalized/`, re-derives the frozen
+`selection_input_root_hash`, and checks every source is content-addressed with a retrieval
+timestamp and a parser version, that an unavailable source carries a reason and is not counted
+present, and that the acquisition is reproducible -- with an instrument-sensitivity control that
+seeds four mutations and requires each caught. The registry is the file `run_courts.py` checks is
+reproduced, so a court silently dropped is a finding rather than a smaller green run. This is the
+reverse of Phase 16's edge: the ledger's contract-unit states are measured from this registry, so
+this runner does **not** bind the obligations ledger as an input.
 
 **Every entry point calls the Docker-only execution guard first.** Phase 24's whole subject is
 compiling, linking and running other software, and `docs/REPRODUCIBILITY.md` section 1 says nothing
@@ -35,7 +41,7 @@ record kinds are a file the evidence points at rather than prose the plan would 
 
 The fifteen courts, and the subphase that lands each
 ----------------------------------------------------
-  * `RT-RANKING-SOURCES` -- 24.1, the frozen ranking-source acquisition.
+  * `RT-RANKING-SOURCES` -- 24.1, the frozen ranking-source acquisition (registered).
   * `RT-CANDIDATE-UNIVERSE` -- 24.2, the candidate family universe.
   * `RT-AUTHORITY-BASELINE` -- 24.3, the authority-baseline census.
   * `RT-FAMILY-FREEZE` -- 24.4, the P1000 + reserve freeze.
@@ -51,10 +57,11 @@ The fifteen courts, and the subphase that lands each
   * `RT-FRF-CLOSURE` -- 24.14, the FRF/Gemel closure.
   * `DOWNSTREAM-1000-SEAL` -- 24.15, the seal.
 
-Every one is `pending` at activation. A passing court is an instrument, not a property claim, and
-this stratum makes no property claim beyond the atlas: a selected empirical population is not a
-random sample, 1000/1000 is not a security proof, a build is not a functional proof, and transitive
-and direct consumers are different evidence.
+Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES` and the remaining
+fourteen are pending. A passing court is an instrument, not a property claim, and this stratum
+makes no property claim beyond the atlas: a selected empirical population is not a random sample,
+1000/1000 is not a security proof, a build is not a functional proof, and transitive and direct
+consumers are different evidence.
 
 The runner reads no obligations ledger: the ledger's contract-unit states are measured from this
 registry, so the edge runs ledger -> courts and binding it back would form a digest cycle neither
@@ -67,6 +74,7 @@ SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -90,6 +98,11 @@ import phase24_guard  # noqa: E402
 # the registry's inventory cannot drift from the module the evidence is checked with.
 import downstream_schemas  # noqa: E402
 
+# The 24.1 acquisition tool, imported so the court re-runs its pure validation and sensitivity
+# control over the committed manifest (never fetching) through the same code path the manifest was
+# produced by (never a second, drifting predicate).
+import downstream_sources  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -97,15 +110,22 @@ SCHEMAS = REPO_ROOT / "forensics" / "tools" / "downstream_schemas.py"
 GUARD = REPO_ROOT / "forensics" / "tools" / "phase24_guard.py"
 MANIFEST = REPO_ROOT / "forensics" / "downstream" / "container.json"
 
-# The courts this stratum will stage. **Empty at activation**: 24.0 owns no runnable court, so the
-# registry carries none. Each later subphase appends its court here in the commit that lands its
-# instrument, and a court removed from the table leaves the registry and fails `run_courts.py`.
-COURTS: list[tuple[str, str]] = []
+# 24.1's subject: the frozen ranking-source manifest and the committed normalized inputs the court
+# re-hashes and re-derives the frozen root from. The court reads them; it never fetches.
+RANKING_SOURCES = REPO_ROOT / "forensics" / "downstream" / "ranking-sources.json"
+RANKING_SOURCES_COURT = "RT-RANKING-SOURCES"
 
-# The fifteen courts the plan names, each pending with the subphase that lands it. Ordered as the
-# plan orders them, so the registry reads as the execution order.
+# The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES`; each later subphase appends
+# its court here in the commit that lands its instrument, and a court removed from the table leaves
+# the registry and fails `run_courts.py`.
+COURTS: list[tuple[str, str]] = [
+    (RANKING_SOURCES_COURT, "_ranking_sources_court"),
+]
+
+# The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
+# plan orders them, so the registry reads as the execution order. `RT-RANKING-SOURCES` moves out of
+# this table and into `COURTS` in the commit that lands its instrument (24.1).
 PENDING_COURTS: dict[str, str] = {
-    "RT-RANKING-SOURCES": "24.1 -- the frozen ranking-source acquisition",
     "RT-CANDIDATE-UNIVERSE": "24.2 -- the candidate family universe",
     "RT-AUTHORITY-BASELINE": "24.3 -- the authority-baseline census",
     "RT-FAMILY-FREEZE": "24.4 -- the P1000 + reserve freeze",
@@ -121,6 +141,82 @@ PENDING_COURTS: dict[str, str] = {
     "RT-FRF-CLOSURE": "24.14 -- the FRF/Gemel closure",
     "DOWNSTREAM-1000-SEAL": "24.15 -- the downstream-1000 seal",
 }
+
+
+def _ranking_sources_court(name: str) -> dict:
+    """`RT-RANKING-SOURCES`: 24.1's court, the frozen ranking-source acquisition.
+
+    Stages no probe. It reads the committed manifest `forensics/downstream/ranking-sources.json`
+    and the committed normalized inputs, re-derives the frozen `selection_input_root_hash`, and
+    establishes that every source is content-addressed (raw payload SHA-256 and normalization
+    SHA-256) with a retrieval timestamp and a parser version, that an available source's committed
+    normalized input hashes to its recorded digest, that an unavailable source carries a reason and
+    is not counted present, and that the acquisition is reproducible from its committed recipe and
+    digest. Four seeded mutations are each caught with specificity holding. A passing ranking-source
+    manifest is a **precommitment**, not a ranking claim: it says the selection input was frozen
+    before any candidate result, not that any family is important.
+    """
+    if not RANKING_SOURCES.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the ranking-source manifest {rel(RANKING_SOURCES)} is absent"],
+                "findings": [], "control": {}}
+
+    body = json.loads(RANKING_SOURCES.read_text(encoding="utf-8"))
+    manifest = body.get("body", body)
+    normalized = downstream_sources.load_committed(manifest)
+    findings = downstream_sources.ranking_source_findings(manifest, normalized)
+    control = downstream_sources.ranking_sensitivity_control(manifest, normalized)
+
+    counts = manifest.get("counts") or {}
+    sources = [{
+        "source_id": row.get("source_id"),
+        "kind": row.get("kind"),
+        "availability": row.get("availability"),
+        "sha256": row.get("sha256"),
+        "retrieved_at": row.get("retrieved_at"),
+        "size_bytes": row.get("size_bytes"),
+        "row_count": row.get("row_count"),
+        "repository_timestamp": row.get("repository_timestamp"),
+        "parser_version": row.get("parser_version"),
+    } for row in manifest.get("sources", [])]
+
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/ranking-sources.json and the committed "
+            "normalized inputs under forensics/downstream/ranking/normalized/, and re-runs the "
+            "24.1 validation and sensitivity control over the committed manifest without "
+            "fetching. It establishes that every source is content-addressed by its raw payload "
+            "SHA-256 and its normalization SHA-256, carries a retrieval timestamp and a parser "
+            "version, and is reproducible from its deterministic retrieval recipe; that an "
+            "available source's committed normalized input hashes to its recorded digest; that "
+            "the frozen selection_input_root_hash reproduces from the present sources; and that "
+            "an unavailable source carries a reason and is not counted present. A source stripped "
+            "of its hash, a mutated normalized payload, an unavailable source counted present and "
+            "a missing retrieval timestamp are each detected with specificity holding "
+            "(docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2 and 3.4)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the ranking-source court reads a committed manifest and committed normalized inputs "
+            "and stages no artifacts/phase24/probes/ pair, so it takes no transcript to diff and "
+            "carries no FRF declaration"
+        ),
+        "selection_input_root_hash": manifest.get("selection_input_root_hash"),
+        "counts": {
+            "sources": counts.get("sources", len(sources)),
+            "available": counts.get("available", 0),
+            "unavailable": counts.get("unavailable", 0),
+            "normalized_rows": counts.get("normalized_rows", 0),
+        },
+        "sources": sources,
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
 
 
 def main(argv: list[str]) -> int:
@@ -156,12 +252,17 @@ def main(argv: list[str]) -> int:
     auth = resolve_authority(PRODUCTION_AUTHORITY)
 
     records: list[dict] = []
-    for name, filename in COURTS:
-        # No court is registered at activation, so this loop is inert. It is kept so the first
-        # subphase that appends a court stages it here rather than inventing the shape.
-        src = REPO_ROOT / "courts" / "phase24" / str(filename)
-        records.append({"court": name, "verdict": "fail", "stage": "probe-missing",
-                        "detail": rel(src)})
+    for name, handler in COURTS:
+        # Each registered court stages no probe -- this stratum owns no exported symbol, so no
+        # differential probe over a symbol set is its evidence -- and each is computed here rather
+        # than read back from disk, so no digest cycle forms. The handler is named in the table and
+        # resolved here, so a court added to COURTS without a function is a loud failure.
+        fn = globals().get(str(handler))
+        if fn is None:
+            records.append({"court": name, "verdict": "fail", "stage": "handler-missing",
+                            "detail": str(handler)})
+            continue
+        records.append(fn(name))
 
     passed = sum(1 for r in records if r["verdict"] == "pass")
     failed = sum(1 for r in records if r["verdict"] == "fail")
@@ -177,14 +278,30 @@ def main(argv: list[str]) -> int:
         "residual_classes": list(downstream_schemas.RESIDUAL_CLASSES),
         "drop_in_verdicts": list(downstream_schemas.DROP_IN_VERDICTS),
         "claim": (
-            "No court is registered at activation: Phase 24 owns no exported symbol, so no "
-            "differential probe over a symbol set is its evidence, and its fifteen courts -- "
-            "RT-RANKING-SOURCES, RT-CANDIDATE-UNIVERSE, RT-AUTHORITY-BASELINE, RT-FAMILY-FREEZE, "
+            "`RT-RANKING-SOURCES` is 24.1's court: the frozen ranking-source acquisition. It "
+            "stages no probe and reads forensics/downstream/ranking-sources.json and the "
+            "committed normalized inputs under forensics/downstream/ranking/normalized/, "
+            "re-running the 24.1 validation and sensitivity control without fetching. It "
+            "establishes that every acquired ranking / reverse-dependency source -- the Debian "
+            "reverse-dependency graph and Popcon counts, the Fedora and Alpine reverse package "
+            "dependencies, Homebrew openssl@3's dependency relationships and analytics, the "
+            "OpenSSF Scorecard and the crates.io reverse-dependency count -- is content-addressed "
+            "by its raw payload SHA-256 and its normalization SHA-256, carries a retrieval "
+            "timestamp and a parser version, and is reproducible from its deterministic retrieval "
+            "recipe; that the frozen selection_input_root_hash reproduces from the present "
+            "sources; and that an unavailable source (the OpenSSF Criticality Score, which has no "
+            "reproducible public endpoint) carries a reason and is not counted present. A source "
+            "stripped of its hash, a mutated normalized payload, an unavailable source counted "
+            "present and a missing retrieval timestamp are each detected with specificity "
+            "holding. A passing ranking-source manifest is a precommitment, not a ranking claim: "
+            "it says the selection input was frozen before any candidate result. The remaining "
+            "fourteen courts -- RT-CANDIDATE-UNIVERSE, RT-AUTHORITY-BASELINE, RT-FAMILY-FREEZE, "
             "RT-HOLDOUT-PARTITION, RT-BUILD-LINK-ATLAS, RT-RUNTIME-FUNCTIONAL-ATLAS, "
             "RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, RT-HOSTILITY-AUGMENTATION, "
             "RT-CANDIDATE-FREEZE, RT-P1000-RUN, RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and "
-            "DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.1 through "
-            "24.15). The stratum's record kinds are defined and self-tested in "
+            "DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.2 through "
+            "24.15). Phase 24 owns no exported symbol, so no differential probe over a symbol "
+            "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
             "family (the counted unit, never a package alias), the separate specimen, the "
             "variant, the frozen ranking-source row, the execution-level row over the L0-L8 "
@@ -208,10 +325,51 @@ def main(argv: list[str]) -> int:
         InputRef(name="phase24-guard", path=GUARD),
         InputRef(name="phase24-container-manifest", path=MANIFEST),
     ]
+    # 24.1's subject: the committed ranking-source manifest and every committed normalized input /
+    # raw payload it binds, so the court's evidence is content-addressed rather than restated.
+    if RANKING_SOURCES.is_file():
+        inputs.append(InputRef(name="ranking-sources", path=RANKING_SOURCES))
+        rbody = json.loads(RANKING_SOURCES.read_text(encoding="utf-8"))
+        for row in (rbody.get("body", rbody).get("sources") or []):
+            path = row.get("normalized_path")
+            if path:
+                inputs.append(InputRef(name=f"normalized/{row['source_id']}",
+                                       path=REPO_ROOT / path))
+            for payload in row.get("raw_payloads") or []:
+                if payload.get("committed_path"):
+                    inputs.append(InputRef(
+                        name=f"raw/{row['source_id']}/{payload['role']}",
+                        path=REPO_ROOT / payload["committed_path"]))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
 
+    for r in records:
+        if r["verdict"] == "pass" and r["court"] == RANKING_SOURCES_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            print(f"  {r['court']:<32} pass   (no probe, {counts['sources']} source(s) "
+                  f"{counts['available']} available {counts['unavailable']} unavailable; "
+                  f"{counts['normalized_rows']} normalized row(s); "
+                  f"root={r['selection_input_root_hash'][:16]}...; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"no-hash->{c['caught_no_hash']} "
+                  f"mutated->{c['caught_mutated_payload']} "
+                  f"counted-present->{c['caught_unavailable_counted_present']} "
+                  f"no-timestamp->{c['caught_missing_retrieval_timestamp']})")
+            for s in r["sources"]:
+                print(f"      {s['source_id']:<28} {s['kind']:<18} {s['availability']:<11} "
+                      f"{(s['sha256'] or '')[:12]:<12} rows={s['row_count']:<5} "
+                      f"retrieved={s['retrieved_at']}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] != "pass":
+            print(f"  {r['court']:<32} FAIL   stage={r.get('stage', 'derive')}")
+            for p in (r.get("problems") or [])[:12]:
+                print(f"      {p}")
+            for f in (r.get("findings") or [])[:12]:
+                print(f"      finding: {f}")
     for cname, needs in PENDING_COURTS.items():
         print(f"  {cname:<32} PENDING (not registered as passing) -- {needs}")
     print(f"  schema inventory: {len(body['schemas'])} record kind(s)")
