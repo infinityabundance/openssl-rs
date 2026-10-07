@@ -115,6 +115,15 @@ def normalise_build_products(doc: dict) -> dict:
         if isinstance(entry, dict) and entry.get("name") in BUILD_PRODUCT_INPUT_NAMES \
                 and "sha256" in entry:
             entry["sha256"] = BUILD_PRODUCT
+    # The envelope's own `body_hash` was computed from the *pre-normalisation* body, so it still
+    # describes the machine-specific field values even after those fields are blanked. Two
+    # authorities built on different machines therefore disagreed on `body_hash` while their
+    # normalised bodies were identical. Recompute it from the normalised body so the hash keeps
+    # describing what is compared rather than what was built: a derived hash of a body whose
+    # declared build products are blanked is itself a build-product-dependent field and is
+    # normalised the same way, by definition rather than by a placeholder.
+    if "body_hash" in doc:
+        doc["body_hash"] = content_hash(body)
     return doc
 
 
