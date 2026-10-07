@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "boundary": "the population covers the catalogue and records a status per node; it is not a compatibility claim about any release. The `downstream-evidenced` rung is read from forensics/multitrack/downstream-multitrack.json (23.11): a node attains it when an unmodified real downstream consumer was built against its authority and ran a real workload, and it may be attained without the oracle-to-oracle `runtime-evidenced` rung, because the two are independent evidence planes rather than a contiguous prefix. An unavailable release is archaeology -- studied, catalogued, and never runtime-compatible -- and each major ABI epoch carries at least one built representative: 0.9.8zh (pre-1.0), 1.0.2u (1.0.x), 1.1.1w (1.1.x), 3.0.0 (3.x) and 3.6.3/3.6.4 (3.6+/4.x). The epoch representatives are built in the historical and forensic venues; the profile each was built with is a property of its authority node, not of its release identity",
-    "content_hash": "9dd8edd4eb6cd9d98c3d7006f3cef7d8b905e2dfd7fa51b7194164afbf7af11f",
+    "content_hash": "389c409664a0c870b814b45c1cd49d8418290ee7c5a1dd7e6db164ec298889f2",
     "counts": {
       "built": 20,
       "by_epoch": {
@@ -6966,7 +6966,7 @@
           },
           {
             "path": "forensics/atlas/BUILD_RECORDS.json",
-            "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0",
+            "sha256": "0119269c2a15dcf398386d7c93efb9e5a5dcf191a08415540d8d42cf651f94b0",
             "what": "the build receipt the built-authority claim is backed by"
           },
           {
@@ -7011,7 +7011,7 @@
           },
           {
             "path": "forensics/atlas/BUILD_RECORDS.json",
-            "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0",
+            "sha256": "0119269c2a15dcf398386d7c93efb9e5a5dcf191a08415540d8d42cf651f94b0",
             "what": "the build receipt the built-authority claim is backed by"
           },
           {

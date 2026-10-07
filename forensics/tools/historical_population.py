@@ -13,7 +13,10 @@ and never types a status:
   * `forensics/multitrack/historical-acquisition.json` -- a release's acquisition, or its recorded
     unavailability with its reason;
   * `forensics/multitrack/historical-build-receipts.json` and `forensics/atlas/BUILD_RECORDS.json`
-    -- the build receipts a `built-authority` rung is backed by;
+    -- the build receipts a `built-authority` rung is backed by. `BUILD_RECORDS.json` records the
+    host's `build_platform`/`build_toolchain`, which the court job's `authority_build.py --all`
+    rewrites, so it is cited by a digest over its stable build identity rather than by its file
+    bytes (`evidence_digest`);
   * `forensics/atlas/<authority>/` -- a committed atlas, for the `atlas-complete` rung;
   * `forensics/multitrack/compatibility-views.json` -- a compatible candidate view, for
     `candidate-view`; and
@@ -91,6 +94,43 @@ def sha(path: Path) -> str:
     return sha256_file(path)
 
 
+# `forensics/atlas/BUILD_RECORDS.json` records each build's `build_platform` (the host kernel),
+# `build_toolchain` and produced-`artifacts` sizes, so its **file** digest is a property of the
+# machine that built the authority rather than a committed input: the court job's
+# `authority_build.py --all` rewrites the file before the courts run, so binding its file bytes would
+# make this derivation disagree with itself on a differently-built authority. The evidence therefore
+# binds a digest over the receipt's **stable build identity** -- the fields that are a function of
+# the release and the recorded profile, not of the host -- exactly as `implemented_surface_input`
+# binds `body_hash` rather than the artefact's file digest, because that artefact too carries
+# build-product observations (docs/DECISIONS.md D30). `historical-build-receipts.json` records no
+# host value, so it stays content-addressed by its file digest as before.
+BUILD_RECORD_STABLE_FIELDS: tuple[str, ...] = (
+    "id", "version", "profile", "profile_args", "build_dir", "prefix", "configure_argv",
+)
+
+
+def _build_records_digest() -> str:
+    """A digest over `BUILD_RECORDS`'s stable build identity, not its machine-specific bytes."""
+    builds = load(BUILD_RECORDS)["builds"]
+    stable = [
+        {field: b.get(field) for field in BUILD_RECORD_STABLE_FIELDS}
+        for b in sorted(builds, key=lambda b: b["id"])
+    ]
+    return content_hash(stable)
+
+
+def evidence_digest(path: Path) -> str:
+    """The digest an evidence entry records for `path`, and the digest the court checks it against.
+
+    A build-product receipt (`BUILD_RECORDS.json`) is hashed by its stable build identity (above);
+    every other artefact is hashed by its file bytes. The court's content-addressing check calls
+    this same function, so the committed digest and the check cannot drift.
+    """
+    if rel(path) == rel(BUILD_RECORDS):
+        return _build_records_digest()
+    return sha(path)
+
+
 class Evidence:
     """A content-addressed evidence cache: one artefact, hashed once, cited many times."""
 
@@ -100,7 +140,7 @@ class Evidence:
     def ref(self, path: Path, what: str) -> dict:
         key = rel(path)
         if key not in self._digests:
-            self._digests[key] = sha(path)
+            self._digests[key] = evidence_digest(path)
         return {"path": key, "sha256": self._digests[key], "what": what}
 
 

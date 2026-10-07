@@ -103,7 +103,7 @@
         "name": "support_status",
         "path": "forensics/multitrack/support-status.json",
         "record_count": 372,
-        "sha256": "839658eba24f6481f34b5b203b36323aade376cc1d35ffeadabf6bbeafccbfa1"
+        "sha256": "03747b1302b3a9947a60b0e29c4ca7313241cf59baa61db04e5d11cab7428aec"
       }
     ],
     "relations": [
@@ -10279,7 +10279,7 @@
     {
       "name": "support-status",
       "path": "forensics/multitrack/support-status.json",
-      "sha256": "839658eba24f6481f34b5b203b36323aade376cc1d35ffeadabf6bbeafccbfa1"
+      "sha256": "03747b1302b3a9947a60b0e29c4ca7313241cf59baa61db04e5d11cab7428aec"
     },
     {
       "name": "authority-nodes",
