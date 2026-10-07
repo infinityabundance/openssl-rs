@@ -107,7 +107,7 @@ contract.
 
 **The downstream 1000 contract is fifteen units**, each derived from the court that measures it,
 and each court lands with the subphase that builds its instrument: `ranking-sources`,
-`candidate-universe`, `authority-baseline-census`, `family-freeze`, `holdout-partition`,
+`candidate-universe`, `authority-census`, `family-freeze`, `holdout-partition`,
 `build-link-atlas`, `runtime-functional-atlas`, `failure-minimization`, `high-value-tier`,
 `hostility-augmentation`, `candidate-freeze`, `p1000-run`, `atlas-reconciliation`,
 `frf-gemel-closure` and `downstream-1000-seal`. All fifteen are open at activation, so the ledger's
@@ -132,7 +132,7 @@ live record and this section is the activation measurement.**
 | 24.0 | **The constitution, the schemas, the guard, the ledger and the runner** | `docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md`, `forensics/tools/downstream_schemas.py`, the Docker-only execution guard `forensics/tools/phase24_guard.py`, the committed venue manifest `forensics/downstream/container.json` and the measurement in §1. The ledger (`forensics/phase24-obligations.json`) and its generator land with it, together with the runner `forensics/tools/phase24_courts.py` and the registry it writes. **The runner cannot be deferred**: `run_courts.py` refuses a stratum in `in-progress` with no runner, and this stratum's obligations are not exports, so its first runnable court is a later subphase's. | 23 | — |
 | 24.1 | **The frozen ranking-source acquisition** | the multi-source ranking evidence (`forensics/downstream/ranking-sources.json`) acquired from the named sources, each row's URL, fetch date and SHA-256 frozen **before** any candidate result exists, so the population cannot be selected by what the candidate passes. | 24.0 | `RT-RANKING-SOURCES` |
 | 24.2 | **The candidate family universe** | the multi-ecosystem candidate package-identity universe discovered from the frozen dependency/ranking evidence (`forensics/downstream/candidates.json`) and the deduplicated **project families** it normalises into -- one family node per real downstream project family, never a package alias, each classified by directness and provenance-backed (`forensics/downstream/families.json`, schema kind `family`), with specimens kept separate for 24.3. | 24.1 | `RT-CANDIDATE-UNIVERSE` |
-| 24.3 | **The authority-baseline census** | one authority-baseline census per specimen, recording the level the **pristine-source** build reached against the admitted authority, so a candidate pass is normalized against what the authority itself achieved (`forensics/downstream/authority-baseline.json`). | 24.2 | `RT-AUTHORITY-BASELINE` |
+| 24.3 | **The authority-baseline census** | one authority-baseline census per specimen, recording the level the **pristine-source** build reached against the admitted authority, so a candidate pass is normalized against what the authority itself achieved (`forensics/downstream/authority-baselines.jsonl` and `forensics/downstream/usage-fingerprints.json`). | 24.2 | `RT-AUTHORITY-CENSUS` |
 | 24.4 | **The P1000 + reserve freeze** | the frozen population of 1,000 counted families plus the reserve, selected from the precommitted ranking evidence and content-addressed before any candidate result (`forensics/downstream/family-freeze.json`). | 24.3 | `RT-FAMILY-FREEZE` |
 | 24.5 | **The precommitted holdout partition** | the holdout partition fixed before the candidate was run against the development population and never used to choose a patch (`forensics/downstream/holdout.json`). | 24.4 | `RT-HOLDOUT-PARTITION` |
 | 24.6 | **The build/link atlas** | one build/link run per specimen per subject, reaching `L2-configured`, `L3-built` and `L4-linked`, with candidate linkage proven (`forensics/downstream/build-link-atlas.json`). | 24.5 | `RT-BUILD-LINK-ATLAS` |
@@ -160,7 +160,8 @@ for exactly one of the fifteen contract units. The partition is derived from
 | `forensics/downstream/execution-levels.json` | the L0-L8 ladder | `execution_level` |
 | `forensics/downstream/candidates.json` | the candidate package-identity universe | the 24.2 court's own checks |
 | `forensics/downstream/families.json` | the deduplicated project families | `family` |
-| `forensics/downstream/authority-baseline.json` | the authority-baseline census | `run` |
+| `forensics/downstream/authority-baselines.jsonl` | the authority-baseline census | `run` |
+| `forensics/downstream/usage-fingerprints.json` | the usage fingerprints and linkage proof | `run`, `specimen`, `variant` |
 | `forensics/downstream/family-freeze.json` | the frozen P1000 + reserve | `family` |
 | `forensics/downstream/holdout.json` | the holdout partition | `family` |
 | `forensics/downstream/build-link-atlas.json` | build/link runs and variants | `run`, `variant` |
@@ -291,6 +292,22 @@ selection provenance) and adds the brief section 8 seven-class `directness_class
 checks the correction rather than this paragraph asserting it. The measured universe is recorded
 in the court's registry row and in `forensics/downstream/candidates.json`'s own counts, not typed
 here.
+
+**4.8 The census court and unit are renamed, and the census is authority-side only (24.3).** The
+working names this plan used for 24.3 -- the court `RT-AUTHORITY-BASELINE`, the unit
+`authority-baseline-census` and the artefact `forensics/downstream/authority-baseline.json` -- are
+corrected here: the court is `RT-AUTHORITY-CENSUS`, the unit is `authority-census`, and the census
+lands as two artefacts, `forensics/downstream/authority-baselines.jsonl` (one schema-`run` row per
+cohort member) and `forensics/downstream/usage-fingerprints.json` (the separate specimens, the
+pristine variants, the imported OpenSSL symbols, the headers and the linkage proof). The rename is a
+name correction to the plan's prose and not a record-kind change, so §1 and §2 carry the corrected
+names and the court checks the correction rather than this paragraph asserting it. The census is
+**authority-side only**: it runs the acquire -> configure -> compile -> link -> launch ladder against
+the admitted authority and never executes a candidate, so a family the authority cannot build is
+`AUTHORITY_BASELINE_FAIL` with a precise reason and is never counted as a candidate failure. Its
+cohort is a **bounded, provisional** census cohort (the families carried by at least four frozen
+ranking sources), recorded and reproducible from the frozen 24.1 evidence; the real P1000 freeze is
+24.4, and the provisional cohort selects nothing. `RT-AUTHORITY-CENSUS` checks all of this.
 
 ## 5. Process
 

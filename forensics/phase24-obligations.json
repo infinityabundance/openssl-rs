@@ -27,15 +27,15 @@
         "what": "one family node per real downstream project **family** -- never a package alias -- with its specimens kept separate, its OpenSSL linkage (direct or transitive) named, and its ranking provenance recorded"
       },
       {
-        "closure": "the `RT-AUTHORITY-BASELINE` court passes",
+        "closure": "the `RT-AUTHORITY-CENSUS` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-AUTHORITY-BASELINE is pending",
+        "measurement_state": "complete",
+        "observation": "RT-AUTHORITY-CENSUS is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase24/COURTS.json",
-        "unit": "authority-baseline-census",
+        "unit": "authority-census",
         "what": "one authority-baseline census per specimen, recording the level the pristine-source build reached against the admitted authority, so a candidate pass is normalized against what the authority itself achieved"
       },
       {
@@ -188,8 +188,8 @@
       "contract_units": 15,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 2,
-      "open_in_this_stratum": 13,
+      "implemented": 3,
+      "open_in_this_stratum": 12,
       "owned": 15,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -225,12 +225,12 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "6e6a7a96c337a68ccdad457bcd2cd940af1120d11ab2b29b40a1ec46125b1b59"
+      "sha256": "11bddad6e1d3c9053ec16b2408f0aade17e912149d130526eaffbc161c4c6169"
     },
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "47df1affb525c80c53c01de439566fe69eebda26564a0d79fb9fec9cdf0f07b7"
+      "sha256": "9b92fc3688754e9231f236fc758d9c32762fd422905e3aabb60b22a93cb97680"
     },
     {
       "name": "phase24-guard",

@@ -130,8 +130,8 @@ COURT_UNITS: tuple[tuple[str, str, str, str], ...] = (
      "one family node per real downstream project **family** -- never a package alias -- with its "
      "specimens kept separate, its OpenSSL linkage (direct or transitive) named, and its ranking "
      "provenance recorded"),
-    ("authority-baseline-census", "RT-AUTHORITY-BASELINE",
-     "the `RT-AUTHORITY-BASELINE` court passes",
+    ("authority-census", "RT-AUTHORITY-CENSUS",
+     "the `RT-AUTHORITY-CENSUS` court passes",
      "one authority-baseline census per specimen, recording the level the pristine-source build "
      "reached against the admitted authority, so a candidate pass is normalized against what the "
      "authority itself achieved"),

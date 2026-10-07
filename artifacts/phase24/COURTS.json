@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-RANKING-SOURCES` is 24.1's court: the frozen ranking-source acquisition. It stages no probe and reads forensics/downstream/ranking-sources.json and the committed normalized inputs under forensics/downstream/ranking/normalized/, re-running the 24.1 validation and sensitivity control without fetching. It establishes that every acquired ranking / reverse-dependency source -- the Debian reverse-dependency graph and Popcon counts, the Fedora and Alpine reverse package dependencies, Homebrew openssl@3's dependency relationships and analytics, the OpenSSF Scorecard and the crates.io reverse-dependency count -- is content-addressed by its raw payload SHA-256 and its normalization SHA-256, carries a retrieval timestamp and a parser version, and is reproducible from its deterministic retrieval recipe; that the frozen selection_input_root_hash reproduces from the present sources; and that an unavailable source (the OpenSSF Criticality Score, which has no reproducible public endpoint) carries a reason and is not counted present. A source stripped of its hash, a mutated normalized payload, an unavailable source counted present and a missing retrieval timestamp are each detected with specificity holding. A passing ranking-source manifest is a precommitment, not a ranking claim: it says the selection input was frozen before any candidate result. `RT-CANDIDATE-UNIVERSE` is 24.2's court: the candidate family universe. It stages no probe and reads forensics/downstream/candidates.json and forensics/downstream/families.json, re-deriving both from the committed forensics/downstream/ranking/normalized/ inputs. It establishes that every family is schema-valid (kind `family`) and provenance-backed; that aliases of one upstream collapse to one family (the libcurl4/curl/curl-dev/curl-doc set is one family, not four); that the OpenSSL providers and a name collision (`libcrypto++`) are not counted as consumers; that a fork is not independent without explicit evidence of materially different OpenSSL integration; that a transitive consumer is not counted as direct; and that the universe is substantially larger than 1,000 before deduplication. A double-counted distro alias, a transitive consumer promoted to direct, a fork counted independent with no evidence and a family with no provenance are each detected with specificity holding. The remaining thirteen courts -- RT-AUTHORITY-BASELINE, RT-FAMILY-FREEZE, RT-HOLDOUT-PARTITION, RT-BUILD-LINK-ATLAS, RT-RUNTIME-FUNCTIONAL-ATLAS, RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.3 through 24.15). Phase 24 owns no exported symbol, so no differential probe over a symbol set is its evidence. The stratum's record kinds are defined and self-tested in forensics/tools/downstream_schemas.py, whose inventory this registry records: the family (the counted unit, never a package alias), the separate specimen, the variant, the frozen ranking-source row, the execution-level row over the L0-L8 ladder, the run, the classified residual, the preserved-and-minimized failure and the baseline-normalized drop-in verdict. Every entry point calls the Docker-only execution guard (forensics/tools/phase24_guard.py) first, so nothing in this stratum executes on the host. The four things the model never claims are: a selected empirical population is not a random sample; 1000/1000 is not a security proof; a build is not a functional proof; and transitive and direct consumers are different evidence. DROP_IN_PASS is baseline-normalized -- the same pristine source, a succeeded authority baseline, the candidate reaching the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches. docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "`RT-RANKING-SOURCES` is 24.1's court: the frozen ranking-source acquisition. It stages no probe and reads forensics/downstream/ranking-sources.json and the committed normalized inputs under forensics/downstream/ranking/normalized/, re-running the 24.1 validation and sensitivity control without fetching. It establishes that every acquired ranking / reverse-dependency source -- the Debian reverse-dependency graph and Popcon counts, the Fedora and Alpine reverse package dependencies, Homebrew openssl@3's dependency relationships and analytics, the OpenSSF Scorecard and the crates.io reverse-dependency count -- is content-addressed by its raw payload SHA-256 and its normalization SHA-256, carries a retrieval timestamp and a parser version, and is reproducible from its deterministic retrieval recipe; that the frozen selection_input_root_hash reproduces from the present sources; and that an unavailable source (the OpenSSF Criticality Score, which has no reproducible public endpoint) carries a reason and is not counted present. A source stripped of its hash, a mutated normalized payload, an unavailable source counted present and a missing retrieval timestamp are each detected with specificity holding. A passing ranking-source manifest is a precommitment, not a ranking claim: it says the selection input was frozen before any candidate result. `RT-CANDIDATE-UNIVERSE` is 24.2's court: the candidate family universe. It stages no probe and reads forensics/downstream/candidates.json and forensics/downstream/families.json, re-deriving both from the committed forensics/downstream/ranking/normalized/ inputs. It establishes that every family is schema-valid (kind `family`) and provenance-backed; that aliases of one upstream collapse to one family (the libcurl4/curl/curl-dev/curl-doc set is one family, not four); that the OpenSSL providers and a name collision (`libcrypto++`) are not counted as consumers; that a fork is not independent without explicit evidence of materially different OpenSSL integration; that a transitive consumer is not counted as direct; and that the universe is substantially larger than 1,000 before deduplication. A double-counted distro alias, a transitive consumer promoted to direct, a fork counted independent with no evidence and a family with no provenance are each detected with specificity holding. `RT-AUTHORITY-CENSUS` is 24.3's court: the authority-baseline census. It stages no probe and reads forensics/downstream/authority-baselines.jsonl and forensics/downstream/usage-fingerprints.json, re-deriving the provisional census cohort from the committed families. It establishes that every cohort member has an authority result classified; that an `AUTHORITY_BASELINE_FAIL` carries an authority failure class from the taxonomy and a reason, and is never counted as a candidate failure; that a `AUTHORITY_BASELINE_PASS`'s linkage proof resolves the admitted authority's own libssl/libcrypto and never a system one; that the cohort selection rule is recorded and reproduces from the frozen sources; and that no candidate execution occurred. A build claiming authority linkage while resolving a system libssl, an authority failure counted as a candidate failure, a cohort member with no source hash and a fingerprint with no imported symbols claimed as a pass are each detected with specificity holding. A passing census is a measurement, not a candidate result: the authority side reached the level it records, and no candidate ran. The remaining twelve courts -- RT-FAMILY-FREEZE, RT-HOLDOUT-PARTITION, RT-BUILD-LINK-ATLAS, RT-RUNTIME-FUNCTIONAL-ATLAS, RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.4 through 24.15). Phase 24 owns no exported symbol, so no differential probe over a symbol set is its evidence. The stratum's record kinds are defined and self-tested in forensics/tools/downstream_schemas.py, whose inventory this registry records: the family (the counted unit, never a package alias), the separate specimen, the variant, the frozen ranking-source row, the execution-level row over the L0-L8 ladder, the run, the classified residual, the preserved-and-minimized failure and the baseline-normalized drop-in verdict. Every entry point calls the Docker-only execution guard (forensics/tools/phase24_guard.py) first, so nothing in this stratum executes on the host. The four things the model never claims are: a selected empirical population is not a random sample; 1000/1000 is not a security proof; a build is not a functional proof; and transitive and direct consumers are different evidence. DROP_IN_PASS is baseline-normalized -- the same pristine source, a succeeded authority baseline, the candidate reaching the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches. docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -247,6 +247,435 @@
         "probe": "",
         "problems": [],
         "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught_authority_fail_as_candidate_failure": true,
+          "caught_authority_linkage_but_system": true,
+          "caught_cohort_member_without_source_hash": true,
+          "caught_fingerprint_without_symbols_claimed_pass": true,
+          "honest": true,
+          "injected_authority_fail_as_candidate_failure": "authority_fail_as_candidate_failure",
+          "injected_authority_linkage_but_system": "authority_linkage_but_system",
+          "injected_cohort_member_without_source_hash": "cohort_member_without_source_hash",
+          "injected_fingerprint_without_symbols_claimed_pass": "fingerprint_without_symbols_claimed_pass",
+          "specificity_holds": true
+        },
+        "counts": {
+          "acquired": 11,
+          "cohort": 53,
+          "failed": 47,
+          "launched": 5,
+          "linked_to_authority": 6,
+          "no_recipe": 42,
+          "passed": 6,
+          "with_recipe": 11
+        },
+        "court": "RT-AUTHORITY-CENSUS",
+        "examples": {
+          "authority_baseline_fails": [
+            {
+              "failure_class": "configure-failure",
+              "family": "libssh",
+              "level": "L1-admitted-source",
+              "reason": "configure failed: [Errno 2] No such file or directory: './configure'"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "jwt",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "cargo",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "alpine",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "borgbackup",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "cargo-c",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "clamav",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "coturn",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "dnsdist",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "dovecot",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "fido2",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "grpc",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "hydra",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "configure-failure",
+              "family": "isync",
+              "level": "L1-admitted-source",
+              "reason": "configure failed: configure: error: OpenSSL libs and/or includes were not found where specified"
+            },
+            {
+              "failure_class": "configure-failure",
+              "family": "kmod",
+              "level": "L1-admitted-source",
+              "reason": "configure failed: configure: error: *** scdoc needed for building manpages. Either install it or pass --disable-manpages"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "lastpass-cli",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "libimobiledevice",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "libpq",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "librdkafka",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "libshout",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "libstrophe",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "libwebsockets",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "configure-failure",
+              "family": "lighttpd",
+              "level": "L1-admitted-source",
+              "reason": "configure failed: [Errno 2] No such file or directory: './configure'"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "mariadb",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "mosquitto",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "mupdf",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "netdata",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "nmap",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "nmh",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "nsd",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "configure-failure",
+              "family": "openvpn",
+              "level": "L1-admitted-source",
+              "reason": "configure failed: configure: error: libnl-genl-3.0 package not found or too old. Is the development package and pkg-config (/usr/bin/pkg-config) installed? Must be version 3.4.0 or newer for DCO"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "pam-u2f",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "pdns",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "pgbouncer",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "rpki-client",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "s-nail",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "shairport-sync",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "sofia-sip",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "squid",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "ssldump",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "syslog-ng",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "thrift",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "tor",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "unbound",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "uwsgi",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "w3m",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            },
+            {
+              "failure_class": "acquire-failure",
+              "family": "znc",
+              "level": "L0-catalogued",
+              "reason": "no pristine-source acquisition recipe is recorded for this family; the census does not manufacture a source URL"
+            }
+          ],
+          "authority_linkage_proof": {
+            "curl": {
+              "all_under_authority": true,
+              "authority_prefix": "forensics/authorities/prefix/openssl-3.6.4-production",
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+                "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+              },
+              "sonames": {
+                "libcrypto.so.3": {
+                  "resolved": "authority:libcrypto.so.3",
+                  "under_authority": true
+                },
+                "libssl.so.3": {
+                  "resolved": "authority:libssl.so.3",
+                  "under_authority": true
+                }
+              }
+            },
+            "haproxy": {
+              "all_under_authority": true,
+              "authority_prefix": "forensics/authorities/prefix/openssl-3.6.4-production",
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+                "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+              },
+              "sonames": {
+                "libcrypto.so.3": {
+                  "resolved": "authority:libcrypto.so.3",
+                  "under_authority": true
+                },
+                "libssl.so.3": {
+                  "resolved": "authority:libssl.so.3",
+                  "under_authority": true
+                }
+              }
+            },
+            "monit": {
+              "all_under_authority": true,
+              "authority_prefix": "forensics/authorities/prefix/openssl-3.6.4-production",
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+                "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+              },
+              "sonames": {
+                "libcrypto.so.3": {
+                  "resolved": "authority:libcrypto.so.3",
+                  "under_authority": true
+                },
+                "libssl.so.3": {
+                  "resolved": "authority:libssl.so.3",
+                  "under_authority": true
+                }
+              }
+            },
+            "openssh": {
+              "all_under_authority": true,
+              "authority_prefix": "forensics/authorities/prefix/openssl-3.6.4-production",
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3"
+              },
+              "sonames": {
+                "libcrypto.so.3": {
+                  "resolved": "authority:libcrypto.so.3",
+                  "under_authority": true
+                }
+              }
+            },
+            "pure-ftpd": {
+              "all_under_authority": true,
+              "authority_prefix": "forensics/authorities/prefix/openssl-3.6.4-production",
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+                "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+              },
+              "sonames": {
+                "libcrypto.so.3": {
+                  "resolved": "authority:libcrypto.so.3",
+                  "under_authority": true
+                },
+                "libssl.so.3": {
+                  "resolved": "authority:libssl.so.3",
+                  "under_authority": true
+                }
+              }
+            },
+            "redis": {
+              "all_under_authority": true,
+              "authority_prefix": "forensics/authorities/prefix/openssl-3.6.4-production",
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+                "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+              },
+              "sonames": {
+                "libcrypto.so.3": {
+                  "resolved": "authority:libcrypto.so.3",
+                  "under_authority": true
+                },
+                "libssl.so.3": {
+                  "resolved": "authority:libssl.so.3",
+                  "under_authority": true
+                }
+              }
+            }
+          },
+          "authority_prefix": "forensics/authorities/prefix/openssl-3.6.4-production",
+          "candidate_rows": [],
+          "cohort_min_sources": 4,
+          "cohort_size": 53,
+          "rule": "the cohort is the families carried by at least 4 independent frozen 24.1 ranking sources (the consensus tier), ranked by the provisional consensus signal (source breadth, then distro breadth, then popularity, then canonical name). The rule is provisional: the real P1000 selection is 24.4, and this cohort changes nothing about it. Every row is authority-side; a family the authority cannot build is `AUTHORITY_BASELINE_FAIL`, never a candidate failure, and its reason is preserved."
+        },
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the authority-census court reads committed census and fingerprint artefacts and stages no artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it reads forensics/downstream/authority-baselines.jsonl and forensics/downstream/usage-fingerprints.json, re-derives the provisional census cohort from the committed forensics/downstream/families.json, and re-runs the 24.3 validation and sensitivity control over the committed artefacts without rebuilding. It establishes that every cohort member has an authority result classified; that an `AUTHORITY_BASELINE_FAIL` carries an authority failure class from the taxonomy and a reason, and is never counted as a candidate failure; that a `AUTHORITY_BASELINE_PASS`'s linkage proof resolves the admitted authority's own libssl/libcrypto and never a system one; that the cohort selection rule is recorded and reproduces from the frozen sources; and that no candidate execution occurred. A build claiming authority linkage while resolving a system libssl, an `AUTHORITY_BASELINE_FAIL` counted as a candidate failure, a cohort member with no source hash and a fingerprint with no imported symbols claimed as a pass are each detected with specificity holding (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 3.1, 3.2 and 3.6).",
+        "probe": "",
+        "problems": [],
+        "verdict": "pass"
       }
     ],
     "drop_in_verdicts": [
@@ -286,7 +715,6 @@
     "pending_courts": {
       "DOWNSTREAM-1000-SEAL": "24.15 -- the downstream-1000 seal",
       "RT-ATLAS-RECONCILIATION": "24.13 -- the atlas reconciliation",
-      "RT-AUTHORITY-BASELINE": "24.3 -- the authority-baseline census",
       "RT-BUILD-LINK-ATLAS": "24.6 -- the build/link atlas",
       "RT-CANDIDATE-FREEZE": "24.11 -- the candidate freeze and holdout",
       "RT-FAILURE-MINIMIZATION": "24.8 -- the failure discovery/minimization loop",
@@ -438,8 +866,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 2,
-      "total": 2
+      "pass": 3,
+      "total": 3
     }
   },
   "generator": "forensics/tools/phase24_courts.py",
@@ -447,7 +875,7 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "6e6a7a96c337a68ccdad457bcd2cd940af1120d11ab2b29b40a1ec46125b1b59"
+      "sha256": "11bddad6e1d3c9053ec16b2408f0aade17e912149d130526eaffbc161c4c6169"
     },
     {
       "name": "downstream-schemas",
@@ -538,6 +966,21 @@
       "name": "families",
       "path": "forensics/downstream/families.json",
       "sha256": "4682c5c2523be6f64ca4be9d349747d4055b2a777d0441fee801448b3a17b60a"
+    },
+    {
+      "name": "authority-baselines",
+      "path": "forensics/downstream/authority-baselines.jsonl",
+      "sha256": "30ee7cc37fcbdbf7adca22ac47bffe335e5336f8fbdb67ae0b30dfdb2f0e7068"
+    },
+    {
+      "name": "usage-fingerprints",
+      "path": "forensics/downstream/usage-fingerprints.json",
+      "sha256": "02ce3cf1fd2fdf57cbfae7bf2bfb5c526292a9d055b69de16165c8d363424fff"
+    },
+    {
+      "name": "downstream-census",
+      "path": "forensics/tools/downstream_census.py",
+      "sha256": "025921fa1197d6e56d5c6e664b3685150bf31a270a7b3150f719c27d85807875"
     }
   ],
   "kind": "phase24-courts",

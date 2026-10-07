@@ -18,8 +18,8 @@ honest is `fail` rather than `pass`.
 first runnable court is a later subphase's, and `run_courts.py` would refuse a stratum in
 `in-progress` with no runner at all -- so this runner lands at activation with an empty registry
 and names the fifteen courts it will stage. **24.1 registers `RT-RANKING-SOURCES`**, the frozen
-ranking-source acquisition, and **24.2 registers `RT-CANDIDATE-UNIVERSE`**, the candidate family
-universe. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
+ranking-source acquisition, **24.2 registers `RT-CANDIDATE-UNIVERSE`**, the candidate family
+universe, and **24.3 registers `RT-AUTHORITY-CENSUS`**, the authority-baseline census. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
 normalized inputs under `forensics/downstream/ranking/normalized/`, re-derives the frozen
 `selection_input_root_hash`, and checks every source is content-addressed with a retrieval
 timestamp and a parser version, that an unavailable source carries a reason and is not counted
@@ -30,7 +30,14 @@ from those same committed normalized inputs, and checks every family is schema-v
 provenance-backed, that aliases of one upstream collapse to one family, that a fork is not
 independent without evidence, that a transitive consumer is not counted as direct, and that the
 universe is substantially larger than 1,000 before deduplication -- with an instrument-sensitivity
-control that seeds four mutations and requires each caught. The registry is the file `run_courts.py`
+control that seeds four mutations and requires each caught. `RT-AUTHORITY-CENSUS` reads the
+committed `forensics/downstream/authority-baselines.jsonl` and
+`forensics/downstream/usage-fingerprints.json`, re-derives the provisional census cohort from the
+committed families, and checks every cohort member has an authority result classified, that an
+`AUTHORITY_BASELINE_FAIL` carries an authority failure class and a reason and is never a candidate
+failure, that a `AUTHORITY_BASELINE_PASS`'s linkage proof resolves the admitted authority and not a
+system libssl, and that no candidate execution occurred -- with an instrument-sensitivity control
+that seeds four mutations and requires each caught. The registry is the file `run_courts.py`
 checks is reproduced, so a court silently dropped is a finding rather than a smaller green run.
 This is the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this
 registry, so this runner does **not** bind the obligations ledger as an input.
@@ -50,7 +57,7 @@ The fifteen courts, and the subphase that lands each
 ----------------------------------------------------
   * `RT-RANKING-SOURCES` -- 24.1, the frozen ranking-source acquisition (registered).
   * `RT-CANDIDATE-UNIVERSE` -- 24.2, the candidate family universe (registered).
-  * `RT-AUTHORITY-BASELINE` -- 24.3, the authority-baseline census.
+  * `RT-AUTHORITY-CENSUS` -- 24.3, the authority-baseline census (registered).
   * `RT-FAMILY-FREEZE` -- 24.4, the P1000 + reserve freeze.
   * `RT-HOLDOUT-PARTITION` -- 24.5, the precommitted holdout.
   * `RT-BUILD-LINK-ATLAS` -- 24.6, the build/link atlas.
@@ -64,8 +71,9 @@ The fifteen courts, and the subphase that lands each
   * `RT-FRF-CLOSURE` -- 24.14, the FRF/Gemel closure.
   * `DOWNSTREAM-1000-SEAL` -- 24.15, the seal.
 
-Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES` and 24.2 registers
-`RT-CANDIDATE-UNIVERSE`, and the remaining thirteen are pending. A passing court is an instrument,
+Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2 registers
+`RT-CANDIDATE-UNIVERSE` and 24.3 registers `RT-AUTHORITY-CENSUS`, and the remaining twelve are
+pending. A passing court is an instrument,
 not a property claim, and this stratum makes no property claim beyond the atlas: a selected
 empirical population is not a random sample, 1000/1000 is not a security proof, a build is not a
 functional proof, and transitive and direct consumers are different evidence.
@@ -116,6 +124,11 @@ import downstream_sources  # noqa: E402
 # own writes) through the same code path the artefacts were produced by.
 import downstream_universe  # noqa: E402
 
+# The 24.3 authority-baseline census tool, imported so the court re-runs its pure validation and
+# sensitivity control over the committed census and fingerprint artefacts (never rebuilding) through
+# the same code path the artefacts were produced by.
+import downstream_census  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -134,19 +147,25 @@ CANDIDATES = REPO_ROOT / "forensics" / "downstream" / "candidates.json"
 FAMILIES = REPO_ROOT / "forensics" / "downstream" / "families.json"
 CANDIDATE_UNIVERSE_COURT = "RT-CANDIDATE-UNIVERSE"
 
+# 24.3's subject: the authority-baseline census (one `run` row per cohort member) and the usage
+# fingerprints (the specimens, variants, link surface and linkage proof) the court re-validates.
+AUTHORITY_BASELINES = REPO_ROOT / "forensics" / "downstream" / "authority-baselines.jsonl"
+USAGE_FINGERPRINTS = REPO_ROOT / "forensics" / "downstream" / "usage-fingerprints.json"
+AUTHORITY_CENSUS_COURT = "RT-AUTHORITY-CENSUS"
+
 # The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES` and 24.2 `RT-CANDIDATE-UNIVERSE`;
 # each later subphase appends its court here in the commit that lands its instrument, and a court
 # removed from the table leaves the registry and fails `run_courts.py`.
 COURTS: list[tuple[str, str]] = [
     (RANKING_SOURCES_COURT, "_ranking_sources_court"),
     (CANDIDATE_UNIVERSE_COURT, "_candidate_universe_court"),
+    (AUTHORITY_CENSUS_COURT, "_authority_census_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order. A court moves out of this table
 # and into `COURTS` in the commit that lands its instrument.
 PENDING_COURTS: dict[str, str] = {
-    "RT-AUTHORITY-BASELINE": "24.3 -- the authority-baseline census",
     "RT-FAMILY-FREEZE": "24.4 -- the P1000 + reserve freeze",
     "RT-HOLDOUT-PARTITION": "24.5 -- the precommitted holdout partition",
     "RT-BUILD-LINK-ATLAS": "24.6 -- the build/link atlas",
@@ -350,6 +369,100 @@ def _candidate_universe_court(name: str) -> dict:
     }
 
 
+def _authority_census_court(name: str) -> dict:
+    """`RT-AUTHORITY-CENSUS`: 24.3's court, the authority-baseline census.
+
+    Stages no probe. It reads the committed census `forensics/downstream/authority-baselines.jsonl`
+    (one `run` row per provisional cohort member) and the fingerprint envelope
+    `forensics/downstream/usage-fingerprints.json`, re-derives the provisional cohort from the
+    committed families, and establishes that every cohort member has an authority result
+    classified; that an `AUTHORITY_BASELINE_FAIL` carries an authority failure class and a reason
+    and is never counted as a candidate failure; that a `AUTHORITY_BASELINE_PASS`'s linkage proof
+    resolves the admitted authority and not a system libssl; that the cohort selection rule is
+    recorded and reproduces from the frozen sources; and that no candidate execution occurred. Four
+    seeded mutations are each caught with specificity holding. A passing census is a **measurement**,
+    not a candidate result: it says how far the authority itself reached, and no candidate ran.
+    """
+    if not (AUTHORITY_BASELINES.is_file() and USAGE_FINGERPRINTS.is_file()):
+        missing = [rel(p) for p in (AUTHORITY_BASELINES, USAGE_FINGERPRINTS) if not p.is_file()]
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the authority-baseline census artefact {m} is absent"
+                             for m in missing],
+                "findings": [], "control": {}}
+
+    families_body = json.loads(FAMILIES.read_text(encoding="utf-8"))["body"]
+    rows = downstream_census._load_outcomes()
+    body = downstream_census._load_fingerprints()
+    findings = downstream_census.census_findings(families_body, rows, body)
+    control = downstream_census.census_sensitivity_control(families_body, rows, body)
+
+    counts = body.get("counts") or {}
+    cohort = body.get("cohort") or []
+    fails = [r for r in rows if r.get("classification") == downstream_census.CLASS_FAIL]
+    passes = [r for r in rows if r.get("classification") == downstream_census.CLASS_PASS]
+    fingerprints = {str(f.get("family_id")): f for f in body.get("fingerprints") or []}
+    examples = {
+        "rule": body.get("rule"),
+        "cohort_min_sources": body.get("cohort_min_sources"),
+        "cohort_size": len(cohort),
+        "authority_prefix": body.get("authority_prefix"),
+        "authority_baseline_fails": [
+            {"family": r.get("canonical_name"), "level": r.get("level"),
+             "failure_class": r.get("failure_class"), "reason": r.get("failure_reason")}
+            for r in sorted(fails, key=lambda r: r.get("rank") or 0)
+        ],
+        "authority_linkage_proof": {
+            str(r.get("canonical_name")): (fingerprints.get(str(r.get("family_id"))) or
+                                           {}).get("linkage_proof")
+            for r in passes
+        },
+        "candidate_rows": [r.get("run_id") for r in rows if r.get("subject") == "candidate"],
+    }
+
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/authority-baselines.jsonl and "
+            "forensics/downstream/usage-fingerprints.json, re-derives the provisional census "
+            "cohort from the committed forensics/downstream/families.json, and re-runs the 24.3 "
+            "validation and sensitivity control over the committed artefacts without rebuilding. "
+            "It establishes that every cohort member has an authority result classified; that an "
+            "`AUTHORITY_BASELINE_FAIL` carries an authority failure class from the taxonomy and a "
+            "reason, and is never counted as a candidate failure; that a `AUTHORITY_BASELINE_PASS`'s "
+            "linkage proof resolves the admitted authority's own libssl/libcrypto and never a "
+            "system one; that the cohort selection rule is recorded and reproduces from the frozen "
+            "sources; and that no candidate execution occurred. A build claiming authority linkage "
+            "while resolving a system libssl, an `AUTHORITY_BASELINE_FAIL` counted as a candidate "
+            "failure, a cohort member with no source hash and a fingerprint with no imported "
+            "symbols claimed as a pass are each detected with specificity holding "
+            "(docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 3.1, 3.2 and 3.6)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the authority-census court reads committed census and fingerprint artefacts and "
+            "stages no artifacts/phase24/probes/ pair, so it takes no transcript to diff and "
+            "carries no FRF declaration"
+        ),
+        "counts": {
+            "cohort": counts.get("cohort", len(cohort)),
+            "passed": counts.get("passed", len(passes)),
+            "failed": counts.get("failed", len(fails)),
+            "acquired": counts.get("acquired", 0),
+            "linked_to_authority": counts.get("linked_to_authority", 0),
+            "launched": counts.get("launched", 0),
+            "no_recipe": counts.get("no_recipe", 0),
+            "with_recipe": counts.get("with_recipe", 0),
+        },
+        "examples": examples,
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -438,13 +551,28 @@ def main(argv: list[str]) -> int:
             "as direct; and that the universe is substantially larger than 1,000 before "
             "deduplication. A double-counted distro alias, a transitive consumer promoted to "
             "direct, a fork counted independent with no evidence and a family with no provenance "
-            "are each detected with specificity holding. The remaining "
-            "thirteen courts -- RT-AUTHORITY-BASELINE, RT-FAMILY-FREEZE, "
-            "RT-HOLDOUT-PARTITION, RT-BUILD-LINK-ATLAS, RT-RUNTIME-FUNCTIONAL-ATLAS, "
-            "RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, RT-HOSTILITY-AUGMENTATION, "
-            "RT-CANDIDATE-FREEZE, RT-P1000-RUN, RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and "
-            "DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.3 through "
-            "24.15). Phase 24 owns no exported symbol, so no differential probe over a symbol "
+            "are each detected with specificity holding. "
+            "`RT-AUTHORITY-CENSUS` is 24.3's court: the authority-baseline census. It stages no "
+            "probe and reads forensics/downstream/authority-baselines.jsonl and "
+            "forensics/downstream/usage-fingerprints.json, re-deriving the provisional census "
+            "cohort from the committed families. It establishes that every cohort member has an "
+            "authority result classified; that an `AUTHORITY_BASELINE_FAIL` carries an authority "
+            "failure class from the taxonomy and a reason, and is never counted as a candidate "
+            "failure; that a `AUTHORITY_BASELINE_PASS`'s linkage proof resolves the admitted "
+            "authority's own libssl/libcrypto and never a system one; that the cohort selection "
+            "rule is recorded and reproduces from the frozen sources; and that no candidate "
+            "execution occurred. A build claiming authority linkage while resolving a system "
+            "libssl, an authority failure counted as a candidate failure, a cohort member with "
+            "no source hash and a fingerprint with no imported symbols claimed as a pass are each "
+            "detected with specificity holding. A passing census is a measurement, not a "
+            "candidate result: the authority side reached the level it records, and no candidate "
+            "ran. The remaining "
+            "twelve courts -- RT-FAMILY-FREEZE, RT-HOLDOUT-PARTITION, RT-BUILD-LINK-ATLAS, "
+            "RT-RUNTIME-FUNCTIONAL-ATLAS, RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, "
+            "RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, "
+            "RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending "
+            "with the subphases that land them (24.4 through 24.15). Phase 24 owns no exported "
+            "symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
             "family (the counted unit, never a package alias), the separate specimen, the "
@@ -487,6 +615,15 @@ def main(argv: list[str]) -> int:
     # 24.2's subject: the committed candidate universe and families it re-derives, bound so a
     # family record the court reads is content-addressed rather than restated.
     for ref_name, path in (("candidates", CANDIDATES), ("families", FAMILIES)):
+        if path.is_file():
+            inputs.append(InputRef(name=ref_name, path=path))
+    # 24.3's subject: the committed authority-baseline census (one `run` row per cohort member),
+    # the usage fingerprints and the tool that produced them, bound so a row the court reads is
+    # content-addressed rather than restated.
+    for ref_name, path in (("authority-baselines", AUTHORITY_BASELINES),
+                           ("usage-fingerprints", USAGE_FINGERPRINTS),
+                           ("downstream-census", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_census.py")):
         if path.is_file():
             inputs.append(InputRef(name=ref_name, path=path))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
@@ -535,6 +672,33 @@ def main(argv: list[str]) -> int:
                   f"fork merge={ex['fork_merge']}; "
                   f"forks-independent-without-evidence="
                   f"{ex['forks_independent_without_evidence']}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == AUTHORITY_CENSUS_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            ex = r["examples"]
+            print(f"  {r['court']:<32} pass   (no probe, cohort={counts['cohort']} "
+                  f"passed={counts['passed']} failed={counts['failed']} "
+                  f"linked={counts['linked_to_authority']} launched={counts['launched']} "
+                  f"no-recipe={counts['no_recipe']} with-recipe={counts['with_recipe']}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"system-linkage->{c['caught_authority_linkage_but_system']} "
+                  f"candidate-failure->{c['caught_authority_fail_as_candidate_failure']} "
+                  f"no-source-hash->{c['caught_cohort_member_without_source_hash']} "
+                  f"no-symbols->{c['caught_fingerprint_without_symbols_claimed_pass']})")
+            print(f"      cohort rule: min_sources={ex['cohort_min_sources']} "
+                  f"size={ex['cohort_size']} authority={ex['authority_prefix']}")
+            for f in ex["authority_baseline_fails"]:
+                print(f"      AUTHORITY_BASELINE_FAIL {f['family']:<16} {f['level']:<18} "
+                      f"{f['failure_class']:<24} {(f['reason'] or '')[:70]}")
+            for fam, proof in sorted((ex["authority_linkage_proof"] or {}).items()):
+                if not proof:
+                    continue
+                son = ", ".join(f"{k}->{v['resolved']}"
+                                for k, v in sorted(proof["sonames"].items()))
+                print(f"      authority-linkage {fam:<12} {son}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":
