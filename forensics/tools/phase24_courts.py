@@ -22,7 +22,8 @@ ranking-source acquisition, **24.2 registers `RT-CANDIDATE-UNIVERSE`**, the cand
 universe, **24.3 registers `RT-AUTHORITY-CENSUS`**, the authority-baseline census, and **24.4
 registers `RT-FAMILY-FREEZE`**, the P1000 + reserve freeze, and **24.5 registers
 `RT-HOLDOUT-PARTITION`**, the precommitted holdout partition, and **24.6 registers
-`RT-BUILD-LINK-ATLAS`**, the build/link atlas. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
+`RT-BUILD-LINK-ATLAS`**, the build/link atlas, and **24.7 registers
+`RT-RUNTIME-FUNCTIONAL-ATLAS`**, the runtime/functional atlas. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
 normalized inputs under `forensics/downstream/ranking/normalized/`, re-derives the frozen
 `selection_input_root_hash`, and checks every source is content-addressed with a retrieval
 timestamp and a parser version, that an unavailable source carries a reason and is not counted
@@ -83,7 +84,7 @@ The fifteen courts, and the subphase that lands each
   * `RT-FAMILY-FREEZE` -- 24.4, the P1000 + reserve freeze (registered).
   * `RT-HOLDOUT-PARTITION` -- 24.5, the precommitted holdout (registered).
   * `RT-BUILD-LINK-ATLAS` -- 24.6, the build/link atlas (registered).
-  * `RT-RUNTIME-FUNCTIONAL-ATLAS` -- 24.7, the runtime/functional atlas.
+  * `RT-RUNTIME-FUNCTIONAL-ATLAS` -- 24.7, the runtime/functional atlas (registered).
   * `RT-FAILURE-MINIMIZATION` -- 24.8, the failure discovery/minimization loop.
   * `RT-HIGH-VALUE-TIER` -- 24.9, the high-value deep tier.
   * `RT-HOSTILITY-AUGMENTATION` -- 24.10, the separate hostility corpus.
@@ -95,8 +96,8 @@ The fifteen courts, and the subphase that lands each
 
 Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2 registers
 `RT-CANDIDATE-UNIVERSE`, 24.3 registers `RT-AUTHORITY-CENSUS`, 24.4 registers
-`RT-FAMILY-FREEZE`, 24.5 registers `RT-HOLDOUT-PARTITION` and 24.6 registers
-`RT-BUILD-LINK-ATLAS`, and the remaining nine are
+`RT-FAMILY-FREEZE`, 24.5 registers `RT-HOLDOUT-PARTITION`, 24.6 registers
+`RT-BUILD-LINK-ATLAS` and 24.7 registers `RT-RUNTIME-FUNCTIONAL-ATLAS`, and the remaining eight are
 pending. A passing court is an instrument,
 not a property claim, and this stratum makes no property claim beyond the atlas: a selected
 empirical population is not a random sample, 1000/1000 is not a security proof, a build is not a
@@ -169,6 +170,11 @@ import downstream_holdout  # noqa: E402
 # program) through the same code path the artefact was produced by.
 import downstream_build_link  # noqa: E402
 
+# The 24.7 runtime/functional atlas tool, imported so the court re-runs its pure validation and
+# sensitivity control over the committed runtime/functional atlas (never rebuilding and never
+# launching a downstream program) through the same code path the artefact was produced by.
+import downstream_runtime  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -209,6 +215,11 @@ HOLDOUT_PARTITION_COURT = "RT-HOLDOUT-PARTITION"
 BUILD_LINK_ATLAS = REPO_ROOT / "forensics" / "downstream" / "build-link-atlas.json"
 BUILD_LINK_ATLAS_COURT = "RT-BUILD-LINK-ATLAS"
 
+# 24.7's subject: the runtime/functional atlas, one load/run/behave run per specimen per subject. The
+# court reads it and re-runs the pure validation; it never rebuilds and never launches a program.
+RUNTIME_FUNCTIONAL_ATLAS = REPO_ROOT / "forensics" / "downstream" / "runtime-functional-atlas.json"
+RUNTIME_FUNCTIONAL_ATLAS_COURT = "RT-RUNTIME-FUNCTIONAL-ATLAS"
+
 # The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES`, 24.2 `RT-CANDIDATE-UNIVERSE`,
 # 24.3 `RT-AUTHORITY-CENSUS`, 24.4 `RT-FAMILY-FREEZE`, 24.5 `RT-HOLDOUT-PARTITION` and 24.6
 # `RT-BUILD-LINK-ATLAS`; each later
@@ -221,13 +232,13 @@ COURTS: list[tuple[str, str]] = [
     (FAMILY_FREEZE_COURT, "_family_freeze_court"),
     (HOLDOUT_PARTITION_COURT, "_holdout_partition_court"),
     (BUILD_LINK_ATLAS_COURT, "_build_link_atlas_court"),
+    (RUNTIME_FUNCTIONAL_ATLAS_COURT, "_runtime_functional_atlas_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order. A court moves out of this table
 # and into `COURTS` in the commit that lands its instrument.
 PENDING_COURTS: dict[str, str] = {
-    "RT-RUNTIME-FUNCTIONAL-ATLAS": "24.7 -- the runtime/functional atlas",
     "RT-FAILURE-MINIMIZATION": "24.8 -- the failure discovery/minimization loop",
     "RT-HIGH-VALUE-TIER": "24.9 -- the high-value deep tier",
     "RT-HOSTILITY-AUGMENTATION": "24.10 -- the separate hostility-augmentation corpus",
@@ -817,6 +828,127 @@ def _build_link_atlas_court(name: str) -> dict:
     }
 
 
+def _runtime_functional_atlas_court(name: str) -> dict:
+    """`RT-RUNTIME-FUNCTIONAL-ATLAS`: 24.7's court, the runtime/functional atlas.
+
+    Stages no probe. It reads the committed atlas
+    `forensics/downstream/runtime-functional-atlas.json`, the committed frozen P1000
+    `forensics/downstream/family-freeze.json`, the committed families
+    `forensics/downstream/families.json` and the committed 24.6 build/link atlas
+    `forensics/downstream/build-link-atlas.json`, and re-runs the 24.7 validation and sensitivity
+    control over the committed artefact **without rebuilding and without launching anything**. It
+    establishes that every frozen P1000 family is accounted for under both subjects; that a family
+    that reached `L4-linked` in 24.6 has runtime rows under both subjects; that a runtime row never
+    reaches above the level its build/link row permits (a subject that never linked cannot load);
+    that an `L5+` row is backed by a real load proof resolving the subject prefix and never the
+    authority's (for a candidate); that an `L6`/`L7` row carries a non-empty normalised transcript
+    hash and a normalisation tag that erases no evidence; that the candidate's
+    authority-applicable baseline is re-derived from the authority rows (never inflated to justify
+    a pass); that `candidate_specific_patch_count` is 0; that every non-measured row carries a
+    reason and a schema-valid residual/failure class; and that the counts are derived rather than
+    typed. Six seeded mutations are each caught with specificity holding. A passing atlas is a
+    **measurement**, not a security proof: it says a pristine downstream program loaded the
+    subject's libssl/libcrypto and completed one deterministic local workload, not that any consumer
+    is safe.
+    """
+    if not RUNTIME_FUNCTIONAL_ATLAS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the runtime/functional atlas artefact {rel(RUNTIME_FUNCTIONAL_ATLAS)} "
+                             f"is absent"], "findings": [], "control": {}}
+
+    freeze_body = json.loads(FAMILY_FREEZE.read_text(encoding="utf-8"))["body"]
+    families_body = json.loads(FAMILIES.read_text(encoding="utf-8"))["body"]
+    build_link_body = downstream_build_link._load_atlas()
+    atlas_body = downstream_runtime._load_atlas()
+    findings = downstream_runtime.runtime_findings(families_body, freeze_body, build_link_body,
+                                                   atlas_body)
+    control = downstream_runtime.runtime_sensitivity_control(families_body, freeze_body,
+                                                             build_link_body, atlas_body)
+
+    counts = atlas_body.get("counts") or {}
+    runs = atlas_body.get("runs") or []
+    by = counts.get("by_subject") or {}
+    loaded = [r for r in runs if r.get("has_recipe")
+              and downstream_runtime.RANK.get(str(r.get("level")), -1)
+              >= downstream_runtime.RANK[downstream_runtime.L5]]
+    examples = {
+        "rule": atlas_body.get("rule"),
+        "candidate_identity": atlas_body.get("candidate_identity"),
+        "authority_applicable_level": counts.get("authority_applicable_level"),
+        "loaded": [
+            {"family": r.get("canonical_name"), "subject": r.get("subject"),
+             "level": r.get("level"), "outcome": r.get("outcome"),
+             "workload": r.get("workload"), "residual_class": r.get("residual_class")}
+            for r in loaded
+        ],
+        "candidate_failures": [
+            {"family": r.get("canonical_name"), "level": r.get("level"),
+             "failure_class": r.get("failure_class"), "reason": r.get("reason")}
+            for r in runs if r.get("subject") == "candidate" and r.get("has_recipe")
+            and r.get("outcome") in ("failed", "not_attempted")
+        ],
+        "candidate_specific_patch_count": counts.get("candidate_specific_patch_count", 0),
+    }
+
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/runtime-functional-atlas.json, "
+            "forensics/downstream/family-freeze.json, forensics/downstream/families.json and "
+            "forensics/downstream/build-link-atlas.json and re-runs the 24.7 validation and "
+            "sensitivity control over the committed artefact without rebuilding and without "
+            "launching anything. It establishes that every frozen P1000 family is accounted for "
+            "under both subjects; that a family that reached L4-linked in 24.6 has runtime rows "
+            "under both subjects; that a runtime row never reaches above the level its build/link "
+            "row permits; that an L5+ row is backed by a real load proof resolving the subject "
+            "prefix and never the authority's; that an L6/L7 row carries a non-empty normalised "
+            "transcript hash and a normalisation tag that erases no evidence; that the candidate's "
+            "authority-applicable baseline is re-derived from the authority rows; that "
+            "candidate_specific_patch_count is 0; and that the counts are derived rather than "
+            "typed. The six seeded mutations -- a candidate row whose level passes only by "
+            "inflating its authority baseline, an L5 row with no load proof, an L6 row with an "
+            "empty transcript hash, a missing authority runtime row for a family that reached L4, "
+            "a normalisation that erases a return code, and a runtime row reaching above its "
+            "build/link permit -- are each detected with specificity holding. A passing atlas is a "
+            "measurement, not a security proof: it says a pristine downstream program loaded the "
+            "subject's libssl/libcrypto and completed one deterministic local workload "
+            "(docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 3.1, 3.2, 3.6 and the "
+            "brief's sections 18, 43 and 46)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the runtime/functional atlas court reads committed artefacts and brings no "
+            "artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF "
+            "declaration"
+        ),
+        "candidate_identity": atlas_body.get("candidate_identity"),
+        "counts": {
+            "p1000": counts.get("p1000", 0),
+            "rows": counts.get("rows", len(runs)),
+            "with_recipe": counts.get("with_recipe", 0),
+            "no_recipe": counts.get("no_recipe", 0),
+            "authority_loaded": (by.get("authority") or {}).get("loaded", 0),
+            "authority_runtime": (by.get("authority") or {}).get("runtime", 0),
+            "authority_functional": (by.get("authority") or {}).get("functional", 0),
+            "candidate_loaded": (by.get("candidate") or {}).get("loaded", 0),
+            "candidate_runtime": (by.get("candidate") or {}).get("runtime", 0),
+            "candidate_functional": (by.get("candidate") or {}).get("functional", 0),
+            "candidate_reaches_baseline": counts.get("candidate_reaches_baseline", 0),
+            "candidate_reaches_linked_baseline": counts.get("candidate_reaches_linked_baseline", 0),
+            "candidate_below_baseline": counts.get("candidate_below_baseline", 0),
+            "candidate_baseline_not_linked": counts.get("candidate_baseline_not_linked", 0),
+            "candidate_specific_patch_count": counts.get("candidate_specific_patch_count", 0),
+        },
+        "examples": examples,
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -977,12 +1109,32 @@ def main(argv: list[str]) -> int:
             "detected with specificity holding. A passing atlas is a measurement, not a "
             "functional proof: the linkage proof says the candidate's libssl/libcrypto "
             "resolved, not that any consumer works. "
+            "`RT-RUNTIME-FUNCTIONAL-ATLAS` is 24.7's court: the runtime/functional atlas. It stages "
+            "no probe and reads forensics/downstream/runtime-functional-atlas.json, "
+            "forensics/downstream/family-freeze.json, forensics/downstream/families.json and the "
+            "24.6 build/link atlas, re-running the 24.7 validation and sensitivity control over "
+            "the committed artefact without rebuilding and without launching anything. It "
+            "establishes that every frozen P1000 family is accounted for under both subjects; "
+            "that a family that reached L4-linked in 24.6 has runtime rows under both subjects; "
+            "that a runtime row never reaches above the level its build/link row permits; that an "
+            "L5+ row is backed by a real load proof resolving the subject prefix and never the "
+            "authority's; that an L6/L7 row carries a non-empty normalised transcript hash and a "
+            "normalisation tag that erases no evidence; that the candidate's authority-applicable "
+            "baseline is re-derived from the authority rows rather than inflated to justify a "
+            "pass; that candidate_specific_patch_count is 0; and that the counts are derived "
+            "rather than typed. A candidate row whose level passes only by inflating its "
+            "authority baseline, an L5 row with no load proof, an L6 row with an empty transcript, "
+            "a missing authority runtime row for an L4 family, a normalisation that erases a "
+            "return code, and a runtime row above its build/link permit are each detected with "
+            "specificity holding. A passing atlas is a measurement, not a security proof: it says "
+            "a pristine downstream program loaded the subject's libssl/libcrypto and completed "
+            "one deterministic local workload, not that any consumer is safe. "
             "The remaining "
-            "nine courts -- "
-            "RT-RUNTIME-FUNCTIONAL-ATLAS, RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, "
+            "eight courts -- "
+            "RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, "
             "RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, "
             "RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending "
-            "with the subphases that land them (24.7 through 24.15). Phase 24 owns no exported "
+            "with the subphases that land them (24.8 through 24.15). Phase 24 owns no exported "
             "symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
@@ -1056,6 +1208,13 @@ def main(argv: list[str]) -> int:
     for ref_name, path in (("build-link-atlas", BUILD_LINK_ATLAS),
                            ("downstream-build-link", REPO_ROOT / "forensics" / "tools"
                             / "downstream_build_link.py")):
+        if path.is_file():
+            inputs.append(InputRef(name=ref_name, path=path))
+    # 24.7's subject: the committed runtime/functional atlas and the tool that produced it, bound so
+    # a run row the court reads is content-addressed rather than restated.
+    for ref_name, path in (("runtime-functional-atlas", RUNTIME_FUNCTIONAL_ATLAS),
+                           ("downstream-runtime", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_runtime.py")):
         if path.is_file():
             inputs.append(InputRef(name=ref_name, path=path))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
@@ -1224,6 +1383,39 @@ def main(argv: list[str]) -> int:
             for f in ex.get("candidate_failures") or []:
                 print(f"      candidate-failure {f['family']:<12} {f['level']:<16} "
                       f"{f['failure_class']:<24} {(f['reason'] or '')[:70]}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == RUNTIME_FUNCTIONAL_ATLAS_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            ex = r["examples"]
+            print(f"  {r['court']:<32} pass   (no probe, p1000={counts['p1000']} "
+                  f"rows={counts['rows']} with_recipe={counts['with_recipe']} "
+                  f"no_recipe={counts['no_recipe']} "
+                  f"auth_loaded={counts['authority_loaded']} "
+                  f"auth_runtime={counts['authority_runtime']} "
+                  f"auth_functional={counts['authority_functional']} "
+                  f"cand_loaded={counts['candidate_loaded']} "
+                  f"cand_runtime={counts['candidate_runtime']} "
+                  f"cand_functional={counts['candidate_functional']} "
+                  f"reaches_baseline={counts['candidate_reaches_baseline']} "
+                  f"reaches_linked={counts['candidate_reaches_linked_baseline']} "
+                  f"not_linked={counts['candidate_baseline_not_linked']} "
+                  f"patches={counts['candidate_specific_patch_count']}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"baseline->{c['caught_candidate_level_above_authority_baseline']} "
+                  f"no-proof->{c['caught_loaded_row_without_proof']} "
+                  f"no-transcript->{c['caught_runtime_row_without_transcript']} "
+                  f"missing-authority->{c['caught_missing_authority_runtime_row']} "
+                  f"norm-erases->{c['caught_normalisation_erases_return_code']} "
+                  f"above-permit->{c['caught_runtime_above_build_link_permit']})")
+            for row in ex.get("loaded") or []:
+                print(f"      loaded {row['subject']:<9} {row['family']:<10} {row['level']:<16} "
+                      f"{str(row.get('workload'))[:60]}")
+            for f in ex.get("candidate_failures") or []:
+                print(f"      candidate-failure {f['family']:<12} {f['level']:<16} "
+                      f"{str(f['failure_class']):<20} {(f['reason'] or '')[:70]}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

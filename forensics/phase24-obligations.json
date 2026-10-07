@@ -78,10 +78,10 @@
         "closure": "the `RT-RUNTIME-FUNCTIONAL-ATLAS` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-RUNTIME-FUNCTIONAL-ATLAS is pending",
+        "measurement_state": "complete",
+        "observation": "RT-RUNTIME-FUNCTIONAL-ATLAS is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "runtime-functional-atlas",
         "what": "one runtime/functional run per specimen that reached the build/link levels, reaching the loaded, runtime and functional levels where the authority baseline did"
@@ -188,8 +188,8 @@
       "contract_units": 15,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 6,
-      "open_in_this_stratum": 9,
+      "implemented": 7,
+      "open_in_this_stratum": 8,
       "owned": 15,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -230,7 +230,7 @@
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "b67d1474c82ea6c991ec53e3d9b463ec5309d4f2f635fd1f837eb6c032378a81"
+      "sha256": "f3a0e79c607033896b0a32ed4907a06a407ccc20585d6939cceec4f24a2a3332"
     },
     {
       "name": "phase24-guard",
