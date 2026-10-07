@@ -25,7 +25,8 @@ registers `RT-HOLDOUT-PARTITION`**, the precommitted holdout partition, and **24
 `RT-BUILD-LINK-ATLAS`**, the build/link atlas, and **24.7 registers
 `RT-RUNTIME-FUNCTIONAL-ATLAS`**, the runtime/functional atlas, and **24.8 registers
 `RT-FAILURE-MINIMIZATION`**, the failure discovery/minimization loop, and **24.9 registers
-`RT-HIGH-VALUE-TIER`**, the high-value deep tier. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
+`RT-HIGH-VALUE-TIER`**, the high-value deep tier, and **24.10 registers
+`RT-HOSTILITY-AUGMENTATION`**, the separate hostility-augmentation corpus. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
 normalized inputs under `forensics/downstream/ranking/normalized/`, re-derives the frozen
 `selection_input_root_hash`, and checks every source is content-addressed with a retrieval
 timestamp and a parser version, that an unavailable source carries a reason and is not counted
@@ -89,7 +90,7 @@ The fifteen courts, and the subphase that lands each
   * `RT-RUNTIME-FUNCTIONAL-ATLAS` -- 24.7, the runtime/functional atlas (registered).
   * `RT-FAILURE-MINIMIZATION` -- 24.8, the failure discovery/minimization loop (registered).
   * `RT-HIGH-VALUE-TIER` -- 24.9, the high-value deep tier (registered).
-  * `RT-HOSTILITY-AUGMENTATION` -- 24.10, the separate hostility corpus.
+  * `RT-HOSTILITY-AUGMENTATION` -- 24.10, the separate hostility corpus (registered).
   * `RT-CANDIDATE-FREEZE` -- 24.11, the candidate freeze and holdout.
   * `RT-P1000-RUN` -- 24.12, the final full P1000 run.
   * `RT-ATLAS-RECONCILIATION` -- 24.13, the atlas reconciliation.
@@ -100,7 +101,8 @@ Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2
 `RT-CANDIDATE-UNIVERSE`, 24.3 registers `RT-AUTHORITY-CENSUS`, 24.4 registers
 `RT-FAMILY-FREEZE`, 24.5 registers `RT-HOLDOUT-PARTITION`, 24.6 registers
 `RT-BUILD-LINK-ATLAS`, 24.7 registers `RT-RUNTIME-FUNCTIONAL-ATLAS`, 24.8 registers
-`RT-FAILURE-MINIMIZATION` and 24.9 registers `RT-HIGH-VALUE-TIER`, and the remaining six are
+`RT-FAILURE-MINIMIZATION`, 24.9 registers `RT-HIGH-VALUE-TIER` and 24.10 registers
+`RT-HOSTILITY-AUGMENTATION`, and the remaining five are
 pending. A passing court is an instrument,
 not a property claim, and this stratum makes no property claim beyond the atlas: a selected
 empirical population is not a random sample, 1000/1000 is not a security proof, a build is not a
@@ -188,6 +190,11 @@ import downstream_failures  # noqa: E402
 # through the same code path the artefact was produced by.
 import downstream_high_value  # noqa: E402
 
+# The 24.10 hostility-augmentation tool, imported so the court re-runs its pure selection, validation
+# and sensitivity control over the committed corpus (never rebuilding and never launching a probe)
+# through the same code path the artefact was produced by.
+import downstream_hostility  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -246,11 +253,20 @@ FAILURE_MINIMIZATION_COURT = "RT-FAILURE-MINIMIZATION"
 HIGH_VALUE_TIER = REPO_ROOT / "forensics" / "downstream" / "high-value-tier.json"
 HIGH_VALUE_TIER_COURT = "RT-HIGH-VALUE-TIER"
 
+# 24.10's subject: the separate hostility-augmentation corpus, a bounded set of rare-surface probes
+# (custom BIO, legacy ENGINE, provider config, error queue, layout, fork/reinit, threading, dlopen,
+# PKCS#12, CMS, cross-implementation TLS, static) selected by maximum marginal contract novelty over
+# the P1000-covered surface and measured against both subjects. The court reads it and re-runs the
+# pure selection/validation; it never rebuilds a probe.
+HOSTILITY_CORPUS = REPO_ROOT / "forensics" / "downstream" / "hostility-corpus.json"
+HOSTILITY_AUGMENTATION_COURT = "RT-HOSTILITY-AUGMENTATION"
+
 # The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES`, 24.2 `RT-CANDIDATE-UNIVERSE`,
 # 24.3 `RT-AUTHORITY-CENSUS`, 24.4 `RT-FAMILY-FREEZE`, 24.5 `RT-HOLDOUT-PARTITION`, 24.6
-# `RT-BUILD-LINK-ATLAS`, 24.7 `RT-RUNTIME-FUNCTIONAL-ATLAS` and 24.8 `RT-FAILURE-MINIMIZATION`; each
-# later subphase appends its court here in the commit that lands its instrument, and a court removed
-# from the table leaves the registry and fails `run_courts.py`.
+# `RT-BUILD-LINK-ATLAS`, 24.7 `RT-RUNTIME-FUNCTIONAL-ATLAS`, 24.8 `RT-FAILURE-MINIMIZATION`, 24.9
+# `RT-HIGH-VALUE-TIER` and 24.10 `RT-HOSTILITY-AUGMENTATION`; each later subphase appends its court
+# here in the commit that lands its instrument, and a court removed from the table leaves the
+# registry and fails `run_courts.py`.
 COURTS: list[tuple[str, str]] = [
     (RANKING_SOURCES_COURT, "_ranking_sources_court"),
     (CANDIDATE_UNIVERSE_COURT, "_candidate_universe_court"),
@@ -261,13 +277,13 @@ COURTS: list[tuple[str, str]] = [
     (RUNTIME_FUNCTIONAL_ATLAS_COURT, "_runtime_functional_atlas_court"),
     (FAILURE_MINIMIZATION_COURT, "_failure_minimization_court"),
     (HIGH_VALUE_TIER_COURT, "_high_value_tier_court"),
+    (HOSTILITY_AUGMENTATION_COURT, "_hostility_augmentation_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order. A court moves out of this table
 # and into `COURTS` in the commit that lands its instrument.
 PENDING_COURTS: dict[str, str] = {
-    "RT-HOSTILITY-AUGMENTATION": "24.10 -- the separate hostility-augmentation corpus",
     "RT-CANDIDATE-FREEZE": "24.11 -- the candidate freeze and holdout",
     "RT-P1000-RUN": "24.12 -- the final full P1000 run",
     "RT-ATLAS-RECONCILIATION": "24.13 -- the atlas reconciliation",
@@ -1203,6 +1219,128 @@ def _high_value_tier_court(name: str) -> dict:
     }
 
 
+def _hostility_augmentation_court(name: str) -> dict:
+    """`RT-HOSTILITY-AUGMENTATION`: 24.10's court, the separate hostility-augmentation corpus.
+
+    Stages no probe. It reads the committed corpus `forensics/downstream/hostility-corpus.json`, the
+    committed P1000 union inputs (the 24.3 usage fingerprints and the 24.6/24.7/24.9 atlases), the
+    Phase-22 public-entity inventory and the committed frozen P1000
+    `forensics/downstream/family-freeze.json`, and re-runs the 24.10 selection, validation and
+    sensitivity control over the committed artefact **without rebuilding a probe**. It establishes
+    that the corpus reproduces from the frozen maximum-marginal-novelty rule over the covered
+    surface and reads no candidate row; that the corpus is **separate** -- no member is a P1000
+    counted family, no member carries a frozen `family_id`, and the frozen P1000 count is unchanged;
+    that every member contributes at least one new public entity not in the covered surface; that
+    every member has both-subject runs; that each member's linkage is subject-correct with a real
+    load proof on an `L5+` row (a candidate row never resolves the authority); that the transcript
+    normalisation is applied identically to both subjects; that `candidate_specific_patch_count` is
+    0; and that the counts are derived rather than typed. Six seeded mutations are each caught with
+    specificity holding. A passing corpus is a **separate instrument**, not a rate: it says the rare
+    surfaces were exercised against both subjects, and its results are never mixed into the counted
+    population's rates.
+    """
+    if not HOSTILITY_CORPUS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the hostility corpus artefact {rel(HOSTILITY_CORPUS)} is absent"],
+                "findings": [], "control": {}}
+
+    inputs = downstream_hostility.load_inputs()
+    corpus_body = json.loads(HOSTILITY_CORPUS.read_text(encoding="utf-8"))["body"]
+    findings = downstream_hostility.hostility_findings(inputs, corpus_body)
+    control = downstream_hostility.hostility_sensitivity_control(inputs, corpus_body)
+
+    counts = corpus_body.get("counts") or {}
+    by = counts.get("by_subject") or {}
+    corpus = corpus_body.get("corpus") or []
+    runs = corpus_body.get("runs") or []
+    examples = {
+        "rule": corpus_body.get("rule"),
+        "covered_surface": {
+            "symbol_count": (corpus_body.get("covered_surface") or {}).get("symbol_count"),
+            "header_count": (corpus_body.get("covered_surface") or {}).get("header_count"),
+            "api_family_count": (corpus_body.get("covered_surface") or {}).get("api_family_count"),
+            "hash": (corpus_body.get("covered_surface") or {}).get("hash"),
+        },
+        "corpus": [{"surface_id": m.get("surface_id"), "selection_rank": m.get("selection_rank"),
+                    "variant": m.get("variant"), "probe_kind": m.get("probe_kind"),
+                    "marginal_novelty": m.get("marginal_novelty"),
+                    "marginal_new_entities": m.get("marginal_new_entities"),
+                    "legacy_entities": m.get("legacy_entities")} for m in corpus],
+        "not_selected": corpus_body.get("not_selected"),
+        "runs": [{"probe_id": r.get("probe_id"), "subject": r.get("subject"),
+                  "direction": r.get("direction"), "level": r.get("level"),
+                  "outcome": r.get("outcome"), "residual_class": r.get("residual_class"),
+                  "failure_class": r.get("failure_class"), "divergence": r.get("divergence")}
+                 for r in runs],
+        "candidate_failures": counts.get("candidate_failures") or {},
+        "separated_by_design": counts.get("separated_by_design"),
+        "candidate_specific_patch_count": counts.get("candidate_specific_patch_count", 0),
+    }
+
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/hostility-corpus.json, the committed "
+            "P1000 union inputs (the 24.3 usage fingerprints and the 24.6/24.7/24.9 atlases), the "
+            "Phase-22 public-entity inventory and forensics/downstream/family-freeze.json and "
+            "re-runs the 24.10 maximum-marginal-novelty selection, validation and sensitivity "
+            "control over the committed artefact without rebuilding a probe. It establishes that "
+            "the corpus reproduces from the frozen novelty rule over the covered surface; that the "
+            "corpus is separate -- no member is a P1000 counted family, no member carries a frozen "
+            "family_id and the frozen P1000 count is unchanged; that every member contributes at "
+            "least one new public entity and has both-subject runs; that each member's linkage is "
+            "subject-correct with a real load proof on an L5+ row; that the transcript "
+            "normalisation is applied identically to both subjects; that "
+            "candidate_specific_patch_count is 0; and that the counts are derived rather than "
+            "typed. The six seeded mutations -- a hostility member injected into the P1000 counts, "
+            "a corpus member with no new entity, a candidate row resolving the authority, a missing "
+            "authority run, an unnormalised transcript and a corpus member beyond the bound -- are "
+            "each detected with specificity holding. A passing corpus is a separate instrument, not "
+            "a rate: its results are never mixed into the counted population's rates "
+            "(docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 3.7 and 4.9 and the brief's "
+            "sections 12, 19, 36, 43, 46, 61, 62, 63 and 64)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the hostility-augmentation court reads committed artefacts and brings no "
+            "artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF "
+            "declaration"
+        ),
+        "candidate_identity": corpus_body.get("candidate_identity"),
+        "counts": {
+            "corpus_size": counts.get("corpus_size", 0),
+            "corpus_c": counts.get("corpus_c", 0),
+            "corpus_network": counts.get("corpus_network", 0),
+            "corpus_bound": counts.get("corpus_bound", 0),
+            "new_public_entities": counts.get("new_public_entities", 0),
+            "distinct_new_public_entities": counts.get("distinct_new_public_entities", 0),
+            "covered_surface_symbols": counts.get("covered_surface_symbols", 0),
+            "rows": counts.get("rows", len(runs)),
+            "authority_loaded": (by.get("authority") or {}).get("loaded", 0),
+            "authority_runtime": (by.get("authority") or {}).get("runtime", 0),
+            "authority_functional": (by.get("authority") or {}).get("functional", 0),
+            "candidate_loaded": (by.get("candidate") or {}).get("loaded", 0),
+            "candidate_runtime": (by.get("candidate") or {}).get("runtime", 0),
+            "candidate_functional": (by.get("candidate") or {}).get("functional", 0),
+            "candidate_failed": (by.get("candidate") or {}).get("failed", 0),
+            "candidate_failures": counts.get("candidate_failures") or {},
+            "divergences": counts.get("divergences", 0),
+            "linkage_proven": counts.get("linkage_proven", 0),
+            "p1000": counts.get("p1000", 0),
+            "p1000_hostility_overlap": counts.get("p1000_hostility_overlap", 0),
+            "separated_by_design": counts.get("separated_by_design"),
+            "candidate_specific_patch_count": counts.get("candidate_specific_patch_count", 0),
+        },
+        "examples": examples,
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1428,11 +1566,29 @@ def main(argv: list[str]) -> int:
             "security proof: it says the deepest families the committed evidence selects loaded "
             "the subject's libssl/libcrypto and completed one deterministic local workload, not "
             "that any consumer outside it is safe. "
+            "`RT-HOSTILITY-AUGMENTATION` is 24.10's court: the separate hostility-augmentation "
+            "corpus. It stages no probe and reads forensics/downstream/hostility-corpus.json, the "
+            "committed P1000 union inputs (the 24.3 usage fingerprints and the 24.6/24.7/24.9 "
+            "atlases), the Phase-22 public-entity inventory and "
+            "forensics/downstream/family-freeze.json, re-running the 24.10 maximum-marginal-novelty "
+            "selection, validation and sensitivity control over the committed artefact without "
+            "rebuilding a probe. It establishes that the corpus reproduces from the frozen novelty "
+            "rule over the covered surface; that the corpus is separate -- no member is a P1000 "
+            "counted family, no member carries a frozen family_id and the frozen P1000 count is "
+            "unchanged; that every member contributes at least one new public entity and has "
+            "both-subject runs; that each member's linkage is subject-correct with a real load "
+            "proof on an L5+ row; that the transcript normalisation is applied identically to both "
+            "subjects; that candidate_specific_patch_count is 0; and that the counts are derived "
+            "rather than typed. A hostility member injected into the P1000 counts, a corpus member "
+            "with no new entity, a candidate row resolving the authority, a missing authority run, "
+            "an unnormalised transcript and a corpus member beyond the bound are each detected with "
+            "specificity holding. A passing corpus is a separate instrument, not a rate: its "
+            "results are never mixed into the counted population's rates. "
             "The remaining "
-            "six courts -- "
-            "RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, "
+            "five courts -- "
+            "RT-CANDIDATE-FREEZE, RT-P1000-RUN, "
             "RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending "
-            "with the subphases that land them (24.10 through 24.15). Phase 24 owns no exported "
+            "with the subphases that land them (24.11 through 24.15). Phase 24 owns no exported "
             "symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
@@ -1542,6 +1698,19 @@ def main(argv: list[str]) -> int:
                             / "downstream_high_value.py")):
         if path.is_file():
             inputs.append(InputRef(name=ref_name, path=path))
+    # 24.10's subject: the committed hostility corpus, the tool that produced it, its committed probe
+    # sources and the Phase-22 public-entity inventory it was selected against, bound so a corpus row
+    # and a probe source the court reads are content-addressed rather than restated.
+    for ref_name, path in (("hostility-corpus", HOSTILITY_CORPUS),
+                           ("downstream-hostility", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_hostility.py"),
+                           ("phase22-implemented-surface",
+                            REPO_ROOT / "forensics" / "atlas" / "implemented-surface.json")):
+        if path.is_file():
+            inputs.append(InputRef(name=ref_name, path=path))
+    for probe in sorted((REPO_ROOT / "forensics" / "downstream" / "hostility").glob("*")):
+        if probe.is_file():
+            inputs.append(InputRef(name=f"hostility-probe/{probe.name}", path=probe))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
@@ -1801,6 +1970,46 @@ def main(argv: list[str]) -> int:
                       f"{row['outcome']:<8} {str(row.get('carried_from') or row.get('workload') or '')[:52]}")
             print(f"      tier_not_measured: {ex.get('tier_not_measured')}")
             print(f"      candidate_failures: {counts['candidate_failures']}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == HOSTILITY_AUGMENTATION_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            ex = r["examples"]
+            print(f"  {r['court']:<32} pass   (no probe, corpus={counts['corpus_size']} "
+                  f"c={counts['corpus_c']} network={counts['corpus_network']} "
+                  f"bound={counts['corpus_bound']} "
+                  f"new_entities={counts['distinct_new_public_entities']} "
+                  f"covered={counts['covered_surface_symbols']} "
+                  f"auth_functional={counts['authority_functional']} "
+                  f"cand_functional={counts['candidate_functional']} "
+                  f"cand_failed={counts['candidate_failed']} "
+                  f"divergences={counts['divergences']} "
+                  f"p1000={counts['p1000']} overlap={counts['p1000_hostility_overlap']} "
+                  f"separated={counts['separated_by_design']} "
+                  f"patches={counts['candidate_specific_patch_count']}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"injected->{c['caught_hostility_member_injected_into_p1000']} "
+                  f"no-new-entity->{c['caught_corpus_member_without_new_entity']} "
+                  f"resolves-authority->{c['caught_candidate_row_resolves_authority']} "
+                  f"missing-authority->{c['caught_missing_authority_run']} "
+                  f"unnormalised->{c['caught_unnormalised_transcript']} "
+                  f"beyond-bound->{c['caught_corpus_member_beyond_bound']})")
+            cs = ex.get("covered_surface") or {}
+            print(f"      covered surface: symbols={cs.get('symbol_count')} "
+                  f"headers={cs.get('header_count')} api_families={cs.get('api_family_count')} "
+                  f"hash={str(cs.get('hash'))[:16]}")
+            for m in ex.get("corpus") or []:
+                print(f"      corpus[{m['selection_rank']:>2}] {m['surface_id']:<28} "
+                      f"{str(m['variant']):<22} marg={m['marginal_novelty']} "
+                      f"legacy={m['legacy_entities']}")
+            for row in ex.get("runs") or []:
+                print(f"      run  {row['subject']:<9} {str(row.get('direction') or ''):<22} "
+                      f"{row['probe_id']:<28} {row['level']:<16} {row['outcome']:<8} "
+                      f"div={row.get('divergence')}")
+            print(f"      candidate_failures: {counts['candidate_failures']}")
+            print(f"      not_selected: {[m['surface_id'] for m in ex.get('not_selected') or []]}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

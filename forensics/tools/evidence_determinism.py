@@ -265,6 +265,20 @@ GENERATORS_BEFORE_LEDGERS = [
     # re-runs only its pure checks over the committed artefact), exactly as the Phase-17 measured
     # corpus and 24.6's atlas are. A later subphase that derives a pure aggregate from it (the
     # failure minimisation, the reconciliation) is what belongs in this list.
+    #
+    # Phase 24.9's high-value deep tier and **Phase 24.10's hostility-augmentation corpus follow the
+    # same precedent, for the same reason.** Both are measurement: the tier re-runs the Phase-17
+    # build harnesses for Git and CPython, and the hostility corpus compiles a bounded set of rare-
+    # surface probes (custom BIO, legacy ENGINE, provider config, the error queue, layout,
+    # fork/reinit, threading, dlopen, PKCS#12, CMS, cross-implementation TLS, static) against each
+    # subject and runs them locally, so the level a run reaches and its normalised transcript are a
+    # function of the court's toolchain and of the network, not of committed inputs. A CI runner has
+    # no compiler, no install prefix and no loopback TLS peer, and the Docker-only guard refuses a
+    # host invocation before either builds anything. Neither artefact is listed here; their courts
+    # (`RT-HIGH-VALUE-TIER`, `RT-HOSTILITY-AUGMENTATION`) re-run only their pure selection/checks
+    # over the committed artefacts. 24.10 is a **separate** corpus, but that changes nothing about
+    # how it is regenerated: it is still measurement, and a later subphase that derives a pure
+    # aggregate from it is what would belong in this list.
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
