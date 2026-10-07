@@ -18,15 +18,22 @@ honest is `fail` rather than `pass`.
 first runnable court is a later subphase's, and `run_courts.py` would refuse a stratum in
 `in-progress` with no runner at all -- so this runner lands at activation with an empty registry
 and names the fifteen courts it will stage. **24.1 registers `RT-RANKING-SOURCES`**, the frozen
-ranking-source acquisition: it reads `forensics/downstream/ranking-sources.json` and the committed
+ranking-source acquisition, and **24.2 registers `RT-CANDIDATE-UNIVERSE`**, the candidate family
+universe. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
 normalized inputs under `forensics/downstream/ranking/normalized/`, re-derives the frozen
 `selection_input_root_hash`, and checks every source is content-addressed with a retrieval
 timestamp and a parser version, that an unavailable source carries a reason and is not counted
 present, and that the acquisition is reproducible -- with an instrument-sensitivity control that
-seeds four mutations and requires each caught. The registry is the file `run_courts.py` checks is
-reproduced, so a court silently dropped is a finding rather than a smaller green run. This is the
-reverse of Phase 16's edge: the ledger's contract-unit states are measured from this registry, so
-this runner does **not** bind the obligations ledger as an input.
+seeds four mutations and requires each caught. `RT-CANDIDATE-UNIVERSE` reads the committed
+`forensics/downstream/candidates.json` and `forensics/downstream/families.json`, re-derives them
+from those same committed normalized inputs, and checks every family is schema-valid and
+provenance-backed, that aliases of one upstream collapse to one family, that a fork is not
+independent without evidence, that a transitive consumer is not counted as direct, and that the
+universe is substantially larger than 1,000 before deduplication -- with an instrument-sensitivity
+control that seeds four mutations and requires each caught. The registry is the file `run_courts.py`
+checks is reproduced, so a court silently dropped is a finding rather than a smaller green run.
+This is the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this
+registry, so this runner does **not** bind the obligations ledger as an input.
 
 **Every entry point calls the Docker-only execution guard first.** Phase 24's whole subject is
 compiling, linking and running other software, and `docs/REPRODUCIBILITY.md` section 1 says nothing
@@ -42,7 +49,7 @@ record kinds are a file the evidence points at rather than prose the plan would 
 The fifteen courts, and the subphase that lands each
 ----------------------------------------------------
   * `RT-RANKING-SOURCES` -- 24.1, the frozen ranking-source acquisition (registered).
-  * `RT-CANDIDATE-UNIVERSE` -- 24.2, the candidate family universe.
+  * `RT-CANDIDATE-UNIVERSE` -- 24.2, the candidate family universe (registered).
   * `RT-AUTHORITY-BASELINE` -- 24.3, the authority-baseline census.
   * `RT-FAMILY-FREEZE` -- 24.4, the P1000 + reserve freeze.
   * `RT-HOLDOUT-PARTITION` -- 24.5, the precommitted holdout.
@@ -57,11 +64,11 @@ The fifteen courts, and the subphase that lands each
   * `RT-FRF-CLOSURE` -- 24.14, the FRF/Gemel closure.
   * `DOWNSTREAM-1000-SEAL` -- 24.15, the seal.
 
-Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES` and the remaining
-fourteen are pending. A passing court is an instrument, not a property claim, and this stratum
-makes no property claim beyond the atlas: a selected empirical population is not a random sample,
-1000/1000 is not a security proof, a build is not a functional proof, and transitive and direct
-consumers are different evidence.
+Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES` and 24.2 registers
+`RT-CANDIDATE-UNIVERSE`, and the remaining thirteen are pending. A passing court is an instrument,
+not a property claim, and this stratum makes no property claim beyond the atlas: a selected
+empirical population is not a random sample, 1000/1000 is not a security proof, a build is not a
+functional proof, and transitive and direct consumers are different evidence.
 
 The runner reads no obligations ledger: the ledger's contract-unit states are measured from this
 registry, so the edge runs ledger -> courts and binding it back would form a digest cycle neither
@@ -84,6 +91,7 @@ from atlas_common import (  # noqa: E402
     PRODUCTION_AUTHORITY,
     REPO_ROOT,
     InputRef,
+    content_hash,
     envelope,
     rel,
     resolve_authority,
@@ -103,6 +111,11 @@ import downstream_schemas  # noqa: E402
 # produced by (never a second, drifting predicate).
 import downstream_sources  # noqa: E402
 
+# The 24.2 candidate-universe tool, imported so the court re-runs its derivation and sensitivity
+# control over the committed ranking evidence (never fetching and never re-running the generator's
+# own writes) through the same code path the artefacts were produced by.
+import downstream_universe  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -115,18 +128,24 @@ MANIFEST = REPO_ROOT / "forensics" / "downstream" / "container.json"
 RANKING_SOURCES = REPO_ROOT / "forensics" / "downstream" / "ranking-sources.json"
 RANKING_SOURCES_COURT = "RT-RANKING-SOURCES"
 
-# The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES`; each later subphase appends
-# its court here in the commit that lands its instrument, and a court removed from the table leaves
-# the registry and fails `run_courts.py`.
+# 24.2's subject: the candidate identity universe and the deduplicated project families the court
+# re-derives from those same committed normalized inputs.
+CANDIDATES = REPO_ROOT / "forensics" / "downstream" / "candidates.json"
+FAMILIES = REPO_ROOT / "forensics" / "downstream" / "families.json"
+CANDIDATE_UNIVERSE_COURT = "RT-CANDIDATE-UNIVERSE"
+
+# The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES` and 24.2 `RT-CANDIDATE-UNIVERSE`;
+# each later subphase appends its court here in the commit that lands its instrument, and a court
+# removed from the table leaves the registry and fails `run_courts.py`.
 COURTS: list[tuple[str, str]] = [
     (RANKING_SOURCES_COURT, "_ranking_sources_court"),
+    (CANDIDATE_UNIVERSE_COURT, "_candidate_universe_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
-# plan orders them, so the registry reads as the execution order. `RT-RANKING-SOURCES` moves out of
-# this table and into `COURTS` in the commit that lands its instrument (24.1).
+# plan orders them, so the registry reads as the execution order. A court moves out of this table
+# and into `COURTS` in the commit that lands its instrument.
 PENDING_COURTS: dict[str, str] = {
-    "RT-CANDIDATE-UNIVERSE": "24.2 -- the candidate family universe",
     "RT-AUTHORITY-BASELINE": "24.3 -- the authority-baseline census",
     "RT-FAMILY-FREEZE": "24.4 -- the P1000 + reserve freeze",
     "RT-HOLDOUT-PARTITION": "24.5 -- the precommitted holdout partition",
@@ -219,6 +238,118 @@ def _ranking_sources_court(name: str) -> dict:
     }
 
 
+def _candidate_universe_court(name: str) -> dict:
+    """`RT-CANDIDATE-UNIVERSE`: 24.2's court, the candidate family universe.
+
+    Stages no probe. It reads the committed candidate universe `forensics/downstream/candidates.json`
+    and the committed families `forensics/downstream/families.json`, re-derives both from the
+    committed 24.1 normalized inputs, and establishes that every family is schema-valid and
+    provenance-backed, that aliases of one upstream collapse to one family (and the
+    `libcurl4`/`curl`/`curl-dev`/`curl-doc` alias set is one family, not four), that a fork is not
+    independent without explicit evidence, that a transitive consumer is not counted as direct, and
+    that the universe is substantially larger than 1,000 before deduplication. Four seeded
+    mutations are each caught with specificity holding. A passing candidate universe is a
+    **precommitment**, not a ranking claim: it says the discoverable population was normalised into
+    families from the frozen evidence, not that any family is important.
+    """
+    if not (CANDIDATES.is_file() and FAMILIES.is_file()):
+        missing = [rel(p) for p in (CANDIDATES, FAMILIES) if not p.is_file()]
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the candidate-universe artefact {m} is absent" for m in missing],
+                "findings": [], "control": {}}
+
+    manifest = json.loads(RANKING_SOURCES.read_text(encoding="utf-8"))["body"]
+    committed_c = json.loads(CANDIDATES.read_text(encoding="utf-8"))["body"]
+    committed_f = json.loads(FAMILIES.read_text(encoding="utf-8"))["body"]
+    normalized = downstream_sources.load_committed(manifest)
+    derived_c, derived_f = downstream_universe.derive_universe(manifest, normalized)
+
+    findings = downstream_universe.universe_findings(manifest, committed_c, committed_f)
+    if content_hash(derived_c) != content_hash(committed_c):
+        findings.append("candidates.json does not reproduce from the committed ranking evidence")
+    if content_hash(derived_f) != content_hash(committed_f):
+        findings.append("families.json does not reproduce from the committed ranking evidence")
+
+    control = downstream_universe.universe_sensitivity_control(manifest, committed_c, committed_f)
+
+    identities = committed_c.get("identities") or []
+    families = committed_f.get("families") or []
+    excluded = committed_f.get("excluded") or []
+    names = {str(i["package"]).lower() for i in identities}
+    curl = next((f for f in families if f["canonical_name"] == "curl"), None)
+    forked = next((f for f in families if f.get("fork_merged")), None)
+    examples = {
+        "alias_collapse": ({
+            "family": curl["family_id"],
+            "aliases": curl["aliases"],
+            "distro_packages": curl["distro_packages"],
+            "ecosystem_packages": curl["ecosystem_packages"],
+        } if curl else None),
+        "provider_group": {
+            "canonical_name": "openssl",
+            "class": downstream_universe.NOT_ACTUALLY,
+            "excluded_identities": sum(1 for e in excluded
+                                       if e.get("canonical_name") == "openssl"),
+        },
+        # A package whose only OpenSSL link is through libcurl is not a direct consumer and is not
+        # in the universe: `git` names neither a provider nor a soname, so the reverse scan never
+        # admits it.
+        "transitive_through_libcurl_absent": "git" not in names,
+        # A fork sharing a base name with a real family is merged into it (no evidence of
+        # materially different OpenSSL integration); a fork that stands alone without evidence
+        # would be a finding.
+        "fork_merge": ({
+            "family": forked["family_id"],
+            "merged": forked["fork_merged"],
+            "aliases": forked["aliases"],
+        } if forked else None),
+        "forks_independent_without_evidence": sorted(
+            f["family_id"] for f in families if f.get("fork_of") and not f.get("fork_evidence")),
+    }
+
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    ccounts = committed_c.get("counts") or {}
+    fcounts = committed_f.get("counts") or {}
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/candidates.json and "
+            "forensics/downstream/families.json, re-derives both from the committed "
+            "forensics/downstream/ranking/normalized/ inputs, and re-runs the 24.2 validation and "
+            "sensitivity control over the committed artefacts. It establishes that every family "
+            "is schema-valid (kind `family`) and provenance-backed, that a package alias set "
+            "collapses to one family, that the OpenSSL providers and a name collision "
+            "(`libcrypto++`) are not counted as consumers, that a fork is not independent without "
+            "evidence, that a transitive consumer is not counted as direct, and that the universe "
+            "is substantially larger than 1,000 before deduplication. A double-counted alias, a "
+            "transitive consumer promoted to direct, a fork counted independent with no evidence "
+            "and a family with no provenance are each detected with specificity holding "
+            "(docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 3.1, 3.6 and 4.5)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the candidate-universe court re-derives committed artefacts from committed inputs "
+            "and stages no artifacts/phase24/probes/ pair, so it takes no transcript to diff and "
+            "carries no FRF declaration"
+        ),
+        "counts": {
+            "identities": ccounts.get("identities", len(identities)),
+            "families": fcounts.get("families", len(families)),
+            "aliases_collapsed": fcounts.get("aliases_collapsed", 0),
+            "forks_merged": fcounts.get("forks_merged", 0),
+            "excluded": len(excluded),
+        },
+        "identities_by_directness": ccounts.get("by_directness", {}),
+        "families_by_directness": fcounts.get("by_directness", {}),
+        "examples": examples,
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -294,12 +425,25 @@ def main(argv: list[str]) -> int:
             "stripped of its hash, a mutated normalized payload, an unavailable source counted "
             "present and a missing retrieval timestamp are each detected with specificity "
             "holding. A passing ranking-source manifest is a precommitment, not a ranking claim: "
-            "it says the selection input was frozen before any candidate result. The remaining "
-            "fourteen courts -- RT-CANDIDATE-UNIVERSE, RT-AUTHORITY-BASELINE, RT-FAMILY-FREEZE, "
+            "it says the selection input was frozen before any candidate result. "
+            "`RT-CANDIDATE-UNIVERSE` is 24.2's court: the candidate family universe. It stages "
+            "no probe and reads forensics/downstream/candidates.json and "
+            "forensics/downstream/families.json, re-deriving both from the committed "
+            "forensics/downstream/ranking/normalized/ inputs. It establishes that every family "
+            "is schema-valid (kind `family`) and provenance-backed; that aliases of one upstream "
+            "collapse to one family (the libcurl4/curl/curl-dev/curl-doc set is one family, not "
+            "four); that the OpenSSL providers and a name collision (`libcrypto++`) are not "
+            "counted as consumers; that a fork is not independent without explicit evidence of "
+            "materially different OpenSSL integration; that a transitive consumer is not counted "
+            "as direct; and that the universe is substantially larger than 1,000 before "
+            "deduplication. A double-counted distro alias, a transitive consumer promoted to "
+            "direct, a fork counted independent with no evidence and a family with no provenance "
+            "are each detected with specificity holding. The remaining "
+            "thirteen courts -- RT-AUTHORITY-BASELINE, RT-FAMILY-FREEZE, "
             "RT-HOLDOUT-PARTITION, RT-BUILD-LINK-ATLAS, RT-RUNTIME-FUNCTIONAL-ATLAS, "
             "RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, RT-HOSTILITY-AUGMENTATION, "
             "RT-CANDIDATE-FREEZE, RT-P1000-RUN, RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and "
-            "DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.2 through "
+            "DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.3 through "
             "24.15). Phase 24 owns no exported symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
@@ -340,6 +484,11 @@ def main(argv: list[str]) -> int:
                     inputs.append(InputRef(
                         name=f"raw/{row['source_id']}/{payload['role']}",
                         path=REPO_ROOT / payload["committed_path"]))
+    # 24.2's subject: the committed candidate universe and families it re-derives, bound so a
+    # family record the court reads is content-addressed rather than restated.
+    for ref_name, path in (("candidates", CANDIDATES), ("families", FAMILIES)):
+        if path.is_file():
+            inputs.append(InputRef(name=ref_name, path=path))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
@@ -362,6 +511,30 @@ def main(argv: list[str]) -> int:
                 print(f"      {s['source_id']:<28} {s['kind']:<18} {s['availability']:<11} "
                       f"{(s['sha256'] or '')[:12]:<12} rows={s['row_count']:<5} "
                       f"retrieved={s['retrieved_at']}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == CANDIDATE_UNIVERSE_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            ex = r["examples"]
+            print(f"  {r['court']:<32} pass   (no probe, {counts['identities']} identity(ies) "
+                  f"-> {counts['families']} family(ies), {counts['aliases_collapsed']} alias "
+                  f"collapse(s), {counts['forks_merged']} fork merge(s), {counts['excluded']} "
+                  f"excluded non-consumer; {len(r['findings'])} finding(s); "
+                  f"control honest={c['honest']} specificity={c['specificity_holds']} "
+                  f"alias->{c['caught_alias_double_counted']} "
+                  f"promoted->{c['caught_transitive_promoted_to_direct']} "
+                  f"fork->{c['caught_fork_independent_without_evidence']} "
+                  f"no-provenance->{c['caught_family_without_provenance']})")
+            print(f"      identities by directness: {r['identities_by_directness']}")
+            print(f"      families by directness: {r['families_by_directness']}")
+            print(f"      alias collapse: {ex['alias_collapse']}")
+            print(f"      provider group: openssl excluded={ex['provider_group']['excluded_identities']} "
+                  f"class={ex['provider_group']['class']}; "
+                  f"transitive-through-libcurl absent={ex['transitive_through_libcurl_absent']}; "
+                  f"fork merge={ex['fork_merge']}; "
+                  f"forks-independent-without-evidence="
+                  f"{ex['forks_independent_without_evidence']}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

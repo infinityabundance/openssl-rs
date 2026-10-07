@@ -131,7 +131,7 @@ live record and this section is the activation measurement.**
 |---|---|---|---|---|
 | 24.0 | **The constitution, the schemas, the guard, the ledger and the runner** | `docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md`, `forensics/tools/downstream_schemas.py`, the Docker-only execution guard `forensics/tools/phase24_guard.py`, the committed venue manifest `forensics/downstream/container.json` and the measurement in §1. The ledger (`forensics/phase24-obligations.json`) and its generator land with it, together with the runner `forensics/tools/phase24_courts.py` and the registry it writes. **The runner cannot be deferred**: `run_courts.py` refuses a stratum in `in-progress` with no runner, and this stratum's obligations are not exports, so its first runnable court is a later subphase's. | 23 | — |
 | 24.1 | **The frozen ranking-source acquisition** | the multi-source ranking evidence (`forensics/downstream/ranking-sources.json`) acquired from the named sources, each row's URL, fetch date and SHA-256 frozen **before** any candidate result exists, so the population cannot be selected by what the candidate passes. | 24.0 | `RT-RANKING-SOURCES` |
-| 24.2 | **The candidate family universe** | one family node per real downstream project family -- never a package alias -- with its specimens kept separate, its OpenSSL linkage named and its ranking provenance recorded (`forensics/downstream/candidate-universe.json`). | 24.1 | `RT-CANDIDATE-UNIVERSE` |
+| 24.2 | **The candidate family universe** | the multi-ecosystem candidate package-identity universe discovered from the frozen dependency/ranking evidence (`forensics/downstream/candidates.json`) and the deduplicated **project families** it normalises into -- one family node per real downstream project family, never a package alias, each classified by directness and provenance-backed (`forensics/downstream/families.json`, schema kind `family`), with specimens kept separate for 24.3. | 24.1 | `RT-CANDIDATE-UNIVERSE` |
 | 24.3 | **The authority-baseline census** | one authority-baseline census per specimen, recording the level the **pristine-source** build reached against the admitted authority, so a candidate pass is normalized against what the authority itself achieved (`forensics/downstream/authority-baseline.json`). | 24.2 | `RT-AUTHORITY-BASELINE` |
 | 24.4 | **The P1000 + reserve freeze** | the frozen population of 1,000 counted families plus the reserve, selected from the precommitted ranking evidence and content-addressed before any candidate result (`forensics/downstream/family-freeze.json`). | 24.3 | `RT-FAMILY-FREEZE` |
 | 24.5 | **The precommitted holdout partition** | the holdout partition fixed before the candidate was run against the development population and never used to choose a patch (`forensics/downstream/holdout.json`). | 24.4 | `RT-HOLDOUT-PARTITION` |
@@ -158,7 +158,8 @@ for exactly one of the fifteen contract units. The partition is derived from
 |---|---|---|
 | `forensics/downstream/ranking-sources.json` | ranking-source rows | `ranking_source` |
 | `forensics/downstream/execution-levels.json` | the L0-L8 ladder | `execution_level` |
-| `forensics/downstream/candidate-universe.json` | families and their separate specimens | `family`, `specimen` |
+| `forensics/downstream/candidates.json` | the candidate package-identity universe | the 24.2 court's own checks |
+| `forensics/downstream/families.json` | the deduplicated project families | `family` |
 | `forensics/downstream/authority-baseline.json` | the authority-baseline census | `run` |
 | `forensics/downstream/family-freeze.json` | the frozen P1000 + reserve | `family` |
 | `forensics/downstream/holdout.json` | the holdout partition | `family` |
@@ -275,6 +276,21 @@ population is *selected* from frozen ranking evidence, so its rates are a measur
 population and never of all downstream software. Every reconciliation records the selection rule
 and the population it measured, and the seal records the non-claim, so a rate is never read as a
 population-wide probability.
+
+**4.7 The candidate universe is two artefacts, and a family carries a directness class (24.2).**
+The candidate universe is not one file: `forensics/downstream/candidates.json` holds the package
+**identities** (the several thousand `(ecosystem, package)` rows the frozen evidence discovers,
+with the source row each came from) and `forensics/downstream/families.json` holds the
+deduplicated project **families** (schema kind `family`) the identities collapse to. A provider
+identity -- the OpenSSL packages themselves, or a name collision such as Crypto++'s `libcrypto++`
+-- is classified `NOT_ACTUALLY_OPENSSL` and excluded from the family universe rather than counted.
+This extends the `family` record with the brief section 9 fields (a canonical name, the alias set,
+the distro/ecosystem package listings, the licence, the popularity/criticality signals and the
+selection provenance) and adds the brief section 8 seven-class `directness_class`, which
+`openssl_linkage` (`direct`/`transitive`) is checked against; the `RT-CANDIDATE-UNIVERSE` court
+checks the correction rather than this paragraph asserting it. The measured universe is recorded
+in the court's registry row and in `forensics/downstream/candidates.json`'s own counts, not typed
+here.
 
 ## 5. Process
 
