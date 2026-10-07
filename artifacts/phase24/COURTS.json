@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-RANKING-SOURCES` is 24.1's court: the frozen ranking-source acquisition. It stages no probe and reads forensics/downstream/ranking-sources.json and the committed normalized inputs under forensics/downstream/ranking/normalized/, re-running the 24.1 validation and sensitivity control without fetching. It establishes that every acquired ranking / reverse-dependency source -- the Debian reverse-dependency graph and Popcon counts, the Fedora and Alpine reverse package dependencies, Homebrew openssl@3's dependency relationships and analytics, the OpenSSF Scorecard and the crates.io reverse-dependency count -- is content-addressed by its raw payload SHA-256 and its normalization SHA-256, carries a retrieval timestamp and a parser version, and is reproducible from its deterministic retrieval recipe; that the frozen selection_input_root_hash reproduces from the present sources; and that an unavailable source (the OpenSSF Criticality Score, which has no reproducible public endpoint) carries a reason and is not counted present. A source stripped of its hash, a mutated normalized payload, an unavailable source counted present and a missing retrieval timestamp are each detected with specificity holding. A passing ranking-source manifest is a precommitment, not a ranking claim: it says the selection input was frozen before any candidate result. `RT-CANDIDATE-UNIVERSE` is 24.2's court: the candidate family universe. It stages no probe and reads forensics/downstream/candidates.json and forensics/downstream/families.json, re-deriving both from the committed forensics/downstream/ranking/normalized/ inputs. It establishes that every family is schema-valid (kind `family`) and provenance-backed; that aliases of one upstream collapse to one family (the libcurl4/curl/curl-dev/curl-doc set is one family, not four); that the OpenSSL providers and a name collision (`libcrypto++`) are not counted as consumers; that a fork is not independent without explicit evidence of materially different OpenSSL integration; that a transitive consumer is not counted as direct; and that the universe is substantially larger than 1,000 before deduplication. A double-counted distro alias, a transitive consumer promoted to direct, a fork counted independent with no evidence and a family with no provenance are each detected with specificity holding. `RT-AUTHORITY-CENSUS` is 24.3's court: the authority-baseline census. It stages no probe and reads forensics/downstream/authority-baselines.jsonl and forensics/downstream/usage-fingerprints.json, re-deriving the provisional census cohort from the committed families. It establishes that every cohort member has an authority result classified; that an `AUTHORITY_BASELINE_FAIL` carries an authority failure class from the taxonomy and a reason, and is never counted as a candidate failure; that a `AUTHORITY_BASELINE_PASS`'s linkage proof resolves the admitted authority's own libssl/libcrypto and never a system one; that the cohort selection rule is recorded and reproduces from the frozen sources; and that no candidate execution occurred. A build claiming authority linkage while resolving a system libssl, an authority failure counted as a candidate failure, a cohort member with no source hash and a fingerprint with no imported symbols claimed as a pass are each detected with specificity holding. A passing census is a measurement, not a candidate result: the authority side reached the level it records, and no candidate ran. `RT-FAMILY-FREEZE` is 24.4's court: the P1000 + reserve freeze. It stages no probe and reads forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-deriving the ranked universe from the committed families by the frozen selection rule (source breadth, then distro breadth, then popularity, then canonical name, then family_id). It establishes that the recorded P1000 is exactly the derived top-1,000 and the reserve the derived remainder in rank order; that the P1000 is distinct and disjoint from the reserve; that both are a subset of the universe; that ranks are positions and the recorded signal is each family's own; that the recorded selection root reproduces and its selection_input_root_hash, families sha256 and rule sha256 match the committed files; and that no candidate-subject run exists anywhere in the downstream plane, so the population is frozen before any candidate result. Two P1000 members' order swapped, a P1000 member deleted so the count is wrong, a family id shared between the P1000 and the reserve, a mutated selection root, and a fabricated candidate-subject run row in the downstream plane are each detected with specificity holding. A passing freeze is a precommitment, not a result, and it refuses the anti-pattern of a family typed into the 1,000 because a candidate passed it. The remaining eleven courts -- RT-HOLDOUT-PARTITION, RT-BUILD-LINK-ATLAS, RT-RUNTIME-FUNCTIONAL-ATLAS, RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.5 through 24.15). Phase 24 owns no exported symbol, so no differential probe over a symbol set is its evidence. The stratum's record kinds are defined and self-tested in forensics/tools/downstream_schemas.py, whose inventory this registry records: the family (the counted unit, never a package alias), the separate specimen, the variant, the frozen ranking-source row, the execution-level row over the L0-L8 ladder, the run, the classified residual, the preserved-and-minimized failure and the baseline-normalized drop-in verdict. Every entry point calls the Docker-only execution guard (forensics/tools/phase24_guard.py) first, so nothing in this stratum executes on the host. The four things the model never claims are: a selected empirical population is not a random sample; 1000/1000 is not a security proof; a build is not a functional proof; and transitive and direct consumers are different evidence. DROP_IN_PASS is baseline-normalized -- the same pristine source, a succeeded authority baseline, the candidate reaching the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches. docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "`RT-RANKING-SOURCES` is 24.1's court: the frozen ranking-source acquisition. It stages no probe and reads forensics/downstream/ranking-sources.json and the committed normalized inputs under forensics/downstream/ranking/normalized/, re-running the 24.1 validation and sensitivity control without fetching. It establishes that every acquired ranking / reverse-dependency source -- the Debian reverse-dependency graph and Popcon counts, the Fedora and Alpine reverse package dependencies, Homebrew openssl@3's dependency relationships and analytics, the OpenSSF Scorecard and the crates.io reverse-dependency count -- is content-addressed by its raw payload SHA-256 and its normalization SHA-256, carries a retrieval timestamp and a parser version, and is reproducible from its deterministic retrieval recipe; that the frozen selection_input_root_hash reproduces from the present sources; and that an unavailable source (the OpenSSF Criticality Score, which has no reproducible public endpoint) carries a reason and is not counted present. A source stripped of its hash, a mutated normalized payload, an unavailable source counted present and a missing retrieval timestamp are each detected with specificity holding. A passing ranking-source manifest is a precommitment, not a ranking claim: it says the selection input was frozen before any candidate result. `RT-CANDIDATE-UNIVERSE` is 24.2's court: the candidate family universe. It stages no probe and reads forensics/downstream/candidates.json and forensics/downstream/families.json, re-deriving both from the committed forensics/downstream/ranking/normalized/ inputs. It establishes that every family is schema-valid (kind `family`) and provenance-backed; that aliases of one upstream collapse to one family (the libcurl4/curl/curl-dev/curl-doc set is one family, not four); that the OpenSSL providers and a name collision (`libcrypto++`) are not counted as consumers; that a fork is not independent without explicit evidence of materially different OpenSSL integration; that a transitive consumer is not counted as direct; and that the universe is substantially larger than 1,000 before deduplication. A double-counted distro alias, a transitive consumer promoted to direct, a fork counted independent with no evidence and a family with no provenance are each detected with specificity holding. `RT-AUTHORITY-CENSUS` is 24.3's court: the authority-baseline census. It stages no probe and reads forensics/downstream/authority-baselines.jsonl and forensics/downstream/usage-fingerprints.json, re-deriving the provisional census cohort from the committed families. It establishes that every cohort member has an authority result classified; that an `AUTHORITY_BASELINE_FAIL` carries an authority failure class from the taxonomy and a reason, and is never counted as a candidate failure; that a `AUTHORITY_BASELINE_PASS`'s linkage proof resolves the admitted authority's own libssl/libcrypto and never a system one; that the cohort selection rule is recorded and reproduces from the frozen sources; and that no candidate execution occurred. A build claiming authority linkage while resolving a system libssl, an authority failure counted as a candidate failure, a cohort member with no source hash and a fingerprint with no imported symbols claimed as a pass are each detected with specificity holding. A passing census is a measurement, not a candidate result: the authority side reached the level it records, and no candidate ran. `RT-FAMILY-FREEZE` is 24.4's court: the P1000 + reserve freeze. It stages no probe and reads forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-deriving the ranked universe from the committed families by the frozen selection rule (source breadth, then distro breadth, then popularity, then canonical name, then family_id). It establishes that the recorded P1000 is exactly the derived top-1,000 and the reserve the derived remainder in rank order; that the P1000 is distinct and disjoint from the reserve; that both are a subset of the universe; that ranks are positions and the recorded signal is each family's own; that the recorded selection root reproduces and its selection_input_root_hash, families sha256 and rule sha256 match the committed files; and that no candidate-subject run exists anywhere in the downstream plane, so the population is frozen before any candidate result. Two P1000 members' order swapped, a P1000 member deleted so the count is wrong, a family id shared between the P1000 and the reserve, a mutated selection root, and a fabricated candidate-subject run row in the downstream plane are each detected with specificity holding. A passing freeze is a precommitment, not a result, and it refuses the anti-pattern of a family typed into the 1,000 because a candidate passed it. `RT-HOLDOUT-PARTITION` is 24.5's court: the precommitted holdout partition. It stages no probe and reads forensics/downstream/holdout.json, forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-deriving the partition from the committed frozen P1000 by the frozen rank-band rule (bands of 100, each band ordered by content_hash('phase24-holdout-v1:'+family_id) ascending, tiebreak by family_id, the first 20 holdout and the remaining 80 development). It establishes that the two cohorts union to exactly the frozen P1000; that they are disjoint and each family_id appears exactly once; that every family_id is a real committed family; that each band contributes exactly 20 holdout / 80 development; that the cohorts reproduce from the frozen rule; that the partition root reproduces; that the counts are read rather than typed; that the partition is a pure function of the frozen P1000 (no family outside it); and that no candidate-subject run exists anywhere in the downstream plane, so the split is fixed before any candidate result. One development family moved into the holdout cohort, one holdout member deleted, a family_id duplicated into both cohorts, a P1000-external family added, a mutated partition root, and a fabricated candidate-subject run row in the downstream plane are each detected with specificity holding. A passing partition is a precommitment, not a result, and it refuses the anti-pattern of a holdout chosen after seeing a candidate failure -- a holdout that is no longer out-of-sample. The remaining ten courts -- RT-BUILD-LINK-ATLAS, RT-RUNTIME-FUNCTIONAL-ATLAS, RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.6 through 24.15). Phase 24 owns no exported symbol, so no differential probe over a symbol set is its evidence. The stratum's record kinds are defined and self-tested in forensics/tools/downstream_schemas.py, whose inventory this registry records: the family (the counted unit, never a package alias), the separate specimen, the variant, the frozen ranking-source row, the execution-level row over the L0-L8 ladder, the run, the classified residual, the preserved-and-minimized failure and the baseline-normalized drop-in verdict. Every entry point calls the Docker-only execution guard (forensics/tools/phase24_guard.py) first, so nothing in this stratum executes on the host. The four things the model never claims are: a selected empirical population is not a random sample; 1000/1000 is not a security proof; a build is not a functional proof; and transitive and direct consumers are different evidence. DROP_IN_PASS is baseline-normalized -- the same pristine source, a succeeded authority baseline, the candidate reaching the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches. docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -838,6 +838,136 @@
         "problems": [],
         "selection_root_hash": "f2a0454fe4dca98556da2e958b6e70cebaf76becbebba69b2abd752e63deba4e",
         "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught_candidate_result_present": true,
+          "caught_family_id_in_both_cohorts": true,
+          "caught_holdout_member_deleted": true,
+          "caught_holdout_member_moved": true,
+          "caught_mutated_partition_root": true,
+          "caught_p1000_external_family": true,
+          "honest": true,
+          "injected_candidate_result_present": "candidate_result_present",
+          "injected_family_id_in_both_cohorts": "family_id_in_both_cohorts",
+          "injected_holdout_member_deleted": "holdout_member_deleted",
+          "injected_holdout_member_moved": "holdout_member_moved",
+          "injected_mutated_partition_root": "mutated_partition_root",
+          "injected_p1000_external_family": "p1000_external_family",
+          "specificity_holds": true
+        },
+        "counts": {
+          "development": 800,
+          "holdout": 200,
+          "p1000": 1000,
+          "per_band_holdout": 20
+        },
+        "court": "RT-HOLDOUT-PARTITION",
+        "examples": {
+          "candidate_rows": [],
+          "development_head": [
+            {
+              "band": 1,
+              "canonical_name": "libssh",
+              "cohort": "development",
+              "family_id": "family:libssh",
+              "openssl_linkage": "direct",
+              "p1000_rank": 1
+            },
+            {
+              "band": 1,
+              "canonical_name": "jwt",
+              "cohort": "development",
+              "family_id": "family:jwt",
+              "openssl_linkage": "direct",
+              "p1000_rank": 2
+            },
+            {
+              "band": 1,
+              "canonical_name": "cargo",
+              "cohort": "development",
+              "family_id": "family:cargo",
+              "openssl_linkage": "direct",
+              "p1000_rank": 3
+            }
+          ],
+          "holdout_head": [
+            {
+              "band": 1,
+              "canonical_name": "dnsdist",
+              "cohort": "holdout",
+              "family_id": "family:dnsdist",
+              "openssl_linkage": "direct",
+              "p1000_rank": 10
+            },
+            {
+              "band": 1,
+              "canonical_name": "libpq",
+              "cohort": "holdout",
+              "family_id": "family:libpq",
+              "openssl_linkage": "direct",
+              "p1000_rank": 20
+            },
+            {
+              "band": 1,
+              "canonical_name": "libshout",
+              "cohort": "holdout",
+              "family_id": "family:libshout",
+              "openssl_linkage": "direct",
+              "p1000_rank": 22
+            }
+          ],
+          "holdout_status": "unopened",
+          "p1000_tag": {
+            "p1000_content_hash": "5e17ce8c2ae17266a5ee96014496dc7da6f7a1f3fce278448b157957ed61c707",
+            "p1000_size": 1000,
+            "selection_root_hash": "f2a0454fe4dca98556da2e958b6e70cebaf76becbebba69b2abd752e63deba4e",
+            "source": "forensics/downstream/family-freeze.json"
+          },
+          "partition_root_hash": "2886e72f6e25ba62ee4f5f6a7f06eb14a2c2a7d0ea872cea50acc144cf2c1174",
+          "per_band_holdout": {
+            "1": 20,
+            "2": 20,
+            "3": 20,
+            "4": 20,
+            "5": 20,
+            "6": 20,
+            "7": 20,
+            "8": 20,
+            "9": 20,
+            "10": 20
+          },
+          "rule": {
+            "band_size": 100,
+            "band_structure": "rank band of 100: band b in 1..10 covers frozen P1000 ranks 100*(b-1)+1 .. 100*b",
+            "bands": 10,
+            "constants": {
+              "band_size": 100,
+              "bands": 10,
+              "holdout_fraction": "1/5",
+              "holdout_per_band": 20,
+              "p1000_size": 1000,
+              "partition_seed": "phase24-holdout-v1"
+            },
+            "directness_stratification": "degenerate: all 1000 frozen families are `direct`, so a direct/transitive split carries no information and is not pretended",
+            "fraction": "1/5",
+            "id": "downstream-holdout-partition/1",
+            "name": "the precommitted holdout partition of the frozen P1000",
+            "ordering": "within each band, order the 100 families by content_hash(PARTITION_SEED + ':' + family_id) ascending, tiebreak by family_id; the first per_band_holdout are holdout and the remaining are development",
+            "per_band_holdout": 20,
+            "seed": "phase24-holdout-v1",
+            "usage_cluster_stratification": "unavailable at freeze time: usage clusters are computed later, in the runtime/functional atlas, so the partition is stratified by rank band only and no usage cluster is invented"
+          }
+        },
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the holdout-partition court re-derives the partition from committed inputs and stages no artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it reads forensics/downstream/holdout.json, forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-derives the partition from the committed frozen P1000 by the frozen rule (rank bands of 100, each band ordered by content_hash('phase24-holdout-v1:'+family_id) ascending, tiebreak by family_id, the first 20 holdout and the remaining 80 development), and re-runs the 24.5 validation and sensitivity control over the committed artefact without re-dividing or running anything. It establishes that the two cohorts union to exactly the frozen P1000; that they are disjoint and each family_id appears exactly once; that every family_id is a real committed family; that each band contributes exactly 20 holdout / 80 development; that the cohorts reproduce from the frozen rule; that the partition root reproduces; that the counts are read rather than typed; that the partition is a pure function of the frozen P1000; and that no candidate-subject run exists anywhere in the downstream plane. The six seeded mutations -- one development family moved into the holdout cohort, one holdout member deleted, a family_id duplicated into both cohorts, a P1000-external family added, a mutated partition root, and a fabricated candidate-subject run row in the downstream plane -- are each detected with specificity holding. The anti-pattern it refuses is a holdout chosen after seeing a candidate failure: the holdout is fixed before any candidate result and run exactly once (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2, 3.4 and 3.6).",
+        "partition_root_hash": "2886e72f6e25ba62ee4f5f6a7f06eb14a2c2a7d0ea872cea50acc144cf2c1174",
+        "probe": "",
+        "problems": [],
+        "verdict": "pass"
       }
     ],
     "drop_in_verdicts": [
@@ -882,7 +1012,6 @@
       "RT-FAILURE-MINIMIZATION": "24.8 -- the failure discovery/minimization loop",
       "RT-FRF-CLOSURE": "24.14 -- the FRF/Gemel closure",
       "RT-HIGH-VALUE-TIER": "24.9 -- the high-value deep tier",
-      "RT-HOLDOUT-PARTITION": "24.5 -- the precommitted holdout partition",
       "RT-HOSTILITY-AUGMENTATION": "24.10 -- the separate hostility-augmentation corpus",
       "RT-P1000-RUN": "24.12 -- the final full P1000 run",
       "RT-RUNTIME-FUNCTIONAL-ATLAS": "24.7 -- the runtime/functional atlas"
@@ -1027,8 +1156,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 4,
-      "total": 4
+      "pass": 5,
+      "total": 5
     }
   },
   "generator": "forensics/tools/phase24_courts.py",
@@ -1152,6 +1281,16 @@
       "name": "downstream-freeze",
       "path": "forensics/tools/downstream_freeze.py",
       "sha256": "a8c73b3d7909c682bf3c8a714ef600545278d7853c10a030d142c3e317c3a87b"
+    },
+    {
+      "name": "holdout",
+      "path": "forensics/downstream/holdout.json",
+      "sha256": "19e0a449b304887df231bb372fd91c1a7ea00cf26089987d79004c676816a02d"
+    },
+    {
+      "name": "downstream-holdout",
+      "path": "forensics/tools/downstream_holdout.py",
+      "sha256": "0b1623cd642565ce6a74829519956a1b5d899c88c8759f7e5505d593459acd89"
     }
   ],
   "kind": "phase24-courts",

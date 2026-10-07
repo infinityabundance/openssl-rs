@@ -20,7 +20,8 @@ first runnable court is a later subphase's, and `run_courts.py` would refuse a s
 and names the fifteen courts it will stage. **24.1 registers `RT-RANKING-SOURCES`**, the frozen
 ranking-source acquisition, **24.2 registers `RT-CANDIDATE-UNIVERSE`**, the candidate family
 universe, **24.3 registers `RT-AUTHORITY-CENSUS`**, the authority-baseline census, and **24.4
-registers `RT-FAMILY-FREEZE`**, the P1000 + reserve freeze. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
+registers `RT-FAMILY-FREEZE`**, the P1000 + reserve freeze, and **24.5 registers
+`RT-HOLDOUT-PARTITION`**, the precommitted holdout partition. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
 normalized inputs under `forensics/downstream/ranking/normalized/`, re-derives the frozen
 `selection_input_root_hash`, and checks every source is content-addressed with a retrieval
 timestamp and a parser version, that an unavailable source carries a reason and is not counted
@@ -45,7 +46,16 @@ atlas. It establishes that the recorded P1000 is exactly the derived top-1,000 a
 derived remainder in rank order; that the P1000 is distinct and disjoint from the reserve; that both
 are a subset of the universe; that the recorded selection root reproduces and its input hashes match
 the committed files; and that no candidate-subject run exists anywhere in the downstream plane --
-with an instrument-sensitivity control that seeds five mutations and requires each caught. The
+with an instrument-sensitivity control that seeds five mutations and requires each caught.
+`RT-HOLDOUT-PARTITION` reads the committed `forensics/downstream/holdout.json`, the committed
+frozen `forensics/downstream/family-freeze.json` and the committed
+`forensics/downstream/families.json`, re-derives the partition from the frozen P1000 by the frozen
+rank-band rule, and checks that atlas. It establishes that the two cohorts union to exactly the
+frozen P1000; that they are disjoint and each family_id appears exactly once; that every family_id
+is a real committed family; that each band of 100 contributes exactly 20 holdout / 80 development;
+that the cohorts reproduce from the frozen rule; that the partition root reproduces; and that no
+candidate-subject run exists anywhere in the downstream plane -- with an instrument-sensitivity
+control that seeds six mutations and requires each caught. The
 registry is the file `run_courts.py`
 checks is reproduced, so a court silently dropped is a finding rather than a smaller green run.
 This is the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this
@@ -68,7 +78,7 @@ The fifteen courts, and the subphase that lands each
   * `RT-CANDIDATE-UNIVERSE` -- 24.2, the candidate family universe (registered).
   * `RT-AUTHORITY-CENSUS` -- 24.3, the authority-baseline census (registered).
   * `RT-FAMILY-FREEZE` -- 24.4, the P1000 + reserve freeze (registered).
-  * `RT-HOLDOUT-PARTITION` -- 24.5, the precommitted holdout.
+  * `RT-HOLDOUT-PARTITION` -- 24.5, the precommitted holdout (registered).
   * `RT-BUILD-LINK-ATLAS` -- 24.6, the build/link atlas.
   * `RT-RUNTIME-FUNCTIONAL-ATLAS` -- 24.7, the runtime/functional atlas.
   * `RT-FAILURE-MINIMIZATION` -- 24.8, the failure discovery/minimization loop.
@@ -81,8 +91,8 @@ The fifteen courts, and the subphase that lands each
   * `DOWNSTREAM-1000-SEAL` -- 24.15, the seal.
 
 Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2 registers
-`RT-CANDIDATE-UNIVERSE`, 24.3 registers `RT-AUTHORITY-CENSUS` and 24.4 registers
-`RT-FAMILY-FREEZE`, and the remaining eleven are
+`RT-CANDIDATE-UNIVERSE`, 24.3 registers `RT-AUTHORITY-CENSUS`, 24.4 registers
+`RT-FAMILY-FREEZE` and 24.5 registers `RT-HOLDOUT-PARTITION`, and the remaining ten are
 pending. A passing court is an instrument,
 not a property claim, and this stratum makes no property claim beyond the atlas: a selected
 empirical population is not a random sample, 1000/1000 is not a security proof, a build is not a
@@ -144,6 +154,12 @@ import downstream_census  # noqa: E402
 # (never re-selecting) through the same code path the artefact was produced by.
 import downstream_freeze  # noqa: E402
 
+# The 24.5 precommitted holdout-partition tool, imported so the court re-derives the partition from
+# the committed frozen P1000 and re-runs its validation and sensitivity control over the committed
+# artefact (never re-dividing and never running a candidate) through the same code path the artefact
+# was produced by.
+import downstream_holdout  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -174,22 +190,27 @@ AUTHORITY_CENSUS_COURT = "RT-AUTHORITY-CENSUS"
 FAMILY_FREEZE = REPO_ROOT / "forensics" / "downstream" / "family-freeze.json"
 FAMILY_FREEZE_COURT = "RT-FAMILY-FREEZE"
 
+# 24.5's subject: the precommitted development/holdout partition, re-derived from the committed
+# frozen P1000. The court reads it; it never re-divides the population and never runs a candidate.
+HOLDOUT = REPO_ROOT / "forensics" / "downstream" / "holdout.json"
+HOLDOUT_PARTITION_COURT = "RT-HOLDOUT-PARTITION"
+
 # The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES`, 24.2 `RT-CANDIDATE-UNIVERSE`,
-# 24.3 `RT-AUTHORITY-CENSUS` and 24.4 `RT-FAMILY-FREEZE`; each later subphase appends its court here
-# in the commit that lands its instrument, and a court removed from the table leaves the registry and
-# fails `run_courts.py`.
+# 24.3 `RT-AUTHORITY-CENSUS`, 24.4 `RT-FAMILY-FREEZE` and 24.5 `RT-HOLDOUT-PARTITION`; each later
+# subphase appends its court here in the commit that lands its instrument, and a court removed from
+# the table leaves the registry and fails `run_courts.py`.
 COURTS: list[tuple[str, str]] = [
     (RANKING_SOURCES_COURT, "_ranking_sources_court"),
     (CANDIDATE_UNIVERSE_COURT, "_candidate_universe_court"),
     (AUTHORITY_CENSUS_COURT, "_authority_census_court"),
     (FAMILY_FREEZE_COURT, "_family_freeze_court"),
+    (HOLDOUT_PARTITION_COURT, "_holdout_partition_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order. A court moves out of this table
 # and into `COURTS` in the commit that lands its instrument.
 PENDING_COURTS: dict[str, str] = {
-    "RT-HOLDOUT-PARTITION": "24.5 -- the precommitted holdout partition",
     "RT-BUILD-LINK-ATLAS": "24.6 -- the build/link atlas",
     "RT-RUNTIME-FUNCTIONAL-ATLAS": "24.7 -- the runtime/functional atlas",
     "RT-FAILURE-MINIMIZATION": "24.8 -- the failure discovery/minimization loop",
@@ -573,6 +594,99 @@ def _family_freeze_court(name: str) -> dict:
     }
 
 
+def _holdout_partition_court(name: str) -> dict:
+    """`RT-HOLDOUT-PARTITION`: 24.5's court, the precommitted holdout partition.
+
+    Stages no probe. It reads the committed partition `forensics/downstream/holdout.json`, the
+    committed frozen P1000 `forensics/downstream/family-freeze.json` and the committed families
+    `forensics/downstream/families.json`, re-derives the partition from the frozen rule, and
+    establishes that the two cohorts union to exactly the frozen P1000; that they are disjoint and
+    each family_id appears exactly once; that every family_id is a real committed family; that each
+    band of 100 contributes exactly 20 holdout / 80 development; that the cohorts reproduce from the
+    frozen rule; that the partition root reproduces; that the counts are read rather than typed;
+    that the partition is a **pure function of the frozen P1000** (no family outside it); and that
+    **no candidate-subject run exists anywhere in the downstream plane**, so the split is fixed
+    before any candidate result. Six seeded mutations are each caught with specificity holding. A
+    passing partition is a **precommitment**, not a result. The anti-pattern it refuses is a holdout
+    chosen after seeing a candidate failure -- a holdout that is no longer out-of-sample.
+    """
+    if not HOLDOUT.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the holdout artefact {rel(HOLDOUT)} is absent"],
+                "findings": [], "control": {}}
+
+    families_body = json.loads(FAMILIES.read_text(encoding="utf-8"))["body"]
+    freeze_body = json.loads(FAMILY_FREEZE.read_text(encoding="utf-8"))["body"]
+    holdout_body = json.loads(HOLDOUT.read_text(encoding="utf-8"))["body"]
+    findings = downstream_holdout.holdout_findings(families_body, freeze_body, holdout_body)
+    control = downstream_holdout.holdout_sensitivity_control(families_body, freeze_body, holdout_body)
+
+    counts = holdout_body.get("counts") or {}
+    partition = holdout_body.get("partition") or {}
+    development = partition.get("development") or []
+    holdout = partition.get("holdout") or []
+    per_band = {b: sum(1 for r in holdout if r.get("band") == b)
+                for b in range(1, downstream_holdout.BANDS + 1)}
+    examples = {
+        "rule": holdout_body.get("rule"),
+        "p1000_tag": holdout_body.get("p1000_tag"),
+        "partition_root_hash": holdout_body.get("partition_root_hash"),
+        "holdout_status": holdout_body.get("holdout_status"),
+        "development_head": development[:3],
+        "holdout_head": holdout[:3],
+        "per_band_holdout": per_band,
+        "candidate_rows": [
+            hit for where, doc in downstream_freeze.load_plane()
+            for hit in downstream_freeze._candidate_rows(doc, where)],
+    }
+
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/holdout.json, "
+            "forensics/downstream/family-freeze.json and forensics/downstream/families.json, "
+            "re-derives the partition from the committed frozen P1000 by the frozen rule (rank "
+            "bands of 100, each band ordered by content_hash('phase24-holdout-v1:'+family_id) "
+            "ascending, tiebreak by family_id, the first 20 holdout and the remaining 80 "
+            "development), and re-runs the 24.5 validation and sensitivity control over the "
+            "committed artefact without re-dividing or running anything. It establishes that the "
+            "two cohorts union to exactly the frozen P1000; that they are disjoint and each "
+            "family_id appears exactly once; that every family_id is a real committed family; "
+            "that each band contributes exactly 20 holdout / 80 development; that the cohorts "
+            "reproduce from the frozen rule; that the partition root reproduces; that the counts "
+            "are read rather than typed; that the partition is a pure function of the frozen P1000; "
+            "and that no candidate-subject run exists anywhere in the downstream plane. The six "
+            "seeded mutations -- one development family moved into the holdout cohort, one holdout "
+            "member deleted, a family_id duplicated into both cohorts, a P1000-external family "
+            "added, a mutated partition root, and a fabricated candidate-subject run row in the "
+            "downstream plane -- are each detected with specificity holding. The anti-pattern it "
+            "refuses is a holdout chosen after seeing a candidate failure: the holdout is fixed "
+            "before any candidate result and run exactly once (docs/PHASE-24-DOWNSTREAM-1000-"
+            "SUBPHASES.md sections 1, 2, 3.4 and 3.6)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the holdout-partition court re-derives the partition from committed inputs and stages "
+            "no artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no "
+            "FRF declaration"
+        ),
+        "partition_root_hash": holdout_body.get("partition_root_hash"),
+        "counts": {
+            "p1000": counts.get("p1000", len(freeze_body.get("p1000") or [])),
+            "development": counts.get("development", len(development)),
+            "holdout": counts.get("holdout", len(holdout)),
+            "per_band_holdout": counts.get("per_band_holdout", 0),
+        },
+        "examples": examples,
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -694,12 +808,31 @@ def main(argv: list[str]) -> int:
             "candidate-subject run row in the downstream plane are each detected with specificity "
             "holding. A passing freeze is a precommitment, not a result, and it refuses the "
             "anti-pattern of a family typed into the 1,000 because a candidate passed it. "
+            "`RT-HOLDOUT-PARTITION` is 24.5's court: the precommitted holdout partition. It "
+            "stages no probe and reads forensics/downstream/holdout.json, "
+            "forensics/downstream/family-freeze.json and forensics/downstream/families.json, "
+            "re-deriving the partition from the committed frozen P1000 by the frozen rank-band "
+            "rule (bands of 100, each band ordered by content_hash('phase24-holdout-v1:'+family_id) "
+            "ascending, tiebreak by family_id, the first 20 holdout and the remaining 80 "
+            "development). It establishes that the two cohorts union to exactly the frozen P1000; "
+            "that they are disjoint and each family_id appears exactly once; that every family_id "
+            "is a real committed family; that each band contributes exactly 20 holdout / 80 "
+            "development; that the cohorts reproduce from the frozen rule; that the partition root "
+            "reproduces; that the counts are read rather than typed; that the partition is a pure "
+            "function of the frozen P1000 (no family outside it); and that no candidate-subject run "
+            "exists anywhere in the downstream plane, so the split is fixed before any candidate "
+            "result. One development family moved into the holdout cohort, one holdout member "
+            "deleted, a family_id duplicated into both cohorts, a P1000-external family added, a "
+            "mutated partition root, and a fabricated candidate-subject run row in the downstream "
+            "plane are each detected with specificity holding. A passing partition is a "
+            "precommitment, not a result, and it refuses the anti-pattern of a holdout chosen "
+            "after seeing a candidate failure -- a holdout that is no longer out-of-sample. "
             "The remaining "
-            "eleven courts -- RT-HOLDOUT-PARTITION, RT-BUILD-LINK-ATLAS, "
+            "ten courts -- RT-BUILD-LINK-ATLAS, "
             "RT-RUNTIME-FUNCTIONAL-ATLAS, RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, "
             "RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, "
             "RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending "
-            "with the subphases that land them (24.5 through 24.15). Phase 24 owns no exported "
+            "with the subphases that land them (24.6 through 24.15). Phase 24 owns no exported "
             "symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
@@ -759,6 +892,13 @@ def main(argv: list[str]) -> int:
     for ref_name, path in (("family-freeze", FAMILY_FREEZE),
                            ("downstream-freeze", REPO_ROOT / "forensics" / "tools"
                             / "downstream_freeze.py")):
+        if path.is_file():
+            inputs.append(InputRef(name=ref_name, path=path))
+    # 24.5's subject: the committed precommitted holdout partition and the tool that derived it,
+    # bound so a partition row the court reads is content-addressed rather than restated.
+    for ref_name, path in (("holdout", HOLDOUT),
+                           ("downstream-holdout", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_holdout.py")):
         if path.is_file():
             inputs.append(InputRef(name=ref_name, path=path))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
@@ -862,6 +1002,38 @@ def main(argv: list[str]) -> int:
                 print(f"      reserve[{row['reserve_rank']:>4}] {row['family_id']:<34} "
                       f"cursor={row['replacement_cursor']} "
                       f"{row['openssl_linkage']:<10} sb={row['source_breadth']}")
+            print(f"      candidate-subject rows in the downstream plane: {ex['candidate_rows']}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == HOLDOUT_PARTITION_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            ex = r["examples"]
+            print(f"  {r['court']:<32} pass   (no probe, p1000={counts['p1000']} "
+                  f"development={counts['development']} holdout={counts['holdout']} "
+                  f"per_band_holdout={counts['per_band_holdout']}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"moved->{c['caught_holdout_member_moved']} "
+                  f"deleted->{c['caught_holdout_member_deleted']} "
+                  f"duplicated->{c['caught_family_id_in_both_cohorts']} "
+                  f"external->{c['caught_p1000_external_family']} "
+                  f"root->{c['caught_mutated_partition_root']} "
+                  f"candidate->{c['caught_candidate_result_present']})")
+            print(f"      rule: id={ex['rule']['id']} seed={ex['rule']['seed']} "
+                  f"fraction={ex['rule']['fraction']} bands={ex['rule']['bands']} "
+                  f"per_band_holdout={ex['rule']['per_band_holdout']} "
+                  f"status={ex['holdout_status']}")
+            print(f"      partition_root_hash={ex['partition_root_hash']}")
+            print(f"      per-band holdout: {ex['per_band_holdout']}")
+            for row in ex["development_head"]:
+                print(f"      development[{row['p1000_rank']:>4}] band={row['band']} "
+                      f"{row['family_id']:<34} {row['openssl_linkage']:<10} "
+                      f"{row['canonical_name']}")
+            for row in ex["holdout_head"]:
+                print(f"      holdout[{row['p1000_rank']:>4}] band={row['band']} "
+                      f"{row['family_id']:<34} {row['openssl_linkage']:<10} "
+                      f"{row['canonical_name']}")
             print(f"      candidate-subject rows in the downstream plane: {ex['candidate_rows']}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
