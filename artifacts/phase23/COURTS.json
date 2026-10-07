@@ -297,6 +297,12 @@
           "openssl-4.0.3-historical"
         ],
         "byte_identity": {
+          "available": true,
+          "build_products_normalised": [
+            "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+            "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json"
+          ],
           "disclosed_drift": [
             "forensics/atlas/openssl-3.6.4-production/ATLAS.md",
             "forensics/atlas/openssl-3.6.4-production/parity-obligations.json"
@@ -438,7 +444,7 @@
             "engines"
           ]
         },
-        "method": "stages no probe: its instrument is the parameterized generator. It reads forensics/atlas/parameterization-receipt.json, the committed default-authority alias and forensics/atlas/openssl-0.9.8zh-historical/plane-census.json; re-derives every census through the same generator (one code path, one plane set); corroborates the historical authority's decisive absences (providers, provider registrations, QUIC) against its committed source manifest; and re-runs the authority-parameterized archaeology generators for the 3.6.4 production authority and asserts its committed plane is byte-identical. The default is the committed alias, never the catalogue's latest-stable (openssl-4.0.3). Swapping the authority argument changes the produced census, so a hidden production fallback is caught; a measured absence with no provenance or a nonzero count is refused. The pre-existing, disclosed drift (parity-obligations.json and the rendered ATLAS.md, stale since cli-commands gained its option grammar at p16) is measured live and undone, never applied.",
+        "method": "stages no probe: its instrument is the parameterized generator. It reads forensics/atlas/parameterization-receipt.json, the committed default-authority alias and forensics/atlas/openssl-0.9.8zh-historical/plane-census.json; re-derives every census through the same generator (one code path, one plane set); corroborates the historical authority's decisive absences (providers, provider registrations, QUIC) against its committed source manifest; and, where the 3.6.4 production authority's source/build/prefix products are present, re-runs the authority-parameterized archaeology generators for it and asserts its committed plane reproduces -- comparing the symbols planes modulo their declared build products (the built DSO's own digest and size and each symbol's machine-code size, which a different build legitimately moves, D27/D30), and otherwise records the regeneration not-run with its reason rather than asserting it. The default is the committed alias, never the catalogue's latest-stable (openssl-4.0.3). Swapping the authority argument changes the produced census, so a hidden production fallback is caught; a measured absence with no provenance or a nonzero count is refused. The pre-existing, disclosed drift (parity-obligations.json and the rendered ATLAS.md, stale since cli-commands gained its option grammar at p16) is measured live and undone, never applied.",
         "planes": 17,
         "probe": "",
         "problems": [],
@@ -4241,7 +4247,7 @@
         "verdict": "pass"
       },
       {
-        "content_hash": "9dd8edd4eb6cd9d98c3d7006f3cef7d8b905e2dfd7fa51b7194164afbf7af11f",
+        "content_hash": "389c409664a0c870b814b45c1cd49d8418290ee7c5a1dd7e6db164ec298889f2",
         "control": {
           "baseline_findings": 0,
           "caught_built_without_receipt": true,
@@ -4534,7 +4540,7 @@
           "openssl-fips-2.0.8",
           "openssl-fips-2.0.9"
         ],
-        "content_hash": "f7e6bc49ed54c43bcc545899540b33740a4165e6c2be45bc7a79bbb6b664cf71",
+        "content_hash": "61bef684969c1ea65a716dd9340771df52f4755ae17efd77f10bc2af13872b2a",
         "control": {
           "baseline_findings": 0,
           "caught_archaeology_counted_supported": true,
@@ -4713,7 +4719,7 @@
           {
             "name": "support_status",
             "record_count": 372,
-            "sha256": "839658eba24f6481f34b5b203b36323aade376cc1d35ffeadabf6bbeafccbfa1"
+            "sha256": "03747b1302b3a9947a60b0e29c4ca7313241cf59baa61db04e5d11cab7428aec"
           }
         ],
         "probe": "",
@@ -6843,17 +6849,17 @@
     {
       "name": "historical-population",
       "path": "forensics/multitrack/historical-population.json",
-      "sha256": "605a63584795829c572d9455f9f2642ed800482cd4c0c9e91f395e81b3c40b66"
+      "sha256": "1435ced773319063d13dbac61d40a601abc1ddeb84c48a70d650dd92290ce1e5"
     },
     {
       "name": "support-status",
       "path": "forensics/multitrack/support-status.json",
-      "sha256": "839658eba24f6481f34b5b203b36323aade376cc1d35ffeadabf6bbeafccbfa1"
+      "sha256": "03747b1302b3a9947a60b0e29c4ca7313241cf59baa61db04e5d11cab7428aec"
     },
     {
       "name": "compatibility-matrix",
       "path": "forensics/multitrack/compatibility-matrix.json",
-      "sha256": "c26ce0d79b1efdd807b74bb497176637b56ff8821a1b6442fa5d038725bffc01"
+      "sha256": "bd49dc97bce061657dbb6ef898d5bb3102f4fcdcdff1eab6562b65d2357c77cd"
     },
     {
       "name": "downstream-multitrack",

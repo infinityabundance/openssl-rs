@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "boundary": "the ladder records how far each release node reached, not how compatible anything is: `support_role` is ladder bookkeeping (`support-target` or `archaeology`) and is not a compatibility verdict, and no row is a `PARITY_VERIFIED` or any other one-boolean compatibility claim. The core rungs catalogued, admitted-source, built-authority and atlas-complete are the contiguous climb every supported node makes; candidate-view, runtime-evidenced, downstream-evidenced and maintained are each read from an independent evidence plane (23.10), so a node may attain them without the intermediate additive rungs -- 0.9.8zh is downstream-evidenced from a real consumer without candidate-view/runtime-evidenced. A status is derived from the evidence and never typed, and an archaeological-only node has climbed no rung",
-    "content_hash": "f7e6bc49ed54c43bcc545899540b33740a4165e6c2be45bc7a79bbb6b664cf71",
+    "content_hash": "61bef684969c1ea65a716dd9340771df52f4755ae17efd77f10bc2af13872b2a",
     "core_rungs": [
       "catalogued",
       "admitted-source",
@@ -12321,7 +12321,7 @@
           },
           {
             "path": "forensics/atlas/BUILD_RECORDS.json",
-            "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0",
+            "sha256": "0119269c2a15dcf398386d7c93efb9e5a5dcf191a08415540d8d42cf651f94b0",
             "what": "the build receipt the built-authority claim is backed by"
           },
           {
@@ -12348,7 +12348,7 @@
           },
           "built-authority": {
             "path": "forensics/atlas/BUILD_RECORDS.json",
-            "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0",
+            "sha256": "0119269c2a15dcf398386d7c93efb9e5a5dcf191a08415540d8d42cf651f94b0",
             "what": "the build receipt the built-authority claim is backed by"
           },
           "catalogued": {
@@ -12398,7 +12398,7 @@
           },
           {
             "path": "forensics/atlas/BUILD_RECORDS.json",
-            "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0",
+            "sha256": "0119269c2a15dcf398386d7c93efb9e5a5dcf191a08415540d8d42cf651f94b0",
             "what": "the build receipt the built-authority claim is backed by"
           },
           {
@@ -12440,7 +12440,7 @@
           },
           "built-authority": {
             "path": "forensics/atlas/BUILD_RECORDS.json",
-            "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0",
+            "sha256": "0119269c2a15dcf398386d7c93efb9e5a5dcf191a08415540d8d42cf651f94b0",
             "what": "the build receipt the built-authority claim is backed by"
           },
           "candidate-view": {
@@ -14452,7 +14452,7 @@
     {
       "name": "historical-population",
       "path": "forensics/multitrack/historical-population.json",
-      "sha256": "605a63584795829c572d9455f9f2642ed800482cd4c0c9e91f395e81b3c40b66"
+      "sha256": "1435ced773319063d13dbac61d40a601abc1ddeb84c48a70d650dd92290ce1e5"
     },
     {
       "name": "release-catalog",

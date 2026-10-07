@@ -47,6 +47,7 @@ No wall-clock, path or environment value is written; see atlas_common.
 from __future__ import annotations
 
 import argparse
+import copy
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -70,6 +71,52 @@ from atlas_common import (  # noqa: E402
     sha256_file,
     write_json,
 )
+
+# ---------------------------------------------------------------------------
+# the declared build-product surface
+# ---------------------------------------------------------------------------
+#
+# `symbols-*.json` and `symbol-versions.json` record the **built** shared object's own file digest,
+# its size, and each symbol's machine-code size (`st_size`). Those are properties of the machine that
+# ran the build, not of the authority's committed surface -- the court job's `authority_build.py
+# --all` rebuilds the authority before the courts run, and OpenSSL stamps a fresh build time into the
+# DSO, so the file digest moves on every build. They are declared here and normalised out before the
+# byte-identity comparison (docs/DECISIONS.md D27/D30: a build-product field is not evidence).
+# Everything else -- the symbol names, ordinals, version nodes, reconciliations and counts -- is a
+# function of the committed source manifest and is compared exactly.
+BUILD_PRODUCT = "<build-product>"
+BUILD_PRODUCT_INPUT_NAMES = frozenset({"dso", "libcrypto_dso", "libssl_dso"})
+
+
+def normalise_build_products(doc: dict) -> dict:
+    """`doc` with the symbols planes' declared build-product fields blanked, symmetrically.
+
+    Both sides of a comparison are passed through this, so an authority rebuilt on a different
+    machine still reproduces everything that is a committed-input fact while the DSO's own digest,
+    its size and the per-symbol machine-code sizes are not read as evidence.
+    """
+    doc = copy.deepcopy(doc)
+    body = doc.get("body", doc)
+    dso = (body.get("planes") or {}).get("dso")
+    if isinstance(dso, dict):
+        for field in ("sha256", "size_bytes"):
+            if field in dso:
+                dso[field] = BUILD_PRODUCT
+    for row in body.get("records") or []:
+        if isinstance(row.get("dso"), dict) and "size" in row["dso"]:
+            row["dso"]["size"] = BUILD_PRODUCT
+    for row in body.get("dso_only") or []:
+        if isinstance(row, dict) and "size" in row:
+            row["size"] = BUILD_PRODUCT
+    for lib in (body.get("libraries") or {}).values():
+        if isinstance(lib, dict) and "sha256" in lib:
+            lib["sha256"] = BUILD_PRODUCT
+    for entry in doc.get("inputs") or []:
+        if isinstance(entry, dict) and entry.get("name") in BUILD_PRODUCT_INPUT_NAMES \
+                and "sha256" in entry:
+            entry["sha256"] = BUILD_PRODUCT
+    return doc
+
 
 # Libraries the distribution contract requires. Keys are linker names; the
 # runtime SONAMEs are in the value.

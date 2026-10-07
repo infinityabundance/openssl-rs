@@ -92,6 +92,7 @@ from atlas_common import (  # noqa: E402
     PRODUCTION_AUTHORITY,
     REPO_ROOT,
     InputRef,
+    authority_build_dir,
     content_hash,
     default_authority_id,
     envelope,
@@ -107,6 +108,11 @@ import multitrack_schemas  # noqa: E402
 # The Phase-23.3 parameterized generator, imported so the court re-derives the census in-process
 # through the same code path the receipt was produced by (never a second, drifting predicate).
 import atlas_authority  # noqa: E402
+# The Phase-1 symbols generator, imported for the declared build-product surface of the symbols
+# planes: the byte-identity proof normalises exactly those fields before comparing, because the
+# built DSO's own digest and per-symbol machine-code sizes are properties of the machine that built
+# the authority (docs/DECISIONS.md D27/D30).
+import atlas_symbols  # noqa: E402
 # The Phase-23.1 catalogue generator, imported for the lineage hash keys the sensitivity control
 # re-seals a mutated body with, so the control isolates the semantic check rather than the hash.
 import authority_catalog  # noqa: E402
@@ -964,6 +970,37 @@ def _authority_nodes_court(name: str) -> dict:
     }
 
 
+def _atlas_products_present(authority_id: str) -> bool:
+    """Whether the authority's source, build and installed products are on this machine.
+
+    The byte-identity proof re-runs the archaeology generators, which read the authority's acquired
+    source tree, its generated version scripts and its built shared objects. Those are gitignored
+    build products, so the proof can run only where the authority was built; the fact is recorded
+    not-run rather than asserted where they are absent (see `_measure_atlas_byte_identity`), exactly
+    as `downstream_multitrack.py` records a `not_run` trial.
+    """
+    try:
+        auth = resolve_authority(authority_id)
+    except Exception:
+        return False
+    return (auth.source.is_dir() and auth.prefix.is_dir()
+            and authority_build_dir(authority_id).is_dir())
+
+
+def _comparable(path: Path, data: bytes) -> object:
+    """The value a byte-identity comparison sees: declared build products are normalised out.
+
+    `symbols-*.json` and `symbol-versions.json` record the built shared object's own digest, its size
+    and each symbol's machine-code size, which a different build legitimately moves, so they are
+    compared modulo exactly those declared fields (docs/DECISIONS.md D27/D30). Every other committed
+    atlas file is compared byte for byte.
+    """
+    if path.suffix == ".json" and (path.name.startswith("symbols-")
+                                   or path.name == "symbol-versions.json"):
+        return atlas_symbols.normalise_build_products(json.loads(data.decode("utf-8")))
+    return data
+
+
 def _measure_atlas_byte_identity(authority_id: str) -> dict:
     """Re-derive the authority's atlas through the parameterized generators and measure the diff.
 
@@ -973,9 +1010,39 @@ def _measure_atlas_byte_identity(authority_id: str) -> dict:
     *measure* the disclosed pre-existing drift, and finally restores the committed bytes so the
     working tree is left exactly as committed. Nothing here is typed: the parameterized diff and
     the drift are both read from the files themselves.
+
+    A file carrying a declared build product (`symbols-*.json`, `symbol-versions.json`) is compared
+    modulo that declared surface, because the DSO's own digest and sizes are properties of the build
+    and not of the authority's committed surface. Where the authority's source/build/prefix products
+    are absent the regeneration cannot run at all, so the fact is recorded `available: false` with
+    its reason rather than asserted -- the parameterization subject (the census, derived from the
+    committed source manifest) does not depend on it.
     """
     atlas_dir = REPO_ROOT / "forensics" / "atlas" / authority_id
     snapshot = {p.resolve(): p.read_bytes() for p in atlas_dir.glob("*") if p.is_file()}
+    base = {p: _comparable(p, b) for p, b in snapshot.items()}
+    normalised = sorted(rel(p) for p in snapshot
+                        if p.name.startswith("symbols-") or p.name == "symbol-versions.json")
+
+    if not _atlas_products_present(authority_id):
+        return {
+            "authority": authority_id,
+            "available": False,
+            "reason": (
+                "the authority's source, build and installed products are absent on this machine, so "
+                "the byte-identity regeneration cannot run and is recorded not-run rather than "
+                "asserted; the parameterization subject -- the census, derived from the committed "
+                "source manifest -- is unaffected"
+            ),
+            "files_checked": len(snapshot),
+            "regenerators": list(atlas_authority.REGENERATORS),
+            "regenerator_returncodes": {},
+            "parameterized_diffs": [],
+            "parity_returncode": None,
+            "pre_existing_drift": [],
+            "disclosed_drift": sorted(atlas_authority.KNOWN_STALE_PATHS),
+            "build_products_normalised": normalised,
+        }
 
     def run(gen: str) -> int:
         res = subprocess.run(
@@ -984,14 +1051,14 @@ def _measure_atlas_byte_identity(authority_id: str) -> dict:
         return res.returncode
 
     codes = {g: run(g) for g in atlas_authority.REGENERATORS}
-    after_param = {p: p.read_bytes() for p in snapshot}
-    parameterized_diffs = sorted(rel(p) for p in snapshot if snapshot[p] != after_param[p])
+    after_param = {p: _comparable(p, p.read_bytes()) for p in snapshot}
+    parameterized_diffs = sorted(rel(p) for p in snapshot if base[p] != after_param[p])
 
     # The disclosed pre-existing drift: the reconciliation plane that does not reproduce. It is
     # measured, named and then undone, never applied.
     parity_code = run("forensics/tools/atlas_parity.py")
-    after_parity = {p: p.read_bytes() for p in snapshot}
-    drift = sorted(rel(p) for p in snapshot if snapshot[p] != after_parity[p])
+    after_parity = {p: _comparable(p, p.read_bytes()) for p in snapshot}
+    drift = sorted(rel(p) for p in snapshot if base[p] != after_parity[p])
 
     for p, b in snapshot.items():
         if p.read_bytes() != b:
@@ -999,6 +1066,7 @@ def _measure_atlas_byte_identity(authority_id: str) -> dict:
 
     return {
         "authority": authority_id,
+        "available": True,
         "files_checked": len(snapshot),
         "regenerators": list(atlas_authority.REGENERATORS),
         "regenerator_returncodes": codes,
@@ -1006,6 +1074,7 @@ def _measure_atlas_byte_identity(authority_id: str) -> dict:
         "parity_returncode": parity_code,
         "pre_existing_drift": drift,
         "disclosed_drift": sorted(atlas_authority.KNOWN_STALE_PATHS),
+        "build_products_normalised": normalised,
     }
 
 
@@ -1202,10 +1271,12 @@ def _atlas_parameterization_court(name: str) -> dict:
     reads `forensics/atlas/parameterization-receipt.json`, the committed default-authority alias
     and the historical authority's plane census; re-derives every census through the same
     generator; corroborates the historical authority's decisive absences against the committed
-    source manifest; and **re-runs the authority-parameterized archaeology generators for the
-    3.6.4 production authority**, asserting the committed plane is byte-identical. The one
-    pre-existing, disclosed drift (`parity-obligations.json`) is measured live and undone, never
-    applied. Swapping the authority argument must change the produced census, so a hidden
+    source manifest; and, where the 3.6.4 production authority's products are present, **re-runs the
+    authority-parameterized archaeology generators for it**, asserting the committed plane reproduces
+    modulo the symbols planes' declared build products (the built DSO's digest/size and each symbol's
+    machine-code size, D27/D30), and otherwise records the regeneration `not-run` with its reason.
+    The one pre-existing, disclosed drift (`parity-obligations.json`) is measured live and undone,
+    never applied. Swapping the authority argument must change the produced census, so a hidden
     production fallback is caught.
     """
     problems: list[str] = []
@@ -1239,7 +1310,11 @@ def _atlas_parameterization_court(name: str) -> dict:
     raw_codes = identity["regenerator_returncodes"]
     if any(c != 0 for c in raw_codes.values()):
         findings.append(f"an authority-parameterized regenerator failed: {raw_codes}")
-    parameterized_reproduced = not undisclosed
+    # `None` records honest unavailability: where the authority's products are absent the pivot
+    # cannot be re-measured, and the court says so rather than asserting it (see
+    # `_measure_atlas_byte_identity`). The census derivation above is the parameterization subject
+    # and is checked either way.
+    parameterized_reproduced = (not undisclosed) if identity["available"] else None
 
     censuses = receipt.get("censuses") or {}
     verdict = "pass" if (not findings and not problems and control["honest"]) else "fail"
@@ -1252,9 +1327,13 @@ def _atlas_parameterization_court(name: str) -> dict:
             "and forensics/atlas/openssl-0.9.8zh-historical/plane-census.json; re-derives every "
             "census through the same generator (one code path, one plane set); corroborates the "
             "historical authority's decisive absences (providers, provider registrations, QUIC) "
-            "against its committed source manifest; and re-runs the authority-parameterized "
-            "archaeology generators for the 3.6.4 production authority and asserts its committed "
-            "plane is byte-identical. The default is the committed alias, never the catalogue's "
+            "against its committed source manifest; and, where the 3.6.4 production authority's "
+            "source/build/prefix products are present, re-runs the authority-parameterized "
+            "archaeology generators for it and asserts its committed plane reproduces -- comparing "
+            "the symbols planes modulo their declared build products (the built DSO's own digest "
+            "and size and each symbol's machine-code size, which a different build legitimately "
+            "moves, D27/D30), and otherwise records the regeneration not-run with its reason rather "
+            "than asserting it. The default is the committed alias, never the catalogue's "
             "latest-stable (openssl-4.0.3). Swapping the authority argument changes the produced "
             "census, so a hidden production fallback is caught; a measured absence with no "
             "provenance or a nonzero count is refused. The pre-existing, disclosed drift "
@@ -1275,11 +1354,14 @@ def _atlas_parameterization_court(name: str) -> dict:
         "measured_absence": {aid: v for aid, v in sorted(
             (receipt.get("measured_absences") or {}).items())},
         "byte_identity": {
+            "available": identity["available"],
             "parameterized_reproduced": parameterized_reproduced,
             "files_checked": identity["files_checked"],
             "regenerators": identity["regenerators"],
             "pre_existing_drift": identity["pre_existing_drift"],
             "disclosed_drift": identity["disclosed_drift"],
+            "build_products_normalised": identity["build_products_normalised"],
+            **({} if identity["available"] else {"reason": identity["reason"]}),
         },
         "findings": findings,
         "control": control,
@@ -4334,7 +4416,7 @@ def population_findings(body: dict, catalog: dict, authority_nodes: dict, author
             if not p.is_file():
                 findings.append(f"population record {r.get('release_id')}: evidence path {path!r} "
                                 f"is absent")
-            elif digest != sha256_file(p):
+            elif digest != historical_population.evidence_digest(p):
                 findings.append(f"population record {r.get('release_id')}: evidence {path!r} is "
                                 f"not content-addressed")
     return findings
@@ -4772,7 +4854,7 @@ def support_status_findings(body: dict, population: dict, catalog: dict, authori
             if not p.is_file():
                 findings.append(f"support-status row {r.get('subject_id')}: evidence path {path!r} "
                                 f"is absent")
-            elif digest != sha256_file(p):
+            elif digest != historical_population.evidence_digest(p):
                 findings.append(f"support-status row {r.get('subject_id')}: evidence {path!r} is "
                                 f"not content-addressed")
     return findings
@@ -6542,11 +6624,13 @@ def main(argv: list[str]) -> int:
         elif r["verdict"] == "pass" and r["court"] == ATLAS_PARAMETERIZATION_COURT:
             c = r["control"]
             bi = r["byte_identity"]
+            pivot = (f"re-derived reproduced={bi['parameterized_reproduced']} over "
+                     f"{bi['files_checked']} file(s), disclosed drift={bi['pre_existing_drift']}"
+                     if bi["available"] else "byte-identity not-run (authority products absent)")
             print(f"  {r['court']:<32} pass   (no probe, {r['planes']} plane(s) over "
                   f"{len(r['authorities'])} authority/ies; default={r['default_authority']}; "
-                  f"{len(r['findings'])} finding(s); 3.6.4 re-derived byte-identical="
-                  f"{bi['parameterized_reproduced']} over {bi['files_checked']} file(s), "
-                  f"disclosed drift={bi['pre_existing_drift']}; control honest={c['honest']} "
+                  f"{len(r['findings'])} finding(s); 3.6.4 {pivot}; "
+                  f"control honest={c['honest']} "
                   f"specificity={c['specificity_holds']} "
                   f"swapped-authority-differs={c['swapped_authority_differs']} "
                   f"no-evidence->{c['injected_absence_without_evidence_findings']} "
