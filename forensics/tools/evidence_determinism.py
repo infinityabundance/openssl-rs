@@ -220,6 +220,13 @@ GENERATORS_BEFORE_LEDGERS = [
     # re-derives the whole plane through the same generator, reconciles every row with its population
     # record, and checks each attained rung is backed by the artefact that establishes it.
     "forensics/tools/support_status.py",
+    # Phase 24.4's P1000 + reserve freeze. It is a pure function of committed non-ledger inputs --
+    # the committed 24.2 families, the frozen 24.1 ranking evidence, and the committed 24.3
+    # consensus signal it imports -- so a stale committed freeze, or a population re-selected by
+    # something other than the recorded rule, is a failure rather than a silent divergence. It sits
+    # **before** the ledgers because it reads no ledger; the RT-FAMILY-FREEZE court re-derives the
+    # whole population through the same rule and refuses a family typed into the 1,000.
+    "forensics/tools/downstream_freeze.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -461,6 +468,12 @@ COMPARED = [
     # silent divergence. The raw build/run outputs are carried inside the artefact, which is why the
     # re-derivation needs no compiler, no network and no authority prefix.
     "forensics/multitrack/downstream-multitrack.json",
+    # Phase 24.4's frozen P1000 + reserve: a pure function of the committed 24.2 families and the
+    # frozen 24.1 ranking evidence, so a stale population, or one re-selected by something other than
+    # the recorded rule, is a failure rather than a silent divergence. It carries no candidate result
+    # (the freeze precedes every candidate run), which is why re-deriving it needs no compiler and no
+    # candidate.
+    "forensics/downstream/family-freeze.json",
 ]
 
 # ---------------------------------------------------------------------------

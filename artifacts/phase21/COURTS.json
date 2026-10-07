@@ -1033,7 +1033,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "270e6b73dece2871322b7283b81ab650dddd0c114f1aa0508c952a911f4c096a"
+      "sha256": "eee6125167bb7e8b230d7986aef08b30edd34042ec2b30758ed4485b93f6c75a"
     },
     {
       "name": "symbol-ownership",
@@ -1058,7 +1058,7 @@
     {
       "name": "release-gates",
       "path": "docs/RELEASE_GATES.md",
-      "sha256": "e908c495f0fa9dc36c1394c4d460960f533e60cf1ea1f6f1e48e474f6fe107e5"
+      "sha256": "3a4892d36740ccefa48e3361c5fe792513597bf9e7f7b55b7f03e1248593abe6"
     },
     {
       "name": "non-claims",
