@@ -234,6 +234,16 @@ GENERATORS_BEFORE_LEDGERS = [
     # **before** the ledgers because it reads no ledger; the RT-HOLDOUT-PARTITION court re-derives the
     # whole split through the same rule and refuses a holdout chosen after a candidate failure.
     "forensics/tools/downstream_holdout.py",
+    # Phase 24.8's failure discovery/minimization plane. Unlike 24.6's and 24.7's atlases below it
+    # executes nothing: it is a **pure function of committed inputs** -- the committed 24.6 build/link
+    # atlas, the committed 24.7 runtime/functional atlas and the committed 24.4 frozen P1000 -- so a
+    # stale committed failures plane, or a leftover re-classified by something other than the record's
+    # authority row, is a failure rather than a silent divergence. It is exactly the pure aggregate the
+    # 24.6/24.7 comments below anticipated ("a later subphase that derives a pure aggregate from it is
+    # what belongs in this list"). It sits **after** the atlases it reads and **before** the ledgers
+    # because it reads no ledger; the RT-FAILURE-MINIMIZATION court re-derives the whole plane through
+    # the same functions and refuses a candidate-specific label the authority baseline does not justify.
+    "forensics/tools/downstream_failures.py",
     # Phase 24.6's **build/link atlas is deliberately not here, and not in `COMPARED`.** It is
     # produced by measurement -- real builds of real downstream releases inside the court container --
     # so the level each build reaches and the ELF it links are a function of the court's toolchain and
@@ -508,6 +518,13 @@ COMPARED = [
     # divergence. It carries no candidate result (the split is fixed before any candidate run), which
     # is why re-deriving it needs no compiler and no candidate.
     "forensics/downstream/holdout.json",
+    # Phase 24.8's classified, preserved, minimized failures: a pure function of the committed 24.6
+    # build/link atlas, the 24.7 runtime/functional atlas and the 24.4 frozen P1000, so a stale plane,
+    # a fabricated record, a candidate-specific label the authority baseline does not justify or an
+    # unclassified leftover is a failure rather than a silent divergence. The minimized fixtures it
+    # references are re-hashed from disk by the RT-FAILURE-MINIMIZATION court, so a fixture drifting
+    # from its record fails the court rather than passing here.
+    "forensics/downstream/failures.json",
 ]
 
 # ---------------------------------------------------------------------------
