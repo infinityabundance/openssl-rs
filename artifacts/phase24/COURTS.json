@@ -3,8 +3,151 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "No court is registered at activation: Phase 24 owns no exported symbol, so no differential probe over a symbol set is its evidence, and its fifteen courts -- RT-RANKING-SOURCES, RT-CANDIDATE-UNIVERSE, RT-AUTHORITY-BASELINE, RT-FAMILY-FREEZE, RT-HOLDOUT-PARTITION, RT-BUILD-LINK-ATLAS, RT-RUNTIME-FUNCTIONAL-ATLAS, RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.1 through 24.15). The stratum's record kinds are defined and self-tested in forensics/tools/downstream_schemas.py, whose inventory this registry records: the family (the counted unit, never a package alias), the separate specimen, the variant, the frozen ranking-source row, the execution-level row over the L0-L8 ladder, the run, the classified residual, the preserved-and-minimized failure and the baseline-normalized drop-in verdict. Every entry point calls the Docker-only execution guard (forensics/tools/phase24_guard.py) first, so nothing in this stratum executes on the host. The four things the model never claims are: a selected empirical population is not a random sample; 1000/1000 is not a security proof; a build is not a functional proof; and transitive and direct consumers are different evidence. DROP_IN_PASS is baseline-normalized -- the same pristine source, a succeeded authority baseline, the candidate reaching the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches. docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
-    "courts": [],
+    "claim": "`RT-RANKING-SOURCES` is 24.1's court: the frozen ranking-source acquisition. It stages no probe and reads forensics/downstream/ranking-sources.json and the committed normalized inputs under forensics/downstream/ranking/normalized/, re-running the 24.1 validation and sensitivity control without fetching. It establishes that every acquired ranking / reverse-dependency source -- the Debian reverse-dependency graph and Popcon counts, the Fedora and Alpine reverse package dependencies, Homebrew openssl@3's dependency relationships and analytics, the OpenSSF Scorecard and the crates.io reverse-dependency count -- is content-addressed by its raw payload SHA-256 and its normalization SHA-256, carries a retrieval timestamp and a parser version, and is reproducible from its deterministic retrieval recipe; that the frozen selection_input_root_hash reproduces from the present sources; and that an unavailable source (the OpenSSF Criticality Score, which has no reproducible public endpoint) carries a reason and is not counted present. A source stripped of its hash, a mutated normalized payload, an unavailable source counted present and a missing retrieval timestamp are each detected with specificity holding. A passing ranking-source manifest is a precommitment, not a ranking claim: it says the selection input was frozen before any candidate result. The remaining fourteen courts -- RT-CANDIDATE-UNIVERSE, RT-AUTHORITY-BASELINE, RT-FAMILY-FREEZE, RT-HOLDOUT-PARTITION, RT-BUILD-LINK-ATLAS, RT-RUNTIME-FUNCTIONAL-ATLAS, RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.2 through 24.15). Phase 24 owns no exported symbol, so no differential probe over a symbol set is its evidence. The stratum's record kinds are defined and self-tested in forensics/tools/downstream_schemas.py, whose inventory this registry records: the family (the counted unit, never a package alias), the separate specimen, the variant, the frozen ranking-source row, the execution-level row over the L0-L8 ladder, the run, the classified residual, the preserved-and-minimized failure and the baseline-normalized drop-in verdict. Every entry point calls the Docker-only execution guard (forensics/tools/phase24_guard.py) first, so nothing in this stratum executes on the host. The four things the model never claims are: a selected empirical population is not a random sample; 1000/1000 is not a security proof; a build is not a functional proof; and transitive and direct consumers are different evidence. DROP_IN_PASS is baseline-normalized -- the same pristine source, a succeeded authority baseline, the candidate reaching the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches. docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
+    "courts": [
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught_missing_retrieval_timestamp": true,
+          "caught_mutated_payload": true,
+          "caught_no_hash": true,
+          "caught_unavailable_counted_present": true,
+          "honest": true,
+          "injected_missing_retrieval_timestamp": "alpine-community-rdepends",
+          "injected_mutated_payload": "alpine-community-rdepends",
+          "injected_no_hash": "alpine-community-rdepends",
+          "injected_unavailable_counted_present": "openssf-criticality",
+          "specificity_holds": true
+        },
+        "counts": {
+          "available": 9,
+          "normalized_rows": 3450,
+          "sources": 10,
+          "unavailable": 1
+        },
+        "court": "RT-RANKING-SOURCES",
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the ranking-source court reads a committed manifest and committed normalized inputs and stages no artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it reads forensics/downstream/ranking-sources.json and the committed normalized inputs under forensics/downstream/ranking/normalized/, and re-runs the 24.1 validation and sensitivity control over the committed manifest without fetching. It establishes that every source is content-addressed by its raw payload SHA-256 and its normalization SHA-256, carries a retrieval timestamp and a parser version, and is reproducible from its deterministic retrieval recipe; that an available source's committed normalized input hashes to its recorded digest; that the frozen selection_input_root_hash reproduces from the present sources; and that an unavailable source carries a reason and is not counted present. A source stripped of its hash, a mutated normalized payload, an unavailable source counted present and a missing retrieval timestamp are each detected with specificity holding (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2 and 3.4).",
+        "probe": "",
+        "problems": [],
+        "selection_input_root_hash": "569d28319e6724bf76f1db37e7daf2bf456bd3e4c459a838619ff31275a1f856",
+        "sources": [
+          {
+            "availability": "available",
+            "kind": "distro-package",
+            "parser_version": "downstream-sources/1",
+            "repository_timestamp": "alpine-v3.20",
+            "retrieved_at": "2026-10-07T13:06:07Z",
+            "row_count": 466,
+            "sha256": "815ef15704e3ec3a47688bb339d0b2c1dc674827f3025db2dd41e16de19468a9",
+            "size_bytes": 1848333,
+            "source_id": "alpine-community-rdepends"
+          },
+          {
+            "availability": "available",
+            "kind": "distro-package",
+            "parser_version": "downstream-sources/1",
+            "repository_timestamp": "alpine-v3.20",
+            "retrieved_at": "2026-10-07T13:06:07Z",
+            "row_count": 237,
+            "sha256": "fe41d27859fabe0dfc156dcb83ffdaebda493f98af686c6d22ed9a0f96abe5eb",
+            "size_bytes": 473603,
+            "source_id": "alpine-main-rdepends"
+          },
+          {
+            "availability": "available",
+            "kind": "language-registry",
+            "parser_version": "downstream-sources/1",
+            "repository_timestamp": "openssl on crates.io (live)",
+            "retrieved_at": "2026-10-07T13:06:07Z",
+            "row_count": 100,
+            "sha256": "304b85deb9c6320408eb3725ff05136aa86461ce675e8f4fd71f741607deb691",
+            "size_bytes": 219157,
+            "source_id": "crates-rdepends"
+          },
+          {
+            "availability": "available",
+            "kind": "popularity",
+            "parser_version": "downstream-sources/1",
+            "repository_timestamp": "2026-10-06T13:54:54Z",
+            "retrieved_at": "2026-10-07T13:06:07Z",
+            "row_count": 80,
+            "sha256": "2054d46f3609257c29612c60103bdb44a9ed8eb7563102e2eb6d0e6af51e0b11",
+            "size_bytes": 2051669,
+            "source_id": "debian-popcon"
+          },
+          {
+            "availability": "available",
+            "kind": "distro-package",
+            "parser_version": "downstream-sources/1",
+            "repository_timestamp": "2024-10-01T00:00:00Z",
+            "retrieved_at": "2026-10-07T13:06:07Z",
+            "row_count": 943,
+            "sha256": "aea3ea5e8161c894b6374538a9f81f5e334b9a5d4f01e40e3e6f636e75023de0",
+            "size_bytes": 8787100,
+            "source_id": "debian-rdepends"
+          },
+          {
+            "availability": "available",
+            "kind": "distro-package",
+            "parser_version": "downstream-sources/1",
+            "repository_timestamp": "2023-11-01T00:12:44Z",
+            "retrieved_at": "2026-10-07T13:06:07Z",
+            "row_count": 1220,
+            "sha256": "e681f4dcf1aa9814a1393a685d70b94210232b8997d2bc8a02c080e0ba8e51e3",
+            "size_bytes": 18464964,
+            "source_id": "fedora-rdepends"
+          },
+          {
+            "availability": "available",
+            "kind": "popularity",
+            "parser_version": "downstream-sources/1",
+            "repository_timestamp": "2025-10-07..2026-10-07",
+            "retrieved_at": "2026-10-07T13:06:07Z",
+            "row_count": 3,
+            "sha256": "406470413e47e3c9414a39277100a1b1aee3091ec02e5f99eab61195008a3aa7",
+            "size_bytes": 3984600,
+            "source_id": "homebrew-analytics"
+          },
+          {
+            "availability": "available",
+            "kind": "language-registry",
+            "parser_version": "downstream-sources/1",
+            "repository_timestamp": "formulae.brew.sh formula.json (live)",
+            "retrieved_at": "2026-10-07T13:06:07Z",
+            "row_count": 387,
+            "sha256": "a15ae3e386bb0397a99689d8dfb064b1002064b5ec1acc92531fccec3d02f783",
+            "size_bytes": 32032062,
+            "source_id": "homebrew-dependencies"
+          },
+          {
+            "availability": "unavailable",
+            "kind": "security-advisory",
+            "parser_version": "downstream-sources/1",
+            "repository_timestamp": "unavailable",
+            "retrieved_at": "2026-10-07T13:06:07Z",
+            "row_count": 0,
+            "sha256": "unknown",
+            "size_bytes": 0,
+            "source_id": "openssf-criticality"
+          },
+          {
+            "availability": "available",
+            "kind": "security-advisory",
+            "parser_version": "downstream-sources/1",
+            "repository_timestamp": "2026-10-05",
+            "retrieved_at": "2026-10-07T13:06:07Z",
+            "row_count": 14,
+            "sha256": "f821ca5c4324c40d80ceb14c41dee94dea52540bfe57905dd0420b84f94dd851",
+            "size_bytes": 7764,
+            "source_id": "openssf-scorecard"
+          }
+        ],
+        "verdict": "pass"
+      }
+    ],
     "drop_in_verdicts": [
       "DROP_IN_PASS",
       "DROP_IN_FAIL",
@@ -53,7 +196,6 @@
       "RT-HOLDOUT-PARTITION": "24.5 -- the precommitted holdout partition",
       "RT-HOSTILITY-AUGMENTATION": "24.10 -- the separate hostility-augmentation corpus",
       "RT-P1000-RUN": "24.12 -- the final full P1000 run",
-      "RT-RANKING-SOURCES": "24.1 -- the frozen ranking-source acquisition",
       "RT-RUNTIME-FUNCTIONAL-ATLAS": "24.7 -- the runtime/functional atlas"
     },
     "residual_classes": [
@@ -185,8 +327,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 0,
-      "total": 0
+      "pass": 1,
+      "total": 1
     }
   },
   "generator": "forensics/tools/phase24_courts.py",
@@ -210,6 +352,71 @@
       "name": "phase24-container-manifest",
       "path": "forensics/downstream/container.json",
       "sha256": "5f734c87ff0824110345ff0086a24b0cc259b6b605bb8ca108976840c37c278b"
+    },
+    {
+      "name": "ranking-sources",
+      "path": "forensics/downstream/ranking-sources.json",
+      "sha256": "5728e84a22fae4659e3f660c2ada29e67b6afcc564a6b0e09ad0373c971cb61b"
+    },
+    {
+      "name": "normalized/alpine-community-rdepends",
+      "path": "forensics/downstream/ranking/normalized/alpine-community-rdepends.json",
+      "sha256": "438617e95451183c7e8a5996ec30a31bf6f0df2bb8abd8f010c254db0a20e715"
+    },
+    {
+      "name": "normalized/alpine-main-rdepends",
+      "path": "forensics/downstream/ranking/normalized/alpine-main-rdepends.json",
+      "sha256": "2b5a8961231dfd966d0758ac41a478639f25a4b38c3d543c1dc7694fa1147479"
+    },
+    {
+      "name": "normalized/crates-rdepends",
+      "path": "forensics/downstream/ranking/normalized/crates-rdepends.json",
+      "sha256": "3a50be3ca0b796758c21f6a9cfdd51d760e9e83410baeb3141503cd37ae275ed"
+    },
+    {
+      "name": "raw/crates-rdepends/reverse-dependencies",
+      "path": "forensics/downstream/ranking/raw/crates-rdepends-304b85deb9c6320408eb3725ff05136aa86461ce675e8f4fd71f741607deb691.json",
+      "sha256": "304b85deb9c6320408eb3725ff05136aa86461ce675e8f4fd71f741607deb691"
+    },
+    {
+      "name": "normalized/debian-popcon",
+      "path": "forensics/downstream/ranking/normalized/debian-popcon.json",
+      "sha256": "a624c7dd91978b4f0af91debcfa9c9c8fc0eada02c18c9cc68a8e5f2d794c1a8"
+    },
+    {
+      "name": "normalized/debian-rdepends",
+      "path": "forensics/downstream/ranking/normalized/debian-rdepends.json",
+      "sha256": "5507da47661ab5072671a733dd07316b92db0838401c8747b88c188f3d8ae1dc"
+    },
+    {
+      "name": "normalized/fedora-rdepends",
+      "path": "forensics/downstream/ranking/normalized/fedora-rdepends.json",
+      "sha256": "10392f5290a6f7aed91b4a5d698d87ee451b1ce94a8b7d46e672750816612e58"
+    },
+    {
+      "name": "raw/fedora-rdepends/repomd",
+      "path": "forensics/downstream/ranking/raw/fedora-rdepends-498099e3b0551363a6ec8ecbb81925f53a97969818422ec21c34b86e00f01009.xml",
+      "sha256": "498099e3b0551363a6ec8ecbb81925f53a97969818422ec21c34b86e00f01009"
+    },
+    {
+      "name": "normalized/homebrew-analytics",
+      "path": "forensics/downstream/ranking/normalized/homebrew-analytics.json",
+      "sha256": "3a42f75683c6d070b384781c759d4f4789d6aa3cd9fc055c1dc18b3824b1a653"
+    },
+    {
+      "name": "normalized/homebrew-dependencies",
+      "path": "forensics/downstream/ranking/normalized/homebrew-dependencies.json",
+      "sha256": "df2f2fa5c0a955c64971f2c3d2af51fa347f48421ec4e63bf2df0ad6e253018c"
+    },
+    {
+      "name": "normalized/openssf-scorecard",
+      "path": "forensics/downstream/ranking/normalized/openssf-scorecard.json",
+      "sha256": "bf3b95c1708ed9750d91e38c9422f5937df25f4a39e3fc90fea26fe6142466db"
+    },
+    {
+      "name": "raw/openssf-scorecard/scorecard",
+      "path": "forensics/downstream/ranking/raw/openssf-scorecard-f821ca5c4324c40d80ceb14c41dee94dea52540bfe57905dd0420b84f94dd851.json",
+      "sha256": "f821ca5c4324c40d80ceb14c41dee94dea52540bfe57905dd0420b84f94dd851"
     }
   ],
   "kind": "phase24-courts",

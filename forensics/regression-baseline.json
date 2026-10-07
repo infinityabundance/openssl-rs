@@ -721,6 +721,10 @@
       "observations": 111,
       "verdict": "pass"
     },
+    "RT-RANKING-SOURCES": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-RECEIPT-CLOSURE": {
       "observations": 0,
       "verdict": "pass"
@@ -933,7 +937,7 @@
     "phase21": 0,
     "phase22": 0,
     "phase23": 0,
-    "phase24": 15,
+    "phase24": 14,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

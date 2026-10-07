@@ -1,0 +1,1941 @@
+{
+  "row_count": 387,
+  "rows": [
+    {
+      "dependency": "openssl@3",
+      "dependent": "adios2",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "afflib",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "alpine",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ansible@10",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ansible@12",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ansible@9",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "apache-arrow",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "apache-serf",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "apr-util",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "apt",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "aria2",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "arturo",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "aws-c-cal",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "azure-cli",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "azure-core-cpp",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "azure-storage-common-cpp",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "bareos-client",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "bbot",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "bibtexconv",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "bind",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "bittensor",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "borgbackup",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "brpc",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "btcli",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "cargo-c",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "cargo-clone",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "cargo-geiger",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "cargo-outdated",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "cargo-udeps",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "cargo-update",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ccache",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "cfengine",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "chawan",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "citus",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "civetweb",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "clamav",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "cnats",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "codanna",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "code2prompt",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "codeberg-cli",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "colmap",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "condure",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "coturn",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "cpprestsdk",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "cryptography",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "csound",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "cups",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "curl",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "cyrus-sasl",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "davix",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "deadfinder",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "dnsdist",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "dnsperf",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "dotnet",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "dotnet@6",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "dotnet@8",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "dotnet@9",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "dovecot",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "duo_unix",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "dura",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ecflow-ui",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "edbrowse",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "efl",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ekg2",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "emqx",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "etcd-cpp-apiv3",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ettercap",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "far2l-tty",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "fastnetmon",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "fb-client",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "fbthrift",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "feroxbuster",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ffmpeg",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ffmpeg@2.8",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "findomain",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "fizz",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "fnox",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "folly",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "forbidden",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "freeradius-server",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "freerdp",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "freeswitch",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "freetds",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "fw",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gcli",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gdal",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gdcm",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gensio",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gerust",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "getdns",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gexiv2",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ggshield",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "git-series",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "git-trim",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "git-xet",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gitg",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gitlogue",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gitnr",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gittype",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gitui",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gitversion",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gloox",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gnupg-pkcs11-scd",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "got",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gpac",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "grpc",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gss-ntlmssp",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gstreamer",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "gwenhywfar",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "h2o",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "haproxy@2.8",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "hcxtools",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "heimdal",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "hermes-agent",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "hiredis",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "http_load",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "httpd",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "hydra",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "icecast",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ios-webkit-debug-proxy",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "isync",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "julia",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "karchive",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "kcov",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "keydb",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "kmod",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "krb5",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "lanraragi",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "lasso",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "lastpass-cli",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ldapvi",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ldid",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ldid-procursus",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ldns",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "legba",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libcouchbase",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libdap",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libetpan",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libevent",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libewf",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libfido2",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libgit2@1.7",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libimobiledevice",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libks",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libmsquic",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libngtcp2",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libpaho-mqtt",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libpq",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libpq@16",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libpq@17",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libpulsar",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "librdkafka",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libretls",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libshout",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libssh",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libssh2",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libstrophe",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libtorrent-rakshasa",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libtorrent-rasterbar",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libtrace",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libwebsockets",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "libxmlsec1",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "lighttpd",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "llama.cpp",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "localstack",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mailcatcher",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "makepkg",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "manticoresearch",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mapnik",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mariadb",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mariadb-connector-c",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mariadb@10.11",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mariadb@10.5",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mariadb@10.6",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mariadb@11.4",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mariadb@11.8",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mariadb@12.3",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mavsdk",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "megatools",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "meli",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "memcached",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "memtier_benchmark",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mender-artifact",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mender-cli",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "micromamba",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "midnight-commander",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "min-lang",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "minimal-racket",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "monero",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mongo-c-driver",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "monit",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "monitoring-plugins",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mosquitto",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mupdf",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "musikcube",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mutt",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mvfst",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mydumper",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mysql",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mysql-client",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mysql-client@8.0",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mysql-client@8.4",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mysql-client@9.7",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mysql-connector-c++",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mysql@8.0",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mysql@8.4",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "mysql@9.7",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "nagios-plugins",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "near",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "neomutt",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "neon",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "net-snmp",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "netdata",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "nmail",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "nmap",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "nmh",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "node",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "node@18",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "node@20",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "node@22",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "node@24",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "nrpe",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "nsd",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ntopng",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ntp",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "nushell",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "nut",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "nvchecker",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "nzbget",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "oath-toolkit",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "omniorb",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "openiked",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "openldap",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "opensaml",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "openssh",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "ca-certificates",
+      "dependent": "openssl@3",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "opentelemetry-cpp",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "openvpn",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "opusfile",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "osslsigncode",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pam-u2f",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "passenger",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pdal",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pdfly",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pdns",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pdnsrec",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "percona-server",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "percona-server@8.0",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "percona-server@8.4",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "percona-xtrabackup",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "percona-xtrabackup@8.0",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pgbackrest",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pgbouncer",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pgloader",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "php",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "php@8.1",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "php@8.2",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "php@8.3",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "php@8.4",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pipewire",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pistache",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pkcs11-helper",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pkcs11-tools",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "postgresql@12",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "postgresql@13",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "postgresql@14",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "postgresql@15",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "postgresql@16",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "postgresql@17",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "postgresql@18",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "projectable",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "prowler",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "proxygen",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "prr",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pulseaudio",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pure-ftpd",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pushpin",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pyenv",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pypy",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pypy3.10",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pypy3.11",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "pypy3.12",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "python-freethreading",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "python@3.10",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "python@3.11",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "python@3.12",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "python@3.13",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "python@3.14",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "python@3.9",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "qca",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "qpdf",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "qpid-proton",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "qtbase",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "qxmpp",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "rabbitmq-c",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "rails-mcp-server",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "rapid-mlx",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "recc",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "redis",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "redis@6.2",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "redwax-tool",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "rethinkdb",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "riemann-client",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "river",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "rizin",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "root",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "rpki-client",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "rpm",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "rpmspectool",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "rtl_433",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "rtmpdump",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ruby",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ruby-build",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ruby@3.1",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ruby@3.2",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ruby@3.3",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ruby@3.4",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "rust",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "s-nail",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "s2n",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "s3-backer",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "s3fs",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "sapling",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "sblim-sfcc",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "scryer-prolog",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "sem-cli",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "sequoia-chameleon-gnupg",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "sgr",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "shairport-sync",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "sheldon",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "shibboleth-sp",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "signalwire-client-c",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "sigstore",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "skillspector",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "sleuthkit",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "snownews",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "sofia-sip",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "somalier",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "spice-gtk",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "spice-server",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "squid",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "srt",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "srtp",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ssldump",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "sslscan",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "sslsplit",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "sstp-client",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "strongswan",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "stubby",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "synergy-core",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "syslog-ng",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "systemd",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "tarantool",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "tarsnap",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "tcl-tk@8",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "termscp",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "texlive",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "thors-anvil",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "thrift",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "tiledb",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "toml-bombadil",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "tor",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "trunk",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "tsduck",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "tt",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "ttyd",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "u-boot-tools",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "uhd",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "unbound",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "uuu",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "uwsgi",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "virtuoso",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "w3m",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "wally",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "wangle",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "weave",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "weaviate-cli",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "xml-security-c",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "xml-tooling-c",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "xmlrpc-c",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "xmrig",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "xrootd",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "yafc",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "yara",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "yek",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "zeek",
+      "relation": "depends_on"
+    },
+    {
+      "dependency": "openssl@3",
+      "dependent": "znc",
+      "relation": "depends_on"
+    }
+  ],
+  "source_id": "homebrew-dependencies"
+}

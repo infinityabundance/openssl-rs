@@ -1,0 +1,76 @@
+{
+  "row_count": 14,
+  "rows": [
+    {
+      "check": "Binary-Artifacts",
+      "reason": "no binaries found in the repo",
+      "score": 10
+    },
+    {
+      "check": "Branch-Protection",
+      "reason": "internal error: error during branchesHandler.setup: internal error: some github tokens can't read classic branch protection rules: https://github.com/ossf/scorecard-action/blob/main/docs/authentication/fine-grained-auth-token.md",
+      "score": -1
+    },
+    {
+      "check": "CII-Best-Practices",
+      "reason": "badge detected: Passing",
+      "score": 5
+    },
+    {
+      "check": "Code-Review",
+      "reason": "Found 0/30 approved changesets -- score normalized to 0",
+      "score": 0
+    },
+    {
+      "check": "Dangerous-Workflow",
+      "reason": "no workflows found",
+      "score": -1
+    },
+    {
+      "check": "Fuzzing",
+      "reason": "project is fuzzed",
+      "score": 10
+    },
+    {
+      "check": "License",
+      "reason": "license file detected",
+      "score": 10
+    },
+    {
+      "check": "Maintained",
+      "reason": "30 commit(s) and 12 issue activity found in the last 90 days -- score normalized to 10",
+      "score": 10
+    },
+    {
+      "check": "Packaging",
+      "reason": "packaging workflow not detected",
+      "score": -1
+    },
+    {
+      "check": "Pinned-Dependencies",
+      "reason": "dependency not pinned by hash detected -- score normalized to 0",
+      "score": 0
+    },
+    {
+      "check": "SAST",
+      "reason": "no SAST tool detected",
+      "score": 0
+    },
+    {
+      "check": "Security-Policy",
+      "reason": "security policy file detected",
+      "score": 10
+    },
+    {
+      "check": "Signed-Releases",
+      "reason": "5 out of the last 5 releases have a total of 5 signed artifacts.",
+      "score": 8
+    },
+    {
+      "check": "Token-Permissions",
+      "reason": "No tokens found",
+      "score": -1
+    }
+  ],
+  "source_id": "openssf-scorecard"
+}
