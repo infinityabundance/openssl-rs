@@ -387,6 +387,7 @@
           "20": "complete",
           "21": "complete",
           "22": "complete",
+          "23": "complete",
           "3": "complete",
           "4": "complete",
           "5": "complete",
@@ -3516,7 +3517,7 @@
             "what": "the Miri TCB suite's unsupported tests and its problems"
           },
           {
-            "checked": 75,
+            "checked": 76,
             "dispositioned": 0,
             "dispositions": {},
             "intersecting": 0,
@@ -3549,7 +3550,7 @@
         ],
         "totals": {
           "bounded": 35,
-          "checked": 63620,
+          "checked": 63621,
           "dispositioned": 63994,
           "findings": 0,
           "intersecting": 12474,
@@ -3835,7 +3836,7 @@
     {
       "name": "release-gates",
       "path": "docs/RELEASE_GATES.md",
-      "sha256": "99c80e1f36abede7ef3425c1f5dcd71ba40e0d0d77317346d3564313f9a4f294"
+      "sha256": "e908c495f0fa9dc36c1394c4d460960f533e60cf1ea1f6f1e48e474f6fe107e5"
     },
     {
       "name": "custodian-contract",
@@ -3865,7 +3866,7 @@
     {
       "name": "phase18-courts",
       "path": "artifacts/phase18/COURTS.json",
-      "sha256": "099302f8e807e9091b1384915633295483a40968e3ae80b2112f7136f4159e46"
+      "sha256": "3b78ac45ee2e37149d8ceaf466760f30506911a5ab712d2986ab27df6d25f9c2"
     },
     {
       "name": "downstream-corpus",
@@ -3910,7 +3911,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "76fb7b7150a7488c5928faada5486808fae5a781f97a8a10d0e07b43d6d382c0"
+      "sha256": "608b98b83e57d700fbb3fe24e890b61adce1feed8869dcc5acf7f56d082b9129"
     },
     {
       "name": "court-coverage-rows",
@@ -3920,7 +3921,7 @@
     {
       "name": "divergence-obligations",
       "path": "forensics/divergence-obligations.json",
-      "sha256": "80dfdf84963ff01c30be5e045255cd9c6a52f42c91adca48ba6060d4f83c5a3d"
+      "sha256": "3e8a199c68d75d61db8cbf79d64ce1fb29414b96ddb623ccfb9d2fcc4356883b"
     },
     {
       "name": "prerequisites",
@@ -3990,7 +3991,7 @@
     {
       "name": "unsafe-footprint",
       "path": "forensics/atlas/unsafe-footprint.json",
-      "sha256": "6951d4a5091ec06a63fab65eea7388cd73442e126940f2c2efbf80fad6547298"
+      "sha256": "a74612fede10e4cb44db75c6567bf785daf6fcfee8e43208b651606ce68a0dff"
     },
     {
       "name": "unsafe-bounds",
