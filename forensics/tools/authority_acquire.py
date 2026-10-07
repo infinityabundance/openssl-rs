@@ -27,6 +27,21 @@ Usage
     python3 forensics/tools/authority_acquire.py --authority openssl-3.6.4-production
     python3 forensics/tools/authority_acquire.py --all --verify-only
 
+Historical releases (Phase 23.2)
+--------------------------------
+The admitted set above is the production and its paired historical authority. A **historical
+release** from the release catalogue is acquired by a separate mode that derives the official
+release-asset URL from the catalogue's own `upstream_tag` and `display_version` -- never from a
+typed URL -- fetches the upstream-published SHA-256, and records provenance in
+`forensics/multitrack/historical-acquisition.json`:
+
+    python3 forensics/tools/authority_acquire.py --historical openssl-0.9.8zh
+
+A release with no upstream-published SHA-256 is **recorded unavailable** in the same registry
+with its reason rather than admitted: an absent official digest cannot be invented, and the
+records-crossing rule (`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 3.5) forbids typing one.
+A *checksum mismatch* still aborts hard, exactly as above.
+
 Exit codes: 0 success, 1 acquisition/verification failure, 2 usage error.
 """
 
@@ -53,6 +68,23 @@ DOWNLOADS = AUTH_ROOT / "downloads"
 SRC_ROOT = AUTH_ROOT / "src"
 REGISTRY = AUTH_ROOT / "AUTHORITIES.json"
 REGISTRY_SCHEMA = "openssl-rs/authorities/v1"
+
+# The release catalogue (Phase 23.1) is the source of a historical release's identity, and the
+# historical registry is where a historical acquisition is recorded. They are deliberately
+# *separate* from AUTHORITIES.json: the admitted production/historical pair is the authority the
+# candidate is measured against, while a historical release is archaeology, and admitting one
+# into the production registry would make `authority_build.py --all` and every per-authority
+# atlas try to build it as if it were a target.
+CATALOG = REPO_ROOT / "forensics" / "release-catalog.json"
+HISTORICAL_REGISTRY = REPO_ROOT / "forensics" / "multitrack" / "historical-acquisition.json"
+HISTORICAL_SCHEMA = "openssl-rs/historical-acquisition/v1"
+
+# The official release-asset URL the OpenSSL project publishes under its own GitHub releases,
+# keyed by the upstream tag the catalogue records. `https://www.openssl.org/source/old/<series>/`
+# redirects (for the releases it still serves) to these same assets; older releases that carry no
+# GitHub release asset have no upstream-published digest and are recorded unavailable instead.
+RELEASE_ASSET = "https://github.com/openssl/openssl/releases/download/{tag}/openssl-{version}"
+OLD_SOURCE = "https://www.openssl.org/source/old/{series}/openssl-{version}"
 
 CHUNK = 1 << 20
 USER_AGENT = "openssl-rs-authority-acquire/1 (+custodian evidence tooling)"
@@ -221,6 +253,156 @@ def fetch_published_sha256(spec: AuthoritySpec) -> str:
     return matches[0].lower()
 
 
+def _try_get(url: str, *, timeout: int = 60) -> Optional[bytes]:
+    """`http_get`, but a missing resource returns `None` instead of raising.
+
+    An absent asset is a fact to record (the release is unavailable), not a failure to
+    fail closed on. A *present* asset that does not match its published digest is still a
+    hard abort, because that is a content error rather than an absence.
+    """
+    try:
+        return http_get(url, timeout=timeout)
+    except urllib.error.URLError:
+        return None
+
+
+def _series(version: str) -> str:
+    """The source directory a pre-3.0 release lives under: `0.9.8zh` -> `0.9.8`, `1.0.2u` -> `1.0.2`."""
+    m = re.match(r"^(\d+)\.(\d+)(?:\.(\d+))?\.?[A-Za-z]*$", version)
+    if m is None:
+        raise SystemExit(f"FATAL: cannot derive a series from version {version!r}")
+    major, minor, fix = m.group(1), m.group(2), m.group(3)
+    if int(major) >= 3 or fix is None:
+        return f"{major}.{minor}"
+    return f"{major}.{minor}.{fix}"
+
+
+def load_catalog() -> dict:
+    if not CATALOG.is_file():
+        raise SystemExit(
+            f"FATAL: the release catalogue {CATALOG.relative_to(REPO_ROOT)} is absent; run "
+            f"forensics/tools/authority_catalog.py first (`--historical` reads it, it never "
+            f"types a release's identity)"
+        )
+    return json.loads(CATALOG.read_text(encoding="utf-8"))["body"]
+
+
+def catalog_release(release_id: str) -> dict:
+    """The catalogue node for a release id, or a fail-closed abort."""
+    for node in load_catalog()["nodes"]:
+        if node["release_id"] == release_id:
+            return node
+    raise SystemExit(
+        f"FATAL: {release_id!r} is not a release node in "
+        f"{CATALOG.relative_to(REPO_ROOT)}; a historical acquisition is derived from the "
+        f"catalogue, never typed"
+    )
+
+
+def _official_checksum(version: str, tag: str, series: str) -> tuple[Optional[str], Optional[str]]:
+    """`(base_url, published_sha256)` for the first official source that publishes a digest.
+
+    Tried in order: the OpenSSL project's GitHub release asset for the catalogue's own
+    `upstream_tag`, then the `openssl.org/source/old/<series>/` archive. A source that is
+    absent, or whose `.sha256` is absent or ambiguous, is skipped. `(None, None)` means no
+    official digest exists, and the release cannot be admitted.
+    """
+    candidates = (
+        RELEASE_ASSET.format(tag=tag, version=version),
+        OLD_SOURCE.format(series=series, version=version),
+    )
+    for base in candidates:
+        body = _try_get(base + ".tar.gz.sha256")
+        if body is None:
+            continue
+        matches = _SHA256_RE.findall(body.decode("utf-8", errors="replace"))
+        if len(matches) == 1:
+            return base, matches[0].lower()
+    return None, None
+
+
+def historical_spec(release_id: str) -> Optional[AuthoritySpec]:
+    """The `AuthoritySpec` for a catalogue release, or `None` when it is unavailable.
+
+    The official URL is derived from the catalogue's `upstream_tag` and `display_version`,
+    and the digest from the source's own published `.sha256`. Nothing is typed: a release the
+    catalogue carries with no tag, or with no published digest, is unavailable rather than
+    guessed at.
+    """
+    node = catalog_release(release_id)
+    version = str(node["display_version"])
+    tag = str(node["upstream_tag"])
+    if tag == "unknown":
+        return None
+    base, _published = _official_checksum(version, tag, _series(version))
+    if base is None:
+        return None
+    return AuthoritySpec(
+        id=f"{release_id}-historical",
+        role="historical",
+        version=version,
+        series=_series(version),
+        released=node.get("release_date") if node.get("release_date") != "unknown" else None,
+        source_url=base + ".tar.gz",
+        checksum_url=base + ".tar.gz.sha256",
+        archive_name=f"openssl-{version}.tar.gz",
+        source_dir_name=f"openssl-{version}",
+        notes=(
+            f"Historical authority over {release_id}, acquired from the official source the "
+            f"release catalogue names ({base}). It is archaeology for the multitrack model, "
+            f"not a production or security target."
+        ),
+    )
+
+
+def load_historical() -> dict:
+    if HISTORICAL_REGISTRY.exists():
+        return json.loads(HISTORICAL_REGISTRY.read_text())
+    return {"schema": HISTORICAL_SCHEMA, "acquisitions": [], "unavailable": []}
+
+
+def acquire_historical(release_id: str, *, force: bool, verify_only: bool) -> dict:
+    """Acquire one catalogue release, or record it explicitly unavailable.
+
+    Returns the acquisition record or an `unavailable` record. A checksum *mismatch* re-raises
+    through `admit` (fails closed); an *absent* official source or digest is recorded as an
+    availability fact, so an authority that cannot be acquired is named rather than omitted.
+    """
+    node = catalog_release(release_id)
+    spec = historical_spec(release_id)
+    if spec is None:
+        return {
+            "release_id": release_id,
+            "version": node["display_version"],
+            "git": {"tag": node["upstream_tag"], "commit": node["upstream_commit"]},
+            "outcome": "unavailable",
+            "reason": (
+                "no upstream-published SHA-256 could be fetched from the official release "
+                "asset or the openssl.org/source/old archive; an official digest cannot be "
+                "invented, so the release is not admitted"
+            ),
+        }
+    rec = admit(spec, force=force, verify_only=verify_only)
+    rec["release_id"] = release_id
+    rec["git"] = {"tag": node["upstream_tag"], "commit": node["upstream_commit"]}
+    rec["outcome"] = "acquired"
+    return rec
+
+
+def merge_historical(registry: dict, record: dict) -> None:
+    """Upsert `record` into `registry`, by `release_id`, in the list its outcome names.
+
+    Exactly one list holds a release: an acquisition that later becomes unavailable (or the
+    reverse) moves rather than appearing in both, so the registry cannot double-count a node.
+    """
+    key = record["release_id"]
+    target = "acquisitions" if record["outcome"] == "acquired" else "unavailable"
+    other = "unavailable" if target == "acquisitions" else "acquisitions"
+    registry[target] = [r for r in registry.get(target, []) if r["release_id"] != key] + [record]
+    registry[target].sort(key=lambda r: r["release_id"])
+    registry[other] = [r for r in registry.get(other, []) if r["release_id"] != key]
+
+
 def extract_source(spec: AuthoritySpec) -> None:
     """Extract the tarball into the authority source area.
 
@@ -246,17 +428,39 @@ def extract_source(spec: AuthoritySpec) -> None:
     staging.rmdir()
 
 
+def _link_stays_inside(dest_resolved: Path, member: tarfile.TarInfo) -> bool:
+    """Whether a tar link member resolves to a path inside the extraction root.
+
+    A symlink's `linkname` is relative to the member's own directory; a hardlink's is relative
+    to the archive root. An absolute target, or one that climbs out of the root, is refused.
+    """
+    if os.path.isabs(member.linkname):
+        return False
+    base = (dest_resolved / member.name).parent if member.issym() else dest_resolved
+    target = (base / member.linkname).resolve()
+    return target == dest_resolved or str(target).startswith(str(dest_resolved) + os.sep)
+
+
 def _safe_extract(tf: tarfile.TarFile, dest: Path) -> None:
-    """Extract, refusing path traversal and absolute paths."""
+    """Extract, refusing path traversal and absolute paths.
+
+    Links are allowed only when they provably stay inside the extraction root: some early
+    OpenSSL tarballs carry internal symlinks (0.9.8zh's `apps/md4.c` -> `../crypto/md4/md4.c`),
+    and refusing every link would make a genuinely acquirable release unacquirable. A link whose
+    target escapes the root is still refused, so the extracted tree cannot reference anything
+    outside itself.
+    """
     dest_resolved = dest.resolve()
     for member in tf.getmembers():
         target = (dest / member.name).resolve()
         if not str(target).startswith(str(dest_resolved) + os.sep):
             raise SystemExit(f"FATAL: archive member escapes destination: {member.name}")
         if member.issym() or member.islnk():
-            # OpenSSL release tarballs contain no links; refuse them so the
-            # extracted tree cannot reference anything outside itself.
-            raise SystemExit(f"FATAL: archive contains a link member: {member.name}")
+            if not _link_stays_inside(dest_resolved, member):
+                raise SystemExit(
+                    f"FATAL: archive link member escapes destination: "
+                    f"{member.name} -> {member.linkname}"
+                )
     tf.extractall(dest)  # noqa: S202 - members validated above
 
 
@@ -370,15 +574,39 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--authority", action="append", default=[],
                     help="authority id to admit (repeatable)")
     ap.add_argument("--all", action="store_true", help="admit every known authority")
+    ap.add_argument("--historical", action="append", default=[], metavar="RELEASE_ID",
+                    help="acquire a release-catalogue node by release id (repeatable); "
+                         "records into forensics/multitrack/historical-acquisition.json")
     ap.add_argument("--force", action="store_true", help="re-download and re-extract")
     ap.add_argument("--verify-only", action="store_true",
                     help="verify existing archives/trees, change nothing")
     args = ap.parse_args(argv)
 
+    if args.historical:
+        if args.all or args.authority:
+            ap.error("use --historical on its own, not with --all or --authority")
+        registry = load_historical()
+        for release_id in args.historical:
+            print(f"[historical] {release_id}")
+            record = acquire_historical(release_id, force=args.force,
+                                        verify_only=args.verify_only)
+            merge_historical(registry, record)
+            if record["outcome"] == "unavailable":
+                print(f"  outcome   unavailable: {record['reason']}")
+            else:
+                print(f"  sha256    {record['artifact']['sha256']}")
+                print(f"  published {record['artifact']['published_sha256']}")
+                print(f"  root      {record['source_tree']['root_hash']}")
+        if not args.verify_only:
+            registry["schema"] = HISTORICAL_SCHEMA
+            write_json(HISTORICAL_REGISTRY, registry)
+            print(f"[registry] wrote {HISTORICAL_REGISTRY.relative_to(REPO_ROOT)}")
+        return 0
+
     if args.all and args.authority:
         ap.error("use either --all or --authority, not both")
     if not args.all and not args.authority:
-        ap.error("specify --all or at least one --authority")
+        ap.error("specify --all, --authority, or --historical")
 
     specs = SPECS if args.all else [s for s in SPECS if s.id in set(args.authority)]
     unknown = set(args.authority) - {s.id for s in SPECS}

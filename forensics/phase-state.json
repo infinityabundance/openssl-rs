@@ -724,16 +724,38 @@
         "seal_sha256": "1503b5ae2e719d08854be9b32a41e59eccde4b52f911e4347c7249a836417e91",
         "state": "complete",
         "stratum": "Authority exhaustiveness and the whole-program compatibility atlas"
+      },
+      {
+        "blocking": "",
+        "deferred": [],
+        "evidence_absent": [],
+        "evidence_present": [
+          "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
+          "forensics/tools/phase23_obligations.py",
+          "forensics/tools/multitrack_schemas.py",
+          "docs/PHASE-23-MULTITRACK-SEAL.md",
+          "forensics/phase23-obligations.json",
+          "artifacts/phase23/COURTS.json",
+          "forensics/atlas/court-coverage.json",
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
+        ],
+        "name": "multitrack-authority",
+        "phase": 23,
+        "provider_rows": null,
+        "seal_sha256": "fa8de40319a59f236f89a7266ca7e0546754ff15d63c2210df04f0bf93c82971",
+        "state": "complete",
+        "stratum": "Multitrack authority compatibility and OpenSSL lineage"
       }
     ],
     "rule": "a phase may be complete only if every phase it requires is complete (forensics/tools/phase_state.py REQUIRES; docs/PHASE-22-SUBPHASES.md section 8)",
     "summary": {
-      "complete": 23,
+      "complete": 24,
       "in_progress": 0,
       "not_started": 0
     }
   },
-  "body_hash": "a7550738d764be7a58c425dd48e59e83bd327a3869b9ca521a5e722c51156a14",
+  "body_hash": "00deed0a28ab815518ca0750ed8bb0399ca81f7d279f3b9a144d5456fb3c329e",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

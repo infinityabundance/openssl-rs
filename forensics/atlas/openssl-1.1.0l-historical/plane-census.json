@@ -1,0 +1,318 @@
+{
+  "authority": "openssl-1.1.0l-historical",
+  "body": {
+    "authority_id": "openssl-1.1.0l-historical",
+    "counts": {
+      "measured_absence": 9,
+      "planes": 17,
+      "produced": 8
+    },
+    "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+    "manifest_root_hash": "3a7067cd2a30221cb22f1df48d750aaff176a136b9904982416eb6872a66a4f5",
+    "note": "one census per authority from the same parameterized generator: a `produced` plane is a nonzero count over the authority's own committed source manifest, and a `measured_absence` is a counted zero with its epoch and chronology as provenance, never an empty modern assumption. A plane here is a *source* plane: it says the release's tree carries the implementation, not that the built profile enabled it.",
+    "plane_order": [
+      "source-tree",
+      "source-headers",
+      "cli-apps",
+      "test-suite",
+      "man-pages",
+      "symbol-ordinal-inventory",
+      "engines",
+      "engine-registry",
+      "providers",
+      "provider-registrations",
+      "fips-provider",
+      "provider-capabilities",
+      "store-api",
+      "encoder-decoder-api",
+      "quic",
+      "symbol-versioning",
+      "engine-vs-provider-registry"
+    ],
+    "planes": [
+      {
+        "count": 2501,
+        "epoch_introduced": null,
+        "evidence": {
+          "chronology": "n/a",
+          "detail": "2501 path(s) under the plane's predicate in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 2501,
+          "sample": [
+            "ACKNOWLEDGEMENTS",
+            "AUTHORS",
+            "CHANGES",
+            "CONTRIBUTING",
+            "Configurations/00-base-templates.conf",
+            "Configurations/10-main.conf"
+          ]
+        },
+        "plane": "source-tree",
+        "status": "produced"
+      },
+      {
+        "count": 192,
+        "epoch_introduced": null,
+        "evidence": {
+          "chronology": "n/a",
+          "detail": "192 path(s) under the plane's predicate in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 192,
+          "sample": [
+            "apps/apps.h",
+            "apps/s_apps.h",
+            "apps/testdsa.h",
+            "apps/testrsa.h",
+            "apps/timeouts.h",
+            "apps/vms_term_sock.h"
+          ]
+        },
+        "plane": "source-headers",
+        "status": "produced"
+      },
+      {
+        "count": 54,
+        "epoch_introduced": null,
+        "evidence": {
+          "chronology": "n/a",
+          "detail": "54 path(s) under the plane's predicate in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 54,
+          "sample": [
+            "apps/app_rand.c",
+            "apps/apps.c",
+            "apps/asn1pars.c",
+            "apps/ca.c",
+            "apps/ciphers.c",
+            "apps/cms.c"
+          ]
+        },
+        "plane": "cli-apps",
+        "status": "produced"
+      },
+      {
+        "count": 599,
+        "epoch_introduced": null,
+        "evidence": {
+          "chronology": "n/a",
+          "detail": "599 path(s) under the plane's predicate in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 599,
+          "sample": [
+            "test/CAss.cnf",
+            "test/CAssdh.cnf",
+            "test/CAssdsa.cnf",
+            "test/CAssrsa.cnf",
+            "test/CAtsa.cnf",
+            "test/P1ss.cnf"
+          ]
+        },
+        "plane": "test-suite",
+        "status": "produced"
+      },
+      {
+        "count": 459,
+        "epoch_introduced": null,
+        "evidence": {
+          "chronology": "n/a",
+          "detail": "459 path(s) under the plane's predicate in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 459,
+          "sample": [
+            "doc/HOWTO/certificates.txt",
+            "doc/HOWTO/keys.txt",
+            "doc/HOWTO/proxy_certificates.txt",
+            "doc/README",
+            "doc/apps/CA.pl.pod",
+            "doc/apps/asn1parse.pod"
+          ]
+        },
+        "plane": "man-pages",
+        "status": "produced"
+      },
+      {
+        "count": 3,
+        "epoch_introduced": null,
+        "evidence": {
+          "chronology": "n/a",
+          "detail": "3 path(s) under the plane's predicate in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 3,
+          "sample": [
+            "crypto/objects/obj_mac.num",
+            "util/libcrypto.num",
+            "util/libssl.num"
+          ]
+        },
+        "plane": "symbol-ordinal-inventory",
+        "status": "produced"
+      },
+      {
+        "count": 26,
+        "epoch_introduced": "0.9.7",
+        "evidence": {
+          "chronology": "at_or_after",
+          "detail": "26 path(s) under the plane's predicate in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 26,
+          "sample": [
+            "crypto/engine/README",
+            "crypto/engine/build.info",
+            "crypto/engine/eng_all.c",
+            "crypto/engine/eng_cnf.c",
+            "crypto/engine/eng_cryptodev.c",
+            "crypto/engine/eng_ctrl.c"
+          ]
+        },
+        "plane": "engines",
+        "status": "produced"
+      },
+      {
+        "count": 0,
+        "epoch_introduced": "1.0.0",
+        "evidence": {
+          "chronology": "at_or_after",
+          "detail": "1.1.0l is at or after the 1.0.0 epoch but the plane's predicate (engine-registry) matches zero paths in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 0,
+          "sample": []
+        },
+        "plane": "engine-registry",
+        "status": "measured_absence"
+      },
+      {
+        "count": 0,
+        "epoch_introduced": "3.0.0",
+        "evidence": {
+          "chronology": "predates",
+          "detail": "1.1.0l predates the 3.0.0 epoch (providers): zero paths in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json is the measured absence",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 0,
+          "sample": []
+        },
+        "plane": "providers",
+        "status": "measured_absence"
+      },
+      {
+        "count": 0,
+        "epoch_introduced": "3.0.0",
+        "evidence": {
+          "chronology": "predates",
+          "detail": "1.1.0l predates the 3.0.0 epoch (provider-registrations): zero paths in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json is the measured absence",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 0,
+          "sample": []
+        },
+        "plane": "provider-registrations",
+        "status": "measured_absence"
+      },
+      {
+        "count": 0,
+        "epoch_introduced": "3.0.0",
+        "evidence": {
+          "chronology": "predates",
+          "detail": "1.1.0l predates the 3.0.0 epoch (fips-provider): zero paths in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json is the measured absence",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 0,
+          "sample": []
+        },
+        "plane": "fips-provider",
+        "status": "measured_absence"
+      },
+      {
+        "count": 0,
+        "epoch_introduced": "3.0.0",
+        "evidence": {
+          "chronology": "predates",
+          "detail": "1.1.0l predates the 3.0.0 epoch (provider-capabilities): zero paths in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json is the measured absence",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 0,
+          "sample": []
+        },
+        "plane": "provider-capabilities",
+        "status": "measured_absence"
+      },
+      {
+        "count": 0,
+        "epoch_introduced": "3.0.0",
+        "evidence": {
+          "chronology": "predates",
+          "detail": "1.1.0l predates the 3.0.0 epoch (store-api): zero paths in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json is the measured absence",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 0,
+          "sample": []
+        },
+        "plane": "store-api",
+        "status": "measured_absence"
+      },
+      {
+        "count": 0,
+        "epoch_introduced": "3.0.0",
+        "evidence": {
+          "chronology": "predates",
+          "detail": "1.1.0l predates the 3.0.0 epoch (encoder-decoder-api): zero paths in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json is the measured absence",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 0,
+          "sample": []
+        },
+        "plane": "encoder-decoder-api",
+        "status": "measured_absence"
+      },
+      {
+        "count": 0,
+        "epoch_introduced": "3.2.0",
+        "evidence": {
+          "chronology": "predates",
+          "detail": "1.1.0l predates the 3.2.0 epoch (quic): zero paths in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json is the measured absence",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 0,
+          "sample": []
+        },
+        "plane": "quic",
+        "status": "measured_absence"
+      },
+      {
+        "count": 1,
+        "epoch_introduced": "1.1.0",
+        "evidence": {
+          "chronology": "at_or_after",
+          "detail": "1 path(s) under the plane's predicate in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 1,
+          "sample": [
+            "util/libcrypto.num"
+          ]
+        },
+        "plane": "symbol-versioning",
+        "status": "produced"
+      },
+      {
+        "count": 0,
+        "epoch_introduced": "3.0.0",
+        "evidence": {
+          "chronology": "predates",
+          "detail": "1.1.0l predates the 3.0.0 epoch (engine-registry and provider-registrations): zero paths in forensics/authorities/SOURCE_MANIFEST.1.1.0l.json is the measured absence",
+          "manifest": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "manifest_paths_matched": 0,
+          "sample": []
+        },
+        "plane": "engine-vs-provider-registry",
+        "status": "measured_absence"
+      }
+    ],
+    "role": "historical",
+    "source_file_count": 2501,
+    "venue": "historical",
+    "version": "1.1.0l"
+  },
+  "generator": "forensics/tools/atlas_authority.py",
+  "inputs": [
+    {
+      "name": "source-manifest",
+      "path": "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+      "sha256": "be79dee773d95745bb6e9ee84378b496c1489e97d7858ca5061fc73d58f98c89"
+    }
+  ],
+  "kind": "plane-census",
+  "schema": "openssl-rs/atlas/plane-census/v1"
+}
