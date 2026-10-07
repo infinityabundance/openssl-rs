@@ -65,6 +65,25 @@ categories = ["cryptography", "api-bindings"]
 #   tests/**                 the crate's own evidence-binding tests.
 exclude = [
     "forensics/atlas/**",
+    # Phase 23's derived multitrack evidence planes and edge deltas: reproducible from
+    # the release catalogue, the authority registries and the build receipts, and the
+    # single largest of them (the entity lineage) is 25 MB -- shipping them would bloat
+    # every downstream `cargo fetch` for no product value, exactly as the atlas argument
+    # above explains. `forensics/multitrack/default-authority.json` is NOT excluded: it
+    # is the committed default-authority alias `build.rs` reads to bind the binary.
+    "forensics/multitrack/entity-lineage.json",
+    "forensics/multitrack/support-status.json",
+    "forensics/multitrack/historical-population.json",
+    "forensics/multitrack/historical-acquisition.json",
+    "forensics/multitrack/historical-build-receipts.json",
+    "forensics/multitrack/compatibility-views.json",
+    "forensics/multitrack/compatibility-edges.json",
+    "forensics/multitrack/compatibility-matrix.json",
+    "forensics/multitrack/negative-obligations.json",
+    "forensics/multitrack/security-lineage.json",
+    "forensics/multitrack/semantic-courts.json",
+    "forensics/multitrack/downstream-multitrack.json",
+    "forensics/deltas/**",
     "forensics/tools/**",
     "forensics/receipts/**",
     "forensics/STATUS.md",
