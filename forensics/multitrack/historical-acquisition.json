@@ -1,0 +1,689 @@
+{
+  "acquisitions": [
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-0.9.8zh.tar.gz",
+        "published_sha256": "f1d9f3ed1b85a82ecf80d0e2d389e1fda3fca9a4dba0bf07adbf231e1a5e2fd6",
+        "sha256": "f1d9f3ed1b85a82ecf80d0e2d389e1fda3fca9a4dba0bf07adbf231e1a5e2fd6",
+        "size_bytes": 3818524
+      },
+      "git": {
+        "commit": "c2ef67100cd0ca2321b5f1a437abb93fc7e11e37",
+        "tag": "OpenSSL_0_9_8zh"
+      },
+      "id": "openssl-0.9.8zh-historical",
+      "notes": "Historical authority over openssl-0.9.8zh, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/OpenSSL_0_9_8zh/openssl-0.9.8zh). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-0.9.8zh",
+      "released": "2015-12-03",
+      "role": "historical",
+      "series": "0.9.8",
+      "source_tree": {
+        "file_count": 2019,
+        "manifest": "SOURCE_MANIFEST.0.9.8zh.json",
+        "path": "forensics/authorities/src/openssl-0.9.8zh",
+        "root_hash": "083ae3530093d12577986975822421ddf995879b1954dca291589e9cdff830e8",
+        "total_bytes": 18338277
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_0_9_8zh/openssl-0.9.8zh.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_0_9_8zh/openssl-0.9.8zh.tar.gz"
+      },
+      "version": "0.9.8zh"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-1.0.0t.tar.gz",
+        "published_sha256": "5ab6e348c6c2a95d457e7a00e0aa653bfc7eb4df7b24e7c9ab63163ac0299097",
+        "sha256": "5ab6e348c6c2a95d457e7a00e0aa653bfc7eb4df7b24e7c9ab63163ac0299097",
+        "size_bytes": 4092302
+      },
+      "git": {
+        "commit": "ce052c8437fb97cbc57f034fa94b5bcd749dbf52",
+        "tag": "OpenSSL_1_0_0t"
+      },
+      "id": "openssl-1.0.0t-historical",
+      "notes": "Historical authority over openssl-1.0.0t, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/OpenSSL_1_0_0t/openssl-1.0.0t). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-1.0.0t",
+      "released": "2015-12-03",
+      "role": "historical",
+      "series": "1.0.0",
+      "source_tree": {
+        "file_count": 2153,
+        "manifest": "SOURCE_MANIFEST.1.0.0t.json",
+        "path": "forensics/authorities/src/openssl-1.0.0t",
+        "root_hash": "bffed865a71c2be1fb04987d894e9db0353d3f7b1b51361cb410b5ee45af0a7e",
+        "total_bytes": 19715977
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_1_0_0t/openssl-1.0.0t.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_1_0_0t/openssl-1.0.0t.tar.gz"
+      },
+      "version": "1.0.0t"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-1.0.1u.tar.gz",
+        "published_sha256": "4312b4ca1215b6f2c97007503d80db80d5157f76f8f7d3febbe6b4c56ff26739",
+        "sha256": "4312b4ca1215b6f2c97007503d80db80d5157f76f8f7d3febbe6b4c56ff26739",
+        "size_bytes": 4567068
+      },
+      "git": {
+        "commit": "888759a1d38197f29de7227876c3b58fbff8549f",
+        "tag": "OpenSSL_1_0_1u"
+      },
+      "id": "openssl-1.0.1u-historical",
+      "notes": "Historical authority over openssl-1.0.1u, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/OpenSSL_1_0_1u/openssl-1.0.1u). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-1.0.1u",
+      "released": "2016-09-22",
+      "role": "historical",
+      "series": "1.0.1",
+      "source_tree": {
+        "file_count": 2185,
+        "manifest": "SOURCE_MANIFEST.1.0.1u.json",
+        "path": "forensics/authorities/src/openssl-1.0.1u",
+        "root_hash": "5d2322292017b315bd8a24a01c9043cfdace05e7c85da56e75648f9e66cbe503",
+        "total_bytes": 21928393
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_1_0_1u/openssl-1.0.1u.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_1_0_1u/openssl-1.0.1u.tar.gz"
+      },
+      "version": "1.0.1u"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-1.0.2u.tar.gz",
+        "published_sha256": "ecd0c6ffb493dd06707d38b14bb4d8c2288bb7033735606569d8f90f89669d16",
+        "sha256": "ecd0c6ffb493dd06707d38b14bb4d8c2288bb7033735606569d8f90f89669d16",
+        "size_bytes": 5355412
+      },
+      "git": {
+        "commit": "e818b74be2170fbe957a07b0da4401c2b694b3b8",
+        "tag": "OpenSSL_1_0_2u"
+      },
+      "id": "openssl-1.0.2u-historical",
+      "notes": "Historical authority over openssl-1.0.2u, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/OpenSSL_1_0_2u/openssl-1.0.2u). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-1.0.2u",
+      "released": "2019-12-20",
+      "role": "historical",
+      "series": "1.0.2",
+      "source_tree": {
+        "file_count": 2289,
+        "manifest": "SOURCE_MANIFEST.1.0.2u.json",
+        "path": "forensics/authorities/src/openssl-1.0.2u",
+        "root_hash": "a8f7cfb29abae204de07cec904fa74d00c2bcdd4461d81c6c143ee0016b38110",
+        "total_bytes": 25083603
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_1_0_2u/openssl-1.0.2u.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_1_0_2u/openssl-1.0.2u.tar.gz"
+      },
+      "version": "1.0.2u"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-1.1.0l.tar.gz",
+        "published_sha256": "74a2f756c64fd7386a29184dc0344f4831192d61dc2481a93a4c5dd727f41148",
+        "sha256": "74a2f756c64fd7386a29184dc0344f4831192d61dc2481a93a4c5dd727f41148",
+        "size_bytes": 5294857
+      },
+      "git": {
+        "commit": "7ea5bd2b52d0e81eaef3d109b3b12545306f201c",
+        "tag": "OpenSSL_1_1_0l"
+      },
+      "id": "openssl-1.1.0l-historical",
+      "notes": "Historical authority over openssl-1.1.0l, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/OpenSSL_1_1_0l/openssl-1.1.0l). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-1.1.0l",
+      "released": "2019-09-10",
+      "role": "historical",
+      "series": "1.1.0",
+      "source_tree": {
+        "file_count": 2501,
+        "manifest": "SOURCE_MANIFEST.1.1.0l.json",
+        "path": "forensics/authorities/src/openssl-1.1.0l",
+        "root_hash": "3a7067cd2a30221cb22f1df48d750aaff176a136b9904982416eb6872a66a4f5",
+        "total_bytes": 23427151
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_1_1_0l/openssl-1.1.0l.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_1_1_0l/openssl-1.1.0l.tar.gz"
+      },
+      "version": "1.1.0l"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-1.1.1w.tar.gz",
+        "published_sha256": "cf3098950cb4d853ad95c0841f1f9c6d3dc102dccfcacd521d93925208b76ac8",
+        "sha256": "cf3098950cb4d853ad95c0841f1f9c6d3dc102dccfcacd521d93925208b76ac8",
+        "size_bytes": 9893384
+      },
+      "git": {
+        "commit": "e04bd3433fd84e1861bf258ea37928d9845e6a86",
+        "tag": "OpenSSL_1_1_1w"
+      },
+      "id": "openssl-1.1.1w-historical",
+      "notes": "Historical authority over openssl-1.1.1w, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/OpenSSL_1_1_1w/openssl-1.1.1w). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-1.1.1w",
+      "released": "2023-09-12",
+      "role": "historical",
+      "series": "1.1.1",
+      "source_tree": {
+        "file_count": 3104,
+        "manifest": "SOURCE_MANIFEST.1.1.1w.json",
+        "path": "forensics/authorities/src/openssl-1.1.1w",
+        "root_hash": "03f5c9b23bf972f3731c76d212c3521c2150f75ee444f93b3560804f01a2421a",
+        "total_bytes": 41590232
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_1_1_1w/openssl-1.1.1w.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/OpenSSL_1_1_1w/openssl-1.1.1w.tar.gz"
+      },
+      "version": "1.1.1w"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-3.0.0.tar.gz",
+        "published_sha256": "59eedfcb46c25214c9bd37ed6078297b4df01d012267fe9e9eee31f61bc70536",
+        "sha256": "59eedfcb46c25214c9bd37ed6078297b4df01d012267fe9e9eee31f61bc70536",
+        "size_bytes": 14978663
+      },
+      "git": {
+        "commit": "89cd17a031e022211684eb7eb41190cf1910f9fa",
+        "tag": "openssl-3.0.0"
+      },
+      "id": "openssl-3.0.0-historical",
+      "notes": "Historical authority over openssl-3.0.0, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/openssl-3.0.0/openssl-3.0.0). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-3.0.0",
+      "released": "2021-09-07",
+      "role": "historical",
+      "series": "3.0",
+      "source_tree": {
+        "file_count": 4518,
+        "manifest": "SOURCE_MANIFEST.3.0.0.json",
+        "path": "forensics/authorities/src/openssl-3.0.0",
+        "root_hash": "7c14a6fe562f814793aaee6e23322427e4662bb2f0846bb67f61f5ff4e9c8136",
+        "total_bytes": 53333374
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/openssl-3.0.0/openssl-3.0.0.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-3.0.0/openssl-3.0.0.tar.gz"
+      },
+      "version": "3.0.0"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-3.0.22.tar.gz",
+        "published_sha256": "67ebca7e50d17383028045486653492195b83db95f8558709701bb47b5c1ef81",
+        "sha256": "67ebca7e50d17383028045486653492195b83db95f8558709701bb47b5c1ef81",
+        "size_bytes": 15330396
+      },
+      "git": {
+        "commit": "a279090b9cd6b682a5a178410765a63e619fa2d9",
+        "tag": "openssl-3.0.22"
+      },
+      "id": "openssl-3.0.22-historical",
+      "notes": "Historical authority over openssl-3.0.22, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/openssl-3.0.22/openssl-3.0.22). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-3.0.22",
+      "released": "2026-08-25",
+      "role": "historical",
+      "series": "3.0",
+      "source_tree": {
+        "file_count": 4685,
+        "manifest": "SOURCE_MANIFEST.3.0.22.json",
+        "path": "forensics/authorities/src/openssl-3.0.22",
+        "root_hash": "659821a9f1b9423088d7e86bd196ccc00c5d5f9125a2da96e341f738c69fdb13",
+        "total_bytes": 54357592
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/openssl-3.0.22/openssl-3.0.22.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-3.0.22/openssl-3.0.22.tar.gz"
+      },
+      "version": "3.0.22"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-3.1.8.tar.gz",
+        "published_sha256": "d319da6aecde3aa6f426b44bbf997406d95275c5c59ab6f6ef53caaa079f456f",
+        "sha256": "d319da6aecde3aa6f426b44bbf997406d95275c5c59ab6f6ef53caaa079f456f",
+        "size_bytes": 15706439
+      },
+      "git": {
+        "commit": "77e6daafbad639584e1e4877172b3f9a777966dd",
+        "tag": "openssl-3.1.8"
+      },
+      "id": "openssl-3.1.8-historical",
+      "notes": "Historical authority over openssl-3.1.8, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/openssl-3.1.8/openssl-3.1.8). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-3.1.8",
+      "released": "2025-02-11",
+      "role": "historical",
+      "series": "3.1",
+      "source_tree": {
+        "file_count": 4729,
+        "manifest": "SOURCE_MANIFEST.3.1.8.json",
+        "path": "forensics/authorities/src/openssl-3.1.8",
+        "root_hash": "062ab9ed5030787770cb7fcdb013d694ce2ce18aa35894d7fe6eb619474577cc",
+        "total_bytes": 56317800
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/openssl-3.1.8/openssl-3.1.8.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-3.1.8/openssl-3.1.8.tar.gz"
+      },
+      "version": "3.1.8"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-3.2.6.tar.gz",
+        "published_sha256": "89681a9ddaa9ed7cf25ea8ef61338db805200bae47d00510490623547380c148",
+        "sha256": "89681a9ddaa9ed7cf25ea8ef61338db805200bae47d00510490623547380c148",
+        "size_bytes": 17805999
+      },
+      "git": {
+        "commit": "86874e2ee18ccc14aa518bffa178ebada9c66c86",
+        "tag": "openssl-3.2.6"
+      },
+      "id": "openssl-3.2.6-historical",
+      "notes": "Historical authority over openssl-3.2.6, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/openssl-3.2.6/openssl-3.2.6). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-3.2.6",
+      "released": "2025-09-30",
+      "role": "historical",
+      "series": "3.2",
+      "source_tree": {
+        "file_count": 5163,
+        "manifest": "SOURCE_MANIFEST.3.2.6.json",
+        "path": "forensics/authorities/src/openssl-3.2.6",
+        "root_hash": "06f783a4c97211689fae1d30206ff43a09d6d91e109a8119b5a977d29e952c44",
+        "total_bytes": 63697485
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/openssl-3.2.6/openssl-3.2.6.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-3.2.6/openssl-3.2.6.tar.gz"
+      },
+      "version": "3.2.6"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-3.3.7.tar.gz",
+        "published_sha256": "4900be54e81c4dfe00bb1a10dad33fd8414833573c40d0e9e3274d4ed32e53a2",
+        "sha256": "4900be54e81c4dfe00bb1a10dad33fd8414833573c40d0e9e3274d4ed32e53a2",
+        "size_bytes": 18047292
+      },
+      "git": {
+        "commit": "204165c1550d3aa0f49395af654124cec2bbabf9",
+        "tag": "openssl-3.3.7"
+      },
+      "id": "openssl-3.3.7-historical",
+      "notes": "Historical authority over openssl-3.3.7, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/openssl-3.3.7/openssl-3.3.7). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-3.3.7",
+      "released": "2026-04-07",
+      "role": "historical",
+      "series": "3.3",
+      "source_tree": {
+        "file_count": 5290,
+        "manifest": "SOURCE_MANIFEST.3.3.7.json",
+        "path": "forensics/authorities/src/openssl-3.3.7",
+        "root_hash": "b7293ecca22fd035ce1a52b6801c66212543d9bf5035e66f3e6c320b96757715",
+        "total_bytes": 64353770
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/openssl-3.3.7/openssl-3.3.7.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-3.3.7/openssl-3.3.7.tar.gz"
+      },
+      "version": "3.3.7"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-3.4.8.tar.gz",
+        "published_sha256": "9de9ce2f29e584044ae07ab93fc601637be01fdc91d109c5a655ec7419e6022b",
+        "sha256": "9de9ce2f29e584044ae07ab93fc601637be01fdc91d109c5a655ec7419e6022b",
+        "size_bytes": 18407958
+      },
+      "git": {
+        "commit": "e72c946f6f6d94c8ba5119acb25340b7b6b2073f",
+        "tag": "openssl-3.4.8"
+      },
+      "id": "openssl-3.4.8-historical",
+      "notes": "Historical authority over openssl-3.4.8, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/openssl-3.4.8/openssl-3.4.8). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-3.4.8",
+      "released": "2026-09-29",
+      "role": "historical",
+      "series": "3.4",
+      "source_tree": {
+        "file_count": 5452,
+        "manifest": "SOURCE_MANIFEST.3.4.8.json",
+        "path": "forensics/authorities/src/openssl-3.4.8",
+        "root_hash": "efb5349aef38700f9c817b474f32cd55438da845a5aa0711a9c5d6d794f54bdb",
+        "total_bytes": 65871757
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/openssl-3.4.8/openssl-3.4.8.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-3.4.8/openssl-3.4.8.tar.gz"
+      },
+      "version": "3.4.8"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-3.5.9.tar.gz",
+        "published_sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a",
+        "sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a",
+        "size_bytes": 53279637
+      },
+      "git": {
+        "commit": "45e844fa2a14ec92d146bd8f5778ac130b6625fb",
+        "tag": "openssl-3.5.9"
+      },
+      "id": "openssl-3.5.9-historical",
+      "notes": "Historical authority over openssl-3.5.9, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-3.5.9",
+      "released": "2026-09-29",
+      "role": "historical",
+      "series": "3.5",
+      "source_tree": {
+        "file_count": 5779,
+        "manifest": "SOURCE_MANIFEST.3.5.9.json",
+        "path": "forensics/authorities/src/openssl-3.5.9",
+        "root_hash": "674c3a3778c324ef08de4bed7e62585d7781f2bf962c259eff6ec931dbfc7f3d",
+        "total_bytes": 131230833
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz"
+      },
+      "version": "3.5.9"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-3.6.5.tar.gz",
+        "published_sha256": "a2157c2830efdec3788939b00c9b0638306d3f0bbb76dc4832ee503bb397df98",
+        "sha256": "a2157c2830efdec3788939b00c9b0638306d3f0bbb76dc4832ee503bb397df98",
+        "size_bytes": 55078161
+      },
+      "git": {
+        "commit": "c8bd5a57108599ac650bbae77fcabe3109dab2e8",
+        "tag": "openssl-3.6.5"
+      },
+      "id": "openssl-3.6.5-historical",
+      "notes": "Historical authority over openssl-3.6.5, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/openssl-3.6.5/openssl-3.6.5). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-3.6.5",
+      "released": "2026-09-29",
+      "role": "historical",
+      "series": "3.6",
+      "source_tree": {
+        "file_count": 5889,
+        "manifest": "SOURCE_MANIFEST.3.6.5.json",
+        "path": "forensics/authorities/src/openssl-3.6.5",
+        "root_hash": "a36b21586ae896198ace42b46871c5930ca1262b5c1de82813ea15956fad8263",
+        "total_bytes": 135437842
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/openssl-3.6.5/openssl-3.6.5.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-3.6.5/openssl-3.6.5.tar.gz"
+      },
+      "version": "3.6.5"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-4.0.0.tar.gz",
+        "published_sha256": "c32cf49a959c4f345f9606982dd36e7d28f7c58b19c2e25d75624d2b3d2f79ac",
+        "sha256": "c32cf49a959c4f345f9606982dd36e7d28f7c58b19c2e25d75624d2b3d2f79ac",
+        "size_bytes": 55046677
+      },
+      "git": {
+        "commit": "11b7b6ea3b65a584e1d31408ed1bdb139465cffd",
+        "tag": "openssl-4.0.0"
+      },
+      "id": "openssl-4.0.0-historical",
+      "notes": "Historical authority over openssl-4.0.0, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/openssl-4.0.0/openssl-4.0.0). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-4.0.0",
+      "released": "2026-04-14",
+      "role": "historical",
+      "series": "4.0",
+      "source_tree": {
+        "file_count": 5996,
+        "manifest": "SOURCE_MANIFEST.4.0.0.json",
+        "path": "forensics/authorities/src/openssl-4.0.0",
+        "root_hash": "3a85283f1e6199a2eaa7b8646ba3d816a6d0254f6b1b9bd21ee284fac95f21d1",
+        "total_bytes": 135002078
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.0/openssl-4.0.0.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.0/openssl-4.0.0.tar.gz"
+      },
+      "version": "4.0.0"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-4.0.1.tar.gz",
+        "published_sha256": "2db3f3a0d6ea4b59e1f094ace2c8cd536dffb87cdc39084c5afa1e6f7f37dd09",
+        "sha256": "2db3f3a0d6ea4b59e1f094ace2c8cd536dffb87cdc39084c5afa1e6f7f37dd09",
+        "size_bytes": 55079428
+      },
+      "git": {
+        "commit": "1e963a8680ec78ad2072792c7a1a71f3c530bd2e",
+        "tag": "openssl-4.0.1"
+      },
+      "id": "openssl-4.0.1-historical",
+      "notes": "Historical authority over openssl-4.0.1, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/openssl-4.0.1/openssl-4.0.1). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-4.0.1",
+      "released": "2026-06-09",
+      "role": "historical",
+      "series": "4.0",
+      "source_tree": {
+        "file_count": 6008,
+        "manifest": "SOURCE_MANIFEST.4.0.1.json",
+        "path": "forensics/authorities/src/openssl-4.0.1",
+        "root_hash": "5648631f7adf262e47803d13e65bb42aef1ab349e7182f588b1a0cb8ba4b8cf8",
+        "total_bytes": 134989491
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.1/openssl-4.0.1.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.1/openssl-4.0.1.tar.gz"
+      },
+      "version": "4.0.1"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-4.0.2.tar.gz",
+        "published_sha256": "736b467530f916737b7031310ccb21d8218c6229e61e8e160cd1d3458cd543a8",
+        "sha256": "736b467530f916737b7031310ccb21d8218c6229e61e8e160cd1d3458cd543a8",
+        "size_bytes": 55153883
+      },
+      "git": {
+        "commit": "f089acdf4bc7ba94a79f4bf6eb7362c3e7d14aa9",
+        "tag": "openssl-4.0.2"
+      },
+      "id": "openssl-4.0.2-historical",
+      "notes": "Historical authority over openssl-4.0.2, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/openssl-4.0.2/openssl-4.0.2). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-4.0.2",
+      "released": "2026-08-25",
+      "role": "historical",
+      "series": "4.0",
+      "source_tree": {
+        "file_count": 6032,
+        "manifest": "SOURCE_MANIFEST.4.0.2.json",
+        "path": "forensics/authorities/src/openssl-4.0.2",
+        "root_hash": "5b56bf503089d1c66e6a79176ccd47c38f18bd8cc4b84551061b5a0523589db0",
+        "total_bytes": 135277698
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.2/openssl-4.0.2.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.2/openssl-4.0.2.tar.gz"
+      },
+      "version": "4.0.2"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-4.0.3.tar.gz",
+        "published_sha256": "325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9",
+        "sha256": "325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9",
+        "size_bytes": 55235667
+      },
+      "git": {
+        "commit": "af1775b60dfa141a4ad762585052cabeb9f37e9e",
+        "tag": "openssl-4.0.3"
+      },
+      "id": "openssl-4.0.3-historical",
+      "notes": "Historical authority over openssl-4.0.3, acquired from the official source the release catalogue names (https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3). It is archaeology for the multitrack model, not a production or security target.",
+      "outcome": "acquired",
+      "release_id": "openssl-4.0.3",
+      "released": "2026-09-29",
+      "role": "historical",
+      "series": "4.0",
+      "source_tree": {
+        "file_count": 6047,
+        "manifest": "SOURCE_MANIFEST.4.0.3.json",
+        "path": "forensics/authorities/src/openssl-4.0.3",
+        "root_hash": "4e00dc99103cdc81a7ee2ecc1bdb4a7ab90f618a9d03ee6c31e2567e0991fdc6",
+        "total_bytes": 135651861
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3.tar.gz"
+      },
+      "version": "4.0.3"
+    }
+  ],
+  "schema": "openssl-rs/historical-acquisition/v1",
+  "unavailable": [
+    {
+      "git": {
+        "commit": "320a14cb5b12cbdd2ff4d81c1e9a2ea7a139a038",
+        "tag": "OpenSSL_0_9_1c"
+      },
+      "outcome": "unavailable",
+      "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+      "release_id": "openssl-0.9.1c",
+      "version": "0.9.1c"
+    },
+    {
+      "git": {
+        "commit": "8af354d44907dc89fbc41a03af4e5d71b8bcd7b9",
+        "tag": "OpenSSL_0_9_2b"
+      },
+      "outcome": "unavailable",
+      "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+      "release_id": "openssl-0.9.2b",
+      "version": "0.9.2b"
+    },
+    {
+      "git": {
+        "commit": "033d858cc22eaca6ee6a6414e378be359ab112ca",
+        "tag": "OpenSSL_0_9_3a"
+      },
+      "outcome": "unavailable",
+      "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+      "release_id": "openssl-0.9.3a",
+      "version": "0.9.3a"
+    },
+    {
+      "git": {
+        "commit": "2c720c746b18fa2eef4be4ad21c9352a5417b583",
+        "tag": "OpenSSL_0_9_4"
+      },
+      "outcome": "unavailable",
+      "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+      "release_id": "openssl-0.9.4",
+      "version": "0.9.4"
+    },
+    {
+      "git": {
+        "commit": "5e61580bbd2ee37a30e8d0afdcc45be1555592d8",
+        "tag": "OpenSSL_0_9_5a"
+      },
+      "outcome": "unavailable",
+      "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+      "release_id": "openssl-0.9.5a",
+      "version": "0.9.5a"
+    },
+    {
+      "git": {
+        "commit": "8ccf402239a07d23ab308c9dc11bfbe59bad3e65",
+        "tag": "OpenSSL_0_9_6m"
+      },
+      "outcome": "unavailable",
+      "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+      "release_id": "openssl-0.9.6m",
+      "version": "0.9.6m"
+    },
+    {
+      "git": {
+        "commit": "10626fac1569ea37839c37b105681cd08dbe6658",
+        "tag": "OpenSSL_0_9_7m"
+      },
+      "outcome": "unavailable",
+      "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+      "release_id": "openssl-0.9.7m",
+      "version": "0.9.7m"
+    }
+  ]
+}

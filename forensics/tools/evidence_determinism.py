@@ -139,6 +139,87 @@ GENERATORS_BEFORE_LEDGERS = [
     # into `forensics/STATUS.md`, so it must run before that renderer, and the register court in
     # `phase18_courts.py` re-scans against the authored bounds at court time.
     "forensics/tools/unsafe_footprint.py",
+    # Phase 23.1's release catalogue and lineage (D535). It reads the committed archaeology
+    # snapshot `forensics/multitrack/release-archaeology.json` and nothing else, so it has no
+    # position dependence beyond being after the sources are final; it is listed here so a stale
+    # committed catalogue is a failure rather than a silent divergence. The whole point of
+    # deriving the catalogue from the snapshot rather than typing it is that the lineage is a
+    # fact a reader can recompute, which a generator nothing re-runs would defeat. The court
+    # `RT-RELEASE-CATALOG` reads the two artefacts it writes.
+    "forensics/tools/authority_catalog.py",
+    # Phase 23.3's parameterized archaeology atlas (D538). It is a pure function of committed
+    # inputs -- the default-authority alias, the admitted/historical registries and the committed
+    # source manifests -- so a stale receipt or plane census is a failure rather than a silent
+    # divergence. The RT-ATLAS-PARAMETERIZATION court reads the two artefacts it writes and
+    # re-derives every census through the same generator.
+    "forensics/tools/atlas_authority.py",
+    # Phase 23.5's entity lineage (D538's second identity plane). It is a pure function of the
+    # committed per-authority atlases -- the declaration and public-symbol planes -- so a stale
+    # committed plane is a failure rather than a silent divergence. The RT-ENTITY-LINEAGE court
+    # reads the artefact it writes and re-derives every relation through the same identity shapes.
+    "forensics/tools/entity_lineage.py",
+    # Phase 23.6's delta engine. It is a pure function of the committed atlases and the entity
+    # lineage -- the semantic compatibility delta over the canonical release-graph edges -- so a
+    # stale committed edge delta is a failure rather than a silent divergence, and no pairwise
+    # combination beyond the canonical edges is written. The RT-DELTA-ENGINE court reads the
+    # artefacts it writes and re-derives every row through the same engine.
+    "forensics/tools/authority_delta.py",
+    # Phase 23.7's ABI/history façades. In the court container it is a pure function of the
+    # committed measurement `forensics/multitrack/abi-facades.json`: it re-checks each layout's
+    # provenance against the committed source manifest and regenerates
+    # `src/compat/layout_generated.rs`, the repr(C) façades and their compile-time assertions, so
+    # a cargo-visible generated file cannot drift from the measurement. (`--measure` runs only in
+    # the historical venue and writes the measurement itself; the court never needs a compiler.)
+    "forensics/tools/gen_abi_facades.py",
+    # Phase 23.8's semantic multitrack courts. Its default run is a pure function of the committed
+    # artefact's own preserved raw transcripts: it re-derives every normalized observation through
+    # the same adapter and re-classifies every difference against the committed 23.6 delta engine,
+    # so a stale committed plane is a failure rather than a silent divergence. (`--measure` compiles
+    # and runs the probe against both authorities and runs only in the court venue; the court and
+    # this re-derivation need neither a compiler nor an authority prefix.)
+    "forensics/tools/gen_semantic_courts.py",
+    # Phase 23.9's directional, dimension-specific compatibility views. It is a pure function of the
+    # committed authorities' own evidence -- the authority-node registry, the production atlas, the
+    # historical build receipts and census, the source manifest and the committed Phase-2
+    # distribution shell -- so a stale committed plane is a failure rather than a silent divergence.
+    # The RT-COMPATIBILITY-VIEWS court re-derives the whole plane through the same generator and
+    # refuses a view relayed from another authority.
+    "forensics/tools/compat_views.py",
+    # Phase 23.12's directional, dimension-specific compatibility edges. It is a pure function of
+    # the committed edge deltas, the entity lineage, the compatibility views and the Phase-2 ABI
+    # courts, so a stale committed plane -- or a verdict that was typed rather than derived -- is a
+    # failure rather than a silent divergence. The RT-COMPATIBILITY-EDGES court re-derives the whole
+    # plane through the same generator and refuses a side whose evidence is inherited from the other.
+    "forensics/tools/compat_edges.py",
+    # Phase 23.13's negative and positive obligations. It is a pure function of the committed
+    # censuses, ABI/history façades, edge deltas and symbols planes, so a stale committed plane --
+    # or an obligation whose state was typed rather than read from its evidence -- is a failure
+    # rather than a silent divergence. The RT-NEGATIVE-OBLIGATIONS court re-derives the whole plane
+    # through the same generator and re-reads each record's named evidence through `adjudicate`.
+    "forensics/tools/negative_obligations.py",
+    # Phase 23.11's downstream multitrack court. Its default run is a pure function of the committed
+    # artefact's own preserved raw outputs: it re-derives every consumer record from the raw build
+    # and run bytes through the same code, so a stale committed record -- or a hand-typed outcome --
+    # is a failure rather than a silent divergence. (`--measure` builds and runs the consumers
+    # against the authority prefixes and runs only in the historical and forensic venues, one venue
+    # per set of trials; the court and this re-derivation need neither a compiler nor a prefix.) It
+    # sits **before** `historical_population.py`, which reads its `downstream-evidenced` rung, so a
+    # plan change propagates in one pass rather than leaving the population stale.
+    "forensics/tools/downstream_multitrack.py",
+    # Phase 23.10's historical population. It is a pure function of the committed catalogue, the
+    # authority-node registry, the acquisition and build receipts, the committed atlases, the
+    # compatibility views, the semantic pair and the downstream-multitrack plane, so a stale
+    # committed record -- or a hand-typed status -- is a failure rather than a silent divergence.
+    # The RT-HISTORICAL-POPULATION court re-derives the whole record through the same generator and
+    # refuses a typed status.
+    "forensics/tools/historical_population.py",
+    # Phase 23.15's support-status ladder (D545). It reuses 23.10's derivation -- it calls the
+    # historical-population generator and re-expresses each record as the schema-validated
+    # `support_status` row the plan names, adding the per-rung evidence and the reason for each rung
+    # not attained, so the status has one derivation rather than two. The RT-SUPPORT-STATUS court
+    # re-derives the whole plane through the same generator, reconciles every row with its population
+    # record, and checks each attained rung is backed by the artefact that establishes it.
+    "forensics/tools/support_status.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -158,9 +239,28 @@ GENERATORS_AFTER_LEDGERS = [
     # copy is a failure and not a silent divergence: `phase_state.py` refuses to derive any
     # state without it, and the whole point of the file is that a triggered obligation cannot
     # be outrun by a derived `complete`, so a generator nothing re-runs would reintroduce
-    # exactly that. It sits immediately before `phase_state.py` because it consumes nothing
-    # and `phase_state.py` consumes *it*.
+    # exactly that. It sits before `phase_state.py`, which consumes *it*.
     "forensics/tools/divergence_obligations.py",
+    # Phase 23.14's security lineage. It is a pure function of the committed source snapshot, the
+    # release catalogue, the default-authority alias, the divergence register and the negative
+    # obligations plane, so a stale committed plane -- or a typed disposition, a hand-listed fix or
+    # a re-adopted vulnerable behaviour -- is a failure rather than a silent divergence. It records
+    # the divergence register's own hash as evidence, so it must run **after**
+    # `divergence_obligations.py` (the court's content-addressing check reads the recorded hash back
+    # against that file); it also supplies the `security_backport` lineage edges `authority_catalog.py`
+    # merges, which stays a one-run lag exactly as the ledgers' own inputs do. The RT-SECURITY-LINEAGE
+    # court re-derives the whole plane through the same generator and re-reads every cited evidence
+    # path.
+    "forensics/tools/security_lineage.py",
+    # Phase 23.16's assembled compatibility matrix (D546). It is a pure function of the five
+    # committed planes -- the compatibility views, the directional edges, the negative obligations,
+    # the security lineage and the support-status ladder -- so a stale matrix, or a verdict that was
+    # typed rather than joined, is a failure rather than a silent divergence. It reads the security
+    # lineage, which this block generates just above, so it sits after it; it needs no authority and
+    # no compiler. The RT-COMPATIBILITY-MATRIX court re-derives the whole matrix through the same
+    # generator, re-reads every source record a cell references, and refuses a cell that contradicts
+    # the plane it joins.
+    "forensics/tools/compat_matrix.py",
     "forensics/tools/phase_state.py",
     # The prerequisite gate reads the phase states to decide whether a stratum has
     # sealed, so it sits after `phase_state.py` rather than beside it. It needs no
@@ -291,6 +391,76 @@ COMPARED = [
     # `.bin` fixtures are re-derived by the generator above and re-verified by the court, so the
     # compared artefact is the manifest that pins them.
     "courts/phase18/fixtures/hostile-x509/MANIFEST.json",
+    # Phase 23.1's release catalogue and its typed lineage: pure functions of the committed
+    # `forensics/multitrack/release-archaeology.json`, so a stale committed copy is a failure and
+    # not a silent divergence -- the whole point of deriving the catalogue rather than typing it
+    # is defeated by a generator nothing re-runs.
+    "forensics/release-catalog.json",
+    "forensics/authority-lineage.json",
+    # Phase 23.3's parameterization receipt and the historical authorities' plane censuses: pure
+    # functions of the committed default-authority alias and the committed source manifests, so a
+    # stale copy is a failure and not a silent divergence.
+    "forensics/atlas/parameterization-receipt.json",
+    *[rel(p) for p in sorted((REPO_ROOT / "forensics" / "atlas").glob(
+        "openssl-*-historical/plane-census.json"))],
+    # Phase 23.5's entity lineage: what became of each public entity across the covered release
+    # pair, a pure function of the committed declaration and symbol planes, so a stale copy is a
+    # failure and not a silent divergence.
+    "forensics/multitrack/entity-lineage.json",
+    # Phase 23.6's canonical edge deltas: the semantic compatibility delta over the release-graph
+    # edges, a pure function of the committed atlases and the entity lineage. Every committed edge
+    # delta is compared -- the artefact set is the canonical edges, never their pairwise product --
+    # so a stale copy is a failure and not a silent divergence.
+    *[rel(p) for p in sorted((REPO_ROOT / "forensics" / "deltas").glob("*.json"))],
+    # Phase 23.7's generated repr(C) façades and their compile-time layout assertions. A
+    # cargo-visible generated file regenerated from the committed measurement, so a hand edit or a
+    # measurement drift is a failure rather than a silent divergence. The measurement itself
+    # (`forensics/multitrack/abi-facades.json`) is a historical-venue measurement, compared by the
+    # RT-ABI-HISTORY-FACADES court against its provenance rather than regenerated here.
+    "src/compat/layout_generated.rs",
+    # Phase 23.8's normalized oracle-to-oracle observations and the raw transcripts they were
+    # re-derived from. A pure function of those preserved raw bytes and the committed 23.6 delta, so
+    # a hand edit to a normalized reading or a classification is a failure rather than a silent
+    # divergence -- which is exactly the erasure the court's sensitivity control injects.
+    "forensics/multitrack/semantic-courts.json",
+    # Phase 23.9's compatibility views: a pure function of each authority's own committed evidence,
+    # so a stale committed plane -- or a view relayed from another authority -- is a failure rather
+    # than a silent divergence.
+    "forensics/multitrack/compatibility-views.json",
+    # Phase 23.12's compatibility edges: a pure function of the committed edge delta, the entity
+    # lineage, the compatibility views and the Phase-2 ABI courts, so a stale plane -- or an edge
+    # whose verdict is not established by its evidence -- is a failure rather than a silent
+    # divergence.
+    "forensics/multitrack/compatibility-edges.json",
+    # Phase 23.13's negative and positive obligations: a pure function of the committed censuses,
+    # ABI/history façades, edge deltas and symbols planes, so a stale plane -- or an obligation
+    # whose state was not read from its evidence -- is a failure rather than a silent divergence.
+    "forensics/multitrack/negative-obligations.json",
+    # Phase 23.14's security lineage: a pure function of the frozen source snapshot, the release
+    # catalogue, the default-authority alias, the divergence register and the negative obligations
+    # plane, so a stale plane -- or a typed disposition, a hand-listed fix or a re-adopted
+    # vulnerable behaviour -- is a failure rather than a silent divergence. The source snapshot
+    # itself (`forensics/multitrack/security-source.json`) is an acquisition, not a derivation, so
+    # it is the input this plane binds rather than an artefact compared here.
+    "forensics/multitrack/security-lineage.json",
+    # Phase 23.10's historical population: a pure function of the committed catalogue, authority
+    # nodes, receipts, atlases, compatibility views and semantic pair, so a stale record or a typed
+    # status is a failure rather than a silent divergence.
+    "forensics/multitrack/historical-population.json",
+    # Phase 23.15's support-status ladder: a pure function of the 23.10 population, so a stale row, a
+    # typed status or a row that disagrees with its population record is a failure rather than a
+    # silent divergence.
+    "forensics/multitrack/support-status.json",
+    # Phase 23.16's assembled compatibility matrix: a pure function of the five committed planes, so a
+    # stale cell, a typed verdict or a cell that contradicts the plane it joins is a failure rather
+    # than a silent divergence. Every cell references its source records rather than restating them,
+    # so the matrix cannot drift from the planes it joins.
+    "forensics/multitrack/compatibility-matrix.json",
+    # Phase 23.11's downstream multitrack court: a pure function of the committed artefact's own
+    # preserved raw outputs, so a stale record or a hand-typed outcome is a failure rather than a
+    # silent divergence. The raw build/run outputs are carried inside the artefact, which is why the
+    # re-derivation needs no compiler, no network and no authority prefix.
+    "forensics/multitrack/downstream-multitrack.json",
 ]
 
 # ---------------------------------------------------------------------------

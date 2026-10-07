@@ -466,7 +466,11 @@ def main(argv: list[str]) -> int:
 
     plan_files: list[Path] = []
     for plan in plans:
-        m = re.search(r"PHASE-(\d+)-SUBPHASES\.md$", plan.name)
+        # The stratum's plan may carry a slug between the number and `SUBPHASES` (Phase 23's is
+        # `PHASE-23-MULTITRACK-SUBPHASES.md`), so the pattern accepts one rather than ignoring a
+        # plan because its name is more specific than the convention -- a plan the tool silently
+        # skipped would be exactly the missed-promise defect this tool exists to catch (D134).
+        m = re.search(r"PHASE-(\d+)(?:-[A-Za-z0-9]+)*-SUBPHASES\.md$", plan.name)
         if m is None:
             continue
         phase = int(m.group(1))

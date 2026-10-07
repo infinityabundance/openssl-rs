@@ -1,0 +1,2167 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "boundary": "23.12 derives the directional, dimension-specific compatibility edges for the pairs the committed evidence supports: the one canonical 3.6.3->3.6.4 edge delta (both directions) and the candidate's relation to its reference authority 3.6.4-production (both directions). The facets are API source, ABI link, ABI load, layout, semantic and CLI-config compatibility. A facet the evidence cannot support is UNKNOWN with its reason; the semantic facet of the candidate-to-authority pair is unmeasured because no committed candidate-to-authority semantic observation exists in this evidence set. No edge is a one-boolean claim and none derives compatibility from numeric ordering",
+    "counts": {
+      "by_dimension": {
+        "abi": 12,
+        "cli_config": 4,
+        "semantic": 4,
+        "source_api": 4
+      },
+      "by_facet": {
+        "abi_link": 4,
+        "abi_load": 4,
+        "api_source": 4,
+        "cli_config": 4,
+        "layout": 4,
+        "semantic": 4
+      },
+      "by_verdict": {
+        "FAIL": 1,
+        "PASS": 21,
+        "UNKNOWN": 2
+      },
+      "directions": 4,
+      "edges": 24,
+      "pairs": 2,
+      "unknown": 2
+    },
+    "direction_model": "reference_to_candidate reads the edge from the reference side toward the candidate side; candidate_to_reference reads it the other way. The same pair and facet may carry different verdicts in the two directions",
+    "directions": [
+      {
+        "direction": "reference_to_candidate",
+        "from_id": "openssl-3.6.3-historical",
+        "from_kind": "authority",
+        "pair_id": "release-3.6.3-3.6.4",
+        "source": "delta",
+        "to_id": "openssl-3.6.4-production",
+        "to_kind": "authority"
+      },
+      {
+        "direction": "candidate_to_reference",
+        "from_id": "openssl-3.6.4-production",
+        "from_kind": "authority",
+        "pair_id": "release-3.6.3-3.6.4",
+        "source": "delta",
+        "to_id": "openssl-3.6.3-historical",
+        "to_kind": "authority"
+      },
+      {
+        "direction": "reference_to_candidate",
+        "from_id": "openssl-3.6.4-production",
+        "from_kind": "authority",
+        "pair_id": "candidate-vs-reference",
+        "source": "views",
+        "to_id": "openssl-rs",
+        "to_kind": "candidate"
+      },
+      {
+        "direction": "candidate_to_reference",
+        "from_id": "openssl-rs",
+        "from_kind": "candidate",
+        "pair_id": "candidate-vs-reference",
+        "source": "views",
+        "to_id": "openssl-3.6.4-production",
+        "to_kind": "authority"
+      }
+    ],
+    "edges": [
+      {
+        "basis": "the committed 3.6.3->3.6.4 delta measures abi_link on ['abi_symbol_presence', 'abi_symbol_version'] and yields 0 added / 0 removed / 20 changed row(s) read forward; no removal and no contract-bearing change is present, so the reading holds",
+        "dimension": "abi",
+        "direction": "reference_to_candidate",
+        "edge_id": "CE-openssl-3.6.3-historical--openssl-3.6.4-production--abi_link",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "note": "the committed canonical edge delta for this pair",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
+            "side": "pair"
+          },
+          {
+            "kind": "entity_lineage",
+            "note": "the entity identity plane the delta rows key on",
+            "path": "forensics/multitrack/entity-lineage.json",
+            "sha256": "476d7798935d779c92bdb7fb23099961efe202784919d61182eb6967fb7bdf43",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/abi-layout.json",
+            "sha256": "4fafba1bdf0dae658e2ce8b96ae128e284f9acb45b83aa5dfea5a33f115aacf8",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/enums.json",
+            "sha256": "1ae4bab8dd4a3619d92a5b98f26f19f93f57fc5af0a9a1b83fde04ea905982b7",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/structs.json",
+            "sha256": "fdbb2546bb1701fece94a3c4114d44df175d3d72ef7157761ab1c816d8c9f1cd",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+            "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/abi-layout.json",
+            "sha256": "e90413dab871f2cd71cc33215d60f032ba6e3d02f7b54a40fb77190a7996fc09",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/enums.json",
+            "sha256": "a95111482a96ab687db8abe9c9ef485f3bee26ef6cb87089dea80c0c4c7574a1",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/structs.json",
+            "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+            "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "atlas_differential",
+        "facet": "abi_link",
+        "from_authority": "openssl-3.6.3-historical",
+        "from_id": "openssl-3.6.3-historical",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.3",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.4-production",
+        "to_id": "openssl-3.6.4-production",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed 3.6.3->3.6.4 delta measures abi_load on ['abi_symbol_version'] and yields 0 added / 0 removed / 0 changed row(s) read forward; no removal and no contract-bearing change is present, so the reading holds",
+        "dimension": "abi",
+        "direction": "reference_to_candidate",
+        "edge_id": "CE-openssl-3.6.3-historical--openssl-3.6.4-production--abi_load",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "note": "the committed canonical edge delta for this pair",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
+            "side": "pair"
+          },
+          {
+            "kind": "entity_lineage",
+            "note": "the entity identity plane the delta rows key on",
+            "path": "forensics/multitrack/entity-lineage.json",
+            "sha256": "476d7798935d779c92bdb7fb23099961efe202784919d61182eb6967fb7bdf43",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/abi-layout.json",
+            "sha256": "4fafba1bdf0dae658e2ce8b96ae128e284f9acb45b83aa5dfea5a33f115aacf8",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/enums.json",
+            "sha256": "1ae4bab8dd4a3619d92a5b98f26f19f93f57fc5af0a9a1b83fde04ea905982b7",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/structs.json",
+            "sha256": "fdbb2546bb1701fece94a3c4114d44df175d3d72ef7157761ab1c816d8c9f1cd",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+            "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/abi-layout.json",
+            "sha256": "e90413dab871f2cd71cc33215d60f032ba6e3d02f7b54a40fb77190a7996fc09",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/enums.json",
+            "sha256": "a95111482a96ab687db8abe9c9ef485f3bee26ef6cb87089dea80c0c4c7574a1",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/structs.json",
+            "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+            "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "atlas_differential",
+        "facet": "abi_load",
+        "from_authority": "openssl-3.6.3-historical",
+        "from_id": "openssl-3.6.3-historical",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.3",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.4-production",
+        "to_id": "openssl-3.6.4-production",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed 3.6.3->3.6.4 delta measures api_source on ['api_presence', 'api_declaration', 'prototype', 'macro_value', 'enum_value', 'typedef'] and yields 2 added / 0 removed / 5 changed row(s) read forward; no removal and no contract-bearing change is present, so the reading holds",
+        "dimension": "source_api",
+        "direction": "reference_to_candidate",
+        "edge_id": "CE-openssl-3.6.3-historical--openssl-3.6.4-production--api_source",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "note": "the committed canonical edge delta for this pair",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
+            "side": "pair"
+          },
+          {
+            "kind": "entity_lineage",
+            "note": "the entity identity plane the delta rows key on",
+            "path": "forensics/multitrack/entity-lineage.json",
+            "sha256": "476d7798935d779c92bdb7fb23099961efe202784919d61182eb6967fb7bdf43",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/enums.json",
+            "sha256": "1ae4bab8dd4a3619d92a5b98f26f19f93f57fc5af0a9a1b83fde04ea905982b7",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/functions.json",
+            "sha256": "c4c31aa8889527b1e934224070f8a12855885397dfdef414c9dcb92224f006a8",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/macros.json",
+            "sha256": "e300e9b5bcc783b0d5385090bd5bb0a7062cf368bc2d3f7cc192efe6f9a54e70",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/structs.json",
+            "sha256": "fdbb2546bb1701fece94a3c4114d44df175d3d72ef7157761ab1c816d8c9f1cd",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/typedefs.json",
+            "sha256": "b41eff262261c146a056a2ab265cdaba482381cabe29f1f15cad8422379f1497",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/variables.json",
+            "sha256": "00d480cfffdd667d475184e8f765a14fa65d59676727a3da7b953c269e55021a",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/enums.json",
+            "sha256": "a95111482a96ab687db8abe9c9ef485f3bee26ef6cb87089dea80c0c4c7574a1",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+            "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/macros.json",
+            "sha256": "99e595fad544d1cff98c5495519db7abe68a34b32e6e97fd29735f9686c846da",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/structs.json",
+            "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/typedefs.json",
+            "sha256": "af99118d026274d21e18b3c499ec6853eaf463f7491d56e05e934124d1458d83",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/variables.json",
+            "sha256": "5133de801f35c4825ef7a03a06fa1decf5203061df9456abe2046b2b8c45dd2c",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "atlas_differential",
+        "facet": "api_source",
+        "from_authority": "openssl-3.6.3-historical",
+        "from_id": "openssl-3.6.3-historical",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.3",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.4-production",
+        "to_id": "openssl-3.6.4-production",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed 3.6.3->3.6.4 delta measures cli_config on ['configuration', 'cli'] and yields 0 added / 0 removed / 0 changed row(s) read forward; no removal and no contract-bearing change is present, so the reading holds",
+        "dimension": "cli_config",
+        "direction": "reference_to_candidate",
+        "edge_id": "CE-openssl-3.6.3-historical--openssl-3.6.4-production--cli_config",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "note": "the committed canonical edge delta for this pair",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
+            "side": "pair"
+          },
+          {
+            "kind": "entity_lineage",
+            "note": "the entity identity plane the delta rows key on",
+            "path": "forensics/multitrack/entity-lineage.json",
+            "sha256": "476d7798935d779c92bdb7fb23099961efe202784919d61182eb6967fb7bdf43",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/cli-commands.json",
+            "sha256": "36bd07aaf8dd775ce9dede13d8a317bd8e601c8b779f3b850201cf4a6ae69716",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/configs.json",
+            "sha256": "231aef9b1b3afa5e0fc6444aa8d24368699a15cc7ad41e49993ad3867c182131",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/cli-commands.json",
+            "sha256": "874e4ef400b33871c7d282fac76210394de39e465f5c6b5d276cd88d9b05149d",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/configs.json",
+            "sha256": "d111158e5bf80d41f382886e429776c7642fc6b468cf86c6f093d824fb2a51ae",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "atlas_differential",
+        "facet": "cli_config",
+        "from_authority": "openssl-3.6.3-historical",
+        "from_id": "openssl-3.6.3-historical",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.3",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.4-production",
+        "to_id": "openssl-3.6.4-production",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed 3.6.3->3.6.4 delta measures layout on ['public_layout'] and yields 0 added / 0 removed / 0 changed row(s) read forward; no removal and no contract-bearing change is present, so the reading holds",
+        "dimension": "abi",
+        "direction": "reference_to_candidate",
+        "edge_id": "CE-openssl-3.6.3-historical--openssl-3.6.4-production--layout",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "note": "the committed canonical edge delta for this pair",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
+            "side": "pair"
+          },
+          {
+            "kind": "entity_lineage",
+            "note": "the entity identity plane the delta rows key on",
+            "path": "forensics/multitrack/entity-lineage.json",
+            "sha256": "476d7798935d779c92bdb7fb23099961efe202784919d61182eb6967fb7bdf43",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/abi-layout.json",
+            "sha256": "4fafba1bdf0dae658e2ce8b96ae128e284f9acb45b83aa5dfea5a33f115aacf8",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/enums.json",
+            "sha256": "1ae4bab8dd4a3619d92a5b98f26f19f93f57fc5af0a9a1b83fde04ea905982b7",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/structs.json",
+            "sha256": "fdbb2546bb1701fece94a3c4114d44df175d3d72ef7157761ab1c816d8c9f1cd",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+            "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/abi-layout.json",
+            "sha256": "e90413dab871f2cd71cc33215d60f032ba6e3d02f7b54a40fb77190a7996fc09",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/enums.json",
+            "sha256": "a95111482a96ab687db8abe9c9ef485f3bee26ef6cb87089dea80c0c4c7574a1",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/structs.json",
+            "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+            "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "atlas_differential",
+        "facet": "layout",
+        "from_authority": "openssl-3.6.3-historical",
+        "from_id": "openssl-3.6.3-historical",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.3",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.4-production",
+        "to_id": "openssl-3.6.4-production",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed 3.6.3->3.6.4 delta measures semantic on ['deprecation_state'] and yields 0 added / 0 removed / 0 changed row(s) read forward; no removal and no contract-bearing change is present, so the reading holds",
+        "dimension": "semantic",
+        "direction": "reference_to_candidate",
+        "edge_id": "CE-openssl-3.6.3-historical--openssl-3.6.4-production--semantic",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "note": "the committed canonical edge delta for this pair",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
+            "side": "pair"
+          },
+          {
+            "kind": "entity_lineage",
+            "note": "the entity identity plane the delta rows key on",
+            "path": "forensics/multitrack/entity-lineage.json",
+            "sha256": "476d7798935d779c92bdb7fb23099961efe202784919d61182eb6967fb7bdf43",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/functions.json",
+            "sha256": "c4c31aa8889527b1e934224070f8a12855885397dfdef414c9dcb92224f006a8",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+            "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+            "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+            "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "atlas_differential",
+        "facet": "semantic",
+        "from_authority": "openssl-3.6.3-historical",
+        "from_id": "openssl-3.6.3-historical",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.3",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.4-production",
+        "to_id": "openssl-3.6.4-production",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed 3.6.3->3.6.4 delta measures abi_link on ['abi_symbol_presence', 'abi_symbol_version'] and yields 0 added / 0 removed / 20 changed row(s) read backward; no removal and no contract-bearing change is present, so the reading holds",
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "edge_id": "CE-openssl-3.6.4-production--openssl-3.6.3-historical--abi_link",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "note": "the committed canonical edge delta for this pair",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
+            "side": "pair"
+          },
+          {
+            "kind": "entity_lineage",
+            "note": "the entity identity plane the delta rows key on",
+            "path": "forensics/multitrack/entity-lineage.json",
+            "sha256": "476d7798935d779c92bdb7fb23099961efe202784919d61182eb6967fb7bdf43",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/abi-layout.json",
+            "sha256": "4fafba1bdf0dae658e2ce8b96ae128e284f9acb45b83aa5dfea5a33f115aacf8",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/enums.json",
+            "sha256": "1ae4bab8dd4a3619d92a5b98f26f19f93f57fc5af0a9a1b83fde04ea905982b7",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/structs.json",
+            "sha256": "fdbb2546bb1701fece94a3c4114d44df175d3d72ef7157761ab1c816d8c9f1cd",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+            "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/abi-layout.json",
+            "sha256": "e90413dab871f2cd71cc33215d60f032ba6e3d02f7b54a40fb77190a7996fc09",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/enums.json",
+            "sha256": "a95111482a96ab687db8abe9c9ef485f3bee26ef6cb87089dea80c0c4c7574a1",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/structs.json",
+            "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+            "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634",
+            "side": "from_side"
+          }
+        ],
+        "evidence_kind": "atlas_differential",
+        "facet": "abi_link",
+        "from_authority": "openssl-3.6.4-production",
+        "from_id": "openssl-3.6.4-production",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.3-historical",
+        "to_id": "openssl-3.6.3-historical",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.3",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed 3.6.3->3.6.4 delta measures abi_load on ['abi_symbol_version'] and yields 0 added / 0 removed / 0 changed row(s) read backward; no removal and no contract-bearing change is present, so the reading holds",
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "edge_id": "CE-openssl-3.6.4-production--openssl-3.6.3-historical--abi_load",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "note": "the committed canonical edge delta for this pair",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
+            "side": "pair"
+          },
+          {
+            "kind": "entity_lineage",
+            "note": "the entity identity plane the delta rows key on",
+            "path": "forensics/multitrack/entity-lineage.json",
+            "sha256": "476d7798935d779c92bdb7fb23099961efe202784919d61182eb6967fb7bdf43",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/abi-layout.json",
+            "sha256": "4fafba1bdf0dae658e2ce8b96ae128e284f9acb45b83aa5dfea5a33f115aacf8",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/enums.json",
+            "sha256": "1ae4bab8dd4a3619d92a5b98f26f19f93f57fc5af0a9a1b83fde04ea905982b7",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/structs.json",
+            "sha256": "fdbb2546bb1701fece94a3c4114d44df175d3d72ef7157761ab1c816d8c9f1cd",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+            "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/abi-layout.json",
+            "sha256": "e90413dab871f2cd71cc33215d60f032ba6e3d02f7b54a40fb77190a7996fc09",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/enums.json",
+            "sha256": "a95111482a96ab687db8abe9c9ef485f3bee26ef6cb87089dea80c0c4c7574a1",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/structs.json",
+            "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+            "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634",
+            "side": "from_side"
+          }
+        ],
+        "evidence_kind": "atlas_differential",
+        "facet": "abi_load",
+        "from_authority": "openssl-3.6.4-production",
+        "from_id": "openssl-3.6.4-production",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.3-historical",
+        "to_id": "openssl-3.6.3-historical",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.3",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed 3.6.3->3.6.4 delta measures api_source on ['api_presence', 'api_declaration', 'prototype', 'macro_value', 'enum_value', 'typedef'] and yields 0 added / 2 removed / 5 changed row(s) read backward; a removal or contract-bearing change is present, so the reading breaks",
+        "dimension": "source_api",
+        "direction": "candidate_to_reference",
+        "edge_id": "CE-openssl-3.6.4-production--openssl-3.6.3-historical--api_source",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "note": "the committed canonical edge delta for this pair",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
+            "side": "pair"
+          },
+          {
+            "kind": "entity_lineage",
+            "note": "the entity identity plane the delta rows key on",
+            "path": "forensics/multitrack/entity-lineage.json",
+            "sha256": "476d7798935d779c92bdb7fb23099961efe202784919d61182eb6967fb7bdf43",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/enums.json",
+            "sha256": "1ae4bab8dd4a3619d92a5b98f26f19f93f57fc5af0a9a1b83fde04ea905982b7",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/functions.json",
+            "sha256": "c4c31aa8889527b1e934224070f8a12855885397dfdef414c9dcb92224f006a8",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/macros.json",
+            "sha256": "e300e9b5bcc783b0d5385090bd5bb0a7062cf368bc2d3f7cc192efe6f9a54e70",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/structs.json",
+            "sha256": "fdbb2546bb1701fece94a3c4114d44df175d3d72ef7157761ab1c816d8c9f1cd",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/typedefs.json",
+            "sha256": "b41eff262261c146a056a2ab265cdaba482381cabe29f1f15cad8422379f1497",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/variables.json",
+            "sha256": "00d480cfffdd667d475184e8f765a14fa65d59676727a3da7b953c269e55021a",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/enums.json",
+            "sha256": "a95111482a96ab687db8abe9c9ef485f3bee26ef6cb87089dea80c0c4c7574a1",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+            "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/macros.json",
+            "sha256": "99e595fad544d1cff98c5495519db7abe68a34b32e6e97fd29735f9686c846da",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/structs.json",
+            "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/typedefs.json",
+            "sha256": "af99118d026274d21e18b3c499ec6853eaf463f7491d56e05e934124d1458d83",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/variables.json",
+            "sha256": "5133de801f35c4825ef7a03a06fa1decf5203061df9456abe2046b2b8c45dd2c",
+            "side": "from_side"
+          }
+        ],
+        "evidence_kind": "atlas_differential",
+        "facet": "api_source",
+        "from_authority": "openssl-3.6.4-production",
+        "from_id": "openssl-3.6.4-production",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "incompatible",
+        "to_authority": "openssl-3.6.3-historical",
+        "to_id": "openssl-3.6.3-historical",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.3",
+        "verdict": "FAIL"
+      },
+      {
+        "basis": "the committed 3.6.3->3.6.4 delta measures cli_config on ['configuration', 'cli'] and yields 0 added / 0 removed / 0 changed row(s) read backward; no removal and no contract-bearing change is present, so the reading holds",
+        "dimension": "cli_config",
+        "direction": "candidate_to_reference",
+        "edge_id": "CE-openssl-3.6.4-production--openssl-3.6.3-historical--cli_config",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "note": "the committed canonical edge delta for this pair",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
+            "side": "pair"
+          },
+          {
+            "kind": "entity_lineage",
+            "note": "the entity identity plane the delta rows key on",
+            "path": "forensics/multitrack/entity-lineage.json",
+            "sha256": "476d7798935d779c92bdb7fb23099961efe202784919d61182eb6967fb7bdf43",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/cli-commands.json",
+            "sha256": "36bd07aaf8dd775ce9dede13d8a317bd8e601c8b779f3b850201cf4a6ae69716",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/configs.json",
+            "sha256": "231aef9b1b3afa5e0fc6444aa8d24368699a15cc7ad41e49993ad3867c182131",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/cli-commands.json",
+            "sha256": "874e4ef400b33871c7d282fac76210394de39e465f5c6b5d276cd88d9b05149d",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/configs.json",
+            "sha256": "d111158e5bf80d41f382886e429776c7642fc6b468cf86c6f093d824fb2a51ae",
+            "side": "from_side"
+          }
+        ],
+        "evidence_kind": "atlas_differential",
+        "facet": "cli_config",
+        "from_authority": "openssl-3.6.4-production",
+        "from_id": "openssl-3.6.4-production",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.3-historical",
+        "to_id": "openssl-3.6.3-historical",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.3",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed 3.6.3->3.6.4 delta measures layout on ['public_layout'] and yields 0 added / 0 removed / 0 changed row(s) read backward; no removal and no contract-bearing change is present, so the reading holds",
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "edge_id": "CE-openssl-3.6.4-production--openssl-3.6.3-historical--layout",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "note": "the committed canonical edge delta for this pair",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
+            "side": "pair"
+          },
+          {
+            "kind": "entity_lineage",
+            "note": "the entity identity plane the delta rows key on",
+            "path": "forensics/multitrack/entity-lineage.json",
+            "sha256": "476d7798935d779c92bdb7fb23099961efe202784919d61182eb6967fb7bdf43",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/abi-layout.json",
+            "sha256": "4fafba1bdf0dae658e2ce8b96ae128e284f9acb45b83aa5dfea5a33f115aacf8",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/enums.json",
+            "sha256": "1ae4bab8dd4a3619d92a5b98f26f19f93f57fc5af0a9a1b83fde04ea905982b7",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/structs.json",
+            "sha256": "fdbb2546bb1701fece94a3c4114d44df175d3d72ef7157761ab1c816d8c9f1cd",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+            "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/abi-layout.json",
+            "sha256": "e90413dab871f2cd71cc33215d60f032ba6e3d02f7b54a40fb77190a7996fc09",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/enums.json",
+            "sha256": "a95111482a96ab687db8abe9c9ef485f3bee26ef6cb87089dea80c0c4c7574a1",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/structs.json",
+            "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+            "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634",
+            "side": "from_side"
+          }
+        ],
+        "evidence_kind": "atlas_differential",
+        "facet": "layout",
+        "from_authority": "openssl-3.6.4-production",
+        "from_id": "openssl-3.6.4-production",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.3-historical",
+        "to_id": "openssl-3.6.3-historical",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.3",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed 3.6.3->3.6.4 delta measures semantic on ['deprecation_state'] and yields 0 added / 0 removed / 0 changed row(s) read backward; no removal and no contract-bearing change is present, so the reading holds",
+        "dimension": "semantic",
+        "direction": "candidate_to_reference",
+        "edge_id": "CE-openssl-3.6.4-production--openssl-3.6.3-historical--semantic",
+        "evidence": [
+          {
+            "kind": "atlas_differential",
+            "note": "the committed canonical edge delta for this pair",
+            "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
+            "side": "pair"
+          },
+          {
+            "kind": "entity_lineage",
+            "note": "the entity identity plane the delta rows key on",
+            "path": "forensics/multitrack/entity-lineage.json",
+            "sha256": "476d7798935d779c92bdb7fb23099961efe202784919d61182eb6967fb7bdf43",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.3-historical/functions.json",
+            "sha256": "c4c31aa8889527b1e934224070f8a12855885397dfdef414c9dcb92224f006a8",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+            "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.3-historical",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+            "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "source_manifest",
+            "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+            "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+            "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+            "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634",
+            "side": "from_side"
+          }
+        ],
+        "evidence_kind": "atlas_differential",
+        "facet": "semantic",
+        "from_authority": "openssl-3.6.4-production",
+        "from_id": "openssl-3.6.4-production",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.3-historical",
+        "to_id": "openssl-3.6.3-historical",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.3",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed candidate-to-authority evidence for abi_link -- the Phase-2 ABI courts [ABI-MATRIX.json, ABI-LINK.json, ABI-SUBSTITUTION.json] and the 23.9 compatibility views [-] -- reads pass",
+        "dimension": "abi",
+        "direction": "reference_to_candidate",
+        "edge_id": "CE-openssl-3.6.4-production--openssl-rs--abi_link",
+        "evidence": [
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-MATRIX.json",
+            "sha256": "8449cde89fe43bda65720a179d85508c3a68b86f275d96712d01372882d52c42",
+            "side": "pair"
+          },
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-LINK.json",
+            "sha256": "dfe93722ea2436d327cf64b7186253c18e04b9299f41d75788cce856fa0303ac",
+            "side": "pair"
+          },
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-SUBSTITUTION.json",
+            "sha256": "802c6d3be53f6d1cac86f5968a8b77d3c67a8283054e3f7d1b4f8b4678cc5cc7",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "note": "the authority node's build identity",
+            "path": "forensics/authority-nodes.json",
+            "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "note": "the authority's measured symbol-version plane",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+            "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "note": "the candidate's emitted distribution shell",
+            "path": "artifacts/phase2/SHELL_MANIFEST.json",
+            "sha256": "96dba80a026f9a8ee75760fdc7b15697f0f5403760bef682f6ad299372e3cf6d",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "court_transcript",
+        "facet": "abi_link",
+        "from_authority": "openssl-3.6.4-production",
+        "from_id": "openssl-3.6.4-production",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-rs",
+        "to_id": "openssl-rs",
+        "to_kind": "candidate",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed candidate-to-authority evidence for abi_load -- the Phase-2 ABI courts [ABI-LOAD.json, ABI-SUBSTITUTION.json] and the 23.9 compatibility views [-] -- reads pass",
+        "dimension": "abi",
+        "direction": "reference_to_candidate",
+        "edge_id": "CE-openssl-3.6.4-production--openssl-rs--abi_load",
+        "evidence": [
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-LOAD.json",
+            "sha256": "ec6a46ca349361bd39648fb00dbe930e911768e212582ac3a57891460f0ca100",
+            "side": "pair"
+          },
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-SUBSTITUTION.json",
+            "sha256": "802c6d3be53f6d1cac86f5968a8b77d3c67a8283054e3f7d1b4f8b4678cc5cc7",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "note": "the authority node's build identity",
+            "path": "forensics/authority-nodes.json",
+            "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "note": "the authority's measured symbol-version plane",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+            "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "note": "the candidate's emitted distribution shell",
+            "path": "artifacts/phase2/SHELL_MANIFEST.json",
+            "sha256": "96dba80a026f9a8ee75760fdc7b15697f0f5403760bef682f6ad299372e3cf6d",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "court_transcript",
+        "facet": "abi_load",
+        "from_authority": "openssl-3.6.4-production",
+        "from_id": "openssl-3.6.4-production",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-rs",
+        "to_id": "openssl-rs",
+        "to_kind": "candidate",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed candidate-to-authority evidence for api_source -- the Phase-2 ABI courts [ABI-CONSTANTS.json, ABI-MATRIX.json] and the 23.9 compatibility views [-] -- reads pass",
+        "dimension": "source_api",
+        "direction": "reference_to_candidate",
+        "edge_id": "CE-openssl-3.6.4-production--openssl-rs--api_source",
+        "evidence": [
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-CONSTANTS.json",
+            "sha256": "c4fadbfeb93b2ef2f00e6eee788a1e6fbc2b8514010e336f983ed6d0d1c505e3",
+            "side": "pair"
+          },
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-MATRIX.json",
+            "sha256": "8449cde89fe43bda65720a179d85508c3a68b86f275d96712d01372882d52c42",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "note": "the authority node's build identity",
+            "path": "forensics/authority-nodes.json",
+            "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "note": "the authority's measured symbol-version plane",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+            "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "note": "the candidate's emitted distribution shell",
+            "path": "artifacts/phase2/SHELL_MANIFEST.json",
+            "sha256": "96dba80a026f9a8ee75760fdc7b15697f0f5403760bef682f6ad299372e3cf6d",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "court_transcript",
+        "facet": "api_source",
+        "from_authority": "openssl-3.6.4-production",
+        "from_id": "openssl-3.6.4-production",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-rs",
+        "to_id": "openssl-rs",
+        "to_kind": "candidate",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed candidate-to-authority evidence for cli_config -- the Phase-2 ABI courts [ABI-INSTALL-LAYOUT.json] and the 23.9 compatibility views [distribution_pkg_config, distribution_install_layout] -- reads pass",
+        "dimension": "cli_config",
+        "direction": "reference_to_candidate",
+        "edge_id": "CE-openssl-3.6.4-production--openssl-rs--cli_config",
+        "evidence": [
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-INSTALL-LAYOUT.json",
+            "sha256": "5612fe7bc38cbfcbd4da66a7ac1a412de2a63fcb68053673c5f863eb09e53152",
+            "side": "pair"
+          },
+          {
+            "kind": "court_transcript",
+            "note": "the 23.9 compatibility view distribution_pkg_config",
+            "path": "forensics/multitrack/compatibility-views.json",
+            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "side": "pair"
+          },
+          {
+            "kind": "court_transcript",
+            "note": "the 23.9 compatibility view distribution_install_layout",
+            "path": "forensics/multitrack/compatibility-views.json",
+            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "note": "the authority node's build identity",
+            "path": "forensics/authority-nodes.json",
+            "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "note": "the authority's measured symbol-version plane",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+            "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "note": "the candidate's emitted distribution shell",
+            "path": "artifacts/phase2/SHELL_MANIFEST.json",
+            "sha256": "96dba80a026f9a8ee75760fdc7b15697f0f5403760bef682f6ad299372e3cf6d",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "court_transcript",
+        "facet": "cli_config",
+        "from_authority": "openssl-3.6.4-production",
+        "from_id": "openssl-3.6.4-production",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-rs",
+        "to_id": "openssl-rs",
+        "to_kind": "candidate",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed candidate-to-authority evidence for layout -- the Phase-2 ABI courts [ABI-LAYOUT.json] and the 23.9 compatibility views [-] -- reads pass",
+        "dimension": "abi",
+        "direction": "reference_to_candidate",
+        "edge_id": "CE-openssl-3.6.4-production--openssl-rs--layout",
+        "evidence": [
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-LAYOUT.json",
+            "sha256": "c919958d72e276b95bb02cf8aff2214f46bb957016fcc1e575b011216e078123",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "note": "the authority node's build identity",
+            "path": "forensics/authority-nodes.json",
+            "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "note": "the authority's measured symbol-version plane",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+            "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "note": "the candidate's emitted distribution shell",
+            "path": "artifacts/phase2/SHELL_MANIFEST.json",
+            "sha256": "96dba80a026f9a8ee75760fdc7b15697f0f5403760bef682f6ad299372e3cf6d",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "court_transcript",
+        "facet": "layout",
+        "from_authority": "openssl-3.6.4-production",
+        "from_id": "openssl-3.6.4-production",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-rs",
+        "to_id": "openssl-rs",
+        "to_kind": "candidate",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "UNKNOWN: no committed candidate-to-authority measurement exists for this facet: the Phase-2 ABI courts do not cover it and the compatibility views record no view for it, so it is unmeasured rather than compatible",
+        "dimension": "semantic",
+        "direction": "reference_to_candidate",
+        "edge_id": "CE-openssl-3.6.4-production--openssl-rs--semantic",
+        "evidence": [
+          {
+            "kind": "manual_adjudication",
+            "note": "no committed candidate-to-authority measurement exists for this facet: the Phase-2 ABI courts do not cover it and the compatibility views record no view for it, so it is unmeasured rather than compatible",
+            "path": "forensics/multitrack/compatibility-views.json",
+            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "side": "pair"
+          }
+        ],
+        "evidence_kind": "manual_adjudication",
+        "facet": "semantic",
+        "from_authority": "openssl-3.6.4-production",
+        "from_id": "openssl-3.6.4-production",
+        "from_kind": "authority",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reason": "no committed candidate-to-authority measurement exists for this facet: the Phase-2 ABI courts do not cover it and the compatibility views record no view for it, so it is unmeasured rather than compatible",
+        "status": "unknown",
+        "to_authority": "openssl-rs",
+        "to_id": "openssl-rs",
+        "to_kind": "candidate",
+        "to_release": "openssl-3.6.4",
+        "verdict": "UNKNOWN"
+      },
+      {
+        "basis": "the committed candidate-to-authority evidence for abi_link -- the Phase-2 ABI courts [ABI-MATRIX.json, ABI-LINK.json, ABI-SUBSTITUTION.json] and the 23.9 compatibility views [-] -- reads pass",
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "edge_id": "CE-openssl-rs--openssl-3.6.4-production--abi_link",
+        "evidence": [
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-MATRIX.json",
+            "sha256": "8449cde89fe43bda65720a179d85508c3a68b86f275d96712d01372882d52c42",
+            "side": "pair"
+          },
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-LINK.json",
+            "sha256": "dfe93722ea2436d327cf64b7186253c18e04b9299f41d75788cce856fa0303ac",
+            "side": "pair"
+          },
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-SUBSTITUTION.json",
+            "sha256": "802c6d3be53f6d1cac86f5968a8b77d3c67a8283054e3f7d1b4f8b4678cc5cc7",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "note": "the candidate's emitted distribution shell",
+            "path": "artifacts/phase2/SHELL_MANIFEST.json",
+            "sha256": "96dba80a026f9a8ee75760fdc7b15697f0f5403760bef682f6ad299372e3cf6d",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "note": "the authority node's build identity",
+            "path": "forensics/authority-nodes.json",
+            "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "note": "the authority's measured symbol-version plane",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+            "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "court_transcript",
+        "facet": "abi_link",
+        "from_authority": "openssl-rs",
+        "from_id": "openssl-rs",
+        "from_kind": "candidate",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.4-production",
+        "to_id": "openssl-3.6.4-production",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed candidate-to-authority evidence for abi_load -- the Phase-2 ABI courts [ABI-LOAD.json, ABI-SUBSTITUTION.json] and the 23.9 compatibility views [-] -- reads pass",
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "edge_id": "CE-openssl-rs--openssl-3.6.4-production--abi_load",
+        "evidence": [
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-LOAD.json",
+            "sha256": "ec6a46ca349361bd39648fb00dbe930e911768e212582ac3a57891460f0ca100",
+            "side": "pair"
+          },
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-SUBSTITUTION.json",
+            "sha256": "802c6d3be53f6d1cac86f5968a8b77d3c67a8283054e3f7d1b4f8b4678cc5cc7",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "note": "the candidate's emitted distribution shell",
+            "path": "artifacts/phase2/SHELL_MANIFEST.json",
+            "sha256": "96dba80a026f9a8ee75760fdc7b15697f0f5403760bef682f6ad299372e3cf6d",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "note": "the authority node's build identity",
+            "path": "forensics/authority-nodes.json",
+            "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "note": "the authority's measured symbol-version plane",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+            "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "court_transcript",
+        "facet": "abi_load",
+        "from_authority": "openssl-rs",
+        "from_id": "openssl-rs",
+        "from_kind": "candidate",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.4-production",
+        "to_id": "openssl-3.6.4-production",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed candidate-to-authority evidence for api_source -- the Phase-2 ABI courts [ABI-CONSTANTS.json, ABI-MATRIX.json] and the 23.9 compatibility views [-] -- reads pass",
+        "dimension": "source_api",
+        "direction": "candidate_to_reference",
+        "edge_id": "CE-openssl-rs--openssl-3.6.4-production--api_source",
+        "evidence": [
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-CONSTANTS.json",
+            "sha256": "c4fadbfeb93b2ef2f00e6eee788a1e6fbc2b8514010e336f983ed6d0d1c505e3",
+            "side": "pair"
+          },
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-MATRIX.json",
+            "sha256": "8449cde89fe43bda65720a179d85508c3a68b86f275d96712d01372882d52c42",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "note": "the candidate's emitted distribution shell",
+            "path": "artifacts/phase2/SHELL_MANIFEST.json",
+            "sha256": "96dba80a026f9a8ee75760fdc7b15697f0f5403760bef682f6ad299372e3cf6d",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "note": "the authority node's build identity",
+            "path": "forensics/authority-nodes.json",
+            "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "note": "the authority's measured symbol-version plane",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+            "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "court_transcript",
+        "facet": "api_source",
+        "from_authority": "openssl-rs",
+        "from_id": "openssl-rs",
+        "from_kind": "candidate",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.4-production",
+        "to_id": "openssl-3.6.4-production",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed candidate-to-authority evidence for cli_config -- the Phase-2 ABI courts [ABI-INSTALL-LAYOUT.json] and the 23.9 compatibility views [distribution_pkg_config, distribution_install_layout] -- reads pass",
+        "dimension": "cli_config",
+        "direction": "candidate_to_reference",
+        "edge_id": "CE-openssl-rs--openssl-3.6.4-production--cli_config",
+        "evidence": [
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-INSTALL-LAYOUT.json",
+            "sha256": "5612fe7bc38cbfcbd4da66a7ac1a412de2a63fcb68053673c5f863eb09e53152",
+            "side": "pair"
+          },
+          {
+            "kind": "court_transcript",
+            "note": "the 23.9 compatibility view distribution_pkg_config",
+            "path": "forensics/multitrack/compatibility-views.json",
+            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "side": "pair"
+          },
+          {
+            "kind": "court_transcript",
+            "note": "the 23.9 compatibility view distribution_install_layout",
+            "path": "forensics/multitrack/compatibility-views.json",
+            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "note": "the candidate's emitted distribution shell",
+            "path": "artifacts/phase2/SHELL_MANIFEST.json",
+            "sha256": "96dba80a026f9a8ee75760fdc7b15697f0f5403760bef682f6ad299372e3cf6d",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "note": "the authority node's build identity",
+            "path": "forensics/authority-nodes.json",
+            "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "note": "the authority's measured symbol-version plane",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+            "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "court_transcript",
+        "facet": "cli_config",
+        "from_authority": "openssl-rs",
+        "from_id": "openssl-rs",
+        "from_kind": "candidate",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.4-production",
+        "to_id": "openssl-3.6.4-production",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "the committed candidate-to-authority evidence for layout -- the Phase-2 ABI courts [ABI-LAYOUT.json] and the 23.9 compatibility views [-] -- reads pass",
+        "dimension": "abi",
+        "direction": "candidate_to_reference",
+        "edge_id": "CE-openssl-rs--openssl-3.6.4-production--layout",
+        "evidence": [
+          {
+            "kind": "court_transcript",
+            "note": "the Phase-2 ABI differential court",
+            "path": "artifacts/phase2/courts/ABI-LAYOUT.json",
+            "sha256": "c919958d72e276b95bb02cf8aff2214f46bb957016fcc1e575b011216e078123",
+            "side": "pair"
+          },
+          {
+            "authority_id": "openssl-rs",
+            "kind": "build_records",
+            "note": "the candidate's emitted distribution shell",
+            "path": "artifacts/phase2/SHELL_MANIFEST.json",
+            "sha256": "96dba80a026f9a8ee75760fdc7b15697f0f5403760bef682f6ad299372e3cf6d",
+            "side": "from_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "build_records",
+            "note": "the authority node's build identity",
+            "path": "forensics/authority-nodes.json",
+            "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31",
+            "side": "to_side"
+          },
+          {
+            "authority_id": "openssl-3.6.4-production",
+            "kind": "upstream_declaration",
+            "note": "the authority's measured symbol-version plane",
+            "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+            "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550",
+            "side": "to_side"
+          }
+        ],
+        "evidence_kind": "court_transcript",
+        "facet": "layout",
+        "from_authority": "openssl-rs",
+        "from_id": "openssl-rs",
+        "from_kind": "candidate",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "status": "compatible",
+        "to_authority": "openssl-3.6.4-production",
+        "to_id": "openssl-3.6.4-production",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.4",
+        "verdict": "PASS"
+      },
+      {
+        "basis": "UNKNOWN: no committed candidate-to-authority measurement exists for this facet: the Phase-2 ABI courts do not cover it and the compatibility views record no view for it, so it is unmeasured rather than compatible",
+        "dimension": "semantic",
+        "direction": "candidate_to_reference",
+        "edge_id": "CE-openssl-rs--openssl-3.6.4-production--semantic",
+        "evidence": [
+          {
+            "kind": "manual_adjudication",
+            "note": "no committed candidate-to-authority measurement exists for this facet: the Phase-2 ABI courts do not cover it and the compatibility views record no view for it, so it is unmeasured rather than compatible",
+            "path": "forensics/multitrack/compatibility-views.json",
+            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "side": "pair"
+          }
+        ],
+        "evidence_kind": "manual_adjudication",
+        "facet": "semantic",
+        "from_authority": "openssl-rs",
+        "from_id": "openssl-rs",
+        "from_kind": "candidate",
+        "from_release": "openssl-3.6.4",
+        "non_claims": [
+          "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+          "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+          "upstream's ABI promise is not candidate evidence",
+          "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+        ],
+        "reason": "no committed candidate-to-authority measurement exists for this facet: the Phase-2 ABI courts do not cover it and the compatibility views record no view for it, so it is unmeasured rather than compatible",
+        "status": "unknown",
+        "to_authority": "openssl-3.6.4-production",
+        "to_id": "openssl-3.6.4-production",
+        "to_kind": "authority",
+        "to_release": "openssl-3.6.4",
+        "verdict": "UNKNOWN"
+      }
+    ],
+    "facets": {
+      "abi_link": {
+        "delta_dimensions": [
+          "abi_symbol_presence",
+          "abi_symbol_version"
+        ],
+        "dimension": "abi"
+      },
+      "abi_load": {
+        "delta_dimensions": [
+          "abi_symbol_version"
+        ],
+        "dimension": "abi"
+      },
+      "api_source": {
+        "delta_dimensions": [
+          "api_presence",
+          "api_declaration",
+          "prototype",
+          "macro_value",
+          "enum_value",
+          "typedef"
+        ],
+        "dimension": "source_api"
+      },
+      "cli_config": {
+        "delta_dimensions": [
+          "configuration",
+          "cli",
+          "environment",
+          "filesystem_distribution"
+        ],
+        "dimension": "cli_config"
+      },
+      "layout": {
+        "delta_dimensions": [
+          "public_layout"
+        ],
+        "dimension": "abi"
+      },
+      "semantic": {
+        "delta_dimensions": [
+          "security_policy",
+          "deprecation_state",
+          "documentation_claims"
+        ],
+        "dimension": "semantic"
+      }
+    },
+    "non_claims": [
+      "a compatibility edge is a directional, dimension-specific fact about one reading, not a one-boolean compatibility claim about a release",
+      "one platform/profile is not every platform/profile: an edge is bounded to the authorities it names and the evidence they carry",
+      "upstream's ABI promise is not candidate evidence",
+      "OpenSSL compatibility is not FIPS validation (docs/FIPS_CLAIMS.md)"
+    ],
+    "rule": "one directional, dimension-specific compatibility edge per pair-direction and facet, derived from the committed evidence and never typed. A verdict is PASS, FAIL or UNKNOWN with the evidence that establishes it; a facet whose evidence is absent is UNKNOWN with its reason, never PASS by default, and no edge is a single boolean. Every evidence entry names the side it belongs to and, for a side, that side's own authority identity and a content-addressed path + sha256, so a side's evidence is never inherited from the other",
+    "status_projection": {
+      "FAIL": "incompatible",
+      "PASS": "compatible",
+      "UNKNOWN": "unknown"
+    },
+    "unknown": [
+      {
+        "edge_id": "CE-openssl-3.6.4-production--openssl-rs--semantic",
+        "facet": "semantic",
+        "pair_id": "openssl-3.6.4-production->openssl-rs",
+        "reason": "no committed candidate-to-authority measurement exists for this facet: the Phase-2 ABI courts do not cover it and the compatibility views record no view for it, so it is unmeasured rather than compatible"
+      },
+      {
+        "edge_id": "CE-openssl-rs--openssl-3.6.4-production--semantic",
+        "facet": "semantic",
+        "pair_id": "openssl-rs->openssl-3.6.4-production",
+        "reason": "no committed candidate-to-authority measurement exists for this facet: the Phase-2 ABI courts do not cover it and the compatibility views record no view for it, so it is unmeasured rather than compatible"
+      }
+    ],
+    "verdict_vocabulary": [
+      "PASS",
+      "FAIL",
+      "UNKNOWN"
+    ]
+  },
+  "generator": "forensics/tools/compat_edges.py",
+  "inputs": [
+    {
+      "name": "authority-nodes",
+      "path": "forensics/authority-nodes.json",
+      "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31"
+    },
+    {
+      "name": "entity-lineage",
+      "path": "forensics/multitrack/entity-lineage.json",
+      "sha256": "476d7798935d779c92bdb7fb23099961efe202784919d61182eb6967fb7bdf43"
+    },
+    {
+      "name": "compatibility-views",
+      "path": "forensics/multitrack/compatibility-views.json",
+      "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84"
+    },
+    {
+      "name": "delta-3.6.3-3.6.4",
+      "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+      "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0"
+    },
+    {
+      "name": "production-symbol-versions",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+      "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550"
+    },
+    {
+      "name": "phase2-shell-manifest",
+      "path": "artifacts/phase2/SHELL_MANIFEST.json",
+      "sha256": "96dba80a026f9a8ee75760fdc7b15697f0f5403760bef682f6ad299372e3cf6d"
+    },
+    {
+      "name": "abi-court/abi-constants",
+      "path": "artifacts/phase2/courts/ABI-CONSTANTS.json",
+      "sha256": "c4fadbfeb93b2ef2f00e6eee788a1e6fbc2b8514010e336f983ed6d0d1c505e3"
+    },
+    {
+      "name": "abi-court/abi-dynamic",
+      "path": "artifacts/phase2/courts/ABI-DYNAMIC.json",
+      "sha256": "680c63e0364a1bc11c9167f26ccd054d3cee01d939f0cfab3d7a1be95a8f96b2"
+    },
+    {
+      "name": "abi-court/abi-install-layout",
+      "path": "artifacts/phase2/courts/ABI-INSTALL-LAYOUT.json",
+      "sha256": "5612fe7bc38cbfcbd4da66a7ac1a412de2a63fcb68053673c5f863eb09e53152"
+    },
+    {
+      "name": "abi-court/abi-layout",
+      "path": "artifacts/phase2/courts/ABI-LAYOUT.json",
+      "sha256": "c919958d72e276b95bb02cf8aff2214f46bb957016fcc1e575b011216e078123"
+    },
+    {
+      "name": "abi-court/abi-link",
+      "path": "artifacts/phase2/courts/ABI-LINK.json",
+      "sha256": "dfe93722ea2436d327cf64b7186253c18e04b9299f41d75788cce856fa0303ac"
+    },
+    {
+      "name": "abi-court/abi-load",
+      "path": "artifacts/phase2/courts/ABI-LOAD.json",
+      "sha256": "ec6a46ca349361bd39648fb00dbe930e911768e212582ac3a57891460f0ca100"
+    },
+    {
+      "name": "abi-court/abi-matrix",
+      "path": "artifacts/phase2/courts/ABI-MATRIX.json",
+      "sha256": "8449cde89fe43bda65720a179d85508c3a68b86f275d96712d01372882d52c42"
+    },
+    {
+      "name": "abi-court/abi-substitution",
+      "path": "artifacts/phase2/courts/ABI-SUBSTITUTION.json",
+      "sha256": "802c6d3be53f6d1cac86f5968a8b77d3c67a8283054e3f7d1b4f8b4678cc5cc7"
+    },
+    {
+      "name": "abi-court/abi-symbol",
+      "path": "artifacts/phase2/courts/ABI-SYMBOL.json",
+      "sha256": "0a154557f3f8afcedea986811579c9b19adce8c85c4f160820da49b0839686ed"
+    },
+    {
+      "name": "abi-court/abi-version",
+      "path": "artifacts/phase2/courts/ABI-VERSION.json",
+      "sha256": "98575bf1ef2898ee8f3963fd7f7e2008cc68589dee0c751f01e308755e4e5b34"
+    }
+  ],
+  "kind": "compatibility-edges",
+  "schema": "openssl-rs/atlas/compatibility-edges/v1"
+}

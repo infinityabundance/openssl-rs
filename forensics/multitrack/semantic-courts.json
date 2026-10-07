@@ -1,0 +1,743 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "agrees": 10,
+    "authorities": {
+      "authority_a": {
+        "id": "openssl-3.6.3-historical",
+        "release_id": "openssl-3.6.3"
+      },
+      "authority_b": {
+        "id": "openssl-3.6.4-production",
+        "release_id": "openssl-3.6.4"
+      }
+    },
+    "authority_a": "openssl-3.6.3-historical",
+    "authority_b": "openssl-3.6.4-production",
+    "boundary": "The oracle-to-oracle comparison is bounded to the two forensic-venue authorities openssl-3.6.3-historical and openssl-3.6.4-production, on the linux/x86_64 default shared/legacy profile, over the observation vocabulary the probe emits. It is a behavioural reading of a named pair and is not a compatibility claim about either authority, and it is not a source-line diff. `error_behavior` is read behaviourally here while the 23.6 delta engine records the dimension absent for want of a committed per-authority plane; the 0.9.8zh epoch is not compared (see not_run).",
+    "candidate_to_authority": {
+      "disposition": "discharged_by_existing_courts",
+      "existing_courts": [
+        {
+          "artefact": "artifacts/phase2/COURTS.json",
+          "courts": [
+            "ABI-SYMBOL",
+            "ABI-LAYOUT",
+            "ABI-CONSTANTS",
+            "ABI-MATRIX",
+            "ABI-SUBSTITUTION",
+            "ABI-LINK",
+            "ABI-LOAD"
+          ],
+          "how": "the candidate distribution shell is compiled against the authority headers and run/linked against the candidate DSOs, so the source-surface constants and the binary substitution are candidate-to-authority comparisons"
+        },
+        {
+          "artefact": "artifacts/phase17/COURTS.json",
+          "courts": [
+            "RT-TLS13-INTEROP",
+            "RT-CLI-BODIES",
+            "RT-CROSS-DSO-STATE",
+            "RT-DOWNSTREAM-CONSUMER"
+          ],
+          "how": "the same probe source executes once against the authority and once against the candidate, so the runtime behaviour is a candidate-to-authority comparison"
+        }
+      ],
+      "statement": "the candidate-to-authority dimension is executed by the existing Phase-2 ABI family and Phase-17 runtime family, so 23.8 does not stage a duplicate court; what 23.8 adds is the shared vocabulary — the one `courts/phase23/semantic_probe.c` source, whose normalized `OBS key=value` rows both the oracle-to-oracle and a candidate run would be read through, so the candidate and the oracle are read the same way"
+    },
+    "classified_differences": [
+      {
+        "classification": "declaration_added",
+        "dimension": "error",
+        "observation_id": "SO-error.reason.CRL_SIGNATURE_ALGORITHM_MISMATCH",
+        "observed_a": "<absent>",
+        "observed_b": "<null>",
+        "release_delta": null,
+        "vocabulary": "error.reason.CRL_SIGNATURE_ALGORITHM_MISMATCH"
+      },
+      {
+        "classification": "declaration_added",
+        "dimension": "source_api",
+        "observation_id": "SO-presence.SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+        "observed_a": "<absent>",
+        "observed_b": "16",
+        "release_delta": {
+          "adjudication": "`SSL_VALUE_QUIC_MAX_PENDING_CONNS` is public in the subject and absent from the reference",
+          "classification": "added",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "api_presence",
+          "entity_id": "macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+          "facet": "entity"
+        },
+        "vocabulary": "presence.SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+      },
+      {
+        "classification": "declaration_added",
+        "dimension": "source_api",
+        "observation_id": "SO-presence.X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+        "observed_a": "<absent>",
+        "observed_b": "147",
+        "release_delta": {
+          "adjudication": "`X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH` is public in the subject and absent from the reference",
+          "classification": "added",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "api_presence",
+          "entity_id": "macro:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+          "facet": "entity"
+        },
+        "vocabulary": "presence.X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+      },
+      {
+        "classification": "release_identity",
+        "dimension": "source_api",
+        "observation_id": "SO-version.full",
+        "observed_a": "3.6.3",
+        "observed_b": "3.6.4",
+        "release_delta": {
+          "adjudication": "the macro's public value changed",
+          "classification": "changed",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "macro_value",
+          "entity_id": "macro:OPENSSL_FULL_VERSION_STR",
+          "facet": "value"
+        },
+        "vocabulary": "version.full"
+      },
+      {
+        "classification": "release_identity",
+        "dimension": "source_api",
+        "observation_id": "SO-version.number",
+        "observed_a": "811597872",
+        "observed_b": "811597888",
+        "release_delta": {
+          "adjudication": "the macro's public value changed",
+          "classification": "changed",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "macro_value",
+          "entity_id": "macro:OPENSSL_VERSION_PATCH",
+          "facet": "value"
+        },
+        "vocabulary": "version.number"
+      },
+      {
+        "classification": "release_identity",
+        "dimension": "source_api",
+        "observation_id": "SO-version.patch",
+        "observed_a": "3",
+        "observed_b": "4",
+        "release_delta": {
+          "adjudication": "the macro's public value changed",
+          "classification": "changed",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "macro_value",
+          "entity_id": "macro:OPENSSL_VERSION_PATCH",
+          "facet": "value"
+        },
+        "vocabulary": "version.patch"
+      },
+      {
+        "classification": "release_identity",
+        "dimension": "source_api",
+        "observation_id": "SO-version.release_date",
+        "observed_a": "9 Jun 2026",
+        "observed_b": "25 Aug 2026",
+        "release_delta": {
+          "adjudication": "the macro's public value changed",
+          "classification": "changed",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "macro_value",
+          "entity_id": "macro:OPENSSL_RELEASE_DATE",
+          "facet": "value"
+        },
+        "vocabulary": "version.release_date"
+      },
+      {
+        "classification": "release_identity",
+        "dimension": "source_api",
+        "observation_id": "SO-version.str",
+        "observed_a": "3.6.3",
+        "observed_b": "3.6.4",
+        "release_delta": {
+          "adjudication": "the macro's public value changed",
+          "classification": "changed",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "macro_value",
+          "entity_id": "macro:OPENSSL_VERSION_STR",
+          "facet": "value"
+        },
+        "vocabulary": "version.str"
+      },
+      {
+        "classification": "release_identity",
+        "dimension": "source_api",
+        "observation_id": "SO-version.text.macro",
+        "observed_a": "OpenSSL 3.6.3 9 Jun 2026",
+        "observed_b": "OpenSSL 3.6.4 25 Aug 2026",
+        "release_delta": {
+          "adjudication": "the macro's public value changed",
+          "classification": "changed",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "macro_value",
+          "entity_id": "macro:OPENSSL_VERSION_TEXT",
+          "facet": "value"
+        },
+        "vocabulary": "version.text.macro"
+      },
+      {
+        "classification": "release_identity",
+        "dimension": "source_api",
+        "observation_id": "SO-version.text.runtime",
+        "observed_a": "OpenSSL 3.6.3 9 Jun 2026",
+        "observed_b": "OpenSSL 3.6.4 25 Aug 2026",
+        "release_delta": {
+          "adjudication": "the macro's public value changed",
+          "classification": "changed",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "macro_value",
+          "entity_id": "macro:OPENSSL_VERSION_TEXT",
+          "facet": "value"
+        },
+        "vocabulary": "version.text.runtime"
+      }
+    ],
+    "differs": 10,
+    "direction": "authority_a -> authority_b",
+    "not_run": [
+      {
+        "direction": "authority_a_vs_authority_b",
+        "pair": [
+          "openssl-3.6.4-production",
+          "openssl-0.9.8zh-historical"
+        ],
+        "reason": "the 0.9.8zh authority is built in the separate historical venue (`docker/openssl-rs-historical.Dockerfile`, GCC 10 / Perl 5.32, pinned independently of the forensic court's GCC 12 / Perl 5.36; `docs/REPRODUCIBILITY.md` sections 1.1 and 1.2). Its installed prefix is a historical-venue build product not present in the forensic court venue, and its pre-3.0 headers and ABI are not compile-compatible with the 3.6.4 probe, so the oracle-to-oracle comparison is not executed here rather than approximated."
+      },
+      {
+        "direction": "authority_a_vs_authority_b",
+        "pair": [
+          "openssl-3.6.3-historical",
+          "openssl-0.9.8zh-historical"
+        ],
+        "reason": "the same venue separation: 3.6.3 is a forensic-venue authority and 0.9.8zh a historical-venue one, so neither prefix is present in the other venue and no single probe can be linked against both in one container. The 0.9.8zh epoch is measured by the historical-venue façade plane (23.7), not by an oracle-to-oracle semantic court."
+      }
+    ],
+    "observations": [
+      {
+        "absent_dimension": null,
+        "adjudication": "the 23.6 engine records this exported symbol's machine-code size changed; the behavioural reading agrees, so the movement is an implementation-size observation and not an ABI contract change",
+        "agreement": true,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "agreed",
+        "dimension": "abi",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-behaviour.BN_uadd",
+        "observed_a": "0F0F0F0F0F0F100E",
+        "observed_b": "0F0F0F0F0F0F100E",
+        "release_delta": {
+          "compat_dimension": "abi",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "abi_symbol_presence",
+          "entity_id": "function:BN_uadd"
+        },
+        "vocabulary": "behaviour.BN_uadd"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "the 23.6 engine records this exported symbol's machine-code size changed; the behavioural reading agrees, so the movement is an implementation-size observation and not an ABI contract change",
+        "agreement": true,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "agreed",
+        "dimension": "abi",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-behaviour.BN_ucmp",
+        "observed_a": "1",
+        "observed_b": "1",
+        "release_delta": {
+          "compat_dimension": "abi",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "abi_symbol_presence",
+          "entity_id": "function:BN_ucmp"
+        },
+        "vocabulary": "behaviour.BN_ucmp"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "both authorities read the same value on this observation",
+        "agreement": true,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "agreed",
+        "dimension": "semantic",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-behaviour.EVP_sha256",
+        "observed_a": "0d61cdc962a38c9ea30266c09dbedf0ddbd487e176cecc739f0f552e13cf7214",
+        "observed_b": "0d61cdc962a38c9ea30266c09dbedf0ddbd487e176cecc739f0f552e13cf7214",
+        "release_delta": null,
+        "vocabulary": "behaviour.EVP_sha256"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "the 23.6 engine records this exported symbol's machine-code size changed; the behavioural reading agrees, so the movement is an implementation-size observation and not an ABI contract change",
+        "agreement": true,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "agreed",
+        "dimension": "semantic",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-behaviour.OPENSSL_uni2utf8",
+        "observed_a": "AÃ©B",
+        "observed_b": "AÃ©B",
+        "release_delta": {
+          "compat_dimension": "abi",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "abi_symbol_presence",
+          "entity_id": "function:OPENSSL_uni2utf8"
+        },
+        "vocabulary": "behaviour.OPENSSL_uni2utf8"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "the 23.6 engine records this exported symbol's machine-code size changed; the behavioural reading agrees, so the movement is an implementation-size observation and not an ABI contract change",
+        "agreement": true,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "agreed",
+        "dimension": "abi",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-behaviour.OSSL_parse_url",
+        "observed_a": "r=1 scheme=https host=example.com port=8443 portnum=8443 path=/a/b query=q=1 frag=frag",
+        "observed_b": "r=1 scheme=https host=example.com port=8443 portnum=8443 path=/a/b query=q=1 frag=frag",
+        "release_delta": {
+          "compat_dimension": "abi",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "abi_symbol_presence",
+          "entity_id": "function:OSSL_parse_url"
+        },
+        "vocabulary": "behaviour.OSSL_parse_url"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "both authorities read the same value on this observation",
+        "agreement": true,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "agreed",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-const.EVP_MAX_MD_SIZE",
+        "observed_a": "64",
+        "observed_b": "64",
+        "release_delta": null,
+        "vocabulary": "const.EVP_MAX_MD_SIZE"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "both authorities read the same value on this observation",
+        "agreement": true,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "agreed",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-const.SHA256_DIGEST_LENGTH",
+        "observed_a": "32",
+        "observed_b": "32",
+        "release_delta": null,
+        "vocabulary": "const.SHA256_DIGEST_LENGTH"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "both authorities read the same value on this observation",
+        "agreement": true,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "agreed",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-const.TLS1_3_VERSION",
+        "observed_a": "772",
+        "observed_b": "772",
+        "release_delta": null,
+        "vocabulary": "const.TLS1_3_VERSION"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "both authorities read the same value on this observation",
+        "agreement": true,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "agreed",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-const.X509_V_OK",
+        "observed_a": "0",
+        "observed_b": "0",
+        "release_delta": null,
+        "vocabulary": "const.X509_V_OK"
+      },
+      {
+        "absent_dimension": "error_behavior",
+        "adjudication": "the reading is the behavioural evidence for the `error_behavior` dimension the 23.6 engine records absent with its reason",
+        "agreement": false,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "declaration_added",
+        "dimension": "error",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-error.reason.CRL_SIGNATURE_ALGORITHM_MISMATCH",
+        "observed_a": "<absent>",
+        "observed_b": "<null>",
+        "release_delta": null,
+        "vocabulary": "error.reason.CRL_SIGNATURE_ALGORITHM_MISMATCH"
+      },
+      {
+        "absent_dimension": "error_behavior",
+        "adjudication": "both authorities read the same value on this observation",
+        "agreement": true,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "agreed",
+        "dimension": "error",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-error.reason.MALLOC_FAILURE",
+        "observed_a": "<null>",
+        "observed_b": "<null>",
+        "release_delta": null,
+        "vocabulary": "error.reason.MALLOC_FAILURE"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "the 23.6 engine records api_presence added for macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS; the divergent reading corroborates it",
+        "agreement": false,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "declaration_added",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-presence.SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+        "observed_a": "<absent>",
+        "observed_b": "16",
+        "release_delta": {
+          "adjudication": "`SSL_VALUE_QUIC_MAX_PENDING_CONNS` is public in the subject and absent from the reference",
+          "classification": "added",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "api_presence",
+          "entity_id": "macro:SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+          "facet": "entity"
+        },
+        "vocabulary": "presence.SSL_VALUE_QUIC_MAX_PENDING_CONNS"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "the 23.6 engine records api_presence added for macro:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH; the divergent reading corroborates it",
+        "agreement": false,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "declaration_added",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-presence.X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+        "observed_a": "<absent>",
+        "observed_b": "147",
+        "release_delta": {
+          "adjudication": "`X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH` is public in the subject and absent from the reference",
+          "classification": "added",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "api_presence",
+          "entity_id": "macro:X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+          "facet": "entity"
+        },
+        "vocabulary": "presence.X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "the 23.6 engine records macro_value changed for macro:OPENSSL_FULL_VERSION_STR; the divergent reading corroborates it",
+        "agreement": false,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "release_identity",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-version.full",
+        "observed_a": "3.6.3",
+        "observed_b": "3.6.4",
+        "release_delta": {
+          "adjudication": "the macro's public value changed",
+          "classification": "changed",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "macro_value",
+          "entity_id": "macro:OPENSSL_FULL_VERSION_STR",
+          "facet": "value"
+        },
+        "vocabulary": "version.full"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "the 23.6 engine records macro_value changed for macro:OPENSSL_VERSION_PATCH; the divergent reading corroborates it",
+        "agreement": false,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "release_identity",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "non_claims": [
+          "a version number is not a compatibility claim"
+        ],
+        "observation_id": "SO-version.number",
+        "observed_a": "811597872",
+        "observed_b": "811597888",
+        "release_delta": {
+          "adjudication": "the macro's public value changed",
+          "classification": "changed",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "macro_value",
+          "entity_id": "macro:OPENSSL_VERSION_PATCH",
+          "facet": "value"
+        },
+        "vocabulary": "version.number"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "the 23.6 engine records macro_value changed for macro:OPENSSL_VERSION_PATCH; the divergent reading corroborates it",
+        "agreement": false,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "release_identity",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-version.patch",
+        "observed_a": "3",
+        "observed_b": "4",
+        "release_delta": {
+          "adjudication": "the macro's public value changed",
+          "classification": "changed",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "macro_value",
+          "entity_id": "macro:OPENSSL_VERSION_PATCH",
+          "facet": "value"
+        },
+        "vocabulary": "version.patch"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "the 23.6 engine records macro_value changed for macro:OPENSSL_RELEASE_DATE; the divergent reading corroborates it",
+        "agreement": false,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "release_identity",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-version.release_date",
+        "observed_a": "9 Jun 2026",
+        "observed_b": "25 Aug 2026",
+        "release_delta": {
+          "adjudication": "the macro's public value changed",
+          "classification": "changed",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "macro_value",
+          "entity_id": "macro:OPENSSL_RELEASE_DATE",
+          "facet": "value"
+        },
+        "vocabulary": "version.release_date"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "the 23.6 engine records macro_value changed for macro:OPENSSL_VERSION_STR; the divergent reading corroborates it",
+        "agreement": false,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "release_identity",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-version.str",
+        "observed_a": "3.6.3",
+        "observed_b": "3.6.4",
+        "release_delta": {
+          "adjudication": "the macro's public value changed",
+          "classification": "changed",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "macro_value",
+          "entity_id": "macro:OPENSSL_VERSION_STR",
+          "facet": "value"
+        },
+        "vocabulary": "version.str"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "the 23.6 engine records macro_value changed for macro:OPENSSL_VERSION_TEXT; the divergent reading corroborates it",
+        "agreement": false,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "release_identity",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-version.text.macro",
+        "observed_a": "OpenSSL 3.6.3 9 Jun 2026",
+        "observed_b": "OpenSSL 3.6.4 25 Aug 2026",
+        "release_delta": {
+          "adjudication": "the macro's public value changed",
+          "classification": "changed",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "macro_value",
+          "entity_id": "macro:OPENSSL_VERSION_TEXT",
+          "facet": "value"
+        },
+        "vocabulary": "version.text.macro"
+      },
+      {
+        "absent_dimension": null,
+        "adjudication": "the 23.6 engine records macro_value changed for macro:OPENSSL_VERSION_TEXT; the divergent reading corroborates it",
+        "agreement": false,
+        "authority_a": "openssl-3.6.3-historical",
+        "authority_b": "openssl-3.6.4-production",
+        "classification": "release_identity",
+        "dimension": "source_api",
+        "evidence": [
+          "forensics/multitrack/semantic-courts.json#raw_transcripts"
+        ],
+        "observation_id": "SO-version.text.runtime",
+        "observed_a": "OpenSSL 3.6.3 9 Jun 2026",
+        "observed_b": "OpenSSL 3.6.4 25 Aug 2026",
+        "release_delta": {
+          "adjudication": "the macro's public value changed",
+          "classification": "changed",
+          "compat_dimension": "source_api",
+          "delta_file": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+          "dimension": "macro_value",
+          "entity_id": "macro:OPENSSL_VERSION_TEXT",
+          "facet": "value"
+        },
+        "vocabulary": "version.text.runtime"
+      }
+    ],
+    "probe": {
+      "sha256": "c1b0561e589cd12a2ac9cc5dc2153e140ce638c8e5774455462ad8848a0dfe4c",
+      "source": "courts/phase23/semantic_probe.c",
+      "vocabulary": [
+        "behaviour.BN_uadd",
+        "behaviour.BN_ucmp",
+        "behaviour.EVP_sha256",
+        "behaviour.OPENSSL_uni2utf8",
+        "behaviour.OSSL_parse_url",
+        "const.EVP_MAX_MD_SIZE",
+        "const.SHA256_DIGEST_LENGTH",
+        "const.TLS1_3_VERSION",
+        "const.X509_V_OK",
+        "error.reason.CRL_SIGNATURE_ALGORITHM_MISMATCH",
+        "error.reason.MALLOC_FAILURE",
+        "presence.SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+        "presence.X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH",
+        "version.full",
+        "version.number",
+        "version.patch",
+        "version.release_date",
+        "version.str",
+        "version.text.macro",
+        "version.text.runtime"
+      ]
+    },
+    "raw_transcripts": {
+      "authority_a": {
+        "authority_id": "openssl-3.6.3-historical",
+        "exit": 0,
+        "release_id": "openssl-3.6.3",
+        "sha256": "811796086cd9f19f3907b5f7eef8fd580e0f3bb575c8bae66e6b439d60b2f3cd",
+        "stderr": "",
+        "stdout": "OBS side.authority=openssl-3.6.3-historical\nOBS side.release=openssl-3.6.3\nOBS version.text.macro=OpenSSL 3.6.3 9 Jun 2026\nOBS version.str=3.6.3\nOBS version.full=3.6.3\nOBS version.release_date=9 Jun 2026\nOBS version.patch=3\nOBS version.number=811597872\nOBS version.text.runtime=OpenSSL 3.6.3 9 Jun 2026\nOBS presence.SSL_VALUE_QUIC_MAX_PENDING_CONNS=<absent>\nOBS presence.X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH=<absent>\nOBS error.reason.CRL_SIGNATURE_ALGORITHM_MISMATCH=<absent>\nOBS error.reason.MALLOC_FAILURE=<null>\nOBS const.EVP_MAX_MD_SIZE=64\nOBS const.SHA256_DIGEST_LENGTH=32\nOBS const.TLS1_3_VERSION=772\nOBS const.X509_V_OK=0\nOBS behaviour.EVP_sha256=0d61cdc962a38c9ea30266c09dbedf0ddbd487e176cecc739f0f552e13cf7214\nOBS behaviour.OSSL_parse_url=r=1 scheme=https host=example.com port=8443 portnum=8443 path=/a/b query=q=1 frag=frag\nOBS behaviour.BN_uadd=0F0F0F0F0F0F100E\nOBS behaviour.BN_ucmp=1\nOBS behaviour.OPENSSL_uni2utf8=AÃ©B\n"
+      },
+      "authority_b": {
+        "authority_id": "openssl-3.6.4-production",
+        "exit": 0,
+        "release_id": "openssl-3.6.4",
+        "sha256": "9d3c3e7ae04db6fde746ee2574922bde39bd19513c9ad1997d4267d05dba7394",
+        "stderr": "",
+        "stdout": "OBS side.authority=openssl-3.6.4-production\nOBS side.release=openssl-3.6.4\nOBS version.text.macro=OpenSSL 3.6.4 25 Aug 2026\nOBS version.str=3.6.4\nOBS version.full=3.6.4\nOBS version.release_date=25 Aug 2026\nOBS version.patch=4\nOBS version.number=811597888\nOBS version.text.runtime=OpenSSL 3.6.4 25 Aug 2026\nOBS presence.SSL_VALUE_QUIC_MAX_PENDING_CONNS=16\nOBS presence.X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH=147\nOBS error.reason.CRL_SIGNATURE_ALGORITHM_MISMATCH=<null>\nOBS error.reason.MALLOC_FAILURE=<null>\nOBS const.EVP_MAX_MD_SIZE=64\nOBS const.SHA256_DIGEST_LENGTH=32\nOBS const.TLS1_3_VERSION=772\nOBS const.X509_V_OK=0\nOBS behaviour.EVP_sha256=0d61cdc962a38c9ea30266c09dbedf0ddbd487e176cecc739f0f552e13cf7214\nOBS behaviour.OSSL_parse_url=r=1 scheme=https host=example.com port=8443 portnum=8443 path=/a/b query=q=1 frag=frag\nOBS behaviour.BN_uadd=0F0F0F0F0F0F100E\nOBS behaviour.BN_ucmp=1\nOBS behaviour.OPENSSL_uni2utf8=AÃ©B\n"
+      }
+    }
+  },
+  "generator": "forensics/tools/gen_semantic_courts.py",
+  "inputs": [
+    {
+      "name": "semantic-probe",
+      "path": "courts/phase23/semantic_probe.c",
+      "sha256": "c1b0561e589cd12a2ac9cc5dc2153e140ce638c8e5774455462ad8848a0dfe4c"
+    },
+    {
+      "name": "delta-engine",
+      "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
+      "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0"
+    },
+    {
+      "name": "build-records",
+      "path": "forensics/atlas/BUILD_RECORDS.json",
+      "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0"
+    },
+    {
+      "name": "authority-a-manifest",
+      "path": "forensics/authorities/SOURCE_MANIFEST.3.6.3.json",
+      "sha256": "2849ce1d61167b1fad510ba4e086903e339a85ecae9b3c61b5a349aac8c5f261"
+    },
+    {
+      "name": "authority-b-manifest",
+      "path": "forensics/authorities/SOURCE_MANIFEST.3.6.4.json",
+      "sha256": "64535af39ae6732322cce6812534d3e13193771b76a0cd4e3cad06126bdd320e"
+    }
+  ],
+  "kind": "semantic-courts",
+  "schema": "openssl-rs/atlas/semantic-courts/v1"
+}

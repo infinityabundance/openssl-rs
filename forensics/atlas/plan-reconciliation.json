@@ -23,13 +23,14 @@
         "docs/PHASE-20-SUBPHASES.md",
         "docs/PHASE-21-SUBPHASES.md",
         "docs/PHASE-22-SUBPHASES.md",
+        "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
         "docs/PHASE-7-SUBPHASES.md",
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 211,
+      "rows_judged": 229,
       "symbols_named_by_a_row": 115,
       "symbols_reached": 115,
       "unit_records": 152,
@@ -8113,13 +8114,13 @@
       "transcribed_units": 599
     }
   },
-  "body_hash": "f3a00e5a20bddacf9f694d7ee13a7085f912e7697eaabdc0718faa9d1e319852",
+  "body_hash": "8c805efa784110937f485ea290cd13d4e97b1e808a01c368a8cb96791c2f2b74",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "41088cba75be3b9e630851b90d4bfe9ab7c98a80b3294e49d9f79c9ba1682534"
+      "sha256": "22de7db7aa07fb8239f380f235f678e182351d38b56e253cf6496ef37c92b018"
     },
     {
       "name": "transcription-edges",
@@ -8129,12 +8130,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "40b6c06a9431fb31871951f72848ec83da8bacaa533268b74a2e3e4a7826af92"
+      "sha256": "ba342e2f504834e016c6a8ee97e8b405b04bd1c7fabaf1cd034365f51bbe85e7"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "b8e3c21c4a9d77fb469545720ebf7c4a20023879703d099347841a3a95b34463"
+      "sha256": "e21025ed16f075922c331ca63379062b31f8159cd581d5efcfa8e60fa7f4a622"
     },
     {
       "name": "prerequisites",
@@ -8210,6 +8211,11 @@
       "name": "plan-PHASE-22-SUBPHASES",
       "path": "docs/PHASE-22-SUBPHASES.md",
       "sha256": "9c5bff3c85e95c206bc39ccdf0d000e0ca36115211bba3d4fdad65e3650dad9a"
+    },
+    {
+      "name": "plan-PHASE-23-MULTITRACK-SUBPHASES",
+      "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
+      "sha256": "0dccf4dab0cfd57a027b4d937414bb53ff838603f7d4d841162443286b559d6a"
     },
     {
       "name": "plan-PHASE-5-SUBPHASES",

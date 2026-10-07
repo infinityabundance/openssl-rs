@@ -35454,3 +35454,597 @@ and its `--self-test`; `phase_state.py` and its `--self-test`; `plan_reconciliat
 `gen_frf_courts.py --check`; `cargo fmt`; `cargo clippy --all-targets -- -D warnings`.
 
 The push-event comparison reads its `before` from the seal commit's `github.event.before` (`3297fbae`), whose committed gate was stale at **386**, so the same regeneration is recorded a second time as `386 -> 468`; `forensics/ownership-transitions.json` carries both rows (the ref supplying `before` is the only difference) and `regression_guard.py --baseline-ref 3297fbae --require-current` passes.
+
+## D532 -- Phase 23 activates: the multitrack authority model, and its non-export unit
+
+Phase 23 is the stratum `docs/RELEASE_GATES.md` section 1 names "Multitrack authority
+compatibility and OpenSSL lineage". It is dependency-ordered after the authority archaeology
+(Phase 1, strengthened by Phase 22) and the maintenance-delta machinery (Phase 21): its first
+subphase, 23.0, lands `docs/PHASE-23-MULTITRACK-SUBPHASES.md`,
+`forensics/tools/multitrack_schemas.py`, the contract ledger `forensics/phase23-obligations.json`
+and the courts scaffold `artifacts/phase23/COURTS.json`, and its seal
+`docs/PHASE-23-MULTITRACK-SEAL.md` is a later subphase's. No existing phase is renumbered, and
+`REQUIRES[23] = (21,)`; because Phase 21 requires Phase 22, that edge transitively requires both.
+
+**The model.** One Rust implementation, not one per version: a single crate emits
+**independently-evidenced compatibility views** for the OpenSSL release lineage, from the first
+real release (OpenSSL 0.9.1c) through the latest admitted stable release and forward to future
+releases. The architecture is infrastructure for the lifetime of the project: **release nodes**
+(one per upstream release, with its scheme, channel and source identity), **authority nodes** (one
+per admitted built authority over a release, platform, arch, profile, toolchain and build
+environment, with binary and installed hashes), **lineage edges** (chronological successor, git
+ancestry, branch fork, maintenance successor, security backport, declared ABI compatibility,
+observed compatibility), **entity lineage** (same entity, renamed, moved, signature changed,
+layout changed, kind changed, split, merged, deprecated, removed, reintroduced, semantic
+successor, unknown relationship), a **delta engine**, **compatibility views**, **negative
+obligations** and **security lineage**. Phase 23 owns **no exported symbol**: reading
+`forensics/atlas/symbol-ownership.json` for `owner_phase == 23` yields no record, so its ledger's
+unit is not a symbol but the non-export `multitrack authority contract`, named in
+`atlas_common.NON_EXPORT_UNITS` so the export-partitioning tools skip it. Its ledger's working set
+is twelve contract units, one per subphase 23.1 through 23.12, all open at activation
+(`open_in_this_stratum` 12); the ledger fails closed if the ownership atlas ever assigns this
+stratum an export, the provider census a registration row, or the prerequisite plane a unit.
+
+**Deliberately forbidden shapes.** There is no per-version fork, no hundreds of Cargo features,
+and no runtime version switch in one DSO; the compatibility views are evidence artefacts the
+single implementation emits, not separate implementations. The four explicit choices this
+activation records are D533 through D536.
+
+## D533 -- Cross-version receipts are never inherited
+
+A receipt, claim or court result compiled against one authority or release is evidence about
+*that* authority and release and no other. Phase 23 never reinterprets a 3.6.x receipt as evidence
+for a different release, and never lets a compatibility view inherit evidence across a lineage
+edge. The rule generalises `docs/RELEASE_GATES.md` section 8's "an OpenSSL 3 receipt is never
+silently reinterpreted as evidence for OpenSSL 4" to the whole lineage: a lineage edge is a
+*relationship*, and a compatibility view citing it must still carry the release-specific evidence
+it was derived from. `multitrack_schemas.validate_compatibility_view` requires a per-view
+evidence list and a reference release, so a view with no release-specific evidence fails rather
+than inherits.
+
+## D534 -- Authority selection is explicit and singular, never a Cargo feature explosion
+
+A compatibility view names the authority or release it is about explicitly. Phase 23 adds no
+Cargo feature per version and no build-time switch that changes the implementation's behaviour by
+target version; the single DSO's behaviour is fixed by the source, and the version dimension lives
+in evidence artefacts (release nodes, authority nodes, compatibility views), not in the compiled
+artefact's configuration. `multitrack_schemas.validate_authority_node` requires the release id
+plus platform, arch, profile, toolchain and build environment, so an authority is never an
+implicit “whatever is built”.
+
+## D535 -- Compatibility is directional and dimension-specific, never one boolean
+
+There is no single "compatible" flag. A compatibility claim is a **directional** statement on a
+named **dimension** (source/API, ABI, semantic, behavioural, CLI/config, provider registration,
+protocol, error, ownership, concurrency), and a view in one direction does not imply the other.
+`multitrack_schemas.validate_compatibility_view` requires `dimension` and `direction` and rejects a
+record that carries only a boolean; `validate_compatibility_edge` additionally rejects evidence
+whose `evidence_kind` is `version_order`, because numeric ordering is not a compatibility
+measurement (`docs/PARITY_MODEL.md` sections 3 and 4 are the authority on the dimensions).
+
+## D536 -- Negative ("must be absent") obligations are first-class
+
+"Must be absent" is an obligation with the same standing as "must exist". Phase 23 records
+negative obligations as a first-class record kind -- `must_exist`, `must_not_exist`,
+`must_be_opaque`, `must_be_public`, `must_be_exported`, `must_not_be_exported` -- validated by
+`multitrack_schemas.validate_negative_obligation`, so a surface that must not be exported, must be
+opaque, or must not exist is a checkable claim rather than an omission. This is the discipline the
+project already applies where absence is load-bearing (a `NOEXIST` `.num` row, a deliberately
+absent feature); Phase 23 gives it the same vocabulary as presence.
+
+## D537 -- the Phase-23 stratum is reconciled to the brief: five dropped slices are restored, and the plan is corrected by measurement
+
+Phase 23's first plan (`docs/PHASE-23-MULTITRACK-SUBPHASES.md`), its contract ledger
+(`forensics/phase23-obligations.json` with its generator `forensics/tools/phase23_obligations.py`)
+and its runner (`forensics/tools/phase23_courts.py` with the registry `artifacts/phase23/COURTS.json`)
+organized the stratum into **twelve** units. The phase brief's execution order (its §52) requires
+**seventeen**: the twelve plus five capabilities the first draft never numbered. This entry records
+the reconciliation and its reason.
+
+**The rule the reconciliation applies: a brief-required slice is never silently dropped.** The five
+omitted slices are, with the brief section each came from:
+
+1. **Parameterize the atlases** (brief §52 23.3, §8) -- the Phase 1 / Phase 22 archaeology generators
+generalized to be parameterized by authority identity (no `phase1_old.py` per version), with the
+current 3.6.4 atlas proved **byte-identical** under the parameterization.
+2. **ABI / history façades** (brief §52 23.7, §18/§19/§21/§22) -- the historical public-layout
+(`#[repr(C)]`) façades, the prototype wrappers, the initialization/threading epochs and the
+ENGINE -> Provider -> no-ENGINE architecture model, as narrow adapters over the shared
+implementation.
+3. **Semantic multitrack courts** (brief §52 23.8, §12) -- oracle-to-oracle (authority A vs authority
+B) and candidate-to-authority courts, with side-specific adapters that emit the same normalized
+observation vocabulary.
+4. **Historical population** (brief §52 23.10, §31) -- the systematic admission and courting of the
+public final-release lineage forward from the first release, recording honest unavailability where a
+release cannot be reproducibly built.
+5. **Downstream multitrack court** (brief §52 23.11, §34) -- at least one meaningful unmodified real
+downstream consumer per major compatibility epoch.
+
+**The correction is made by measurement, not by preference.** The brief's slice list was read against
+the ledger's unit set and the runner's registry; the same measurement that showed the omission
+restores the slices at the brief's own numbers and renumbers only phase 23's remaining capabilities.
+`release-nodes` (23.1) and `authority-nodes` (23.2) are unchanged and stay closed. The ten shifted
+capabilities move to `lineage-edges` 23.4, `entity-lineage` 23.5, `delta-engine` 23.6,
+`compatibility-views` 23.9, `directional-compatibility-edges` 23.12, `negative-obligations` 23.13,
+`security-lineage` 23.14, `support-status` 23.15, `compatibility-matrix` 23.16 and `multitrack-seal`
+23.17. No other phase is renumbered.
+
+**What moves, and where it is recorded.** `docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 1 now
+measures seventeen units; section 2 carries the seventeen-row subphase table, an explicit brief
+§52 slice -> subphase -> court/unit map and a brief §49 seal-requirement map; and section 4.8
+records this reconciliation as a measured correction. The ledger's unit set is seventeen (two
+implemented, `open_in_this_stratum` fifteen, so the open count equals the number of still-open
+units), and the runner registers the same two courts as before with fifteen `pending`, each naming
+the subphase that lands it. The Phase-23 `ledger_note` in `forensics/tools/phase_state.py` names the
+seventeen units and the fifteen pending courts. The ledger -> courts edge is unchanged, and the
+runner still binds no ledger. The stratum's load-bearing non-claims are untouched: no slice the
+existing plan had is lost, and nothing is weakened.
+
+This is an additive correction: it restores required structure the first draft dropped, and it does
+not commit or push.
+
+## D538 -- the atlases are parameterized by authority identity, and the default is a committed alias
+
+Phase 23.3 lands the Phase 1 / Phase 22 archaeology generators as **one code path parameterized by
+authority identity** rather than a `phase1_old.py` per version, and closes `atlas-parameterization`.
+
+**The default authority is a committed alias, not the newest release, and not a version sort.**
+`forensics/multitrack/default-authority.json` names `openssl-3.6.4-production` as the maintained
+authority; the catalogue's `latest-stable` alias is `openssl-4.0.3`, a newer compatibility profile
+the candidate does not target. `atlas_common.PRODUCTION_AUTHORITY` is now **derived from that
+alias**, so the roughly thirty-nine call sites that default to it cannot drift from the one
+committed choice, and `atlas_common.add_authority_selector`/`selected_authorities` are the single
+selection point. A historical authority (`openssl-0.9.8zh-historical`) resolves through the same
+`atlas_common` path -- `resolve_authority`, `authority_source`, `authority_prefix` read the
+committed historical acquisition and build receipts after the court registries -- so no bespoke
+script serves it. `all_authority_ids()` keeps its court-only default, so the atlas `--all` walk is
+unchanged; `all_known_authority_ids()` is the merged set.
+
+**The generator is `forensics/tools/atlas_authority.py`; its proof is
+`forensics/atlas/parameterization-receipt.json` (record kind `parameterization_receipt`).** Every
+plane is a **counted predicate over the authority's own committed source manifest**, so an absence
+is evidence rather than an assumption: the 3.6.4 production authority produces all seventeen planes
+and `openssl-0.9.8zh-historical` produces seven and records ten **measured absences** (providers,
+provider registrations, provider capabilities, the FIPS provider, the STORE and encoder/decoder
+APIs, QUIC, symbol versioning, the ENGINE registry and the ENGINE-versus-Provider comparison),
+each a counted zero carrying its manifest and the release's own chronology. ENGINE itself is
+**produced** for 0.9.8zh, so the older authority is not handed a blanket absence. The court
+`RT-ATLAS-PARAMETERIZATION` re-derives every census through the same generator and corroborates the
+decisive absences against the committed manifest independently of the generator's own predicates.
+
+**The 3.6.4 plane is the byte-identity pivot and does not move.** The court re-runs the
+authority-parameterized generators (`atlas_symbols.py`, `atlas_api.py`, `atlas_runtime.py`,
+`atlas_abi.py`, `render_atlas.py`) with an explicit `--authority` and asserts they reproduce the
+committed plane. **One pre-existing staleness is disclosed, measured and never applied**: the
+committed `parity-obligations.json` and the rendered `ATLAS.md` predate the CLI option grammar
+`cli-commands.json` gained at p16 (commit 0db42154) and were never regenerated, so re-deriving them
+moves each command's `option_count` from the stale `0` to the measured value. The court measures
+that drift live, restores the committed bytes, and refuses any drift outside the disclosed set. The
+correcting regeneration is a separate change, reported rather than hidden; the refactor itself
+leaves the atlas byte-identical.
+
+The sensitivity control is honest: the same generator over a different court authority
+(`openssl-3.6.3-historical`) produces a different census, so a hidden hard-coded production
+fallback is caught; a measured absence with no provenance, or with a nonzero count, or a census
+that renames its own authority, is each refused. `atlas-parameterization` moves to
+`implemented`/closed and the stratum's `open_in_this_stratum` falls from fifteen to fourteen.
+
+## D539 -- the delta engine computes the semantic compatibility delta over the canonical edges
+
+Phase 23.6 lands the semantic compatibility delta (`forensics/tools/authority_delta.py`, court
+`RT-DELTA-ENGINE`, unit `delta-engine`): the added / removed / changed surface between two
+authorities, computed mechanically from the per-authority atlases and the entity lineage, in the
+direction the lineage edge names, and never hand-listed. Three measured corrections are recorded in
+`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.9 and checked by the court.
+
+**The delta's dimension is two-layered, and the schema is unchanged.** The brief's delta dimensions
+are finer than `multitrack_schemas.COMPAT_DIMENSIONS`. Rather than widen a vocabulary the views,
+edges and matrix also read (section 4.5's hook), a *row* names a fine dimension (`DELTA_DIMENSIONS`:
+`api_presence`, `macro_value`, `public_layout`, `abi_symbol_version`, `deprecation_state`, ...) and a
+*receipt* names the coarse dimension the fine one maps onto. Every receipt is still a `delta_receipt`
+validated against `COMPAT_DIMENSIONS`, so no record kind or validator moved; a dimension the evidence
+cannot support is recorded in `absent_dimensions` with its reason, never asserted.
+
+**The canonical delta is one file per release-graph edge, and a longer path is composed.**
+`forensics/deltas/<from_release>--<to_release>.json` holds the `delta_receipt` rows for one canonical
+lineage edge; the plan's aggregate path `forensics/multitrack/delta-receipts.json` is superseded. A
+long-range query composes the edge deltas it traverses (`authority_delta <a> <b> --compose`) and an
+uncovered edge is a recorded gap, so the artefact set is the canonical edges and never their
+pairwise product (the brief section 11 rule against an O(N^2) delta database). The record kind is
+unchanged (`delta_receipt`).
+
+**A source-line diff is not the delta.** The engine never reads a patch and never shells out to
+`diff`: a delta row is keyed by entity and dimension, and the court refuses a row or an evidence path
+that is a source diff standing in for the compatibility delta. An exported symbol's `st_size` change
+-- which the brief's dimension list does not name -- is recorded under `abi_symbol_presence` with the
+`st_size` facet and the adjudication that it is an implementation-size observation, not an ABI
+contract change, so the movement 23.5 records as evidence is visible without being read as an
+obligation.
+
+The measured 3.6.3 -> 3.6.4 delta is two macros added (`api_presence`), five version-stamp macros
+changed (`macro_value`) and twenty symbol-size changes (`abi_symbol_presence` / `st_size`); nine
+dimensions the committed atlases carry no structured evidence for are recorded absent with their
+reason. The court's control seeds an unclassified change, a composed path that disagrees with its
+edges, a row with no evidence and a dimension the evidence cannot support, and requires each caught
+with specificity holding. `delta-engine` moves to `implemented`/closed and the stratum's
+`open_in_this_stratum` falls from fourteen to thirteen.
+
+## D540 -- the ABI/history façades are typed adapters over the shared implementation, and the default build carries none
+
+Phase 23.7 lands the compatibility-policy layer and the historical ABI/history façades
+(`src/compat/`, the plane `forensics/multitrack/abi-facades.json` with the record kind
+`abi_facade`, the generator `forensics/tools/gen_abi_facades.py`, court `RT-ABI-HISTORY-FACADES`,
+unit `abi-history-facades`), each a narrow adapter over the shared implementation rather than a
+per-version fork. Four measured corrections are recorded in `docs/PHASE-23-MULTITRACK-SUBPHASES.md`
+section 4.10 and checked by the court.
+
+**The generation proved is 0.9.8zh, and the boundary is named.** The façade layouts are measured by
+compiling a probe against the acquired 0.9.8zh release's own headers in the historical venue, and
+each record cites its header and that header's SHA-256 in the committed `SOURCE_MANIFEST.0.9.8zh.json`.
+No 1.0.x authority is admitted with an acquired tree in this subphase, so the 1.0.x layouts and the
+pre-1.1.0 aggregates the subphase does not name are recorded `not established` with their reason
+rather than inferred; the court fails if the boundary is not named. This is the honest partial:
+the subphase establishes a real, small epoch it can prove, not a broad unproven claim.
+
+**The façade is the pre-1.1.0 side of a real opacity transition, and an adapter, never a cast.**
+In 0.9.8zh `struct env_md_ctx_st` and `struct hmac_ctx_st` are transparent; in 3.6.4 production both
+are opaque (`complete: false`). `HMAC_CTX` embeds three `EVP_MD_CTX` by value at 0.9.8zh, so the
+historical and canonical representations differ in size and no cast between them is correct; the
+`#[repr(C)]` structs carry generated compile-time `sizeof`/`alignof`/`offsetof`/field-width
+assertions, and explicit field-copy adapters translate them. The court refuses a record whose
+adapter is a blind cast.
+
+**The prototype wrappers are the era-specific declaration.** A C symbol has no runtime signature,
+so the same name carries a different declaration across eras (`HMAC_Init_ex`/`HMAC_Update`/
+`HMAC_Final` return `void` in 0.9.8zh and `int` from 1.1.0; `EVP_MD_CTX_init`/`_create`/`_destroy`
+are functions in 0.9.8zh and macros in 3.6.4; `CRYPTO_set_locking_callback` is a function in
+0.9.8zh and a no-op macro in 3.6.4). Each record names both declarations and a safe wrapper over the
+shared implementation, and the ENGINE -> Provider -> no-ENGINE architecture and the init/thread
+epochs are cross-checked against the historical plane census and the production atlas.
+
+**The compatibility selection is a build parameter, not a Cargo feature, and the default is clean.**
+`build.rs` reads `OPENSSL_RS_COMPAT`, resolves an unset value through the committed alias
+`forensics/multitrack/default-authority.json` (never the catalogue's newest release), refuses any
+other value, and sets the `openssl_rs_compat_facades` cfg only for the historical selection, so the
+default 3.6.4 production candidate compiles none of the façades (D534). The court rebuilds the
+generated `src/compat/layout_generated.rs` from the committed measurement and checks the cfg gating,
+so the default build's artefacts, symbols, layouts and semantics are unchanged. `abi-history-facades`
+moves to `implemented`/closed and the stratum's `open_in_this_stratum` falls from eleven to ten.
+
+## D541 -- the semantic multitrack courts read authority A and authority B through one vocabulary, and a difference is never erased
+
+Phase 23.8 lands the semantic multitrack courts (`courts/phase23/semantic_probe.c`, the plane
+`forensics/multitrack/semantic-courts.json` with the record kind `semantic_observation`, the
+generator `forensics/tools/gen_semantic_courts.py`, court `RT-SEMANTIC-COURTS`, unit
+`semantic-courts`), the oracle-to-oracle and candidate-to-authority comparison the brief requires.
+The measured corrections are recorded in `docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.11 and
+checked by the court.
+
+**The pair that is real is 3.6.3 vs 3.6.4, and it is measured, not asserted.** Both authorities are
+built in the forensic court venue, so the shared probe is compiled and run once against each prefix
+and its raw transcript (stdout, stderr and exit) is preserved *in* the artefact. The measured
+3.6.3 -> 3.6.4 movement is ten classified differences over twenty observations: seven version-stamp
+readings (`release_identity`, tied to the `macro_value` rows the 23.6 engine already carries), two
+added declarations (`declaration_added`: `SSL_VALUE_QUIC_MAX_PENDING_CONNS` and
+`X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH`) and one error-reason reading (`declaration_added`). The
+ten agreeing observations include the four exported symbols whose machine-code size the 23.6 engine
+records changed (`OSSL_parse_url`, `BN_uadd`, `BN_ucmp`, `OPENSSL_uni2utf8`): their behaviour agrees,
+which corroborates the engine's adjudication that the `st_size` movement is an implementation-size
+observation and not an ABI contract change.
+
+**The adapters normalize the shape and preserve the difference, and the court proves it.** Where a
+declaration differs across the pair the probe carries a side-specific `#ifdef` adapter that emits the
+same `OBS <key>=<value>` line on both sides: the value on the side that declares it, the literal
+`<absent>` on the side that does not. An adapter that mapped both sides to the same reading would
+erase the difference under investigation; the court re-derives every normalized observation from the
+preserved raw bytes through the same adapter and refuses the erasure, and its sensitivity control
+injects exactly that (plus a probe read against the wrong authority and a difference left
+unclassified) and requires each caught with specificity holding.
+
+**Everything is a classified release delta, and the candidate-to-authority dimension is not
+duplicated.** Each divergence names the fine delta dimension and the entity id the 23.6 engine keys
+its row by, and the court requires the row to resolve in the committed
+`forensics/deltas/openssl-3.6.3--openssl-3.6.4.json`; the `error.reason.*` readings name
+`error_behavior`, the dimension the engine records absent for want of a committed per-authority
+plane, so 23.8 supplies the behavioural reading rather than restating a claim. The
+candidate-to-authority dimension is discharged by the existing Phase-2 ABI family and Phase-17
+runtime family, which the plane names and the court verifies are registered and passing; 23.8 adds
+the shared vocabulary the plan requires and stages no duplicate court. A pair the venue cannot
+execute -- the 0.9.8zh epoch, which lives in the separately pinned historical venue -- is recorded
+`not_run` with its reason and is never counted as passing. `semantic-courts` moves to
+`implemented`/closed and the stratum's `open_in_this_stratum` falls from ten to nine.
+
+## D542 -- the compatibility views are directional and dimension-specific, and a view never inherits another authority's receipt
+
+Phase 23.9 lands the compatibility views (`forensics/multitrack/compatibility-views.json` with the
+record kind `compatibility_view`, the generator `forensics/tools/compat_views.py`, court
+`RT-COMPATIBILITY-VIEWS`, unit `compatibility-views`), the per-authority distribution views whose
+API/ABI/distribution surface is *derived from that authority*. The measured corrections are recorded
+in `docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.12 and checked by the court.
+
+**A view is directional, dimension-specific, and carries a fine facet.** Every view is read
+`candidate_to_reference`: the subject is the emitted distribution (the implementation crate) and the
+reference is the authority whose evidence defines the surface. Its coarse `dimension` is one of the
+schema's closed `COMPAT_DIMENSIONS`; because the distribution shell is finer than that vocabulary,
+the view also names a fine `facet` -- library filenames, SONAMEs, the exported symbol set and its
+versions, static archive names, link names, pkg-config metadata, the installed layout and the
+version-reporting identity -- that lives with this generator and its court, exactly as the 23.6
+delta engine keeps its fine `DELTA_DIMENSIONS` beside the coarse schema dimension (D539). The shared
+vocabulary is not widened.
+
+**The view states its evidence kind, and neither a view nor an edge may cite numeric ordering.**
+`multitrack_schemas.validate_compatibility_view` now requires an `evidence_kind` and refuses
+`version_order` by name, so a view can no more rest on the version number than an edge can (D535,
+`docs/PARITY_MODEL.md` section 4). A view that carries a bare `compatible` boolean is the claim the
+model forbids and is refused; a view is never a single boolean.
+
+**The 3.6.4 production view is real and derived; the 0.9.8zh views are honestly unmeasured.** The
+production authority's eight views compare its derived distribution/ABI shell -- its own measured
+SONAMEs and exported symbol counts and version namespace (the production atlas), against the
+committed Phase-2 ABI-SYMBOL/ABI-VERSION and install-layout courts and the committed
+`artifacts/phase2/` distribution -- and all read `compatible`. The historical authority's six views
+read `not_measured`, because no candidate build exists for the 0.9.8zh epoch in this venue, and the
+two facets its receipt cannot support -- the static archive names and the pkg-config metadata -- are
+recorded `not_derivable` with their reasons rather than emitted with plausible values. The seven
+dimensions the distribution shell does not carry (source/API, semantic, protocol, error, ownership,
+concurrency and provider registration) are likewise recorded `not_derivable`, so every dimension is
+either an emitted view or a named gap.
+
+**Anti-inheritance is the load-bearing rule, and the court proves it.** Every reference-role
+evidence entry names the authority it belongs to and is content-addressed (path + sha256); a view for
+authority X carries only X's evidence and X's reference identity. The court re-derives the whole
+plane from the authorities' own committed evidence through the same generator and refuses a view
+whose reference evidence belongs to another authority. Its sensitivity control relays authority A's
+evidence into authority B's view, collapses a view to a boolean, makes a view cite numeric ordering
+and drops a view's reference authority, and requires each caught with specificity holding.
+`compatibility-views` moves to `implemented`/closed and the stratum's `open_in_this_stratum` falls
+from nine to eight.
+
+## D543 -- the historical population records one support status per catalogue node, and the epoch representatives are built rather than assumed
+
+Phase 23.10 lands the historical population
+(`forensics/multitrack/historical-population.json` with the record kind `population_record`, the
+generator `forensics/tools/historical_population.py`, court `RT-HISTORICAL-POPULATION`, unit
+`historical-population`). The measured corrections are recorded in
+`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.13 and checked by the court.
+
+**Every catalogue node carries a status, and an out-of-scope node says so.** The brief's subject is
+the public final-release lineage forward from OpenSSL 0.9.1c, but a release the ladder does not
+track must still be recorded rather than omitted. So all 372 catalogue nodes carry a
+`population_record`: the 247 mainline finals climb the ladder or are recorded unavailable, and the
+125 pre-release and auxiliary nodes are `archaeological-only` with `scope:
+"out-of-population-scope"` and a reason. The `public`/`extended` channel flag is deliberately not a
+lineage boundary -- the LTS branch finals (0.9.8, 1.0.2, 1.1.1, 3.0, 3.5) are `extended`, and they
+are exactly the epoch representatives the population must carry -- so the lineage test is `final`
+mainline.
+
+**A status is the highest rung an evidence plane reached.** `multitrack_schemas.SUPPORT_LADDER` is
+read from the artefact that carries each rung: `admitted-source` from the acquisition or
+admitted-authority registry, `built-authority` from an authority node backed by a receipt,
+`atlas-complete` from a committed atlas, `candidate-view` from a compatible view, `runtime-evidenced`
+from the executed semantic pair, and `maintained` from the committed `default-authority.json` alias
+(openssl-3.6.4). `rungs_attained` names every rung reached and is not filled cumulatively by
+assertion; `downstream-evidenced` has no plane until 23.11 and is named absent rather than invented.
+The validator refuses a ladder `status` that is not the highest attained rung and refuses
+`runtime_compatible` without a `runtime-evidenced` rung, so an unavailable release is never counted
+runtime-compatible.
+
+**The epoch representatives are built, and the epoch set is pre-1.0, 1.0.x, 1.1.x, 3.x and
+3.6+/4.x.** 0.9.8zh, 3.6.3 and 3.6.4 were already built; this subphase acquires and builds 1.0.2u,
+1.1.1w and 3.0.0 in the historical venue, each admitted from the official release asset the
+catalogue's tag names and verified against the upstream-published SHA-256. The historical build tool
+now pins `--libdir=lib` for 3.0-plus releases, whose default install libdir is `lib64`, so every
+historical authority installs under one convention; and it points the loader at the prefix's own
+`lib` when reading the built version banner rather than recording a loader error as the version.
+The court requires each major epoch to hold at least one built representative.
+
+**Acquiring the representatives expands the parameterized atlas and the entity-lineage boundary.**
+`atlas_common.historical_authority_ids()` names every acquired historical authority, so
+`atlas_authority.py` now produces a plane census for 1.0.2u/1.1.1w/3.0.0 beside 0.9.8zh, and
+`entity_lineage.py` names them in its coverage boundary as built-but-not-covered. Both artefacts are
+regenerated in this commit and their courts re-derive them and pass; no committed evidence is
+suppressed to keep an earlier artefact unchanged. `historical-population` moves to
+`implemented`/closed and the stratum's `open_in_this_stratum` falls from eight to seven.
+
+## D544 -- the security lineage observes a documented selection, and the candidate disposition is derived
+
+Phase 23.14 lands the security lineage (`forensics/multitrack/security-lineage.json` with the
+record kind `security_observation`, extended), the acquisition tool
+`forensics/tools/security_acquire.py`, the frozen source snapshot
+`forensics/multitrack/security-source.json`, the generator
+`forensics/tools/security_lineage.py` and the court `RT-SECURITY-LINEAGE`, unit
+`security-lineage`. The measured corrections are recorded in
+`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.14 and checked by the court.
+
+**The source is frozen rather than fetched at generation time.** The acquisition tool reads the
+official OpenSSL vulnerability index and each observed advisory, records the URL, the fetch date
+and the SHA-256 of the bytes, and freezes them into a committed snapshot the generator reads; the
+generator never touches the network. The index carries 297 CVE records and the plane binds a
+documented selection of ten, spanning every severity class, every maintained branch the catalogue
+carries and both the public and the premium fix identifiers; the other 287 are named as
+`unobserved` findings rather than fabricated. Widening the selection changes only the acquisition
+tool.
+
+**One identity per vulnerability, and separate branch-fix rows.** The plane carries
+`vulnerabilities` (one identity per CVE: upstream's severity, affected range, subsystem, FIPS
+impact and candidate disposition) and `observations` (one `security_observation` per
+(vulnerability, maintained branch): the affected range, the fixed release, the branch it maps to,
+and the external-reference flag). The `security_observation` schema now requires the
+vulnerability identity, the branch, the severity, the subsystem, the FIPS impact, the candidate
+disposition and the external flag; a `preserve_vulnerable_behaviour` disposition is refused by
+name and `reintroduced` must be the literal false, so the no-reintroduction rule is a validator
+and a court check rather than a prose rule.
+
+**The candidate disposition is derived from the reference authority and the divergence register.**
+The reference is the committed `default-authority.json` alias (`openssl-3.6.4-production`): a
+vulnerability whose reference lies inside an affected range is `unresolved` because the fix
+postdates the reference (`CVE-2026-84782`, fixed in `3.6.5`), an affected subsystem with a
+recorded safety divergence is `safe_divergence` and cites it (`D-GF2M-1`/`D-GF2M-2` and
+`D-EC-1`/`D-EC-2` in `forensics/divergence-obligations.json`, referenced rather than restated),
+and every other is `never_contained`. The court fails if any disposition would reintroduce a
+fixed behaviour, and its control proves that a `preserve_vulnerable_behaviour` disposition and a
+`safe_divergence` with no recorded divergence are each caught.
+
+**An unavailable-source identifier is an external release reference, never an authority.** Of the
+52 branch fixes, 37 resolve in the release catalogue and 15 do not: `1.0.2zd`, `1.1.1zj`, `3.0.23`
+and the rest are named by upstream's advisories but are not catalogue nodes, so each is recorded
+`external_release_reference: true` with `source_available: false` and a null `authority_id`. The
+court refuses a fix whose external flag disagrees with the catalogue and refuses an external
+identifier that names an admitted authority.
+
+**The `security_backport` edges land.** `security_lineage.security_backport_edges` types the
+relationship between the catalogued fixes of one vulnerability, read forward in time, and
+`authority_catalog.py` merges them into `forensics/authority-lineage.json` -- 27 edges over the
+observed set -- retiring 23.4's absent-with-reason for the kind. `security-lineage` moves to
+`implemented`/closed and the stratum's `open_in_this_stratum` falls from four to three. The
+court's property is `NOT_CLAIMED` with the unobserved source records named as findings, so a
+passing `RT-SECURITY-LINEAGE` must never be read as "the lineage is secure".
+
+## D545 -- the support-status ladder is the reconciled projection of the historical population
+
+Phase 23.15 lands the support-status ladder
+(`forensics/multitrack/support-status.json` with the record kind `support_status`, the kind 23.0
+already defined), the generator `forensics/tools/support_status.py` and the court
+`RT-SUPPORT-STATUS`, unit `support-status`. The measured corrections are recorded in
+`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.15 and checked by the court.
+
+**One derivation, two views.** 23.10's `historical-population.json` already records a support
+status per catalogue node, so a second hand-maintained ladder would be a parallel truth. The
+subphase chooses the option the plan allows: the generator calls
+`historical_population.derive_body()` -- the one derivation of a status -- and re-expresses each
+record in the schema-validated `support_status` shape, adding the per-rung evidence
+(`evidence_by_rung`) and the reason for each rung not attained (`not_attained`) the subphase row
+asks for. `RT-SUPPORT-STATUS` reconciles every row with its population record node-for-node and
+rung-for-rung and re-derives both planes through their own generators, so the two artefacts
+cannot drift, neither is typed, and the same fact is recorded once.
+
+**The ladder's ordering rule is corrected to match the committed evidence.** 23.0's
+`validate_support_status` required `rungs_attained` to be a strict prefix of `SUPPORT_LADDER`, but
+the committed population is deliberately not a strict prefix: the four historical epoch
+representatives are `downstream-evidenced` from a real consumer with no `candidate-view` and no
+`runtime-evidenced`, because a downstream consumer build is not gated on the oracle-to-oracle
+measurement (D543). The correction splits the ladder into `SUPPORT_CORE` -- the contiguous climb
+`catalogued` -> `admitted-source` -> `built-authority` -> `atlas-complete`, which must be a prefix
+so a core rung cannot be skipped -- and the additive rungs (`candidate-view`, `runtime-evidenced`,
+`downstream-evidenced`, `maintained`), each read from its own independent evidence plane. The
+validator still refuses an out-of-order rung, a duplicate, a lower-than-highest status and an
+`archaeological-only` node with a rung; its documented-good set gains 0.9.8zh's independent-rung
+form and its documented-bad set still refuses a node that skips `admitted-source`.
+
+**A status is a release/authority state, not a parity dimension, and every rung is backed by its
+evidence.** Each row carries `support_role` (`support-target` or `archaeology`) and the plane
+names no `PARITY_VERIFIED` and no one-boolean compatibility claim; a row carrying a competing
+`compatible`/`parity` field is a finding. The court re-reads each attained rung against the raw
+plane -- a `built-authority` against the authority's actual receipt, a `downstream-evidenced`
+against a passing consumer, a `candidate-view` against a compatible view, and so on -- and
+requires an `archaeological-only` node to climb no rung and never be counted a support target. The
+measured ladder is 245 support targets and 127 archaeological-only nodes, with no status typed.
+The control seeds a higher rung with no evidence, a skipped core rung, an archaeological-only node
+counted supported and a typed status, and each is caught with specificity holding.
+`support-status` moves to `implemented`/closed and the stratum's `open_in_this_stratum` falls from
+three to two.
+
+## D546 -- the compatibility matrix is assembled from five planes, and no cell is a boolean
+
+Phase 23.16 lands the assembled compatibility matrix
+(`forensics/multitrack/compatibility-matrix.json`, the record kind `compatibility_matrix` 23.0
+defined and this subphase extends), the generator `forensics/tools/compat_matrix.py` and the court
+`RT-COMPATIBILITY-MATRIX`, unit `compatibility-matrix`. The measured corrections are recorded in
+`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.16 and checked by the court.
+
+**The matrix joins, it does not restate.** A cell names the source records it joins as
+`(plane, record_id)` references and carries only the reading the join took from each, so the
+committed matrix cannot drift from its inputs: the court re-reads every source record from the
+plane it names and re-derives every reading and every cell verdict. The five planes are the
+compatibility views (23.9), the directional compatibility edges (23.12), the negative and positive
+obligations (23.13), the security lineage (23.14) and the support-status ladder (23.15), and they
+are content-addressed once in the matrix's `planes` block.
+
+**The matrix is `O(relations x dimensions)`, never the pairwise release product.** The relations
+are read from the planes that establish them -- the edge plane's declared pair-directions, the
+view plane's candidate-to-authority relations and the obligation plane's authority/release scopes
+-- so 23.16 joins over the lineage edges and the planes that exist. The measured matrix is 10
+relations x 10 dimensions = 100 cells; the 3.6.3 <-> 3.6.4 pair is joined in both directions, the
+candidate is joined to its reference authority 3.6.4-production in both directions, and to each
+authority (and the one release) the planes scope obligations to (0.9.8zh, 1.0.2u, 1.1.1w, 3.0.0,
+3.6.3, 3.6.4 and 4.0.3).
+
+**Every cell is directional and dimension-specific with a join verdict, never a boolean.**
+`multitrack_schemas.validate_compatibility_matrix` now requires the cell's `dimension` and
+`direction` from the closed vocabularies and a `verdict` from `MATRIX_VERDICTS`
+(`PASS`/`FAIL`/`UNKNOWN`/`NOT_MEASURED`), and still refuses a bare `compatible` flag. A cell is
+`PASS` only when every joined reading passes, `FAIL` when any reading fails, `UNKNOWN` when a
+reading is unknown or unmeasured, and `NOT_MEASURED` (`with its reason`) when the cell joins no
+reading at all. The measured verdicts are 21 `PASS`, 1 `FAIL`, 6 `UNKNOWN` and 72 `NOT_MEASURED`:
+the `FAIL` is the 3.6.4 -> 3.6.3 `source_api` cell, whose backward reading of the committed delta
+removes the two macros 3.6.4 added; the six `UNKNOWN` cells are the 0.9.8zh `abi` cell (a
+`not_measured` view joins a satisfied obligation), the 4.0.3 `provider_registration` cell (its one
+obligation, the 4.x ENGINE absence, is `unknown` because no 4.x authority or view is admitted), the
+candidate-to-reference-authority `semantic` cells in both directions (the edge plane's semantic
+facet is `UNKNOWN`) and the candidate-to-reference-authority `behavioural` cells in both directions
+(the security lineage's one `unresolved` disposition -- `CVE-2026-84782`, fixed in 3.6.5 -- joins
+them); the 72 `NOT_MEASURED` cells are the dimensions no plane measured for a relation.
+
+**The security lineage guards the behavioural dimension, and support status is context.** The
+security plane joins the candidate-to-reference-authority relation on the `behavioural` dimension
+(`never_contained`/`safe_divergence` -> `PASS`, `unresolved` -> `UNKNOWN`,
+`preserve_vulnerable_behaviour` -> `FAIL`), so a cell can never re-adopt a fixed behaviour; the
+support-status plane joins the endpoints' ladder rows as **context**, and never turns an unmeasured
+reading into a pass. The court establishes that every cell references real records from the five
+planes, that its reading equals the source record's own value, that the verdict reproduces from the
+joined readings, that one cell covers every declared relation and dimension, that all five planes
+are joined, and that the counts, content hash and plane block reproduce and are content-addressed.
+The control seeds a reading that contradicts its plane, a boolean cell, a cell with no source record
+and a `PASS` with no evidence, and each is caught with specificity holding. `compatibility-matrix`
+moves to `implemented`/closed and the stratum's `open_in_this_stratum` falls from two to one,
+leaving only the `multitrack-seal` (23.17).
+
+## D547 -- every distinct major.minor line carries a track, and seven early 0.9.x lines stay `unavailable`
+
+Phase 23 sealed with **six** built authorities (0.9.8zh, 1.0.2u, 1.1.1w, 3.0.0, 3.6.3 and 3.6.4).
+This decision records the line-coverage expansion: one authority per distinct major.minor OpenSSL
+line's **latest final release**, acquired by the official asset and verified against the
+upstream-published SHA-256 (`forensics/tools/authority_acquire.py --historical`) and built in the
+historical venue (`forensics/tools/historical_build.py`), so that every line the catalogue carries
+has a track. The new built authorities are `1.0.0t`, `1.0.1u`, `1.1.0l`, `3.0.22`, `3.1.8`,
+`3.2.6`, `3.3.7`, `3.4.8`, `3.5.9`, `3.6.5`, `4.0.0`, `4.0.1`, `4.0.2` and `4.0.3`, each with a
+historical build receipt in `forensics/multitrack/historical-build-receipts.json` and a node in
+`forensics/authority-nodes.json`. The registry is now **20** nodes (**2** admitted, **18**
+historical built) with **7** honestly `unavailable`; the twenty-six originally-sealed authority
+nodes and the admitted pair's receipts are byte-stable.
+
+**Seven early 0.9.x lines are recorded `unavailable`, not built.** `0.9.1c`, `0.9.2b`, `0.9.3a`,
+`0.9.4`, `0.9.5a`, `0.9.6m` and `0.9.7m` are genuine upstream releases and catalogue nodes, but
+no upstream-published SHA-256 exists for them (the project published only MD5/SHA-1 for most, and
+no release asset at all for several), and an official digest cannot be invented. They are carried
+in `historical-acquisition.json` and `forensics/authority-nodes.json` `unavailable` with their
+reason, are never authority nodes and are never counted runtime-compatible. `docs/PHASE-23-
+MULTITRACK-SUBPHASES.md` section 4.7 and the seal's section 4 already named `0.9.1c` and `0.9.6m`;
+this decision extends that honest boundary to the whole 0.9.1-0.9.7 range.
+
+**The dependent planes re-derive over the larger set; nothing is typed.** The historical
+population's `built` count is **20** with **7** unavailable and **5/5** ABI epochs carrying a
+representative (pre-1.0 `0.9.8zh`; 1.0.x `1.0.0t`/`1.0.1u`/`1.0.2u`; 1.1.x `1.1.0l`/`1.1.1w`;
+3.x `3.0.0`/`3.0.22`/`3.1.8`/`3.2.6`/`3.3.7`/`3.4.8`/`3.5.9`; 3.6+/4.x
+`3.6.3`/`3.6.4`/`3.6.5`/`4.0.0`/`4.0.1`/`4.0.2`/`4.0.3`); the 23.3 parameterization produces a
+plane census for each of the **18** built historical authorities beside the default; the support
+ladder is **240** support targets and **132** archaeological-only; the negative surface is **107**
+obligations (**35** negative, **72** positive, **0** open, **1** unknown); and the assembled matrix
+grows to **24** relations x **10** dimensions = **240** cells (**35** `PASS`, **1** `FAIL`, **6**
+`UNKNOWN`, **198** `NOT_MEASURED`). The compatibility views (14 over 2 authorities), the
+compatibility edges (24 over 2 pairs), the entity lineage (26,001 rows over the one covered pair),
+the security lineage (52 branch fixes over 27 edges) and the downstream plane (5/5 epochs, 3
+`not_run`) are unchanged in count; only their content-addressed inputs move. `run_courts.py
+--phase 23` reports **17/17** pass, `phase_state.py` still derives phase 23 **complete**, and
+`regen_all.sh` reaches a fixed point with `evidence_determinism.py` green.
+
+**Two bounded prose statements the expansion falsifies are corrected at their source, never
+weakened.** The ABI/history façade's 1.0.x `not established` reason no longer reads "no 1.0.x
+source tree is admitted" (one now is); it reads that the 1.0.x *layouts* remain unmeasured because
+the committed measurement is the 0.9.8zh `EVP_MD_CTX`/`HMAC_CTX` generation only, and admitting a
+source tree is a separate evidence plane from measuring a layout. The 4.x ENGINE negative
+obligation's rationale no longer reads "no 4.x authority is admitted" (four now are); it stays
+`unknown` because no 4.x **view or measured façade** is committed, so the absence stays a recorded
+boundary rather than a manufactured pass. The measured corrections are recorded in
+`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.17 and in `docs/PHASE-23-MULTITRACK-SEAL.md`
+section 9 item 5, and each is checked by the Phase-23 courts rather than asserted here.

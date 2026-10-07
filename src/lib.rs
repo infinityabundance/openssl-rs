@@ -87,6 +87,11 @@ pub mod cms;
 // object model; the CRMF item groups its message engine carries are pulled forward crate-internally
 // (the plan orders 12.4 before 12.7). See `src/cmp/mod.rs`.
 pub mod cmp;
+// Phase 23.7's compatibility-policy layer and historical ABI/history façades. The default 3.6.4
+// production selection compiles no façade; `build.rs` compiles them only for a historical
+// compatibility selection, and the modules are `cfg(test)`-visible so the generated layout
+// assertions are exercised by the crate's own gates. See `src/compat/mod.rs`.
+pub mod compat;
 pub mod context;
 // Phase 13.7 — `crypto/async/`: the ASYNC job-and-wait framework. The directory is named for
 // the authority's `crypto/async/`, and its files follow that layout; the module is reachable as

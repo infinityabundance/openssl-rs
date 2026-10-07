@@ -14,6 +14,7 @@
     "phase20",
     "phase21",
     "phase22",
+    "phase23",
     "phase3",
     "phase4",
     "phase5",
@@ -103,7 +104,15 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "MULTITRACK-SEAL": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "PERFORMANCE-BOUNDARY-REGISTER": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-ABI-HISTORY-FACADES": {
       "observations": 0,
       "verdict": "pass"
     },
@@ -147,7 +156,15 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "RT-ATLAS-PARAMETERIZATION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-AUTHORITY-ADMISSION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-AUTHORITY-NODES": {
       "observations": 0,
       "verdict": "pass"
     },
@@ -267,6 +284,18 @@
       "observations": 27,
       "verdict": "pass"
     },
+    "RT-COMPATIBILITY-EDGES": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-COMPATIBILITY-MATRIX": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-COMPATIBILITY-VIEWS": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-CONF": {
       "observations": 736,
       "verdict": "pass"
@@ -307,6 +336,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "RT-DELTA-ENGINE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-DH": {
       "observations": 589,
       "verdict": "pass"
@@ -321,6 +354,10 @@
     },
     "RT-DOWNSTREAM-CORPUS": {
       "observations": 6,
+      "verdict": "pass"
+    },
+    "RT-DOWNSTREAM-MULTITRACK": {
+      "observations": 0,
       "verdict": "pass"
     },
     "RT-DRBG": {
@@ -361,6 +398,10 @@
     },
     "RT-ENGINE-TABLE": {
       "observations": 76,
+      "verdict": "pass"
+    },
+    "RT-ENTITY-LINEAGE": {
+      "observations": 0,
       "verdict": "pass"
     },
     "RT-ERR": {
@@ -455,6 +496,10 @@
       "observations": 30,
       "verdict": "pass"
     },
+    "RT-HISTORICAL-POPULATION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-HMAC": {
       "observations": 32,
       "verdict": "pass"
@@ -503,6 +548,10 @@
       "observations": 124,
       "verdict": "pass"
     },
+    "RT-LINEAGE-EDGES": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-MEM": {
       "observations": 82,
       "verdict": "pass"
@@ -517,6 +566,10 @@
     },
     "RT-MEM-INSTALL": {
       "observations": 15,
+      "verdict": "pass"
+    },
+    "RT-NEGATIVE-OBLIGATIONS": {
+      "observations": 0,
       "verdict": "pass"
     },
     "RT-OBJ-STREAM": {
@@ -675,6 +728,10 @@
       "observations": 38,
       "verdict": "pass"
     },
+    "RT-RELEASE-CATALOG": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-RSA": {
       "observations": 1021,
       "verdict": "pass"
@@ -691,8 +748,16 @@
       "observations": 32,
       "verdict": "pass"
     },
+    "RT-SECURITY-LINEAGE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-SELFTEST": {
       "observations": 71,
+      "verdict": "pass"
+    },
+    "RT-SEMANTIC-COURTS": {
+      "observations": 0,
       "verdict": "pass"
     },
     "RT-SESSION-CERT": {
@@ -748,6 +813,10 @@
       "verdict": "pass"
     },
     "RT-SUBSTITUTION-WITNESS": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-SUPPORT-STATUS": {
       "observations": 0,
       "verdict": "pass"
     },
@@ -834,6 +903,7 @@
     "phase20": 0,
     "phase21": 0,
     "phase22": 0,
+    "phase23": 0,
     "phase3": 43,
     "phase4": 23,
     "phase5": 91,
@@ -860,6 +930,7 @@
     "phase20": 0,
     "phase21": 0,
     "phase22": 0,
+    "phase23": 0,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
@@ -882,6 +953,7 @@
     "phase20": 5,
     "phase21": 5,
     "phase22": 18,
+    "phase23": 17,
     "phase3": 294,
     "phase4": 272,
     "phase5": 565,
@@ -907,6 +979,7 @@
     "20": "complete",
     "21": "complete",
     "22": "complete",
+    "23": "complete",
     "3": "complete",
     "4": "complete",
     "5": "complete",
