@@ -4,7 +4,7 @@
     "detail": "Git 2.56.0, SHA-1/SHA-256 via the candidate libcrypto",
     "ok": true
   },
-  "candidate": "0.0.26",
+  "candidate": "0.0.27",
   "concurrency": {
     "ok": 16,
     "total": 16
