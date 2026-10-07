@@ -93,6 +93,29 @@ OUT = REPO_ROOT / "forensics" / "downstream" / "family-freeze.json"
 DOWNSTREAM = REPO_ROOT / "forensics" / "downstream"
 GENERATOR = "forensics/tools/downstream_freeze.py"
 
+# The artefacts that legitimately carry **candidate results**, and are produced only **after** the
+# freeze. 24.6's build/link atlas is the first: the freeze enables candidate execution, so the
+# candidate rows it records are the measurement the freeze made possible, not a candidate result
+# that existed *before* the freeze. The freeze-time scan (`candidate_subject_findings`) therefore
+# excludes these artefacts -- the property that matters is that no candidate result existed at
+# freeze time, and that is preserved -- while a candidate row in any other artefact is still a
+# finding, and a fabricated row injected under any other path is still caught by the sensitivity
+# control. The population's own frozen-before-any-candidate property is separately enforced: the
+# freeze is a pure function of the committed families and ranking evidence, and the court re-derives
+# 24.6 records this time-scoping correction
+# (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md section 4.9), rather than the freeze asking a later
+# stratum's artefacts never to contain the candidate runs it enabled.
+CANDIDATE_RESULT_ARTEFACTS = frozenset({
+    "build-link-atlas.json",
+    "runtime-functional-atlas.json",
+    "failures.json",
+    "high-value-tier.json",
+    "hostility-corpus.json",
+    "candidate-freeze.json",
+    "p1000-run.json",
+    "reconciliation.json",
+})
+
 # The P1000 size: the first 1,000 families of the ranked universe are the counted population, and
 # the entire remaining ranked tail is the reserve. The constant is recorded in the artefact's rule.
 P1000_SIZE = 1000
@@ -267,9 +290,18 @@ def _candidate_rows(doc: object, where: str) -> list[str]:
 
 
 def load_plane() -> list[tuple[str, object]]:
-    """The committed downstream plane: every `forensics/downstream/*.json*` document, parsed."""
+    """The committed **pre-freeze** downstream plane: every `forensics/downstream/*.json*` document,
+    parsed, minus the candidate-result artefacts the stratum produces after the freeze (24.6 onward,
+    the first being the build/link atlas). The candidate-subject scan this feeds asks whether a
+    candidate result existed *before* the freeze, which is the property that matters, so the
+    candidate runs the freeze enabled are not read as pre-freeze contamination. A fabricated
+    candidate row injected under any other path is still caught (see `candidate_subject_findings`
+    and the sensitivity control).
+    """
     docs: list[tuple[str, object]] = []
     for path in sorted(DOWNSTREAM.glob("*.json*")):
+        if path.name in CANDIDATE_RESULT_ARTEFACTS:
+            continue
         text = path.read_text(encoding="utf-8")
         if path.suffix == ".jsonl":
             docs.extend((rel(path), json.loads(line))

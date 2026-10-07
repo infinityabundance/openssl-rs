@@ -66,10 +66,10 @@
         "closure": "the `RT-BUILD-LINK-ATLAS` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-BUILD-LINK-ATLAS is pending",
+        "measurement_state": "complete",
+        "observation": "RT-BUILD-LINK-ATLAS is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "build-link-atlas",
         "what": "one build/link run per specimen per subject (authority and candidate), reaching the configured, built and linked levels with candidate linkage proven"
@@ -188,8 +188,8 @@
       "contract_units": 15,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 5,
-      "open_in_this_stratum": 10,
+      "implemented": 6,
+      "open_in_this_stratum": 9,
       "owned": 15,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -225,12 +225,12 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "11bddad6e1d3c9053ec16b2408f0aade17e912149d130526eaffbc161c4c6169"
+      "sha256": "d76d1da44a915755970afaf488d2b63b0914a67e0de851ae06c15e9c81f62389"
     },
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "359c69887bc52e94bdde4ae4b6a7360749ee554e0b63c67987efbef19ae305e5"
+      "sha256": "b67d1474c82ea6c991ec53e3d9b463ec5309d4f2f635fd1f837eb6c032378a81"
     },
     {
       "name": "phase24-guard",

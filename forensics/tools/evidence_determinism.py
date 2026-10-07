@@ -231,9 +231,19 @@ GENERATORS_BEFORE_LEDGERS = [
     # inputs -- the committed 24.4 frozen P1000 and the committed 24.2 families -- so a stale
     # committed partition, or one re-divided by something other than the recorded rule, is a failure
     # rather than a silent divergence. It sits **after** the freeze (it reads family-freeze.json) and
-    # **before** the ledgers because it reads no ledger; the RT-HOLDOUT-PARTITION court re-derives
-    # the whole split through the same rule and refuses a holdout chosen after a candidate failure.
+    # **before** the ledgers because it reads no ledger; the RT-HOLDOUT-PARTITION court re-derives the
+    # whole split through the same rule and refuses a holdout chosen after a candidate failure.
     "forensics/tools/downstream_holdout.py",
+    # Phase 24.6's **build/link atlas is deliberately not here, and not in `COMPARED`.** It is
+    # produced by measurement -- real builds of real downstream releases inside the court container --
+    # so the level each build reaches and the ELF it links are a function of the court's toolchain and
+    # of the network, not of committed inputs; regenerating it needs a compiler and a prefix that a
+    # CI runner (which runs this tool host-side) does not have, and the Docker-only guard refuses a
+    # host invocation of the tool before it builds anything. This is the same precedent as the
+    # Phase-17 measured corpus under `courts/phase17/downstream/*/result.json`: the raw measurement is
+    # the court's business (`RT-BUILD-LINK-ATLAS` re-runs only its pure checks over the committed
+    # artefact), not a byte-compared artefact here. If a later subphase derives a pure aggregate from
+    # it, that aggregate is what belongs in this list.
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court

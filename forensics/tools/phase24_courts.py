@@ -21,7 +21,8 @@ and names the fifteen courts it will stage. **24.1 registers `RT-RANKING-SOURCES
 ranking-source acquisition, **24.2 registers `RT-CANDIDATE-UNIVERSE`**, the candidate family
 universe, **24.3 registers `RT-AUTHORITY-CENSUS`**, the authority-baseline census, and **24.4
 registers `RT-FAMILY-FREEZE`**, the P1000 + reserve freeze, and **24.5 registers
-`RT-HOLDOUT-PARTITION`**, the precommitted holdout partition. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
+`RT-HOLDOUT-PARTITION`**, the precommitted holdout partition, and **24.6 registers
+`RT-BUILD-LINK-ATLAS`**, the build/link atlas. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
 normalized inputs under `forensics/downstream/ranking/normalized/`, re-derives the frozen
 `selection_input_root_hash`, and checks every source is content-addressed with a retrieval
 timestamp and a parser version, that an unavailable source carries a reason and is not counted
@@ -45,7 +46,9 @@ re-derives the ranked universe from those families by the frozen selection rule,
 atlas. It establishes that the recorded P1000 is exactly the derived top-1,000 and the reserve the
 derived remainder in rank order; that the P1000 is distinct and disjoint from the reserve; that both
 are a subset of the universe; that the recorded selection root reproduces and its input hashes match
-the committed files; and that no candidate-subject run exists anywhere in the downstream plane --
+the committed files; and that no candidate-subject run exists in the pre-freeze plane (the
+candidate-result artefacts the stratum produces after the freeze -- 24.6's build/link atlas onward
+-- are excluded, because the freeze enabled them) --
 with an instrument-sensitivity control that seeds five mutations and requires each caught.
 `RT-HOLDOUT-PARTITION` reads the committed `forensics/downstream/holdout.json`, the committed
 frozen `forensics/downstream/family-freeze.json` and the committed
@@ -79,7 +82,7 @@ The fifteen courts, and the subphase that lands each
   * `RT-AUTHORITY-CENSUS` -- 24.3, the authority-baseline census (registered).
   * `RT-FAMILY-FREEZE` -- 24.4, the P1000 + reserve freeze (registered).
   * `RT-HOLDOUT-PARTITION` -- 24.5, the precommitted holdout (registered).
-  * `RT-BUILD-LINK-ATLAS` -- 24.6, the build/link atlas.
+  * `RT-BUILD-LINK-ATLAS` -- 24.6, the build/link atlas (registered).
   * `RT-RUNTIME-FUNCTIONAL-ATLAS` -- 24.7, the runtime/functional atlas.
   * `RT-FAILURE-MINIMIZATION` -- 24.8, the failure discovery/minimization loop.
   * `RT-HIGH-VALUE-TIER` -- 24.9, the high-value deep tier.
@@ -92,7 +95,8 @@ The fifteen courts, and the subphase that lands each
 
 Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2 registers
 `RT-CANDIDATE-UNIVERSE`, 24.3 registers `RT-AUTHORITY-CENSUS`, 24.4 registers
-`RT-FAMILY-FREEZE` and 24.5 registers `RT-HOLDOUT-PARTITION`, and the remaining ten are
+`RT-FAMILY-FREEZE`, 24.5 registers `RT-HOLDOUT-PARTITION` and 24.6 registers
+`RT-BUILD-LINK-ATLAS`, and the remaining nine are
 pending. A passing court is an instrument,
 not a property claim, and this stratum makes no property claim beyond the atlas: a selected
 empirical population is not a random sample, 1000/1000 is not a security proof, a build is not a
@@ -160,6 +164,11 @@ import downstream_freeze  # noqa: E402
 # was produced by.
 import downstream_holdout  # noqa: E402
 
+# The 24.6 build/link atlas tool, imported so the court re-runs its pure validation and sensitivity
+# control over the committed build/link atlas (never rebuilding and never launching a downstream
+# program) through the same code path the artefact was produced by.
+import downstream_build_link  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -195,8 +204,14 @@ FAMILY_FREEZE_COURT = "RT-FAMILY-FREEZE"
 HOLDOUT = REPO_ROOT / "forensics" / "downstream" / "holdout.json"
 HOLDOUT_PARTITION_COURT = "RT-HOLDOUT-PARTITION"
 
+# 24.6's subject: the build/link atlas, one build/link run per specimen per subject. The court reads
+# it and re-runs the pure validation; it never rebuilds and never launches a downstream program.
+BUILD_LINK_ATLAS = REPO_ROOT / "forensics" / "downstream" / "build-link-atlas.json"
+BUILD_LINK_ATLAS_COURT = "RT-BUILD-LINK-ATLAS"
+
 # The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES`, 24.2 `RT-CANDIDATE-UNIVERSE`,
-# 24.3 `RT-AUTHORITY-CENSUS`, 24.4 `RT-FAMILY-FREEZE` and 24.5 `RT-HOLDOUT-PARTITION`; each later
+# 24.3 `RT-AUTHORITY-CENSUS`, 24.4 `RT-FAMILY-FREEZE`, 24.5 `RT-HOLDOUT-PARTITION` and 24.6
+# `RT-BUILD-LINK-ATLAS`; each later
 # subphase appends its court here in the commit that lands its instrument, and a court removed from
 # the table leaves the registry and fails `run_courts.py`.
 COURTS: list[tuple[str, str]] = [
@@ -205,13 +220,13 @@ COURTS: list[tuple[str, str]] = [
     (AUTHORITY_CENSUS_COURT, "_authority_census_court"),
     (FAMILY_FREEZE_COURT, "_family_freeze_court"),
     (HOLDOUT_PARTITION_COURT, "_holdout_partition_court"),
+    (BUILD_LINK_ATLAS_COURT, "_build_link_atlas_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order. A court moves out of this table
 # and into `COURTS` in the commit that lands its instrument.
 PENDING_COURTS: dict[str, str] = {
-    "RT-BUILD-LINK-ATLAS": "24.6 -- the build/link atlas",
     "RT-RUNTIME-FUNCTIONAL-ATLAS": "24.7 -- the runtime/functional atlas",
     "RT-FAILURE-MINIMIZATION": "24.8 -- the failure discovery/minimization loop",
     "RT-HIGH-VALUE-TIER": "24.9 -- the high-value deep tier",
@@ -516,7 +531,9 @@ def _family_freeze_court(name: str) -> dict:
     distinct and disjoint from the reserve; that both are a subset of the universe; that ranks are
     positions and the recorded signal is each family's own; that the recorded selection root
     reproduces and its `selection_input_root_hash` and input hashes match the committed files; and
-    that **no candidate-subject run exists anywhere in the downstream plane**, so the population is
+    that **no candidate-subject run exists in the pre-freeze plane** (the candidate-result artefacts
+    the stratum produces after the freeze -- 24.6's build/link atlas onward -- are excluded), so the
+    population is
     frozen before any candidate result. Five seeded mutations are each caught with specificity
     holding. A passing freeze is a **precommitment**, not a result: it says the population was
     selected from the frozen ranking evidence before any candidate ran. The anti-pattern it refuses
@@ -605,7 +622,9 @@ def _holdout_partition_court(name: str) -> dict:
     band of 100 contributes exactly 20 holdout / 80 development; that the cohorts reproduce from the
     frozen rule; that the partition root reproduces; that the counts are read rather than typed;
     that the partition is a **pure function of the frozen P1000** (no family outside it); and that
-    **no candidate-subject run exists anywhere in the downstream plane**, so the split is fixed
+    **no candidate-subject run exists in the pre-freeze plane** (the candidate-result artefacts
+    the stratum produces after the freeze -- 24.6's build/link atlas onward -- are excluded), so the
+    split is fixed
     before any candidate result. Six seeded mutations are each caught with specificity holding. A
     passing partition is a **precommitment**, not a result. The anti-pattern it refuses is a holdout
     chosen after seeing a candidate failure -- a holdout that is no longer out-of-sample.
@@ -657,7 +676,9 @@ def _holdout_partition_court(name: str) -> dict:
             "that each band contributes exactly 20 holdout / 80 development; that the cohorts "
             "reproduce from the frozen rule; that the partition root reproduces; that the counts "
             "are read rather than typed; that the partition is a pure function of the frozen P1000; "
-            "and that no candidate-subject run exists anywhere in the downstream plane. The six "
+            "and that no candidate-subject run exists in the pre-freeze plane (the candidate-result "
+            "artefacts the stratum produces after the freeze -- 24.6's build/link atlas onward -- "
+            "are excluded). The six "
             "seeded mutations -- one development family moved into the holdout cohort, one holdout "
             "member deleted, a family_id duplicated into both cohorts, a P1000-external family "
             "added, a mutated partition root, and a fabricated candidate-subject run row in the "
@@ -678,6 +699,115 @@ def _holdout_partition_court(name: str) -> dict:
             "development": counts.get("development", len(development)),
             "holdout": counts.get("holdout", len(holdout)),
             "per_band_holdout": counts.get("per_band_holdout", 0),
+        },
+        "examples": examples,
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
+def _build_link_atlas_court(name: str) -> dict:
+    """`RT-BUILD-LINK-ATLAS`: 24.6's court, the build/link atlas.
+
+    Stages no probe. It reads the committed atlas `forensics/downstream/build-link-atlas.json`, the
+    committed frozen P1000 `forensics/downstream/family-freeze.json` and the committed families
+    `forensics/downstream/families.json`, and re-runs the 24.6 validation and sensitivity control
+    over the committed artefact **without rebuilding and without launching anything**. It
+    establishes that every frozen P1000 family is accounted for under both subjects; that every
+    recipe-backed family has both an authority and a candidate row for the same specimen and the
+    same recipe (identical build intent); that a candidate `L4-linked` row's linkage proof resolves
+    the candidate install and never the authority prefix nor a system library; that an authority
+    `L4-linked` row resolves the authority; that `candidate_specific_patch_count` is 0; that every
+    non-measured row carries a reason and a schema-valid residual/failure class; and that the counts
+    are derived rather than typed. Five seeded mutations are each caught with specificity holding. A
+    passing atlas is a **measurement**, not a functional proof: it says how far a pristine
+    downstream build reached and that the candidate's libssl/libcrypto resolved, not that any
+    consumer works.
+    """
+    if not BUILD_LINK_ATLAS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the build/link atlas artefact {rel(BUILD_LINK_ATLAS)} is absent"],
+                "findings": [], "control": {}}
+
+    freeze_body = json.loads(FAMILY_FREEZE.read_text(encoding="utf-8"))["body"]
+    families_body = json.loads(FAMILIES.read_text(encoding="utf-8"))["body"]
+    atlas_body = downstream_build_link._load_atlas()
+    findings = downstream_build_link.build_link_findings(families_body, freeze_body, atlas_body)
+    control = downstream_build_link.build_link_sensitivity_control(families_body, freeze_body,
+                                                                   atlas_body)
+
+    counts = atlas_body.get("counts") or {}
+    runs = atlas_body.get("runs") or []
+    cand = [r for r in runs if r.get("subject") == "candidate" and r.get("has_recipe")]
+    by = counts.get("by_subject") or {}
+    examples = {
+        "rule": atlas_body.get("rule"),
+        "candidate_identity": atlas_body.get("candidate_identity"),
+        "authority_prefix": atlas_body.get("authority_prefix"),
+        "candidate_linkage_proof": {
+            str(r.get("canonical_name")): {
+                "resolved": {k: v.get("resolved")
+                             for k, v in ((r.get("linkage") or {}).get("sonames") or {}).items()},
+                "default_resolution": (r.get("linkage") or {}).get("default_resolution"),
+                "version_needs": (r.get("linkage") or {}).get("version_needs"),
+            }
+            for r in cand if r.get("level") == downstream_build_link.L4
+        },
+        "candidate_failures": [
+            {"family": r.get("canonical_name"), "level": r.get("level"),
+             "failure_class": r.get("failure_class"), "reason": r.get("reason")}
+            for r in cand if r.get("outcome") in ("failed", "not_attempted")
+        ],
+        "candidate_specific_patch_count": counts.get("candidate_specific_patch_count", 0),
+    }
+
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/build-link-atlas.json, "
+            "forensics/downstream/family-freeze.json and forensics/downstream/families.json and "
+            "re-runs the 24.6 validation and sensitivity control over the committed artefact "
+            "without rebuilding and without launching anything. It establishes that every frozen "
+            "P1000 family is accounted for under both subjects; that every recipe-backed family "
+            "has both an authority and a candidate row for the same specimen and the same recipe "
+            "(identical build intent); that a candidate L4-linked row's linkage proof resolves the "
+            "candidate install and never the authority prefix nor a system library; that an "
+            "authority L4-linked row resolves the authority; that candidate_specific_patch_count "
+            "is 0; that every non-measured row carries a reason and a schema-valid "
+            "residual/failure class; and that the counts are derived rather than typed. The six "
+            "seeded mutations -- a candidate L4 row whose linkage resolves the authority, a "
+            "recipe-backed family missing its authority row (non-identical intent), a positive "
+            "candidate_specific_patch_count, a non-measured row with no residual class, a "
+            "candidate L4 row whose linkage resolves a system library, and a candidate row that "
+            "built a different pristine source tree -- are each detected with "
+            "specificity holding. A passing atlas is a measurement, not a functional proof: the "
+            "linkage proof establishes that the candidate's libssl/libcrypto resolved, not that "
+            "any consumer works (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 3.1, 3.2, "
+            "3.6 and the brief's sections 21-22)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the build/link atlas court reads committed artefacts and brings no "
+            "artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF "
+            "declaration"
+        ),
+        "candidate_identity": atlas_body.get("candidate_identity"),
+        "counts": {
+            "p1000": counts.get("p1000", 0),
+            "rows": counts.get("rows", len(runs)),
+            "with_recipe": counts.get("with_recipe", 0),
+            "no_recipe": counts.get("no_recipe", 0),
+            "authority_linked": (by.get("authority") or {}).get("linked", 0),
+            "candidate_linked": (by.get("candidate") or {}).get("linked", 0),
+            "candidate_configured": (by.get("candidate") or {}).get("configured", 0),
+            "candidate_built": (by.get("candidate") or {}).get("built", 0),
+            "candidate_failed": (by.get("candidate") or {}).get("failed", 0),
+            "candidate_linkage_proven": counts.get("candidate_linkage_proven", 0),
+            "candidate_specific_patch_count": counts.get("candidate_specific_patch_count", 0),
         },
         "examples": examples,
         "findings": findings,
@@ -801,7 +931,9 @@ def main(argv: list[str]) -> int:
             "that both are a subset of the universe; that ranks are positions and the recorded "
             "signal is each family's own; that the recorded selection root reproduces and its "
             "selection_input_root_hash, families sha256 and rule sha256 match the committed "
-            "files; and that no candidate-subject run exists anywhere in the downstream plane, so "
+            "files; and that no candidate-subject run exists in the pre-freeze plane (the "
+            "candidate-result artefacts the stratum produces after the freeze -- 24.6's build/link "
+            "atlas onward -- are excluded), so "
             "the population is frozen before any candidate result. Two P1000 members' order "
             "swapped, a P1000 member deleted so the count is wrong, a family id shared between "
             "the P1000 and the reserve, a mutated selection root, and a fabricated "
@@ -827,12 +959,30 @@ def main(argv: list[str]) -> int:
             "plane are each detected with specificity holding. A passing partition is a "
             "precommitment, not a result, and it refuses the anti-pattern of a holdout chosen "
             "after seeing a candidate failure -- a holdout that is no longer out-of-sample. "
+            "`RT-BUILD-LINK-ATLAS` is 24.6's court: the build/link atlas. It stages no probe "
+            "and reads forensics/downstream/build-link-atlas.json, "
+            "forensics/downstream/family-freeze.json and forensics/downstream/families.json, "
+            "re-running the 24.6 validation and sensitivity control over the committed artefact "
+            "without rebuilding. It establishes that every frozen P1000 family is accounted for "
+            "under both subjects; that every recipe-backed family has both an authority and a "
+            "candidate row for the same specimen and the same recipe (identical build intent); "
+            "that a candidate L4-linked row's linkage proof resolves the candidate install and "
+            "never the authority prefix nor a system library; that an authority L4-linked row "
+            "resolves the authority; that candidate_specific_patch_count is 0; that every "
+            "non-measured row carries a reason and a schema-valid residual/failure class; and "
+            "that the counts are derived rather than typed. A candidate L4 row whose linkage "
+            "resolves the authority, a recipe-backed family missing its authority row, a "
+            "positive candidate-specific patch count, a non-measured row with no residual "
+            "class, and a candidate L4 row whose linkage resolves a system library are each "
+            "detected with specificity holding. A passing atlas is a measurement, not a "
+            "functional proof: the linkage proof says the candidate's libssl/libcrypto "
+            "resolved, not that any consumer works. "
             "The remaining "
-            "ten courts -- RT-BUILD-LINK-ATLAS, "
+            "nine courts -- "
             "RT-RUNTIME-FUNCTIONAL-ATLAS, RT-FAILURE-MINIMIZATION, RT-HIGH-VALUE-TIER, "
             "RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, "
             "RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending "
-            "with the subphases that land them (24.6 through 24.15). Phase 24 owns no exported "
+            "with the subphases that land them (24.7 through 24.15). Phase 24 owns no exported "
             "symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
@@ -899,6 +1049,13 @@ def main(argv: list[str]) -> int:
     for ref_name, path in (("holdout", HOLDOUT),
                            ("downstream-holdout", REPO_ROOT / "forensics" / "tools"
                             / "downstream_holdout.py")):
+        if path.is_file():
+            inputs.append(InputRef(name=ref_name, path=path))
+    # 24.6's subject: the committed build/link atlas and the tool that produced it, bound so a run
+    # row the court reads is content-addressed rather than restated.
+    for ref_name, path in (("build-link-atlas", BUILD_LINK_ATLAS),
+                           ("downstream-build-link", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_build_link.py")):
         if path.is_file():
             inputs.append(InputRef(name=ref_name, path=path))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
@@ -1035,6 +1192,38 @@ def main(argv: list[str]) -> int:
                       f"{row['family_id']:<34} {row['openssl_linkage']:<10} "
                       f"{row['canonical_name']}")
             print(f"      candidate-subject rows in the downstream plane: {ex['candidate_rows']}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == BUILD_LINK_ATLAS_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            ex = r["examples"]
+            print(f"  {r['court']:<32} pass   (no probe, p1000={counts['p1000']} "
+                  f"rows={counts['rows']} with_recipe={counts['with_recipe']} "
+                  f"no_recipe={counts['no_recipe']} auth_linked={counts['authority_linked']} "
+                  f"cand_linked={counts['candidate_linked']} "
+                  f"cand_failed={counts['candidate_failed']} "
+                  f"linkage_proven={counts['candidate_linkage_proven']} "
+                  f"patches={counts['candidate_specific_patch_count']}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"authority-link->{c['caught_candidate_linkage_resolves_authority']} "
+                  f"missing-authority->{c['caught_recipe_family_missing_authority_row']} "
+                  f"patch-count->{c['caught_positive_candidate_specific_patch_count']} "
+                  f"no-residual->{c['caught_failed_row_without_residual']} "
+                  f"system->{c['caught_candidate_system_libssl']} "
+                  f"source-root->{c['caught_candidate_different_source_root']})")
+            ident = ex.get("candidate_identity") or {}
+            print(f"      candidate install={ident.get('install_prefix')} "
+                  f"libssl={str(ident.get('libssl_so_3_sha256'))[:12]} "
+                  f"libcrypto={str(ident.get('libcrypto_so_3_sha256'))[:12]}")
+            for fam, proof in sorted((ex.get("candidate_linkage_proof") or {}).items()):
+                son = ", ".join(f"{k}->{v}" for k, v in sorted(proof["resolved"].items()))
+                print(f"      candidate-linkage {fam:<12} {son} "
+                      f"needs={proof.get('version_needs')}")
+            for f in ex.get("candidate_failures") or []:
+                print(f"      candidate-failure {f['family']:<12} {f['level']:<16} "
+                      f"{f['failure_class']:<24} {(f['reason'] or '')[:70]}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":
