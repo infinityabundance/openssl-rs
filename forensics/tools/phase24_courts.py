@@ -24,7 +24,8 @@ registers `RT-FAMILY-FREEZE`**, the P1000 + reserve freeze, and **24.5 registers
 registers `RT-HOLDOUT-PARTITION`**, the precommitted holdout partition, and **24.6 registers
 `RT-BUILD-LINK-ATLAS`**, the build/link atlas, and **24.7 registers
 `RT-RUNTIME-FUNCTIONAL-ATLAS`**, the runtime/functional atlas, and **24.8 registers
-`RT-FAILURE-MINIMIZATION`**, the failure discovery/minimization loop. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
+`RT-FAILURE-MINIMIZATION`**, the failure discovery/minimization loop, and **24.9 registers
+`RT-HIGH-VALUE-TIER`**, the high-value deep tier. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
 normalized inputs under `forensics/downstream/ranking/normalized/`, re-derives the frozen
 `selection_input_root_hash`, and checks every source is content-addressed with a retrieval
 timestamp and a parser version, that an unavailable source carries a reason and is not counted
@@ -87,7 +88,7 @@ The fifteen courts, and the subphase that lands each
   * `RT-BUILD-LINK-ATLAS` -- 24.6, the build/link atlas (registered).
   * `RT-RUNTIME-FUNCTIONAL-ATLAS` -- 24.7, the runtime/functional atlas (registered).
   * `RT-FAILURE-MINIMIZATION` -- 24.8, the failure discovery/minimization loop (registered).
-  * `RT-HIGH-VALUE-TIER` -- 24.9, the high-value deep tier.
+  * `RT-HIGH-VALUE-TIER` -- 24.9, the high-value deep tier (registered).
   * `RT-HOSTILITY-AUGMENTATION` -- 24.10, the separate hostility corpus.
   * `RT-CANDIDATE-FREEZE` -- 24.11, the candidate freeze and holdout.
   * `RT-P1000-RUN` -- 24.12, the final full P1000 run.
@@ -98,8 +99,8 @@ The fifteen courts, and the subphase that lands each
 Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2 registers
 `RT-CANDIDATE-UNIVERSE`, 24.3 registers `RT-AUTHORITY-CENSUS`, 24.4 registers
 `RT-FAMILY-FREEZE`, 24.5 registers `RT-HOLDOUT-PARTITION`, 24.6 registers
-`RT-BUILD-LINK-ATLAS`, 24.7 registers `RT-RUNTIME-FUNCTIONAL-ATLAS` and 24.8 registers
-`RT-FAILURE-MINIMIZATION`, and the remaining seven are
+`RT-BUILD-LINK-ATLAS`, 24.7 registers `RT-RUNTIME-FUNCTIONAL-ATLAS`, 24.8 registers
+`RT-FAILURE-MINIMIZATION` and 24.9 registers `RT-HIGH-VALUE-TIER`, and the remaining six are
 pending. A passing court is an instrument,
 not a property claim, and this stratum makes no property claim beyond the atlas: a selected
 empirical population is not a random sample, 1000/1000 is not a security proof, a build is not a
@@ -182,6 +183,11 @@ import downstream_runtime  # noqa: E402
 # anything) through the same code path the artefact was produced by.
 import downstream_failures  # noqa: E402
 
+# The 24.9 high-value deep tier tool, imported so the court re-runs its pure validation and
+# sensitivity control over the committed tier (never rebuilding and never launching a program)
+# through the same code path the artefact was produced by.
+import downstream_high_value  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -234,6 +240,12 @@ DOWNSTREAM_FAILURES = REPO_ROOT / "forensics" / "downstream" / "failures.json"
 DOWNSTREAM_FAILURES_DIR = REPO_ROOT / "forensics" / "downstream" / "failures"
 FAILURE_MINIMIZATION_COURT = "RT-FAILURE-MINIMIZATION"
 
+# 24.9's subject: the high-value deep tier, the deepest families by the committed 24.3 usage
+# fingerprints plus the precedented deep consumers (Git, CPython), measured to the functional level
+# under both subjects. The court reads it and re-runs the pure validation; it never rebuilds.
+HIGH_VALUE_TIER = REPO_ROOT / "forensics" / "downstream" / "high-value-tier.json"
+HIGH_VALUE_TIER_COURT = "RT-HIGH-VALUE-TIER"
+
 # The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES`, 24.2 `RT-CANDIDATE-UNIVERSE`,
 # 24.3 `RT-AUTHORITY-CENSUS`, 24.4 `RT-FAMILY-FREEZE`, 24.5 `RT-HOLDOUT-PARTITION`, 24.6
 # `RT-BUILD-LINK-ATLAS`, 24.7 `RT-RUNTIME-FUNCTIONAL-ATLAS` and 24.8 `RT-FAILURE-MINIMIZATION`; each
@@ -248,13 +260,13 @@ COURTS: list[tuple[str, str]] = [
     (BUILD_LINK_ATLAS_COURT, "_build_link_atlas_court"),
     (RUNTIME_FUNCTIONAL_ATLAS_COURT, "_runtime_functional_atlas_court"),
     (FAILURE_MINIMIZATION_COURT, "_failure_minimization_court"),
+    (HIGH_VALUE_TIER_COURT, "_high_value_tier_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order. A court moves out of this table
 # and into `COURTS` in the commit that lands its instrument.
 PENDING_COURTS: dict[str, str] = {
-    "RT-HIGH-VALUE-TIER": "24.9 -- the high-value deep tier",
     "RT-HOSTILITY-AUGMENTATION": "24.10 -- the separate hostility-augmentation corpus",
     "RT-CANDIDATE-FREEZE": "24.11 -- the candidate freeze and holdout",
     "RT-P1000-RUN": "24.12 -- the final full P1000 run",
@@ -1065,6 +1077,132 @@ def _failure_minimization_court(name: str) -> dict:
     }
 
 
+def _high_value_tier_court(name: str) -> dict:
+    """`RT-HIGH-VALUE-TIER`: 24.9's court, the high-value deep tier.
+
+    Stages no probe. It reads the committed tier `forensics/downstream/high-value-tier.json`, the
+    committed 24.3 usage fingerprints `forensics/downstream/usage-fingerprints.json`, the committed
+    24.7 runtime/functional atlas, the committed frozen P1000 `forensics/downstream/family-freeze.json`
+    and the committed families `forensics/downstream/families.json`, and re-runs the 24.9 validation
+    and sensitivity control over the committed artefact **without rebuilding and without launching
+    anything**. It establishes that the tier reproduces from the frozen depth rule (the committed
+    24.3 fingerprints, ordered by distinct imported symbols, then API-family breadth, then distinct
+    headers, then direct-before-transitive, then canonical name/family_id) and reads no candidate row;
+    that every tier member is a real committed direct-consumer family with both-subject runs; that a
+    carried row cites a committed 24.7 row agreeing on its level and transcript hash; that an `L5+`
+    row is backed by a real load proof resolving the subject prefix and never the authority's; that
+    an `L6`/`L7` row carries a non-empty normalised transcript hash and a normalisation that erases
+    no evidence; that a candidate row never claims a level above the authority-applicable baseline;
+    that every non-selected P1000 family carries a reason and the accounting covers the whole P1000;
+    that `candidate_specific_patch_count` is 0; and that the counts are derived rather than typed.
+    Six seeded mutations are each caught with specificity holding. A passing tier is a
+    **measurement**, not a security proof: it says the deepest families the committed evidence
+    selects loaded the subject's libssl/libcrypto and completed one deterministic local workload, not
+    that any consumer outside the tier is safe.
+    """
+    if not HIGH_VALUE_TIER.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the high-value tier artefact {rel(HIGH_VALUE_TIER)} is absent"],
+                "findings": [], "control": {}}
+
+    fingerprints_body = json.loads(USAGE_FINGERPRINTS.read_text(encoding="utf-8"))["body"]
+    runtime_body = downstream_runtime._load_atlas()
+    families_body = json.loads(FAMILIES.read_text(encoding="utf-8"))["body"]
+    freeze_body = json.loads(FAMILY_FREEZE.read_text(encoding="utf-8"))["body"]
+    tier_body = json.loads(HIGH_VALUE_TIER.read_text(encoding="utf-8"))["body"]
+    findings = downstream_high_value.high_value_findings(fingerprints_body, runtime_body,
+                                                         families_body, freeze_body, tier_body)
+    control = downstream_high_value.high_value_sensitivity_control(
+        fingerprints_body, runtime_body, families_body, freeze_body, tier_body)
+
+    counts = tier_body.get("counts") or {}
+    by = counts.get("by_subject") or {}
+    tier = tier_body.get("tier") or []
+    runs = tier_body.get("runs") or []
+    examples = {
+        "rule": tier_body.get("rule"),
+        "tier": [{"family": m.get("canonical_name"), "family_id": m.get("family_id"),
+                  "source": m.get("source"), "depth_rank": m.get("depth_rank"),
+                  "authority_applicable_baseline": m.get("authority_applicable_baseline"),
+                  "admission": m.get("admission")} for m in tier],
+        "precedent_consumers": tier_body.get("precedent_consumers"),
+        "authority_applicable_level": counts.get("authority_applicable_level"),
+        "runs": [{"family": r.get("canonical_name"), "subject": r.get("subject"),
+                  "level": r.get("level"), "outcome": r.get("outcome"),
+                  "carried_from": r.get("carried_from"), "workload": r.get("workload"),
+                  "residual_class": r.get("residual_class")} for r in runs],
+        "tier_not_measured": counts.get("tier_not_measured"),
+        "accounting": counts.get("accounting"),
+        "candidate_specific_patch_count": counts.get("candidate_specific_patch_count", 0),
+    }
+
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/high-value-tier.json, "
+            "forensics/downstream/usage-fingerprints.json, the 24.7 runtime/functional atlas, "
+            "forensics/downstream/family-freeze.json and forensics/downstream/families.json and "
+            "re-runs the 24.9 validation and sensitivity control over the committed artefact "
+            "without rebuilding and without launching anything. It establishes that the tier "
+            "reproduces from the frozen depth rule (the committed 24.3 usage fingerprints, ordered "
+            "by distinct imported OpenSSL symbols, then API-family breadth, then distinct headers, "
+            "then direct-before-transitive, then canonical name/family_id) and reads no candidate "
+            "row; that every tier member is a real committed direct-consumer family with "
+            "both-subject runs; that a carried row cites a committed 24.7 row agreeing on its level "
+            "and transcript hash; that an L5+ row is backed by a real load proof resolving the "
+            "subject prefix and never the authority's; that an L6/L7 row carries a non-empty "
+            "normalised transcript hash and a normalisation that erases no evidence; that a "
+            "candidate row never claims a level above the authority-applicable baseline; that every "
+            "non-selected P1000 family carries a reason and the accounting covers the whole P1000; "
+            "that candidate_specific_patch_count is 0; and that the counts are derived rather than "
+            "typed. The six seeded mutations -- a tier member dropped, a family added to the tier by "
+            "a candidate result rather than the depth rule, a candidate L7 above the authority "
+            "baseline marked pass, an L5 row with no load proof, an empty transcript at L6, and a "
+            "not-selected P1000 family with no reason -- are each detected with specificity holding. "
+            "A passing tier is a measurement, not a security proof: it says the deepest families the "
+            "committed evidence selects loaded the subject's libssl/libcrypto and completed one "
+            "deterministic local workload, not that any consumer outside it is safe "
+            "(docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 3.1, 3.2 and 3.6 and the "
+            "brief's sections 19, 30, 31, 43, 44 and 46)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the high-value-tier court reads committed artefacts and brings no "
+            "artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF "
+            "declaration"
+        ),
+        "candidate_identity": tier_body.get("candidate_identity"),
+        "counts": {
+            "tier_size": counts.get("tier_size", 0),
+            "tier_fingerprint": counts.get("tier_fingerprint", 0),
+            "tier_precedent": counts.get("tier_precedent", 0),
+            "tier_in_p1000": counts.get("tier_in_p1000", 0),
+            "tier_outside_p1000": counts.get("tier_outside_p1000", 0),
+            "rows": counts.get("rows", len(runs)),
+            "p1000_accounted": counts.get("p1000_accounted", 0),
+            "accounting_tier_measured": (counts.get("accounting") or {}).get("tier_measured", 0),
+            "accounting_not_selected": (counts.get("accounting") or {}).get("not_selected", 0),
+            "authority_loaded": (by.get("authority") or {}).get("loaded", 0),
+            "authority_runtime": (by.get("authority") or {}).get("runtime", 0),
+            "authority_functional": (by.get("authority") or {}).get("functional", 0),
+            "candidate_loaded": (by.get("candidate") or {}).get("loaded", 0),
+            "candidate_runtime": (by.get("candidate") or {}).get("runtime", 0),
+            "candidate_functional": (by.get("candidate") or {}).get("functional", 0),
+            "candidate_reaches_baseline": counts.get("candidate_reaches_baseline", 0),
+            "candidate_failures": counts.get("candidate_failures") or {},
+            "tier_not_measured": len(counts.get("tier_not_measured") or []),
+            "candidate_specific_patch_count": counts.get("candidate_specific_patch_count", 0),
+        },
+        "examples": examples,
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1266,12 +1404,35 @@ def main(argv: list[str]) -> int:
             "on disk, and a fabricated fix commit are each detected with specificity holding. A "
             "passing court is an instrument: a discovered-and-minimized failure is a preserved "
             "record, not a fix, and a minimized reproducer is not the consumer. "
+            "`RT-HIGH-VALUE-TIER` is 24.9's court: the high-value deep tier. It stages no probe and "
+            "reads forensics/downstream/high-value-tier.json, "
+            "forensics/downstream/usage-fingerprints.json, the 24.7 runtime/functional atlas, "
+            "forensics/downstream/family-freeze.json and forensics/downstream/families.json, "
+            "re-running the 24.9 validation and sensitivity control over the committed artefact "
+            "without rebuilding and without launching anything. It establishes that the tier "
+            "reproduces from the frozen depth rule (the committed 24.3 usage fingerprints, ordered "
+            "by distinct imported OpenSSL symbols, then API-family breadth, then distinct headers, "
+            "then direct-before-transitive, then canonical name/family_id) and reads no candidate "
+            "row; that every tier member is a real committed direct-consumer family with "
+            "both-subject runs; that a carried row cites a committed 24.7 row agreeing on its level "
+            "and transcript hash; that an L5+ row is backed by a real load proof resolving the "
+            "subject prefix and never the authority's; that an L6/L7 row carries a non-empty "
+            "normalised transcript hash and a normalisation that erases no evidence; that a "
+            "candidate row never claims a level above the authority-applicable baseline; that "
+            "every non-selected P1000 family carries a reason and the accounting covers the whole "
+            "P1000; that candidate_specific_patch_count is 0; and that the counts are derived "
+            "rather than typed. A tier member dropped, a family added to the tier by a candidate "
+            "result, a candidate L7 above the authority baseline marked pass, an L5 row with no "
+            "load proof, an empty transcript at L6, and a not-selected P1000 family with no reason "
+            "are each detected with specificity holding. A passing tier is a measurement, not a "
+            "security proof: it says the deepest families the committed evidence selects loaded "
+            "the subject's libssl/libcrypto and completed one deterministic local workload, not "
+            "that any consumer outside it is safe. "
             "The remaining "
-            "seven courts -- "
-            "RT-HIGH-VALUE-TIER, "
+            "six courts -- "
             "RT-HOSTILITY-AUGMENTATION, RT-CANDIDATE-FREEZE, RT-P1000-RUN, "
             "RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending "
-            "with the subphases that land them (24.9 through 24.15). Phase 24 owns no exported "
+            "with the subphases that land them (24.10 through 24.15). Phase 24 owns no exported "
             "symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
@@ -1374,6 +1535,13 @@ def main(argv: list[str]) -> int:
                         inputs.append(InputRef(
                             name=f"fixture/{downstream_failures._sanitize(rec['failure_id'])}/{name}",
                             path=fp))
+    # 24.9's subject: the committed high-value deep tier and the tool that produced it, bound so a
+    # tier row and an accounting row the court reads are content-addressed rather than restated.
+    for ref_name, path in (("high-value-tier", HIGH_VALUE_TIER),
+                           ("downstream-high-value", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_high_value.py")):
+        if path.is_file():
+            inputs.append(InputRef(name=ref_name, path=path))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
@@ -1602,6 +1770,37 @@ def main(argv: list[str]) -> int:
                 print(f"      divergence {d['atlas']} {d['consumer']}: "
                       f"authority={d['authority_failure_class']} "
                       f"candidate={d['candidate_failure_class']}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == HIGH_VALUE_TIER_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            ex = r["examples"]
+            print(f"  {r['court']:<32} pass   (no probe, tier={counts['tier_size']} "
+                  f"fingerprint={counts['tier_fingerprint']} precedent={counts['tier_precedent']} "
+                  f"in_p1000={counts['tier_in_p1000']} outside={counts['tier_outside_p1000']} "
+                  f"auth_functional={counts['authority_functional']} "
+                  f"cand_functional={counts['candidate_functional']} "
+                  f"reaches_baseline={counts['candidate_reaches_baseline']} "
+                  f"accounting={counts['accounting_tier_measured']}/"
+                  f"{counts['accounting_not_selected']} "
+                  f"patches={counts['candidate_specific_patch_count']}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"dropped->{c['caught_tier_member_dropped']} "
+                  f"candidate-added->{c['caught_family_added_by_candidate_result']} "
+                  f"above-baseline->{c['caught_candidate_level_above_authority_baseline']} "
+                  f"no-proof->{c['caught_loaded_row_without_proof']} "
+                  f"no-transcript->{c['caught_runtime_row_without_transcript']} "
+                  f"no-reason->{c['caught_non_selected_family_without_reason']})")
+            for m in ex.get("tier") or []:
+                print(f"      tier {m['source']:<11} rank={str(m['depth_rank']):<4} "
+                      f"{m['family']:<10} baseline={m['authority_applicable_baseline']}")
+            for row in ex.get("runs") or []:
+                print(f"      run  {row['subject']:<9} {row['family']:<10} {row['level']:<16} "
+                      f"{row['outcome']:<8} {str(row.get('carried_from') or row.get('workload') or '')[:52]}")
+            print(f"      tier_not_measured: {ex.get('tier_not_measured')}")
+            print(f"      candidate_failures: {counts['candidate_failures']}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":

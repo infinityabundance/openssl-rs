@@ -102,10 +102,10 @@
         "closure": "the `RT-HIGH-VALUE-TIER` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-HIGH-VALUE-TIER is pending",
+        "measurement_state": "complete",
+        "observation": "RT-HIGH-VALUE-TIER is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "high-value-tier",
         "what": "the high-value deep tier: the families that depend on OpenSSL most deeply are measured past the shallow levels, to the functional level, where they can be"
@@ -188,8 +188,8 @@
       "contract_units": 15,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 8,
-      "open_in_this_stratum": 7,
+      "implemented": 9,
+      "open_in_this_stratum": 6,
       "owned": 15,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -230,7 +230,7 @@
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "e914f8c5f50fad50dc6cd955a826b92294f1960ce47e735f23c72a11ae14adc8"
+      "sha256": "821ddf43cbd90f0e7d606b4a6fd8e9264218782173afc05ca6d4bc1a2d78244d"
     },
     {
       "name": "phase24-guard",
