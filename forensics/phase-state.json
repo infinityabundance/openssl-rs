@@ -746,16 +746,40 @@
         "seal_sha256": "ae74b4d9726b0abe8a1e74a81124eed52a1dc37edeb731794c58bfbe4585ed7e",
         "state": "complete",
         "stratum": "Multitrack authority compatibility and OpenSSL lineage"
+      },
+      {
+        "blocking": "15 open obligation(s) of this stratum recorded in forensics/phase24-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase24-obligations.json` publishes `unit: downstream 1000 contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the fifteen contract units (`ranking-sources`, `candidate-universe`, `authority-baseline-census`, `family-freeze`, `holdout-partition`, `build-link-atlas`, `runtime-functional-atlas`, `failure-minimization`, `high-value-tier`, `hostility-augmentation`, `candidate-freeze`, `p1000-run`, `atlas-reconciliation`, `frf-gemel-closure` and `downstream-1000-seal`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it measures downstream replacement over real projects that are already identified. Its courts stage no probe, because it owns no symbol for a differential probe to observe: they read committed evidence about a frozen, precommitted population of 1,000 downstream project families. Every entry point calls the Docker-only execution guard (`forensics/tools/phase24_guard.py`) first, so on the host the stratum refuses rather than compiling or running anything (docs/REPRODUCIBILITY.md section 1). A passing court is an **instrument**, not a property claim: the property it names may still carry findings, so `measurement_state` says the instrument completed while `property_status`/`findings` say what is claimed. The stratum records four explicit non-claims: a selected empirical population is not a random sample, so its rates do not generalise to all downstream software; 1000/1000 is not a security proof, so a full pass is not a guarantee that any consumer is safe; a build is not a functional proof, so compiling and linking is not behaving; and transitive and direct consumers are different evidence, so a project that only links libssl transitively is not the same measurement as one that calls the API directly. `DROP_IN_PASS` is baseline-normalized and never a boolean of its own: it requires the same pristine source, the authority baseline succeeded, the candidate reached the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches; residuals are classified and failures preserved and minimized. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md` sections 0 and 4 and docs/DECISIONS.md D548 through D553 record the measurement",
+        "deferred": [],
+        "evidence_absent": [
+          "docs/PHASE-24-DOWNSTREAM-1000-SEAL.md"
+        ],
+        "evidence_present": [
+          "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
+          "forensics/tools/phase24_obligations.py",
+          "forensics/tools/phase24_guard.py",
+          "forensics/tools/downstream_schemas.py",
+          "forensics/phase24-obligations.json",
+          "artifacts/phase24/COURTS.json",
+          "forensics/atlas/court-coverage.json",
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
+        ],
+        "name": "downstream-1000",
+        "phase": 24,
+        "provider_rows": null,
+        "seal_sha256": null,
+        "state": "in-progress",
+        "stratum": "Downstream-1000 replacement atlas and empirical drop-in corpus"
       }
     ],
     "rule": "a phase may be complete only if every phase it requires is complete (forensics/tools/phase_state.py REQUIRES; docs/PHASE-22-SUBPHASES.md section 8)",
     "summary": {
       "complete": 24,
-      "in_progress": 0,
+      "in_progress": 1,
       "not_started": 0
     }
   },
-  "body_hash": "835fc5b6aa447e91f9f214bfa05730addc42603705ea64047b3d0a711b3e44ef",
+  "body_hash": "2ffa9cdbfb11d0c630a7746433d155f902218ab2b08ba7cd8f10d141d9954737",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
