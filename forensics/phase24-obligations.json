@@ -54,10 +54,10 @@
         "closure": "the `RT-HOLDOUT-PARTITION` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-HOLDOUT-PARTITION is pending",
+        "measurement_state": "complete",
+        "observation": "RT-HOLDOUT-PARTITION is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "holdout-partition",
         "what": "the precommitted holdout partition, fixed before the candidate was run against the development population and never used to choose a patch"
@@ -188,8 +188,8 @@
       "contract_units": 15,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 4,
-      "open_in_this_stratum": 11,
+      "implemented": 5,
+      "open_in_this_stratum": 10,
       "owned": 15,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -230,7 +230,7 @@
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "6e3374527c749fb47640667d62b8d61377cc5f1db57276e304e933774e46cd95"
+      "sha256": "359c69887bc52e94bdde4ae4b6a7360749ee554e0b63c67987efbef19ae305e5"
     },
     {
       "name": "phase24-guard",
