@@ -6,7 +6,7 @@
         "detail": "curl 8.22.0 (x86_64-pc-linux-gnu) libcurl/8.22.0 OpenSSL/3.6.4 zlib/1.2.13\nRelease-Date: 2026-09-02\nProtocols: file ftp ftps http https ipfs ipns ws wss\nFeatures: alt-svc HSTS HTTPS-proxy IPv6 Largefile libz SSL threadsafe UnixSockets",
         "ok": true
       },
-      "candidate": "0.0.26",
+      "candidate": "0.0.27",
       "concurrency": {
         "ok": 16,
         "total": 16
@@ -56,7 +56,7 @@
         "detail": "Git 2.56.0, SHA-1/SHA-256 via the candidate libcrypto",
         "ok": true
       },
-      "candidate": "0.0.26",
+      "candidate": "0.0.27",
       "concurrency": {
         "ok": 16,
         "total": 16
@@ -107,7 +107,7 @@
         "detail": "HAProxy 3.0.29, built with the candidate OpenSSL 3.6.4",
         "ok": true
       },
-      "candidate": "0.0.26",
+      "candidate": "0.0.27",
       "concurrency": {
         "ok": 16,
         "total": 16
@@ -154,7 +154,7 @@
         "detail": "nginx/1.26.3, built with OpenSSL 3.6.4",
         "ok": true
       },
-      "candidate": "0.0.26",
+      "candidate": "0.0.27",
       "concurrency": {
         "ok": 16,
         "total": 16
@@ -200,7 +200,7 @@
         "detail": "OpenSSH 10.5p1 (portable), libcrypto-only consumer",
         "ok": true
       },
-      "candidate": "0.0.26",
+      "candidate": "0.0.27",
       "concurrency": {
         "ok": 16,
         "total": 16
@@ -246,7 +246,7 @@
         "detail": "CPython 3.12.15, _ssl/hashlib built with OpenSSL 3.6.4",
         "ok": true
       },
-      "candidate": "0.0.26",
+      "candidate": "0.0.27",
       "concurrency": {
         "ok": 16,
         "total": 16

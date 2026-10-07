@@ -240,15 +240,15 @@ in place, so no plan correction is recorded for it.
 No `.frf` object and no Gemel change or checkpoint was created for Phase 21, because the
 mechanism requires none. The FRF store's chain status is recorded here rather than moved: the
 store carries **21 compiled claims with zero blockers** — the **17** sensitivity-backed claims
-(one per runtime stratum, Phases 3 through 19) each recording candidate `openssl-rs 0.0.26`
+(one per runtime stratum, Phases 3 through 19) each recording candidate `openssl-rs 0.0.27`
 (`identity_hash e4f60d8b`) plus the abi/dgst/inventory/baseline oracle claims — over **147**
-receipts, and `forensics/GEMEL_TRAJECTORY.md`'s `current:` is the **0.0.26** release checkpoint
-`K69` (`checkpoint.3c8555fe60fc46b625742b76e310e697db4d7817ee67681b5ca5fc93a02bf8dc`), closing
-change `C115`. The store is **re-created at a release, not at a stratum seal**: the `0.0.26`
-release removed and rebuilt it at the new version, folded the now-complete Phase 21 into the
-release, and recorded the Gemel change and checkpoint exactly as the `0.0.25` release did for
-Phase 20 (the `0.0.25` release commit `ad6fd709`; the `0.0.24` release commit `1b426a91` did the
-same for Phase 19's three declarable courts). This seal records the division: **the stratum records
+receipts, and `forensics/GEMEL_TRAJECTORY.md`'s `current:` is the **0.0.27** release checkpoint
+`K70` (`checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d`), closing
+change `C116`. The store is **re-created at a release, not at a stratum seal**: the `0.0.27`
+release removed and rebuilt it at the new version, folded the now-complete Phases 22 and 23 into the
+release, and recorded the Gemel change and checkpoint exactly as the `0.0.26` release did for
+Phases 20, 21 and 22 (the `0.0.26` release commit `f75f6879`; the `0.0.25` release commit
+`ad6fd709` did the same for Phase 20). This seal records the division: **the stratum records
 the chain status; the release re-creates the store.**
 
 ## 7. Non-claims
