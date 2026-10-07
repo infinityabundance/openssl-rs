@@ -4,7 +4,7 @@
     "detail": "HAProxy 3.0.29, built with the candidate OpenSSL 3.6.4",
     "ok": true
   },
-  "candidate": "0.0.26",
+  "candidate": "0.0.27",
   "concurrency": {
     "ok": 16,
     "total": 16
