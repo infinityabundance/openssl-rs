@@ -309,6 +309,23 @@ cohort is a **bounded, provisional** census cohort (the families carried by at l
 ranking sources), recorded and reproducible from the frozen 24.1 evidence; the real P1000 freeze is
 24.4, and the provisional cohort selects nothing. `RT-AUTHORITY-CENSUS` checks all of this.
 
+**4.9 The freeze-time candidate scan is time-scoped, so the candidate runs the freeze enabled are
+not read as pre-freeze contamination (24.6).** The freeze (24.4) and the holdout (24.5) each scan
+the committed downstream plane and fail if a candidate-subject run exists, which is §3.4's rule
+that the population is frozen before any candidate result. 24.6 is the first subphase that
+**legitimately** runs the candidate, so its build/link atlas carries candidate rows the freeze
+itself made possible, and every later subphase's artefact carries them too. The scan is therefore
+scoped to the plane as it existed at freeze time: the artefact set the stratum produces only after
+the freeze (`build-link-atlas.json`, `runtime-functional-atlas.json`, `failures.json`,
+`high-value-tier.json`, `hostility-corpus.json`, `candidate-freeze.json`, `p1000-run.json`,
+`reconciliation.json`) is excluded, so the property the scan names -- that no candidate result
+existed *at freeze time* -- is preserved rather than a later subphase's honest measurement being
+recorded as contamination. A candidate-subject row in any other artefact is still a finding, and
+the sensitivity control still catches a fabricated candidate row injected under any path outside
+that set. The population's own frozen-before-any-candidate property is enforced separately: the
+freeze is a pure function of the committed families and ranking evidence and its court re-derives
+it. `RT-FAMILY-FREEZE`, `RT-HOLDOUT-PARTITION` and `RT-BUILD-LINK-ATLAS` check this.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 23's process unchanged: a subphase lands its code, its court
