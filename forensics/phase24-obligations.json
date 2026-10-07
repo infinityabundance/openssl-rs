@@ -126,10 +126,10 @@
         "closure": "the `RT-CANDIDATE-FREEZE` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-CANDIDATE-FREEZE is pending",
+        "measurement_state": "complete",
+        "observation": "RT-CANDIDATE-FREEZE is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "candidate-freeze",
         "what": "the candidate identity frozen and content-addressed, and the precommitted holdout run against it exactly once, so the holdout is a real out-of-sample measurement"
@@ -188,8 +188,8 @@
       "contract_units": 15,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 10,
-      "open_in_this_stratum": 5,
+      "implemented": 11,
+      "open_in_this_stratum": 4,
       "owned": 15,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -230,7 +230,7 @@
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "7bbfedc1bb93e38649df438e222bd647ed5980373444532bbb94e55e66a5c99a"
+      "sha256": "bd898ee4363e02af89880df8e3a921291d809eafcb19167eb2314e219ac74dda"
     },
     {
       "name": "phase24-guard",

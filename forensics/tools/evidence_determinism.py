@@ -279,6 +279,17 @@ GENERATORS_BEFORE_LEDGERS = [
     # over the committed artefacts. 24.10 is a **separate** corpus, but that changes nothing about
     # how it is regenerated: it is still measurement, and a later subphase that derives a pure
     # aggregate from it is what would belong in this list.
+    #
+    # Phase 24.11's candidate freeze follows the same precedent, for the same reason and one more. It
+    # re-runs the precommitted holdout against the frozen candidate using the exact 24.6/24.7
+    # recipe/workload machinery, so the level a run reaches, its normalised transcript and the
+    # candidate install's digests at the moment of the run are a measurement. It also carries an
+    # **immutable first_run** that a re-run must never overwrite (a rerun is appended, not folded in),
+    # so regenerating it is a deliberate act, not a byte-compare. It is therefore not listed here; the
+    # `RT-CANDIDATE-FREEZE` court re-runs only its pure checks -- the identity re-derivation from the
+    # committed install, the precommitted-set check, the first_run immutability (every rerun attests
+    # the recorded first_run), the verdict re-derivation and the fix-source check -- over the
+    # committed artefact.
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
