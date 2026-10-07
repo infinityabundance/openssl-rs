@@ -1,13 +1,13 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "content_hash": "141d73032de431ad4ec3a749763e03df97470de8dcf7338d08bc210a78355c2a",
+    "content_hash": "c2b6c3ad13e1aa73c681d732eb9558ae17f5e2b4047792c4f0937e93906fdfab",
     "counts": {
       "admitted": 2,
-      "built": 6,
-      "historical_built": 4,
-      "nodes": 6,
-      "unavailable": 2
+      "built": 20,
+      "historical_built": 18,
+      "nodes": 20,
+      "unavailable": 7
     },
     "nodes": [
       {
@@ -66,6 +66,114 @@
       },
       {
         "arch": "x86_64",
+        "authority_id": "openssl-1.0.0t-historical",
+        "binary_hashes": {
+          "libcrypto.so.1.0.0": "498a1e15e4a3c43cb92b9f48dde7356c5ae3062aaf88c1a2eca16884c816d7e5",
+          "libssl.so.1.0.0": "e50bf1aeae1768a565df523ca5ac45b05883e063de4b16fd368da62927fa68d9"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-1.0.0t-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-1.0.0t-historical/ssl",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "ce052c8437fb97cbc57f034fa94b5bcd749dbf52",
+          "tag": "OpenSSL_1_0_0t"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "3d394fc7013bbc23e707dcd946eede3630f46092b0a42a7b551e37b4cb536319",
+          "include/openssl/evp.h": "1f179f02530c7063821a765a841764b6f6c49ddc7526df6c7d0f0ecfb483edec",
+          "include/openssl/ssl.h": "384577f5ba70f49bf9d261062d05847e33a74e4cbd21656a60487ded63b75fa0"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.1.0.0t.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-1.0.0t",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-1.0.0t.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "5ab6e348c6c2a95d457e7a00e0aa653bfc7eb4df7b24e7c9ab63163ac0299097",
+          "sha256": "5ab6e348c6c2a95d457e7a00e0aa653bfc7eb4df7b24e7c9ab63163ac0299097"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-1.0.1u-historical",
+        "binary_hashes": {
+          "libcrypto.so.1.0.0": "7530ee5aeef14f8554362749b0f966089e819aeae2a2d610e6517db37c9f1987",
+          "libssl.so.1.0.0": "3e70330e0d18cd9e2620819ad4a9cb202c573b80dc68239a1916cccaac8751ca"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-1.0.1u-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-1.0.1u-historical/ssl",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "888759a1d38197f29de7227876c3b58fbff8549f",
+          "tag": "OpenSSL_1_0_1u"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "0cfdd7410d85f5a07a622296f611079a2a242298d058600bffce14e71d949454",
+          "include/openssl/evp.h": "e5942448b44ada0bb075d5fc24686e903ebde273134f5dc0b94e114c6dde2766",
+          "include/openssl/ssl.h": "313bd3ca20a9534a4606bfbe87b968333fc42ce3c27b8dd9807d76ae7de8fcec"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.1.0.1u.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-1.0.1u",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-1.0.1u.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "4312b4ca1215b6f2c97007503d80db80d5157f76f8f7d3febbe6b4c56ff26739",
+          "sha256": "4312b4ca1215b6f2c97007503d80db80d5157f76f8f7d3febbe6b4c56ff26739"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
+      },
+      {
+        "arch": "x86_64",
         "authority_id": "openssl-1.0.2u-historical",
         "binary_hashes": {
           "libcrypto.so.1.0.0": "fae70428bb61ddfe1c2dae7594b697541189380796239c7786b62561245645d7",
@@ -115,6 +223,60 @@
           "checksum_verified": true,
           "published_sha256": "ecd0c6ffb493dd06707d38b14bb4d8c2288bb7033735606569d8f90f89669d16",
           "sha256": "ecd0c6ffb493dd06707d38b14bb4d8c2288bb7033735606569d8f90f89669d16"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-1.1.0l-historical",
+        "binary_hashes": {
+          "libcrypto.so.1.1": "e15b9ddebeccb13dcc53f533a884fbc0b63a370a4a275d1044df1d4a1c0c05f9",
+          "libssl.so.1.1": "e4a2394a60c57b37007c8d56d874dc69b7ca73d0f32cca38db4a6ed001801fba"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-1.1.0l-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-1.1.0l-historical/ssl",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "7ea5bd2b52d0e81eaef3d109b3b12545306f201c",
+          "tag": "OpenSSL_1_1_0l"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "ee3967cc5a51a6e30e3d87feaa4a516b7d693a793cc30323d8abd37b85b9fbde",
+          "include/openssl/evp.h": "1b35eb7f64dc1f70e5d34b862d83044a73ee0a914bc95e613ccf925a5d70f4eb",
+          "include/openssl/ssl.h": "267d8eba7d70babbbdfb6c59a57d21533f352c8943b30030c16282ff6bc704d8"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.1.1.0l.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-1.1.0l",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-1.1.0l.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "74a2f756c64fd7386a29184dc0344f4831192d61dc2481a93a4c5dd727f41148",
+          "sha256": "74a2f756c64fd7386a29184dc0344f4831192d61dc2481a93a4c5dd727f41148"
         },
         "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
       },
@@ -224,6 +386,336 @@
           "checksum_verified": true,
           "published_sha256": "59eedfcb46c25214c9bd37ed6078297b4df01d012267fe9e9eee31f61bc70536",
           "sha256": "59eedfcb46c25214c9bd37ed6078297b4df01d012267fe9e9eee31f61bc70536"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-3.0.22-historical",
+        "binary_hashes": {
+          "libcrypto.so.3": "2f6c85eb5c237c468052445c1bd8414a93940eead22263995b994ccef46c32cc",
+          "libssl.so.3": "a1234439501c716fea9cb661bd032ae9d6fdb6795784101e911203918e35eea3"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-3.0.22-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-3.0.22-historical/ssl",
+            "--libdir=lib",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "a279090b9cd6b682a5a178410765a63e619fa2d9",
+          "tag": "openssl-3.0.22"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "859866622526884d4e1ab33f54fcd93f3fc44d8c661ef62834bc11b8f3455d1b",
+          "include/openssl/evp.h": "f6a4d694d7a72d71a50a804e009e93e86c90872f53e10f95dbd4f3de040832dc",
+          "include/openssl/ssl.h": "d8112849786645f3f183bfcba3b13050be1057f86eb60874af5eb5df5742f952"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.3.0.22.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-3.0.22",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-3.0.22.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "67ebca7e50d17383028045486653492195b83db95f8558709701bb47b5c1ef81",
+          "sha256": "67ebca7e50d17383028045486653492195b83db95f8558709701bb47b5c1ef81"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-3.1.8-historical",
+        "binary_hashes": {
+          "libcrypto.so.3": "8c3c28b8869e4a849f96c6ea13dba912f5a0362a2b45998872fccddd590ce822",
+          "libssl.so.3": "b53526edc28ca7d294315e8bbccc0a56ec505ffa894bade80888b14ace75501d"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-3.1.8-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-3.1.8-historical/ssl",
+            "--libdir=lib",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "77e6daafbad639584e1e4877172b3f9a777966dd",
+          "tag": "openssl-3.1.8"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "c14458c23bd87bd7681012ab4a64bbce48c2608222240bb7e06e101c7a684e21",
+          "include/openssl/evp.h": "4c9e4dc79362ac5db9aca2abb1a0b74806134edec54db19026795495c707bba2",
+          "include/openssl/ssl.h": "c58e45aa66f6e05af8eb7c817a14fb5dffbb3968baa56fcca6f0188854d225d3"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.3.1.8.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-3.1.8",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-3.1.8.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "d319da6aecde3aa6f426b44bbf997406d95275c5c59ab6f6ef53caaa079f456f",
+          "sha256": "d319da6aecde3aa6f426b44bbf997406d95275c5c59ab6f6ef53caaa079f456f"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-3.2.6-historical",
+        "binary_hashes": {
+          "libcrypto.so.3": "de1ce46f7a8676732f825a1aad9785f627543227dc73029ca203b5d2a7f8d21f",
+          "libssl.so.3": "92c00534fac08adf0b461a402942aa16a5fc7907ae1c473c34ad45ec659fc22e"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-3.2.6-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-3.2.6-historical/ssl",
+            "--libdir=lib",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "86874e2ee18ccc14aa518bffa178ebada9c66c86",
+          "tag": "openssl-3.2.6"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "c72330743546610edab7c5e9e95c732da648924ed052086ccaf6f57856cf7cd0",
+          "include/openssl/evp.h": "e7a29e795a165d60a4554bfa191e84e7210783b0d18325e4bb6970a2bbb9f75b",
+          "include/openssl/ssl.h": "5d2f8f10d12dd9a7fdf5e4188def6dfcec87c18870c8625dbbb857d3dd1590cd"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.3.2.6.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-3.2.6",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-3.2.6.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "89681a9ddaa9ed7cf25ea8ef61338db805200bae47d00510490623547380c148",
+          "sha256": "89681a9ddaa9ed7cf25ea8ef61338db805200bae47d00510490623547380c148"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-3.3.7-historical",
+        "binary_hashes": {
+          "libcrypto.so.3": "fc37773bf757e3d9bd44bd5f8440b4dd592f167cb399f718e6c39793cf4ae79b",
+          "libssl.so.3": "b5f037000e2d7654c2e2f0e549af77bbf63c6196ec6903b51a06115dace9c60c"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-3.3.7-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-3.3.7-historical/ssl",
+            "--libdir=lib",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "204165c1550d3aa0f49395af654124cec2bbabf9",
+          "tag": "openssl-3.3.7"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "4054eea4d41ea39ed24cebe06c9103169b9bf779681e031baf84d008222ea048",
+          "include/openssl/evp.h": "cfc2805851cbfe8514e16926d8131591763a0763bf1336b72adc80eab5c37a4a",
+          "include/openssl/ssl.h": "de5cc008698a8108ac34f3784df6720d782077f20a453e8ad16ee7cba8d5170d"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.3.3.7.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-3.3.7",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-3.3.7.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "4900be54e81c4dfe00bb1a10dad33fd8414833573c40d0e9e3274d4ed32e53a2",
+          "sha256": "4900be54e81c4dfe00bb1a10dad33fd8414833573c40d0e9e3274d4ed32e53a2"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-3.4.8-historical",
+        "binary_hashes": {
+          "libcrypto.so.3": "64534346d2c9df8cf0975346b0a09e75ee420ee3f77814ab308b0798e1d345a1",
+          "libssl.so.3": "18792e4dbd8b6541c3bab2a4bc9455f8700e974d3ab012491c389e1f4104a1ff"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-3.4.8-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-3.4.8-historical/ssl",
+            "--libdir=lib",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "e72c946f6f6d94c8ba5119acb25340b7b6b2073f",
+          "tag": "openssl-3.4.8"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "9931ee81ed3d31306f23f5a11de6991ded4ddc0007d58f47e8a0d38ca847ee68",
+          "include/openssl/evp.h": "4cf8e838d354806c28a809e3cca11af0dc3eeb4dcbbaa8409a3d29c3013cf930",
+          "include/openssl/ssl.h": "af40ca9c51cc3bbc1bff7e8d8bfd2852c2d08b40919e229b2b24a4e417b446b8"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.3.4.8.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-3.4.8",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-3.4.8.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "9de9ce2f29e584044ae07ab93fc601637be01fdc91d109c5a655ec7419e6022b",
+          "sha256": "9de9ce2f29e584044ae07ab93fc601637be01fdc91d109c5a655ec7419e6022b"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-3.5.9-historical",
+        "binary_hashes": {
+          "libcrypto.so.3": "e3dee3823ea67e4e47f13fdcf4b8a2950bdee95e98482caef2892f09d1a8bd50",
+          "libssl.so.3": "6f988509cd787644226b557cafd42c0cbeec77693f3be3d20dc07794b6e5a46a"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-3.5.9-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-3.5.9-historical/ssl",
+            "--libdir=lib",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "45e844fa2a14ec92d146bd8f5778ac130b6625fb",
+          "tag": "openssl-3.5.9"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "e38926e360184b25b245e694563129c9b7e6aaa9f152e270ab9f3cf4ff1314a3",
+          "include/openssl/evp.h": "41b42c68adfd98b9d8a80fb2d78bbdaf1094f43dd02be045c7d8605edf36a706",
+          "include/openssl/ssl.h": "5bd2500a92ef42bc3499485762c3841aab6bf6275d8d429613941e38b77ecf60"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.3.5.9.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-3.5.9",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-3.5.9.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a",
+          "sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a"
         },
         "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
       },
@@ -340,6 +832,281 @@
           "sha256": "9bffaa1ad1e07b354c21bd3324ec02fa15579f45a7d0494b3e74bc449b7333ef"
         },
         "toolchain": "cc (Debian 12.2.0-14+deb12u1) 12.2.0"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-3.6.5-historical",
+        "binary_hashes": {
+          "libcrypto.so.3": "8e4c0df4bb74c99d21f300887b0d5d56dc6c9721a6df0f81048aa0477891aaa6",
+          "libssl.so.3": "a81bd749de0ed52371278305975ed37954ca13b838c81711ec5ff96229f2e2b8"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-3.6.5-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-3.6.5-historical/ssl",
+            "--libdir=lib",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "c8bd5a57108599ac650bbae77fcabe3109dab2e8",
+          "tag": "openssl-3.6.5"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "159455d9d79f1a1de3e50cc094b913e580513f53ed28a4edb891fdca77ef3d68",
+          "include/openssl/evp.h": "0c2e950834c4cd0ac8a887f039400932e7cb1d6aaf2f80da73698a8ed5c3b318",
+          "include/openssl/ssl.h": "29f1ff501f1ac10dc23b750dc1c64634acd267e430c12ccc6bd78c1d05c2f58f"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.3.6.5.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-3.6.5",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-3.6.5.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "a2157c2830efdec3788939b00c9b0638306d3f0bbb76dc4832ee503bb397df98",
+          "sha256": "a2157c2830efdec3788939b00c9b0638306d3f0bbb76dc4832ee503bb397df98"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-4.0.0-historical",
+        "binary_hashes": {
+          "libcrypto.so.4": "b2331b0228fe89c64dfd78b6769225fc660e247ff5c6f5d870822947edb400db",
+          "libssl.so.4": "cc8ff20945be5d591dfdcb55e59dbfc2c56c96c441c0f06294f2292e8e6522b1"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-4.0.0-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-4.0.0-historical/ssl",
+            "--libdir=lib",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "11b7b6ea3b65a584e1d31408ed1bdb139465cffd",
+          "tag": "openssl-4.0.0"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "549afc6fa09ef115e2fbb3a1793b9c5b2c9115386956b97ae870992b9bc3a897",
+          "include/openssl/evp.h": "f69f984ed8ba816b911ab5b8085d84a27cee18fa96fec2cc152469a9891dccd1",
+          "include/openssl/ssl.h": "95d50a1df61c05be9a9905ee7a8623e0429076ba6e5a95bb9d5b363b7fa84628"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.4.0.0.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-4.0.0",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-4.0.0.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "c32cf49a959c4f345f9606982dd36e7d28f7c58b19c2e25d75624d2b3d2f79ac",
+          "sha256": "c32cf49a959c4f345f9606982dd36e7d28f7c58b19c2e25d75624d2b3d2f79ac"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-4.0.1-historical",
+        "binary_hashes": {
+          "libcrypto.so.4": "ea823dc1de88bd2f04cb63872ba2b60dbf195d5a2bedafb6f5031604934ae13f",
+          "libssl.so.4": "16ca749c433c427a28469a34c4f4fbc1b01cbc25b120ae5b42334a653366508a"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-4.0.1-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-4.0.1-historical/ssl",
+            "--libdir=lib",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "1e963a8680ec78ad2072792c7a1a71f3c530bd2e",
+          "tag": "openssl-4.0.1"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "549afc6fa09ef115e2fbb3a1793b9c5b2c9115386956b97ae870992b9bc3a897",
+          "include/openssl/evp.h": "f69f984ed8ba816b911ab5b8085d84a27cee18fa96fec2cc152469a9891dccd1",
+          "include/openssl/ssl.h": "5d54e6482fbf390a732d9aa50f6d45ad88e8e2e1784f3af23ae644c8bc80d153"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.4.0.1.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-4.0.1",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-4.0.1.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "2db3f3a0d6ea4b59e1f094ace2c8cd536dffb87cdc39084c5afa1e6f7f37dd09",
+          "sha256": "2db3f3a0d6ea4b59e1f094ace2c8cd536dffb87cdc39084c5afa1e6f7f37dd09"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-4.0.2-historical",
+        "binary_hashes": {
+          "libcrypto.so.4": "5fa710e565defeddd0692c37ee9b9b2444fc02c2b5dc9e7797b0feb5a9d88bee",
+          "libssl.so.4": "e563b2cc93c7d75c2974929ab1a93f48cf5bf2145ce45934fff7e69532c354ec"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-4.0.2-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-4.0.2-historical/ssl",
+            "--libdir=lib",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "f089acdf4bc7ba94a79f4bf6eb7362c3e7d14aa9",
+          "tag": "openssl-4.0.2"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "549afc6fa09ef115e2fbb3a1793b9c5b2c9115386956b97ae870992b9bc3a897",
+          "include/openssl/evp.h": "f69f984ed8ba816b911ab5b8085d84a27cee18fa96fec2cc152469a9891dccd1",
+          "include/openssl/ssl.h": "13c802e5f7708a491c01548faf1fa2e5ef225751acae8adf998d729e91ff6737"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.4.0.2.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-4.0.2",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-4.0.2.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "736b467530f916737b7031310ccb21d8218c6229e61e8e160cd1d3458cd543a8",
+          "sha256": "736b467530f916737b7031310ccb21d8218c6229e61e8e160cd1d3458cd543a8"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
+      },
+      {
+        "arch": "x86_64",
+        "authority_id": "openssl-4.0.3-historical",
+        "binary_hashes": {
+          "libcrypto.so.4": "d5af9470b5f5dd456c5fab53e7f566a23cbfb57133b309083cb90d4f12d13d2c",
+          "libssl.so.4": "0e4c75814d813be3425b407b7e27f047914bf4520bcff8efb2096d51d726af66"
+        },
+        "build_environment": {
+          "base": "debian@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd",
+          "configure_argv": [
+            "perl",
+            "Configure",
+            "linux-x86_64",
+            "--prefix=/work/forensics/authorities/prefix/openssl-4.0.3-historical",
+            "--openssldir=/work/forensics/authorities/prefix/openssl-4.0.3-historical/ssl",
+            "--libdir=lib",
+            "shared"
+          ],
+          "image": "openssl-rs-historical:1",
+          "locale": "C.UTF-8",
+          "parallel_jobs": 1,
+          "profile_args": [
+            "shared"
+          ],
+          "venue": "openssl-rs-historical"
+        },
+        "build_profile": "linux-x86_64-historical-shared",
+        "build_receipt": "forensics/multitrack/historical-build-receipts.json",
+        "claim": "built-authority",
+        "git": {
+          "commit": "af1775b60dfa141a4ad762585052cabeb9f37e9e",
+          "tag": "openssl-4.0.3"
+        },
+        "installed_hashes": {
+          "include/openssl/crypto.h": "549afc6fa09ef115e2fbb3a1793b9c5b2c9115386956b97ae870992b9bc3a897",
+          "include/openssl/evp.h": "f69f984ed8ba816b911ab5b8085d84a27cee18fa96fec2cc152469a9891dccd1",
+          "include/openssl/ssl.h": "13c802e5f7708a491c01548faf1fa2e5ef225751acae8adf998d729e91ff6737"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-build-receipts.json",
+          "forensics/authorities/SOURCE_MANIFEST.4.0.3.json",
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "platform": "linux",
+        "release_id": "openssl-4.0.3",
+        "runtime_evidence": "available",
+        "source_package": {
+          "artifact": "openssl-4.0.3.tar.gz",
+          "checksum_verified": true,
+          "published_sha256": "325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9",
+          "sha256": "325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9"
+        },
+        "toolchain": "cc (Debian 10.2.1-6) 10.2.1 20210110"
       }
     ],
     "note": "the registry is a registry of *builds*, not of releases: an authority node is what a court can be run against, and a release node in forensics/release-catalog.json is a fact about upstream. The admitted pair openssl-3.6.3-historical and openssl-3.6.4-production are build-compatible in the forensic court (linux-x86_64-default-shared-legacy-notests); the built historical authority openssl-0.9.8zh-historical is a pre-1.1.0 source with no out-of-tree build, built in the separately pinned historical venue (docs/PHASE-23-MULTITRACK-SUBPHASES.md section 2). The unavailable list names the early releases whose official digest could not be fetched, so they were not admitted: an unavailable authority is never counted as runtime-compatible",
@@ -363,6 +1130,70 @@
       },
       {
         "git": {
+          "commit": "8af354d44907dc89fbc41a03af4e5d71b8bcd7b9",
+          "tag": "OpenSSL_0_9_2b"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "outcome": "unavailable",
+        "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+        "release_id": "openssl-0.9.2b",
+        "runtime_compatible": false,
+        "runtime_evidence": "unavailable",
+        "version": "0.9.2b"
+      },
+      {
+        "git": {
+          "commit": "033d858cc22eaca6ee6a6414e378be359ab112ca",
+          "tag": "OpenSSL_0_9_3a"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "outcome": "unavailable",
+        "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+        "release_id": "openssl-0.9.3a",
+        "runtime_compatible": false,
+        "runtime_evidence": "unavailable",
+        "version": "0.9.3a"
+      },
+      {
+        "git": {
+          "commit": "2c720c746b18fa2eef4be4ad21c9352a5417b583",
+          "tag": "OpenSSL_0_9_4"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "outcome": "unavailable",
+        "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+        "release_id": "openssl-0.9.4",
+        "runtime_compatible": false,
+        "runtime_evidence": "unavailable",
+        "version": "0.9.4"
+      },
+      {
+        "git": {
+          "commit": "5e61580bbd2ee37a30e8d0afdcc45be1555592d8",
+          "tag": "OpenSSL_0_9_5a"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "outcome": "unavailable",
+        "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+        "release_id": "openssl-0.9.5a",
+        "runtime_compatible": false,
+        "runtime_evidence": "unavailable",
+        "version": "0.9.5a"
+      },
+      {
+        "git": {
           "commit": "8ccf402239a07d23ab308c9dc11bfbe59bad3e65",
           "tag": "OpenSSL_0_9_6m"
         },
@@ -376,6 +1207,22 @@
         "runtime_compatible": false,
         "runtime_evidence": "unavailable",
         "version": "0.9.6m"
+      },
+      {
+        "git": {
+          "commit": "10626fac1569ea37839c37b105681cd08dbe6658",
+          "tag": "OpenSSL_0_9_7m"
+        },
+        "metadata_provenance": [
+          "forensics/multitrack/historical-acquisition.json",
+          "forensics/release-catalog.json"
+        ],
+        "outcome": "unavailable",
+        "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+        "release_id": "openssl-0.9.7m",
+        "runtime_compatible": false,
+        "runtime_evidence": "unavailable",
+        "version": "0.9.7m"
       }
     ]
   },
@@ -399,12 +1246,12 @@
     {
       "name": "historical-acquisition",
       "path": "forensics/multitrack/historical-acquisition.json",
-      "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd"
+      "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff"
     },
     {
       "name": "historical-build-receipts",
       "path": "forensics/multitrack/historical-build-receipts.json",
-      "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee"
+      "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e"
     }
   ],
   "kind": "authority-nodes",

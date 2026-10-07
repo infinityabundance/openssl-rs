@@ -397,9 +397,10 @@ def derive_body() -> dict:
                 view_id=_view_of(aid, "provider_registration"))
 
     # The ENGINE -> Provider -> no-ENGINE model's terminal epoch: a 4.x release is beyond every
-    # admitted authority (the highest is the 3.6.4 `deprecated_engine` façade), so its view must not
-    # retain ENGINE -- and no 4.x authority or view exists to check, so the obligation reads
-    # `unknown` rather than satisfied.
+    # authority the architecture model has *measured* (the highest is the 3.6.4 `deprecated_engine`
+    # façade), so its view must not retain ENGINE -- and no 4.x view or measured façade exists to
+    # check, so the obligation reads `unknown` rather than satisfied. A built 4.x authority is not a
+    # 4.x view: the view plane and the façade measurement are separate planes from the build.
     architecture_ev = ev.entry(ABI_FACADES, "model",
                                "the architecture model's highest measured epoch: the 3.6.4 "
                                "`deprecated_engine` façade")
@@ -415,8 +416,8 @@ def derive_body() -> dict:
             {"release_id": latest_4x},
             f"the architecture model moves ENGINE -> Provider -> no-ENGINE; {display} is beyond the "
             f"highest measured authority epoch (3.6.4 `deprecated_engine`), so a 4.x view must not "
-            f"retain the ENGINE surface. No 4.x authority or view is admitted, so the obligation "
-            f"cannot be adjudicated and reads `unknown`",
+            f"retain the ENGINE surface. No 4.x view or measured façade is admitted, so the "
+            f"obligation cannot be adjudicated and reads `unknown`",
             "model", architecture_ev,
             {"rule": "architecture-future", "release_id": latest_4x,
              "evidence": [rel(ABI_FACADES), rel(CATALOG)]},

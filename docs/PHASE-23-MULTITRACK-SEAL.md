@@ -94,21 +94,21 @@ Every figure below is read from `artifacts/phase23/COURTS.json` and the plane it
 | # | court | subject | verdict | the instrument's own result |
 |---|---|---|---|---|
 | 23.1 | `RT-RELEASE-CATALOG` | the release catalogue and its lineage | `pass` | **372** release nodes from root `openssl-0.9.1c` (23 December 1998), **247** finals, **331** mainline / **41** auxiliary, **25** series, **16** recorded `unresolved`; lineage **991** typed edges over the nodes, a DAG; 0 findings; control honest (a deleted release, a `final` flipped to `beta`, a repointed parent edge and `latest-stable` pointed at a beta are each caught) |
-| 23.2 | `RT-AUTHORITY-NODES` | the authority-node registry | `pass` | **6** authority nodes (**2** admitted, **4** historical built), each backed by a build receipt and content-addressed; **2** `unavailable` (0.9.1c, 0.9.6m) with their reason and `runtime_compatible` false; 0 findings; control honest (a built-authority with no receipt, a dropped identity field and an unproven source digest are each caught) |
-| 23.3 | `RT-ATLAS-PARAMETERIZATION` | the parameterized atlases, byte-identical | `pass` | the 3.6.4 production atlas is re-derived through the authority-parameterized generator and required byte-identical; the two disclosed non-reproducing projections (`ATLAS.md`, `parity-obligations.json`) are measured live and **not applied**; 17-plane censuses for the historical authorities; 0 findings; control honest (an authority argument that changes the census, and a measured absence with no provenance, are each caught) |
+| 23.2 | `RT-AUTHORITY-NODES` | the authority-node registry | `pass` | **20** authority nodes (**2** admitted, **18** historical built), each backed by a build receipt and content-addressed; **7** `unavailable` (0.9.1c, 0.9.2b, 0.9.3a, 0.9.4, 0.9.5a, 0.9.6m, 0.9.7m) with their reason and `runtime_compatible` false; 0 findings; control honest (a built-authority with no receipt, a dropped identity field and an unproven source digest are each caught) |
+| 23.3 | `RT-ATLAS-PARAMETERIZATION` | the parameterized atlases, byte-identical | `pass` | the 3.6.4 production atlas is re-derived through the authority-parameterized generator and required byte-identical; the two disclosed non-reproducing projections (`ATLAS.md`, `parity-obligations.json`) are measured live and **not applied**; 17-plane censuses for the **19**-authority set (the default authority plus the **18** built historical authorities); 0 findings; control honest (an authority argument that changes the census, and a measured absence with no provenance, are each caught) |
 | 23.4 | `RT-LINEAGE-EDGES` | the typed, directed lineage edges | `pass` | every edge schema-valid, typed and directed with a stated sense and resolving provenance; the parallel supported lines (1.0.2, 1.1.1, 3.x, 4.x) are `branch_fork` edges, never a false linear mainline; `date_order_is_not_abi`; 0 findings; control honest (a reversed direction, a date-order edge relabelled `declared_abi_compatibility`, a cycle and a stripped provenance are each caught) |
-| 23.5 | `RT-ENTITY-LINEAGE` | what became of each public entity | `pass` | **26,001** entity rows over the one covered pair (`3.6.3 -> 3.6.4`), every relation `same_entity` with its strong signals and a confidence; no settled relation on a fuzzy nomination; the coverage boundary names the uncovered 0.9.8zh pair; 0 findings; control honest (a name-only similarity, a `renamed_to` that is really a split, a settled relation with no strong signal and a silent merge are each caught) |
+| 23.5 | `RT-ENTITY-LINEAGE` | what became of each public entity | `pass` | **26,001** entity rows over the one covered pair (`3.6.3 -> 3.6.4`), every relation `same_entity` with its strong signals and a confidence; no settled relation on a fuzzy nomination; the coverage boundary names every uncovered pair (each authority that carries only a source manifest and a source-plane census has no declaration plane, so no pair touching it is covered); 0 findings; control honest (a name-only similarity, a `renamed_to` that is really a split, a settled relation with no strong signal and a silent merge are each caught) |
 | 23.6 | `RT-DELTA-ENGINE` | the added / removed / changed surface | `pass` | the 3.6.3 → 3.6.4 delta: **2** added macros (`api_presence`), **5** changed version-stamp macros (`macro_value`) and **20** exported symbols whose machine-code size changed (`abi_symbol_presence`, `st_size`, adjudicated an implementation-size observation and **not an ABI contract change**); **9** dimensions absent with their reason; 0 findings; control honest (an unclassified change, a composed path that disagrees with its edges, a row with no evidence and an unsupportable dimension are each caught) |
 | 23.7 | `RT-ABI-HISTORY-FACADES` | the historical public-layout and prototype façades | `pass` | the 0.9.8zh generation measured from its own headers, the 3.6.4 opacity transition (`struct evp_md_ctx_st`, `struct hmac_ctx_st`), the prototype wrappers' genuinely different eras and the ENGINE → Provider → no-ENGINE epochs; **2** layouts not established (`1.0.x`, the pre-1.1.0 aggregates) with their reason; the default 3.6.4 build compiles no façade; 0 findings; control honest (a perturbed offset, a provider in a pre-provider epoch and a blind-cast façade are each caught) |
 | 23.8 | `RT-SEMANTIC-COURTS` | the oracle-to-oracle semantic pair | `pass` | **20** normalized observations over `3.6.3` vs `3.6.4`, **10** agree and **10** differ, every difference a classified release delta resolving in the 23.6 engine (or a dimension it records absent); the candidate-to-authority dimension is discharged by the named passing Phase-2 and Phase-17 courts; **2** 0.9.8zh pairs `not_run` with their reason; 0 findings; control honest (an adapter that normalizes away a difference, a probe read against the wrong authority and an unclassified difference are each caught) |
 | 23.9 | `RT-COMPATIBILITY-VIEWS` | the directional, dimension-specific views | `pass` | **14** views over **2** authorities (**8** `compatible` production distribution/ABI shell facets, **6** `not_measured` historical), each with an explicit `evidence_kind` that is never numeric ordering and content-addressed, authority-scoped evidence; **16** facets `not_derivable` with their reason; 0 findings; control honest (relayed evidence, a boolean view, a numeric-ordering view and a view with no reference authority are each caught) |
-| 23.10 | `RT-HISTORICAL-POPULATION` | the historical population | `pass` | one derived support status per catalogue node (**372** nodes; **5/5** ABI epochs carry a built representative: 0.9.8zh, 1.0.2u, 1.1.1w, 3.0.0, 3.6.3/3.6.4); **2** releases `unavailable`, never runtime-compatible; every rung backed by its own evidence; 0 findings; control honest (a built release with no receipt, an unavailable release counted runtime-compatible, a release with no status and an epoch with no representative are each caught) |
+| 23.10 | `RT-HISTORICAL-POPULATION` | the historical population | `pass` | one derived support status per catalogue node (**372** nodes; **20** built authorities; **5/5** ABI epochs carry a built representative — pre-1.0 `0.9.8zh`, 1.0.x `1.0.0t`/`1.0.1u`/`1.0.2u`, 1.1.x `1.1.0l`/`1.1.1w`, 3.x `3.0.0`/`3.0.22`/`3.1.8`/`3.2.6`/`3.3.7`/`3.4.8`/`3.5.9`, 3.6+/4.x `3.6.3`/`3.6.4`/`3.6.5`/`4.0.0`/`4.0.1`/`4.0.2`/`4.0.3`); **7** releases `unavailable`, never runtime-compatible; every rung backed by its own evidence; 0 findings; control honest (a built release with no receipt, an unavailable release counted runtime-compatible, a release with no status and an epoch with no representative are each caught) |
 | 23.11 | `RT-DOWNSTREAM-MULTITRACK` | one unmodified downstream consumer per epoch | `pass` | **5/5** epochs covered by a real unmodified consumer built against that epoch's authority and exercised against its own `s_server`, **5** passed, **0** failed, **3** pairs `not_run` with their measured reason; the Phase-17 candidate corpus is checked green and distinct; 0 findings; control honest (a consumer claiming a build with no artifact, an epoch counted passing with a `not_run` consumer, and a result relabelled across authorities are each caught) |
 | 23.12 | `RT-COMPATIBILITY-EDGES` | the directional compatibility edges | `pass` | **24** edges over **2** pairs, **21** `PASS`, **1** `FAIL`, **2** `UNKNOWN`; the one `FAIL` is the 3.6.4 → 3.6.3 `api_source` backward reading, which removes the two macros 3.6.4 added; the candidate-vs-reference semantic facet is `UNKNOWN` for want of a committed measurement; no evidence inherited across a side; 0 findings; control honest (a `PASS` with no evidence, a boolean dimension, inherited evidence, a defaulting verdict and a numeric-ordering kind are each caught) |
-| 23.13 | `RT-NEGATIVE-OBLIGATIONS` | the negative and positive obligations | `pass` | **79** obligations (**29** negative, **50** positive) over all six kinds, each checked against the named authority/view/plane; **0** `open`, **1** `unknown` (the 4.x ENGINE absence — no 4.x authority or view is admitted); 0 findings; control honest (a provider symbol in a pre-provider authority, a post-1.1.0 layout declared public, a retained ENGINE in a 4.x view, an obligation with no evidence and a leaked future symbol are each caught) |
+| 23.13 | `RT-NEGATIVE-OBLIGATIONS` | the negative and positive obligations | `pass` | **107** obligations (**35** negative, **72** positive) over all six kinds, each checked against the named authority/view/plane; **0** `open`, **1** `unknown` (the 4.x ENGINE absence — no 4.x view or measured façade is admitted); 0 findings; control honest (a provider symbol in a pre-provider authority, a post-1.1.0 layout declared public, a retained ENGINE in a 4.x view, an obligation with no evidence and a leaked future symbol are each caught) |
 | 23.14 | `RT-SECURITY-LINEAGE` | the historical security lineage, never reintroduced | `pass` | one identity per CVE with per-branch fixes, **52** branch fixes over **27** `security_backport` edges; candidate dispositions **7** `never_contained`, **2** `safe_divergence`, **1** `unresolved` (`CVE-2026-84782`, fixed in 3.6.5); **10** of the source's **297** records observed; property `NOT_CLAIMED` with findings; control honest (a wrong branch, a preserved vulnerable behaviour, a safe divergence with no recorded divergence, an external identifier admitted as an authority and a dropped branch fix are each caught) |
-| 23.15 | `RT-SUPPORT-STATUS` | the support-status ladder | `pass` | **372** rows reconciled node-for-node and rung-for-rung with the 23.10 population: **245** support targets and **127** archaeological-only; **239** `catalogued`, **4** `downstream-evidenced`, **1** `runtime-evidenced`, **1** `maintained`; the core rungs are a prefix while the additive rungs are independent evidence planes; 0 findings; control honest (a node claiming a higher rung with no evidence, a node skipping a core rung, an archaeological-only node counted a support target and a typed status are each caught) |
-| 23.16 | `RT-COMPATIBILITY-MATRIX` | the assembled matrix | `pass` | **10** relations × **10** dimensions = **100** cells, joining all **5** planes; **21** `PASS`, **1** `FAIL`, **6** `UNKNOWN`, **72** `NOT_MEASURED`; every cell directional, dimension-specific and never a boolean; the security lineage guards the behavioural dimension; 0 findings; control honest (a contradicted reading, a boolean cell, a cell with no source record and a `PASS` with no evidence are each caught) |
+| 23.15 | `RT-SUPPORT-STATUS` | the support-status ladder | `pass` | **372** rows reconciled node-for-node and rung-for-rung with the 23.10 population: **240** support targets and **132** archaeological-only; **220** `catalogued`, **14** `atlas-complete`, **4** `downstream-evidenced`, **1** `runtime-evidenced`, **1** `maintained`; the core rungs are a prefix while the additive rungs are independent evidence planes; 0 findings; control honest (a node claiming a higher rung with no evidence, a node skipping a core rung, an archaeological-only node counted a support target and a typed status are each caught) |
+| 23.16 | `RT-COMPATIBILITY-MATRIX` | the assembled matrix | `pass` | **24** relations × **10** dimensions = **240** cells, joining all **5** planes; **35** `PASS`, **1** `FAIL`, **6** `UNKNOWN`, **198** `NOT_MEASURED`; every cell directional, dimension-specific and never a boolean; the security lineage guards the behavioural dimension; 0 findings; control honest (a contradicted reading, a boolean cell, a cell with no source record and a `PASS` with no evidence are each caught) |
 | 23.17 | `MULTITRACK-SEAL` | the full matrix, the FRF/Gemel chain and the seal | `pass` | the declared contract is the plan's **17** units with the seal last; the assembled matrix is closed and reproduces from its five planes; **no** Phase-23 court is FRF-declarable, so the chain entry is vacuous; the Gemel projection records the current checkpoint; the seal document exists and carries the scaffolding every seal carries; the coverage boundaries are present in the planes; 0 findings; control honest (a dropped contract unit, an inconsistent or non-reproducing matrix, an injected FRF declaration, a stripped seal and an omitted boundary are each caught) |
 
 Each court reads the artefact that carries its subject and maintains no list of its own, so it
@@ -150,12 +150,14 @@ A capability an instrument does not drive is not observed by it, and a boundary 
 is named here rather than buried. These are the limits the stratum's own plan §4 and its planes
 record:
 
-- **0.9.1c and 0.9.6m are `unavailable`.** Both are genuine upstream releases and both are
-  catalogue nodes, but no upstream-published SHA-256 could be fetched for either, so neither is
-  admitted as an authority and neither is ever counted runtime-compatible
-  (`forensics/authority-nodes.json` `unavailable`; `docs/PHASE-23-MULTITRACK-SUBPHASES.md` §4.7).
-  The root from which the lineage is read is therefore **0.9.1c the catalogue node**, not 0.9.1c
-  the authority.
+- **0.9.1c, 0.9.2b, 0.9.3a, 0.9.4, 0.9.5a, 0.9.6m and 0.9.7m are `unavailable`.** All seven are
+  genuine upstream releases and all seven are catalogue nodes, but no upstream-published SHA-256
+  could be fetched for any of them (the early 0.9.x releases published only MD5/SHA-1 digests, or
+  no release asset at all), so none is admitted as an authority and none is ever counted
+  runtime-compatible (`forensics/authority-nodes.json` `unavailable`;
+  `docs/PHASE-23-MULTITRACK-SUBPHASES.md` §4.7 and §4.17). The root from which the lineage is read
+  is therefore **0.9.1c the catalogue node**, not 0.9.1c the authority, and the 0.9.1–0.9.7 lines
+  are carried as an honestly-recorded `unavailable` track rather than as built authorities.
 - **16 catalogue labels are undecodable.** `forensics/release-catalog.json` records **16** upstream
   labels — the FIPS and engine branches such as `2.0`, `2.0-pl1` and `2.0-rc1` — that neither
   OpenSSL scheme decodes. They are recorded `unresolved` with their reason, never dropped and never
@@ -173,11 +175,13 @@ record:
 - **1.0.x and the pre-1.1.0 aggregates are not established.** `forensics/multitrack/abi-facades.json`
   records **2** layout claims `not established` — the released 1.0.x public layouts, and the
   pre-1.1.0 layouts of `BIO`, `RSA`, `X509`, `SSL`, `SSL_CTX`, `SSL_SESSION` and `BIGNUM` — because
-  no 1.0.x source tree is admitted and each aggregate needs its own measured layout rather than an
-  inference from a sibling (`RT-ABI-HISTORY-FACADES`, D540).
-- **The matrix's `UNKNOWN` and `NOT_MEASURED` cells.** Of the 100 cells, **6** are `UNKNOWN` (the
+  the committed layout measurement is the 0.9.8zh `EVP_MD_CTX`/`HMAC_CTX` generation only, and each
+  epoch or aggregate needs its own measured layout rather than an inference from a sibling or from
+  an admitted source tree (`RT-ABI-HISTORY-FACADES`, D540). A 1.0.x authority with its acquired
+  source tree is now admitted, but admitting a source tree is not measuring a layout.
+- **The matrix's `UNKNOWN` and `NOT_MEASURED` cells.** Of the 240 cells, **6** are `UNKNOWN` (the
   0.9.8zh `abi` cell, the 4.0.3 `provider_registration` cell, and the candidate-to-reference
-  `semantic` and `behavioural` cells in both directions) and **72** are `NOT_MEASURED`, each with
+  `semantic` and `behavioural` cells in both directions) and **198** are `NOT_MEASURED`, each with
   its reason. An unmeasured cell is `NOT_MEASURED`, never `PASS` by default.
 - **One platform/profile.** Every view is bounded to the platform, architecture, profile and
   toolchain of the authority node it names: `linux-x86_64`, the
@@ -199,11 +203,11 @@ what was met and what is honestly bounded; a condition whose evidence is not mea
 |---|---|---|
 | **catalog completeness** | the catalogue holds **372** nodes from root `openssl-0.9.1c`, **247** finals, a typed DAG; `RT-RELEASE-CATALOG` re-derives it | **16** labels are undecodable and recorded `unresolved` (never dropped); the root is a catalogue node, and 0.9.1c/0.9.6m are not authorities |
 | **provenance** | every node, authority, edge, delta, view and obligation is content-addressed; the security index and its advisories are frozen with URL, fetch date and SHA-256 | provenance is of the bytes fetched, not a completeness claim; the security selection is **10/297** |
-| **built authorities** | **6** authority nodes backed by build receipts; the production profile is named | **2** releases `unavailable`; one platform/arch/profile per authority |
+| **built authorities** | **20** authority nodes backed by build receipts; the production profile is named | **7** releases `unavailable`; one platform/arch/profile per authority |
 | **atlas** | the 3.6.4 production atlas is regenerated through the parameterized generator and required byte-identical; the two disclosed non-reproducing projections are measured live and not applied | the historical epochs carry plane censuses, not full atlases |
 | **lineage** | **991** typed, directed edges over **372** nodes, a DAG; parallel lines are `branch_fork` | a lineage edge is a relationship, never a compatibility claim; the 0.9.8zh pair is outside the entity lineage |
 | **candidate views** | **14** directional, dimension-specific views with authority-scoped, content-addressed evidence and no boolean | **6** historical views are `not_measured`; **16** facets are `not_derivable` with their reasons |
-| **negative surface** | **79** obligations over all six kinds, `open` 0; absence is a checkable claim (D536) | **1** obligation is `unknown` (the 4.x ENGINE absence), recorded not assumed |
+| **negative surface** | **107** obligations over all six kinds, `open` 0; absence is a checkable claim (D536) | **1** obligation is `unknown` (the 4.x ENGINE absence), recorded not assumed |
 | **courts** | **17/17** pass, `pending_courts` empty; every control honest | a passing court is an instrument; each stages no probe |
 | **security** | **52** branch fixes over **27** `security_backport` edges; no `preserve_vulnerable_behaviour`; the behavioural matrix cell can never re-adopt a fixed behaviour | property `NOT_CLAIMED` with the **287** unobserved records and the one `unresolved` observation as findings |
 | **downstream** | **5/5** epochs carry a real unmodified consumer; **5** passed, **0** failed; the candidate corpus stays distinct | **3** pairs `not_run`; one platform/profile |
@@ -223,14 +227,14 @@ release lineage and the authorities already admitted, and compiles exactly the v
 > `openssl-0.9.1c` through the reference release `openssl-3.6.4` and the catalogued forward node
 > `openssl-4.0.3`, the `linux-x86_64-default-shared-legacy-notests` build profile and the
 > `linux-x86_64` platform: a **372**-node catalogue with **247** finals and a **991**-edge typed
-> lineage; **6** built authorities with **2** honestly `unavailable`; a parameterized atlas that
+> lineage; **20** built authorities with **7** honestly `unavailable`; a parameterized atlas that
 > reproduces the 3.6.4 production plane byte-identically; a **14**-view directional,
-> dimension-specific compatibility plane and a **24**-edge compatibility plane; **79** negative and
+> dimension-specific compatibility plane and a **24**-edge compatibility plane; **107** negative and
 > positive obligations with **0** open; a **52**-branch-fix security lineage, observed and never
 > reintroduced; **5/5** epochs covered by a real unmodified downstream consumer; and an assembled
-> **10 × 10 = 100**-cell matrix joining all five planes with **21** `PASS`, **1** `FAIL`, **6**
-> `UNKNOWN` and **72** `NOT_MEASURED` cells — and is explicitly bounded by the non-claims of §8, by
-> the coverage boundaries §4 records (the `unavailable` 0.9.1c/0.9.6m, the **16** undecodable
+> **24 × 10 = 240**-cell matrix joining all five planes with **35** `PASS`, **1** `FAIL`, **6**
+> `UNKNOWN` and **198** `NOT_MEASURED` cells — and is explicitly bounded by the non-claims of §8, by
+> the coverage boundaries §4 records (the `unavailable` 0.9.1c–0.9.7m, the **16** undecodable
 > catalogue labels, the **10/297** observed CVE records, the `not_run` pairs and the
 > not-established `1.0.x`/pre-1.1.0 layouts), and by the three compatibility-root families Phase 22
 > declared but no instrument observes (`runtime-behaviour`, `protocol`, `dynamic-loading`).**
@@ -321,13 +325,35 @@ correction merged into the prose it corrects cannot be checked against what it r
    `forensics/phase23-obligations.json`: it checks the seal document's *shape* and the committed
    planes, so its verdict cannot flip with its own pass. The audit found nothing to fix, and the
    constraint the audit established is recorded as a design rule in §3 rather than left implicit.
-4. **No `docs/PHASE-23-MULTITRACK-SUBPHASES.md` §4 correction was needed, and none is recorded.**
+4. **No `docs/PHASE-23-MULTITRACK-SUBPHASES.md` §4 correction was needed at the seal, and the plan
+   stands as written.**
    The plan §4.5 said the seal would correct the plan if a record kind needed a different split; no
    subphase found one, so the plan stands and the record kinds it names are the ones the planes
    carry. The inherited runner-docstring clause *"No court is registered in `gen_frf_courts.py`:
    that registry is the stratum's seal"* is left in place for the reason Phase 20's §8.1 gives — a
    correction is checked against the text it corrects — and the chain status is recorded in §7
    instead: the stratum's seal is this document, and `MULTITRACK-SEAL` re-checks the vacuity of the
-   chain entry directly rather than leaning on the clause.
+   chain entry directly rather than leaning on the clause. (Item 5 records the one §4 correction
+   the later line-coverage expansion requires.)
+
+5. **The post-seal line-coverage expansion: `docs/PHASE-23-MULTITRACK-SUBPHASES.md` §4.17 records
+   the one §4 correction the larger authority set requires, and supersedes the "no correction"
+   clause of item 4.** Every distinct major.minor line now carries a track: one built authority per
+   line's latest final release was acquired by the official asset (verified against the
+   upstream-published SHA-256) and built in the historical venue — `1.0.0t`, `1.0.1u`, `1.1.0l`,
+   `3.0.22`, `3.1.8`, `3.2.6`, `3.3.7`, `3.4.8`, `3.5.9`, `3.6.5`, `4.0.0`, `4.0.1`, `4.0.2` and
+   `4.0.3`, beside the four already-built historical authorities — and each of the seven early
+   0.9.x lines (0.9.1 through 0.9.7) is recorded `unavailable` with its reason because no
+   upstream-published SHA-256 exists for it. The registry is **20** authority nodes (**2** admitted,
+   **18** historical built) with **7** honestly `unavailable`; the historical population's `built`
+   count is **20**; the support-status ladder is **240** support targets and **132**
+   archaeological-only; the negative surface is **107** obligations; and the assembled matrix is
+   **24** relations × **10** dimensions = **240** cells (**35** `PASS`, **1** `FAIL`, **6**
+   `UNKNOWN`, **198** `NOT_MEASURED`). The two prose statements the expansion falsifies are
+   corrected rather than left stale: the ABI/history façade's 1.0.x `not established` reason no
+   longer reads "no 1.0.x source tree is admitted" (one is), and the 4.x ENGINE obligation's
+   rationale no longer reads "no 4.x authority is admitted" (four are) — the obligation stays
+   `unknown` because no 4.x **view or measured façade** is committed, so the boundary is
+   strengthened, not weakened. Decision **D547** records the change.
 
 SPDX-License-Identifier: Apache-2.0

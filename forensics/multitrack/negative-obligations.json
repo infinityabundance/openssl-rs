@@ -3,40 +3,68 @@
   "body": {
     "authorities": [
       "openssl-0.9.8zh-historical",
+      "openssl-1.0.0t-historical",
+      "openssl-1.0.1u-historical",
       "openssl-1.0.2u-historical",
+      "openssl-1.1.0l-historical",
       "openssl-1.1.1w-historical",
       "openssl-3.0.0-historical",
+      "openssl-3.0.22-historical",
+      "openssl-3.1.8-historical",
+      "openssl-3.2.6-historical",
+      "openssl-3.3.7-historical",
+      "openssl-3.4.8-historical",
+      "openssl-3.5.9-historical",
       "openssl-3.6.3-historical",
-      "openssl-3.6.4-production"
+      "openssl-3.6.4-production",
+      "openssl-3.6.5-historical",
+      "openssl-4.0.0-historical",
+      "openssl-4.0.1-historical",
+      "openssl-4.0.2-historical",
+      "openssl-4.0.3-historical"
     ],
     "boundary": "23.13 derives the obligations the committed evidence supports: the provider planes of every censused authority, the public-layout and architecture façades, the 3.6.3 -> 3.6.4 delta's added entities and measured exports, and each authority's `.num` NOEXIST rows. A 4.x release carries no admitted authority or view, so its ENGINE obligation reads `unknown` rather than satisfied. An obligation is bounded to the authority or release it names; no obligation inherits another authority's evidence.",
-    "content_hash": "deab41d3f50582d97666bd2fa65161039c45093277c596bde92cbfce718faad1",
+    "content_hash": "8228205e8571ca534f9c1da8e83bb72d33867749ad88dffbfa0c7c2bcb4c8083",
     "counts": {
       "by_authority": {
         "openssl-0.9.8zh-historical": 5,
+        "openssl-1.0.0t-historical": 2,
+        "openssl-1.0.1u-historical": 2,
         "openssl-1.0.2u-historical": 2,
+        "openssl-1.1.0l-historical": 2,
         "openssl-1.1.1w-historical": 2,
         "openssl-3.0.0-historical": 2,
+        "openssl-3.0.22-historical": 2,
+        "openssl-3.1.8-historical": 2,
+        "openssl-3.2.6-historical": 2,
+        "openssl-3.3.7-historical": 2,
+        "openssl-3.4.8-historical": 2,
+        "openssl-3.5.9-historical": 2,
         "openssl-3.6.3-historical": 31,
         "openssl-3.6.4-production": 36,
-        "openssl-4.0.3": 1
+        "openssl-3.6.5-historical": 2,
+        "openssl-4.0.0-historical": 2,
+        "openssl-4.0.1-historical": 2,
+        "openssl-4.0.2-historical": 2,
+        "openssl-4.0.3": 1,
+        "openssl-4.0.3-historical": 2
       },
       "by_kind": {
         "must_be_exported": 40,
         "must_be_opaque": 2,
         "must_be_public": 2,
-        "must_exist": 8,
+        "must_exist": 30,
         "must_not_be_exported": 18,
-        "must_not_exist": 9
+        "must_not_exist": 15
       },
       "by_state": {
-        "satisfied": 78,
+        "satisfied": 106,
         "unknown": 1
       },
-      "negative": 29,
-      "obligations": 79,
+      "negative": 35,
+      "obligations": 107,
       "open": 0,
-      "positive": 50,
+      "positive": 72,
       "unknown": 1
     },
     "expected_state_of_kind": {
@@ -86,7 +114,7 @@
             "kind": "build_records",
             "path": "forensics/multitrack/abi-facades.json",
             "role": "authority",
-            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "sha256": "bc3281302002e6c8f90d401df02e5bad055b7ac51e0f46f4d7ea14f2cd85d669",
             "what": "the EVP_MD_CTX public-layout façade: its measured layout epoch"
           }
         ],
@@ -127,7 +155,7 @@
             "kind": "build_records",
             "path": "forensics/multitrack/abi-facades.json",
             "role": "authority",
-            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "sha256": "bc3281302002e6c8f90d401df02e5bad055b7ac51e0f46f4d7ea14f2cd85d669",
             "what": "the HMAC_CTX public-layout façade: its measured layout epoch"
           }
         ],
@@ -166,7 +194,7 @@
             "kind": "build_records",
             "path": "forensics/multitrack/abi-facades.json",
             "role": "authority",
-            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "sha256": "bc3281302002e6c8f90d401df02e5bad055b7ac51e0f46f4d7ea14f2cd85d669",
             "what": "the authority's architecture façade: its engine/provider model"
           }
         ],
@@ -260,7 +288,7 @@
             "kind": "build_records",
             "path": "forensics/multitrack/abi-facades.json",
             "role": "authority",
-            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "sha256": "bc3281302002e6c8f90d401df02e5bad055b7ac51e0f46f4d7ea14f2cd85d669",
             "what": "the authority's architecture façade: its engine/provider model"
           }
         ],
@@ -271,6 +299,162 @@
         "scope": {
           "authority_id": "openssl-0.9.8zh-historical",
           "release_id": "openssl-0.9.8zh"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-1.0.0t-historical",
+              "evidence": [
+                "forensics/atlas/openssl-1.0.0t-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-1.0.0t-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "3cda9fe9a2163a79e795f68efcf9ffb1519322e6b4701e68d1a237c36e3aae30",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-1.0.0t-historical-must_not_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured measured_absence (count 0), so the provider-registration surface must be absent in its view",
+        "scope": {
+          "authority_id": "openssl-1.0.0t-historical",
+          "release_id": "openssl-1.0.0t"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-1.0.0t-historical",
+              "evidence": [
+                "forensics/atlas/openssl-1.0.0t-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-1.0.0t-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "3cda9fe9a2163a79e795f68efcf9ffb1519322e6b4701e68d1a237c36e3aae30",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-1.0.0t-historical-must_not_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured measured_absence (count 0), so the provider-store surface must be absent in its view",
+        "scope": {
+          "authority_id": "openssl-1.0.0t-historical",
+          "release_id": "openssl-1.0.0t"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-1.0.1u-historical",
+              "evidence": [
+                "forensics/atlas/openssl-1.0.1u-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-1.0.1u-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "6095e90b48371ea1715b774cabdadc0177fbfafa04386111d1faa1bd8de48a7d",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-1.0.1u-historical-must_not_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured measured_absence (count 0), so the provider-registration surface must be absent in its view",
+        "scope": {
+          "authority_id": "openssl-1.0.1u-historical",
+          "release_id": "openssl-1.0.1u"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-1.0.1u-historical",
+              "evidence": [
+                "forensics/atlas/openssl-1.0.1u-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-1.0.1u-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "6095e90b48371ea1715b774cabdadc0177fbfafa04386111d1faa1bd8de48a7d",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-1.0.1u-historical-must_not_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured measured_absence (count 0), so the provider-store surface must be absent in its view",
+        "scope": {
+          "authority_id": "openssl-1.0.1u-historical",
+          "release_id": "openssl-1.0.1u"
         },
         "state": "satisfied",
         "subject": "provider-store",
@@ -349,6 +533,84 @@
         "scope": {
           "authority_id": "openssl-1.0.2u-historical",
           "release_id": "openssl-1.0.2u"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-1.1.0l-historical",
+              "evidence": [
+                "forensics/atlas/openssl-1.1.0l-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-1.1.0l-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "b7d1b5ad6c25cf7ce8d6e0f242131982772532be993b2646b38ef68ecd1beb41",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-1.1.0l-historical-must_not_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured measured_absence (count 0), so the provider-registration surface must be absent in its view",
+        "scope": {
+          "authority_id": "openssl-1.1.0l-historical",
+          "release_id": "openssl-1.1.0l"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-1.1.0l-historical",
+              "evidence": [
+                "forensics/atlas/openssl-1.1.0l-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-1.1.0l-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "b7d1b5ad6c25cf7ce8d6e0f242131982772532be993b2646b38ef68ecd1beb41",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "absent",
+        "kind": "must_not_exist",
+        "obligation_id": "NO-openssl-1.1.0l-historical-must_not_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured measured_absence (count 0), so the provider-store surface must be absent in its view",
+        "scope": {
+          "authority_id": "openssl-1.1.0l-historical",
+          "release_id": "openssl-1.1.0l"
         },
         "state": "satisfied",
         "subject": "provider-store",
@@ -515,6 +777,474 @@
         "derivation": {
           "checks": [
             {
+              "authority_id": "openssl-3.0.22-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.0.22-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.0.22-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "35de6a8fa354d5db331b587cf474e92de4b5ef739e1a72697298794b7633c2f8",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.0.22-historical-must_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured produced (count 1), so the provider-registration surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.0.22-historical",
+          "release_id": "openssl-3.0.22"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.0.22-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.0.22-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.0.22-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "35de6a8fa354d5db331b587cf474e92de4b5ef739e1a72697298794b7633c2f8",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.0.22-historical-must_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured produced (count 294), so the provider-store surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.0.22-historical",
+          "release_id": "openssl-3.0.22"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.1.8-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.1.8-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.1.8-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "30148503672492caa29ea1817291927f11ab8f24142faf2035cad4525fce8a0a",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.1.8-historical-must_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured produced (count 1), so the provider-registration surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.1.8-historical",
+          "release_id": "openssl-3.1.8"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.1.8-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.1.8-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.1.8-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "30148503672492caa29ea1817291927f11ab8f24142faf2035cad4525fce8a0a",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.1.8-historical-must_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured produced (count 310), so the provider-store surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.1.8-historical",
+          "release_id": "openssl-3.1.8"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.2.6-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.2.6-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.2.6-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "a78d03f0afb861e4885db52d0deaebe8bcfcb2d70a2bf736d146db84acf87af2",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.2.6-historical-must_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured produced (count 1), so the provider-registration surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.2.6-historical",
+          "release_id": "openssl-3.2.6"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.2.6-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.2.6-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.2.6-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "a78d03f0afb861e4885db52d0deaebe8bcfcb2d70a2bf736d146db84acf87af2",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.2.6-historical-must_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured produced (count 327), so the provider-store surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.2.6-historical",
+          "release_id": "openssl-3.2.6"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.3.7-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.3.7-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.3.7-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "df086b4cd65a4facb087bb86c9d65d777cba2b990402a1b0d74f686711dcb0f8",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.3.7-historical-must_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured produced (count 1), so the provider-registration surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.3.7-historical",
+          "release_id": "openssl-3.3.7"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.3.7-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.3.7-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.3.7-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "df086b4cd65a4facb087bb86c9d65d777cba2b990402a1b0d74f686711dcb0f8",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.3.7-historical-must_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured produced (count 332), so the provider-store surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.3.7-historical",
+          "release_id": "openssl-3.3.7"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.4.8-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.4.8-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.4.8-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "19be6a058887de3138a2adc4c7efb62197ece37b7a33062589e8be7ab2f5ef02",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.4.8-historical-must_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured produced (count 1), so the provider-registration surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.4.8-historical",
+          "release_id": "openssl-3.4.8"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.4.8-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.4.8-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.4.8-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "19be6a058887de3138a2adc4c7efb62197ece37b7a33062589e8be7ab2f5ef02",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.4.8-historical-must_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured produced (count 337), so the provider-store surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.4.8-historical",
+          "release_id": "openssl-3.4.8"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.5.9-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.5.9-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.5.9-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "34bcd62198020b7eeb0e838bca4af5565cebb60481a083a5f632b247ed25a44e",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.5.9-historical-must_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured produced (count 1), so the provider-registration surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.5.9-historical",
+          "release_id": "openssl-3.5.9"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.5.9-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.5.9-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.5.9-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "34bcd62198020b7eeb0e838bca4af5565cebb60481a083a5f632b247ed25a44e",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.5.9-historical-must_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured produced (count 370), so the provider-store surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.5.9-historical",
+          "release_id": "openssl-3.5.9"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
               "classification": "changed",
               "delta": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
               "entity_id": "function:ASN1_mbstring_ncopy",
@@ -543,7 +1273,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -592,7 +1322,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -641,7 +1371,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -690,7 +1420,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -739,7 +1469,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -788,7 +1518,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -837,7 +1567,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -886,7 +1616,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -935,7 +1665,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -984,7 +1714,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1033,7 +1763,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1082,7 +1812,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1131,7 +1861,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1180,7 +1910,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1229,7 +1959,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1278,7 +2008,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1327,7 +2057,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1376,7 +2106,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1425,7 +2155,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1474,7 +2204,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1876,7 +2606,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1918,7 +2648,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -1967,7 +2697,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2016,7 +2746,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2065,7 +2795,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2114,7 +2844,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2163,7 +2893,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2212,7 +2942,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2261,7 +2991,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2310,7 +3040,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2359,7 +3089,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2408,7 +3138,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2457,7 +3187,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2506,7 +3236,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2555,7 +3285,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2604,7 +3334,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2653,7 +3383,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2702,7 +3432,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2751,7 +3481,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2800,7 +3530,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2849,7 +3579,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2898,7 +3628,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -2948,7 +3678,7 @@
             "kind": "build_records",
             "path": "forensics/multitrack/abi-facades.json",
             "role": "authority",
-            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "sha256": "bc3281302002e6c8f90d401df02e5bad055b7ac51e0f46f4d7ea14f2cd85d669",
             "what": "the EVP_MD_CTX public-layout façade: its measured layout epoch"
           }
         ],
@@ -2998,7 +3728,7 @@
             "kind": "build_records",
             "path": "forensics/multitrack/abi-facades.json",
             "role": "authority",
-            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "sha256": "bc3281302002e6c8f90d401df02e5bad055b7ac51e0f46f4d7ea14f2cd85d669",
             "what": "the HMAC_CTX public-layout façade: its measured layout epoch"
           }
         ],
@@ -3037,7 +3767,7 @@
             "kind": "build_records",
             "path": "forensics/multitrack/abi-facades.json",
             "role": "authority",
-            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "sha256": "bc3281302002e6c8f90d401df02e5bad055b7ac51e0f46f4d7ea14f2cd85d669",
             "what": "the authority's architecture façade: its engine/provider model"
           }
         ],
@@ -3079,7 +3809,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -3121,7 +3851,7 @@
             "kind": "atlas_differential",
             "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
             "role": "pair",
-            "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277",
+            "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0",
             "what": "the canonical 3.6.3 -> 3.6.4 edge delta"
           }
         ],
@@ -3160,7 +3890,7 @@
             "kind": "build_records",
             "path": "forensics/atlas/parameterization-receipt.json",
             "role": "authority",
-            "sha256": "878b1fd6bb0fe33ab24ed90653089b0a44d10e6485ae4dbef051173a1f6574cb",
+            "sha256": "d9ba52f6249c4e072d9e0fcc5d190ee0a228f4bedd2dc93303fad3efc062c4cb",
             "what": "the authority's plane census, which measures its provider planes"
           }
         ],
@@ -3208,14 +3938,14 @@
             "kind": "build_records",
             "path": "forensics/atlas/parameterization-receipt.json",
             "role": "authority",
-            "sha256": "878b1fd6bb0fe33ab24ed90653089b0a44d10e6485ae4dbef051173a1f6574cb",
+            "sha256": "d9ba52f6249c4e072d9e0fcc5d190ee0a228f4bedd2dc93303fad3efc062c4cb",
             "what": "the authority's plane census, which measures its provider planes"
           },
           {
             "kind": "build_records",
             "path": "forensics/multitrack/abi-facades.json",
             "role": "authority",
-            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "sha256": "bc3281302002e6c8f90d401df02e5bad055b7ac51e0f46f4d7ea14f2cd85d669",
             "what": "the authority's architecture façade: its engine/provider model"
           }
         ],
@@ -3596,6 +4326,396 @@
         "derivation": {
           "checks": [
             {
+              "authority_id": "openssl-3.6.5-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.5-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.5-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "7d21d6ff36d140104214c463c7cf47e20e3bfab40c1a24600de7f14b8fbd0ea8",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.6.5-historical-must_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured produced (count 1), so the provider-registration surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.6.5-historical",
+          "release_id": "openssl-3.6.5"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-3.6.5-historical",
+              "evidence": [
+                "forensics/atlas/openssl-3.6.5-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-3.6.5-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "7d21d6ff36d140104214c463c7cf47e20e3bfab40c1a24600de7f14b8fbd0ea8",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-3.6.5-historical-must_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured produced (count 392), so the provider-store surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-3.6.5-historical",
+          "release_id": "openssl-3.6.5"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-4.0.0-historical",
+              "evidence": [
+                "forensics/atlas/openssl-4.0.0-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-4.0.0-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "aeb41f227764962855215527e1a3f9fd22399847c2975ea13649f1cbaf174e09",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-4.0.0-historical-must_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured produced (count 1), so the provider-registration surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-4.0.0-historical",
+          "release_id": "openssl-4.0.0"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-4.0.0-historical",
+              "evidence": [
+                "forensics/atlas/openssl-4.0.0-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-4.0.0-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "aeb41f227764962855215527e1a3f9fd22399847c2975ea13649f1cbaf174e09",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-4.0.0-historical-must_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured produced (count 484), so the provider-store surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-4.0.0-historical",
+          "release_id": "openssl-4.0.0"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-4.0.1-historical",
+              "evidence": [
+                "forensics/atlas/openssl-4.0.1-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-4.0.1-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "4236b04f84a2a274ab6de51a97a11e4a3535b448410628c35f4630c407820ee0",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-4.0.1-historical-must_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured produced (count 1), so the provider-registration surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-4.0.1-historical",
+          "release_id": "openssl-4.0.1"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-4.0.1-historical",
+              "evidence": [
+                "forensics/atlas/openssl-4.0.1-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-4.0.1-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "4236b04f84a2a274ab6de51a97a11e4a3535b448410628c35f4630c407820ee0",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-4.0.1-historical-must_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured produced (count 484), so the provider-store surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-4.0.1-historical",
+          "release_id": "openssl-4.0.1"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-4.0.2-historical",
+              "evidence": [
+                "forensics/atlas/openssl-4.0.2-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-4.0.2-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "c762290e6585cb0ea8442c18472391325bb9a0feddae059109438074026f41c3",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-4.0.2-historical-must_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured produced (count 1), so the provider-registration surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-4.0.2-historical",
+          "release_id": "openssl-4.0.2"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-4.0.2-historical",
+              "evidence": [
+                "forensics/atlas/openssl-4.0.2-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-4.0.2-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "c762290e6585cb0ea8442c18472391325bb9a0feddae059109438074026f41c3",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-4.0.2-historical-must_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured produced (count 484), so the provider-store surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-4.0.2-historical",
+          "release_id": "openssl-4.0.2"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-4.0.3-historical",
+              "evidence": [
+                "forensics/atlas/openssl-4.0.3-historical/plane-census.json"
+              ],
+              "plane": "provider-registrations",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-4.0.3-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "5f2d8ab566375e81ac59645367f8c5fe596dd75dbc3ab8cba26d949b8bfd0946",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-4.0.3-historical-must_exist-provider-registration",
+        "rationale": "the authority's `provider-registrations` plane is a measured produced (count 1), so the provider-registration surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-4.0.3-historical",
+          "release_id": "openssl-4.0.3"
+        },
+        "state": "satisfied",
+        "subject": "provider-registration",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
+              "authority_id": "openssl-4.0.3-historical",
+              "evidence": [
+                "forensics/atlas/openssl-4.0.3-historical/plane-census.json"
+              ],
+              "plane": "providers",
+              "rule": "census-plane"
+            }
+          ],
+          "rules": [
+            "census-plane"
+          ]
+        },
+        "dimension": "provider_registration",
+        "evidence": [
+          {
+            "kind": "build_records",
+            "path": "forensics/atlas/openssl-4.0.3-historical/plane-census.json",
+            "role": "authority",
+            "sha256": "5f2d8ab566375e81ac59645367f8c5fe596dd75dbc3ab8cba26d949b8bfd0946",
+            "what": "the authority's plane census, which measures its provider planes"
+          }
+        ],
+        "expected_state": "present",
+        "kind": "must_exist",
+        "obligation_id": "NO-openssl-4.0.3-historical-must_exist-provider-store",
+        "rationale": "the authority's `providers` plane is a measured produced (count 488), so the provider-store surface must be present in its view",
+        "scope": {
+          "authority_id": "openssl-4.0.3-historical",
+          "release_id": "openssl-4.0.3"
+        },
+        "state": "satisfied",
+        "subject": "provider-store",
+        "subject_kind": "surface",
+        "view_id": null
+      },
+      {
+        "derivation": {
+          "checks": [
+            {
               "evidence": [
                 "forensics/multitrack/abi-facades.json",
                 "forensics/release-catalog.json"
@@ -3614,7 +4734,7 @@
             "kind": "build_records",
             "path": "forensics/multitrack/abi-facades.json",
             "role": "model",
-            "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245",
+            "sha256": "bc3281302002e6c8f90d401df02e5bad055b7ac51e0f46f4d7ea14f2cd85d669",
             "what": "the architecture model's highest measured epoch: the 3.6.4 `deprecated_engine` façade"
           },
           {
@@ -3628,7 +4748,7 @@
         "expected_state": "absent",
         "kind": "must_not_exist",
         "obligation_id": "NO-openssl-4.0.3-must_not_exist-ENGINE",
-        "rationale": "the architecture model moves ENGINE -> Provider -> no-ENGINE; 4.0.3 is beyond the highest measured authority epoch (3.6.4 `deprecated_engine`), so a 4.x view must not retain the ENGINE surface. No 4.x authority or view is admitted, so the obligation cannot be adjudicated and reads `unknown`",
+        "rationale": "the architecture model moves ENGINE -> Provider -> no-ENGINE; 4.0.3 is beyond the highest measured authority epoch (3.6.4 `deprecated_engine`), so a 4.x view must not retain the ENGINE surface. No 4.x view or measured façade is admitted, so the obligation cannot be adjudicated and reads `unknown`",
         "scope": {
           "release_id": "openssl-4.0.3"
         },
@@ -3640,11 +4760,24 @@
     ],
     "releases": [
       "openssl-0.9.8zh",
+      "openssl-1.0.0t",
+      "openssl-1.0.1u",
       "openssl-1.0.2u",
+      "openssl-1.1.0l",
       "openssl-1.1.1w",
       "openssl-3.0.0",
+      "openssl-3.0.22",
+      "openssl-3.1.8",
+      "openssl-3.2.6",
+      "openssl-3.3.7",
+      "openssl-3.4.8",
+      "openssl-3.5.9",
       "openssl-3.6.3",
       "openssl-3.6.4",
+      "openssl-3.6.5",
+      "openssl-4.0.0",
+      "openssl-4.0.1",
+      "openssl-4.0.2",
       "openssl-4.0.3"
     ],
     "rule": "one negative or positive obligation per surface a named authority or release must (not) carry, derived from the committed censuses, façades, deltas and symbols planes and never typed. Each record names its scope, subject, kind and expected state, and carries the evidence that establishes it; `state` is the reading `adjudicate` takes from that evidence -- `satisfied` where it affirms the obligation, `open` where it contradicts it, and `unknown` only where no authority or view exists to adjudicate it",
@@ -3664,27 +4797,27 @@
     {
       "name": "authority-nodes",
       "path": "forensics/authority-nodes.json",
-      "sha256": "bb9d188018293f625e87ef01577b8c7c6ddae967e88ed066d3434f3b74f35486"
+      "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31"
     },
     {
       "name": "parameterization-receipt",
       "path": "forensics/atlas/parameterization-receipt.json",
-      "sha256": "878b1fd6bb0fe33ab24ed90653089b0a44d10e6485ae4dbef051173a1f6574cb"
+      "sha256": "d9ba52f6249c4e072d9e0fcc5d190ee0a228f4bedd2dc93303fad3efc062c4cb"
     },
     {
       "name": "abi-facades",
       "path": "forensics/multitrack/abi-facades.json",
-      "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245"
+      "sha256": "bc3281302002e6c8f90d401df02e5bad055b7ac51e0f46f4d7ea14f2cd85d669"
     },
     {
       "name": "compatibility-views",
       "path": "forensics/multitrack/compatibility-views.json",
-      "sha256": "01ff789e0ab1e6c8e241013d67402e809e921bd67db3d3a89780bec4a52ff035"
+      "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84"
     },
     {
       "name": "delta-3.6.3-3.6.4",
       "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
-      "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277"
+      "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0"
     }
   ],
   "kind": "negative-obligations",

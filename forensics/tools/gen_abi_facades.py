@@ -35,8 +35,12 @@ against the historical release's own headers.
 What this tool refuses to invent
 --------------------------------
 A layout it cannot measure is recorded `not established` with its reason rather than guessed
-at: the released 1.0.x epoch is not admitted as an authority here (no acquired source tree),
-so no 1.0.x façade is claimed. The coverage boundary is written into the artefact body.
+at: the released 1.0.x layouts are not *measured* here -- this subphase's committed layout
+measurement is the 0.9.8zh EVP_MD_CTX/HMAC_CTX generation only -- so no 1.0.x façade is
+claimed. Admitting a 1.0.x authority with its acquired source tree (which the expanded
+authority set now does) is a separate evidence plane from measuring its layout, so the 1.0.x
+layouts stay unmeasured rather than inferred from the 0.9.8zh layouts. The coverage boundary
+is written into the artefact body.
 
 Outputs
 -------
@@ -263,9 +267,11 @@ NOT_ESTABLISHED = [
     {
         "claim": "the released 1.0.x public layouts (1.0.0-1.0.2)",
         "reason": (
-            "no 1.0.x authority is admitted with an acquired source tree in this subphase, so "
-            "its headers cannot be measured; the 1.0.x epoch is left uncovered rather than "
-            "inferred from the 0.9.8zh layouts"
+            "the released 1.0.x public layouts are not measured: this subphase's committed "
+            "layout measurement is the 0.9.8zh EVP_MD_CTX/HMAC_CTX generation only, so the "
+            "1.0.x layouts are left unmeasured rather than inferred from the 0.9.8zh layouts. "
+            "A 1.0.x authority with its acquired source tree is now admitted, but admitting a "
+            "source tree is not measuring a layout, and the two are separate evidence planes"
         ),
     },
     {

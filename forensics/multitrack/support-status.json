@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "boundary": "the ladder records how far each release node reached, not how compatible anything is: `support_role` is ladder bookkeeping (`support-target` or `archaeology`) and is not a compatibility verdict, and no row is a `PARITY_VERIFIED` or any other one-boolean compatibility claim. The core rungs catalogued, admitted-source, built-authority and atlas-complete are the contiguous climb every supported node makes; candidate-view, runtime-evidenced, downstream-evidenced and maintained are each read from an independent evidence plane (23.10), so a node may attain them without the intermediate additive rungs -- 0.9.8zh is downstream-evidenced from a real consumer without candidate-view/runtime-evidenced. A status is derived from the evidence and never typed, and an archaeological-only node has climbed no rung",
-    "content_hash": "54a17a6a22e19a3be20217cce9e7e53a8fbc44a7f5b5c0a2801d6a3083eacc90",
+    "content_hash": "f7e6bc49ed54c43bcc545899540b33740a4165e6c2be45bc7a79bbb6b664cf71",
     "core_rungs": [
       "catalogued",
       "admitted-source",
@@ -10,13 +10,13 @@
       "atlas-complete"
     ],
     "counts": {
-      "archaeology": 127,
+      "archaeology": 132,
       "by_rung": {
-        "admitted-source": 6,
-        "atlas-complete": 6,
-        "built-authority": 6,
+        "admitted-source": 20,
+        "atlas-complete": 20,
+        "built-authority": 20,
         "candidate-view": 1,
-        "catalogued": 245,
+        "catalogued": 240,
         "downstream-evidenced": 5,
         "maintained": 1,
         "runtime-evidenced": 2
@@ -26,19 +26,20 @@
         "out-of-population-scope": 125
       },
       "by_status": {
-        "archaeological-only": 127,
-        "catalogued": 239,
+        "archaeological-only": 132,
+        "atlas-complete": 14,
+        "catalogued": 220,
         "downstream-evidenced": 4,
         "maintained": 1,
         "runtime-evidenced": 1
       },
       "by_support_role": {
-        "archaeology": 127,
-        "support-target": 245
+        "archaeology": 132,
+        "support-target": 240
       },
       "nodes": 372,
       "runtime_compatible": 2,
-      "support_targets": 245
+      "support_targets": 240
     },
     "ladder": [
       "catalogued",
@@ -62,14 +63,14 @@
           },
           {
             "path": "forensics/multitrack/historical-acquisition.json",
-            "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
             "what": "the recorded unavailability and its reason"
           }
         ],
         "evidence_by_rung": {
           "admitted-source": {
             "path": "forensics/multitrack/historical-acquisition.json",
-            "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
             "what": "the recorded unavailability and its reason"
           },
           "catalogued": {
@@ -104,35 +105,44 @@
           {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
-            "what": "the release node and its channel, scope and version, read from the committed catalogue"
+            "what": "the release node"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the recorded unavailability and its reason"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the recorded unavailability and its reason"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
-            "what": "the release node and its channel, scope and version, read from the committed catalogue"
+            "what": "the release node"
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
-          "candidate-view": "no compatible candidate-to-reference view names the authority",
-          "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
-          "maintained": "the node is not the maintained candidate the default-authority alias names",
-          "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
+          "admitted-source": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "atlas-complete": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "built-authority": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "candidate-view": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "catalogued": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "downstream-evidenced": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "maintained": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "runtime-evidenced": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
         "release_channel": "final",
-        "rungs_attained": [
-          "catalogued"
-        ],
+        "rungs_attained": [],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "archaeological-only",
         "subject_id": "openssl-0.9.2b",
-        "support_role": "support-target"
+        "support_role": "archaeology"
       },
       {
         "display_version": "0.9.3",
@@ -178,35 +188,44 @@
           {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
-            "what": "the release node and its channel, scope and version, read from the committed catalogue"
+            "what": "the release node"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the recorded unavailability and its reason"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the recorded unavailability and its reason"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
-            "what": "the release node and its channel, scope and version, read from the committed catalogue"
+            "what": "the release node"
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
-          "candidate-view": "no compatible candidate-to-reference view names the authority",
-          "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
-          "maintained": "the node is not the maintained candidate the default-authority alias names",
-          "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
+          "admitted-source": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "atlas-complete": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "built-authority": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "candidate-view": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "catalogued": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "downstream-evidenced": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "maintained": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "runtime-evidenced": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
         "release_channel": "final",
-        "rungs_attained": [
-          "catalogued"
-        ],
+        "rungs_attained": [],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "archaeological-only",
         "subject_id": "openssl-0.9.3a",
-        "support_role": "support-target"
+        "support_role": "archaeology"
       },
       {
         "display_version": "0.9.4",
@@ -215,35 +234,44 @@
           {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
-            "what": "the release node and its channel, scope and version, read from the committed catalogue"
+            "what": "the release node"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the recorded unavailability and its reason"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the recorded unavailability and its reason"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
-            "what": "the release node and its channel, scope and version, read from the committed catalogue"
+            "what": "the release node"
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
-          "candidate-view": "no compatible candidate-to-reference view names the authority",
-          "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
-          "maintained": "the node is not the maintained candidate the default-authority alias names",
-          "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
+          "admitted-source": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "atlas-complete": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "built-authority": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "candidate-view": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "catalogued": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "downstream-evidenced": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "maintained": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "runtime-evidenced": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
         "release_channel": "final",
-        "rungs_attained": [
-          "catalogued"
-        ],
+        "rungs_attained": [],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "archaeological-only",
         "subject_id": "openssl-0.9.4",
-        "support_role": "support-target"
+        "support_role": "archaeology"
       },
       {
         "display_version": "0.9.5",
@@ -289,35 +317,44 @@
           {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
-            "what": "the release node and its channel, scope and version, read from the committed catalogue"
+            "what": "the release node"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the recorded unavailability and its reason"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the recorded unavailability and its reason"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
-            "what": "the release node and its channel, scope and version, read from the committed catalogue"
+            "what": "the release node"
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
-          "candidate-view": "no compatible candidate-to-reference view names the authority",
-          "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
-          "maintained": "the node is not the maintained candidate the default-authority alias names",
-          "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
+          "admitted-source": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "atlas-complete": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "built-authority": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "candidate-view": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "catalogued": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "downstream-evidenced": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "maintained": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "runtime-evidenced": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
         "release_channel": "final",
-        "rungs_attained": [
-          "catalogued"
-        ],
+        "rungs_attained": [],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "archaeological-only",
         "subject_id": "openssl-0.9.5a",
-        "support_role": "support-target"
+        "support_role": "archaeology"
       },
       {
         "display_version": "0.9.5a-beta1",
@@ -1135,14 +1172,14 @@
           },
           {
             "path": "forensics/multitrack/historical-acquisition.json",
-            "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
             "what": "the recorded unavailability and its reason"
           }
         ],
         "evidence_by_rung": {
           "admitted-source": {
             "path": "forensics/multitrack/historical-acquisition.json",
-            "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
             "what": "the recorded unavailability and its reason"
           },
           "catalogued": {
@@ -1874,35 +1911,44 @@
           {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
-            "what": "the release node and its channel, scope and version, read from the committed catalogue"
+            "what": "the release node"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the recorded unavailability and its reason"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the recorded unavailability and its reason"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
-            "what": "the release node and its channel, scope and version, read from the committed catalogue"
+            "what": "the release node"
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
-          "candidate-view": "no compatible candidate-to-reference view names the authority",
-          "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
-          "maintained": "the node is not the maintained candidate the default-authority alias names",
-          "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
+          "admitted-source": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "atlas-complete": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "built-authority": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "candidate-view": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "catalogued": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "downstream-evidenced": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "maintained": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+          "runtime-evidenced": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
         "release_channel": "final",
-        "rungs_attained": [
-          "catalogued"
-        ],
+        "rungs_attained": [],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "archaeological-only",
         "subject_id": "openssl-0.9.7m",
-        "support_role": "support-target"
+        "support_role": "archaeology"
       },
       {
         "display_version": "0.9.8",
@@ -3388,12 +3434,12 @@
           },
           {
             "path": "forensics/multitrack/historical-acquisition.json",
-            "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
             "what": "the release's acquisition record and its verified archive digest"
           },
           {
             "path": "forensics/multitrack/historical-build-receipts.json",
-            "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
             "what": "the build receipt the built-authority claim is backed by"
           },
           {
@@ -3403,14 +3449,14 @@
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e922af6050b6a12006b2d608a71a8b0f576c35c30b06b44ff7f0ad6001c5605a",
+            "sha256": "606ebc7fcd3fc9e8b82fbba4622cc2602d7e8083e686f7921bab29e9f45e1295",
             "what": "the downstream consumer that exercised this authority"
           }
         ],
         "evidence_by_rung": {
           "admitted-source": {
             "path": "forensics/multitrack/historical-acquisition.json",
-            "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
             "what": "the release's acquisition record and its verified archive digest"
           },
           "atlas-complete": {
@@ -3420,7 +3466,7 @@
           },
           "built-authority": {
             "path": "forensics/multitrack/historical-build-receipts.json",
-            "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
             "what": "the build receipt the built-authority claim is backed by"
           },
           "catalogued": {
@@ -3430,7 +3476,7 @@
           },
           "downstream-evidenced": {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e922af6050b6a12006b2d608a71a8b0f576c35c30b06b44ff7f0ad6001c5605a",
+            "sha256": "606ebc7fcd3fc9e8b82fbba4622cc2602d7e8083e686f7921bab29e9f45e1295",
             "what": "the downstream consumer that exercised this authority"
           }
         },
@@ -4382,9 +4428,39 @@
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
             "what": "the release node and its channel, scope and version, read from the committed catalogue"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
+          {
+            "path": "forensics/atlas/openssl-1.0.0t-historical/plane-census.json",
+            "sha256": "3cda9fe9a2163a79e795f68efcf9ffb1519322e6b4701e68d1a237c36e3aae30",
+            "what": "the authority's committed atlas"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          "atlas-complete": {
+            "path": "forensics/atlas/openssl-1.0.0t-historical/plane-census.json",
+            "sha256": "3cda9fe9a2163a79e795f68efcf9ffb1519322e6b4701e68d1a237c36e3aae30",
+            "what": "the authority's committed atlas"
+          },
+          "built-authority": {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
@@ -4392,22 +4468,22 @@
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
           "candidate-view": "no compatible candidate-to-reference view names the authority",
           "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
           "maintained": "the node is not the maintained candidate the default-authority alias names",
           "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
         "release_channel": "final",
         "rungs_attained": [
-          "catalogued"
+          "catalogued",
+          "admitted-source",
+          "built-authority",
+          "atlas-complete"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "atlas-complete",
         "subject_id": "openssl-1.0.0t",
         "support_role": "support-target"
       },
@@ -5304,9 +5380,39 @@
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
             "what": "the release node and its channel, scope and version, read from the committed catalogue"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
+          {
+            "path": "forensics/atlas/openssl-1.0.1u-historical/plane-census.json",
+            "sha256": "6095e90b48371ea1715b774cabdadc0177fbfafa04386111d1faa1bd8de48a7d",
+            "what": "the authority's committed atlas"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          "atlas-complete": {
+            "path": "forensics/atlas/openssl-1.0.1u-historical/plane-census.json",
+            "sha256": "6095e90b48371ea1715b774cabdadc0177fbfafa04386111d1faa1bd8de48a7d",
+            "what": "the authority's committed atlas"
+          },
+          "built-authority": {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
@@ -5314,22 +5420,22 @@
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
           "candidate-view": "no compatible candidate-to-reference view names the authority",
           "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
           "maintained": "the node is not the maintained candidate the default-authority alias names",
           "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
         "release_channel": "final",
         "rungs_attained": [
-          "catalogued"
+          "catalogued",
+          "admitted-source",
+          "built-authority",
+          "atlas-complete"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "atlas-complete",
         "subject_id": "openssl-1.0.1u",
         "support_role": "support-target"
       },
@@ -6229,12 +6335,12 @@
           },
           {
             "path": "forensics/multitrack/historical-acquisition.json",
-            "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
             "what": "the release's acquisition record and its verified archive digest"
           },
           {
             "path": "forensics/multitrack/historical-build-receipts.json",
-            "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
             "what": "the build receipt the built-authority claim is backed by"
           },
           {
@@ -6244,14 +6350,14 @@
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e922af6050b6a12006b2d608a71a8b0f576c35c30b06b44ff7f0ad6001c5605a",
+            "sha256": "606ebc7fcd3fc9e8b82fbba4622cc2602d7e8083e686f7921bab29e9f45e1295",
             "what": "the downstream consumer that exercised this authority"
           }
         ],
         "evidence_by_rung": {
           "admitted-source": {
             "path": "forensics/multitrack/historical-acquisition.json",
-            "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
             "what": "the release's acquisition record and its verified archive digest"
           },
           "atlas-complete": {
@@ -6261,7 +6367,7 @@
           },
           "built-authority": {
             "path": "forensics/multitrack/historical-build-receipts.json",
-            "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
             "what": "the build receipt the built-authority claim is backed by"
           },
           "catalogued": {
@@ -6271,7 +6377,7 @@
           },
           "downstream-evidenced": {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e922af6050b6a12006b2d608a71a8b0f576c35c30b06b44ff7f0ad6001c5605a",
+            "sha256": "606ebc7fcd3fc9e8b82fbba4622cc2602d7e8083e686f7921bab29e9f45e1295",
             "what": "the downstream consumer that exercised this authority"
           }
         },
@@ -6963,9 +7069,39 @@
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
             "what": "the release node and its channel, scope and version, read from the committed catalogue"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
+          {
+            "path": "forensics/atlas/openssl-1.1.0l-historical/plane-census.json",
+            "sha256": "b7d1b5ad6c25cf7ce8d6e0f242131982772532be993b2646b38ef68ecd1beb41",
+            "what": "the authority's committed atlas"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          "atlas-complete": {
+            "path": "forensics/atlas/openssl-1.1.0l-historical/plane-census.json",
+            "sha256": "b7d1b5ad6c25cf7ce8d6e0f242131982772532be993b2646b38ef68ecd1beb41",
+            "what": "the authority's committed atlas"
+          },
+          "built-authority": {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
@@ -6973,22 +7109,22 @@
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
           "candidate-view": "no compatible candidate-to-reference view names the authority",
           "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
           "maintained": "the node is not the maintained candidate the default-authority alias names",
           "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
         "release_channel": "final",
         "rungs_attained": [
-          "catalogued"
+          "catalogued",
+          "admitted-source",
+          "built-authority",
+          "atlas-complete"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "atlas-complete",
         "subject_id": "openssl-1.1.0l",
         "support_role": "support-target"
       },
@@ -8178,12 +8314,12 @@
           },
           {
             "path": "forensics/multitrack/historical-acquisition.json",
-            "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
             "what": "the release's acquisition record and its verified archive digest"
           },
           {
             "path": "forensics/multitrack/historical-build-receipts.json",
-            "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
             "what": "the build receipt the built-authority claim is backed by"
           },
           {
@@ -8193,14 +8329,14 @@
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e922af6050b6a12006b2d608a71a8b0f576c35c30b06b44ff7f0ad6001c5605a",
+            "sha256": "606ebc7fcd3fc9e8b82fbba4622cc2602d7e8083e686f7921bab29e9f45e1295",
             "what": "the downstream consumer that exercised this authority"
           }
         ],
         "evidence_by_rung": {
           "admitted-source": {
             "path": "forensics/multitrack/historical-acquisition.json",
-            "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
             "what": "the release's acquisition record and its verified archive digest"
           },
           "atlas-complete": {
@@ -8210,7 +8346,7 @@
           },
           "built-authority": {
             "path": "forensics/multitrack/historical-build-receipts.json",
-            "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
             "what": "the build receipt the built-authority claim is backed by"
           },
           "catalogued": {
@@ -8220,7 +8356,7 @@
           },
           "downstream-evidenced": {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e922af6050b6a12006b2d608a71a8b0f576c35c30b06b44ff7f0ad6001c5605a",
+            "sha256": "606ebc7fcd3fc9e8b82fbba4622cc2602d7e8083e686f7921bab29e9f45e1295",
             "what": "the downstream consumer that exercised this authority"
           }
         },
@@ -8255,12 +8391,12 @@
           },
           {
             "path": "forensics/multitrack/historical-acquisition.json",
-            "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
             "what": "the release's acquisition record and its verified archive digest"
           },
           {
             "path": "forensics/multitrack/historical-build-receipts.json",
-            "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
             "what": "the build receipt the built-authority claim is backed by"
           },
           {
@@ -8270,14 +8406,14 @@
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e922af6050b6a12006b2d608a71a8b0f576c35c30b06b44ff7f0ad6001c5605a",
+            "sha256": "606ebc7fcd3fc9e8b82fbba4622cc2602d7e8083e686f7921bab29e9f45e1295",
             "what": "the downstream consumer that exercised this authority"
           }
         ],
         "evidence_by_rung": {
           "admitted-source": {
             "path": "forensics/multitrack/historical-acquisition.json",
-            "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
             "what": "the release's acquisition record and its verified archive digest"
           },
           "atlas-complete": {
@@ -8287,7 +8423,7 @@
           },
           "built-authority": {
             "path": "forensics/multitrack/historical-build-receipts.json",
-            "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
             "what": "the build receipt the built-authority claim is backed by"
           },
           "catalogued": {
@@ -8297,7 +8433,7 @@
           },
           "downstream-evidenced": {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e922af6050b6a12006b2d608a71a8b0f576c35c30b06b44ff7f0ad6001c5605a",
+            "sha256": "606ebc7fcd3fc9e8b82fbba4622cc2602d7e8083e686f7921bab29e9f45e1295",
             "what": "the downstream consumer that exercised this authority"
           }
         },
@@ -9531,9 +9667,39 @@
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
             "what": "the release node and its channel, scope and version, read from the committed catalogue"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
+          {
+            "path": "forensics/atlas/openssl-3.0.22-historical/plane-census.json",
+            "sha256": "35de6a8fa354d5db331b587cf474e92de4b5ef739e1a72697298794b7633c2f8",
+            "what": "the authority's committed atlas"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          "atlas-complete": {
+            "path": "forensics/atlas/openssl-3.0.22-historical/plane-census.json",
+            "sha256": "35de6a8fa354d5db331b587cf474e92de4b5ef739e1a72697298794b7633c2f8",
+            "what": "the authority's committed atlas"
+          },
+          "built-authority": {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
@@ -9541,22 +9707,22 @@
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
           "candidate-view": "no compatible candidate-to-reference view names the authority",
           "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
           "maintained": "the node is not the maintained candidate the default-authority alias names",
           "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
         "release_channel": "final",
         "rungs_attained": [
-          "catalogued"
+          "catalogued",
+          "admitted-source",
+          "built-authority",
+          "atlas-complete"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "atlas-complete",
         "subject_id": "openssl-3.0.22",
         "support_role": "support-target"
       },
@@ -10195,9 +10361,39 @@
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
             "what": "the release node and its channel, scope and version, read from the committed catalogue"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
+          {
+            "path": "forensics/atlas/openssl-3.1.8-historical/plane-census.json",
+            "sha256": "30148503672492caa29ea1817291927f11ab8f24142faf2035cad4525fce8a0a",
+            "what": "the authority's committed atlas"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          "atlas-complete": {
+            "path": "forensics/atlas/openssl-3.1.8-historical/plane-census.json",
+            "sha256": "30148503672492caa29ea1817291927f11ab8f24142faf2035cad4525fce8a0a",
+            "what": "the authority's committed atlas"
+          },
+          "built-authority": {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
@@ -10205,22 +10401,22 @@
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
           "candidate-view": "no compatible candidate-to-reference view names the authority",
           "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
           "maintained": "the node is not the maintained candidate the default-authority alias names",
           "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
         "release_channel": "final",
         "rungs_attained": [
-          "catalogued"
+          "catalogued",
+          "admitted-source",
+          "built-authority",
+          "atlas-complete"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "atlas-complete",
         "subject_id": "openssl-3.1.8",
         "support_role": "support-target"
       },
@@ -10562,9 +10758,39 @@
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
             "what": "the release node and its channel, scope and version, read from the committed catalogue"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
+          {
+            "path": "forensics/atlas/openssl-3.2.6-historical/plane-census.json",
+            "sha256": "a78d03f0afb861e4885db52d0deaebe8bcfcb2d70a2bf736d146db84acf87af2",
+            "what": "the authority's committed atlas"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          "atlas-complete": {
+            "path": "forensics/atlas/openssl-3.2.6-historical/plane-census.json",
+            "sha256": "a78d03f0afb861e4885db52d0deaebe8bcfcb2d70a2bf736d146db84acf87af2",
+            "what": "the authority's committed atlas"
+          },
+          "built-authority": {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
@@ -10572,22 +10798,22 @@
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
           "candidate-view": "no compatible candidate-to-reference view names the authority",
           "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
           "maintained": "the node is not the maintained candidate the default-authority alias names",
           "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
         "release_channel": "final",
         "rungs_attained": [
-          "catalogued"
+          "catalogued",
+          "admitted-source",
+          "built-authority",
+          "atlas-complete"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "atlas-complete",
         "subject_id": "openssl-3.2.6",
         "support_role": "support-target"
       },
@@ -10930,9 +11156,39 @@
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
             "what": "the release node and its channel, scope and version, read from the committed catalogue"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
+          {
+            "path": "forensics/atlas/openssl-3.3.7-historical/plane-census.json",
+            "sha256": "df086b4cd65a4facb087bb86c9d65d777cba2b990402a1b0d74f686711dcb0f8",
+            "what": "the authority's committed atlas"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          "atlas-complete": {
+            "path": "forensics/atlas/openssl-3.3.7-historical/plane-census.json",
+            "sha256": "df086b4cd65a4facb087bb86c9d65d777cba2b990402a1b0d74f686711dcb0f8",
+            "what": "the authority's committed atlas"
+          },
+          "built-authority": {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
@@ -10940,22 +11196,22 @@
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
           "candidate-view": "no compatible candidate-to-reference view names the authority",
           "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
           "maintained": "the node is not the maintained candidate the default-authority alias names",
           "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
         "release_channel": "final",
         "rungs_attained": [
-          "catalogued"
+          "catalogued",
+          "admitted-source",
+          "built-authority",
+          "atlas-complete"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "atlas-complete",
         "subject_id": "openssl-3.3.7",
         "support_role": "support-target"
       },
@@ -11335,9 +11591,39 @@
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
             "what": "the release node and its channel, scope and version, read from the committed catalogue"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
+          {
+            "path": "forensics/atlas/openssl-3.4.8-historical/plane-census.json",
+            "sha256": "19be6a058887de3138a2adc4c7efb62197ece37b7a33062589e8be7ab2f5ef02",
+            "what": "the authority's committed atlas"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          "atlas-complete": {
+            "path": "forensics/atlas/openssl-3.4.8-historical/plane-census.json",
+            "sha256": "19be6a058887de3138a2adc4c7efb62197ece37b7a33062589e8be7ab2f5ef02",
+            "what": "the authority's committed atlas"
+          },
+          "built-authority": {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
@@ -11345,22 +11631,22 @@
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
           "candidate-view": "no compatible candidate-to-reference view names the authority",
           "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
           "maintained": "the node is not the maintained candidate the default-authority alias names",
           "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
         "release_channel": "final",
         "rungs_attained": [
-          "catalogued"
+          "catalogued",
+          "admitted-source",
+          "built-authority",
+          "atlas-complete"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "atlas-complete",
         "subject_id": "openssl-3.4.8",
         "support_role": "support-target"
       },
@@ -11777,9 +12063,39 @@
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
             "what": "the release node and its channel, scope and version, read from the committed catalogue"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
+          {
+            "path": "forensics/atlas/openssl-3.5.9-historical/plane-census.json",
+            "sha256": "34bcd62198020b7eeb0e838bca4af5565cebb60481a083a5f632b247ed25a44e",
+            "what": "the authority's committed atlas"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          "atlas-complete": {
+            "path": "forensics/atlas/openssl-3.5.9-historical/plane-census.json",
+            "sha256": "34bcd62198020b7eeb0e838bca4af5565cebb60481a083a5f632b247ed25a44e",
+            "what": "the authority's committed atlas"
+          },
+          "built-authority": {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
@@ -11787,22 +12103,22 @@
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
           "candidate-view": "no compatible candidate-to-reference view names the authority",
           "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
           "maintained": "the node is not the maintained candidate the default-authority alias names",
           "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
         "release_channel": "final",
         "rungs_attained": [
-          "catalogued"
+          "catalogued",
+          "admitted-source",
+          "built-authority",
+          "atlas-complete"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "atlas-complete",
         "subject_id": "openssl-3.5.9",
         "support_role": "support-target"
       },
@@ -12015,7 +12331,7 @@
           },
           {
             "path": "forensics/multitrack/semantic-courts.json",
-            "sha256": "945f81f608438a84744ccaa949f651fbce13395a9172567b096f66411658828e",
+            "sha256": "3eeb9d8510df926b55afbe9efb2ac30775dc3fd549b73be64ed9b166ccc2f70a",
             "what": "the oracle-to-oracle semantic court that executed this authority"
           }
         ],
@@ -12042,7 +12358,7 @@
           },
           "runtime-evidenced": {
             "path": "forensics/multitrack/semantic-courts.json",
-            "sha256": "945f81f608438a84744ccaa949f651fbce13395a9172567b096f66411658828e",
+            "sha256": "3eeb9d8510df926b55afbe9efb2ac30775dc3fd549b73be64ed9b166ccc2f70a",
             "what": "the oracle-to-oracle semantic court that executed this authority"
           }
         },
@@ -12092,17 +12408,17 @@
           },
           {
             "path": "forensics/multitrack/compatibility-views.json",
-            "sha256": "01ff789e0ab1e6c8e241013d67402e809e921bd67db3d3a89780bec4a52ff035",
+            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
             "what": "the compatible candidate view the authority carries"
           },
           {
             "path": "forensics/multitrack/semantic-courts.json",
-            "sha256": "945f81f608438a84744ccaa949f651fbce13395a9172567b096f66411658828e",
+            "sha256": "3eeb9d8510df926b55afbe9efb2ac30775dc3fd549b73be64ed9b166ccc2f70a",
             "what": "the oracle-to-oracle semantic court that executed this authority"
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e922af6050b6a12006b2d608a71a8b0f576c35c30b06b44ff7f0ad6001c5605a",
+            "sha256": "606ebc7fcd3fc9e8b82fbba4622cc2602d7e8083e686f7921bab29e9f45e1295",
             "what": "the downstream consumer that exercised this authority"
           },
           {
@@ -12129,7 +12445,7 @@
           },
           "candidate-view": {
             "path": "forensics/multitrack/compatibility-views.json",
-            "sha256": "01ff789e0ab1e6c8e241013d67402e809e921bd67db3d3a89780bec4a52ff035",
+            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
             "what": "the compatible candidate view the authority carries"
           },
           "catalogued": {
@@ -12139,7 +12455,7 @@
           },
           "downstream-evidenced": {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e922af6050b6a12006b2d608a71a8b0f576c35c30b06b44ff7f0ad6001c5605a",
+            "sha256": "606ebc7fcd3fc9e8b82fbba4622cc2602d7e8083e686f7921bab29e9f45e1295",
             "what": "the downstream consumer that exercised this authority"
           },
           "maintained": {
@@ -12149,7 +12465,7 @@
           },
           "runtime-evidenced": {
             "path": "forensics/multitrack/semantic-courts.json",
-            "sha256": "945f81f608438a84744ccaa949f651fbce13395a9172567b096f66411658828e",
+            "sha256": "3eeb9d8510df926b55afbe9efb2ac30775dc3fd549b73be64ed9b166ccc2f70a",
             "what": "the oracle-to-oracle semantic court that executed this authority"
           }
         },
@@ -12180,9 +12496,39 @@
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
             "what": "the release node and its channel, scope and version, read from the committed catalogue"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
+          {
+            "path": "forensics/atlas/openssl-3.6.5-historical/plane-census.json",
+            "sha256": "7d21d6ff36d140104214c463c7cf47e20e3bfab40c1a24600de7f14b8fbd0ea8",
+            "what": "the authority's committed atlas"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          "atlas-complete": {
+            "path": "forensics/atlas/openssl-3.6.5-historical/plane-census.json",
+            "sha256": "7d21d6ff36d140104214c463c7cf47e20e3bfab40c1a24600de7f14b8fbd0ea8",
+            "what": "the authority's committed atlas"
+          },
+          "built-authority": {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
@@ -12190,22 +12536,22 @@
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
           "candidate-view": "no compatible candidate-to-reference view names the authority",
           "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
           "maintained": "the node is not the maintained candidate the default-authority alias names",
           "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
         "release_channel": "final",
         "rungs_attained": [
-          "catalogued"
+          "catalogued",
+          "admitted-source",
+          "built-authority",
+          "atlas-complete"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "atlas-complete",
         "subject_id": "openssl-3.6.5",
         "support_role": "support-target"
       },
@@ -12217,9 +12563,39 @@
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
             "what": "the release node and its channel, scope and version, read from the committed catalogue"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
+          {
+            "path": "forensics/atlas/openssl-4.0.0-historical/plane-census.json",
+            "sha256": "aeb41f227764962855215527e1a3f9fd22399847c2975ea13649f1cbaf174e09",
+            "what": "the authority's committed atlas"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          "atlas-complete": {
+            "path": "forensics/atlas/openssl-4.0.0-historical/plane-census.json",
+            "sha256": "aeb41f227764962855215527e1a3f9fd22399847c2975ea13649f1cbaf174e09",
+            "what": "the authority's committed atlas"
+          },
+          "built-authority": {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
@@ -12227,22 +12603,22 @@
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
           "candidate-view": "no compatible candidate-to-reference view names the authority",
           "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
           "maintained": "the node is not the maintained candidate the default-authority alias names",
           "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
         "release_channel": "final",
         "rungs_attained": [
-          "catalogued"
+          "catalogued",
+          "admitted-source",
+          "built-authority",
+          "atlas-complete"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "atlas-complete",
         "subject_id": "openssl-4.0.0",
         "support_role": "support-target"
       },
@@ -12326,9 +12702,39 @@
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
             "what": "the release node and its channel, scope and version, read from the committed catalogue"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
+          {
+            "path": "forensics/atlas/openssl-4.0.1-historical/plane-census.json",
+            "sha256": "4236b04f84a2a274ab6de51a97a11e4a3535b448410628c35f4630c407820ee0",
+            "what": "the authority's committed atlas"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          "atlas-complete": {
+            "path": "forensics/atlas/openssl-4.0.1-historical/plane-census.json",
+            "sha256": "4236b04f84a2a274ab6de51a97a11e4a3535b448410628c35f4630c407820ee0",
+            "what": "the authority's committed atlas"
+          },
+          "built-authority": {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
@@ -12336,22 +12742,22 @@
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
           "candidate-view": "no compatible candidate-to-reference view names the authority",
           "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
           "maintained": "the node is not the maintained candidate the default-authority alias names",
           "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
         "release_channel": "final",
         "rungs_attained": [
-          "catalogued"
+          "catalogued",
+          "admitted-source",
+          "built-authority",
+          "atlas-complete"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "atlas-complete",
         "subject_id": "openssl-4.0.1",
         "support_role": "support-target"
       },
@@ -12363,9 +12769,39 @@
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
             "what": "the release node and its channel, scope and version, read from the committed catalogue"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
+          {
+            "path": "forensics/atlas/openssl-4.0.2-historical/plane-census.json",
+            "sha256": "c762290e6585cb0ea8442c18472391325bb9a0feddae059109438074026f41c3",
+            "what": "the authority's committed atlas"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          "atlas-complete": {
+            "path": "forensics/atlas/openssl-4.0.2-historical/plane-census.json",
+            "sha256": "c762290e6585cb0ea8442c18472391325bb9a0feddae059109438074026f41c3",
+            "what": "the authority's committed atlas"
+          },
+          "built-authority": {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
@@ -12373,22 +12809,22 @@
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
           "candidate-view": "no compatible candidate-to-reference view names the authority",
           "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
           "maintained": "the node is not the maintained candidate the default-authority alias names",
           "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
         "release_channel": "final",
         "rungs_attained": [
-          "catalogued"
+          "catalogued",
+          "admitted-source",
+          "built-authority",
+          "atlas-complete"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "atlas-complete",
         "subject_id": "openssl-4.0.2",
         "support_role": "support-target"
       },
@@ -12400,9 +12836,39 @@
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
             "what": "the release node and its channel, scope and version, read from the committed catalogue"
+          },
+          {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
+          {
+            "path": "forensics/atlas/openssl-4.0.3-historical/plane-census.json",
+            "sha256": "5f2d8ab566375e81ac59645367f8c5fe596dd75dbc3ab8cba26d949b8bfd0946",
+            "what": "the authority's committed atlas"
           }
         ],
         "evidence_by_rung": {
+          "admitted-source": {
+            "path": "forensics/multitrack/historical-acquisition.json",
+            "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff",
+            "what": "the release's acquisition record and its verified archive digest"
+          },
+          "atlas-complete": {
+            "path": "forensics/atlas/openssl-4.0.3-historical/plane-census.json",
+            "sha256": "5f2d8ab566375e81ac59645367f8c5fe596dd75dbc3ab8cba26d949b8bfd0946",
+            "what": "the authority's committed atlas"
+          },
+          "built-authority": {
+            "path": "forensics/multitrack/historical-build-receipts.json",
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e",
+            "what": "the build receipt the built-authority claim is backed by"
+          },
           "catalogued": {
             "path": "forensics/release-catalog.json",
             "sha256": "9a96179d52047c88ac276b91a820344e944aa3147e060462806ff6e5700b894b",
@@ -12410,22 +12876,22 @@
           }
         },
         "not_attained": {
-          "admitted-source": "no acquisition record and no admitted-authority record names the release",
-          "atlas-complete": "the authority carries no committed atlas",
-          "built-authority": "no authority node with a build receipt names the release",
           "candidate-view": "no compatible candidate-to-reference view names the authority",
           "downstream-evidenced": "no passing unmodified downstream consumer was built against the authority",
           "maintained": "the node is not the maintained candidate the default-authority alias names",
           "runtime-evidenced": "the authority is not one side of the executed oracle-to-oracle semantic pair"
         },
-        "reason": "not attempted: the public final-release lineage is admitted by epoch representative rather than exhaustively, and this release is catalogued but not admitted",
+        "reason": "the authority carries a committed atlas; no candidate view exists for its epoch",
         "release_channel": "final",
         "rungs_attained": [
-          "catalogued"
+          "catalogued",
+          "admitted-source",
+          "built-authority",
+          "atlas-complete"
         ],
         "runtime_compatible": false,
         "scope": "final-release-lineage",
-        "status": "catalogued",
+        "status": "atlas-complete",
         "subject_id": "openssl-4.0.3",
         "support_role": "support-target"
       },
@@ -13986,7 +14452,7 @@
     {
       "name": "historical-population",
       "path": "forensics/multitrack/historical-population.json",
-      "sha256": "f811eb22b0793d41869b4305f494e8f909c812c366a6243029a936c1f9179ebd"
+      "sha256": "605a63584795829c572d9455f9f2642ed800482cd4c0c9e91f395e81b3c40b66"
     },
     {
       "name": "release-catalog",
@@ -13996,7 +14462,7 @@
     {
       "name": "authority-nodes",
       "path": "forensics/authority-nodes.json",
-      "sha256": "bb9d188018293f625e87ef01577b8c7c6ddae967e88ed066d3434f3b74f35486"
+      "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31"
     },
     {
       "name": "authority-registry",
@@ -14011,27 +14477,27 @@
     {
       "name": "historical-acquisition",
       "path": "forensics/multitrack/historical-acquisition.json",
-      "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd"
+      "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff"
     },
     {
       "name": "historical-build-receipts",
       "path": "forensics/multitrack/historical-build-receipts.json",
-      "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee"
+      "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e"
     },
     {
       "name": "compatibility-views",
       "path": "forensics/multitrack/compatibility-views.json",
-      "sha256": "01ff789e0ab1e6c8e241013d67402e809e921bd67db3d3a89780bec4a52ff035"
+      "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84"
     },
     {
       "name": "semantic-courts",
       "path": "forensics/multitrack/semantic-courts.json",
-      "sha256": "945f81f608438a84744ccaa949f651fbce13395a9172567b096f66411658828e"
+      "sha256": "3eeb9d8510df926b55afbe9efb2ac30775dc3fd549b73be64ed9b166ccc2f70a"
     },
     {
       "name": "downstream-multitrack",
       "path": "forensics/multitrack/downstream-multitrack.json",
-      "sha256": "e922af6050b6a12006b2d608a71a8b0f576c35c30b06b44ff7f0ad6001c5605a"
+      "sha256": "606ebc7fcd3fc9e8b82fbba4622cc2602d7e8083e686f7921bab29e9f45e1295"
     },
     {
       "name": "default-authority",

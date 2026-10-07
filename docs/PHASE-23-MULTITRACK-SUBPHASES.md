@@ -718,6 +718,40 @@ corrections, each checked by the court rather than asserted here.
     with specificity holding. `compatibility-matrix` moves to `implemented`/closed and the stratum's
     `open_in_this_stratum` falls from two to one (leaving only the `multitrack-seal`).
 
+**4.17 Every distinct major.minor line now carries a track, and seven early lines are honestly
+`unavailable` (the line-coverage expansion).** The seal recorded six built authorities -- 3.6.3,
+3.6.4, 0.9.8zh, 1.0.2u, 1.1.1w and 3.0.0 -- and this correction expands that to one authority per
+distinct major.minor OpenSSL line. Each line's **latest final release** is read from
+`forensics/release-catalog.json` and acquired by `authority_acquire.py --historical` (the official
+release asset or the `openssl.org` source, verified against the upstream-published SHA-256) and
+built by `historical_build.py` in the historical venue: `1.0.0t`, `1.0.1u` and `1.1.0l` for the
+remaining 1.x lines, and `3.0.22` (3.0 LTS), `3.1.8`, `3.2.6`, `3.3.7`, `3.4.8`, `3.5.9` (3.5 LTS),
+`3.6.5` and every `4.0.x` final (`4.0.0`, `4.0.1`, `4.0.2`, `4.0.3`) for the modern lines. Each
+build emits a historical build receipt and an authority node, so the registry is now **20** nodes
+(**2** admitted, **18** historical built) and the 23.3 parameterization produces a plane census for
+each of the **18** built historical authorities beside the default. The seven early 0.9.x lines
+(`0.9.1`, `0.9.2`, `0.9.3`, `0.9.4`, `0.9.5`, `0.9.6`, `0.9.7`) are recorded **`unavailable`** in
+`forensics/multitrack/historical-acquisition.json` with their reason -- the upstream project
+published no SHA-256 for them (only MD5/SHA-1, or no release asset at all), and an official digest
+cannot be invented -- so `0.9.2b`, `0.9.3a`, `0.9.4`, `0.9.5a` and `0.9.7m` join `0.9.1c` and
+`0.9.6m` as archaeology and are never counted runtime-compatible. The re-derivation widens every
+plane the larger set reaches: the population's `built` count is **20** with **7** unavailable and
+**5/5** ABI epochs carrying a representative; the support-status ladder is **240** support targets
+and **132** archaeological-only; the negative surface is **107** obligations; and the assembled
+matrix grows to **24** relations × **10** dimensions = **240** cells (**35** `PASS`, **1** `FAIL`,
+**6** `UNKNOWN`, **198** `NOT_MEASURED`). Two bounded prose statements that the expansion makes
+false are corrected at their source rather than left stale: the ABI/history façade's 1.0.x `not
+established` reason no longer reads "no 1.0.x source tree is admitted" (one is), and the 4.x ENGINE
+obligation's rationale no longer reads "no 4.x authority is admitted" (four are) -- the obligation
+stays `unknown` because no 4.x **view or measured façade** is committed, so the absence stays a
+recorded boundary rather than a pass. The two authorities bound to the production profile
+(3.6.4-production) and the forensic venue (3.6.3-historical) are untouched: their receipts and
+nodes are byte-stable, and only the historical registry, its receipts and the derived planes move.
+The compatibility views (14 over 2 authorities), the compatibility edges (24 over 2 pairs), the
+downstream plane (5/5 epochs, 3 `not_run`) and the security lineage's counts are unchanged; only
+their content-addressed inputs move. Decision **D547** records the change; the seal's §9 item 5
+and its updated coverage statements carry the same correction.
+
   ## 5. Process
 
 This stratum inherits Phases 8 through 21's process unchanged: a subphase lands its code, its court
