@@ -477,7 +477,7 @@
     "not_established": [
       {
         "claim": "the released 1.0.x public layouts (1.0.0-1.0.2)",
-        "reason": "no 1.0.x authority is admitted with an acquired source tree in this subphase, so its headers cannot be measured; the 1.0.x epoch is left uncovered rather than inferred from the 0.9.8zh layouts"
+        "reason": "the released 1.0.x public layouts are not measured: this subphase's committed layout measurement is the 0.9.8zh EVP_MD_CTX/HMAC_CTX generation only, so the 1.0.x layouts are left unmeasured rather than inferred from the 0.9.8zh layouts. A 1.0.x authority with its acquired source tree is now admitted, but admitting a source tree is not measuring a layout, and the two are separate evidence planes"
       },
       {
         "claim": "the pre-1.1.0 layouts of BIO, RSA, X509, SSL, SSL_CTX, SSL_SESSION and BIGNUM",
@@ -490,7 +490,7 @@
     {
       "name": "historical-acquisition",
       "path": "forensics/multitrack/historical-acquisition.json",
-      "sha256": "d04fa21247477f7d96a51012bb0712c372bc0973a15a40ce302378c37f3e9b95"
+      "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff"
     },
     {
       "name": "source-manifest",
@@ -520,7 +520,7 @@
     {
       "name": "parameterization-receipt",
       "path": "forensics/atlas/parameterization-receipt.json",
-      "sha256": "5cddd98c60f627008fe64b71acd916f73538793535d1ec0b2c0634b7c504de62"
+      "sha256": "d9ba52f6249c4e072d9e0fcc5d190ee0a228f4bedd2dc93303fad3efc062c4cb"
     }
   ],
   "kind": "abi-facades",

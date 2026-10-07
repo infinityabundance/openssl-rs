@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-RELEASE-CATALOG` is 23.1's court: the release catalogue and its lineage. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, both derived from forensics/multitrack/release-archaeology.json -- the official OpenSSL release timeline, the git tag each release names and the commit it peels to, and the nearest release ancestor the git graph gives it. It establishes that the graph begins at OpenSSL 0.9.1c (23 December 1998), that every upstream mainline final is present with no unexplained gap, that a pre-release is classified and never promoted to final or to the `latest-stable` alias merely by sorting higher, that the lineage is a typed DAG whose parallel branches are branch_fork edges rather than a false linear mainline, that every node is schema-valid with provenance, and that SSLeay is provenance ancestry only. A deleted release, a `final` flipped to `beta`, a repointed parent edge and a `latest-stable` pointed at a beta are each detected with specificity holding on the honest catalogue. A passing catalogue is a catalogue, not a compatibility claim: no edge says any release is compatible with any other. `RT-AUTHORITY-NODES` is 23.2's court: the authority-node registry. It stages no probe and reads forensics/authority-nodes.json and the records it is derived from -- the release catalogue, the admitted-authority registry, the build records and the historical acquisition and build receipts -- and establishes that every node is schema-valid, content-addressed and backed by an actual build receipt; that release identity (release_id, git) is proven against the catalogue and kept separate from platform/profile identity; that the admitted pair's source manifests still reproduce; and that an unavailable authority is recorded unavailable and is never a node. A built-authority claim with no receipt, a dropped required identity field, and a source digest asserting tag == tarball without proof are each detected with specificity holding. `RT-ATLAS-PARAMETERIZATION` is 23.3's court: the parameterized atlases. Its instrument is the generator itself: it reads forensics/atlas/parameterization-receipt.json, the committed default-authority alias and forensics/atlas/openssl-0.9.8zh-historical/plane-census.json, re-derives every census through the same generator, corroborates the historical authority's decisive absences (providers, provider registrations, QUIC) against its committed source manifest, and re-runs the authority-parameterized archaeology generators for the 3.6.4 production authority, asserting its committed plane is byte-identical. The default is the committed alias, never the catalogue's `latest-stable` (openssl-4.0.3); swapping the authority argument changes the produced census, so a hidden production fallback is caught, and a measured absence with no provenance or a nonzero count is refused. The one pre-existing, disclosed drift (parity-obligations.json) is measured live and undone, never applied. `RT-LINEAGE-EDGES` is 23.4's court: the typed lineage edges. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, and establishes that every edge is schema-valid, typed and directed, with its stated sense following the evidence's chronology and its provenance resolving; that the graph is a DAG whose parallel supported branches (1.0.2, 1.1.1, 3.x, 4.x) are typed branch_fork edges rather than a false linear mainline; that a date-order chronological_successor edge is never presented as an ABI proof; that the declared_abi_compatibility edges are marked declarations scoped to their declared family; and that every kind the vocabulary names but the evidence cannot settle is recorded absent with a reason. A reversed edge direction, a date-order edge relabelled declared_abi_compatibility, an introduced cycle and an edge stripped of provenance are each detected with specificity holding. A passing edge set is a set of relationships, not a compatibility claim. `RT-ENTITY-LINEAGE` is 23.5's court: the entity lineage. It stages no probe and reads forensics/multitrack/entity-lineage.json and the committed atlases it derives from, and establishes that every row is schema-valid, provenanced and names the two releases, both entities, the strong signals and a confidence; that a settled relation rests on a strong signal and never on a fuzzy nomination; that same_entity rows are the same entity and reproduce as such from the atlases; that no relation is settled on the authority-scoped install prefix moving; that no entity is dropped, silently merged or both renamed and split; and that the plane names its coverage boundary and its absent relations. The committed differential atlas corroborates the per-plane counts independently. A same_entity off name-only similarity, a renamed_to that is really a split, a settled relation with no strong signal and a silent merge are each detected with specificity holding. A passing entity plane records what became of each entity and says nothing about compatibility. `RT-DELTA-ENGINE` is 23.6's court: the semantic compatibility delta. It stages no probe and reads the committed edge deltas under forensics/deltas/ and the committed atlases and entity lineage they derive from, and establishes that every receipt is a schema-valid delta_receipt, every row is directed and dimension-specific with evidence, a confidence and an adjudication, every row reproduces from the atlases and the entity lineage, the measured and absent dimension sets are complete and disjoint, and no row or evidence path is a source-line diff standing in for the delta. A composed path equals the composition of its edge deltas, and a pairwise combination the plan forbids is recorded as a gap rather than committed. An unclassified change, a composed path that disagrees with its edges, a row with no evidence and a dimension the evidence cannot support are each detected with specificity holding. A passing delta records the changed surface between two named nodes; it is not a compatibility claim about either. `RT-ABI-HISTORY-FACADES` is 23.7's court: the compatibility-policy layer and the historical ABI/history façades. It stages no probe and reads forensics/multitrack/abi-facades.json, the generated src/compat/layout_generated.rs and the compat sources the build gating lives in, and establishes that every record is a schema-valid abi_facade naming an explicit adapter rather than a blind cast; that every historical layout is measured from the 0.9.8zh headers and its header hash resolves in the committed source manifest while the production authority marks the same struct opaque (the 1.1.0 opacity transition); that a prototype's eras genuinely differ and its canonical declaration is the production atlas's own; that the ENGINE -> Provider -> no-ENGINE architecture and the init/thread epochs are the census's own; and that the generated repr(C) size/alignment/offset assertions are exactly what the measurement yields. The default 3.6.4 production build is unaffected: every façade module is cfg-gated behind the non-default compatibility selection, which build.rs resolves through the committed default-authority alias. A perturbed struct offset, a provider in a pre-provider epoch and a blind-cast façade are each detected with specificity holding, and the plane names the boundary of what is not established (the 1.0.x epoch and the pre-1.1.0 aggregates it does not cover). A passing façade plane establishes a small historical epoch; it is not a source or binary compatibility claim about any release. `RT-SEMANTIC-COURTS` is 23.8's court: the semantic multitrack courts. It stages no probe at court time: the shared probe courts/phase23/semantic_probe.c is compiled and run against both authorities in the court venue, and the court re-runs the authority-to-authority comparison from the raw transcripts the committed plane preserves. It establishes that both sides emit the same normalized observation vocabulary; that the side-specific adapters for the declarations that differ across the pair preserve the difference rather than erasing it; that the committed observations reproduce from the raw bytes through the same adapter; that every observed difference is a classified release delta resolving in the committed 23.6 delta engine (or in a dimension it records absent with its reason); that the candidate-to-authority dimension is discharged by named, passing existing Phase-2 and Phase-17 courts rather than duplicated; and that a pair the venue cannot execute is recorded not-run with its reason. An adapter that normalizes away a real difference, a probe read against the wrong authority and a difference left unclassified are each detected with specificity holding. A passing semantic court is an instrument: it records the movement between two named authorities and is not a compatibility claim about either. `RT-COMPATIBILITY-VIEWS` is 23.9's court: the directional, dimension-specific compatibility views. It stages no probe and reads forensics/multitrack/compatibility-views.json, re-deriving the whole plane from the authorities' own committed evidence through the same generator. It establishes that every view is a schema-valid, directional, dimension-specific compatibility_view with an explicit evidence_kind that is never numeric ordering; that no view carries a bare `compatible` boolean; that every view names an admitted reference authority and a distribution facet and carries only that authority's reference evidence, so a view inherits no receipt across a version; that every evidence path is content-addressed; and that a dimension the evidence cannot support is recorded not-derivable with its reason. The 3.6.4 production view compares the authority's derived distribution/ABI shell (library names, SONAMEs, exported symbols/versions, static archives, link names, pkg-config metadata, installed layout, version identity) against the committed artifacts/phase2 distribution, and the 0.9.8zh historical views are `not_measured` because the epoch has no candidate build in this venue. Relaying authority A's evidence into authority B's view, a view collapsed to a boolean, a view citing numeric ordering and a view with no reference authority are each detected with specificity holding. `RT-HISTORICAL-POPULATION` is 23.10's court: the historical population. It stages no probe and reads forensics/multitrack/historical-population.json, re-deriving the whole record from the committed catalogue, authority nodes, acquisition and build receipts, atlases, compatibility views and semantic pair through the same generator. It establishes that every catalogue node has exactly one schema-valid support status over the ladder catalogued, admitted-source, built-authority, atlas-complete, candidate-view, runtime-evidenced, downstream-evidenced and maintained, with archaeological-only where a node is studied and not supported; that a built-authority rung is backed by an actual receipt; that an unavailable release is recorded unavailable and is never counted runtime-compatible; that runtime_compatible holds only where the runtime rung does; that each major ABI epoch -- pre-1.0, 1.0.x, 1.1.x, 3.x and 3.6+/4.x -- has at least one built representative (0.9.8zh, 1.0.2u, 1.1.1w, 3.0.0 and 3.6.3/3.6.4); that no status was typed; and that every evidence path is content-addressed. A release marked built with no receipt, an unavailable release marked runtime-compatible, a release with no status and an epoch with no representative are each detected with specificity holding. `RT-DOWNSTREAM-MULTITRACK` is 23.11's court: the unmodified downstream consumer per major compatibility epoch. It stages no probe and reads forensics/multitrack/downstream-multitrack.json, re-deriving every consumer record from the raw build/run outputs the artefact carries through the same generator. It establishes that every major ABI epoch -- pre-1.0, 1.0.x, 1.1.x, 3.x and 3.6+/4.x -- is covered by exactly one unmodified real downstream consumer built against that epoch's built authority and exercised against the authority's own s_server; that a passing consumer genuinely built and ran (its raw `ldd` output links the authority's prefix and its own SONAMEs and never the candidate distribution shell, and its version banner names the authority's OpenSSL); that a record is never relabelled across authorities; and that a `not_run` pair is honest unavailability carrying its measured reason and is never counted as passing. The Phase-17 candidate corpus is checked green and distinct: a candidate result is never relabelled as authority evidence. A consumer claiming a build with no artifact, an epoch counted passing while its consumer is `not_run`, and a result relabelled across authorities are each detected with specificity holding. `RT-COMPATIBILITY-EDGES` is 23.12's court: the directional compatibility edges. It stages no probe and reads forensics/multitrack/compatibility-edges.json, re-deriving the whole plane from the committed edge deltas, the entity lineage, the compatibility views and the Phase-2 ABI courts through the same generator. It establishes that every edge is a schema-valid, directional, dimension-specific compatibility_edge whose facet maps onto its coarse dimension; that each verdict is PASS/FAIL/UNKNOWN with the evidence that establishes it and never a single boolean; that a facet whose evidence is absent is UNKNOWN with its reason, never PASS by default; that every evidence entry is content-addressed and names the side it belongs to, so neither side's evidence is inherited from the other; and that no evidence kind is numeric ordering. The 3.6.3->3.6.4 edge is read both ways, and its API-source facet passes forward and fails backward because the two macros 3.6.4 added are absent from 3.6.3; the candidate's relation to its reference authority 3.6.4-production is read both ways, with the semantic facet UNKNOWN because no committed candidate-to-authority semantic measurement exists. A PASS with no evidence, a dimension collapsed to one boolean, evidence inherited across the two sides, a verdict defaulting to PASS and a numeric-ordering evidence kind are each detected with specificity holding. `RT-NEGATIVE-OBLIGATIONS` is 23.13's court: the negative (and positive) obligations. It stages no probe and reads forensics/multitrack/negative-obligations.json, re-deriving every obligation from the committed censuses, ABI/history façades, edge deltas and symbols planes through the same generator. It establishes that every obligation is a schema-valid negative_obligation whose expected state is the polarity its kind asserts; that its scope names an admitted authority or a catalogued release; that everything it names is present and content-addressed and is the evidence the record's derivation checks actually read, so a negative obligation is checked against the named authority/view/plane rather than asserted; that its state is the reading that evidence establishes and never assumed, so an `open` obligation is a compatibility defect and `unknown` is only where no authority or view exists; and that both polarities and all six kinds -- must_not_exist, must_be_opaque and must_not_be_exported beside must_exist, must_be_public and must_be_exported -- are present. The plane covers the pre-provider authorities' provider absence (0.9.8zh, 1.0.2u, 1.1.1w) beside 3.0.0 and 3.6.4's presence, the pre-1.1.0 public layout (EVP_MD_CTX, HMAC_CTX) beside the 3.6.4 opacity transition, the 3.6.4-added macros' absence from 3.6.3, the exported symbols the 3.6.3 -> 3.6.4 delta read as present in both, each authority's `.num` NOEXIST rows, and a 4.x release's ENGINE absence, which is `unknown` because no 4.x authority or view is admitted. A provider symbol present in a pre-provider authority's view, a post-1.1.0 layout declared public, an ENGINE symbol retained in a 4.x view, an obligation with no evidence and a future symbol leaked into an earlier authority's view are each detected with specificity holding. `RT-SECURITY-LINEAGE` is 23.14's court: the historical security lineage. It stages no probe and reads forensics/multitrack/security-lineage.json, re-deriving the whole plane from the frozen source snapshot, the release catalogue, the default-authority alias and the divergence register through the same generator. It establishes that every vulnerability carries an affected range, per-branch fixes and a candidate disposition; that a branch fix maps to the correct maintained branch; that no disposition re-adopts a fixed behaviour, so a preserved vulnerable behaviour or a safe divergence with no recorded divergence is a finding; that an unavailable-source (extended-support) identifier is an external release reference and is never admitted as an authority; and that the security_backport edges the observed fixes establish are present in the authority lineage. A CVE fix mapped to the wrong branch, a vulnerable behaviour marked preserved, a safe divergence with no recorded divergence, an extended-support identifier admitted as an authority and a dropped branch fix are each detected with specificity holding. The property -- the whole lineage observed and bound -- is NOT_CLAIMED and the unobserved source records are named as property findings, so a passing RT-SECURITY-LINEAGE is an instrument, never a statement that the lineage is secure. Phase 23 lineage is secure. `RT-SUPPORT-STATUS` is 23.15's court: the support-status ladder. It stages no probe and reads forensics/multitrack/support-status.json, re-deriving the whole ladder plane from the 23.10 historical population through the same generator. It establishes that every catalogue node has exactly one schema-valid row; that every row reconciles node-for-node and rung-for-rung with its population record, so there is one derivation of a status rather than two; that each rung a node attained is backed by the evidence that establishes it (a built-authority by a receipt, a downstream-evidenced by a passing consumer, a candidate-view by a compatible view, ...); that each rung not attained carries its reason; that archaeological-only climbs no rung and is never counted a support target; that the statuses are derived rather than typed and carry no competing PARITY_VERIFIED; that the core rungs are a prefix while the additive rungs are independent evidence planes; and that the counts and content hash reproduce and every evidence path is content-addressed. A node claiming a higher rung with no evidence, a node skipping a core rung, an archaeological-only node counted a support target and a status typed rather than derived are each detected with specificity holding. A passing ladder is an instrument: it records how far each release node reached and is not a compatibility claim about any release. `RT-COMPATIBILITY-MATRIX` is 23.16's court: the assembled compatibility matrix. It stages no probe and reads forensics/multitrack/compatibility-matrix.json, re-deriving the whole matrix from the five committed planes -- the compatibility views, the directional edges, the negative obligations, the security lineage and the support-status ladder -- through the same generator. It establishes that every cell is a schema-valid, directional, dimension-specific record with a PASS/FAIL/UNKNOWN/NOT_MEASURED verdict and never a single boolean; that every cell references real source records from the five planes and its reading equals the source record's own value, so the matrix cannot drift from its inputs or contradict the plane it joins; that a cell with no reading is NOT_MEASURED with its reason, never PASS by default; that one cell covers every declared relation and dimension; and that all five planes are joined. The matrix is O(relations x dimensions), never the pairwise release product: the 3.6.3 <-> 3.6.4 pair is joined in both directions, the candidate is joined to its reference authority and to each authority the planes name, and the security lineage joins the candidate-to-reference relation on the behavioural dimension. A reading that contradicts its plane, a cell collapsed to one boolean, a cell with no source record and a PASS with no evidence are each detected with specificity holding. A passing matrix is an instrument: it assembles the directions and dimensions the planes measured, it is not a one-boolean compatibility claim about any release. `MULTITRACK-SEAL` is 23.17's court: the closure of the matrix as the stratum's claim, the FRF/Gemel chain rule and the seal. It stages no probe and reads the committed multitrack planes, the declared contract, the FRF registry and the Gemel projection, and the seal document `docs/PHASE-23-MULTITRACK-SEAL.md`. It establishes that the declared contract is the plan's seventeen units with the seal last; that the assembled matrix is closed and reproduces from its five planes through the same generator; that no Phase-23 court is FRF-declarable, so the chain entry is vacuous by `frf_gemel_blocking_reason`'s own scoping and no `.frf` object or Gemel checkpoint is owed at this seal; that the Gemel projection records the current checkpoint the release re-creates the store at; that the seal document exists and carries the scaffolding every seal carries; and that the coverage boundaries the subphases recorded are present in the planes rather than omitted. It reads no derived state of this stratum, so its finding cannot flip with its own pass, and a dropped contract unit, an inconsistent or non-reproducing matrix, an injected FRF declaration, a stripped seal and an omitted boundary are each detected with specificity holding. The one thing the model forbids everywhere is a single boolean: compatibility is directional and dimension-specific, a cross-version receipt is never inherited, an authority is named explicitly and singularly, and a historical vulnerability is observed but never reintroduced. docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "`RT-RELEASE-CATALOG` is 23.1's court: the release catalogue and its lineage. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, both derived from forensics/multitrack/release-archaeology.json -- the official OpenSSL release timeline, the git tag each release names and the commit it peels to, and the nearest release ancestor the git graph gives it. It establishes that the graph begins at OpenSSL 0.9.1c (23 December 1998), that every upstream mainline final is present with no unexplained gap, that a pre-release is classified and never promoted to final or to the `latest-stable` alias merely by sorting higher, that the lineage is a typed DAG whose parallel branches are branch_fork edges rather than a false linear mainline, that every node is schema-valid with provenance, and that SSLeay is provenance ancestry only. A deleted release, a `final` flipped to `beta`, a repointed parent edge and a `latest-stable` pointed at a beta are each detected with specificity holding on the honest catalogue. A passing catalogue is a catalogue, not a compatibility claim: no edge says any release is compatible with any other. `RT-AUTHORITY-NODES` is 23.2's court: the authority-node registry. It stages no probe and reads forensics/authority-nodes.json and the records it is derived from -- the release catalogue, the admitted-authority registry, the build records and the historical acquisition and build receipts -- and establishes that every node is schema-valid, content-addressed and backed by an actual build receipt; that release identity (release_id, git) is proven against the catalogue and kept separate from platform/profile identity; that the admitted pair's source manifests still reproduce; and that an unavailable authority is recorded unavailable and is never a node. A built-authority claim with no receipt, a dropped required identity field, and a source digest asserting tag == tarball without proof are each detected with specificity holding. `RT-ATLAS-PARAMETERIZATION` is 23.3's court: the parameterized atlases. Its instrument is the generator itself: it reads forensics/atlas/parameterization-receipt.json, the committed default-authority alias and forensics/atlas/openssl-0.9.8zh-historical/plane-census.json, re-derives every census through the same generator, corroborates the historical authority's decisive absences (providers, provider registrations, QUIC) against its committed source manifest, and re-runs the authority-parameterized archaeology generators for the 3.6.4 production authority, asserting its committed plane is byte-identical. The default is the committed alias, never the catalogue's `latest-stable` (openssl-4.0.3); swapping the authority argument changes the produced census, so a hidden production fallback is caught, and a measured absence with no provenance or a nonzero count is refused. The one pre-existing, disclosed drift (parity-obligations.json) is measured live and undone, never applied. `RT-LINEAGE-EDGES` is 23.4's court: the typed lineage edges. It stages no probe and reads forensics/release-catalog.json and forensics/authority-lineage.json, and establishes that every edge is schema-valid, typed and directed, with its stated sense following the evidence's chronology and its provenance resolving; that the graph is a DAG whose parallel supported branches (1.0.2, 1.1.1, 3.x, 4.x) are typed branch_fork edges rather than a false linear mainline; that a date-order chronological_successor edge is never presented as an ABI proof; that the declared_abi_compatibility edges are marked declarations scoped to their declared family; and that every kind the vocabulary names but the evidence cannot settle is recorded absent with a reason. A reversed edge direction, a date-order edge relabelled declared_abi_compatibility, an introduced cycle and an edge stripped of provenance are each detected with specificity holding. A passing edge set is a set of relationships, not a compatibility claim. `RT-ENTITY-LINEAGE` is 23.5's court: the entity lineage. It stages no probe and reads forensics/multitrack/entity-lineage.json and the committed atlases it derives from, and establishes that every row is schema-valid, provenanced and names the two releases, both entities, the strong signals and a confidence; that a settled relation rests on a strong signal and never on a fuzzy nomination; that same_entity rows are the same entity and reproduce as such from the atlases; that no relation is settled on the authority-scoped install prefix moving; that no entity is dropped, silently merged or both renamed and split; and that the plane names its coverage boundary and its absent relations. The committed differential atlas corroborates the per-plane counts independently. A same_entity off name-only similarity, a renamed_to that is really a split, a settled relation with no strong signal and a silent merge are each detected with specificity holding. A passing entity plane records what became of each entity and says nothing about compatibility. `RT-DELTA-ENGINE` is 23.6's court: the semantic compatibility delta. It stages no probe and reads the committed edge deltas under forensics/deltas/ and the committed atlases and entity lineage they derive from, and establishes that every receipt is a schema-valid delta_receipt, every row is directed and dimension-specific with evidence, a confidence and an adjudication, every row reproduces from the atlases and the entity lineage, the measured and absent dimension sets are complete and disjoint, and no row or evidence path is a source-line diff standing in for the delta. A composed path equals the composition of its edge deltas, and a pairwise combination the plan forbids is recorded as a gap rather than committed. An unclassified change, a composed path that disagrees with its edges, a row with no evidence and a dimension the evidence cannot support are each detected with specificity holding. A passing delta records the changed surface between two named nodes; it is not a compatibility claim about either. `RT-ABI-HISTORY-FACADES` is 23.7's court: the compatibility-policy layer and the historical ABI/history façades. It stages no probe and reads forensics/multitrack/abi-facades.json, the generated src/compat/layout_generated.rs and the compat sources the build gating lives in, and establishes that every record is a schema-valid abi_facade naming an explicit adapter rather than a blind cast; that every historical layout is measured from the 0.9.8zh headers and its header hash resolves in the committed source manifest while the production authority marks the same struct opaque (the 1.1.0 opacity transition); that a prototype's eras genuinely differ and its canonical declaration is the production atlas's own; that the ENGINE -> Provider -> no-ENGINE architecture and the init/thread epochs are the census's own; and that the generated repr(C) size/alignment/offset assertions are exactly what the measurement yields. The default 3.6.4 production build is unaffected: every façade module is cfg-gated behind the non-default compatibility selection, which build.rs resolves through the committed default-authority alias. A perturbed struct offset, a provider in a pre-provider epoch and a blind-cast façade are each detected with specificity holding, and the plane names the boundary of what is not established (the 1.0.x epoch and the pre-1.1.0 aggregates it does not cover). A passing façade plane establishes a small historical epoch; it is not a source or binary compatibility claim about any release. `RT-SEMANTIC-COURTS` is 23.8's court: the semantic multitrack courts. It stages no probe at court time: the shared probe courts/phase23/semantic_probe.c is compiled and run against both authorities in the court venue, and the court re-runs the authority-to-authority comparison from the raw transcripts the committed plane preserves. It establishes that both sides emit the same normalized observation vocabulary; that the side-specific adapters for the declarations that differ across the pair preserve the difference rather than erasing it; that the committed observations reproduce from the raw bytes through the same adapter; that every observed difference is a classified release delta resolving in the committed 23.6 delta engine (or in a dimension it records absent with its reason); that the candidate-to-authority dimension is discharged by named, passing existing Phase-2 and Phase-17 courts rather than duplicated; and that a pair the venue cannot execute is recorded not-run with its reason. An adapter that normalizes away a real difference, a probe read against the wrong authority and a difference left unclassified are each detected with specificity holding. A passing semantic court is an instrument: it records the movement between two named authorities and is not a compatibility claim about either. `RT-COMPATIBILITY-VIEWS` is 23.9's court: the directional, dimension-specific compatibility views. It stages no probe and reads forensics/multitrack/compatibility-views.json, re-deriving the whole plane from the authorities' own committed evidence through the same generator. It establishes that every view is a schema-valid, directional, dimension-specific compatibility_view with an explicit evidence_kind that is never numeric ordering; that no view carries a bare `compatible` boolean; that every view names an admitted reference authority and a distribution facet and carries only that authority's reference evidence, so a view inherits no receipt across a version; that every evidence path is content-addressed; and that a dimension the evidence cannot support is recorded not-derivable with its reason. The 3.6.4 production view compares the authority's derived distribution/ABI shell (library names, SONAMEs, exported symbols/versions, static archives, link names, pkg-config metadata, installed layout, version identity) against the committed artifacts/phase2 distribution, and the 0.9.8zh historical views are `not_measured` because the epoch has no candidate build in this venue. Relaying authority A's evidence into authority B's view, a view collapsed to a boolean, a view citing numeric ordering and a view with no reference authority are each detected with specificity holding. `RT-HISTORICAL-POPULATION` is 23.10's court: the historical population. It stages no probe and reads forensics/multitrack/historical-population.json, re-deriving the whole record from the committed catalogue, authority nodes, acquisition and build receipts, atlases, compatibility views and semantic pair through the same generator. It establishes that every catalogue node has exactly one schema-valid support status over the ladder catalogued, admitted-source, built-authority, atlas-complete, candidate-view, runtime-evidenced, downstream-evidenced and maintained, with archaeological-only where a node is studied and not supported; that a built-authority rung is backed by an actual receipt; that an unavailable release is recorded unavailable and is never counted runtime-compatible; that runtime_compatible holds only where the runtime rung does; that each major ABI epoch -- pre-1.0, 1.0.x, 1.1.x, 3.x and 3.6+/4.x -- has at least one built representative (0.9.8zh, 1.0.2u, 1.1.1w, 3.0.0 and 3.6.3/3.6.4); that no status was typed; and that every evidence path is content-addressed. A release marked built with no receipt, an unavailable release marked runtime-compatible, a release with no status and an epoch with no representative are each detected with specificity holding. `RT-DOWNSTREAM-MULTITRACK` is 23.11's court: the unmodified downstream consumer per major compatibility epoch. It stages no probe and reads forensics/multitrack/downstream-multitrack.json, re-deriving every consumer record from the raw build/run outputs the artefact carries through the same generator. It establishes that every major ABI epoch -- pre-1.0, 1.0.x, 1.1.x, 3.x and 3.6+/4.x -- is covered by exactly one unmodified real downstream consumer built against that epoch's built authority and exercised against the authority's own s_server; that a passing consumer genuinely built and ran (its raw `ldd` output links the authority's prefix and its own SONAMEs and never the candidate distribution shell, and its version banner names the authority's OpenSSL); that a record is never relabelled across authorities; and that a `not_run` pair is honest unavailability carrying its measured reason and is never counted as passing. The Phase-17 candidate corpus is checked green and distinct: a candidate result is never relabelled as authority evidence. A consumer claiming a build with no artifact, an epoch counted passing while its consumer is `not_run`, and a result relabelled across authorities are each detected with specificity holding. `RT-COMPATIBILITY-EDGES` is 23.12's court: the directional compatibility edges. It stages no probe and reads forensics/multitrack/compatibility-edges.json, re-deriving the whole plane from the committed edge deltas, the entity lineage, the compatibility views and the Phase-2 ABI courts through the same generator. It establishes that every edge is a schema-valid, directional, dimension-specific compatibility_edge whose facet maps onto its coarse dimension; that each verdict is PASS/FAIL/UNKNOWN with the evidence that establishes it and never a single boolean; that a facet whose evidence is absent is UNKNOWN with its reason, never PASS by default; that every evidence entry is content-addressed and names the side it belongs to, so neither side's evidence is inherited from the other; and that no evidence kind is numeric ordering. The 3.6.3->3.6.4 edge is read both ways, and its API-source facet passes forward and fails backward because the two macros 3.6.4 added are absent from 3.6.3; the candidate's relation to its reference authority 3.6.4-production is read both ways, with the semantic facet UNKNOWN because no committed candidate-to-authority semantic measurement exists. A PASS with no evidence, a dimension collapsed to one boolean, evidence inherited across the two sides, a verdict defaulting to PASS and a numeric-ordering evidence kind are each detected with specificity holding. `RT-NEGATIVE-OBLIGATIONS` is 23.13's court: the negative (and positive) obligations. It stages no probe and reads forensics/multitrack/negative-obligations.json, re-deriving every obligation from the committed censuses, ABI/history façades, edge deltas and symbols planes through the same generator. It establishes that every obligation is a schema-valid negative_obligation whose expected state is the polarity its kind asserts; that its scope names an admitted authority or a catalogued release; that everything it names is present and content-addressed and is the evidence the record's derivation checks actually read, so a negative obligation is checked against the named authority/view/plane rather than asserted; that its state is the reading that evidence establishes and never assumed, so an `open` obligation is a compatibility defect and `unknown` is only where no view or measured façade exists; and that both polarities and all six kinds -- must_not_exist, must_be_opaque and must_not_be_exported beside must_exist, must_be_public and must_be_exported -- are present. The plane covers the pre-provider authorities' provider absence (0.9.8zh, 1.0.2u, 1.1.1w) beside 3.0.0 and 3.6.4's presence, the pre-1.1.0 public layout (EVP_MD_CTX, HMAC_CTX) beside the 3.6.4 opacity transition, the 3.6.4-added macros' absence from 3.6.3, the exported symbols the 3.6.3 -> 3.6.4 delta read as present in both, each authority's `.num` NOEXIST rows, and a 4.x release's ENGINE absence, which is `unknown` because no 4.x view or measured façade is admitted. A provider symbol present in a pre-provider authority's view, a post-1.1.0 layout declared public, an ENGINE symbol retained in a 4.x view, an obligation with no evidence and a future symbol leaked into an earlier authority's view are each detected with specificity holding. `RT-SECURITY-LINEAGE` is 23.14's court: the historical security lineage. It stages no probe and reads forensics/multitrack/security-lineage.json, re-deriving the whole plane from the frozen source snapshot, the release catalogue, the default-authority alias and the divergence register through the same generator. It establishes that every vulnerability carries an affected range, per-branch fixes and a candidate disposition; that a branch fix maps to the correct maintained branch; that no disposition re-adopts a fixed behaviour, so a preserved vulnerable behaviour or a safe divergence with no recorded divergence is a finding; that an unavailable-source (extended-support) identifier is an external release reference and is never admitted as an authority; and that the security_backport edges the observed fixes establish are present in the authority lineage. A CVE fix mapped to the wrong branch, a vulnerable behaviour marked preserved, a safe divergence with no recorded divergence, an extended-support identifier admitted as an authority and a dropped branch fix are each detected with specificity holding. The property -- the whole lineage observed and bound -- is NOT_CLAIMED and the unobserved source records are named as property findings, so a passing RT-SECURITY-LINEAGE is an instrument, never a statement that the lineage is secure. Phase 23 lineage is secure. `RT-SUPPORT-STATUS` is 23.15's court: the support-status ladder. It stages no probe and reads forensics/multitrack/support-status.json, re-deriving the whole ladder plane from the 23.10 historical population through the same generator. It establishes that every catalogue node has exactly one schema-valid row; that every row reconciles node-for-node and rung-for-rung with its population record, so there is one derivation of a status rather than two; that each rung a node attained is backed by the evidence that establishes it (a built-authority by a receipt, a downstream-evidenced by a passing consumer, a candidate-view by a compatible view, ...); that each rung not attained carries its reason; that archaeological-only climbs no rung and is never counted a support target; that the statuses are derived rather than typed and carry no competing PARITY_VERIFIED; that the core rungs are a prefix while the additive rungs are independent evidence planes; and that the counts and content hash reproduce and every evidence path is content-addressed. A node claiming a higher rung with no evidence, a node skipping a core rung, an archaeological-only node counted a support target and a status typed rather than derived are each detected with specificity holding. A passing ladder is an instrument: it records how far each release node reached and is not a compatibility claim about any release. `RT-COMPATIBILITY-MATRIX` is 23.16's court: the assembled compatibility matrix. It stages no probe and reads forensics/multitrack/compatibility-matrix.json, re-deriving the whole matrix from the five committed planes -- the compatibility views, the directional edges, the negative obligations, the security lineage and the support-status ladder -- through the same generator. It establishes that every cell is a schema-valid, directional, dimension-specific record with a PASS/FAIL/UNKNOWN/NOT_MEASURED verdict and never a single boolean; that every cell references real source records from the five planes and its reading equals the source record's own value, so the matrix cannot drift from its inputs or contradict the plane it joins; that a cell with no reading is NOT_MEASURED with its reason, never PASS by default; that one cell covers every declared relation and dimension; and that all five planes are joined. The matrix is O(relations x dimensions), never the pairwise release product: the 3.6.3 <-> 3.6.4 pair is joined in both directions, the candidate is joined to its reference authority and to each authority the planes name, and the security lineage joins the candidate-to-reference relation on the behavioural dimension. A reading that contradicts its plane, a cell collapsed to one boolean, a cell with no source record and a PASS with no evidence are each detected with specificity holding. A passing matrix is an instrument: it assembles the directions and dimensions the planes measured, it is not a one-boolean compatibility claim about any release. `MULTITRACK-SEAL` is 23.17's court: the closure of the matrix as the stratum's claim, the FRF/Gemel chain rule and the seal. It stages no probe and reads the committed multitrack planes, the declared contract, the FRF registry and the Gemel projection, and the seal document `docs/PHASE-23-MULTITRACK-SEAL.md`. It establishes that the declared contract is the plan's seventeen units with the seal last; that the assembled matrix is closed and reproduces from its five planes through the same generator; that no Phase-23 court is FRF-declarable, so the chain entry is vacuous by `frf_gemel_blocking_reason`'s own scoping and no `.frf` object or Gemel checkpoint is owed at this seal; that the Gemel projection records the current checkpoint the release re-creates the store at; that the seal document exists and carries the scaffolding every seal carries; and that the coverage boundaries the subphases recorded are present in the planes rather than omitted. It reads no derived state of this stratum, so its finding cannot flip with its own pass, and a dropped contract unit, an inconsistent or non-reproducing matrix, an injected FRF declaration, a stripped seal and an omitted boundary are each detected with specificity holding. The one thing the model forbids everywhere is a single boolean: compatibility is directional and dimension-specific, a cross-version receipt is never inherited, an authority is named explicitly and singularly, and a historical vulnerability is observed but never reintroduced. docs/PHASE-23-MULTITRACK-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "catalog_counts": {
@@ -68,8 +68,8 @@
         "verdict": "pass"
       },
       {
-        "built": 6,
-        "content_hash": "141d73032de431ad4ec3a749763e03df97470de8dcf7338d08bc210a78355c2a",
+        "built": 20,
+        "content_hash": "c2b6c3ad13e1aa73c681d732eb9558ae17f5e2b4047792c4f0937e93906fdfab",
         "control": {
           "baseline_findings": 0,
           "caught_built_without_receipt": true,
@@ -98,11 +98,32 @@
             "release_id": "openssl-0.9.8zh"
           },
           {
+            "authority_id": "openssl-1.0.0t-historical",
+            "claim": "built-authority",
+            "profile": "linux-x86_64-historical-shared",
+            "receipt": "forensics/multitrack/historical-build-receipts.json",
+            "release_id": "openssl-1.0.0t"
+          },
+          {
+            "authority_id": "openssl-1.0.1u-historical",
+            "claim": "built-authority",
+            "profile": "linux-x86_64-historical-shared",
+            "receipt": "forensics/multitrack/historical-build-receipts.json",
+            "release_id": "openssl-1.0.1u"
+          },
+          {
             "authority_id": "openssl-1.0.2u-historical",
             "claim": "built-authority",
             "profile": "linux-x86_64-historical-shared",
             "receipt": "forensics/multitrack/historical-build-receipts.json",
             "release_id": "openssl-1.0.2u"
+          },
+          {
+            "authority_id": "openssl-1.1.0l-historical",
+            "claim": "built-authority",
+            "profile": "linux-x86_64-historical-shared",
+            "receipt": "forensics/multitrack/historical-build-receipts.json",
+            "release_id": "openssl-1.1.0l"
           },
           {
             "authority_id": "openssl-1.1.1w-historical",
@@ -119,6 +140,48 @@
             "release_id": "openssl-3.0.0"
           },
           {
+            "authority_id": "openssl-3.0.22-historical",
+            "claim": "built-authority",
+            "profile": "linux-x86_64-historical-shared",
+            "receipt": "forensics/multitrack/historical-build-receipts.json",
+            "release_id": "openssl-3.0.22"
+          },
+          {
+            "authority_id": "openssl-3.1.8-historical",
+            "claim": "built-authority",
+            "profile": "linux-x86_64-historical-shared",
+            "receipt": "forensics/multitrack/historical-build-receipts.json",
+            "release_id": "openssl-3.1.8"
+          },
+          {
+            "authority_id": "openssl-3.2.6-historical",
+            "claim": "built-authority",
+            "profile": "linux-x86_64-historical-shared",
+            "receipt": "forensics/multitrack/historical-build-receipts.json",
+            "release_id": "openssl-3.2.6"
+          },
+          {
+            "authority_id": "openssl-3.3.7-historical",
+            "claim": "built-authority",
+            "profile": "linux-x86_64-historical-shared",
+            "receipt": "forensics/multitrack/historical-build-receipts.json",
+            "release_id": "openssl-3.3.7"
+          },
+          {
+            "authority_id": "openssl-3.4.8-historical",
+            "claim": "built-authority",
+            "profile": "linux-x86_64-historical-shared",
+            "receipt": "forensics/multitrack/historical-build-receipts.json",
+            "release_id": "openssl-3.4.8"
+          },
+          {
+            "authority_id": "openssl-3.5.9-historical",
+            "claim": "built-authority",
+            "profile": "linux-x86_64-historical-shared",
+            "receipt": "forensics/multitrack/historical-build-receipts.json",
+            "release_id": "openssl-3.5.9"
+          },
+          {
             "authority_id": "openssl-3.6.3-historical",
             "claim": "built-authority",
             "profile": "linux-x86_64-default-shared-legacy-notests",
@@ -131,12 +194,47 @@
             "profile": "linux-x86_64-default-shared-legacy-notests",
             "receipt": "forensics/atlas/BUILD_RECORDS.json",
             "release_id": "openssl-3.6.4"
+          },
+          {
+            "authority_id": "openssl-3.6.5-historical",
+            "claim": "built-authority",
+            "profile": "linux-x86_64-historical-shared",
+            "receipt": "forensics/multitrack/historical-build-receipts.json",
+            "release_id": "openssl-3.6.5"
+          },
+          {
+            "authority_id": "openssl-4.0.0-historical",
+            "claim": "built-authority",
+            "profile": "linux-x86_64-historical-shared",
+            "receipt": "forensics/multitrack/historical-build-receipts.json",
+            "release_id": "openssl-4.0.0"
+          },
+          {
+            "authority_id": "openssl-4.0.1-historical",
+            "claim": "built-authority",
+            "profile": "linux-x86_64-historical-shared",
+            "receipt": "forensics/multitrack/historical-build-receipts.json",
+            "release_id": "openssl-4.0.1"
+          },
+          {
+            "authority_id": "openssl-4.0.2-historical",
+            "claim": "built-authority",
+            "profile": "linux-x86_64-historical-shared",
+            "receipt": "forensics/multitrack/historical-build-receipts.json",
+            "release_id": "openssl-4.0.2"
+          },
+          {
+            "authority_id": "openssl-4.0.3-historical",
+            "claim": "built-authority",
+            "profile": "linux-x86_64-historical-shared",
+            "receipt": "forensics/multitrack/historical-build-receipts.json",
+            "release_id": "openssl-4.0.3"
           }
         ],
-        "nodes": 6,
+        "nodes": 20,
         "probe": "",
         "problems": [],
-        "unavailable": 2,
+        "unavailable": 7,
         "unavailable_identities": [
           {
             "outcome": "unavailable",
@@ -145,7 +243,32 @@
           },
           {
             "outcome": "unavailable",
+            "release_id": "openssl-0.9.2b",
+            "runtime_evidence": "unavailable"
+          },
+          {
+            "outcome": "unavailable",
+            "release_id": "openssl-0.9.3a",
+            "runtime_evidence": "unavailable"
+          },
+          {
+            "outcome": "unavailable",
+            "release_id": "openssl-0.9.4",
+            "runtime_evidence": "unavailable"
+          },
+          {
+            "outcome": "unavailable",
+            "release_id": "openssl-0.9.5a",
+            "runtime_evidence": "unavailable"
+          },
+          {
+            "outcome": "unavailable",
             "release_id": "openssl-0.9.6m",
+            "runtime_evidence": "unavailable"
+          },
+          {
+            "outcome": "unavailable",
+            "release_id": "openssl-0.9.7m",
             "runtime_evidence": "unavailable"
           }
         ],
@@ -154,10 +277,24 @@
       {
         "authorities": [
           "openssl-0.9.8zh-historical",
+          "openssl-1.0.0t-historical",
+          "openssl-1.0.1u-historical",
           "openssl-1.0.2u-historical",
+          "openssl-1.1.0l-historical",
           "openssl-1.1.1w-historical",
           "openssl-3.0.0-historical",
-          "openssl-3.6.4-production"
+          "openssl-3.0.22-historical",
+          "openssl-3.1.8-historical",
+          "openssl-3.2.6-historical",
+          "openssl-3.3.7-historical",
+          "openssl-3.4.8-historical",
+          "openssl-3.5.9-historical",
+          "openssl-3.6.4-production",
+          "openssl-3.6.5-historical",
+          "openssl-4.0.0-historical",
+          "openssl-4.0.1-historical",
+          "openssl-4.0.2-historical",
+          "openssl-4.0.3-historical"
         ],
         "byte_identity": {
           "disclosed_drift": [
@@ -211,6 +348,30 @@
             "store-api",
             "symbol-versioning"
           ],
+          "openssl-1.0.0t-historical": [
+            "encoder-decoder-api",
+            "engine-registry",
+            "engine-vs-provider-registry",
+            "fips-provider",
+            "provider-capabilities",
+            "provider-registrations",
+            "providers",
+            "quic",
+            "store-api",
+            "symbol-versioning"
+          ],
+          "openssl-1.0.1u-historical": [
+            "encoder-decoder-api",
+            "engine-registry",
+            "engine-vs-provider-registry",
+            "fips-provider",
+            "provider-capabilities",
+            "provider-registrations",
+            "providers",
+            "quic",
+            "store-api",
+            "symbol-versioning"
+          ],
           "openssl-1.0.2u-historical": [
             "encoder-decoder-api",
             "engine-registry",
@@ -222,6 +383,17 @@
             "quic",
             "store-api",
             "symbol-versioning"
+          ],
+          "openssl-1.1.0l-historical": [
+            "encoder-decoder-api",
+            "engine-registry",
+            "engine-vs-provider-registry",
+            "fips-provider",
+            "provider-capabilities",
+            "provider-registrations",
+            "providers",
+            "quic",
+            "store-api"
           ],
           "openssl-1.1.1w-historical": [
             "encoder-decoder-api",
@@ -237,7 +409,34 @@
           "openssl-3.0.0-historical": [
             "quic"
           ],
-          "openssl-3.6.4-production": []
+          "openssl-3.0.22-historical": [
+            "quic"
+          ],
+          "openssl-3.1.8-historical": [
+            "quic"
+          ],
+          "openssl-3.2.6-historical": [],
+          "openssl-3.3.7-historical": [],
+          "openssl-3.4.8-historical": [],
+          "openssl-3.5.9-historical": [],
+          "openssl-3.6.4-production": [],
+          "openssl-3.6.5-historical": [],
+          "openssl-4.0.0-historical": [
+            "engine-registry",
+            "engines"
+          ],
+          "openssl-4.0.1-historical": [
+            "engine-registry",
+            "engines"
+          ],
+          "openssl-4.0.2-historical": [
+            "engine-registry",
+            "engines"
+          ],
+          "openssl-4.0.3-historical": [
+            "engine-registry",
+            "engines"
+          ]
         },
         "method": "stages no probe: its instrument is the parameterized generator. It reads forensics/atlas/parameterization-receipt.json, the committed default-authority alias and forensics/atlas/openssl-0.9.8zh-historical/plane-census.json; re-derives every census through the same generator (one code path, one plane set); corroborates the historical authority's decisive absences (providers, provider registrations, QUIC) against its committed source manifest; and re-runs the authority-parameterized archaeology generators for the 3.6.4 production authority and asserts its committed plane is byte-identical. The default is the committed alias, never the catalogue's latest-stable (openssl-4.0.3). Swapping the authority argument changes the produced census, so a hidden production fallback is caught; a measured absence with no provenance or a nonzero count is refused. The pre-existing, disclosed drift (parity-obligations.json and the rendered ATLAS.md, stale since cli-commands gained its option grammar at p16) is measured live and undone, never applied.",
         "planes": 17,
@@ -245,10 +444,24 @@
         "problems": [],
         "produced": {
           "openssl-0.9.8zh-historical": 7,
+          "openssl-1.0.0t-historical": 7,
+          "openssl-1.0.1u-historical": 7,
           "openssl-1.0.2u-historical": 7,
+          "openssl-1.1.0l-historical": 8,
           "openssl-1.1.1w-historical": 8,
           "openssl-3.0.0-historical": 16,
-          "openssl-3.6.4-production": 17
+          "openssl-3.0.22-historical": 16,
+          "openssl-3.1.8-historical": 16,
+          "openssl-3.2.6-historical": 17,
+          "openssl-3.3.7-historical": 17,
+          "openssl-3.4.8-historical": 17,
+          "openssl-3.5.9-historical": 17,
+          "openssl-3.6.4-production": 17,
+          "openssl-3.6.5-historical": 17,
+          "openssl-4.0.0-historical": 15,
+          "openssl-4.0.1-historical": 15,
+          "openssl-4.0.2-historical": 15,
+          "openssl-4.0.3-historical": 15
         },
         "verdict": "pass"
       },
@@ -320,7 +533,7 @@
           }
         },
         "boundary": "This plane covers the release pair(s) whose two authorities both carry committed declaration and public-symbol planes: openssl-3.6.3 -> openssl-3.6.4. It does not cover a pair with an authority that carries only a source manifest and a source-plane census (openssl-0.9.8zh-historical): no declaration identity exists for that authority, so no entity relation touching it is settled or nominated, and the pair is recorded not covered rather than guessed at.",
-        "content_hash": "0fa55a86eb7490d80a976801c975fe6a67593502f53d89e13a445defa77f16aa",
+        "content_hash": "37c3cd0dafbfb5d98ccfe490acb824924d99afcdb2a31c8fc2f5a07f233559ca",
         "control": {
           "baseline_findings": 0,
           "caught_fuzzy_same_entity": true,
@@ -591,7 +804,7 @@
         "not_established": [
           {
             "claim": "the released 1.0.x public layouts (1.0.0-1.0.2)",
-            "reason": "no 1.0.x authority is admitted with an acquired source tree in this subphase, so its headers cannot be measured; the 1.0.x epoch is left uncovered rather than inferred from the 0.9.8zh layouts"
+            "reason": "the released 1.0.x public layouts are not measured: this subphase's committed layout measurement is the 0.9.8zh EVP_MD_CTX/HMAC_CTX generation only, so the 1.0.x layouts are left unmeasured rather than inferred from the 0.9.8zh layouts. A 1.0.x authority with its acquired source tree is now admitted, but admitting a source tree is not measuring a layout, and the two are separate evidence planes"
           },
           {
             "claim": "the pre-1.1.0 layouts of BIO, RSA, X509, SSL, SSL_CTX, SSL_SESSION and BIGNUM",
@@ -1751,20 +1964,34 @@
       {
         "authorities": [
           "openssl-0.9.8zh-historical",
+          "openssl-1.0.0t-historical",
+          "openssl-1.0.1u-historical",
           "openssl-1.0.2u-historical",
+          "openssl-1.1.0l-historical",
           "openssl-1.1.1w-historical",
           "openssl-3.0.0-historical",
+          "openssl-3.0.22-historical",
+          "openssl-3.1.8-historical",
+          "openssl-3.2.6-historical",
+          "openssl-3.3.7-historical",
+          "openssl-3.4.8-historical",
+          "openssl-3.5.9-historical",
           "openssl-3.6.3-historical",
-          "openssl-3.6.4-production"
+          "openssl-3.6.4-production",
+          "openssl-3.6.5-historical",
+          "openssl-4.0.0-historical",
+          "openssl-4.0.1-historical",
+          "openssl-4.0.2-historical",
+          "openssl-4.0.3-historical"
         ],
         "boundary": "23.13 derives the obligations the committed evidence supports: the provider planes of every censused authority, the public-layout and architecture façades, the 3.6.3 -> 3.6.4 delta's added entities and measured exports, and each authority's `.num` NOEXIST rows. A 4.x release carries no admitted authority or view, so its ENGINE obligation reads `unknown` rather than satisfied. An obligation is bounded to the authority or release it names; no obligation inherits another authority's evidence.",
         "by_kind": {
           "must_be_exported": 40,
           "must_be_opaque": 2,
           "must_be_public": 2,
-          "must_exist": 8,
+          "must_exist": 30,
           "must_not_be_exported": 18,
-          "must_not_exist": 9
+          "must_not_exist": 15
         },
         "control": {
           "baseline_findings": 0,
@@ -1789,29 +2016,43 @@
         "counts": {
           "by_authority": {
             "openssl-0.9.8zh-historical": 5,
+            "openssl-1.0.0t-historical": 2,
+            "openssl-1.0.1u-historical": 2,
             "openssl-1.0.2u-historical": 2,
+            "openssl-1.1.0l-historical": 2,
             "openssl-1.1.1w-historical": 2,
             "openssl-3.0.0-historical": 2,
+            "openssl-3.0.22-historical": 2,
+            "openssl-3.1.8-historical": 2,
+            "openssl-3.2.6-historical": 2,
+            "openssl-3.3.7-historical": 2,
+            "openssl-3.4.8-historical": 2,
+            "openssl-3.5.9-historical": 2,
             "openssl-3.6.3-historical": 31,
             "openssl-3.6.4-production": 36,
-            "openssl-4.0.3": 1
+            "openssl-3.6.5-historical": 2,
+            "openssl-4.0.0-historical": 2,
+            "openssl-4.0.1-historical": 2,
+            "openssl-4.0.2-historical": 2,
+            "openssl-4.0.3": 1,
+            "openssl-4.0.3-historical": 2
           },
           "by_kind": {
             "must_be_exported": 40,
             "must_be_opaque": 2,
             "must_be_public": 2,
-            "must_exist": 8,
+            "must_exist": 30,
             "must_not_be_exported": 18,
-            "must_not_exist": 9
+            "must_not_exist": 15
           },
           "by_state": {
-            "satisfied": 78,
+            "satisfied": 106,
             "unknown": 1
           },
-          "negative": 29,
-          "obligations": 79,
+          "negative": 35,
+          "obligations": 107,
           "open": 0,
-          "positive": 50,
+          "positive": 72,
           "unknown": 1
         },
         "court": "RT-NEGATIVE-OBLIGATIONS",
@@ -1877,6 +2118,38 @@
             "subject": "provider-store"
           },
           {
+            "authority_id": "openssl-1.0.0t-historical",
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-1.0.0t-historical-must_not_exist-provider-registration",
+            "release_id": "openssl-1.0.0t",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-1.0.0t-historical",
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-1.0.0t-historical-must_not_exist-provider-store",
+            "release_id": "openssl-1.0.0t",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-1.0.1u-historical",
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-1.0.1u-historical-must_not_exist-provider-registration",
+            "release_id": "openssl-1.0.1u",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-1.0.1u-historical",
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-1.0.1u-historical-must_not_exist-provider-store",
+            "release_id": "openssl-1.0.1u",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
             "authority_id": "openssl-1.0.2u-historical",
             "kind": "must_not_exist",
             "obligation_id": "NO-openssl-1.0.2u-historical-must_not_exist-provider-registration",
@@ -1889,6 +2162,22 @@
             "kind": "must_not_exist",
             "obligation_id": "NO-openssl-1.0.2u-historical-must_not_exist-provider-store",
             "release_id": "openssl-1.0.2u",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-1.1.0l-historical",
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-1.1.0l-historical-must_not_exist-provider-registration",
+            "release_id": "openssl-1.1.0l",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-1.1.0l-historical",
+            "kind": "must_not_exist",
+            "obligation_id": "NO-openssl-1.1.0l-historical-must_not_exist-provider-store",
+            "release_id": "openssl-1.1.0l",
             "state": "satisfied",
             "subject": "provider-store"
           },
@@ -1921,6 +2210,102 @@
             "kind": "must_exist",
             "obligation_id": "NO-openssl-3.0.0-historical-must_exist-provider-store",
             "release_id": "openssl-3.0.0",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-3.0.22-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.0.22-historical-must_exist-provider-registration",
+            "release_id": "openssl-3.0.22",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-3.0.22-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.0.22-historical-must_exist-provider-store",
+            "release_id": "openssl-3.0.22",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-3.1.8-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.1.8-historical-must_exist-provider-registration",
+            "release_id": "openssl-3.1.8",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-3.1.8-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.1.8-historical-must_exist-provider-store",
+            "release_id": "openssl-3.1.8",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-3.2.6-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.2.6-historical-must_exist-provider-registration",
+            "release_id": "openssl-3.2.6",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-3.2.6-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.2.6-historical-must_exist-provider-store",
+            "release_id": "openssl-3.2.6",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-3.3.7-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.3.7-historical-must_exist-provider-registration",
+            "release_id": "openssl-3.3.7",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-3.3.7-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.3.7-historical-must_exist-provider-store",
+            "release_id": "openssl-3.3.7",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-3.4.8-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.4.8-historical-must_exist-provider-registration",
+            "release_id": "openssl-3.4.8",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-3.4.8-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.4.8-historical-must_exist-provider-store",
+            "release_id": "openssl-3.4.8",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-3.5.9-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.5.9-historical-must_exist-provider-registration",
+            "release_id": "openssl-3.5.9",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-3.5.9-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.5.9-historical-must_exist-provider-store",
+            "release_id": "openssl-3.5.9",
             "state": "satisfied",
             "subject": "provider-store"
           },
@@ -2461,6 +2846,86 @@
             "subject": "SSL_get_peer_certificate"
           },
           {
+            "authority_id": "openssl-3.6.5-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.6.5-historical-must_exist-provider-registration",
+            "release_id": "openssl-3.6.5",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-3.6.5-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-3.6.5-historical-must_exist-provider-store",
+            "release_id": "openssl-3.6.5",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-4.0.0-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-4.0.0-historical-must_exist-provider-registration",
+            "release_id": "openssl-4.0.0",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-4.0.0-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-4.0.0-historical-must_exist-provider-store",
+            "release_id": "openssl-4.0.0",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-4.0.1-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-4.0.1-historical-must_exist-provider-registration",
+            "release_id": "openssl-4.0.1",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-4.0.1-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-4.0.1-historical-must_exist-provider-store",
+            "release_id": "openssl-4.0.1",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-4.0.2-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-4.0.2-historical-must_exist-provider-registration",
+            "release_id": "openssl-4.0.2",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-4.0.2-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-4.0.2-historical-must_exist-provider-store",
+            "release_id": "openssl-4.0.2",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
+            "authority_id": "openssl-4.0.3-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-4.0.3-historical-must_exist-provider-registration",
+            "release_id": "openssl-4.0.3",
+            "state": "satisfied",
+            "subject": "provider-registration"
+          },
+          {
+            "authority_id": "openssl-4.0.3-historical",
+            "kind": "must_exist",
+            "obligation_id": "NO-openssl-4.0.3-historical-must_exist-provider-store",
+            "release_id": "openssl-4.0.3",
+            "state": "satisfied",
+            "subject": "provider-store"
+          },
+          {
             "authority_id": null,
             "kind": "must_not_exist",
             "obligation_id": "NO-openssl-4.0.3-must_not_exist-ENGINE",
@@ -2473,11 +2938,24 @@
         "problems": [],
         "releases": [
           "openssl-0.9.8zh",
+          "openssl-1.0.0t",
+          "openssl-1.0.1u",
           "openssl-1.0.2u",
+          "openssl-1.1.0l",
           "openssl-1.1.1w",
           "openssl-3.0.0",
+          "openssl-3.0.22",
+          "openssl-3.1.8",
+          "openssl-3.2.6",
+          "openssl-3.3.7",
+          "openssl-3.4.8",
+          "openssl-3.5.9",
           "openssl-3.6.3",
           "openssl-3.6.4",
+          "openssl-3.6.5",
+          "openssl-4.0.0",
+          "openssl-4.0.1",
+          "openssl-4.0.2",
           "openssl-4.0.3"
         ],
         "states": [
@@ -3763,7 +4241,7 @@
         "verdict": "pass"
       },
       {
-        "content_hash": "781f7a8d354a897af677d13b0f8b1bccc392bb7d75412452e2ef3dd410784ac3",
+        "content_hash": "9dd8edd4eb6cd9d98c3d7006f3cef7d8b905e2dfd7fa51b7194164afbf7af11f",
         "control": {
           "baseline_findings": 0,
           "caught_built_without_receipt": true,
@@ -3774,7 +4252,7 @@
           "injected_built_without_receipt": "openssl-1.0.2u (authority node dropped)",
           "injected_built_without_receipt_findings": 1,
           "injected_epoch_without_representative": "1.0.x",
-          "injected_epoch_without_representative_findings": 2,
+          "injected_epoch_without_representative_findings": 3,
           "injected_missing_status": "openssl-0.9.1c",
           "injected_missing_status_findings": 3,
           "injected_unavailable_runtime_compatible": "openssl-0.9.1c",
@@ -3782,7 +4260,7 @@
           "specificity_holds": true
         },
         "counts": {
-          "built": 6,
+          "built": 20,
           "by_epoch": {
             "1.0.x": 76,
             "1.1.x": 52,
@@ -3792,18 +4270,19 @@
             "pre-1.0": 112
           },
           "by_rung": {
-            "admitted-source": 6,
-            "atlas-complete": 6,
-            "built-authority": 6,
+            "admitted-source": 20,
+            "atlas-complete": 20,
+            "built-authority": 20,
             "candidate-view": 1,
-            "catalogued": 245,
+            "catalogued": 240,
             "downstream-evidenced": 5,
             "maintained": 1,
             "runtime-evidenced": 2
           },
           "by_status": {
-            "archaeological-only": 127,
-            "catalogued": 239,
+            "archaeological-only": 132,
+            "atlas-complete": 14,
+            "catalogued": 220,
             "downstream-evidenced": 4,
             "maintained": 1,
             "runtime-evidenced": 1
@@ -3812,7 +4291,7 @@
           "epochs_covered": 5,
           "nodes": 372,
           "runtime_compatible": 2,
-          "unavailable": 2
+          "unavailable": 7
         },
         "court": "RT-HISTORICAL-POPULATION",
         "epochs": [
@@ -3826,6 +4305,8 @@
           },
           {
             "built_representatives": [
+              "openssl-1.0.0t",
+              "openssl-1.0.1u",
               "openssl-1.0.2u"
             ],
             "covered": true,
@@ -3834,6 +4315,7 @@
           },
           {
             "built_representatives": [
+              "openssl-1.1.0l",
               "openssl-1.1.1w"
             ],
             "covered": true,
@@ -3842,7 +4324,13 @@
           },
           {
             "built_representatives": [
-              "openssl-3.0.0"
+              "openssl-3.0.0",
+              "openssl-3.0.22",
+              "openssl-3.1.8",
+              "openssl-3.2.6",
+              "openssl-3.3.7",
+              "openssl-3.4.8",
+              "openssl-3.5.9"
             ],
             "covered": true,
             "epoch": "3.x",
@@ -3851,7 +4339,12 @@
           {
             "built_representatives": [
               "openssl-3.6.3",
-              "openssl-3.6.4"
+              "openssl-3.6.4",
+              "openssl-3.6.5",
+              "openssl-4.0.0",
+              "openssl-4.0.1",
+              "openssl-4.0.2",
+              "openssl-4.0.3"
             ],
             "covered": true,
             "epoch": "3.6+/4.x",
@@ -3881,7 +4374,27 @@
           },
           {
             "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+            "release_id": "openssl-0.9.2b"
+          },
+          {
+            "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+            "release_id": "openssl-0.9.3a"
+          },
+          {
+            "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+            "release_id": "openssl-0.9.4"
+          },
+          {
+            "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+            "release_id": "openssl-0.9.5a"
+          },
+          {
+            "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
             "release_id": "openssl-0.9.6m"
+          },
+          {
+            "reason": "no upstream-published SHA-256 could be fetched from the official release asset or the openssl.org/source/old archive; an official digest cannot be invented, so the release is not admitted",
+            "release_id": "openssl-0.9.7m"
           }
         ],
         "verdict": "pass"
@@ -3889,6 +4402,10 @@
       {
         "archaeological_only": [
           "openssl-0.9.1c",
+          "openssl-0.9.2b",
+          "openssl-0.9.3a",
+          "openssl-0.9.4",
+          "openssl-0.9.5a",
           "openssl-0.9.5a-beta1",
           "openssl-0.9.5a-beta2",
           "openssl-0.9.6-beta1",
@@ -3905,6 +4422,7 @@
           "openssl-0.9.7-beta4",
           "openssl-0.9.7-beta5",
           "openssl-0.9.7-beta6",
+          "openssl-0.9.7m",
           "openssl-0.9.8-beta1",
           "openssl-0.9.8-beta2",
           "openssl-0.9.8-beta3",
@@ -4016,7 +4534,7 @@
           "openssl-fips-2.0.8",
           "openssl-fips-2.0.9"
         ],
-        "content_hash": "54a17a6a22e19a3be20217cce9e7e53a8fbc44a7f5b5c0a2801d6a3083eacc90",
+        "content_hash": "f7e6bc49ed54c43bcc545899540b33740a4165e6c2be45bc7a79bbb6b664cf71",
         "control": {
           "baseline_findings": 0,
           "caught_archaeology_counted_supported": true,
@@ -4035,13 +4553,13 @@
           "specificity_holds": true
         },
         "counts": {
-          "archaeology": 127,
+          "archaeology": 132,
           "by_rung": {
-            "admitted-source": 6,
-            "atlas-complete": 6,
-            "built-authority": 6,
+            "admitted-source": 20,
+            "atlas-complete": 20,
+            "built-authority": 20,
             "candidate-view": 1,
-            "catalogued": 245,
+            "catalogued": 240,
             "downstream-evidenced": 5,
             "maintained": 1,
             "runtime-evidenced": 2
@@ -4051,19 +4569,20 @@
             "out-of-population-scope": 125
           },
           "by_status": {
-            "archaeological-only": 127,
-            "catalogued": 239,
+            "archaeological-only": 132,
+            "atlas-complete": 14,
+            "catalogued": 220,
             "downstream-evidenced": 4,
             "maintained": 1,
             "runtime-evidenced": 1
           },
           "by_support_role": {
-            "archaeology": 127,
-            "support-target": 245
+            "archaeology": 132,
+            "support-target": 240
           },
           "nodes": 372,
           "runtime_compatible": 2,
-          "support_targets": 245
+          "support_targets": 240
         },
         "court": "RT-SUPPORT-STATUS",
         "findings": [],
@@ -4073,18 +4592,19 @@
         "probe": "",
         "problems": [],
         "status_histogram": {
-          "archaeological-only": 127,
-          "catalogued": 239,
+          "archaeological-only": 132,
+          "atlas-complete": 14,
+          "catalogued": 220,
           "downstream-evidenced": 4,
           "maintained": 1,
           "runtime-evidenced": 1
         },
-        "support_targets": 245,
+        "support_targets": 240,
         "verdict": "pass"
       },
       {
         "boundary": "the matrix is the assembled substrate, not a strengthened claim: a PASS cell means every committed reading that joins it passes, a FAIL cell means a joined reading fails, and an UNKNOWN or NOT_MEASURED cell is honestly unresolved. The candidate's relation to each authority is joined where the planes name it; the 3.6.3 <-> 3.6.4 pair is joined in both directions from the committed edge delta. The security lineage joins the candidate-to-reference-authority relation on the behavioural dimension, so a cell can never re-adopt a fixed behaviour. A dimension a relation has no evidence for is NOT_MEASURED with its reason",
-        "content_hash": "f6549835d386e59c4ce819f1674b475b9b23261d762d0096d0df0b5acfdf094d",
+        "content_hash": "1605aeda7d192afe88550cf8466d9db9eff619c349cfab6b0aa3405d832676fe",
         "control": {
           "baseline_findings": 0,
           "caught_collapsed_boolean": true,
@@ -4104,23 +4624,37 @@
         },
         "counts": {
           "by_dimension": {
-            "abi": 10,
-            "behavioural": 10,
-            "cli_config": 10,
-            "concurrency": 10,
-            "error": 10,
-            "ownership": 10,
-            "protocol": 10,
-            "provider_registration": 10,
-            "semantic": 10,
-            "source_api": 10
+            "abi": 24,
+            "behavioural": 24,
+            "cli_config": 24,
+            "concurrency": 24,
+            "error": 24,
+            "ownership": 24,
+            "protocol": 24,
+            "provider_registration": 24,
+            "semantic": 24,
+            "source_api": 24
           },
           "by_relation": {
             "candidate-vs-openssl-0.9.8zh-historical/candidate_to_reference": 10,
+            "candidate-vs-openssl-1.0.0t-historical/candidate_to_reference": 10,
+            "candidate-vs-openssl-1.0.1u-historical/candidate_to_reference": 10,
             "candidate-vs-openssl-1.0.2u-historical/candidate_to_reference": 10,
+            "candidate-vs-openssl-1.1.0l-historical/candidate_to_reference": 10,
             "candidate-vs-openssl-1.1.1w-historical/candidate_to_reference": 10,
             "candidate-vs-openssl-3.0.0-historical/candidate_to_reference": 10,
+            "candidate-vs-openssl-3.0.22-historical/candidate_to_reference": 10,
+            "candidate-vs-openssl-3.1.8-historical/candidate_to_reference": 10,
+            "candidate-vs-openssl-3.2.6-historical/candidate_to_reference": 10,
+            "candidate-vs-openssl-3.3.7-historical/candidate_to_reference": 10,
+            "candidate-vs-openssl-3.4.8-historical/candidate_to_reference": 10,
+            "candidate-vs-openssl-3.5.9-historical/candidate_to_reference": 10,
             "candidate-vs-openssl-3.6.3-historical/candidate_to_reference": 10,
+            "candidate-vs-openssl-3.6.5-historical/candidate_to_reference": 10,
+            "candidate-vs-openssl-4.0.0-historical/candidate_to_reference": 10,
+            "candidate-vs-openssl-4.0.1-historical/candidate_to_reference": 10,
+            "candidate-vs-openssl-4.0.2-historical/candidate_to_reference": 10,
+            "candidate-vs-openssl-4.0.3-historical/candidate_to_reference": 10,
             "candidate-vs-openssl-4.0.3/candidate_to_reference": 10,
             "candidate-vs-reference/candidate_to_reference": 10,
             "candidate-vs-reference/reference_to_candidate": 10,
@@ -4129,27 +4663,27 @@
           },
           "by_verdict": {
             "FAIL": 1,
-            "NOT_MEASURED": 72,
-            "PASS": 21,
+            "NOT_MEASURED": 198,
+            "PASS": 35,
             "UNKNOWN": 6
           },
-          "cells": 100,
+          "cells": 240,
           "dimensions": 10,
           "planes_joined": 5,
-          "relations": 10
+          "relations": 24
         },
         "court": "RT-COMPATIBILITY-MATRIX",
         "dimensions": {
-          "abi": 10,
-          "behavioural": 10,
-          "cli_config": 10,
-          "concurrency": 10,
-          "error": 10,
-          "ownership": 10,
-          "protocol": 10,
-          "provider_registration": 10,
-          "semantic": 10,
-          "source_api": 10
+          "abi": 24,
+          "behavioural": 24,
+          "cli_config": 24,
+          "concurrency": 24,
+          "error": 24,
+          "ownership": 24,
+          "protocol": 24,
+          "provider_registration": 24,
+          "semantic": 24,
+          "source_api": 24
         },
         "findings": [],
         "frf_declarable": false,
@@ -4159,27 +4693,27 @@
           {
             "name": "compatibility_edges",
             "record_count": 24,
-            "sha256": "cd3f0f8050c51ba5308d1abd6a8107a94c266e99b78d9c8dc7550aaa930502d0"
+            "sha256": "49bc53ddf4d6352e38128a96af36ad606ff64d4fbcb8276afa56f9b2efce6295"
           },
           {
             "name": "compatibility_views",
             "record_count": 14,
-            "sha256": "01ff789e0ab1e6c8e241013d67402e809e921bd67db3d3a89780bec4a52ff035"
+            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84"
           },
           {
             "name": "negative_obligations",
-            "record_count": 79,
-            "sha256": "fc2f41bdc594ce6c9f3c7364f679ea99e77d3e5e7720e4561054cf51ae7bd82c"
+            "record_count": 107,
+            "sha256": "58e163cd4204f4c9c118041dc9685728b91ae5d8416ae118a6acbc082d9f5b4b"
           },
           {
             "name": "security_lineage",
             "record_count": 52,
-            "sha256": "9e7de7941822c0beee751646b169bb99805695d6e2bc4bb30e04b12d6bef92af"
+            "sha256": "7ab23c22946463a750c5ecd8a1b0480724f3fa95150469373c788efcf5e84b69"
           },
           {
             "name": "support_status",
             "record_count": 372,
-            "sha256": "ea603b1d940f7057846a7a0ee3cd4243ed44e151b04da8bd7c7c932712502d3f"
+            "sha256": "839658eba24f6481f34b5b203b36323aade376cc1d35ffeadabf6bbeafccbfa1"
           }
         ],
         "probe": "",
@@ -4205,10 +4739,49 @@
               "negative_obligations"
             ],
             "kind": "obligation",
+            "pair_id": "candidate-vs-openssl-1.0.0t-historical",
+            "reference_id": "openssl-1.0.0t-historical",
+            "reference_release": "openssl-1.0.0t",
+            "relation_id": "candidate-vs-openssl-1.0.0t-historical/candidate_to_reference",
+            "subject_id": "openssl-rs",
+            "subject_release": null
+          },
+          {
+            "direction": "candidate_to_reference",
+            "established_by": [
+              "negative_obligations"
+            ],
+            "kind": "obligation",
+            "pair_id": "candidate-vs-openssl-1.0.1u-historical",
+            "reference_id": "openssl-1.0.1u-historical",
+            "reference_release": "openssl-1.0.1u",
+            "relation_id": "candidate-vs-openssl-1.0.1u-historical/candidate_to_reference",
+            "subject_id": "openssl-rs",
+            "subject_release": null
+          },
+          {
+            "direction": "candidate_to_reference",
+            "established_by": [
+              "negative_obligations"
+            ],
+            "kind": "obligation",
             "pair_id": "candidate-vs-openssl-1.0.2u-historical",
             "reference_id": "openssl-1.0.2u-historical",
             "reference_release": "openssl-1.0.2u",
             "relation_id": "candidate-vs-openssl-1.0.2u-historical/candidate_to_reference",
+            "subject_id": "openssl-rs",
+            "subject_release": null
+          },
+          {
+            "direction": "candidate_to_reference",
+            "established_by": [
+              "negative_obligations"
+            ],
+            "kind": "obligation",
+            "pair_id": "candidate-vs-openssl-1.1.0l-historical",
+            "reference_id": "openssl-1.1.0l-historical",
+            "reference_release": "openssl-1.1.0l",
+            "relation_id": "candidate-vs-openssl-1.1.0l-historical/candidate_to_reference",
             "subject_id": "openssl-rs",
             "subject_release": null
           },
@@ -4244,10 +4817,153 @@
               "negative_obligations"
             ],
             "kind": "obligation",
+            "pair_id": "candidate-vs-openssl-3.0.22-historical",
+            "reference_id": "openssl-3.0.22-historical",
+            "reference_release": "openssl-3.0.22",
+            "relation_id": "candidate-vs-openssl-3.0.22-historical/candidate_to_reference",
+            "subject_id": "openssl-rs",
+            "subject_release": null
+          },
+          {
+            "direction": "candidate_to_reference",
+            "established_by": [
+              "negative_obligations"
+            ],
+            "kind": "obligation",
+            "pair_id": "candidate-vs-openssl-3.1.8-historical",
+            "reference_id": "openssl-3.1.8-historical",
+            "reference_release": "openssl-3.1.8",
+            "relation_id": "candidate-vs-openssl-3.1.8-historical/candidate_to_reference",
+            "subject_id": "openssl-rs",
+            "subject_release": null
+          },
+          {
+            "direction": "candidate_to_reference",
+            "established_by": [
+              "negative_obligations"
+            ],
+            "kind": "obligation",
+            "pair_id": "candidate-vs-openssl-3.2.6-historical",
+            "reference_id": "openssl-3.2.6-historical",
+            "reference_release": "openssl-3.2.6",
+            "relation_id": "candidate-vs-openssl-3.2.6-historical/candidate_to_reference",
+            "subject_id": "openssl-rs",
+            "subject_release": null
+          },
+          {
+            "direction": "candidate_to_reference",
+            "established_by": [
+              "negative_obligations"
+            ],
+            "kind": "obligation",
+            "pair_id": "candidate-vs-openssl-3.3.7-historical",
+            "reference_id": "openssl-3.3.7-historical",
+            "reference_release": "openssl-3.3.7",
+            "relation_id": "candidate-vs-openssl-3.3.7-historical/candidate_to_reference",
+            "subject_id": "openssl-rs",
+            "subject_release": null
+          },
+          {
+            "direction": "candidate_to_reference",
+            "established_by": [
+              "negative_obligations"
+            ],
+            "kind": "obligation",
+            "pair_id": "candidate-vs-openssl-3.4.8-historical",
+            "reference_id": "openssl-3.4.8-historical",
+            "reference_release": "openssl-3.4.8",
+            "relation_id": "candidate-vs-openssl-3.4.8-historical/candidate_to_reference",
+            "subject_id": "openssl-rs",
+            "subject_release": null
+          },
+          {
+            "direction": "candidate_to_reference",
+            "established_by": [
+              "negative_obligations"
+            ],
+            "kind": "obligation",
+            "pair_id": "candidate-vs-openssl-3.5.9-historical",
+            "reference_id": "openssl-3.5.9-historical",
+            "reference_release": "openssl-3.5.9",
+            "relation_id": "candidate-vs-openssl-3.5.9-historical/candidate_to_reference",
+            "subject_id": "openssl-rs",
+            "subject_release": null
+          },
+          {
+            "direction": "candidate_to_reference",
+            "established_by": [
+              "negative_obligations"
+            ],
+            "kind": "obligation",
             "pair_id": "candidate-vs-openssl-3.6.3-historical",
             "reference_id": "openssl-3.6.3-historical",
             "reference_release": "openssl-3.6.3",
             "relation_id": "candidate-vs-openssl-3.6.3-historical/candidate_to_reference",
+            "subject_id": "openssl-rs",
+            "subject_release": null
+          },
+          {
+            "direction": "candidate_to_reference",
+            "established_by": [
+              "negative_obligations"
+            ],
+            "kind": "obligation",
+            "pair_id": "candidate-vs-openssl-3.6.5-historical",
+            "reference_id": "openssl-3.6.5-historical",
+            "reference_release": "openssl-3.6.5",
+            "relation_id": "candidate-vs-openssl-3.6.5-historical/candidate_to_reference",
+            "subject_id": "openssl-rs",
+            "subject_release": null
+          },
+          {
+            "direction": "candidate_to_reference",
+            "established_by": [
+              "negative_obligations"
+            ],
+            "kind": "obligation",
+            "pair_id": "candidate-vs-openssl-4.0.0-historical",
+            "reference_id": "openssl-4.0.0-historical",
+            "reference_release": "openssl-4.0.0",
+            "relation_id": "candidate-vs-openssl-4.0.0-historical/candidate_to_reference",
+            "subject_id": "openssl-rs",
+            "subject_release": null
+          },
+          {
+            "direction": "candidate_to_reference",
+            "established_by": [
+              "negative_obligations"
+            ],
+            "kind": "obligation",
+            "pair_id": "candidate-vs-openssl-4.0.1-historical",
+            "reference_id": "openssl-4.0.1-historical",
+            "reference_release": "openssl-4.0.1",
+            "relation_id": "candidate-vs-openssl-4.0.1-historical/candidate_to_reference",
+            "subject_id": "openssl-rs",
+            "subject_release": null
+          },
+          {
+            "direction": "candidate_to_reference",
+            "established_by": [
+              "negative_obligations"
+            ],
+            "kind": "obligation",
+            "pair_id": "candidate-vs-openssl-4.0.2-historical",
+            "reference_id": "openssl-4.0.2-historical",
+            "reference_release": "openssl-4.0.2",
+            "relation_id": "candidate-vs-openssl-4.0.2-historical/candidate_to_reference",
+            "subject_id": "openssl-rs",
+            "subject_release": null
+          },
+          {
+            "direction": "candidate_to_reference",
+            "established_by": [
+              "negative_obligations"
+            ],
+            "kind": "obligation",
+            "pair_id": "candidate-vs-openssl-4.0.3-historical",
+            "reference_id": "openssl-4.0.3-historical",
+            "reference_release": "openssl-4.0.3",
+            "relation_id": "candidate-vs-openssl-4.0.3-historical/candidate_to_reference",
             "subject_id": "openssl-rs",
             "subject_release": null
           },
@@ -4366,6 +5082,96 @@
             "verdict": "NOT_MEASURED"
           },
           {
+            "cell_id": "CM/candidate-vs-openssl-1.0.0t-historical/candidate_to_reference/source_api",
+            "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-1.0.0t-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.0t-historical/candidate_to_reference/abi",
+            "reason": "no committed view, edge, obligation or security record establishes a abi reading for openssl-rs -> openssl-1.0.0t-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.0t-historical/candidate_to_reference/semantic",
+            "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-1.0.0t-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.0t-historical/candidate_to_reference/behavioural",
+            "reason": "no committed view, edge, obligation or security record establishes a behavioural reading for openssl-rs -> openssl-1.0.0t-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.0t-historical/candidate_to_reference/cli_config",
+            "reason": "no committed view, edge, obligation or security record establishes a cli_config reading for openssl-rs -> openssl-1.0.0t-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.0t-historical/candidate_to_reference/protocol",
+            "reason": "no committed view, edge, obligation or security record establishes a protocol reading for openssl-rs -> openssl-1.0.0t-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.0t-historical/candidate_to_reference/error",
+            "reason": "no committed view, edge, obligation or security record establishes a error reading for openssl-rs -> openssl-1.0.0t-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.0t-historical/candidate_to_reference/ownership",
+            "reason": "no committed view, edge, obligation or security record establishes a ownership reading for openssl-rs -> openssl-1.0.0t-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.0t-historical/candidate_to_reference/concurrency",
+            "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-1.0.0t-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.1u-historical/candidate_to_reference/source_api",
+            "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-1.0.1u-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.1u-historical/candidate_to_reference/abi",
+            "reason": "no committed view, edge, obligation or security record establishes a abi reading for openssl-rs -> openssl-1.0.1u-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.1u-historical/candidate_to_reference/semantic",
+            "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-1.0.1u-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.1u-historical/candidate_to_reference/behavioural",
+            "reason": "no committed view, edge, obligation or security record establishes a behavioural reading for openssl-rs -> openssl-1.0.1u-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.1u-historical/candidate_to_reference/cli_config",
+            "reason": "no committed view, edge, obligation or security record establishes a cli_config reading for openssl-rs -> openssl-1.0.1u-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.1u-historical/candidate_to_reference/protocol",
+            "reason": "no committed view, edge, obligation or security record establishes a protocol reading for openssl-rs -> openssl-1.0.1u-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.1u-historical/candidate_to_reference/error",
+            "reason": "no committed view, edge, obligation or security record establishes a error reading for openssl-rs -> openssl-1.0.1u-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.1u-historical/candidate_to_reference/ownership",
+            "reason": "no committed view, edge, obligation or security record establishes a ownership reading for openssl-rs -> openssl-1.0.1u-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.0.1u-historical/candidate_to_reference/concurrency",
+            "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-1.0.1u-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
             "cell_id": "CM/candidate-vs-openssl-1.0.2u-historical/candidate_to_reference/source_api",
             "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-1.0.2u-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
             "verdict": "NOT_MEASURED"
@@ -4408,6 +5214,51 @@
           {
             "cell_id": "CM/candidate-vs-openssl-1.0.2u-historical/candidate_to_reference/concurrency",
             "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-1.0.2u-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.1.0l-historical/candidate_to_reference/source_api",
+            "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-1.1.0l-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.1.0l-historical/candidate_to_reference/abi",
+            "reason": "no committed view, edge, obligation or security record establishes a abi reading for openssl-rs -> openssl-1.1.0l-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.1.0l-historical/candidate_to_reference/semantic",
+            "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-1.1.0l-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.1.0l-historical/candidate_to_reference/behavioural",
+            "reason": "no committed view, edge, obligation or security record establishes a behavioural reading for openssl-rs -> openssl-1.1.0l-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.1.0l-historical/candidate_to_reference/cli_config",
+            "reason": "no committed view, edge, obligation or security record establishes a cli_config reading for openssl-rs -> openssl-1.1.0l-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.1.0l-historical/candidate_to_reference/protocol",
+            "reason": "no committed view, edge, obligation or security record establishes a protocol reading for openssl-rs -> openssl-1.1.0l-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.1.0l-historical/candidate_to_reference/error",
+            "reason": "no committed view, edge, obligation or security record establishes a error reading for openssl-rs -> openssl-1.1.0l-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.1.0l-historical/candidate_to_reference/ownership",
+            "reason": "no committed view, edge, obligation or security record establishes a ownership reading for openssl-rs -> openssl-1.1.0l-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-1.1.0l-historical/candidate_to_reference/concurrency",
+            "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-1.1.0l-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
             "verdict": "NOT_MEASURED"
           },
           {
@@ -4501,6 +5352,276 @@
             "verdict": "NOT_MEASURED"
           },
           {
+            "cell_id": "CM/candidate-vs-openssl-3.0.22-historical/candidate_to_reference/source_api",
+            "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-3.0.22-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.0.22-historical/candidate_to_reference/abi",
+            "reason": "no committed view, edge, obligation or security record establishes a abi reading for openssl-rs -> openssl-3.0.22-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.0.22-historical/candidate_to_reference/semantic",
+            "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-3.0.22-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.0.22-historical/candidate_to_reference/behavioural",
+            "reason": "no committed view, edge, obligation or security record establishes a behavioural reading for openssl-rs -> openssl-3.0.22-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.0.22-historical/candidate_to_reference/cli_config",
+            "reason": "no committed view, edge, obligation or security record establishes a cli_config reading for openssl-rs -> openssl-3.0.22-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.0.22-historical/candidate_to_reference/protocol",
+            "reason": "no committed view, edge, obligation or security record establishes a protocol reading for openssl-rs -> openssl-3.0.22-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.0.22-historical/candidate_to_reference/error",
+            "reason": "no committed view, edge, obligation or security record establishes a error reading for openssl-rs -> openssl-3.0.22-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.0.22-historical/candidate_to_reference/ownership",
+            "reason": "no committed view, edge, obligation or security record establishes a ownership reading for openssl-rs -> openssl-3.0.22-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.0.22-historical/candidate_to_reference/concurrency",
+            "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-3.0.22-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.1.8-historical/candidate_to_reference/source_api",
+            "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-3.1.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.1.8-historical/candidate_to_reference/abi",
+            "reason": "no committed view, edge, obligation or security record establishes a abi reading for openssl-rs -> openssl-3.1.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.1.8-historical/candidate_to_reference/semantic",
+            "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-3.1.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.1.8-historical/candidate_to_reference/behavioural",
+            "reason": "no committed view, edge, obligation or security record establishes a behavioural reading for openssl-rs -> openssl-3.1.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.1.8-historical/candidate_to_reference/cli_config",
+            "reason": "no committed view, edge, obligation or security record establishes a cli_config reading for openssl-rs -> openssl-3.1.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.1.8-historical/candidate_to_reference/protocol",
+            "reason": "no committed view, edge, obligation or security record establishes a protocol reading for openssl-rs -> openssl-3.1.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.1.8-historical/candidate_to_reference/error",
+            "reason": "no committed view, edge, obligation or security record establishes a error reading for openssl-rs -> openssl-3.1.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.1.8-historical/candidate_to_reference/ownership",
+            "reason": "no committed view, edge, obligation or security record establishes a ownership reading for openssl-rs -> openssl-3.1.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.1.8-historical/candidate_to_reference/concurrency",
+            "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-3.1.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.2.6-historical/candidate_to_reference/source_api",
+            "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-3.2.6-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.2.6-historical/candidate_to_reference/abi",
+            "reason": "no committed view, edge, obligation or security record establishes a abi reading for openssl-rs -> openssl-3.2.6-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.2.6-historical/candidate_to_reference/semantic",
+            "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-3.2.6-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.2.6-historical/candidate_to_reference/behavioural",
+            "reason": "no committed view, edge, obligation or security record establishes a behavioural reading for openssl-rs -> openssl-3.2.6-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.2.6-historical/candidate_to_reference/cli_config",
+            "reason": "no committed view, edge, obligation or security record establishes a cli_config reading for openssl-rs -> openssl-3.2.6-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.2.6-historical/candidate_to_reference/protocol",
+            "reason": "no committed view, edge, obligation or security record establishes a protocol reading for openssl-rs -> openssl-3.2.6-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.2.6-historical/candidate_to_reference/error",
+            "reason": "no committed view, edge, obligation or security record establishes a error reading for openssl-rs -> openssl-3.2.6-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.2.6-historical/candidate_to_reference/ownership",
+            "reason": "no committed view, edge, obligation or security record establishes a ownership reading for openssl-rs -> openssl-3.2.6-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.2.6-historical/candidate_to_reference/concurrency",
+            "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-3.2.6-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.3.7-historical/candidate_to_reference/source_api",
+            "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-3.3.7-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.3.7-historical/candidate_to_reference/abi",
+            "reason": "no committed view, edge, obligation or security record establishes a abi reading for openssl-rs -> openssl-3.3.7-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.3.7-historical/candidate_to_reference/semantic",
+            "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-3.3.7-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.3.7-historical/candidate_to_reference/behavioural",
+            "reason": "no committed view, edge, obligation or security record establishes a behavioural reading for openssl-rs -> openssl-3.3.7-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.3.7-historical/candidate_to_reference/cli_config",
+            "reason": "no committed view, edge, obligation or security record establishes a cli_config reading for openssl-rs -> openssl-3.3.7-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.3.7-historical/candidate_to_reference/protocol",
+            "reason": "no committed view, edge, obligation or security record establishes a protocol reading for openssl-rs -> openssl-3.3.7-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.3.7-historical/candidate_to_reference/error",
+            "reason": "no committed view, edge, obligation or security record establishes a error reading for openssl-rs -> openssl-3.3.7-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.3.7-historical/candidate_to_reference/ownership",
+            "reason": "no committed view, edge, obligation or security record establishes a ownership reading for openssl-rs -> openssl-3.3.7-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.3.7-historical/candidate_to_reference/concurrency",
+            "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-3.3.7-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.4.8-historical/candidate_to_reference/source_api",
+            "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-3.4.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.4.8-historical/candidate_to_reference/abi",
+            "reason": "no committed view, edge, obligation or security record establishes a abi reading for openssl-rs -> openssl-3.4.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.4.8-historical/candidate_to_reference/semantic",
+            "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-3.4.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.4.8-historical/candidate_to_reference/behavioural",
+            "reason": "no committed view, edge, obligation or security record establishes a behavioural reading for openssl-rs -> openssl-3.4.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.4.8-historical/candidate_to_reference/cli_config",
+            "reason": "no committed view, edge, obligation or security record establishes a cli_config reading for openssl-rs -> openssl-3.4.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.4.8-historical/candidate_to_reference/protocol",
+            "reason": "no committed view, edge, obligation or security record establishes a protocol reading for openssl-rs -> openssl-3.4.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.4.8-historical/candidate_to_reference/error",
+            "reason": "no committed view, edge, obligation or security record establishes a error reading for openssl-rs -> openssl-3.4.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.4.8-historical/candidate_to_reference/ownership",
+            "reason": "no committed view, edge, obligation or security record establishes a ownership reading for openssl-rs -> openssl-3.4.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.4.8-historical/candidate_to_reference/concurrency",
+            "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-3.4.8-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.5.9-historical/candidate_to_reference/source_api",
+            "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-3.5.9-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.5.9-historical/candidate_to_reference/abi",
+            "reason": "no committed view, edge, obligation or security record establishes a abi reading for openssl-rs -> openssl-3.5.9-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.5.9-historical/candidate_to_reference/semantic",
+            "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-3.5.9-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.5.9-historical/candidate_to_reference/behavioural",
+            "reason": "no committed view, edge, obligation or security record establishes a behavioural reading for openssl-rs -> openssl-3.5.9-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.5.9-historical/candidate_to_reference/cli_config",
+            "reason": "no committed view, edge, obligation or security record establishes a cli_config reading for openssl-rs -> openssl-3.5.9-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.5.9-historical/candidate_to_reference/protocol",
+            "reason": "no committed view, edge, obligation or security record establishes a protocol reading for openssl-rs -> openssl-3.5.9-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.5.9-historical/candidate_to_reference/error",
+            "reason": "no committed view, edge, obligation or security record establishes a error reading for openssl-rs -> openssl-3.5.9-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.5.9-historical/candidate_to_reference/ownership",
+            "reason": "no committed view, edge, obligation or security record establishes a ownership reading for openssl-rs -> openssl-3.5.9-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.5.9-historical/candidate_to_reference/concurrency",
+            "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-3.5.9-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
             "cell_id": "CM/candidate-vs-openssl-3.6.3-historical/candidate_to_reference/semantic",
             "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-3.6.3-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
             "verdict": "NOT_MEASURED"
@@ -4541,6 +5662,231 @@
             "verdict": "NOT_MEASURED"
           },
           {
+            "cell_id": "CM/candidate-vs-openssl-3.6.5-historical/candidate_to_reference/source_api",
+            "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-3.6.5-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.6.5-historical/candidate_to_reference/abi",
+            "reason": "no committed view, edge, obligation or security record establishes a abi reading for openssl-rs -> openssl-3.6.5-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.6.5-historical/candidate_to_reference/semantic",
+            "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-3.6.5-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.6.5-historical/candidate_to_reference/behavioural",
+            "reason": "no committed view, edge, obligation or security record establishes a behavioural reading for openssl-rs -> openssl-3.6.5-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.6.5-historical/candidate_to_reference/cli_config",
+            "reason": "no committed view, edge, obligation or security record establishes a cli_config reading for openssl-rs -> openssl-3.6.5-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.6.5-historical/candidate_to_reference/protocol",
+            "reason": "no committed view, edge, obligation or security record establishes a protocol reading for openssl-rs -> openssl-3.6.5-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.6.5-historical/candidate_to_reference/error",
+            "reason": "no committed view, edge, obligation or security record establishes a error reading for openssl-rs -> openssl-3.6.5-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.6.5-historical/candidate_to_reference/ownership",
+            "reason": "no committed view, edge, obligation or security record establishes a ownership reading for openssl-rs -> openssl-3.6.5-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-3.6.5-historical/candidate_to_reference/concurrency",
+            "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-3.6.5-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.0-historical/candidate_to_reference/source_api",
+            "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-4.0.0-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.0-historical/candidate_to_reference/abi",
+            "reason": "no committed view, edge, obligation or security record establishes a abi reading for openssl-rs -> openssl-4.0.0-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.0-historical/candidate_to_reference/semantic",
+            "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-4.0.0-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.0-historical/candidate_to_reference/behavioural",
+            "reason": "no committed view, edge, obligation or security record establishes a behavioural reading for openssl-rs -> openssl-4.0.0-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.0-historical/candidate_to_reference/cli_config",
+            "reason": "no committed view, edge, obligation or security record establishes a cli_config reading for openssl-rs -> openssl-4.0.0-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.0-historical/candidate_to_reference/protocol",
+            "reason": "no committed view, edge, obligation or security record establishes a protocol reading for openssl-rs -> openssl-4.0.0-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.0-historical/candidate_to_reference/error",
+            "reason": "no committed view, edge, obligation or security record establishes a error reading for openssl-rs -> openssl-4.0.0-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.0-historical/candidate_to_reference/ownership",
+            "reason": "no committed view, edge, obligation or security record establishes a ownership reading for openssl-rs -> openssl-4.0.0-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.0-historical/candidate_to_reference/concurrency",
+            "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-4.0.0-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.1-historical/candidate_to_reference/source_api",
+            "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-4.0.1-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.1-historical/candidate_to_reference/abi",
+            "reason": "no committed view, edge, obligation or security record establishes a abi reading for openssl-rs -> openssl-4.0.1-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.1-historical/candidate_to_reference/semantic",
+            "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-4.0.1-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.1-historical/candidate_to_reference/behavioural",
+            "reason": "no committed view, edge, obligation or security record establishes a behavioural reading for openssl-rs -> openssl-4.0.1-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.1-historical/candidate_to_reference/cli_config",
+            "reason": "no committed view, edge, obligation or security record establishes a cli_config reading for openssl-rs -> openssl-4.0.1-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.1-historical/candidate_to_reference/protocol",
+            "reason": "no committed view, edge, obligation or security record establishes a protocol reading for openssl-rs -> openssl-4.0.1-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.1-historical/candidate_to_reference/error",
+            "reason": "no committed view, edge, obligation or security record establishes a error reading for openssl-rs -> openssl-4.0.1-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.1-historical/candidate_to_reference/ownership",
+            "reason": "no committed view, edge, obligation or security record establishes a ownership reading for openssl-rs -> openssl-4.0.1-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.1-historical/candidate_to_reference/concurrency",
+            "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-4.0.1-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.2-historical/candidate_to_reference/source_api",
+            "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-4.0.2-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.2-historical/candidate_to_reference/abi",
+            "reason": "no committed view, edge, obligation or security record establishes a abi reading for openssl-rs -> openssl-4.0.2-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.2-historical/candidate_to_reference/semantic",
+            "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-4.0.2-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.2-historical/candidate_to_reference/behavioural",
+            "reason": "no committed view, edge, obligation or security record establishes a behavioural reading for openssl-rs -> openssl-4.0.2-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.2-historical/candidate_to_reference/cli_config",
+            "reason": "no committed view, edge, obligation or security record establishes a cli_config reading for openssl-rs -> openssl-4.0.2-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.2-historical/candidate_to_reference/protocol",
+            "reason": "no committed view, edge, obligation or security record establishes a protocol reading for openssl-rs -> openssl-4.0.2-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.2-historical/candidate_to_reference/error",
+            "reason": "no committed view, edge, obligation or security record establishes a error reading for openssl-rs -> openssl-4.0.2-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.2-historical/candidate_to_reference/ownership",
+            "reason": "no committed view, edge, obligation or security record establishes a ownership reading for openssl-rs -> openssl-4.0.2-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.2-historical/candidate_to_reference/concurrency",
+            "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-4.0.2-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.3-historical/candidate_to_reference/source_api",
+            "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-4.0.3-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.3-historical/candidate_to_reference/abi",
+            "reason": "no committed view, edge, obligation or security record establishes a abi reading for openssl-rs -> openssl-4.0.3-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.3-historical/candidate_to_reference/semantic",
+            "reason": "no committed view, edge, obligation or security record establishes a semantic reading for openssl-rs -> openssl-4.0.3-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.3-historical/candidate_to_reference/behavioural",
+            "reason": "no committed view, edge, obligation or security record establishes a behavioural reading for openssl-rs -> openssl-4.0.3-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.3-historical/candidate_to_reference/cli_config",
+            "reason": "no committed view, edge, obligation or security record establishes a cli_config reading for openssl-rs -> openssl-4.0.3-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.3-historical/candidate_to_reference/protocol",
+            "reason": "no committed view, edge, obligation or security record establishes a protocol reading for openssl-rs -> openssl-4.0.3-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.3-historical/candidate_to_reference/error",
+            "reason": "no committed view, edge, obligation or security record establishes a error reading for openssl-rs -> openssl-4.0.3-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.3-historical/candidate_to_reference/ownership",
+            "reason": "no committed view, edge, obligation or security record establishes a ownership reading for openssl-rs -> openssl-4.0.3-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
+            "cell_id": "CM/candidate-vs-openssl-4.0.3-historical/candidate_to_reference/concurrency",
+            "reason": "no committed view, edge, obligation or security record establishes a concurrency reading for openssl-rs -> openssl-4.0.3-historical (candidate_to_reference), so the cell is not measured rather than passed by default",
+            "verdict": "NOT_MEASURED"
+          },
+          {
             "cell_id": "CM/candidate-vs-openssl-4.0.3/candidate_to_reference/source_api",
             "reason": "no committed view, edge, obligation or security record establishes a source_api reading for openssl-rs -> openssl-4.0.3 (candidate_to_reference), so the cell is not measured rather than passed by default",
             "verdict": "NOT_MEASURED"
@@ -4567,7 +5913,7 @@
           },
           {
             "cell_id": "CM/candidate-vs-openssl-4.0.3/candidate_to_reference/provider_registration",
-            "reason": "the provider_registration reading for openssl-rs -> openssl-4.0.3 (candidate_to_reference) joins 1 record(s) over ['negative_obligations'] with no failure but at least one unmeasured or unknown (['negative_obligations']), so the cell is not promoted to PASS",
+            "reason": "the provider_registration reading for openssl-rs -> openssl-4.0.3 (candidate_to_reference) joins 3 record(s) over ['negative_obligations'] with no failure but at least one unmeasured or unknown (['negative_obligations']), so the cell is not promoted to PASS",
             "verdict": "UNKNOWN"
           },
           {
@@ -4714,8 +6060,8 @@
         "verdict": "pass",
         "verdicts": {
           "FAIL": 1,
-          "NOT_MEASURED": 72,
-          "PASS": 21,
+          "NOT_MEASURED": 198,
+          "PASS": 35,
           "UNKNOWN": 6
         }
       },
@@ -4985,10 +6331,10 @@
             "atlas_dir": "forensics/atlas/openssl-3.6.4-production"
           },
           "built_authorities": {
-            "built": 6,
-            "historical_built": 4,
-            "nodes": 6,
-            "unavailable": 2
+            "built": 20,
+            "historical_built": 18,
+            "nodes": 20,
+            "unavailable": 7
           },
           "candidate_views": {
             "by_status": {
@@ -5025,18 +6371,18 @@
           "matrix": {
             "by_verdict": {
               "FAIL": 1,
-              "NOT_MEASURED": 72,
-              "PASS": 21,
+              "NOT_MEASURED": 198,
+              "PASS": 35,
               "UNKNOWN": 6
             },
-            "cells": 100,
+            "cells": 240,
             "dimensions": 10,
             "planes_joined": 5,
-            "relations": 10
+            "relations": 24
           },
           "negative_surface": {
-            "negative": 29,
-            "obligations": 79,
+            "negative": 35,
+            "obligations": 107,
             "open": 0
           },
           "security": {
@@ -5056,9 +6402,9 @@
             "not_run": 2
           },
           "support_status": {
-            "archaeology": 127,
+            "archaeology": 132,
             "nodes": 372,
-            "support_targets": 245
+            "support_targets": 240
           }
         },
         "contract_units": 17,
@@ -5087,7 +6433,12 @@
           "semantic_pairs_not_run": 2,
           "unavailable_releases": [
             "openssl-0.9.1c",
-            "openssl-0.9.6m"
+            "openssl-0.9.2b",
+            "openssl-0.9.3a",
+            "openssl-0.9.4",
+            "openssl-0.9.5a",
+            "openssl-0.9.6m",
+            "openssl-0.9.7m"
           ],
           "undecodable_catalog_labels": 16,
           "views_not_measured": 6
@@ -5342,7 +6693,7 @@
     {
       "name": "phase-23-plan",
       "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
-      "sha256": "d65482152b8ae83d3d6fa11a487f342f8f134f16d804c87360f7098c04eb6fdd"
+      "sha256": "0dccf4dab0cfd57a027b4d937414bb53ff838603f7d4d841162443286b559d6a"
     },
     {
       "name": "multitrack-schemas",
@@ -5362,7 +6713,7 @@
     {
       "name": "entity-lineage",
       "path": "forensics/multitrack/entity-lineage.json",
-      "sha256": "72fcbacbab6f95517958e8fd2d40ca972d193263aa765cfe423d9c01fe2b899c"
+      "sha256": "476d7798935d779c92bdb7fb23099961efe202784919d61182eb6967fb7bdf43"
     },
     {
       "name": "release-archaeology",
@@ -5372,7 +6723,7 @@
     {
       "name": "authority-nodes",
       "path": "forensics/authority-nodes.json",
-      "sha256": "bb9d188018293f625e87ef01577b8c7c6ddae967e88ed066d3434f3b74f35486"
+      "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31"
     },
     {
       "name": "authority-registry",
@@ -5387,17 +6738,17 @@
     {
       "name": "historical-acquisition",
       "path": "forensics/multitrack/historical-acquisition.json",
-      "sha256": "1f82808fab23ec68fa9a85bd0dce0a2911c3caaa37cbaa0852fa1d36ee76cbcd"
+      "sha256": "a0f10eea0974749e12798ec1b2bf81842cbd216fb10413c7c3ecf6bba13334ff"
     },
     {
       "name": "historical-build-receipts",
       "path": "forensics/multitrack/historical-build-receipts.json",
-      "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee"
+      "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e"
     },
     {
       "name": "parameterization-receipt",
       "path": "forensics/atlas/parameterization-receipt.json",
-      "sha256": "878b1fd6bb0fe33ab24ed90653089b0a44d10e6485ae4dbef051173a1f6574cb"
+      "sha256": "d9ba52f6249c4e072d9e0fcc5d190ee0a228f4bedd2dc93303fad3efc062c4cb"
     },
     {
       "name": "default-authority",
@@ -5417,7 +6768,7 @@
     {
       "name": "abi-facades",
       "path": "forensics/multitrack/abi-facades.json",
-      "sha256": "da1feb6979ce78057342f59424d3f13117557a4c8f433899ad8ebe03bff56245"
+      "sha256": "bc3281302002e6c8f90d401df02e5bad055b7ac51e0f46f4d7ea14f2cd85d669"
     },
     {
       "name": "abi-facade-rust",
@@ -5447,7 +6798,7 @@
     {
       "name": "semantic-courts",
       "path": "forensics/multitrack/semantic-courts.json",
-      "sha256": "945f81f608438a84744ccaa949f651fbce13395a9172567b096f66411658828e"
+      "sha256": "3eeb9d8510df926b55afbe9efb2ac30775dc3fd549b73be64ed9b166ccc2f70a"
     },
     {
       "name": "semantic-probe",
@@ -5457,22 +6808,22 @@
     {
       "name": "compatibility-views",
       "path": "forensics/multitrack/compatibility-views.json",
-      "sha256": "01ff789e0ab1e6c8e241013d67402e809e921bd67db3d3a89780bec4a52ff035"
+      "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84"
     },
     {
       "name": "compatibility-edges",
       "path": "forensics/multitrack/compatibility-edges.json",
-      "sha256": "cd3f0f8050c51ba5308d1abd6a8107a94c266e99b78d9c8dc7550aaa930502d0"
+      "sha256": "49bc53ddf4d6352e38128a96af36ad606ff64d4fbcb8276afa56f9b2efce6295"
     },
     {
       "name": "negative-obligations",
       "path": "forensics/multitrack/negative-obligations.json",
-      "sha256": "fc2f41bdc594ce6c9f3c7364f679ea99e77d3e5e7720e4561054cf51ae7bd82c"
+      "sha256": "58e163cd4204f4c9c118041dc9685728b91ae5d8416ae118a6acbc082d9f5b4b"
     },
     {
       "name": "security-lineage",
       "path": "forensics/multitrack/security-lineage.json",
-      "sha256": "9e7de7941822c0beee751646b169bb99805695d6e2bc4bb30e04b12d6bef92af"
+      "sha256": "7ab23c22946463a750c5ecd8a1b0480724f3fa95150469373c788efcf5e84b69"
     },
     {
       "name": "security-source",
@@ -5482,7 +6833,7 @@
     {
       "name": "security-divergence-register",
       "path": "forensics/divergence-obligations.json",
-      "sha256": "f26d2b9a15a20670dac2b75324694ea5a6606563afe5296903fa32666598f4df"
+      "sha256": "3e8a199c68d75d61db8cbf79d64ce1fb29414b96ddb623ccfb9d2fcc4356883b"
     },
     {
       "name": "security-divergence-policy",
@@ -5492,22 +6843,22 @@
     {
       "name": "historical-population",
       "path": "forensics/multitrack/historical-population.json",
-      "sha256": "f811eb22b0793d41869b4305f494e8f909c812c366a6243029a936c1f9179ebd"
+      "sha256": "605a63584795829c572d9455f9f2642ed800482cd4c0c9e91f395e81b3c40b66"
     },
     {
       "name": "support-status",
       "path": "forensics/multitrack/support-status.json",
-      "sha256": "ea603b1d940f7057846a7a0ee3cd4243ed44e151b04da8bd7c7c932712502d3f"
+      "sha256": "839658eba24f6481f34b5b203b36323aade376cc1d35ffeadabf6bbeafccbfa1"
     },
     {
       "name": "compatibility-matrix",
       "path": "forensics/multitrack/compatibility-matrix.json",
-      "sha256": "e5a788586393f8e6114c9dd42cb059cc499de572d1488fc6f938532d60378d4d"
+      "sha256": "c26ce0d79b1efdd807b74bb497176637b56ff8821a1b6442fa5d038725bffc01"
     },
     {
       "name": "downstream-multitrack",
       "path": "forensics/multitrack/downstream-multitrack.json",
-      "sha256": "e922af6050b6a12006b2d608a71a8b0f576c35c30b06b44ff7f0ad6001c5605a"
+      "sha256": "606ebc7fcd3fc9e8b82fbba4622cc2602d7e8083e686f7921bab29e9f45e1295"
     },
     {
       "name": "phase17-downstream-corpus",
@@ -5517,7 +6868,7 @@
     {
       "name": "phase-23-seal",
       "path": "docs/PHASE-23-MULTITRACK-SEAL.md",
-      "sha256": "5e2b8528783b713e58a9bd26d6a0c75c13a8e4d0e32a0e81ada444eb60110886"
+      "sha256": "fa8de40319a59f236f89a7266ca7e0546754ff15d63c2210df04f0bf93c82971"
     },
     {
       "name": "gemel-trajectory",
@@ -5532,12 +6883,12 @@
     {
       "name": "semantic-courts",
       "path": "forensics/multitrack/semantic-courts.json",
-      "sha256": "945f81f608438a84744ccaa949f651fbce13395a9172567b096f66411658828e"
+      "sha256": "3eeb9d8510df926b55afbe9efb2ac30775dc3fd549b73be64ed9b166ccc2f70a"
     },
     {
       "name": "delta/openssl-3.6.3--openssl-3.6.4",
       "path": "forensics/deltas/openssl-3.6.3--openssl-3.6.4.json",
-      "sha256": "599b14f47c96cedf2b7daf1aa7522b5b79e4f4192ec977e6044730be855ed277"
+      "sha256": "6ab8cdd2c1523aed9b30e452e423f98539f62c2d622951926bd6b63d31ef36e0"
     }
   ],
   "kind": "phase23-courts",

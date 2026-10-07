@@ -538,12 +538,12 @@
     {
       "name": "phase-23-plan",
       "path": "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
-      "sha256": "d65482152b8ae83d3d6fa11a487f342f8f134f16d804c87360f7098c04eb6fdd"
+      "sha256": "0dccf4dab0cfd57a027b4d937414bb53ff838603f7d4d841162443286b559d6a"
     },
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "5d0337455c53a885afe790799d12461aab6869a1f292b3f158d1b383ef166515"
+      "sha256": "4d190cf1f91b16ed68c2f155bdce8984beb45b856d1e8e5be9ddfcdd0449bd90"
     }
   ],
   "kind": "phase23-obligations",

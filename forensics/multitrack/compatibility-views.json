@@ -270,7 +270,7 @@
             "note": "the historical build receipt records the installed header hashes and artifact positions",
             "path": "forensics/multitrack/historical-build-receipts.json",
             "role": "reference",
-            "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee"
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e"
           }
         ],
         "evidence_kind": "build_records",
@@ -309,7 +309,7 @@
             "note": "the historical build receipt's artifact names are the built library filenames",
             "path": "forensics/multitrack/historical-build-receipts.json",
             "role": "reference",
-            "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee"
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e"
           }
         ],
         "evidence_kind": "build_records",
@@ -348,7 +348,7 @@
             "note": "the link name is derived from the authority's recorded library base name",
             "path": "forensics/multitrack/historical-build-receipts.json",
             "role": "reference",
-            "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee"
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e"
           }
         ],
         "evidence_kind": "build_records",
@@ -388,7 +388,7 @@
             "note": "the era's SONAME is the artifact filename: the release predates ELF symbol versioning",
             "path": "forensics/multitrack/historical-build-receipts.json",
             "role": "reference",
-            "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee"
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e"
           },
           {
             "authority_id": "openssl-0.9.8zh-historical",
@@ -433,7 +433,7 @@
             "note": "the historical build receipt's banner is the authority's reported version",
             "path": "forensics/multitrack/historical-build-receipts.json",
             "role": "reference",
-            "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee"
+            "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e"
           },
           {
             "authority_id": "openssl-0.9.8zh-historical",
@@ -609,7 +609,7 @@
             "note": "the authority's installed shared-object positions are read from its binary_hashes keys",
             "path": "forensics/authority-nodes.json",
             "role": "reference",
-            "sha256": "bb9d188018293f625e87ef01577b8c7c6ddae967e88ed066d3434f3b74f35486"
+            "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31"
           },
           {
             "authority_id": "openssl-rs",
@@ -660,7 +660,7 @@
             "note": "the authority node's binary_hashes keys are its built library names",
             "path": "forensics/authority-nodes.json",
             "role": "reference",
-            "sha256": "bb9d188018293f625e87ef01577b8c7c6ddae967e88ed066d3434f3b74f35486"
+            "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31"
           },
           {
             "authority_id": "openssl-rs",
@@ -899,7 +899,7 @@
             "note": "the static archive name is derived from the authority's own recorded SONAME base, which is the one naming derivation this facet shares",
             "path": "forensics/authority-nodes.json",
             "role": "reference",
-            "sha256": "bb9d188018293f625e87ef01577b8c7c6ddae967e88ed066d3434f3b74f35486"
+            "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31"
           },
           {
             "authority_id": "openssl-rs",
@@ -979,7 +979,7 @@
     {
       "name": "authority-nodes",
       "path": "forensics/authority-nodes.json",
-      "sha256": "bb9d188018293f625e87ef01577b8c7c6ddae967e88ed066d3434f3b74f35486"
+      "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31"
     },
     {
       "name": "release-catalog",
@@ -1009,7 +1009,7 @@
     {
       "name": "historical-build-receipts",
       "path": "forensics/multitrack/historical-build-receipts.json",
-      "sha256": "c59dba3d05084b763ff573850a645fabc8587853fdd82a7f0f2151a5a53c4bee"
+      "sha256": "d1e72bd7552058869aa292d0bdafb210df9b8c3841d8ddeb1a06d567b95ff83e"
     },
     {
       "name": "historical-plane-census",

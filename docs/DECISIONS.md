@@ -35998,3 +35998,53 @@ The control seeds a reading that contradicts its plane, a boolean cell, a cell w
 and a `PASS` with no evidence, and each is caught with specificity holding. `compatibility-matrix`
 moves to `implemented`/closed and the stratum's `open_in_this_stratum` falls from two to one,
 leaving only the `multitrack-seal` (23.17).
+
+## D547 -- every distinct major.minor line carries a track, and seven early 0.9.x lines stay `unavailable`
+
+Phase 23 sealed with **six** built authorities (0.9.8zh, 1.0.2u, 1.1.1w, 3.0.0, 3.6.3 and 3.6.4).
+This decision records the line-coverage expansion: one authority per distinct major.minor OpenSSL
+line's **latest final release**, acquired by the official asset and verified against the
+upstream-published SHA-256 (`forensics/tools/authority_acquire.py --historical`) and built in the
+historical venue (`forensics/tools/historical_build.py`), so that every line the catalogue carries
+has a track. The new built authorities are `1.0.0t`, `1.0.1u`, `1.1.0l`, `3.0.22`, `3.1.8`,
+`3.2.6`, `3.3.7`, `3.4.8`, `3.5.9`, `3.6.5`, `4.0.0`, `4.0.1`, `4.0.2` and `4.0.3`, each with a
+historical build receipt in `forensics/multitrack/historical-build-receipts.json` and a node in
+`forensics/authority-nodes.json`. The registry is now **20** nodes (**2** admitted, **18**
+historical built) with **7** honestly `unavailable`; the twenty-six originally-sealed authority
+nodes and the admitted pair's receipts are byte-stable.
+
+**Seven early 0.9.x lines are recorded `unavailable`, not built.** `0.9.1c`, `0.9.2b`, `0.9.3a`,
+`0.9.4`, `0.9.5a`, `0.9.6m` and `0.9.7m` are genuine upstream releases and catalogue nodes, but
+no upstream-published SHA-256 exists for them (the project published only MD5/SHA-1 for most, and
+no release asset at all for several), and an official digest cannot be invented. They are carried
+in `historical-acquisition.json` and `forensics/authority-nodes.json` `unavailable` with their
+reason, are never authority nodes and are never counted runtime-compatible. `docs/PHASE-23-
+MULTITRACK-SUBPHASES.md` section 4.7 and the seal's section 4 already named `0.9.1c` and `0.9.6m`;
+this decision extends that honest boundary to the whole 0.9.1-0.9.7 range.
+
+**The dependent planes re-derive over the larger set; nothing is typed.** The historical
+population's `built` count is **20** with **7** unavailable and **5/5** ABI epochs carrying a
+representative (pre-1.0 `0.9.8zh`; 1.0.x `1.0.0t`/`1.0.1u`/`1.0.2u`; 1.1.x `1.1.0l`/`1.1.1w`;
+3.x `3.0.0`/`3.0.22`/`3.1.8`/`3.2.6`/`3.3.7`/`3.4.8`/`3.5.9`; 3.6+/4.x
+`3.6.3`/`3.6.4`/`3.6.5`/`4.0.0`/`4.0.1`/`4.0.2`/`4.0.3`); the 23.3 parameterization produces a
+plane census for each of the **18** built historical authorities beside the default; the support
+ladder is **240** support targets and **132** archaeological-only; the negative surface is **107**
+obligations (**35** negative, **72** positive, **0** open, **1** unknown); and the assembled matrix
+grows to **24** relations x **10** dimensions = **240** cells (**35** `PASS`, **1** `FAIL`, **6**
+`UNKNOWN`, **198** `NOT_MEASURED`). The compatibility views (14 over 2 authorities), the
+compatibility edges (24 over 2 pairs), the entity lineage (26,001 rows over the one covered pair),
+the security lineage (52 branch fixes over 27 edges) and the downstream plane (5/5 epochs, 3
+`not_run`) are unchanged in count; only their content-addressed inputs move. `run_courts.py
+--phase 23` reports **17/17** pass, `phase_state.py` still derives phase 23 **complete**, and
+`regen_all.sh` reaches a fixed point with `evidence_determinism.py` green.
+
+**Two bounded prose statements the expansion falsifies are corrected at their source, never
+weakened.** The ABI/history façade's 1.0.x `not established` reason no longer reads "no 1.0.x
+source tree is admitted" (one now is); it reads that the 1.0.x *layouts* remain unmeasured because
+the committed measurement is the 0.9.8zh `EVP_MD_CTX`/`HMAC_CTX` generation only, and admitting a
+source tree is a separate evidence plane from measuring a layout. The 4.x ENGINE negative
+obligation's rationale no longer reads "no 4.x authority is admitted" (four now are); it stays
+`unknown` because no 4.x **view or measured façade** is committed, so the absence stays a recorded
+boundary rather than a manufactured pass. The measured corrections are recorded in
+`docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.17 and in `docs/PHASE-23-MULTITRACK-SEAL.md`
+section 9 item 5, and each is checked by the Phase-23 courts rather than asserted here.

@@ -3643,7 +3643,7 @@ def negative_obligations_sensitivity_control(body: dict) -> dict:
     caught_layout = any("not the state its evidence establishes" in f for f in lay_findings)
 
     # (c) an ENGINE symbol retained in a 4.x view: the 4.x obligation is `unknown` because no 4.x
-    #     authority exists; assume it satisfied.
+    #     view or measured façade is committed; assume it satisfied.
     engine = copy.deepcopy(body)
     eng_rec = next((o for o in engine["obligations"]
                     if o["subject"] == "ENGINE"
@@ -6365,16 +6365,16 @@ def main(argv: list[str]) -> int:
             "the evidence the record's derivation checks actually read, so a negative obligation "
             "is checked against the named authority/view/plane rather than asserted; that its "
             "state is the reading that evidence establishes and never assumed, so an `open` "
-            "obligation is a compatibility defect and `unknown` is only where no authority or "
-            "view exists; and that both polarities and all six kinds -- must_not_exist, "
+            "obligation is a compatibility defect and `unknown` is only where no view or "
+            "measured façade exists; and that both polarities and all six kinds -- must_not_exist, "
             "must_be_opaque and must_not_be_exported beside must_exist, must_be_public and "
             "must_be_exported -- are present. The plane covers the pre-provider authorities' "
             "provider absence (0.9.8zh, 1.0.2u, 1.1.1w) beside 3.0.0 and 3.6.4's presence, the "
             "pre-1.1.0 public layout (EVP_MD_CTX, HMAC_CTX) beside the 3.6.4 opacity transition, "
             "the 3.6.4-added macros' absence from 3.6.3, the exported symbols the 3.6.3 -> 3.6.4 "
             "delta read as present in both, each authority's `.num` NOEXIST rows, and a 4.x "
-            "release's ENGINE absence, which is `unknown` because no 4.x authority or view is "
-            "admitted. A provider symbol present in a pre-provider authority's view, a "
+            "release's ENGINE absence, which is `unknown` because no 4.x view or measured "
+            "façade is admitted. A provider symbol present in a pre-provider authority's view, a "
             "post-1.1.0 layout declared public, an ENGINE symbol retained in a 4.x view, an "
             "obligation with no evidence and a future symbol leaked into an earlier authority's "
             "view are each detected with specificity holding. "

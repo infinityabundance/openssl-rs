@@ -18,7 +18,7 @@
       "established",
       "nominated"
     ],
-    "content_hash": "0fa55a86eb7490d80a976801c975fe6a67593502f53d89e13a445defa77f16aa",
+    "content_hash": "37c3cd0dafbfb5d98ccfe490acb824924d99afcdb2a31c8fc2f5a07f233559ca",
     "counts": {
       "added_not_relations": {
         "openssl-3.6.3->openssl-3.6.4": {
@@ -51,12 +51,36 @@
           "release_id": "openssl-0.9.8zh"
         },
         {
+          "authority_id": "openssl-1.0.0t-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-1.0.0t"
+        },
+        {
+          "authority_id": "openssl-1.0.1u-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-1.0.1u"
+        },
+        {
           "authority_id": "openssl-1.0.2u-historical",
           "covered": false,
           "declaration_planes": false,
           "entity_planes": [],
           "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
           "release_id": "openssl-1.0.2u"
+        },
+        {
+          "authority_id": "openssl-1.1.0l-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-1.1.0l"
         },
         {
           "authority_id": "openssl-1.1.1w-historical",
@@ -73,6 +97,54 @@
           "entity_planes": [],
           "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
           "release_id": "openssl-3.0.0"
+        },
+        {
+          "authority_id": "openssl-3.0.22-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-3.0.22"
+        },
+        {
+          "authority_id": "openssl-3.1.8-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-3.1.8"
+        },
+        {
+          "authority_id": "openssl-3.2.6-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-3.2.6"
+        },
+        {
+          "authority_id": "openssl-3.3.7-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-3.3.7"
+        },
+        {
+          "authority_id": "openssl-3.4.8-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-3.4.8"
+        },
+        {
+          "authority_id": "openssl-3.5.9-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-3.5.9"
         },
         {
           "authority_id": "openssl-3.6.3-historical",
@@ -103,11 +175,67 @@
           ],
           "reason": "both authorities carry committed declaration planes, so every common entity is matchable by identity",
           "release_id": "openssl-3.6.4"
+        },
+        {
+          "authority_id": "openssl-3.6.5-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-3.6.5"
+        },
+        {
+          "authority_id": "openssl-4.0.0-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-4.0.0"
+        },
+        {
+          "authority_id": "openssl-4.0.1-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-4.0.1"
+        },
+        {
+          "authority_id": "openssl-4.0.2-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-4.0.2"
+        },
+        {
+          "authority_id": "openssl-4.0.3-historical",
+          "covered": false,
+          "declaration_planes": false,
+          "entity_planes": [],
+          "reason": "built, with a committed source manifest and a source-plane census, but no committed symbol or declaration plane, so no public entity identity can be established against it; its relations are recorded absent rather than invented",
+          "release_id": "openssl-4.0.3"
         }
       ],
       "boundary": "This plane covers the release pair(s) whose two authorities both carry committed declaration and public-symbol planes: openssl-3.6.3 -> openssl-3.6.4. It does not cover a pair with an authority that carries only a source manifest and a source-plane census (openssl-0.9.8zh-historical): no declaration identity exists for that authority, so no entity relation touching it is settled or nominated, and the pair is recorded not covered rather than guessed at.",
       "covered_pairs": 1,
       "pairs": [
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.0.0t-historical",
+          "to_release": "openssl-1.0.0t"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.0.1u-historical",
+          "to_release": "openssl-1.0.1u"
+        },
         {
           "covered": false,
           "from_authority": "openssl-0.9.8zh-historical",
@@ -121,6 +249,14 @@
           "from_authority": "openssl-0.9.8zh-historical",
           "from_release": "openssl-0.9.8zh",
           "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.1.0l-historical",
+          "to_release": "openssl-1.1.0l"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
           "to_authority": "openssl-1.1.1w-historical",
           "to_release": "openssl-1.1.1w"
         },
@@ -137,6 +273,54 @@
           "from_authority": "openssl-0.9.8zh-historical",
           "from_release": "openssl-0.9.8zh",
           "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.0.22-historical",
+          "to_release": "openssl-3.0.22"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.1.8-historical",
+          "to_release": "openssl-3.1.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.2.6-historical",
+          "to_release": "openssl-3.2.6"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.3.7-historical",
+          "to_release": "openssl-3.3.7"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.4.8-historical",
+          "to_release": "openssl-3.4.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.5.9-historical",
+          "to_release": "openssl-3.5.9"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
           "to_authority": "openssl-3.6.3-historical",
           "to_release": "openssl-3.6.3"
         },
@@ -147,6 +331,334 @@
           "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
           "to_authority": "openssl-3.6.4-production",
           "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-0.9.8zh-historical",
+          "from_release": "openssl-0.9.8zh",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.0.1u-historical",
+          "to_release": "openssl-1.0.1u"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.0.2u-historical",
+          "to_release": "openssl-1.0.2u"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.1.0l-historical",
+          "to_release": "openssl-1.1.0l"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.1.1w-historical",
+          "to_release": "openssl-1.1.1w"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.0.0-historical",
+          "to_release": "openssl-3.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.0.22-historical",
+          "to_release": "openssl-3.0.22"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.1.8-historical",
+          "to_release": "openssl-3.1.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.2.6-historical",
+          "to_release": "openssl-3.2.6"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.3.7-historical",
+          "to_release": "openssl-3.3.7"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.4.8-historical",
+          "to_release": "openssl-3.4.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.5.9-historical",
+          "to_release": "openssl-3.5.9"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.3-historical",
+          "to_release": "openssl-3.6.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.4-production",
+          "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.0t-historical",
+          "from_release": "openssl-1.0.0t",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.0.2u-historical",
+          "to_release": "openssl-1.0.2u"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.1.0l-historical",
+          "to_release": "openssl-1.1.0l"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.1.1w-historical",
+          "to_release": "openssl-1.1.1w"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.0.0-historical",
+          "to_release": "openssl-3.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.0.22-historical",
+          "to_release": "openssl-3.0.22"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.1.8-historical",
+          "to_release": "openssl-3.1.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.2.6-historical",
+          "to_release": "openssl-3.2.6"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.3.7-historical",
+          "to_release": "openssl-3.3.7"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.4.8-historical",
+          "to_release": "openssl-3.4.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.5.9-historical",
+          "to_release": "openssl-3.5.9"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.3-historical",
+          "to_release": "openssl-3.6.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.4-production",
+          "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.1u-historical",
+          "from_release": "openssl-1.0.1u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.1.0l-historical",
+          "to_release": "openssl-1.1.0l"
         },
         {
           "covered": false,
@@ -169,6 +681,54 @@
           "from_authority": "openssl-1.0.2u-historical",
           "from_release": "openssl-1.0.2u",
           "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.0.22-historical",
+          "to_release": "openssl-3.0.22"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.1.8-historical",
+          "to_release": "openssl-3.1.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.2.6-historical",
+          "to_release": "openssl-3.2.6"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.3.7-historical",
+          "to_release": "openssl-3.3.7"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.4.8-historical",
+          "to_release": "openssl-3.4.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.5.9-historical",
+          "to_release": "openssl-3.5.9"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
           "to_authority": "openssl-3.6.3-historical",
           "to_release": "openssl-3.6.3"
         },
@@ -179,6 +739,166 @@
           "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
           "to_authority": "openssl-3.6.4-production",
           "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.0.2u-historical",
+          "from_release": "openssl-1.0.2u",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-1.1.1w-historical",
+          "to_release": "openssl-1.1.1w"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.0.0-historical",
+          "to_release": "openssl-3.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.0.22-historical",
+          "to_release": "openssl-3.0.22"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.1.8-historical",
+          "to_release": "openssl-3.1.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.2.6-historical",
+          "to_release": "openssl-3.2.6"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.3.7-historical",
+          "to_release": "openssl-3.3.7"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.4.8-historical",
+          "to_release": "openssl-3.4.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.5.9-historical",
+          "to_release": "openssl-3.5.9"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.3-historical",
+          "to_release": "openssl-3.6.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.4-production",
+          "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.0l-historical",
+          "from_release": "openssl-1.1.0l",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
         },
         {
           "covered": false,
@@ -193,6 +913,54 @@
           "from_authority": "openssl-1.1.1w-historical",
           "from_release": "openssl-1.1.1w",
           "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.0.22-historical",
+          "to_release": "openssl-3.0.22"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.1w-historical",
+          "from_release": "openssl-1.1.1w",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.1.8-historical",
+          "to_release": "openssl-3.1.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.1w-historical",
+          "from_release": "openssl-1.1.1w",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.2.6-historical",
+          "to_release": "openssl-3.2.6"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.1w-historical",
+          "from_release": "openssl-1.1.1w",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.3.7-historical",
+          "to_release": "openssl-3.3.7"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.1w-historical",
+          "from_release": "openssl-1.1.1w",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.4.8-historical",
+          "to_release": "openssl-3.4.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.1w-historical",
+          "from_release": "openssl-1.1.1w",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.5.9-historical",
+          "to_release": "openssl-3.5.9"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.1w-historical",
+          "from_release": "openssl-1.1.1w",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
           "to_authority": "openssl-3.6.3-historical",
           "to_release": "openssl-3.6.3"
         },
@@ -206,6 +974,94 @@
         },
         {
           "covered": false,
+          "from_authority": "openssl-1.1.1w-historical",
+          "from_release": "openssl-1.1.1w",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.1w-historical",
+          "from_release": "openssl-1.1.1w",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.1w-historical",
+          "from_release": "openssl-1.1.1w",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.1w-historical",
+          "from_release": "openssl-1.1.1w",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-1.1.1w-historical",
+          "from_release": "openssl-1.1.1w",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.0-historical",
+          "from_release": "openssl-3.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.0.22-historical",
+          "to_release": "openssl-3.0.22"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.0-historical",
+          "from_release": "openssl-3.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.1.8-historical",
+          "to_release": "openssl-3.1.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.0-historical",
+          "from_release": "openssl-3.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.2.6-historical",
+          "to_release": "openssl-3.2.6"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.0-historical",
+          "from_release": "openssl-3.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.3.7-historical",
+          "to_release": "openssl-3.3.7"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.0-historical",
+          "from_release": "openssl-3.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.4.8-historical",
+          "to_release": "openssl-3.4.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.0-historical",
+          "from_release": "openssl-3.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.5.9-historical",
+          "to_release": "openssl-3.5.9"
+        },
+        {
+          "covered": false,
           "from_authority": "openssl-3.0.0-historical",
           "from_release": "openssl-3.0.0",
           "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
@@ -219,6 +1075,502 @@
           "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
           "to_authority": "openssl-3.6.4-production",
           "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.0-historical",
+          "from_release": "openssl-3.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.0-historical",
+          "from_release": "openssl-3.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.0-historical",
+          "from_release": "openssl-3.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.0-historical",
+          "from_release": "openssl-3.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.0-historical",
+          "from_release": "openssl-3.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.22-historical",
+          "from_release": "openssl-3.0.22",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.1.8-historical",
+          "to_release": "openssl-3.1.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.22-historical",
+          "from_release": "openssl-3.0.22",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.2.6-historical",
+          "to_release": "openssl-3.2.6"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.22-historical",
+          "from_release": "openssl-3.0.22",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.3.7-historical",
+          "to_release": "openssl-3.3.7"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.22-historical",
+          "from_release": "openssl-3.0.22",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.4.8-historical",
+          "to_release": "openssl-3.4.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.22-historical",
+          "from_release": "openssl-3.0.22",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.5.9-historical",
+          "to_release": "openssl-3.5.9"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.22-historical",
+          "from_release": "openssl-3.0.22",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.3-historical",
+          "to_release": "openssl-3.6.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.22-historical",
+          "from_release": "openssl-3.0.22",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.4-production",
+          "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.22-historical",
+          "from_release": "openssl-3.0.22",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.22-historical",
+          "from_release": "openssl-3.0.22",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.22-historical",
+          "from_release": "openssl-3.0.22",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.22-historical",
+          "from_release": "openssl-3.0.22",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.0.22-historical",
+          "from_release": "openssl-3.0.22",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.1.8-historical",
+          "from_release": "openssl-3.1.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.2.6-historical",
+          "to_release": "openssl-3.2.6"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.1.8-historical",
+          "from_release": "openssl-3.1.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.3.7-historical",
+          "to_release": "openssl-3.3.7"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.1.8-historical",
+          "from_release": "openssl-3.1.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.4.8-historical",
+          "to_release": "openssl-3.4.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.1.8-historical",
+          "from_release": "openssl-3.1.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.5.9-historical",
+          "to_release": "openssl-3.5.9"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.1.8-historical",
+          "from_release": "openssl-3.1.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.3-historical",
+          "to_release": "openssl-3.6.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.1.8-historical",
+          "from_release": "openssl-3.1.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.4-production",
+          "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.1.8-historical",
+          "from_release": "openssl-3.1.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.1.8-historical",
+          "from_release": "openssl-3.1.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.1.8-historical",
+          "from_release": "openssl-3.1.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.1.8-historical",
+          "from_release": "openssl-3.1.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.1.8-historical",
+          "from_release": "openssl-3.1.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.2.6-historical",
+          "from_release": "openssl-3.2.6",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.3.7-historical",
+          "to_release": "openssl-3.3.7"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.2.6-historical",
+          "from_release": "openssl-3.2.6",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.4.8-historical",
+          "to_release": "openssl-3.4.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.2.6-historical",
+          "from_release": "openssl-3.2.6",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.5.9-historical",
+          "to_release": "openssl-3.5.9"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.2.6-historical",
+          "from_release": "openssl-3.2.6",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.3-historical",
+          "to_release": "openssl-3.6.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.2.6-historical",
+          "from_release": "openssl-3.2.6",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.4-production",
+          "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.2.6-historical",
+          "from_release": "openssl-3.2.6",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.2.6-historical",
+          "from_release": "openssl-3.2.6",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.2.6-historical",
+          "from_release": "openssl-3.2.6",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.2.6-historical",
+          "from_release": "openssl-3.2.6",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.2.6-historical",
+          "from_release": "openssl-3.2.6",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.3.7-historical",
+          "from_release": "openssl-3.3.7",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.4.8-historical",
+          "to_release": "openssl-3.4.8"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.3.7-historical",
+          "from_release": "openssl-3.3.7",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.5.9-historical",
+          "to_release": "openssl-3.5.9"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.3.7-historical",
+          "from_release": "openssl-3.3.7",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.3-historical",
+          "to_release": "openssl-3.6.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.3.7-historical",
+          "from_release": "openssl-3.3.7",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.4-production",
+          "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.3.7-historical",
+          "from_release": "openssl-3.3.7",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.3.7-historical",
+          "from_release": "openssl-3.3.7",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.3.7-historical",
+          "from_release": "openssl-3.3.7",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.3.7-historical",
+          "from_release": "openssl-3.3.7",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.3.7-historical",
+          "from_release": "openssl-3.3.7",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.4.8-historical",
+          "from_release": "openssl-3.4.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.5.9-historical",
+          "to_release": "openssl-3.5.9"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.4.8-historical",
+          "from_release": "openssl-3.4.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.3-historical",
+          "to_release": "openssl-3.6.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.4.8-historical",
+          "from_release": "openssl-3.4.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.4-production",
+          "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.4.8-historical",
+          "from_release": "openssl-3.4.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.4.8-historical",
+          "from_release": "openssl-3.4.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.4.8-historical",
+          "from_release": "openssl-3.4.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.4.8-historical",
+          "from_release": "openssl-3.4.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.4.8-historical",
+          "from_release": "openssl-3.4.8",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.5.9-historical",
+          "from_release": "openssl-3.5.9",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.3-historical",
+          "to_release": "openssl-3.6.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.5.9-historical",
+          "from_release": "openssl-3.5.9",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.4-production",
+          "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.5.9-historical",
+          "from_release": "openssl-3.5.9",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.5.9-historical",
+          "from_release": "openssl-3.5.9",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.5.9-historical",
+          "from_release": "openssl-3.5.9",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.5.9-historical",
+          "from_release": "openssl-3.5.9",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.5.9-historical",
+          "from_release": "openssl-3.5.9",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
         },
         {
           "added": 2,
@@ -229,6 +1581,166 @@
           "rows": 26001,
           "to_authority": "openssl-3.6.4-production",
           "to_release": "openssl-3.6.4"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.6.3-historical",
+          "from_release": "openssl-3.6.3",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.6.3-historical",
+          "from_release": "openssl-3.6.3",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.6.3-historical",
+          "from_release": "openssl-3.6.3",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.6.3-historical",
+          "from_release": "openssl-3.6.3",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.6.3-historical",
+          "from_release": "openssl-3.6.3",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.6.4-production",
+          "from_release": "openssl-3.6.4",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-3.6.5-historical",
+          "to_release": "openssl-3.6.5"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.6.4-production",
+          "from_release": "openssl-3.6.4",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.6.4-production",
+          "from_release": "openssl-3.6.4",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.6.4-production",
+          "from_release": "openssl-3.6.4",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.6.4-production",
+          "from_release": "openssl-3.6.4",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.6.5-historical",
+          "from_release": "openssl-3.6.5",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.0-historical",
+          "to_release": "openssl-4.0.0"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.6.5-historical",
+          "from_release": "openssl-3.6.5",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.6.5-historical",
+          "from_release": "openssl-3.6.5",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-3.6.5-historical",
+          "from_release": "openssl-3.6.5",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-4.0.0-historical",
+          "from_release": "openssl-4.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.1-historical",
+          "to_release": "openssl-4.0.1"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-4.0.0-historical",
+          "from_release": "openssl-4.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-4.0.0-historical",
+          "from_release": "openssl-4.0.0",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-4.0.1-historical",
+          "from_release": "openssl-4.0.1",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.2-historical",
+          "to_release": "openssl-4.0.2"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-4.0.1-historical",
+          "from_release": "openssl-4.0.1",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
+        },
+        {
+          "covered": false,
+          "from_authority": "openssl-4.0.2-historical",
+          "from_release": "openssl-4.0.2",
+          "reason": "at least one authority carries no committed declaration or symbol plane, so no public entity identity can be established for the pair",
+          "to_authority": "openssl-4.0.3-historical",
+          "to_release": "openssl-4.0.3"
         }
       ]
     },
@@ -702146,7 +703658,7 @@
     {
       "name": "authority-nodes",
       "path": "forensics/authority-nodes.json",
-      "sha256": "bb9d188018293f625e87ef01577b8c7c6ddae967e88ed066d3434f3b74f35486"
+      "sha256": "21008f914f822e666d68352ecdbbb0db4ae23116e75c00f245762aa4774b1d31"
     },
     {
       "name": "authority-registry",
