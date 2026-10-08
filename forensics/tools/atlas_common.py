@@ -68,7 +68,7 @@ MULTITRACK = FORENSICS / "multitrack"
 # ownership atlas assigns `owner_phase == 23` no row, and its unit is the multitrack authority
 # contract over twelve contract units and no deferral, which a symbol-counting ledger would
 # count zero. **Phase 24 owns no export either**: the ownership atlas assigns `owner_phase == 24`
-# no row, and its unit is the downstream 1000 contract over fifteen contract units and no
+# no row, and its unit is the downstream 1000 contract over sixteen contract units and no
 # deferral, which a symbol-counting ledger would count zero. The marker is a property
 # of the document rather than a phase number those tools know (`docs/PHASE-22-SUBPHASES.md`, D485;
 # `docs/PHASE-16-SUBPHASES.md`, section 1; `docs/PHASE-17-SUBPHASES.md`, section 1;

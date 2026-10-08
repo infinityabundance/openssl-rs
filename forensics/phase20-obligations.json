@@ -112,7 +112,7 @@
     {
       "name": "phase-20-courts",
       "path": "artifacts/phase20/COURTS.json",
-      "sha256": "85ac7cf5151548c8213ce48110db0736cab2886c4c0d9e4c21873e89d94c826a"
+      "sha256": "9e95dfb25a015c95d99eef9824f609ffa30bff56f7b943cac499cac50e743c71"
     }
   ],
   "kind": "phase20-obligations",

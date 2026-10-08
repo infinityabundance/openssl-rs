@@ -86,8 +86,10 @@ import os
 import re
 import shutil
 import socket
+import ssl
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -776,42 +778,297 @@ set httpd port {port} and
             "workload": "monit: TLS httpd handshake + HTTP response", "local_only": True}
 
 
-def _wl_pureftpd(ctx: dict) -> dict:
-    """An FTPS control connection: authority s_client does AUTH TLS against the subject pure-ftpd.
+def _ftps_account(ctx: dict) -> tuple[str, str]:
+    """The deterministic local FTPS account the venue creates in its own disposable container.
 
-    The full FTPS login is not driven -- this venue admits no authenticated FTP account fixture -- so
-    the measured workload is the explicit-TLS control-connection handshake, and the level reached is
-    stated honestly (L6-runtime, with L7 left out-of-scope) rather than faked.
+    A system account (home bound to the fixture dir) lets pure-ftpd's `-l unix` backend authenticate
+    a real login; the account is created idempotently and never touches the image, only the running
+    container's ephemeral /etc.
+    """
+    user, passwd = "p24ftps", "p24ftps-pw"
+    who = _run_captured(["id", "-u", user], timeout=15)
+    if who["exit_code"] != 0:
+        _run_captured(["useradd", "-M", "-d", str(ctx["workdir"] / "ftphome"), "-s", "/bin/sh",
+                       user], timeout=30)
+        _run_captured(["chpasswd"], timeout=30, stdin_text=f"{user}:{passwd}\n")
+    return user, passwd
+
+
+def _wl_pureftpd(ctx: dict) -> dict:
+    """An authenticated FTPS session: AUTH TLS, USER/PASS and PWD against the subject pure-ftpd.
+
+    24.17 adds the missing deterministic local workload: a system FTP account the venue creates in
+    its own disposable container, whose credentials the authority's own `openssl s_client -starttls
+    ftp` uses. The session completes a real authenticated explicit-TLS login and a `PWD` round trip
+    on loopback (no public network), so the family reaches the functional level the authority can.
     """
     ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
     pki = _gen_pki(ap, d)
+    home = d / "ftphome"
+    home.mkdir(parents=True, exist_ok=True)
+    user, passwd = _ftps_account(ctx)
     argv = [str(ctx["program"]), "--tls=1", "--certfile", str(pki["srv_pem"]), "-S",
-            f"127.0.0.1,{port}", "-E", "-j"]
+            f"127.0.0.1,{port}", "-E", "-j", "-l", "unix"]
     proc, of, ef = _spawn(argv, d, ctx["env"], d / "ftpd.out", d / "ftpd.err")
     try:
         if not _wait_tcp("127.0.0.1", port):
             return _wl_fail([("pure-ftpd", {"exit_code": 0, "stdout": _read(d / "ftpd.err")})],
                             "pure-ftpd did not open its control port", "runtime-failure", d)
-        hs = _s_client(ap, port, pki["ca_crt"], ["-starttls", "ftp", "-brief"], stdin_text="",
-                       timeout=25)
+        session = _ossl(ap, ["s_client", "-connect", f"127.0.0.1:{port}", "-starttls", "ftp",
+                             "-CAfile", str(pki["ca_crt"]), "-servername", "127.0.0.1", "-brief",
+                             "-ign_eof"],
+                        timeout=25,
+                        stdin_text=f"USER {user}\r\nPASS {passwd}\r\nPWD\r\nQUIT\r\n")
     finally:
         _stop(proc)
         _kill_comm("pure-ftpd")
         of.close()
         ef.close()
-    runtime_ok = "Verification: OK" in hs["stderr"] and "Protocol version" in hs["stderr"]
-    return {"runtime_ok": runtime_ok, "functional_ok": False,
-            "failure_class": None if runtime_ok else "runtime-failure",
-            "residual": "out-of-scope" if runtime_ok else "runtime-failure",
-            "reason": None if runtime_ok else
-            ("the FTPS control-connection handshake did not verify"),
-            "transcript": _transcript(("authority s_client -starttls ftp", hs),
-                                      ("pure-ftpd", {"exit_code": 0,
-                                                     "stdout": _read(d / "ftpd.err")})),
-            "workload": "pure-ftpd: FTPS control-connection AUTH TLS handshake",
-            "local_only": True,
-            "note": ("L7-functional is not driven: this venue admits no authenticated FTP account "
-                     "fixture, so the TLS control-connection handshake is the measured workload")}
+    replies = (session["stdout"] or "") + (session["stderr"] or "")
+    runtime_ok = "230" in replies or "331" in replies
+    functional_ok = runtime_ok and "230" in replies and "257" in replies
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the authenticated FTPS login did not complete" if not runtime_ok else
+             "the FTPS session did not answer PWD"),
+            "transcript": _transcript(("authority s_client -starttls ftp (USER/PASS/PWD/QUIT)",
+                                       session),
+                                      ("pure-ftpd", {"exit_code": 0, "stdout": _read(d / "ftpd.err")})),
+            "workload": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS",
+            "local_only": True}
+
+
+# --------------------------------------------------------------------------------------------
+# a deterministic local IMAP-over-TLS peer (24.17's isync fixture)
+# --------------------------------------------------------------------------------------------
+
+_IMAP_MESSAGE = (
+    b"Message-ID: <phase24-runtime-1@127.0.0.1>\r\n"
+    b"Date: Thu, 01 Jan 1970 00:00:00 +0000\r\n"
+    b"From: runtime@127.0.0.1\r\n"
+    b"To: isync@127.0.0.1\r\n"
+    b"Subject: phase24 runtime isync fixture\r\n"
+    b"\r\n"
+    b"phase24 runtime isync fixture body\n"
+)
+
+
+def _imap_serve_one(tls, stop: threading.Event) -> None:
+    """Serve the one-mailbox IMAP4rev1 subset mbsync needs, over the already-TLS socket."""
+    f = tls.makefile("rwb", buffering=0)
+    f.write(b"* OK [CAPABILITY IMAP4rev1 AUTH=PLAIN UIDPLUS] phase24 isync fixture ready\r\n")
+    while not stop.is_set():
+        raw = f.readline()
+        if not raw:
+            break
+        line = raw.decode("utf-8", "ignore").rstrip("\r\n")
+        if not line:
+            continue
+        parts = line.split(" ", 2)
+        if len(parts) < 2:
+            continue
+        tag = parts[0]
+        cmd = parts[1].upper()
+        rest = parts[2] if len(parts) > 2 else ""
+        # handle a trailing literal ({n}) on LOGIN/APPEND if the client sends one
+        if rest.endswith("}") and "{" in rest:
+            try:
+                n = int(rest.rsplit("{", 1)[1].rstrip("}"))
+                literal = f.read(n + 2)
+                rest = rest + " " + literal.decode("utf-8", "ignore")
+            except Exception:  # noqa: BLE001
+                pass
+        upper = rest.upper()
+        if cmd in ("CAPABILITY",):
+            f.write(b"* CAPABILITY IMAP4rev1 AUTH=PLAIN UIDPLUS\r\n")
+            f.write(f"{tag} OK CAPABILITY completed\r\n".encode())
+        elif cmd in ("LOGIN", "AUTHENTICATE"):
+            if cmd == "AUTHENTICATE":
+                f.write(b"+ \r\n")
+                f.readline()
+            f.write(f"{tag} OK LOGIN completed\r\n".encode())
+        elif cmd == "NAMESPACE":
+            f.write(b'* NAMESPACE (("" "/")) NIL NIL\r\n')
+            f.write(f"{tag} OK NAMESPACE completed\r\n".encode())
+        elif cmd in ("LIST", "LSUB"):
+            f.write(b'* LIST (\\HasNoChildren) "/" "INBOX"\r\n')
+            f.write(f"{tag} OK {cmd} completed\r\n".encode())
+        elif cmd == "STATUS":
+            f.write(b'* STATUS "INBOX" (MESSAGES 1 RECENT 0 UIDNEXT 2 UIDVALIDITY 1 UNSEEN 0)\r\n')
+            f.write(f"{tag} OK STATUS completed\r\n".encode())
+        elif cmd in ("SELECT", "EXAMINE"):
+            f.write(b"* FLAGS (\\Seen \\Answered \\Flagged \\Deleted \\Draft)\r\n")
+            f.write(b"* 1 EXISTS\r\n")
+            f.write(b"* 0 RECENT\r\n")
+            f.write(b"* OK [UIDVALIDITY 1] UIDs valid\r\n")
+            f.write(b"* OK [UIDNEXT 2] Predicted next UID\r\n")
+            f.write(b"* OK [PERMANENTFLAGS (\\Seen \\Answered \\Flagged \\Deleted \\Draft)] Flags\r\n")
+            f.write(f"{tag} OK [READ-WRITE] {cmd} completed\r\n".encode())
+        elif (cmd == "UID" and upper.startswith("FETCH")) or cmd == "FETCH":
+            spec = rest[upper.index("FETCH") + 5:].strip()
+            items = spec[spec.index("(") + 1:spec.rindex(")")] \
+                if ("(" in spec and ")" in spec) else spec
+            parts: list[str] = []
+            literal: tuple[str, bytes] | None = None
+            has_uid = False
+            for tok in items.replace("(", " ").replace(")", " ").split():
+                u = tok.upper()
+                if u == "UID":
+                    has_uid = True
+                    parts.append("UID 1")
+                elif u == "FLAGS":
+                    parts.append("FLAGS ()")
+                elif u == "RFC822.SIZE":
+                    parts.append(f"RFC822.SIZE {len(_IMAP_MESSAGE)}")
+                elif u == "INTERNALDATE":
+                    parts.append('INTERNALDATE "01-Jan-1970 00:00:00 +0000"')
+                elif u.startswith("BODY") or u.startswith("RFC822"):
+                    name = tok.replace(".PEEK", "").replace(".peek", "")
+                    literal = (name, _IMAP_MESSAGE)
+                elif u == "ENVELOPE":
+                    parts.append('ENVELOPE ("Thu, 01 Jan 1970 00:00:00 +0000" '
+                                 '"phase24 runtime isync fixture" NIL NIL NIL NIL NIL NIL NIL)')
+            # A `UID FETCH` response always carries the message UID, as a real server sends it.
+            if cmd == "UID" and not has_uid:
+                parts.insert(0, "UID 1")
+            if literal is not None:
+                n = len(literal[1])
+                head = ("* 1 FETCH (" + " ".join(parts + [f"{literal[0]} {{{n}}}"]) +
+                        "\r\n")
+                f.write(head.encode())
+                f.write(literal[1])
+                f.write(b")\r\n")
+            else:
+                resp = "* 1 FETCH (" + " ".join(parts) + ")\r\n"
+                f.write(resp.encode())
+            f.write(f"{tag} OK {cmd} FETCH completed\r\n".encode())
+        elif cmd == "UID" and upper.startswith("SEARCH"):
+            f.write(b"* SEARCH 1\r\n")
+            f.write(f"{tag} OK UID SEARCH completed\r\n".encode())
+        elif cmd == "UID" and upper.startswith("STORE"):
+            f.write(b"* 1 FETCH (UID 1 FLAGS (\\Seen))\r\n")
+            f.write(f"{tag} OK UID STORE completed\r\n".encode())
+        elif cmd in ("CREATE", "SUBSCRIBE", "UNSUBSCRIBE", "NOOP", "CHECK", "CLOSE",
+                     "EXPUNGE", "STARTTLS", "ENABLE"):
+            f.write(f"{tag} OK {cmd} completed\r\n".encode())
+        elif cmd == "LOGOUT":
+            f.write(b"* BYE phase24 fixture logging out\r\n")
+            f.write(f"{tag} OK LOGOUT completed\r\n".encode())
+            break
+        else:
+            f.write(f"{tag} OK {cmd} completed\r\n".encode())
+
+
+def _imaps_server(cert_pem: Path, port: int, ready: threading.Event, stop: threading.Event) -> None:
+    """Accept IMAPS connections on loopback and serve the fixture mailbox until `stop`."""
+    try:
+        sctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        sctx.load_cert_chain(str(cert_pem))
+    except Exception:  # noqa: BLE001
+        ready.set()
+        return
+    srv = socket.socket()
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        srv.bind(("127.0.0.1", port))
+        srv.listen(8)
+        srv.settimeout(1.0)
+    except OSError:
+        ready.set()
+        srv.close()
+        return
+    ready.set()
+    while not stop.is_set():
+        try:
+            conn, _ = srv.accept()
+        except socket.timeout:
+            continue
+        except OSError:
+            break
+        tls = None
+        try:
+            tls = sctx.wrap_socket(conn, server_side=True)
+            _imap_serve_one(tls, stop)
+        except Exception:  # noqa: BLE001
+            pass
+        finally:
+            try:
+                if tls is not None:
+                    tls.close()
+            except Exception:  # noqa: BLE001
+                pass
+    srv.close()
+
+
+def _wl_isync(ctx: dict) -> dict:
+    """A real IMAP-over-TLS sync: the subject mbsync pulls a message from a local IMAP peer.
+
+    24.17 adds the missing deterministic local workload: a one-mailbox IMAP4rev1 peer served by the
+    courtroom's own Python over TLS with the authority-generated certificate, on loopback only. The
+    subject `mbsync` connects with IMAPS, authenticates, fetches the message and writes it to a local
+    Maildir, so the family reaches the functional level the authority can.
+    """
+    ap, port, d, root = ctx["authority_prefix"], ctx["port"], ctx["workdir"], ctx["root"]
+    pki = _gen_pki(ap, d)
+    maildir = d / "maildir"
+    for sub in ("cur", "new", "tmp"):
+        (maildir / sub).mkdir(parents=True, exist_ok=True)
+    conf = d / "mbsyncrc"
+    conf.write_text(
+        "IMAPAccount phase24\n"
+        "Host 127.0.0.1\n"
+        f"Port {port}\n"
+        "User runtime\n"
+        "Pass runtime\n"
+        "TLSType IMAPS\n"
+        f"CertificateFile {pki['ca_crt']}\n"
+        "\n"
+        "IMAPStore remote\n"
+        "Account phase24\n"
+        "\n"
+        "MaildirStore local\n"
+        f"Path {maildir}/\n"
+        f"Inbox {maildir}/INBOX\n"
+        "SubFolders Verbatim\n"
+        "\n"
+        "Channel phase24\n"
+        "Far :remote:\n"
+        "Near :local:\n"
+        "Patterns *\n"
+        "Create Both\n"
+        "Expunge Both\n"
+        "SyncState *\n", encoding="utf-8")
+    ready, stop = threading.Event(), threading.Event()
+    thr = threading.Thread(target=_imaps_server, args=(pki["srv_pem"], port, ready, stop),
+                           daemon=True)
+    thr.start()
+    ready.wait(timeout=10)
+    try:
+        if not _wait_tcp("127.0.0.1", port, timeout=10):
+            return _wl_fail([], "the local IMAP peer did not listen", "runtime-failure", d)
+        sync = _run_captured([str(ctx["program"]), "-c", str(conf), "phase24"], cwd=d,
+                             env=ctx["env"], timeout=60)
+    finally:
+        stop.set()
+        thr.join(timeout=5)
+        _kill_comm("mbsync")
+    msgs = [p for p in maildir.rglob("*") if p.is_file() and p.parent.name in ("new", "cur")]
+    functional_ok = sync["exit_code"] == 0 and bool(msgs)
+    runtime_ok = sync["exit_code"] == 0 or bool(msgs)
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the local IMAP-over-TLS sync did not complete"),
+            "transcript": _transcript(("mbsync -c mbsyncrc phase24", sync)),
+            "workload": "isync: mbsync IMAPS fetch from a local IMAP peer into a Maildir",
+            "local_only": True}
 
 
 def _wl_fail(notes: list, reason: str, failure_class: str | None, d: Path) -> dict:
@@ -829,6 +1086,7 @@ RUNNERS = {
     "redis": _wl_redis,
     "monit": _wl_monit,
     "pure-ftpd": _wl_pureftpd,
+    "isync": _wl_isync,
 }
 
 
@@ -1106,6 +1364,40 @@ def derive_atlas(families_body: dict, freeze_body: dict, build_link_body: dict,
                         recipe=recipe, specimen_id=_specimen_variant(recipe, name)[0],
                         variant_id=_specimen_variant(recipe, name)[1], source_sha256=None,
                         limits=limits, prefix=auth_prefix))
+                continue
+
+            # A recipe-backed family the venue admits no runtime workload for (no PROGRAMS entry)
+            # reaches only its build/link level: the runtime atlas records that honestly rather than
+            # rebuilding a program it will not load, so 24.17's admission batch (which links but has
+            # no admitted local workload) is `no-fixture`, not a fabricated load.
+            if name not in PROGRAMS:
+                for subject in SUBJECTS:
+                    blr = bl_rows.get((str(entry.get("family_id")), subject)) or {}
+                    blocked = str(blr.get("level") or L0)
+                    spec_id, variant_id = _specimen_variant(recipe, name)
+                    if RANK.get(blocked, -1) < RANK[L4]:
+                        rows.append(_not_attempted(
+                            fam, subject,
+                            level=blocked if RANK.get(blocked, -1) >= 0 else L0,
+                            failure_class="link-failure", residual="unlinked",
+                            reason=(f"the 24.6 build/link run for {subject} reached {blocked}, below "
+                                    f"L4-linked, so there is no loaded program to run"),
+                            recipe=recipe, specimen_id=spec_id, variant_id=variant_id,
+                            source_sha256=blr.get("source_sha256"), limits=limits,
+                            prefix=auth_prefix))
+                    else:
+                        rows.append(_runtime_row(
+                            fam, recipe, subject, level=blocked, outcome="reached",
+                            residual="out-of-scope", failure_class=None,
+                            reason=("no admitted deterministic local workload exists for this "
+                                    "program in this venue; only the build/link level is measured"),
+                            specimen_id=spec_id, variant_id=variant_id,
+                            source_sha256=blr.get("source_sha256"),
+                            evidence=[f"family:{entry.get('family_id')}",
+                                      f"recipe:{recipe['recipe_id']}"], canvas=None,
+                            limits=limits, prefix=auth_prefix,
+                            source_root_hash=blr.get("source_root_hash"), launch=None,
+                            workload=None, transcript="", local_only=True))
                 continue
 
             # At least one subject reached L4: rebuild the pristine source once (the exact build
@@ -1506,16 +1798,15 @@ def _mutations(atlas_body: dict, freeze_body: dict) -> list[tuple[str, str, dict
     runs = atlas_body.get("runs") or []
 
     # a candidate row whose level passes only because its baseline was inflated (an aspirational
-    # authority level the authority never reached).
+    # authority level the authority never reached). Any candidate row at or below its baseline is a
+    # valid target: raising its recorded baseline above the level the authority rows reached is the
+    # defect the re-derivation check exists to catch.
     m1 = copy.deepcopy(atlas_body)
     cand = next((r for r in m1["runs"] if r.get("subject") == "candidate"
                  and not r.get("beyond_baseline")
-                 and RANK[L5] <= RANK.get(str(r.get("level")), -1) < RANK[L7]), None)
+                 and str(r.get("authority_applicable_level")) not in ("", "None", L0)), None)
     if cand is not None:
-        cand["level"] = L7
-        cand["outcome"] = "reached"
-        cand["residual_class"] = "none"
-        cand["authority_applicable_level"] = L7
+        cand["authority_applicable_level"] = "L8-authority-equivalent"
         cand["reaches_baseline"] = True
     out.append(("candidate_level_above_authority_baseline", "authority_applicable_level", m1))
 

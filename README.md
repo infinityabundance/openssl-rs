@@ -46,6 +46,30 @@ which strata are complete. For shape, the strata group as:
 | 19–21 | performance / CPU dispatch, the 3.6.4 custodian seal, and the maintenance-delta machinery |
 | 22 | authority exhaustiveness and the whole-program compatibility atlas |
 
+<!-- BEGIN GENERATED: downstream-blockers -->
+
+## Downstream-1000 biggest movers (generated)
+
+Every one of the 1000 counted families, partitioned by its **deepest blocker** and the classes ranked by **mover potential**, with the feasible recipe queue, is in the
+[generated report](https://github.com/infinityabundance/openssl-rs/blob/main/docs/PHASE-24-BIGGEST-MOVERS.md) (`docs/PHASE-24-BIGGEST-MOVERS.md`); the same table is cited by
+`docs/SEAL-CENSUS.md`. This block is generated from
+`forensics/downstream/shared-blockers.json` — **do not edit it by hand.**
+
+| blocker class | families | mover potential | fixability | per-fix leverage |
+|---|---|---|---|---|
+| `no-admitted-recipe` | 965 | 965 | `recipe-admission` | 1.0 |
+| `recipe-build-system-unsupported` | 2 | 2 | `recipe-build-system` | 2.0 |
+
+**967 of the 1000 counted families are blocked; 33 are `DROP_IN_PASS`** (967 are `DROP_IN_NOT_APPLICABLE`, 33 measurable). The `drop-in-pass` figure is a baseline-normalized verdict count, not a rung: of the 33 drop-in passes, 25 are at L4-linked with no admitted runtime workload for those families and 8 reach L5 or above.
+
+* a selected population is not a random sample: the 1,000 counted families are selected from frozen ranking evidence, so their blocker shares do not generalise to all downstream software
+* 1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and the analysis makes no statement about an unmeasured consumer
+* a build is not a functional proof: the configure/link/load rungs are not behaving, and only the functional levels are behavioural evidence
+* direct and transitive consumers are different evidence: the two are never summed
+* a heuristic ranking is not a measurement of buildability: the feasible recipe queue is ranked by frozen breadth signals, and no family in it has been built by this analysis
+
+<!-- END GENERATED: downstream-blockers -->
+
 ## Compatibility target
 
 The goal is substitution: an unmodified OpenSSL consumer should be able to

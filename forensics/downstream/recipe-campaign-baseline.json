@@ -1,0 +1,39 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "captured_by": "forensics/tools/downstream_recipe_campaign.py --capture-baseline",
+    "captured_note": "the 24.16 blocker summary of the pre-campaign planes, captured once before the planes were re-measured and committed as the record's `before`",
+    "class_counts": {
+      "authority-baseline-limited": 0,
+      "candidate-configure-failure": 0,
+      "candidate-functional-failure": 0,
+      "candidate-link-failure": 0,
+      "candidate-load-failure": 0,
+      "candidate-runtime-failure": 0,
+      "no-admitted-recipe": 980,
+      "no-fixture": 0,
+      "none": 18,
+      "out-of-scope": 0,
+      "recipe-build-dependency-missing": 0,
+      "recipe-build-system-unsupported": 2
+    },
+    "drop_in_pass": 18,
+    "families": 1000,
+    "linked": 18,
+    "measurable_families": 18,
+    "recipe_backed_families": 20,
+    "recipe_less_families": 980,
+    "source": "24.17 pre-campaign planes"
+  },
+  "body_hash": "ed4a8af337f69be89f4aea26ebe038e7168ad5e61e316a48fdd22b8350b3824c",
+  "generator": "forensics/tools/downstream_recipe_campaign.py",
+  "inputs": [
+    {
+      "name": "shared-blockers",
+      "path": "forensics/downstream/shared-blockers.json",
+      "sha256": "25a86f96c00ebbdfe665ba51f29984f5ce89520e97d64b6da94d6ee7bc229c13"
+    }
+  ],
+  "kind": "downstream-recipe-campaign-baseline",
+  "schema": "openssl-rs/atlas/downstream-recipe-campaign-baseline/v1"
+}
