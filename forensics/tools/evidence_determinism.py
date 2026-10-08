@@ -220,6 +220,99 @@ GENERATORS_BEFORE_LEDGERS = [
     # re-derives the whole plane through the same generator, reconciles every row with its population
     # record, and checks each attained rung is backed by the artefact that establishes it.
     "forensics/tools/support_status.py",
+    # Phase 24.4's P1000 + reserve freeze. It is a pure function of committed non-ledger inputs --
+    # the committed 24.2 families, the frozen 24.1 ranking evidence, and the committed 24.3
+    # consensus signal it imports -- so a stale committed freeze, or a population re-selected by
+    # something other than the recorded rule, is a failure rather than a silent divergence. It sits
+    # **before** the ledgers because it reads no ledger; the RT-FAMILY-FREEZE court re-derives the
+    # whole population through the same rule and refuses a family typed into the 1,000.
+    "forensics/tools/downstream_freeze.py",
+    # Phase 24.5's precommitted holdout partition. It is a pure function of committed non-ledger
+    # inputs -- the committed 24.4 frozen P1000 and the committed 24.2 families -- so a stale
+    # committed partition, or one re-divided by something other than the recorded rule, is a failure
+    # rather than a silent divergence. It sits **after** the freeze (it reads family-freeze.json) and
+    # **before** the ledgers because it reads no ledger; the RT-HOLDOUT-PARTITION court re-derives the
+    # whole split through the same rule and refuses a holdout chosen after a candidate failure.
+    "forensics/tools/downstream_holdout.py",
+    # Phase 24.8's failure discovery/minimization plane. Unlike 24.6's and 24.7's atlases below it
+    # executes nothing: it is a **pure function of committed inputs** -- the committed 24.6 build/link
+    # atlas, the committed 24.7 runtime/functional atlas and the committed 24.4 frozen P1000 -- so a
+    # stale committed failures plane, or a leftover re-classified by something other than the record's
+    # authority row, is a failure rather than a silent divergence. It is exactly the pure aggregate the
+    # 24.6/24.7 comments below anticipated ("a later subphase that derives a pure aggregate from it is
+    # what belongs in this list"). It sits **after** the atlases it reads and **before** the ledgers
+    # because it reads no ledger; the RT-FAILURE-MINIMIZATION court re-derives the whole plane through
+    # the same functions and refuses a candidate-specific label the authority baseline does not justify.
+    "forensics/tools/downstream_failures.py",
+    # Phase 24.13's atlas reconciliation. Like 24.8's failures plane it executes nothing: it is a
+    # **pure function of committed inputs** -- every committed Phase-24 plane (the frozen P1000 and
+    # holdout, the build/link and runtime/functional atlases, the failures plane, the high-value tier,
+    # the hostility corpus, the candidate freeze, the full P1000 run, the usage fingerprints) plus the
+    # committed Phase-22 known-universe and reachability atlases it reads for coverage and the
+    # direct/inferred projection -- so a stale committed reconciliation, or a rate/residual/failure
+    # re-typed rather than re-derived, is a failure rather than a silent divergence. It is exactly the
+    # pure aggregate the 24.6/24.7 comments below name ("the reconciliation") and the 24.8 comment
+    # named as the pattern; the RT-ATLAS-RECONCILIATION court re-derives the whole accounted view
+    # through the same functions and refuses a counted family with no verdict, an unknown residual, a
+    # dropped failure or a hostility result mixed into the P1000 rate.
+    "forensics/tools/downstream_reconciliation.py",
+    # Phase 24.6's **build/link atlas is deliberately not here, and not in `COMPARED`.** It is
+    # produced by measurement -- real builds of real downstream releases inside the court container --
+    # so the level each build reaches and the ELF it links are a function of the court's toolchain and
+    # of the network, not of committed inputs; regenerating it needs a compiler and a prefix that a
+    # CI runner (which runs this tool host-side) does not have, and the Docker-only guard refuses a
+    # host invocation of the tool before it builds anything. This is the same precedent as the
+    # Phase-17 measured corpus under `courts/phase17/downstream/*/result.json`: the raw measurement is
+    # the court's business (`RT-BUILD-LINK-ATLAS` re-runs only its pure checks over the committed
+    # artefact), not a byte-compared artefact here. If a later subphase derives a pure aggregate from
+    # it, that aggregate is what belongs in this list.
+    #
+    # Phase 24.7's **runtime/functional atlas follows the same precedent, for the same reason and one
+    # more.** It is measurement -- real builds and real local workloads inside the court container --
+    # so the level a run reaches and its normalised transcript are a function of the court's toolchain
+    # and of the network, not of committed inputs; a CI runner has no compiler, no prefix and no
+    # loopback peer for the workloads, and the Docker-only guard refuses a host invocation before it
+    # builds or launches anything. It also carries a per-run transcript digest that is a measurement,
+    # not a derivation. The raw measurement is the court's business (`RT-RUNTIME-FUNCTIONAL-ATLAS`
+    # re-runs only its pure checks over the committed artefact), exactly as the Phase-17 measured
+    # corpus and 24.6's atlas are. A later subphase that derives a pure aggregate from it (the
+    # failure minimisation, the reconciliation) is what belongs in this list.
+    #
+    # Phase 24.9's high-value deep tier and **Phase 24.10's hostility-augmentation corpus follow the
+    # same precedent, for the same reason.** Both are measurement: the tier re-runs the Phase-17
+    # build harnesses for Git and CPython, and the hostility corpus compiles a bounded set of rare-
+    # surface probes (custom BIO, legacy ENGINE, provider config, the error queue, layout,
+    # fork/reinit, threading, dlopen, PKCS#12, CMS, cross-implementation TLS, static) against each
+    # subject and runs them locally, so the level a run reaches and its normalised transcript are a
+    # function of the court's toolchain and of the network, not of committed inputs. A CI runner has
+    # no compiler, no install prefix and no loopback TLS peer, and the Docker-only guard refuses a
+    # host invocation before either builds anything. Neither artefact is listed here; their courts
+    # (`RT-HIGH-VALUE-TIER`, `RT-HOSTILITY-AUGMENTATION`) re-run only their pure selection/checks
+    # over the committed artefacts. 24.10 is a **separate** corpus, but that changes nothing about
+    # how it is regenerated: it is still measurement, and a later subphase that derives a pure
+    # aggregate from it is what would belong in this list.
+    #
+    # Phase 24.11's candidate freeze follows the same precedent, for the same reason and one more. It
+    # re-runs the precommitted holdout against the frozen candidate using the exact 24.6/24.7
+    # recipe/workload machinery, so the level a run reaches, its normalised transcript and the
+    # candidate install's digests at the moment of the run are a measurement. It also carries an
+    # **immutable first_run** that a re-run must never overwrite (a rerun is appended, not folded in),
+    # so regenerating it is a deliberate act, not a byte-compare. It is therefore not listed here; the
+    # `RT-CANDIDATE-FREEZE` court re-runs only its pure checks -- the identity re-derivation from the
+    # committed install, the precommitted-set check, the first_run immutability (every rerun attests
+    # the recorded first_run), the verdict re-derivation and the fix-source check -- over the
+    # committed artefact.
+    #
+    # Phase 24.12's final P1000 run follows the same precedent, for the same reason: it re-runs the
+    # whole frozen population under both subjects against the frozen candidate using the exact
+    # 24.6/24.7 recipe/workload machinery, so the level a run reaches and its normalised transcript
+    # are a measurement, not a function of committed inputs -- a CI runner has no compiler, no install
+    # prefix and no network, and the Docker-only guard refuses a host invocation before it builds
+    # anything. It is therefore not listed here and not in `COMPARED`; the `RT-P1000-RUN` court
+    # re-runs only its pure checks -- the identity re-derivation from the committed install and its
+    # equality with the 24.11 freeze, the one-verdict-per-counted-family re-derivation, the section-20
+    # PASS refusal, the UNKNOWN-is-zero check, the ladder and the counts -- over the committed
+    # artefact.
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -291,6 +384,14 @@ GENERATORS_AFTER_LEDGERS = [
     # authority and no container.
     "courts/phase17/downstream/lib/build_corpus.py",
     "forensics/tools/gen_downstream_evidence.py",
+    # Phase 24.14's FRF/Gemel closure. It executes nothing -- it drives each Phase-24 plane's own
+    # pure `*_findings`/`*_sensitivity_control` over the committed artefact, records the per-mutation
+    # delta, and derives the FRF chain staging and the Gemel checkpoint projection from the committed
+    # `gen_frf_courts.py` registry and the committed `forensics/GEMEL_TRAJECTORY.md`. It sits after
+    # the ledgers because it reads the Phase-24 planes (several of them regenerated in the
+    # before-ledgers block) and none of them reads it; the RT-FRF-CLOSURE court re-runs the same pure
+    # functions over the committed artefact.
+    "forensics/tools/phase24_frf.py",
 ]
 
 
@@ -461,6 +562,38 @@ COMPARED = [
     # silent divergence. The raw build/run outputs are carried inside the artefact, which is why the
     # re-derivation needs no compiler, no network and no authority prefix.
     "forensics/multitrack/downstream-multitrack.json",
+    # Phase 24.4's frozen P1000 + reserve: a pure function of the committed 24.2 families and the
+    # frozen 24.1 ranking evidence, so a stale population, or one re-selected by something other than
+    # the recorded rule, is a failure rather than a silent divergence. It carries no candidate result
+    # (the freeze precedes every candidate run), which is why re-deriving it needs no compiler and no
+    # candidate.
+    "forensics/downstream/family-freeze.json",
+    # Phase 24.5's precommitted development/holdout partition: a pure function of the committed 24.4
+    # frozen P1000 (and the committed 24.2 families it re-checks), so a stale split, or one
+    # re-divided by something other than the recorded rule, is a failure rather than a silent
+    # divergence. It carries no candidate result (the split is fixed before any candidate run), which
+    # is why re-deriving it needs no compiler and no candidate.
+    "forensics/downstream/holdout.json",
+    # Phase 24.8's classified, preserved, minimized failures: a pure function of the committed 24.6
+    # build/link atlas, the 24.7 runtime/functional atlas and the 24.4 frozen P1000, so a stale plane,
+    # a fabricated record, a candidate-specific label the authority baseline does not justify or an
+    # unclassified leftover is a failure rather than a silent divergence. The minimized fixtures it
+    # references are re-hashed from disk by the RT-FAILURE-MINIMIZATION court, so a fixture drifting
+    # from its record fails the court rather than passing here.
+    "forensics/downstream/failures.json",
+    # Phase 24.13's reconciliation of the atlas: a pure function of every committed Phase-24 plane
+    # (and the Phase-22 denominators), so a stale accounted view -- or a rate, a residual
+    # classification or a failure summary that was typed rather than re-derived -- is a failure rather
+    # than a silent divergence. It carries no measurement (it executes nothing and reads nothing that
+    # moves), which is why re-deriving it needs no compiler, no prefix and no network.
+    "forensics/downstream/reconciliation.json",
+    # Phase 24.14's FRF/Gemel closure: the per-plane FRF challenges, the FRF chain staging and the
+    # Gemel checkpoint projection. A pure function of the committed Phase-24 planes, the committed
+    # `gen_frf_courts.py` registry and the committed `forensics/GEMEL_TRAJECTORY.md`, so a stale
+    # challenge delta, a chain record that no longer matches the registry, or a Gemel current
+    # checkpoint that moved is a failure rather than a silent divergence. It executes no probe and
+    # opens no store.
+    "forensics/atlas/phase24/frf-closure.json",
 ]
 
 # ---------------------------------------------------------------------------

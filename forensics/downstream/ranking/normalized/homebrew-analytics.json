@@ -1,0 +1,21 @@
+{
+  "row_count": 3,
+  "rows": [
+    {
+      "count": "24",
+      "formula": "openssl",
+      "percent": "0"
+    },
+    {
+      "count": "16,438",
+      "formula": "openssl@1.1",
+      "percent": "0.02"
+    },
+    {
+      "count": "749,678",
+      "formula": "openssl@3",
+      "percent": "0.74"
+    }
+  ],
+  "source_id": "homebrew-analytics"
+}

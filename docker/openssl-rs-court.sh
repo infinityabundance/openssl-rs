@@ -215,7 +215,19 @@ do_exec() {
   # court's target directory instead was rejected because it changes the
   # archive path recorded in `forensics/atlas/implemented-surface.json`, and
   # evidence is not reshaped to suit the tooling. See docs/DECISIONS.md D62.
-  docker exec -i "${NAME}" sh -c 'ulimit -d "$1" 2>/dev/null || { echo "openssl-rs-court: cannot set RLIMIT_DATA to $1" >&2; exit 3; }; shift;
+  #
+  # The three `-e` flags record the admitted venue for the Phase-24 Docker-only
+  # execution guard (forensics/tools/phase24_guard.py): the guard admits only a
+  # container whose marker (/.dockerenv) is present *and* whose environment records
+  # PHASE24_CONTAINER=1 with the admitted image and platform the committed manifest
+  # (forensics/downstream/container.json) names. `docker exec -e` sets them for the
+  # exec'd process and everything it spawns, so a host invocation -- which has no
+  # marker -- is refused rather than proceeding. See docs/DECISIONS.md D550.
+  docker exec -i \
+    -e PHASE24_CONTAINER=1 \
+    -e PHASE24_IMAGE="${IMAGE}" \
+    -e PHASE24_PLATFORM=linux \
+    "${NAME}" sh -c 'ulimit -d "$1" 2>/dev/null || { echo "openssl-rs-court: cannot set RLIMIT_DATA to $1" >&2; exit 3; }; shift;
     if [ "$(id -u)" = 0 ] && { [ -d /work/target/flycheck0 ] \
        || { [ -d /work/target/debug ] \
             && find /work/target/debug -mindepth 1 ! -user 0 -print -quit 2>/dev/null | grep -q .; }; }; then

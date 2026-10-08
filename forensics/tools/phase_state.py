@@ -174,6 +174,8 @@ STRATA: list[tuple[int, str, str]] = [
      "Authority exhaustiveness and the whole-program compatibility atlas"),
     (23, "multitrack-authority",
      "Multitrack authority compatibility and OpenSSL lineage"),
+    (24, "downstream-1000",
+     "Downstream-1000 replacement atlas and empirical drop-in corpus"),
 ]
 
 # The dependency the strata are ordered by (D138). It is a DAG, not "the previous number".
@@ -198,6 +200,12 @@ REQUIRES: dict[int, tuple[int, ...]] = {
     # requires Phase 22 as well. No existing phase is renumbered
     # (docs/PHASE-23-MULTITRACK-SUBPHASES.md section 0).
     23: (21,),
+    # Phase 24 (D548) is dependency-ordered after the multitrack authority stratum, not after the
+    # highest number. It is admitted once Phase 23 is complete, and because 23 -> 21 -> ... ->
+    # (10, 22) that one edge transitively requires the authority archaeology, the maintenance-delta
+    # machinery and the multitrack authority lineage. No existing phase is renumbered
+    # (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md section 0).
+    24: (23,),
 }
 
 CONSTITUTION_DOCS = [
@@ -1239,6 +1247,53 @@ PHASE23_MODULES = [
     "docs/PHASE-23-MULTITRACK-SEAL.md",
 ]
 
+# Phase 24 is the downstream-1000 stratum, and **it owns no exported symbol either**: reading
+# `forensics/atlas/symbol-ownership.json` for `owner_phase == 24` yields no record, so its ledger's
+# unit is not a symbol. `forensics/phase24-obligations.json` records its unit as `downstream 1000
+# contract` (in `atlas_common.NON_EXPORT_UNITS`, so the export-partitioning tools skip it, as they
+# skip Phase 16's `cli-config contract` through Phase 23's `multitrack authority contract`), and its
+# working set is fifteen contract units -- one per subphase 24.1 through 24.15: the ranking-source
+# acquisition, the candidate universe, the authority-baseline census, the P1000+reserve freeze, the
+# holdout partition, the build/link atlas, the runtime/functional atlas, the failure
+# discovery/minimization loop, the high-value deep tier, the hostility augmentation, the candidate
+# freeze and holdout, the final full P1000 run, the atlas reconciliation, the FRF/Gemel closure and
+# the downstream-1000 seal.
+# Like Phases 18 through 23 it hands nothing forward and receives nothing: it owns no provider
+# registration row, no symbol deferral and no prerequisite unit, because it measures downstream
+# replacement over real projects that are already identified rather than adding library surface.
+# Its entry points run only in an admitted container -- `forensics/tools/phase24_guard.py` is the
+# Docker-only execution guard they call first, so on the host the stratum refuses rather than
+# building, running or probing anything (docs/REPRODUCIBILITY.md section 1). Its runner's registry
+# was empty at activation (24.0); each later subphase registers its court in the commit that lands
+# it, and a court still unregistered is `pending` with the subphase that lands it. The ledger
+# measures its contract-unit states from the courts registry, so the runner does not bind the
+# ledger (the edge runs ledger -> courts, the reverse of Phase 16's). A passing court is an
+# *instrument*: the property it names may still carry findings. The stratum's non-claims are that a
+# **selected empirical population is not a random sample**, that **1000/1000 is not a security
+# proof**, that **a build is not a functional proof**, and that **transitive and direct consumers
+# are different evidence**. `docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md` section 0 records the
+# activation measurement and the precondition it places on the runner.
+PHASE24_COURTS = "artifacts/phase24/COURTS.json"
+PHASE24_OBLIGATIONS = "forensics/phase24-obligations.json"
+PHASE24_MODULES = [
+    "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
+    "forensics/tools/phase24_obligations.py",
+    # The Docker-only execution guard every Phase-24 entry point calls first. It is authored
+    # evidence from 24.0: on the host it refuses, so a stratum whose whole subject is compiling and
+    # running real downstream projects cannot execute anything outside the admitted container.
+    "forensics/tools/phase24_guard.py",
+    # The schemas the later subphases validate their records against. They are authored evidence
+    # from 24.0, and the runner binds them as an input, so the stratum's record types are a file the
+    # evidence points at rather than prose this module would have to restate.
+    "forensics/tools/downstream_schemas.py",
+    # Phase 24 owns no FRF-declarable court -- its fifteen courts stage no probe and read committed
+    # evidence -- so the FRF/Gemel chain rule is correctly vacuous for it. Its seal document is its
+    # closing evidence, exactly as it is for Phases 3 through 7 and Phases 20 through 23: the
+    # stratum stays `in-progress` until 24.15 writes this file, so a passing reconciliation at 24.14
+    # cannot be read as the finished downstream-1000 atlas.
+    "docs/PHASE-24-DOWNSTREAM-1000-SEAL.md",
+]
+
 
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
     3: StratumEvidence(PHASE3_MODULES, PHASE3_OBLIGATIONS, PHASE3_COURTS,
@@ -1772,6 +1827,52 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "the reverse of Phase 16's. `docs/PHASE-23-MULTITRACK-SUBPHASES.md` "
                             "sections 0 and 4 and docs/DECISIONS.md D537 through D546 record the "
                             "measurement"
+                        )),
+    24: StratumEvidence(PHASE24_MODULES, PHASE24_OBLIGATIONS, PHASE24_COURTS,
+                        ledger_note=(
+                            "This stratum owns **no exported symbol**, so its ledger's unit is "
+                            "not a symbol: `forensics/phase24-obligations.json` publishes "
+                            "`unit: downstream 1000 contract` and its `implemented`/`open` "
+                            "*export* lists are empty by measurement, while "
+                            "`open_in_this_stratum` counts the fifteen contract units "
+                            "(`ranking-sources`, `candidate-universe`, "
+                            "`authority-census`, `family-freeze`, `holdout-partition`, "
+                            "`build-link-atlas`, `runtime-functional-atlas`, "
+                            "`failure-minimization`, `high-value-tier`, "
+                            "`hostility-augmentation`, `candidate-freeze`, `p1000-run`, "
+                            "`atlas-reconciliation`, `frf-gemel-closure` and "
+                            "`downstream-1000-seal`). It owns no provider registration row, no "
+                            "symbol deferral and no prerequisite unit: it activates no provider "
+                            "and adds no library surface, because it measures downstream "
+                            "replacement over real projects that are already identified. Its "
+                            "courts stage no probe, because it owns no symbol for a differential "
+                            "probe to observe: they read committed evidence about a frozen, "
+                            "precommitted population of 1,000 downstream project families. Every "
+                            "entry point calls the Docker-only execution guard "
+                            "(`forensics/tools/phase24_guard.py`) first, so on the host the "
+                            "stratum refuses rather than compiling or running anything "
+                            "(docs/REPRODUCIBILITY.md section 1). A passing court is an "
+                            "**instrument**, not a property claim: the property it names may "
+                            "still carry findings, so `measurement_state` says the instrument "
+                            "completed while `property_status`/`findings` say what is claimed. "
+                            "The stratum records four explicit non-claims: a selected empirical "
+                            "population is not a random sample, so its rates do not generalise "
+                            "to all downstream software; 1000/1000 is not a security proof, so a "
+                            "full pass is not a guarantee that any consumer is safe; a build is "
+                            "not a functional proof, so compiling and linking is not behaving; "
+                            "and transitive and direct consumers are different evidence, so a "
+                            "project that only links libssl transitively is not the same "
+                            "measurement as one that calls the API directly. `DROP_IN_PASS` is "
+                            "baseline-normalized and never a boolean of its own: it requires the "
+                            "same pristine source, the authority baseline succeeded, the "
+                            "candidate reached the authority-applicable level, candidate linkage "
+                            "proven, and zero candidate-specific downstream patches; residuals "
+                            "are classified and failures preserved and minimized. The ledger's "
+                            "contract-unit states are measured from the courts registry, so the "
+                            "runner does not bind the ledger and the edge runs ledger -> courts, "
+                            "the reverse of Phase 16's. "
+                            "`docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md` sections 0 and 4 and "
+                            "docs/DECISIONS.md D548 through D553 record the measurement"
                         )),
 }
 

@@ -1,0 +1,506 @@
+{
+  "row_count": 100,
+  "rows": [
+    {
+      "dependent": "actix-connect",
+      "downloads": 3938035,
+      "version": "2.0.0"
+    },
+    {
+      "dependent": "actix-http",
+      "downloads": 258918,
+      "version": "3.18.12"
+    },
+    {
+      "dependent": "actix-http-test",
+      "downloads": 3030,
+      "version": "3.3.0"
+    },
+    {
+      "dependent": "actix-net",
+      "downloads": 723323,
+      "version": "0.2.6"
+    },
+    {
+      "dependent": "actix-test",
+      "downloads": 1083968,
+      "version": "0.1.5"
+    },
+    {
+      "dependent": "actix-tls",
+      "downloads": 36275,
+      "version": "3.6.1"
+    },
+    {
+      "dependent": "actix-web",
+      "downloads": 1169386,
+      "version": "4.15.0"
+    },
+    {
+      "dependent": "agave-precompiles",
+      "downloads": 3664,
+      "version": "4.3.0"
+    },
+    {
+      "dependent": "aliri",
+      "downloads": 117641,
+      "version": "0.6.4"
+    },
+    {
+      "dependent": "async-tungstenite",
+      "downloads": 145112,
+      "version": "0.35.0"
+    },
+    {
+      "dependent": "authenticator",
+      "downloads": 342205,
+      "version": "0.5.0"
+    },
+    {
+      "dependent": "awc",
+      "downloads": 656768,
+      "version": "3.8.2"
+    },
+    {
+      "dependent": "aws-nitro-enclaves-cose",
+      "downloads": 16,
+      "version": "0.6.1"
+    },
+    {
+      "dependent": "axum-server",
+      "downloads": 11931594,
+      "version": "0.8.0"
+    },
+    {
+      "dependent": "azure_core",
+      "downloads": 2178778,
+      "version": "1.1.0"
+    },
+    {
+      "dependent": "azure_identity",
+      "downloads": 2809752,
+      "version": "1.0.0"
+    },
+    {
+      "dependent": "c2pa",
+      "downloads": 92,
+      "version": "0.91.2"
+    },
+    {
+      "dependent": "cargo",
+      "downloads": 1899,
+      "version": "0.100.0"
+    },
+    {
+      "dependent": "chia-sha2",
+      "downloads": 167,
+      "version": "0.50.0"
+    },
+    {
+      "dependent": "cloud-storage",
+      "downloads": 1547483,
+      "version": "0.11.1"
+    },
+    {
+      "dependent": "containers-api",
+      "downloads": 239495,
+      "version": "0.9.0"
+    },
+    {
+      "dependent": "crypto-hash",
+      "downloads": 4358843,
+      "version": "0.3.4"
+    },
+    {
+      "dependent": "crypto-primes",
+      "downloads": 2330356,
+      "version": "0.7.2"
+    },
+    {
+      "dependent": "dbus-secret-service",
+      "downloads": 13329226,
+      "version": "4.1.0"
+    },
+    {
+      "dependent": "dimpl",
+      "downloads": 3154,
+      "version": "0.7.5"
+    },
+    {
+      "dependent": "domain",
+      "downloads": 73333,
+      "version": "0.12.3"
+    },
+    {
+      "dependent": "ece",
+      "downloads": 19931,
+      "version": "2.4.2"
+    },
+    {
+      "dependent": "electrum-client",
+      "downloads": 144409,
+      "version": "0.25.0"
+    },
+    {
+      "dependent": "esplora-client",
+      "downloads": 29075,
+      "version": "0.13.0"
+    },
+    {
+      "dependent": "etcd-client",
+      "downloads": 61902,
+      "version": "0.20.0"
+    },
+    {
+      "dependent": "fantoccini",
+      "downloads": 573782,
+      "version": "0.22.1"
+    },
+    {
+      "dependent": "fernet",
+      "downloads": 2133073,
+      "version": "0.2.2"
+    },
+    {
+      "dependent": "fluvio-future",
+      "downloads": 83883,
+      "version": "0.8.3"
+    },
+    {
+      "dependent": "gitlab",
+      "downloads": 3320,
+      "version": "0.1904.0"
+    },
+    {
+      "dependent": "hawk",
+      "downloads": 414336,
+      "version": "5.0.1"
+    },
+    {
+      "dependent": "hyper-openssl",
+      "downloads": 2223949,
+      "version": "0.10.2"
+    },
+    {
+      "dependent": "hyper-proxy",
+      "downloads": 7606282,
+      "version": "0.9.1"
+    },
+    {
+      "dependent": "hyper-proxy2",
+      "downloads": 903625,
+      "version": "0.1.0"
+    },
+    {
+      "dependent": "josekit",
+      "downloads": 896173,
+      "version": "0.10.3"
+    },
+    {
+      "dependent": "jwt",
+      "downloads": 14274078,
+      "version": "0.16.0"
+    },
+    {
+      "dependent": "jwtk",
+      "downloads": 198006,
+      "version": "0.5.0"
+    },
+    {
+      "dependent": "kafka",
+      "downloads": 759400,
+      "version": "0.10.0"
+    },
+    {
+      "dependent": "kube-client",
+      "downloads": 1984905,
+      "version": "4.2.0"
+    },
+    {
+      "dependent": "launchdarkly-server-sdk",
+      "downloads": 11475,
+      "version": "3.3.0"
+    },
+    {
+      "dependent": "memcache",
+      "downloads": 2549,
+      "version": "0.21.0"
+    },
+    {
+      "dependent": "minreq",
+      "downloads": 138495,
+      "version": "3.0.0"
+    },
+    {
+      "dependent": "mongodb",
+      "downloads": 387644,
+      "version": "3.9.1"
+    },
+    {
+      "dependent": "mysql",
+      "downloads": 6875,
+      "version": "28.0.3"
+    },
+    {
+      "dependent": "native-tls",
+      "downloads": 75282120,
+      "version": "0.2.18"
+    },
+    {
+      "dependent": "near-sdk",
+      "downloads": 8174,
+      "version": "5.29.1"
+    },
+    {
+      "dependent": "nitro-tpm-attest",
+      "downloads": 2647,
+      "version": "1.0.3"
+    },
+    {
+      "dependent": "ntex",
+      "downloads": 20933,
+      "version": "3.12.3"
+    },
+    {
+      "dependent": "oo7",
+      "downloads": 1682549,
+      "version": "0.6.0"
+    },
+    {
+      "dependent": "opentls",
+      "downloads": 1797524,
+      "version": "0.2.1"
+    },
+    {
+      "dependent": "parity-ws",
+      "downloads": 845998,
+      "version": "0.11.1"
+    },
+    {
+      "dependent": "pingora-openssl",
+      "downloads": 21376,
+      "version": "0.9.0"
+    },
+    {
+      "dependent": "poem",
+      "downloads": 1925946,
+      "version": "3.1.12"
+    },
+    {
+      "dependent": "postgres-openssl",
+      "downloads": 638238,
+      "version": "0.5.3"
+    },
+    {
+      "dependent": "rcgen",
+      "downloads": 3936670,
+      "version": "0.14.10"
+    },
+    {
+      "dependent": "s2n-tls",
+      "downloads": 15663,
+      "version": "0.3.45"
+    },
+    {
+      "dependent": "s3s",
+      "downloads": 21053,
+      "version": "0.17.0"
+    },
+    {
+      "dependent": "salvo_core",
+      "downloads": 5538,
+      "version": "1.0.1"
+    },
+    {
+      "dependent": "samael",
+      "downloads": 159626,
+      "version": "0.0.22"
+    },
+    {
+      "dependent": "sccache",
+      "downloads": 22639,
+      "version": "0.18.0"
+    },
+    {
+      "dependent": "scylla",
+      "downloads": 19052,
+      "version": "1.9.0"
+    },
+    {
+      "dependent": "secret-service",
+      "downloads": 694810,
+      "version": "5.2.0"
+    },
+    {
+      "dependent": "sev",
+      "downloads": 24602,
+      "version": "8.0.0"
+    },
+    {
+      "dependent": "sha1_smol",
+      "downloads": 142564420,
+      "version": "1.0.1"
+    },
+    {
+      "dependent": "sha256",
+      "downloads": 21528084,
+      "version": "1.6.0"
+    },
+    {
+      "dependent": "shiplift",
+      "downloads": 779649,
+      "version": "0.7.0"
+    },
+    {
+      "dependent": "smpl_jwt",
+      "downloads": 704052,
+      "version": "0.9.0"
+    },
+    {
+      "dependent": "snmp2",
+      "downloads": 62556,
+      "version": "0.5.2"
+    },
+    {
+      "dependent": "solana-program-runtime",
+      "downloads": 12962,
+      "version": "4.3.0"
+    },
+    {
+      "dependent": "solana-secp256r1-program",
+      "downloads": 1939355,
+      "version": "3.0.0"
+    },
+    {
+      "dependent": "solicit",
+      "downloads": 1333473,
+      "version": "0.4.4"
+    },
+    {
+      "dependent": "spiffe",
+      "downloads": 30,
+      "version": "0.18.0"
+    },
+    {
+      "dependent": "sqlx-cli",
+      "downloads": 682960,
+      "version": "0.9.0"
+    },
+    {
+      "dependent": "str0m-proto",
+      "downloads": 318402,
+      "version": "0.7.0"
+    },
+    {
+      "dependent": "tcp-stream",
+      "downloads": 860863,
+      "version": "0.34.14"
+    },
+    {
+      "dependent": "tiny_http",
+      "downloads": 61301807,
+      "version": "0.12.0"
+    },
+    {
+      "dependent": "tls-listener",
+      "downloads": 2740132,
+      "version": "0.11.2"
+    },
+    {
+      "dependent": "tokio-native-tls",
+      "downloads": 255157120,
+      "version": "0.3.1"
+    },
+    {
+      "dependent": "tokio-openssl",
+      "downloads": 18139372,
+      "version": "0.6.5"
+    },
+    {
+      "dependent": "tokio-tls",
+      "downloads": 13848791,
+      "version": "0.3.1"
+    },
+    {
+      "dependent": "tokio-tls-api",
+      "downloads": 4740,
+      "version": "0.2.1"
+    },
+    {
+      "dependent": "tokio-websockets",
+      "downloads": 1246667,
+      "version": "0.13.3"
+    },
+    {
+      "dependent": "tor-llcrypto",
+      "downloads": 1257,
+      "version": "0.47.0"
+    },
+    {
+      "dependent": "trunk",
+      "downloads": 506904,
+      "version": "0.21.14"
+    },
+    {
+      "dependent": "trust-dns-client",
+      "downloads": 2190750,
+      "version": "0.23.2"
+    },
+    {
+      "dependent": "trust-dns-proto",
+      "downloads": 11722485,
+      "version": "0.23.2"
+    },
+    {
+      "dependent": "trust-dns-server",
+      "downloads": 274552,
+      "version": "0.23.2"
+    },
+    {
+      "dependent": "typst-kit",
+      "downloads": 143285,
+      "version": "0.15.1"
+    },
+    {
+      "dependent": "uucore",
+      "downloads": 37117,
+      "version": "0.12.0"
+    },
+    {
+      "dependent": "webauthn-attestation-ca",
+      "downloads": 1794187,
+      "version": "0.5.5"
+    },
+    {
+      "dependent": "webauthn-authenticator-rs",
+      "downloads": 288931,
+      "version": "0.5.5"
+    },
+    {
+      "dependent": "webauthn-rs-core",
+      "downloads": 1793813,
+      "version": "0.5.5"
+    },
+    {
+      "dependent": "webrtc-srtp",
+      "downloads": 292007,
+      "version": "0.17.2"
+    },
+    {
+      "dependent": "ws",
+      "downloads": 347587,
+      "version": "0.9.2"
+    },
+    {
+      "dependent": "xts-mode",
+      "downloads": 9189,
+      "version": "0.6.0"
+    },
+    {
+      "dependent": "zuse",
+      "downloads": 3211,
+      "version": "0.5.0"
+    }
+  ],
+  "source_id": "crates-rdepends"
+}
