@@ -11,13 +11,17 @@ structure. The method is Phases 3 through 24's where an artefact carries the exp
 court reads the artefact that holds its subject rather than typing the expectation beside it, so the
 two cannot disagree, and a court whose control is not honest is `fail` rather than `pass`.
 
-**No court is registered at activation.** The stratum's obligations are not exports, so its first
-runnable court is a later subphase's, and `run_courts.py` would refuse a stratum in `in-progress`
-with no runner at all -- so this runner lands with an empty registry and names the twenty-two courts
-it will stage, each with the subphase that lands it. The registry is the file `run_courts.py`
-checks is reproduced, so a court silently dropped is a finding rather than a smaller green run. This
-is the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this
-registry, so this runner does **not** bind the obligations ledger as an input.
+**No court was registered at activation, and 25.1 registers the first.** The stratum's
+obligations are not exports, so its first runnable court is a later subphase's, and
+`run_courts.py` would refuse a stratum in `in-progress` with no runner at all -- so this runner
+landed at activation with an empty registry, naming the twenty-two courts it will stage each with
+the subphase that lands it. **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source
+census: it reads the committed `artifacts/phase25/source-census.json` and re-runs the 25.1 pure
+checks (`ms_census.census_findings`, `ms_census.census_sensitivity_control`) over it without a
+compiler, so the census's own measurement is the court's subject. The registry is the file
+`run_courts.py` checks is reproduced, so a court silently dropped is a finding rather than a
+smaller green run. This is the reverse of Phase 16's edge: the ledger's contract-unit states are
+measured from this registry, so this runner does **not** bind the obligations ledger as an input.
 
 **Every entry point calls the Docker-only execution guard first.** Phase 25's whole subject is
 executing tools -- a compiler-backed census, Miri, ASan/MSan, TSan, Kani, the CVE replays -- and
@@ -57,11 +61,12 @@ The twenty-two courts, and the subphase that lands each
   * `MS-FRF-CLOSURE` -- 25.20, the FRF/Gemel closure.
   * `MS-SEAL` -- 25.21, the seal.
 
-Every one is `pending` at activation. A passing court is an instrument, not a property claim, and
-this stratum makes no claim beyond its bounded one: safe Rust does not prove protocol correctness,
-unsafe Rust is not inherently vulnerable, unsafe LOC is not a vulnerability count, Miri/ASan/TSan
-are not exhaustive, Kani does not prove unsupported or concurrent whole-program behaviour, and
-historical CVE extinction does not predict a future CVE count.
+Every one is `pending` at activation and each becomes a registered, re-derivable court as the
+subphase that lands its instrument commits. A passing court is an instrument, not a property claim,
+and this stratum makes no claim beyond its bounded one: safe Rust does not prove protocol
+correctness, unsafe Rust is not inherently vulnerable, unsafe LOC is not a vulnerability count,
+Miri/ASan/TSan are not exhaustive, Kani does not prove unsupported or concurrent whole-program
+behaviour, and historical CVE extinction does not predict a future CVE count.
 
 The runner reads no obligations ledger: the ledger's contract-unit states are measured from this
 registry, so the edge runs ledger -> courts and binding it back would form a digest cycle neither
@@ -74,6 +79,7 @@ SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -97,23 +103,34 @@ import phase25_guard  # noqa: E402
 # the registry's inventory cannot drift from the module the evidence is checked with.
 import memory_safety_schemas  # noqa: E402
 
+# 25.1's census tool and the artefact it writes. The court re-runs the tool's pure
+# `census_findings` / `census_sensitivity_control` over the committed artefact; it does **not** run
+# the compiler (the measurement that produced the artefact is the `ms_census.py --measure` run).
+import ms_census  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase25" / "COURTS.json"
 GENERATOR = "forensics/tools/phase25_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-25-MEMORY-SAFETY-SUBPHASES.md"
 SCHEMAS = REPO_ROOT / "forensics" / "tools" / "memory_safety_schemas.py"
 GUARD = REPO_ROOT / "forensics" / "tools" / "phase25_guard.py"
 MANIFEST = REPO_ROOT / "forensics" / "memory-safety" / "container.json"
+# 25.1's compiler-backed source census.
+SOURCE_CENSUS = REPO_ROOT / "artifacts" / "phase25" / "source-census.json"
+MS_CENSUS_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_census.py"
+SOURCE_CENSUS_COURT = "MS-SOURCE-CENSUS"
 
-# The courts this stratum will stage. **Empty at activation**: 25.0 owns no runnable court, so the
-# registry carries none. Each later subphase appends its court here in the commit that lands its
-# instrument, and a court removed from the table leaves the registry and fails `run_courts.py`.
-COURTS: list[tuple[str, str]] = []
+# The courts this stratum stages. **25.0 owns no runnable court**, so this table was empty at
+# activation; **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, and each
+# later subphase appends its court here in the commit that lands its instrument. A court removed
+# from the table leaves the registry and fails `run_courts.py`.
+COURTS: list[tuple[str, str]] = [
+    (SOURCE_CENSUS_COURT, "_ms_source_census_court"),
+]
 
-# The twenty-two courts the plan names, each pending with the subphase that lands it. Ordered as the
-# plan orders them, so the registry reads as the execution order.
+# The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
+# `MS-SOURCE-CENSUS`, so twenty-one remain. Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
     "MS-CONSTITUTION": "25.0 -- the constitution (the plan, schemas, guard, manifest, ledger and runner)",
-    "MS-SOURCE-CENSUS": "25.1 -- the compiler-backed source census",
     "MS-NON-RUST-TCB": "25.2 -- the non-Rust trusted computing base",
     "MS-SAFETY-OBLIGATIONS": "25.3 -- the safety obligations",
     "MS-OWNERSHIP-PLANES": "25.4 -- the ownership/allocation/callback planes",
@@ -135,6 +152,100 @@ PENDING_COURTS: dict[str, str] = {
     "MS-FRF-CLOSURE": "25.20 -- the FRF/Gemel closure",
     "MS-SEAL": "25.21 -- the memory-safety seal",
 }
+
+
+def _ms_source_census_court(name: str) -> dict:
+    """`MS-SOURCE-CENSUS`: 25.1's court, the compiler-backed source census.
+
+    Stages no probe. It reads the committed `artifacts/phase25/source-census.json` and re-runs the
+    25.1 pure checks `ms_census.census_findings` and `ms_census.census_sensitivity_control` over the
+    committed artefact -- no compiler, no clippy, no nightly; the measurement that produced the
+    census is `ms_census.py --measure`, and this court only re-derives from what it wrote. It
+    establishes that every shipped first-party file is accounted for with a matching digest; that
+    every site is compiler-derived and resolves to a compiler-identified context; that site and
+    context ids are stable and unique; that the context/site back-references are consistent; that
+    the per-file counts, the counts block and the LOC arithmetic are derived rather than typed; and
+    that every cross-check disagreement is recorded as a classified residual. Five seeded
+    mutations -- a fabricated raw dereference, an unsafe operation hidden by dropping its
+    macro-generated context, a removed safety contract, a site forged as safe, and a dropped file
+    -- are each caught with specificity holding. It is an **instrument**: it can pass while the
+    census records real property findings (contexts with no source-stated contract, contexts that
+    hold no classified operation, and the cross-check residuals), which are recorded as the row's
+    `findings` so a passing census is never read as a memory-safety claim.
+    """
+    if not SOURCE_CENSUS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
+                "findings": [], "control": {}}
+
+    doc = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8"))
+    body = doc.get("body", doc)
+    problems = ms_census.census_findings(body)
+    control = ms_census.census_sensitivity_control(body)
+
+    counts = body.get("counts") or {}
+    loc = body.get("loc") or {}
+    cross = body.get("crosschecks") or {}
+    toolchain = body.get("toolchain") or {}
+    residuals = body.get("residuals") or []
+
+    # Property findings: what the census observes that is not a defect of the instrument. They are
+    # recorded so a passing court is never read as the property it does not claim.
+    findings = [
+        f"{counts.get('uncontracted_contexts', 0)} compiler-identified unsafe context(s) carry no "
+        f"source-stated SAFETY contract (recorded open; 25.3 owns the obligations)",
+        f"{counts.get('contexts_without_site', 0)} unsafe context(s) hold no classified operation "
+        f"(a declaration, not an operation)",
+        f"{len(residuals)} cross-check residual(s): "
+        + "; ".join(f"{r.get('source')}/{r.get('class')}" for r in residuals),
+    ]
+
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/source-census.json and "
+            "re-runs the 25.1 pure checks (ms_census.census_findings and "
+            "ms_census.census_sensitivity_control) over it, without a compiler. The census was "
+            "derived by one clippy run with the built-in `unsafe_code` lint (the enumerating "
+            "authority) plus the three named documentation lints, --message-format=json, and the "
+            "macro-expanded source from a pinned nightly. It establishes file coverage, "
+            "compiler-derivedness of every site, stable/unique ids, consistent back-references, "
+            "derived counts and the LOC split, and that every cross-check disagreement is a "
+            "classified residual; five seeded mutations are each caught with specificity holding "
+            "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.2)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the census court reads the committed census and re-derives only its pure checks, so "
+            "it stages no artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "toolchain": toolchain,
+        "counts": {
+            "files": counts.get("files", 0),
+            "unsafe_contexts": counts.get("unsafe_contexts", 0),
+            "sites": counts.get("sites", 0),
+            "generated_files": counts.get("generated_files", 0),
+            "uncontracted_contexts": counts.get("uncontracted_contexts", 0),
+            "contexts_without_site": counts.get("contexts_without_site", 0),
+            "residuals": len(residuals),
+        },
+        "sites_by_kind": counts.get("sites_by_kind") or {},
+        "contexts_by_kind": counts.get("contexts_by_kind") or {},
+        "loc": loc,
+        "crosschecks": {
+            "geiger": (cross.get("geiger") or {}).get("status"),
+            "lexical_unsafe_keywords": (cross.get("lexical") or {}).get(
+                "unsafe_keyword_occurrences"),
+            "residual_count": cross.get("residual_count"),
+        },
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
 
 
 def main(argv: list[str]) -> int:
@@ -170,12 +281,17 @@ def main(argv: list[str]) -> int:
     auth = resolve_authority(PRODUCTION_AUTHORITY)
 
     records: list[dict] = []
-    for name, filename in COURTS:
-        # No court is registered at activation, so this loop is inert. It is kept so the first
-        # subphase that appends a court stages it here rather than inventing the shape.
-        src = REPO_ROOT / "courts" / "phase25" / str(filename)
-        records.append({"court": name, "verdict": "fail", "stage": "probe-missing",
-                        "detail": rel(src)})
+    for name, handler in COURTS:
+        # Each registered court stages no probe -- this stratum owns no exported symbol, so no
+        # differential probe over a symbol set is its evidence -- and each is computed here rather
+        # than read back from disk, so no digest cycle forms. The handler is named in the table and
+        # resolved here, so a court added to COURTS without a function is a loud failure.
+        fn = globals().get(str(handler))
+        if fn is None:
+            records.append({"court": name, "verdict": "fail", "stage": "handler-missing",
+                            "detail": str(handler)})
+            continue
+        records.append(fn(name))
 
     passed = sum(1 for r in records if r["verdict"] == "pass")
     failed = sum(1 for r in records if r["verdict"] == "fail")
@@ -196,14 +312,18 @@ def main(argv: list[str]) -> int:
         "risk_tiers": list(memory_safety_schemas.RISK_TIERS),
         "panic_unwind_classes": list(memory_safety_schemas.PANIC_UNWIND_CLASSES),
         "claim": (
-            "No court is registered at activation: Phase 25 owns no exported symbol, so no "
-            "differential probe over a symbol set is its evidence, and its twenty-two courts -- "
-            "MS-CONSTITUTION, MS-SOURCE-CENSUS, MS-NON-RUST-TCB, MS-SAFETY-OBLIGATIONS, "
+            "**25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census: it reads the "
+            "committed artifacts/phase25/source-census.json and re-runs the 25.1 pure checks over "
+            "it without a compiler, so the census's own measurement (`ms_census.py --measure`, one "
+            "clippy run plus a pinned-nightly expansion) is the court's subject and the court is a "
+            "pure re-derivation of it. Phase 25 owns no exported symbol, so no differential probe "
+            "over a symbol set is its evidence; the remaining twenty-one of its twenty-two courts "
+            "-- MS-CONSTITUTION, MS-NON-RUST-TCB, MS-SAFETY-OBLIGATIONS, "
             "MS-OWNERSHIP-PLANES, MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, "
             "MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, "
             "MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.0 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.2 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -232,11 +352,23 @@ def main(argv: list[str]) -> int:
         InputRef(name="memory-safety-schemas", path=SCHEMAS),
         InputRef(name="phase25-guard", path=GUARD),
         InputRef(name="phase25-container-manifest", path=MANIFEST),
+        InputRef(name="source-census", path=SOURCE_CENSUS),
+        InputRef(name="ms-census-tool", path=MS_CENSUS_TOOL),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
 
+    for r in records:
+        if r["verdict"] == "pass":
+            c = r.get("counts") or {}
+            ctrl = r.get("control") or {}
+            print(f"  {r['court']:<32} pass   (no probe, files={c.get('files')} "
+                  f"contexts={c.get('unsafe_contexts')} sites={c.get('sites')} "
+                  f"residuals={c.get('residuals')} uncontracted={c.get('uncontracted_contexts')}; "
+                  f"{len(r.get('findings') or [])} finding(s); control honest={ctrl.get('honest')} "
+                  f"specificity={ctrl.get('specificity_holds')} "
+                  f"caught={ctrl.get('caught')}/{ctrl.get('seeded')})")
     for cname, needs in PENDING_COURTS.items():
         print(f"  {cname:<32} PENDING (not registered as passing) -- {needs}")
     print(f"  schema inventory: {len(body['schemas'])} record kind(s)")

@@ -3,8 +3,119 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "No court is registered at activation: Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence, and its twenty-two courts -- MS-CONSTITUTION, MS-SOURCE-CENSUS, MS-NON-RUST-TCB, MS-SAFETY-OBLIGATIONS, MS-OWNERSHIP-PLANES, MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.0 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
-    "courts": [],
+    "claim": "**25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census: it reads the committed artifacts/phase25/source-census.json and re-runs the 25.1 pure checks over it without a compiler, so the census's own measurement (`ms_census.py --measure`, one clippy run plus a pinned-nightly expansion) is the court's subject and the court is a pure re-derivation of it. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining twenty-one of its twenty-two courts -- MS-CONSTITUTION, MS-NON-RUST-TCB, MS-SAFETY-OBLIGATIONS, MS-OWNERSHIP-PLANES, MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.2 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
+    "courts": [
+      {
+        "contexts_by_kind": {
+          "EXTERN_BLOCK": 10,
+          "FFI_EXPORT_FN": 6565,
+          "UNSAFE_BLOCK": 44516,
+          "UNSAFE_FN": 13101,
+          "UNSAFE_IMPL": 135
+        },
+        "control": {
+          "baseline_findings": 0,
+          "caught": 5,
+          "honest": true,
+          "mutations": {
+            "add_raw_deref": {
+              "caught": true,
+              "delta": 4,
+              "findings": 4,
+              "marker": "which the compiler did not report"
+            },
+            "drop_file": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "is not accounted for"
+            },
+            "forge_site_safe": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "is not compiler-derived"
+            },
+            "hide_unsafe_in_macro": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "which the compiler did not report"
+            },
+            "remove_safety_contract": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "must state its safety contract"
+            }
+          },
+          "seeded": 5,
+          "specificity_holds": true
+        },
+        "counts": {
+          "contexts_without_site": 6664,
+          "files": 872,
+          "generated_files": 15,
+          "residuals": 3,
+          "sites": 57663,
+          "uncontracted_contexts": 2470,
+          "unsafe_contexts": 64327
+        },
+        "court": "MS-SOURCE-CENSUS",
+        "crosschecks": {
+          "geiger": "measured",
+          "lexical_unsafe_keywords": 58826,
+          "residual_count": 3
+        },
+        "findings": [
+          "2470 compiler-identified unsafe context(s) carry no source-stated SAFETY contract (recorded open; 25.3 owns the obligations)",
+          "6664 unsafe context(s) hold no classified operation (a declaration, not an operation)",
+          "3 cross-check residual(s): lexical/out_of_scope; geiger/out_of_scope; geiger/out_of_scope"
+        ],
+        "frf_declarable": false,
+        "frf_exclusion": "the census court reads the committed census and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
+        "loc": {
+          "note": "a secondary projection of the compiler-derived census; unsafe LOC is not a vulnerability count (docs/UNSAFE.md, docs/NON_CLAIMS.md)",
+          "rust_code_loc": 535759,
+          "rust_physical_loc": 802772,
+          "safe_rust_code_loc": 211031,
+          "unsafe_context_code_loc": 324728
+        },
+        "method": "stages no probe: it reads the committed artifacts/phase25/source-census.json and re-runs the 25.1 pure checks (ms_census.census_findings and ms_census.census_sensitivity_control) over it, without a compiler. The census was derived by one clippy run with the built-in `unsafe_code` lint (the enumerating authority) plus the three named documentation lints, --message-format=json, and the macro-expanded source from a pinned nightly. It establishes file coverage, compiler-derivedness of every site, stable/unique ids, consistent back-references, derived counts and the LOC split, and that every cross-check disagreement is a classified residual; five seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.2).",
+        "probe": "",
+        "problems": [],
+        "sites_by_kind": {
+          "EXTERN_FUNCTION_CALL": 10,
+          "FFI_EXPORT": 6565,
+          "RAW_POINTER_DEREFERENCE": 16456,
+          "RAW_POINTER_READ": 44,
+          "RAW_POINTER_WRITE": 716,
+          "STATIC_MUT_ACCESS": 18,
+          "TRANSMUTE": 94,
+          "UNSAFE_FUNCTION_CALL": 22373,
+          "UNSAFE_IMPL": 135,
+          "UNSAFE_METHOD_CALL": 11252
+        },
+        "toolchain": {
+          "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+          "clippy": "clippy 0.1.98 (48a229ceae 2026-09-01)",
+          "compiler_clause": "rustc-1.98.1+clippy-0.1.98",
+          "lints": [
+            "unsafe_code",
+            "clippy::undocumented_unsafe_blocks",
+            "clippy::missing_safety_doc",
+            "unsafe_op_in_unsafe_fn"
+          ],
+          "nightly_channel": "nightly-2026-10-01",
+          "nightly_commit": "21b707e3f97e0b522ebd2f277a862339625ad83f",
+          "nightly_installed": true,
+          "nightly_rustc": "rustc 1.101.0-nightly (21b707e3f 2026-09-30)",
+          "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+          "rustc_commit": "48a229ceaefd4985c50990b14116b6d856af0985"
+        },
+        "verdict": "pass"
+      }
+    ],
     "cve_replay_states": [
       "UPSTREAM_VULNERABLE_REPRODUCED",
       "CANDIDATE_STRUCTURALLY_EXCLUDED",
@@ -102,7 +213,6 @@
       "MS-RED-TEAM": "25.18 -- the red team",
       "MS-SAFETY-OBLIGATIONS": "25.3 -- the safety obligations",
       "MS-SEAL": "25.21 -- the memory-safety seal",
-      "MS-SOURCE-CENSUS": "25.1 -- the compiler-backed source census",
       "MS-TSAN": "25.11 -- TSan",
       "MS-UNSAFE-REDUCTION": "25.8 -- the unsafe reduction"
     },
@@ -376,8 +486,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 0,
-      "total": 0
+      "pass": 1,
+      "total": 1
     },
     "tool_states": [
       "PASS",
@@ -426,6 +536,16 @@
       "name": "phase25-container-manifest",
       "path": "forensics/memory-safety/container.json",
       "sha256": "cbdd39e7340fb32696802307d1f179a5c7d3175122a4db18854cf23e7894ef64"
+    },
+    {
+      "name": "source-census",
+      "path": "artifacts/phase25/source-census.json",
+      "sha256": "dd4f308488851e8bb7fbd0d3930faa9279a35ff1af2643b539d86ffdd3163c02"
+    },
+    {
+      "name": "ms-census-tool",
+      "path": "forensics/tools/ms_census.py",
+      "sha256": "98071377d0e8c60be844ccd41ba7b4861e14951fffc6275c7800ff62a118ee1f"
     }
   ],
   "kind": "phase25-courts",

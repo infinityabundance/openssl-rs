@@ -355,6 +355,18 @@ GENERATORS_BEFORE_LEDGERS = [
     # equality with the 24.11 freeze, the one-verdict-per-counted-family re-derivation, the section-20
     # PASS refusal, the UNKNOWN-is-zero check, the ladder and the counts -- over the committed
     # artefact.
+    #
+    # Phase 25.1's **compiler-backed source census follows the same precedent, for the same reason.**
+    # `forensics/tools/ms_census.py` produces `artifacts/phase25/source-census.json` by measurement --
+    # one clippy run with the built-in `unsafe_code` lint (plus the three named documentation lints)
+    # and a pinned-nightly `-Zunpretty=expanded` -- so its unsafe contexts, compiler-derived sites
+    # and LOC projection are a function of the court's exact toolchain and of the network, not of
+    # committed inputs. A CI runner has no compiler and no pinned nightly, and the Docker-only guard
+    # refuses a host invocation of `ms_census.py` before it runs anything. It is therefore not listed
+    # here and not in `COMPARED`; the `MS-SOURCE-CENSUS` court re-runs only its pure checks
+    # (`ms_census.census_findings` and `ms_census.census_sensitivity_control`) over the committed
+    # artefact. If a later subphase derives a pure aggregate from the census, that aggregate is what
+    # belongs in this list.
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
