@@ -298,6 +298,16 @@ translation unit) does not describe. 25.6 therefore added the member `join_evide
 the crosswalk's residuals against that vocabulary, so a partial join is recorded rather than zeroed
 or guessed.
 
+**25.7 recorded one such correction, and it is checked rather than asserted.** The plan's exposure
+vocabulary (brief section 7) names two classes the 25.0 schema did not carry: `TOOLING_ONLY`, for a
+site only in a tooling module, and `LOCAL_FILE_INPUT_REACHABLE`, for a site reached by a local file
+input. 25.7 therefore added both to `memory_safety_schemas.EXPOSURE_CLASSES`, added
+`LOCAL_FILE_INPUT_REACHABLE` to `EXTERNALLY_REACHABLE_EXPOSURE`, and the `MS-EXPOSURE-CLASSIFICATION`
+court validates every site's class against that vocabulary, so a class the schema lacked is recorded
+rather than folded into the prose it corrects. It also records that the Phase-22 compatibility
+closure leaves its `protocol` family unpopulated, so a network exposure class is grounded in the
+site's committed parser role and the entry semantics it names rather than in a Phase-22 root.
+
 **4.6 The bounded claim is bounded, and the non-claims are its boundary.** The plan's claim is about
 the **inventory** of a fixed candidate's first-party surface, not about the absence of bugs. Every
 subphase records the non-claims where it can be read as more than it is, and the seal records them
