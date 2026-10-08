@@ -260,6 +260,10 @@ CVE_REPLAY_STATES: tuple[str, ...] = (
 )
 
 # The residual classes (brief section: residual). A leftover is classified rather than described.
+# `join_evidence_missing` was added by 25.6: a crosswalk whose join is only partial (an imported
+# symbol with no clean entity mapping, or a runtime-observed family with no usage fingerprint)
+# records the partial join rather than a zero or a guess. See
+# docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4.5.
 RESIDUAL_CLASSES: tuple[str, ...] = (
     "none",
     "unclassified_unsafe_site",
@@ -267,6 +271,7 @@ RESIDUAL_CLASSES: tuple[str, ...] = (
     "tool_unsupported",
     "tool_not_reachable",
     "evidence_missing",
+    "join_evidence_missing",
     "historical_cve_unreplayed",
     "mechanism_unreconciled",
     "out_of_scope",

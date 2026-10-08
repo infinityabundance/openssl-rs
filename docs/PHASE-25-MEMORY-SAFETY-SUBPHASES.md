@@ -289,6 +289,15 @@ that a class list needs a member the schema does not have, it records the correc
 seal rather than folding it into the prose it corrects. The correction is checked by the subphase's
 court rather than asserted.
 
+**25.6 recorded one such correction, and it is checked rather than asserted.** The Phase-24
+downstream crosswalk's join is partial wherever the evidence is: an imported OpenSSL symbol with no
+clean Phase-22 entity mapping, or a family observed at runtime with no committed usage fingerprint,
+is a leftover that the residual vocabulary's `evidence_missing` (which names a site with no authority
+translation unit) does not describe. 25.6 therefore added the member `join_evidence_missing` to
+`memory_safety_schemas.RESIDUAL_CLASSES`, and the `MS-PHASE24-CROSSWALK` court validates every one of
+the crosswalk's residuals against that vocabulary, so a partial join is recorded rather than zeroed
+or guessed.
+
 **4.6 The bounded claim is bounded, and the non-claims are its boundary.** The plan's claim is about
 the **inventory** of a fixed candidate's first-party surface, not about the absence of bugs. Every
 subphase records the non-claims where it can be read as more than it is, and the seal records them

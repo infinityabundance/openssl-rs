@@ -421,6 +421,22 @@ GENERATORS_BEFORE_LEDGERS = [
     # and the `MS-PHASE22-CROSSWALK` court re-runs the same pure checks over the committed artefact,
     # the census and the committed Phase-22 atlas.
     "forensics/tools/ms_phase22_crosswalk.py",
+    # **Phase 25.6's Phase-24 downstream crosswalk (`forensics/tools/ms_phase24_crosswalk.py` ->
+    # `artifacts/phase25/phase24-crosswalk.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It maps every compiler-derived unsafe site of the 25.1
+    # census to the Phase-24 measured consumers that reach it, reading the committed 25.5 crosswalk
+    # for the site -> authority-unit resolution, the Phase-22 entity plane for the name index, and
+    # the committed Phase-24 downstream measurement (`usage-fingerprints.json`, `reconciliation.json`,
+    # `runtime-functional-atlas.json`, `build-link-atlas.json`, `p1000-run.json`,
+    # `family-freeze.json`) for the imports, the runtime levels, the clusters and the counted
+    # population. It compiles nothing -- no compiler, no tool, no probe -- so
+    # `forensics/memory-safety/container.json` lists it `metadata_only` and the Docker-only guard
+    # admits it on any host, exactly as `ms_phase22_crosswalk` is. A stale committed crosswalk -- or
+    # a typed consumer, a dropped site, a runtime-observed site with no runtime row, an inverse view
+    # that disagrees with the forward map or a partial join with no residual -- is a failure rather
+    # than a silent divergence, and the `MS-PHASE24-CROSSWALK` court re-runs the same pure checks
+    # over the committed artefact, the census and the committed Phase-24 measurement.
+    "forensics/tools/ms_phase24_crosswalk.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -758,6 +774,14 @@ COMPARED = [
     # It executes nothing and reads no compiler output, so re-deriving it needs no compiler and no
     # candidate.
     "artifacts/phase25/phase22-crosswalk.json",
+    # Phase 25.6's Phase-24 downstream crosswalk: a pure function of the committed 25.1 census, the
+    # committed 25.5 crosswalk and the committed Phase-24 downstream measurement (the usage
+    # fingerprints, the reconciliation clusters, the runtime and build/link atlases, the drop-in run
+    # and the family freeze), so a stale crosswalk -- or a typed consumer, a dropped site, a
+    # runtime-observed site with no runtime row, an inverse view that disagrees with the forward map
+    # or a partial join with no residual -- is a failure rather than a silent divergence. It executes
+    # nothing and reads no compiler output, so re-deriving it needs no compiler and no candidate.
+    "artifacts/phase25/phase24-crosswalk.json",
 ]
 
 # ---------------------------------------------------------------------------

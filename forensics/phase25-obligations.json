@@ -102,12 +102,18 @@
       },
       {
         "closure": "the `MS-PHASE24-CROSSWALK` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-PHASE24-CROSSWALK is pending",
+        "findings": [
+          "40427 census site(s) are `NOT_OBSERVED`: 4354 have no Phase-22 authority unit (the 25.5 residual) and 36073 are mapped to a unit no measured consumer imports; recorded, never dropped",
+          "the join speaks for 6 measured consumer(s) of 1000 fingerprinted famil(ies): only the families the 24.3 usage census fingerprinted carry symbol-level import evidence, so a counted family without a fingerprint is not counted as reaching any site",
+          "the top consumers by reachable-site count are haproxy=14403, curl=9272, openssh=6873; 17236 site(s) are DOWNSTREAM_RUNTIME_OBSERVED and 0 DOWNSTREAM_IMPORT_OBSERVED",
+          "2 imported symbol(s) (HMAC, SHA256) have no clean Phase-22 entity mapping and are recorded as join_evidence_missing residuals; 2 runtime-observed family/-ies without a fingerprint cannot be attributed to a site and are recorded too",
+          "reaching a site is import evidence, not execution: 17236 site(s) are reached by a measured consumer's symbol table, and a runtime observation covers the measured workload only"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-PHASE24-CROSSWALK is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "phase24-crosswalk",
         "what": "the crosswalk from the memory-safety census to the Phase-24 downstream-1000 atlas, so each unsafe site's downstream usage is the Phase-24 measurement's answer rather than a typed one"
@@ -298,8 +304,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 6,
-      "open_in_this_stratum": 16,
+      "implemented": 7,
+      "open_in_this_stratum": 15,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -335,12 +341,12 @@
     {
       "name": "phase-25-plan",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "de8c54477c63b853e5177ec28c2fb0adb278603ca156e690bd898c61f95a8659"
+      "sha256": "30e45a52634e1f3296e2b2d160fda43d9ba597b7051a1dccff217eac321577d8"
     },
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "0104051b5cdf2d7fadc85a5f0b1e4d9d19aa451fdfd37810d48dd0751a3b7cb3"
+      "sha256": "70288f895e65a774b0f26fa8db182b27e7c096b7be59216bc95c2f77f4d93c5a"
     },
     {
       "name": "phase25-guard",
@@ -350,7 +356,7 @@
     {
       "name": "memory-safety-schemas",
       "path": "forensics/tools/memory_safety_schemas.py",
-      "sha256": "22cfc412f3a8fe3095be0b09386fa02b68d8604d439c5be8963a4bdb1274b5f1"
+      "sha256": "e2de24c2612b597c93cd4f5456c11346e4949723c91e0d685131660cbb522708"
     }
   ],
   "kind": "phase25-obligations",
