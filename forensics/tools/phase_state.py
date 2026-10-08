@@ -1252,12 +1252,12 @@ PHASE23_MODULES = [
 # unit is not a symbol. `forensics/phase24-obligations.json` records its unit as `downstream 1000
 # contract` (in `atlas_common.NON_EXPORT_UNITS`, so the export-partitioning tools skip it, as they
 # skip Phase 16's `cli-config contract` through Phase 23's `multitrack authority contract`), and its
-# working set is fifteen contract units -- one per subphase 24.1 through 24.15: the ranking-source
+# working set is sixteen contract units -- one per subphase 24.1 through 24.16: the ranking-source
 # acquisition, the candidate universe, the authority-baseline census, the P1000+reserve freeze, the
 # holdout partition, the build/link atlas, the runtime/functional atlas, the failure
 # discovery/minimization loop, the high-value deep tier, the hostility augmentation, the candidate
-# freeze and holdout, the final full P1000 run, the atlas reconciliation, the FRF/Gemel closure and
-# the downstream-1000 seal.
+# freeze and holdout, the final full P1000 run, the atlas reconciliation, the FRF/Gemel closure, the
+# downstream-1000 seal and the biggest-mover shared-blocker analysis (24.16).
 # Like Phases 18 through 23 it hands nothing forward and receives nothing: it owns no provider
 # registration row, no symbol deferral and no prerequisite unit, because it measures downstream
 # replacement over real projects that are already identified rather than adding library surface.
@@ -1286,12 +1286,17 @@ PHASE24_MODULES = [
     # from 24.0, and the runner binds them as an input, so the stratum's record types are a file the
     # evidence points at rather than prose this module would have to restate.
     "forensics/tools/downstream_schemas.py",
-    # Phase 24 owns no FRF-declarable court -- its fifteen courts stage no probe and read committed
+    # Phase 24 owns no FRF-declarable court -- its sixteen courts stage no probe and read committed
     # evidence -- so the FRF/Gemel chain rule is correctly vacuous for it. Its seal document is its
     # closing evidence, exactly as it is for Phases 3 through 7 and Phases 20 through 23: the
     # stratum stays `in-progress` until 24.15 writes this file, so a passing reconciliation at 24.14
     # cannot be read as the finished downstream-1000 atlas.
     "docs/PHASE-24-DOWNSTREAM-1000-SEAL.md",
+    # 24.16's biggest-mover shared-blocker analysis, the detailed report a later subphase (24.17)
+    # acts on. Naming it here makes the report required evidence: the stratum is not complete while
+    # the analysis it lands is absent, and the seal court refuses a seal that has lost the link to
+    # it.
+    "docs/PHASE-24-BIGGEST-MOVERS.md",
 ]
 
 
@@ -1834,14 +1839,15 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "not a symbol: `forensics/phase24-obligations.json` publishes "
                             "`unit: downstream 1000 contract` and its `implemented`/`open` "
                             "*export* lists are empty by measurement, while "
-                            "`open_in_this_stratum` counts the fifteen contract units "
+                            "`open_in_this_stratum` counts the sixteen contract units "
                             "(`ranking-sources`, `candidate-universe`, "
                             "`authority-census`, `family-freeze`, `holdout-partition`, "
                             "`build-link-atlas`, `runtime-functional-atlas`, "
                             "`failure-minimization`, `high-value-tier`, "
                             "`hostility-augmentation`, `candidate-freeze`, `p1000-run`, "
-                            "`atlas-reconciliation`, `frf-gemel-closure` and "
-                            "`downstream-1000-seal`). It owns no provider registration row, no "
+                            "`atlas-reconciliation`, `frf-gemel-closure`, "
+                            "`downstream-1000-seal` and `blocker-leverage`). It owns no provider "
+                            "registration row, no "
                             "symbol deferral and no prerequisite unit: it activates no provider "
                             "and adds no library surface, because it measures downstream "
                             "replacement over real projects that are already identified. Its "
