@@ -6,10 +6,10 @@
         "closure": "the `MS-CONSTITUTION` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-CONSTITUTION is pending",
+        "measurement_state": "complete",
+        "observation": "MS-CONSTITUTION is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "constitution",
         "what": "the plan, the record schemas, the Docker-only execution guard, the committed venue manifest, the ledger and the runner -- the authored non-export constitution the later subphases fill, with the closed vocabularies of unsafe-operation kinds, obligation dimensions, exposure classes, tool states, CVE taxonomy, CVE replay states, risk tiers and panic/unwind classes"
@@ -276,8 +276,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 1,
-      "open_in_this_stratum": 21,
+      "implemented": 2,
+      "open_in_this_stratum": 20,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -318,7 +318,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "432b1318c99353c2fa72709eee208d7728aafcfe2cdb2400b1e13422ca01950f"
+      "sha256": "7da0678776aa43f6d391ea3b00bc1d8876344b1c274803c121554a23e2b2308c"
     },
     {
       "name": "phase25-guard",

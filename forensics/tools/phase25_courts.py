@@ -11,17 +11,19 @@ structure. The method is Phases 3 through 24's where an artefact carries the exp
 court reads the artefact that holds its subject rather than typing the expectation beside it, so the
 two cannot disagree, and a court whose control is not honest is `fail` rather than `pass`.
 
-**No court was registered at activation, and 25.1 registers the first.** The stratum's
-obligations are not exports, so its first runnable court is a later subphase's, and
-`run_courts.py` would refuse a stratum in `in-progress` with no runner at all -- so this runner
-landed at activation with an empty registry, naming the twenty-two courts it will stage each with
-the subphase that lands it. **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source
-census: it reads the committed `artifacts/phase25/source-census.json` and re-runs the 25.1 pure
-checks (`ms_census.census_findings`, `ms_census.census_sensitivity_control`) over it without a
-compiler, so the census's own measurement is the court's subject. The registry is the file
-`run_courts.py` checks is reproduced, so a court silently dropped is a finding rather than a
-smaller green run. This is the reverse of Phase 16's edge: the ledger's contract-unit states are
-measured from this registry, so this runner does **not** bind the obligations ledger as an input.
+**25.0 registers `MS-CONSTITUTION` and 25.1 registers the compiler-backed census.** The stratum's
+obligations are not exports, so its courts read committed evidence rather than diffing a staged
+probe pair, and `run_courts.py` would refuse a stratum in `in-progress` with no runner at all -- so
+this runner landed at activation with an empty registry, naming the twenty-two courts it stages
+each with the subphase that lands it. **25.0 registers `MS-CONSTITUTION`**, the constitution gate
+over the plan, schemas, guard, venue manifest, ledger and the frozen safety lint policy.
+**25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census: it reads the committed
+`artifacts/phase25/source-census.json` and re-runs the 25.1 pure checks (`ms_census.census_findings`,
+`ms_census.census_sensitivity_control`) over it without a compiler, so the census's own measurement
+is the court's subject. The registry is the file `run_courts.py` checks is reproduced, so a court
+silently dropped is a finding rather than a smaller green run. This is the reverse of Phase 16's
+edge: the ledger's contract-unit states are measured from this registry, so this runner does
+**not** bind the obligations ledger as an input.
 
 **Every entry point calls the Docker-only execution guard first.** Phase 25's whole subject is
 executing tools -- a compiler-backed census, Miri, ASan/MSan, TSan, Kani, the CVE replays -- and
@@ -80,6 +82,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -119,18 +122,32 @@ SOURCE_CENSUS = REPO_ROOT / "artifacts" / "phase25" / "source-census.json"
 MS_CENSUS_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_census.py"
 SOURCE_CENSUS_COURT = "MS-SOURCE-CENSUS"
 
-# The courts this stratum stages. **25.0 owns no runnable court**, so this table was empty at
-# activation; **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, and each
-# later subphase appends its court here in the commit that lands its instrument. A court removed
-# from the table leaves the registry and fails `run_courts.py`.
+# 25.0's constitution court and the constitution artefacts it re-derives.
+CONSTITUTION_COURT = "MS-CONSTITUTION"
+LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
+CARGO_TOML = REPO_ROOT / "Cargo.toml"
+LIB_RS = REPO_ROOT / "src" / "lib.rs"
+# The safety lint policy 25.0 froze. No Phase-25 tool may weaken it.
+LINT_SETTINGS: tuple[tuple[str, str], ...] = (
+    ("unsafe_op_in_unsafe_fn", "deny"),
+    ("undocumented_unsafe_blocks", "deny"),
+    ("missing_safety_doc", "deny"),
+)
+PLANNED_UNITS = 22
+
+# The courts this stratum stages. **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source
+# census, and each later subphase appends its court here in the commit that lands its instrument;
+# **25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard,
+# manifest, ledger and lint policy. A court removed from the table leaves the registry and fails
+# `run_courts.py`.
 COURTS: list[tuple[str, str]] = [
+    (CONSTITUTION_COURT, "_ms_constitution_court"),
     (SOURCE_CENSUS_COURT, "_ms_source_census_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
 # `MS-SOURCE-CENSUS`, so twenty-one remain. Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-CONSTITUTION": "25.0 -- the constitution (the plan, schemas, guard, manifest, ledger and runner)",
     "MS-NON-RUST-TCB": "25.2 -- the non-Rust trusted computing base",
     "MS-SAFETY-OBLIGATIONS": "25.3 -- the safety obligations",
     "MS-OWNERSHIP-PLANES": "25.4 -- the ownership/allocation/callback planes",
@@ -152,6 +169,178 @@ PENDING_COURTS: dict[str, str] = {
     "MS-FRF-CLOSURE": "25.20 -- the FRF/Gemel closure",
     "MS-SEAL": "25.21 -- the memory-safety seal",
 }
+
+
+def _plan_units(plan_text: str) -> list[tuple[int, str]]:
+    """The `(subphase number, court)` rows of the plan's section-2 table, in file order."""
+    out: list[tuple[int, str]] = []
+    for line in plan_text.splitlines():
+        m = re.match(r"^\|\s*25\.(\d+)\s*\|", line)
+        if not m:
+            continue
+        courts = [c for c in re.findall(r"`([A-Z][A-Z0-9-]+)`", line) if c.startswith("MS-")]
+        if courts:
+            out.append((int(m.group(1)), courts[-1]))
+    return out
+
+
+def _lint_findings(cargo: str, lib_rs: str) -> list[str]:
+    """Every way the frozen safety lint policy has been weakened."""
+    problems: list[str] = []
+    for lint, want in LINT_SETTINGS:
+        if f'{lint} = "{want}"' not in cargo:
+            problems.append(f"Cargo.toml does not declare {lint} = \"{want}\"")
+        for weak in ("allow", "warn"):
+            if f'{lint} = "{weak}"' in cargo:
+                problems.append(f"Cargo.toml weakens {lint} to \"{weak}\"")
+    if 'unsafe_code = "allow"' in cargo:
+        problems.append("Cargo.toml allows unsafe_code")
+    if "#![deny(unsafe_op_in_unsafe_fn)]" not in lib_rs:
+        problems.append("src/lib.rs does not deny unsafe_op_in_unsafe_fn")
+    return problems
+
+
+def _constitution_findings(plan_text: str, manifest: dict, ledger_body: dict, cargo: str,
+                           lib_rs: str, names: list[str]) -> list[str]:
+    """Every way the constitution fails to hold. Pure over its inputs, so the control can mutate."""
+    problems: list[str] = []
+    units = _plan_units(plan_text)
+    if [n for n, _c in units] != list(range(PLANNED_UNITS)):
+        problems.append(
+            f"the plan's section-2 table does not name exactly the {PLANNED_UNITS} subphases "
+            f"25.0-25.21 with a court each (found {[n for n, _c in units][:4]}...)"
+        )
+    plan_courts = [c for _n, c in units]
+    if sorted(plan_courts) != sorted(names):
+        plan_only = sorted(set(plan_courts) - set(names))
+        runner_only = sorted(set(names) - set(plan_courts))
+        problems.append("the plan's courts disagree with the runner's registry "
+                        f"(plan-only {plan_only}, runner-only {runner_only})")
+    if len(set(plan_courts)) != len(plan_courts):
+        problems.append("the plan names a court twice")
+
+    ledger_units = ledger_body.get("contract_units") or []
+    if len(ledger_units) != PLANNED_UNITS:
+        problems.append(f"the ledger carries {len(ledger_units)} contract unit(s), not "
+                        f"{PLANNED_UNITS}")
+    counts = ledger_body.get("counts") or {}
+    if counts.get("owned") != PLANNED_UNITS:
+        problems.append(f"the ledger's owned count {counts.get('owned')!r} disagrees with the "
+                        f"{PLANNED_UNITS} planned unit(s)")
+    if counts.get("atlas_owned") or counts.get("provider_rows_owned"):
+        problems.append("the ownership atlas or the provider census assigns this stratum a symbol "
+                        "row, but it owns no export")
+
+    if not phase25_guard.host_refusal_reasons("phase25_courts.py"):
+        problems.append("the guard admits a host invocation of the runner")
+    for key in ("image", "platform", "marker", "env_flag"):
+        if not manifest.get(key):
+            problems.append(f"the venue manifest does not name {key}")
+    metadata_only = list(manifest.get("metadata_only") or [])
+    if not metadata_only:
+        problems.append("the manifest declares no metadata-only generator")
+    for ep in metadata_only:
+        if not phase25_guard.evaluate(entry_point=str(ep), env={}, dockerenv=False)["admitted"]:
+            problems.append(f"the manifest's metadata-only entry {ep} is not admitted in the shape "
+                            f"of a host invocation")
+    problems += _lint_findings(cargo, lib_rs)
+    return problems
+
+
+def _constitution_control(plan_text: str, manifest: dict, ledger_body: dict, cargo: str,
+                          lib_rs: str, names: list[str]) -> dict:
+    """Seed five mutations and require each caught with specificity holding."""
+    base = _constitution_findings(plan_text, manifest, ledger_body, cargo, lib_rs, names)
+    mutated: list[tuple[str, list[str]]] = []
+
+    # (1) a subphase row dropped from the plan table.
+    lines = [ln for ln in plan_text.splitlines() if not re.match(r"^\|\s*25\.7\s*\|", ln)]
+    mutated.append(("subphase_dropped",
+                    _constitution_findings("\n".join(lines), manifest, ledger_body, cargo, lib_rs,
+                                           names)))
+    # (2) a schema kind removed -- modelled here as a plan court renamed away from the registry.
+    mutated.append(("plan_court_renamed",
+                    _constitution_findings(plan_text.replace("`MS-MIRI`", "`MS-MIRI-X`"), manifest,
+                                           ledger_body, cargo, lib_rs, names)))
+    # (3) a lint weakened to allow.
+    mutated.append(("lint_weakened",
+                    _constitution_findings(plan_text, manifest, ledger_body,
+                                           cargo.replace('unsafe_op_in_unsafe_fn = "deny"',
+                                                         'unsafe_op_in_unsafe_fn = "allow"'),
+                                           lib_rs, names)))
+    # (4) the metadata-only set widened to a real execution entry point.
+    widened = dict(manifest, metadata_only=["ms_census.py"])
+    mutated.append(("metadata_only_widened",
+                    _constitution_findings(plan_text, widened, ledger_body, cargo, lib_rs, names)))
+    # (5) a unit dropped from the ledger.
+    short = dict(ledger_body, contract_units=(ledger_body.get("contract_units") or [])[:-1])
+    mutated.append(("unit_dropped",
+                    _constitution_findings(plan_text, manifest, short, cargo, lib_rs, names)))
+
+    control: dict = {"baseline_findings": len(base), "specificity_holds": not base}
+    for label, found in mutated:
+        control[f"caught_{label}"] = len(found)
+        control[f"seed_{label}"] = bool(found)
+    control["honest"] = (not base) and all(control[f"seed_{label}"] for label, _f in mutated)
+    return control
+
+
+def _ms_constitution_court(name: str) -> dict:
+    """`MS-CONSTITUTION`: 25.0's court, the constitution gate.
+
+    Stages no probe. It re-derives the constitution from the artefacts that *are* the stratum's
+    constitution -- the plan's section-2 table, the schema inventory, the Docker-only guard, the
+    venue manifest, the obligation ledger and the frozen safety lint policy -- and fails if any of
+    them has drifted. It is the court that makes `MS-CONSTITUTION` a real unit rather than a name
+    nothing registers. Five seeded mutations (a dropped subphase, a renamed plan court, a lint
+    weakened to allow, a widened metadata-only set, a dropped ledger unit) are each caught.
+    """
+    plan_text = PLAN.read_text(encoding="utf-8") if PLAN.is_file() else ""
+    if not plan_text:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "plan-missing",
+                "problems": [f"the plan {rel(PLAN)} is absent"], "findings": [], "control": {}}
+    manifest = phase25_guard.load_manifest()
+    ledger_body = (json.loads(LEDGER.read_text(encoding="utf-8")).get("body", {})
+                   if LEDGER.is_file() else {})
+    cargo = CARGO_TOML.read_text(encoding="utf-8") if CARGO_TOML.is_file() else ""
+    lib_rs = LIB_RS.read_text(encoding="utf-8") if LIB_RS.is_file() else ""
+    names = [c for c, _h in COURTS] + list(PENDING_COURTS)
+
+    problems = _constitution_findings(plan_text, manifest, ledger_body, cargo, lib_rs, names)
+    control = _constitution_control(plan_text, manifest, ledger_body, cargo, lib_rs, names)
+    units = _plan_units(plan_text)
+    inventory = memory_safety_schemas.inventory()
+    if not inventory:
+        problems.append("the schema inventory is empty")
+
+    verdict = "pass" if (not problems and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it re-derives the constitution from the plan's section-2 table (the 22 "
+            "subphases and their courts), the schema inventory, the Docker-only guard, the venue "
+            "manifest, the obligation ledger and the frozen safety lint policy, and fails if any has "
+            "drifted -- including if a Phase-25 tool has weakened unsafe_op_in_unsafe_fn, "
+            "undocumented_unsafe_blocks or missing_safety_doc. Five seeded mutations are each caught "
+            "with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the constitution court reads committed authored artefacts and re-derives their claims, "
+            "so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "planned_units": len(units),
+            "registered_or_pending_courts": len(names),
+            "schema_kinds": len(inventory),
+            "ledger_units": len(ledger_body.get("contract_units") or []),
+        },
+        "findings": [],
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
 
 
 def _ms_source_census_court(name: str) -> dict:
@@ -312,13 +501,11 @@ def main(argv: list[str]) -> int:
         "risk_tiers": list(memory_safety_schemas.RISK_TIERS),
         "panic_unwind_classes": list(memory_safety_schemas.PANIC_UNWIND_CLASSES),
         "claim": (
-            "**25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census: it reads the "
-            "committed artifacts/phase25/source-census.json and re-runs the 25.1 pure checks over "
-            "it without a compiler, so the census's own measurement (`ms_census.py --measure`, one "
-            "clippy run plus a pinned-nightly expansion) is the court's subject and the court is a "
-            "pure re-derivation of it. Phase 25 owns no exported symbol, so no differential probe "
-            "over a symbol set is its evidence; the remaining twenty-one of its twenty-two courts "
-            "-- MS-CONSTITUTION, MS-NON-RUST-TCB, MS-SAFETY-OBLIGATIONS, "
+            "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, "
+            "guard, venue manifest, obligation ledger and the frozen safety lint policy, and "
+            "**25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census. Phase 25 owns "
+            "no exported symbol, so no differential probe over a symbol set is its evidence; the "
+            "remaining twenty of its twenty-two courts -- MS-NON-RUST-TCB, MS-SAFETY-OBLIGATIONS, "
             "MS-OWNERSHIP-PLANES, MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, "
             "MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, "
             "MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
@@ -352,6 +539,9 @@ def main(argv: list[str]) -> int:
         InputRef(name="memory-safety-schemas", path=SCHEMAS),
         InputRef(name="phase25-guard", path=GUARD),
         InputRef(name="phase25-container-manifest", path=MANIFEST),
+        InputRef(name="phase25-ledger", path=LEDGER),
+        InputRef(name="cargo-toml", path=CARGO_TOML),
+        InputRef(name="lib-rs", path=LIB_RS),
         InputRef(name="source-census", path=SOURCE_CENSUS),
         InputRef(name="ms-census-tool", path=MS_CENSUS_TOOL),
     ]
@@ -363,12 +553,10 @@ def main(argv: list[str]) -> int:
         if r["verdict"] == "pass":
             c = r.get("counts") or {}
             ctrl = r.get("control") or {}
-            print(f"  {r['court']:<32} pass   (no probe, files={c.get('files')} "
-                  f"contexts={c.get('unsafe_contexts')} sites={c.get('sites')} "
-                  f"residuals={c.get('residuals')} uncontracted={c.get('uncontracted_contexts')}; "
+            pairs = ", ".join(f"{k}={v}" for k, v in sorted(c.items()))
+            print(f"  {r['court']:<32} pass   (no probe, {pairs}; "
                   f"{len(r.get('findings') or [])} finding(s); control honest={ctrl.get('honest')} "
-                  f"specificity={ctrl.get('specificity_holds')} "
-                  f"caught={ctrl.get('caught')}/{ctrl.get('seeded')})")
+                  f"specificity={ctrl.get('specificity_holds')})")
     for cname, needs in PENDING_COURTS.items():
         print(f"  {cname:<32} PENDING (not registered as passing) -- {needs}")
     print(f"  schema inventory: {len(body['schemas'])} record kind(s)")
