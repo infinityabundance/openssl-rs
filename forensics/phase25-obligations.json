@@ -32,12 +32,16 @@
       },
       {
         "closure": "the `MS-NON-RUST-TCB` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-NON-RUST-TCB is pending",
+        "findings": [
+          "5 strict-compile diagnostic(s) recorded across the first-party C adapters and the generated scaffolds (a warning/error is a recorded fact, not a pass)",
+          "23 C-variadic boundary/-ies (the C adapters' variadic exports plus the C-variadic foreign functions the crate imports; 25.1's census reports zero C_VARIADIC_BOUNDARY sites)",
+          "6 residual(s): census:FFI_EXPORT/out_of_scope; census:EXTERN_FUNCTION_CALL/out_of_scope; census:C_VARIADIC_BOUNDARY/out_of_scope; strict-compile/evidence_missing; strict-compile/evidence_missing; strict-compile/evidence_missing"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-NON-RUST-TCB is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "non-rust-tcb",
         "what": "the non-Rust part of the trusted computing base: the first-party C sources and headers, the inline assembly, the exported FFI boundaries, the C adapters and the variadic boundaries, each classified and given a safety contract"
@@ -276,8 +280,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 2,
-      "open_in_this_stratum": 20,
+      "implemented": 3,
+      "open_in_this_stratum": 19,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -318,7 +322,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "7da0678776aa43f6d391ea3b00bc1d8876344b1c274803c121554a23e2b2308c"
+      "sha256": "0ce6a844fbfa2961534bb69b81e21cdb115967956d6085847bc4a2ac9417448f"
     },
     {
       "name": "phase25-guard",
