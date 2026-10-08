@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, and **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining twenty of its twenty-two courts -- MS-NON-RUST-TCB, MS-SAFETY-OBLIGATIONS, MS-OWNERSHIP-PLANES, MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.2 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, and **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining nineteen of its twenty-two courts -- MS-SAFETY-OBLIGATIONS, MS-OWNERSHIP-PLANES, MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.3 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -145,6 +145,71 @@
           "rustc_commit": "48a229ceaefd4985c50990b14116b6d856af0985"
         },
         "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught": 5,
+          "honest": true,
+          "mutations": {
+            "add_fabricated_c_file": {
+              "caught": true,
+              "delta": 5,
+              "findings": 5,
+              "marker": "which is not a shipped or generated non-Rust file"
+            },
+            "drop_c_file": {
+              "caught": true,
+              "delta": 5,
+              "findings": 5,
+              "marker": "is not accounted for in the inventory"
+            },
+            "drop_export_boundary": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "has no boundary record"
+            },
+            "forge_compile_clean": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "the compile outcome is not honest"
+            },
+            "remove_reason": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "names no reason C is required"
+            }
+          },
+          "seeded": 5,
+          "specificity_holds": true
+        },
+        "counts": {
+          "arch_intrinsic_sites": 4,
+          "asm_sites": 0,
+          "c_files": 7,
+          "c_loc": 713,
+          "exported_ffi": 6591,
+          "generated_c_files": 8,
+          "imported_ffi": 232,
+          "residuals": 6,
+          "variadic_boundaries": 23,
+          "warnings": 5
+        },
+        "court": "MS-NON-RUST-TCB",
+        "findings": [
+          "5 strict-compile diagnostic(s) recorded across the first-party C adapters and the generated scaffolds (a warning/error is a recorded fact, not a pass)",
+          "23 C-variadic boundary/-ies (the C adapters' variadic exports plus the C-variadic foreign functions the crate imports; 25.1's census reports zero C_VARIADIC_BOUNDARY sites)",
+          "6 residual(s): census:FFI_EXPORT/out_of_scope; census:EXTERN_FUNCTION_CALL/out_of_scope; census:C_VARIADIC_BOUNDARY/out_of_scope; strict-compile/evidence_missing; strict-compile/evidence_missing; strict-compile/evidence_missing"
+        ],
+        "frf_declarable": false,
+        "frf_exclusion": "the non-Rust TCB court reads the committed inventory and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
+        "method": "stages no probe: it reads the committed artifacts/phase25/non-rust-tcb.json and re-runs the 25.2 pure checks (ms_non_rust_tcb.non_rust_findings and ms_non_rust_tcb.non_rust_sensitivity_control) over it and the on-disk file universe, without a compiler. The inventory was derived by compiling every first-party C adapter under -std=c11 -Wall -Wextra -Werror (recording every diagnostic), running nm for the defined/undefined symbol sets, scanning src for the extern blocks and the core::arch intrinsics, and cross-referencing the 25.1 census's FFI_EXPORT and EXTERN_FUNCTION_CALL sites rather than re-deriving them. It establishes file coverage in both directions, the build.rs correspondence, per-adapter reason/role, the export-to-boundary and census cross-references, derived counts and honest compile outcomes; five seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.2).",
+        "probe": "",
+        "problems": [],
+        "verdict": "pass"
       }
     ],
     "cve_replay_states": [
@@ -234,7 +299,6 @@
       "MS-KANI": "25.12 -- Kani",
       "MS-MECHANISM-RECONCILIATION": "25.17 -- the vulnerability-mechanism reconciliation",
       "MS-MIRI": "25.9 -- Miri",
-      "MS-NON-RUST-TCB": "25.2 -- the non-Rust trusted computing base",
       "MS-OWNERSHIP-PLANES": "25.4 -- the ownership/allocation/callback planes",
       "MS-PHASE18-FUZZ-CROSSWALK": "25.13 -- the Phase-18 fuzz crosswalk",
       "MS-PHASE22-CROSSWALK": "25.5 -- the Phase-22 reachability crosswalk",
@@ -516,8 +580,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 2,
-      "total": 2
+      "pass": 3,
+      "total": 3
     },
     "tool_states": [
       "PASS",
@@ -568,11 +632,6 @@
       "sha256": "cbdd39e7340fb32696802307d1f179a5c7d3175122a4db18854cf23e7894ef64"
     },
     {
-      "name": "phase25-ledger",
-      "path": "forensics/phase25-obligations.json",
-      "sha256": "12245002857c9f367529a98c0ba31d63874357676d5ad71c31be1087d2f4f865"
-    },
-    {
       "name": "cargo-toml",
       "path": "Cargo.toml",
       "sha256": "36a32914475754059067153cb064d4a7a2fe06d6904310d171506446cc101028"
@@ -591,6 +650,16 @@
       "name": "ms-census-tool",
       "path": "forensics/tools/ms_census.py",
       "sha256": "98071377d0e8c60be844ccd41ba7b4861e14951fffc6275c7800ff62a118ee1f"
+    },
+    {
+      "name": "non-rust-tcb",
+      "path": "artifacts/phase25/non-rust-tcb.json",
+      "sha256": "d68c6935e057e069faa8898581f1b11c64cc213d81f5ff3bcc80530afb346484"
+    },
+    {
+      "name": "ms-non-rust-tcb-tool",
+      "path": "forensics/tools/ms_non_rust_tcb.py",
+      "sha256": "7e4958dc5d4456e64f6e2cf9dc362e725a124b5fb1b078b8c5d927a5bf31838f"
     }
   ],
   "kind": "phase25-courts",

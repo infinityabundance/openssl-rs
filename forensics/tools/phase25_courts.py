@@ -11,7 +11,8 @@ structure. The method is Phases 3 through 24's where an artefact carries the exp
 court reads the artefact that holds its subject rather than typing the expectation beside it, so the
 two cannot disagree, and a court whose control is not honest is `fail` rather than `pass`.
 
-**25.0 registers `MS-CONSTITUTION` and 25.1 registers the compiler-backed census.** The stratum's
+**25.0 registers `MS-CONSTITUTION`, 25.1 registers the compiler-backed census, and 25.2 registers the
+non-Rust trusted computing base.** The stratum's
 obligations are not exports, so its courts read committed evidence rather than diffing a staged
 probe pair, and `run_courts.py` would refuse a stratum in `in-progress` with no runner at all -- so
 this runner landed at activation with an empty registry, naming the twenty-two courts it stages
@@ -20,7 +21,12 @@ over the plan, schemas, guard, venue manifest, ledger and the frozen safety lint
 **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census: it reads the committed
 `artifacts/phase25/source-census.json` and re-runs the 25.1 pure checks (`ms_census.census_findings`,
 `ms_census.census_sensitivity_control`) over it without a compiler, so the census's own measurement
-is the court's subject. The registry is the file `run_courts.py` checks is reproduced, so a court
+is the court's subject. **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base: it
+reads the committed `artifacts/phase25/non-rust-tcb.json` and re-runs the 25.2 pure checks
+(`ms_non_rust_tcb.non_rust_findings`, `ms_non_rust_tcb.non_rust_sensitivity_control`) over it and the
+on-disk file universe, so the inventory of the first-party C, the generated C scaffolds, the
+`core::arch` assembly surface and the FFI boundaries is the court's subject. The registry is the file
+`run_courts.py` checks is reproduced, so a court
 silently dropped is a finding rather than a smaller green run. This is the reverse of Phase 16's
 edge: the ledger's contract-unit states are measured from this registry, so this runner does
 **not** bind the obligations ledger as an input.
@@ -111,6 +117,11 @@ import memory_safety_schemas  # noqa: E402
 # the compiler (the measurement that produced the artefact is the `ms_census.py --measure` run).
 import ms_census  # noqa: E402
 
+# 25.2's non-Rust trusted computing base (C, generated C, assembly and the FFI boundaries) and the
+# tool that measures it. The court re-runs the tool's pure `non_rust_findings` /
+# `non_rust_sensitivity_control` over the committed artefact and the on-disk file universe.
+import ms_non_rust_tcb  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase25" / "COURTS.json"
 GENERATOR = "forensics/tools/phase25_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-25-MEMORY-SAFETY-SUBPHASES.md"
@@ -121,6 +132,11 @@ MANIFEST = REPO_ROOT / "forensics" / "memory-safety" / "container.json"
 SOURCE_CENSUS = REPO_ROOT / "artifacts" / "phase25" / "source-census.json"
 MS_CENSUS_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_census.py"
 SOURCE_CENSUS_COURT = "MS-SOURCE-CENSUS"
+
+# 25.2's non-Rust trusted computing base and the tool that measures it.
+NON_RUST_TCB = REPO_ROOT / "artifacts" / "phase25" / "non-rust-tcb.json"
+MS_NON_RUST_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_non_rust_tcb.py"
+NON_RUST_TCB_COURT = "MS-NON-RUST-TCB"
 
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
@@ -143,12 +159,13 @@ PLANNED_UNITS = 22
 COURTS: list[tuple[str, str]] = [
     (CONSTITUTION_COURT, "_ms_constitution_court"),
     (SOURCE_CENSUS_COURT, "_ms_source_census_court"),
+    (NON_RUST_TCB_COURT, "_ms_non_rust_tcb_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
-# `MS-SOURCE-CENSUS`, so twenty-one remain. Ordered as the plan orders them.
+# `MS-SOURCE-CENSUS` and 25.2 removed `MS-NON-RUST-TCB`, so nineteen remain. Ordered as the plan
+# orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-NON-RUST-TCB": "25.2 -- the non-Rust trusted computing base",
     "MS-SAFETY-OBLIGATIONS": "25.3 -- the safety obligations",
     "MS-OWNERSHIP-PLANES": "25.4 -- the ownership/allocation/callback planes",
     "MS-PHASE22-CROSSWALK": "25.5 -- the Phase-22 reachability crosswalk",
@@ -437,6 +454,93 @@ def _ms_source_census_court(name: str) -> dict:
     }
 
 
+def _ms_non_rust_tcb_court(name: str) -> dict:
+    """`MS-NON-RUST-TCB`: 25.2's court, the non-Rust trusted computing base.
+
+    Stages no probe. It reads the committed `artifacts/phase25/non-rust-tcb.json` and re-runs the
+    25.2 pure checks `ms_non_rust_tcb.non_rust_findings` and
+    `ms_non_rust_tcb.non_rust_sensitivity_control` over it together with the on-disk file universe
+    (the shipped `src` non-Rust files, the Phase-2 generated scaffolds, the `build.rs` C list and
+    the 25.1 census's FFI sites) -- no compiler and no `nm`; the measurement that produced the
+    inventory is `ms_non_rust_tcb.py --measure`, and this court only re-derives from what it wrote.
+    It establishes that every shipped/generated non-Rust file is accounted for with a matching
+    digest in both directions; that the C adapters are exactly the C `build.rs` compiles; that each
+    adapter names its reason and its variadic-or-layout role; that every export has a boundary
+    record and every census FFI site is cross-referenced; that the counts are derived, not typed;
+    and that every strict compile is reported honestly. Five seeded mutations -- a dropped C file, a
+    fabricated C file, a removed reason, a forged compile-clean result and a dropped export
+    boundary -- are each caught with specificity holding. It is an **instrument**: it can pass while
+    the inventory records real property findings (the census's macro-collapsed FFI_EXPORT sites, its
+    missing plain-extern and C-variadic coverage, and the strict-compile diagnostics), which are
+    recorded as the row's `findings` so a passing court is never read as a memory-safety claim.
+    """
+    if not NON_RUST_TCB.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "inventory-missing",
+                "problems": [f"the non-Rust TCB inventory {rel(NON_RUST_TCB)} is absent"],
+                "findings": [], "control": {}}
+
+    doc = json.loads(NON_RUST_TCB.read_text(encoding="utf-8"))
+    body = doc.get("body", doc)
+    ctx = ms_non_rust_tcb.build_context()
+    problems = ms_non_rust_tcb.non_rust_findings(body, ctx)
+    control = ms_non_rust_tcb.non_rust_sensitivity_control(body, ctx)
+
+    counts = body.get("counts") or {}
+    residuals = body.get("residuals") or []
+
+    findings = [
+        f"{counts.get('warnings', 0)} strict-compile diagnostic(s) recorded across the first-party "
+        f"C adapters and the generated scaffolds (a warning/error is a recorded fact, not a pass)",
+        f"{counts.get('variadic_boundaries', 0)} C-variadic boundary/-ies (the C adapters' variadic "
+        f"exports plus the C-variadic foreign functions the crate imports; 25.1's census reports "
+        f"zero C_VARIADIC_BOUNDARY sites)",
+        f"{len(residuals)} residual(s): "
+        + "; ".join(f"{r.get('source')}/{r.get('class')}" for r in residuals),
+    ]
+
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/non-rust-tcb.json and "
+            "re-runs the 25.2 pure checks (ms_non_rust_tcb.non_rust_findings and "
+            "ms_non_rust_tcb.non_rust_sensitivity_control) over it and the on-disk file universe, "
+            "without a compiler. The inventory was derived by compiling every first-party C adapter "
+            "under -std=c11 -Wall -Wextra -Werror (recording every diagnostic), running nm for the "
+            "defined/undefined symbol sets, scanning src for the extern blocks and the core::arch "
+            "intrinsics, and cross-referencing the 25.1 census's FFI_EXPORT and "
+            "EXTERN_FUNCTION_CALL sites rather than re-deriving them. It establishes file coverage "
+            "in both directions, the build.rs correspondence, per-adapter reason/role, the "
+            "export-to-boundary and census cross-references, derived counts and honest compile "
+            "outcomes; five seeded mutations are each caught with specificity holding "
+            "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.2)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the non-Rust TCB court reads the committed inventory and re-derives only its pure "
+            "checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "c_files": counts.get("c_files", 0),
+            "c_loc": counts.get("c_loc", 0),
+            "generated_c_files": counts.get("generated_c_files", 0),
+            "asm_sites": counts.get("asm_sites", 0),
+            "arch_intrinsic_sites": counts.get("arch_intrinsic_sites", 0),
+            "exported_ffi": counts.get("exported_ffi", 0),
+            "imported_ffi": counts.get("imported_ffi", 0),
+            "variadic_boundaries": counts.get("variadic_boundaries", 0),
+            "warnings": counts.get("warnings", 0),
+            "residuals": len(residuals),
+        },
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -502,15 +606,16 @@ def main(argv: list[str]) -> int:
         "panic_unwind_classes": list(memory_safety_schemas.PANIC_UNWIND_CLASSES),
         "claim": (
             "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, "
-            "guard, venue manifest, obligation ledger and the frozen safety lint policy, and "
-            "**25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census. Phase 25 owns "
+            "guard, venue manifest, obligation ledger and the frozen safety lint policy, "
+            "**25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, and "
+            "**25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base. Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining twenty of its twenty-two courts -- MS-NON-RUST-TCB, MS-SAFETY-OBLIGATIONS, "
+            "remaining nineteen of its twenty-two courts -- MS-SAFETY-OBLIGATIONS, "
             "MS-OWNERSHIP-PLANES, MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, "
             "MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, "
             "MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.2 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.3 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -539,11 +644,17 @@ def main(argv: list[str]) -> int:
         InputRef(name="memory-safety-schemas", path=SCHEMAS),
         InputRef(name="phase25-guard", path=GUARD),
         InputRef(name="phase25-container-manifest", path=MANIFEST),
-        InputRef(name="phase25-ledger", path=LEDGER),
+        # The obligation ledger is deliberately **not** bound. The edge runs ledger -> courts (the
+        # ledger's contract-unit states are measured from this registry), and binding it back would
+        # embed each artefact's digest in the other -- a digest cycle neither could reproduce, which
+        # is exactly what this runner's own docstring and every other stratum's runner record. The
+        # constitution court reads the ledger directly, so nothing here needs its digest.
         InputRef(name="cargo-toml", path=CARGO_TOML),
         InputRef(name="lib-rs", path=LIB_RS),
         InputRef(name="source-census", path=SOURCE_CENSUS),
         InputRef(name="ms-census-tool", path=MS_CENSUS_TOOL),
+        InputRef(name="non-rust-tcb", path=NON_RUST_TCB),
+        InputRef(name="ms-non-rust-tcb-tool", path=MS_NON_RUST_TOOL),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

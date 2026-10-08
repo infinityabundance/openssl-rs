@@ -367,6 +367,20 @@ GENERATORS_BEFORE_LEDGERS = [
     # (`ms_census.census_findings` and `ms_census.census_sensitivity_control`) over the committed
     # artefact. If a later subphase derives a pure aggregate from the census, that aggregate is what
     # belongs in this list.
+    #
+    # **Phase 25.2's non-Rust trusted computing base (`forensics/tools/ms_non_rust_tcb.py` ->
+    # `artifacts/phase25/non-rust-tcb.json`) follows the same precedent, for the same reason.** It
+    # inventories the first-party C the crate compiles by compiling every adapter under
+    # `-std=c11 -Wall -Wextra -Werror` and running `nm` for the object's symbol sets, and it scans
+    # `src` for the extern blocks and the `core::arch` intrinsics -- so its rows are a function of the
+    # court's exact C toolchain and its read of the crate, not of committed inputs, and it also
+    # carries the 25.1 census's FFI site ids as a cross-reference. A CI runner has no C compiler and
+    # no `nm`, and the Docker-only guard refuses a host invocation of `ms_non_rust_tcb.py` before it
+    # runs anything. It is therefore not listed here and not in `COMPARED`; the `MS-NON-RUST-TCB`
+    # court re-runs only its pure checks (`ms_non_rust_tcb.non_rust_findings` and
+    # `ms_non_rust_tcb.non_rust_sensitivity_control`) over the committed artefact and the on-disk file
+    # universe. If a later subphase derives a pure aggregate from this inventory, that aggregate is
+    # what belongs in this list.
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
