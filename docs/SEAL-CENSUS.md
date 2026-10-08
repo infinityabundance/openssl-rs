@@ -49,7 +49,7 @@ declared owner; this is that assignment.
 | 21 | Maintenance delta machinery | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
 | 23 | Multitrack authority compatibility and OpenSSL lineage | `complete` | 0 | 17 | 17 | 0 | 0 |
-| 24 | Downstream-1000 replacement atlas and empirical drop-in corpus | `in-progress` | 0 | 15 | 12 | 0 | 3 |
+| 24 | Downstream-1000 replacement atlas and empirical drop-in corpus | `in-progress` | 0 | 15 | 13 | 0 | 2 |
 
 ## Phase 3 — Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects
 
@@ -805,14 +805,14 @@ The other 17 compare ELF structure rather than a transcript and observe nothing 
 ## Phase 24 — Downstream-1000 replacement atlas and empirical drop-in corpus
 
 * state: `in-progress`
-* blocking: 3 open obligation(s) of this stratum recorded in forensics/phase24-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase24-obligations.json` publishes `unit: downstream 1000 contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the fifteen contract units (`ranking-sources`, `candidate-universe`, `authority-census`, `family-freeze`, `holdout-partition`, `build-link-atlas`, `runtime-functional-atlas`, `failure-minimization`, `high-value-tier`, `hostility-augmentation`, `candidate-freeze`, `p1000-run`, `atlas-reconciliation`, `frf-gemel-closure` and `downstream-1000-seal`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it measures downstream replacement over real projects that are already identified. Its courts stage no probe, because it owns no symbol for a differential probe to observe: they read committed evidence about a frozen, precommitted population of 1,000 downstream project families. Every entry point calls the Docker-only execution guard (`forensics/tools/phase24_guard.py`) first, so on the host the stratum refuses rather than compiling or running anything (docs/REPRODUCIBILITY.md section 1). A passing court is an **instrument**, not a property claim: the property it names may still carry findings, so `measurement_state` says the instrument completed while `property_status`/`findings` say what is claimed. The stratum records four explicit non-claims: a selected empirical population is not a random sample, so its rates do not generalise to all downstream software; 1000/1000 is not a security proof, so a full pass is not a guarantee that any consumer is safe; a build is not a functional proof, so compiling and linking is not behaving; and transitive and direct consumers are different evidence, so a project that only links libssl transitively is not the same measurement as one that calls the API directly. `DROP_IN_PASS` is baseline-normalized and never a boolean of its own: it requires the same pristine source, the authority baseline succeeded, the candidate reached the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches; residuals are classified and failures preserved and minimized. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md` sections 0 and 4 and docs/DECISIONS.md D548 through D553 record the measurement
+* blocking: 2 open obligation(s) of this stratum recorded in forensics/phase24-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase24-obligations.json` publishes `unit: downstream 1000 contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the fifteen contract units (`ranking-sources`, `candidate-universe`, `authority-census`, `family-freeze`, `holdout-partition`, `build-link-atlas`, `runtime-functional-atlas`, `failure-minimization`, `high-value-tier`, `hostility-augmentation`, `candidate-freeze`, `p1000-run`, `atlas-reconciliation`, `frf-gemel-closure` and `downstream-1000-seal`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it measures downstream replacement over real projects that are already identified. Its courts stage no probe, because it owns no symbol for a differential probe to observe: they read committed evidence about a frozen, precommitted population of 1,000 downstream project families. Every entry point calls the Docker-only execution guard (`forensics/tools/phase24_guard.py`) first, so on the host the stratum refuses rather than compiling or running anything (docs/REPRODUCIBILITY.md section 1). A passing court is an **instrument**, not a property claim: the property it names may still carry findings, so `measurement_state` says the instrument completed while `property_status`/`findings` say what is claimed. The stratum records four explicit non-claims: a selected empirical population is not a random sample, so its rates do not generalise to all downstream software; 1000/1000 is not a security proof, so a full pass is not a guarantee that any consumer is safe; a build is not a functional proof, so compiling and linking is not behaving; and transitive and direct consumers are different evidence, so a project that only links libssl transitively is not the same measurement as one that calls the API directly. `DROP_IN_PASS` is baseline-normalized and never a boolean of its own: it requires the same pristine source, the authority baseline succeeded, the candidate reached the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches; residuals are classified and failures preserved and minimized. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md` sections 0 and 4 and docs/DECISIONS.md D548 through D553 record the measurement
 * seal: none written yet (`docs/PHASE-24-DOWNSTREAM-1000-SEAL.md`)
 * ledger: `forensics/phase24-obligations.json`
 * atlas-owned: 0
 * owned working set: 15
-* implemented: 12
+* implemented: 13
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 3**
+* **open in this stratum: 2**
 
 Contract units (measurement vs property):
 
@@ -830,14 +830,14 @@ Contract units (measurement vs property):
 | hostility-augmentation | `complete` | `not_claimed` | — |
 | candidate-freeze | `complete` | `not_claimed` | — |
 | p1000-run | `complete` | `not_claimed` | — |
-| atlas-reconciliation | `not_measured` | `not_claimed` | — |
+| atlas-reconciliation | `complete` | `NOT_CLAIMED` | `993/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 7 of 1000, so the drop-in rate is measured over 7 families and is not a population-wide rate`, `the measured set exercised 600/6499 exported symbols, 42/81 public headers and 39/152 API families, so the atlas speaks for a thin slice of the authority's public surface`, `3973 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate`, `11330 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty` |
 | frf-gemel-closure | `not_measured` | `not_claimed` | — |
 | downstream-1000-seal | `not_measured` | `not_claimed` | — |
 
 A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
-Courts: `all pass`, 12 court(s), **0** authority observation(s) over 0 transcript court(s).
+Courts: `all pass`, 13 court(s), **0** authority observation(s) over 0 transcript court(s).
 
-The other 12 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
+The other 13 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
@@ -853,6 +853,7 @@ The other 12 compare ELF structure rather than a transcript and observe nothing 
 | RT-HOSTILITY-AUGMENTATION | `pass` | — (structural) |
 | RT-CANDIDATE-FREEZE | `pass` | — (structural) |
 | RT-P1000-RUN | `pass` | — (structural) |
+| RT-ATLAS-RECONCILIATION | `pass` | — (structural) |
 
 ## Court coverage
 
