@@ -452,6 +452,23 @@ GENERATORS_BEFORE_LEDGERS = [
     # rather than a silent divergence, and the `MS-EXPOSURE-CLASSIFICATION` court re-runs the same
     # pure checks over the committed artefact and the committed planes it is derived from.
     "forensics/tools/ms_exposure.py",
+    # **Phase 25.8's unsafe reduction (`forensics/tools/ms_reduction.py` ->
+    # `artifacts/phase25/unsafe-reduction.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It is a pure derivation because this venue applies **no**
+    # reduction: every reachable compiler-derived site is a C-ABI-boundary operation whose safe
+    # replacement would change a signature or the foreign ABI, turn a documented precondition the
+    # authority states into a defined panic, or remove no site at all, so the census is unchanged and
+    # the tool runs no compiler. It reads the committed 25.1 census, the committed 25.7 exposure
+    # classification and the committed source spans the census names; `forensics/memory-safety/
+    # container.json` lists it `metadata_only` and the Docker-only guard admits it on any host,
+    # exactly as `ms_exposure` is. Had a reduction been applied, re-running the compiler census would
+    # have been required and the tool would have followed the `ms_census.py` measurement precedent
+    # instead of this list. A stale committed worklist -- or a dropped candidate class, a typed count,
+    # an applied reduction with no test evidence, a weakened lint or a frozen census that disagrees
+    # with the live census -- is a failure rather than a silent divergence, and the
+    # `MS-UNSAFE-REDUCTION` court re-runs the same pure checks over the committed artefact, the census
+    # and the exposure classification.
+    "forensics/tools/ms_reduction.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -804,6 +821,15 @@ COMPARED = [
     # rather than a silent divergence. It executes nothing and reads no compiler output, so
     # re-deriving it needs no compiler and no candidate.
     "artifacts/phase25/exposure.json",
+    # Phase 25.8's unsafe reduction: a pure function of the committed 25.1 census, the committed 25.7
+    # exposure classification and the committed source spans the census names. It applies no
+    # reduction -- every reachable site is a C-ABI-boundary operation with no behaviour-preserving
+    # safe replacement -- so the census is unchanged and it runs no compiler. A dropped candidate
+    # class, a typed count, an applied reduction with no test evidence, a weakened lint, a reduced
+    # site still present or a frozen census that disagrees with the live census is a failure rather
+    # than a silent divergence. It executes nothing and reads no compiler output, so re-deriving it
+    # needs no compiler and no candidate.
+    "artifacts/phase25/unsafe-reduction.json",
 ]
 
 # ---------------------------------------------------------------------------

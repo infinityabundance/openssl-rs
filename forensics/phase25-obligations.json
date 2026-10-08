@@ -138,12 +138,16 @@
       },
       {
         "closure": "the `MS-UNSAFE-REDUCTION` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-UNSAFE-REDUCTION is pending",
+        "findings": [
+          "53822 externally reachable compiler-derived unsafe site(s) carry exactly one candidate class across 10 pattern(s); **0 were reduced**, so the reachable count is unchanged",
+          "every candidate replacement would change a function signature or the foreign ABI, turn a documented precondition the authority states into a defined panic, or remove no site because the census site is the enclosing raw dereference; consolidating repeated reads into one helper is forbidden by section 3.4 and the brief, so no candidate was applied",
+          "the compiler-derived site count is unchanged and the operation-kind mix is unchanged; a smaller unsafe count would not be a memory-safety claim and the ABI and the lints are unchanged"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-UNSAFE-REDUCTION is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "unsafe-reduction",
         "what": "the unsafe reduction worklist: the reachable unsafe sites reduced by a safe intrinsic or a checked wrapper where the venue can, each reduction with its before/after compiler-derived sites and the sites that remain named rather than dropped, so nothing is weakened to shrink the count"
@@ -310,8 +314,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 8,
-      "open_in_this_stratum": 14,
+      "implemented": 9,
+      "open_in_this_stratum": 13,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -352,7 +356,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "ed1e2bc8300c0d292870db3fd3a1b420167ee880a23724f123990c44e2515f8d"
+      "sha256": "5e300329286275b7ab962c0b45d455c09e573487d84f89926396215914ae0a26"
     },
     {
       "name": "phase25-guard",

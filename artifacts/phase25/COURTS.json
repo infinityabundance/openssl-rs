@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining fourteen of its twenty-two courts -- MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.8 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census, and **25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable compiler-derived sites that records each candidate safe-intrinsic replacement, the sites that remain named rather than dropped, and the frozen post-reduction census. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining thirteen of its twenty-two courts -- MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.9 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -650,6 +650,87 @@
           "S4": 590
         },
         "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught": 6,
+          "honest": true,
+          "mutations": {
+            "frozen_census_disagrees": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "disagrees"
+            },
+            "lint_weakened": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "weakens unsafe_op_in_unsafe_fn"
+            },
+            "reduced_site_still_present": {
+              "caught": true,
+              "delta": 3,
+              "findings": 3,
+              "marker": "still present"
+            },
+            "reduction_without_test_evidence": {
+              "caught": true,
+              "delta": 4,
+              "findings": 4,
+              "marker": "cites no passing test"
+            },
+            "typed_count": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "not the derived `counts`"
+            },
+            "worklist_omits_a_class": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "does not account for exactly the reachable sites"
+            }
+          },
+          "seeded": 6,
+          "specificity_holds": true
+        },
+        "counts": {
+          "applied": 0,
+          "candidate_classes": 10,
+          "candidates": 53822,
+          "census_sites": 57663,
+          "reachable_sites": 53822,
+          "reduced": 0,
+          "rejected": 53822,
+          "residuals": 10
+        },
+        "court": "MS-UNSAFE-REDUCTION",
+        "findings": [
+          "53822 externally reachable compiler-derived unsafe site(s) carry exactly one candidate class across 10 pattern(s); **0 were reduced**, so the reachable count is unchanged",
+          "every candidate replacement would change a function signature or the foreign ABI, turn a documented precondition the authority states into a defined panic, or remove no site because the census site is the enclosing raw dereference; consolidating repeated reads into one helper is forbidden by section 3.4 and the brief, so no candidate was applied",
+          "the compiler-derived site count is unchanged and the operation-kind mix is unchanged; a smaller unsafe count would not be a memory-safety claim and the ABI and the lints are unchanged"
+        ],
+        "frf_declarable": false,
+        "frf_exclusion": "the unsafe-reduction court reads the committed worklist and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
+        "method": "stages no probe: it reads the committed artifacts/phase25/unsafe-reduction.json and re-runs the 25.8 pure checks (ms_reduction.reduction_findings and ms_reduction.reduction_sensitivity_control) over it, the committed 25.1 census it reduces and the committed 25.7 exposure classification it reads for reachability, without a compiler. The plane is a pure derivation: each reachable compiler-derived site is assigned one candidate class by a total function of its operation kind and its committed source span, and for each class the worklist records the proposed safe-intrinsic replacement or the reason it is not behaviour-preserving. It establishes the applied reductions' evidence and before/after sites, the unchanged lint policy and ABI, the worklist's exact accounting of the reachable sites not reduced, the derived counts and the frozen census; six seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.4).",
+        "probe": "",
+        "problems": [],
+        "verdict": "pass",
+        "worklist": {
+          "CASTED_POINTER_READ_WRITE": 55,
+          "FFI_EXPORT": 6560,
+          "FROM_RAW_PARTS_OVER_SLICE": 9,
+          "FUNCTION_POINTER_TRANSMUTE": 89,
+          "RAW_POINTER_ARITHMETIC": 1116,
+          "RAW_POINTER_DEREFERENCE": 15677,
+          "STATIC_MUT": 18,
+          "UNCLASSIFIED": 8,
+          "UNSAFE_CALL": 30174,
+          "UNSAFE_IMPL": 116
+        }
       }
     ],
     "cve_replay_states": [
@@ -745,8 +826,7 @@
       "MS-PHASE24-SAFETY-COVERAGE": "25.14 -- the Phase-24 downstream safety coverage",
       "MS-RED-TEAM": "25.18 -- the red team",
       "MS-SEAL": "25.21 -- the memory-safety seal",
-      "MS-TSAN": "25.11 -- TSan",
-      "MS-UNSAFE-REDUCTION": "25.8 -- the unsafe reduction"
+      "MS-TSAN": "25.11 -- TSan"
     },
     "risk_tiers": [
       "S0",
@@ -1018,8 +1098,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 8,
-      "total": 8
+      "pass": 9,
+      "total": 9
     },
     "tool_states": [
       "PASS",
@@ -1067,7 +1147,7 @@
     {
       "name": "phase25-container-manifest",
       "path": "forensics/memory-safety/container.json",
-      "sha256": "b0fc3c4632b590535f6cb398484e2ca8e4aaf3f3f58eb3ef1aa1dca22345c494"
+      "sha256": "36bd122506bf9d01f4afab3f3d8dd0f21fe7377174035a269890bfbe837a2445"
     },
     {
       "name": "cargo-toml",
@@ -1203,6 +1283,16 @@
       "name": "ms-exposure-tool",
       "path": "forensics/tools/ms_exposure.py",
       "sha256": "cce3556a48a08ca62b8eb3336c5d4c26c72f9d447506a83255bb9a311eb2e849"
+    },
+    {
+      "name": "unsafe-reduction",
+      "path": "artifacts/phase25/unsafe-reduction.json",
+      "sha256": "e625eb28d09cc378032936fdfb345ecba0d68c95b24217956ed6402c9d953957"
+    },
+    {
+      "name": "ms-reduction-tool",
+      "path": "forensics/tools/ms_reduction.py",
+      "sha256": "9f7a5bcdd0771d1575c00b1dcb4192fb62744ef34b6c6e36336f883090d750ba"
     }
   ],
   "kind": "phase25-courts",
