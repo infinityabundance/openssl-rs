@@ -1,0 +1,3778 @@
+{
+  "row_count": 943,
+  "rows": [
+    {
+      "dependent": "389-ds-base",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "389-ds-base-libs",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "acme-tiny",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "afflib-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "alpine",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "amanda-common",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "apache2-bin",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "apache2-dev",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "apache2-utils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "apt-cacher-ng",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "arc-gui-clients",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "argyll",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "arm-trusted-firmware-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "atheme-services",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ausweisapp2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "autofdo",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "autopostgresqlbackup",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "axel",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "b3270",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "bacula-common",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "barnowl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "barrier",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "barrier",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "bfh-base-system",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "bibtexconv",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "bind9",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "bind9-libs",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "bip",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "borgbackup",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "borgbackup2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "boxbackup-client",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "boxbackup-client",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "boxbackup-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "boxbackup-server",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "bruteforce-salted-openssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "bruteforce-wallet",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "btfs",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "burp",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "burp",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "butt",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "c3270",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ca-certificates",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "cairo-dock-weather-plug-in",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "calibre-bin",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "caml-crush-clients",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "camo",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "carbon-c-relay",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cardpeek",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cargo",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cargo-c",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cargo-outdated",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cargo-web",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "casync",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ceph-base",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ceph-common",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ceph-osd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "certmonger",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cfengine3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "checksec",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "chiaki",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ckermit",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cl-plus-ssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "clamav",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "classified-ads",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "clevis",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "clickhouse-common",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cockpit-system",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "cockpit-ws",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "collectd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "condure",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "conserver-client",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "conserver-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "coturn",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cowpatty",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cyrus-caldav",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cyrus-clients",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cyrus-common",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cyrus-imapd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cyrus-murder",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "cyrus-nntpd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "dcap-tunnel-ssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ddnet",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ddnet-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ddnet-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "debcargo",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "debian-edu-config",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "dehydrated",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "dhtnode",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "diffoscope",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "diffoscope-minimal",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "dillo",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "dkim-rotate",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "dma",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "dmg2img",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "dnscap",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "dnsdist",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "dnsperf",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "dnssec-trigger",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "dnssec-trigger",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "dovecot-core",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "dovecot-core",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "dsniff",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "dsniff",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "dvisvgm",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "e2guardian",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "eapoltest",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "easy-rsa",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "ecflow-client",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ecflow-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "eclipse-titan",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "efitools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "eggdrop",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ejabberd",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "encfs",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "epic4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "epic5",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "epoptes",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "epoptes-client",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "erfs",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "erlang-crypto",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "erlang-p1-tls",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ettercap-common",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "eurephia",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ewf-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "falkon",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "fapolicyd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "fastd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "fastnetmon",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "fbx-all",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "fdm",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "fetch-crl",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "fetchmail",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "fido2-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "fort-validator",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "fossil",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "foxeye",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "fqterm",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "freedombox",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "freefilesync",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "freeipa-client",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "freeradius",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "freeradius-config",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "freeradius-utils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ftp-ssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ftpd-ssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ftpd-ssl",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "galera-3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "galera-4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "galera-arbitrator-3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "galera-arbitrator-4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gambas3-gb-openssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ganeti-3.0",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "gensio-bin",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "getdns-utils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gfsd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gftp-gtk",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gftp-text",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "git-crypt",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "glasscoder",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "glirc",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "globus-gass-copy-progs",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "globus-gatekeeper",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "globus-gram-job-manager",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "globus-gsi-cert-utils-progs",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "globus-proxy-utils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "globus-simple-ca",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "glusterfs-common",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gnubiff",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gnumed-server",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "gnunet",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "gnupg-pkcs11-scd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "goaccess",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gocryptfs",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gostsum",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gridengine-client",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gridengine-client",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "gridengine-drmaa1.0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gridengine-exec",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gridengine-master",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gridengine-qmon",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gridsite-clients",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "grisbi",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "groonga-httpd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "growl-for-linux",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "grub-customizer",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gsoap",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gsocket",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gss-ntlmssp",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gstreamer1.0-plugins-bad",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gstreamer1.0-plugins-good",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gvpe",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "gwenhywfar-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "h2o",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "haproxy",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "hcxdumptool",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "hcxkeys",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "hcxtools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "hexchat",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "hexchat-plugins",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "hippotat-client",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "hitch",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "hopm",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "hostapd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "hsmwiz",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "httest",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "httpdirfs",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "httperf",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "httping",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "httping",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "hydra",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "i2pd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "icecast2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "icinga2-bin",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "idevicerestore",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "igtf-policy-classic",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "igtf-policy-experimental",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "igtf-policy-iota",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "igtf-policy-mics",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "igtf-policy-slcs",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "igtf-policy-unaccredited",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "ike-scan",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ikiwiki-hosting-web",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "ima-evm-utils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "imapfilter",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "imapproxy",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "imx-code-signing-tool",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "inetsim",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "inn2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "intel-hdcp",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ipmitool",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ipmiutil",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ircd-hybrid",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "ircii",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "irssi",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "istgt",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "isync",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "jabberd2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "jami-daemon",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "janus",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "janus-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "kamailio-autheph-modules",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "kamailio-outbound-modules",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "kamailio-tls-modules",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "kamailio-websocket-modules",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "kannel",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "kannel-extras",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "kea-common",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "kea-ctrl-agent",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "keepalived",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "keyringer",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "kitty",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "kiwi-systemdeps-core",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "kmod",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "kore",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "krb5-k5tls",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "krb5-pkinit",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "kristall",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "kvirc",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "kvirc-modules",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "lacme",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "lastpass-cli",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "lcmaps-plugins-jobrep",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "lcmaps-plugins-verify-proxy",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ldnsutils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libace-inet-ssl-7.0.8",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libace-ssl-7.0.8",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libafflib0v5",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libalpm13",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libapache2-mod-auth-gssapi",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libapache2-mod-auth-mellon",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libapache2-mod-auth-openidc",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libapache2-mod-auth-pubtkt",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libapache2-mod-php8.2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libapache2-mod-qos",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libaprutil1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libarccommon3v5",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libarccommon3v5",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "libbobcat6",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libboinc7",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libc-client2007e",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcaf-openssl0.17",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcanl-c-examples",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcanl-c4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcapnp-0.9.2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcgsi-gsoap1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcjose0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libclamav11",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcoap3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcohttp-lwt-unix-ocaml-dev",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcpp-httplib0.11",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcpprest2.10",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcreaterepo-c0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcrypt-openssl-bignum-perl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcrypt-openssl-dsa-perl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcrypt-openssl-ec-perl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcrypt-openssl-guess-perl",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "libcrypt-openssl-pkcs10-perl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcrypt-openssl-random-perl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcrypt-openssl-rsa-perl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcrypt-openssl-x509-perl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcrypt-smime-perl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcrypt-ssleay-perl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcryptsetup12",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcurl4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcxxtools10",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libcyrus-imap-perl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libdavix0v5",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libdcmtk17",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libddsc0debian",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libdigidoc-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libdigidoc2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libdkim1d",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libdrpm0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libduo3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libeac3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libeckit0d",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libecore-con1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libeet1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libeiskaltdcpp2.4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libemile1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libengine-gost-openssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libengine-pkcs11-openssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libesmtp6",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libevent-openssl-2.1-7",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libevhtp0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libfaifa0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libfalcosecurity0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libfastrtps2.9",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libfido2-1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libfreefare0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libfreeradius3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libfreerdp2-2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libfsapfs-utils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libfsapfs1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libfsverity0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libgambit4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libgdal32",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libgdcm3.0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libgenomicsdb0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libgensio4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libgetdns10",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libgfarm1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libghc-haxr-dev",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libghc-hookup-dev",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libghc-hsopenssl-dev",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libghc-hsopenssl-x509-system-dev",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libghc-http-streams-dev",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libghc-openssl-streams-dev",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-ftp-client2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-gass-cache5",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-gass-copy2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-gridftp-server6",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-gridmap-eppn-callout",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-gridmap-verify-myproxy-callout",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-gsi-callback0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-gsi-cert-utils0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-gsi-credential1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-gsi-openssl-error0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-gsi-proxy-core0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-gsi-proxy-ssl1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-gsi-sysconfig1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-gssapi-gsi4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglobus-openssl-module0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libglusterfs0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libgridsite6",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libgrpc29",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libgsoap-2.8.124",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libh2o-evloop0.13",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libh2o0.13",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libhashkit2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libhdf5-103-1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libhdf5-mpich-103-1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libhdf5-openmpi-103-1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libhts3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libhttrack2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libicapapi5",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libimaevm2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libimobiledevice-utils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libimobiledevice6",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libiperf0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libisns0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libjose0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libjwt0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libkmod2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libknet1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libkpimitinerary5",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libkrb5-3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libkvilib5",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "liblasso3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "liblcas0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "liblcmaps0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libldns3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libloc1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libmariadb3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libmariadbd19",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libmongoc-1.0-0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libmongoclient0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libmongocrypt0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libmosquitto1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libmyproxy-voms",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libmyproxy6",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libnats3.4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libneon27",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libnet-dns-sec-perl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libnet-ssleay-perl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libnet-tclink-perl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libnetconf2-2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libnetty-tcnative-jni",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libnextcloudsync0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libnode108",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libnvme1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "liboauth2-0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libomniorb4-2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libopamgt0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libopasadb1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libopen3d0.16",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libopencryptoki0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libopendht2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libopendkim11",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libopenhpi3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libopenipmi0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libopusfile0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "liborthancframework1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libosptk4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libp11-3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpaho-mqtt1.3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpam-barada",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpam-mount",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpam-mysql",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpam-p11",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpam-pkcs11",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpam-ssh-agent-auth",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpam-u2f",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpcp3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpeony3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libphp8.2-embed",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpipewire-0.3-modules",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpistache0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpkcs11-helper1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpococrypto80",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpoconetssl80",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpodofo-utils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpodofo0.9.8",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpoe-filter-ssl-perl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpq5",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpromises3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpython3.11-dbg",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libpython3.11-minimal",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libqca-qt5-2-plugins",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libqpid-proton11",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libqt5network5",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libqt6network6",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libquickfix17",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "librabbitmq4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "librados2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libradsec0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "librbd1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "librdkafka1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libre0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "librelp0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "librepo0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "librgw2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "librhash0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "librosbag-storage4d",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "librte-common-qat23",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "librte-crypto-ccp23",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "librte-crypto-openssl23",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libruby3.1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libs2-0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libsasl2-modules",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libsasl2-modules-otp",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libscitokens0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libserf-1-1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libshairport2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libshout3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libsight",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libsnmp40",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libsofia-sip-ua0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libsofthsm2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libsope1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libspice-client-glib-2.0-8",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libspice-server1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libsqlcipher0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libsrt1.5-openssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libssh-4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libssh2-1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libssl-dev",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libssl-ocaml",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libssl-ocaml-dev",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libsss-certmap0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libstrongswan-standard-plugins",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libstrophe0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libsylph1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libsystemd-shared",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libtcnative-1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libtgl-0.0.0.20160623-0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libthrift-0.17.0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libthrift-c-glib0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libtins4.0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libtls26",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libtorrent-rasterbar2.0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libtorrent21",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libtpm-unseal1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libtpm2-pkcs11-1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libtpms0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libtpms0",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "libtr-tid2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libtspi1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libtss0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libtss2-esys-3.0.2-0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libtss2-fapi1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libu2f-server0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libufpidentity1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libveyon-core",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libvirtodbc0",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libvomsapi1v5",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libweb-id-perl",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "libwebsockets-test-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libwebsockets17",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libwinpr-tools2-2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libwinpr2-2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libwvstreams4.6-extras",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libxeus6",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libxlsxwriter4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libxml-security-c20",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libxmlsec1-openssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libxmltooling10",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libxrdcryptolite2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libxrdhttputils2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libxrdutils3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libxrt1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libyara9",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libykpiv2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libyuma2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libzeroc-ice3.7",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libzip4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "libzypp1722",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "lighttpd-mod-openssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "links",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "links2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "linux-kbuild-6.1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "liquidsoap",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "litecoin-qt",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "litecoind",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "lua-cqueues",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "lua-luaossl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "lua-sec",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "lxc",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "lxc-templates",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "macopix",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mailfilter",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mariadb-backup",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mariadb-client",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mariadb-client-core",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mariadb-plugin-s3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mariadb-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mariadb-server-core",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mariadb-test",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "medusa",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "megatools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "memcached",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mender-artifact",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mender-client",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "merecat",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mini-httpd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mixxx",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mktorrent",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mokutil",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mold",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "monero",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "monero-tests",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "monit",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "monitoring-plugins-basic",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "monitoring-plugins-contrib",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "monitoring-plugins-standard",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "moonshot-gss-eap",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "moonshot-trust-router",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "moonshot-ui",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mosh",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mosquitto",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mstflint",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mtd-utils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "muchsync",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mumble",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mumble-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mupdf",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "mupdf-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "myproxy",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nagios-nrpe-plugin",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nagios-nrpe-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ncat",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ncrack",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "netdata-core",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "netsurf-fb",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "netsurf-gtk",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "network-manager-l2tp",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "network-manager-l2tp-gnome",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "neutron-ha-tool",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "nghttp2-client",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nghttp2-proxy",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nghttp2-proxy",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "nghttp2-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nginx",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nheko",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nim",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nix-bin",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "njs",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nmap",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nmh",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nodau",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nordugrid-arc-arex",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nordugrid-arc-client",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nordugrid-arc-datadelivery-service",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nordugrid-arc-gridftpd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nordugrid-arc-plugins-arcrest",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nordugrid-arc-plugins-lcas-lcmaps",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nordugrid-arc-plugins-needed",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nordugrid-arc-test-utils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nsca-ng-client",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nsca-ng-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nsd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nsd",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "ntpsec",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "nzbget",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "o-saft",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "ocsigenserver",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "opa-address-resolution",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "opa-basic-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "opa-fastfabric",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "opa-fm",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "open-iscsi",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "open-isns-utils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "open-vm-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openboard",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "opencryptoki",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "opendkim",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "opendkim-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "opendnssec-signer",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openems",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openfortivpn",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openhpi-plugin-ipmidirect",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openiked",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openiked",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "openpace",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "opensc",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "opensc-pkcs11",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "opensmtpd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "opensmtpd-filter-dkimsign",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openssh-client",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openssh-client-ssh1",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openssh-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openssh-tests",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openssh-tests",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "openssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openvpn",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openvswitch-common",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openvswitch-common",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "openvswitch-switch",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openvswitch-switch-dpdk",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openvswitch-testcontroller",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "openvswitch-vtep",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ophcrack",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ophcrack-cli",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "orthanc",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "orthanc-wsi",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "osptoolkit",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "osptoolkit",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "osslsigncode",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ovn-central",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ovn-common",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ovn-controller-vtep",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ovn-host",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ovn-ic",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "paho.mqtt.c-examples",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pamu2fcfg",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "partclone",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "partimage",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "partimage-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "partimage-server",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "passenger",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pcp",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pcp-testsuite",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pdns-backend-ldap",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pdns-ixfrdist",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pdns-recursor",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pdns-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pdns-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pen",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "perdition",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "performous",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "perl-openssl-defaults",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pev",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pg-auto-failover-cli",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "pgbackrest",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pgbouncer",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pgloader",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pgpool2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "php8.2-cgi",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "php8.2-cli",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "php8.2-common",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "php8.2-fpm",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "php8.2-http",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "php8.2-mongodb",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "php8.2-phpdbg",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "picolisp",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pinot",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pkcs11-dump",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "poedit",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pollen",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "polyphone",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "postfix",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "postgresql-15",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "postgresql-client-15",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ppp",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pr3287",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "proftpd-core",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "proftpd-mod-crypto",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "prosody",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "proxytunnel",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "psi-plus-plugins",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pulseaudio-module-raop",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "puma",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pure-ftpd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pure-ftpd-ldap",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pure-ftpd-mysql",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pure-ftpd-postgresql",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "pypy3",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "python3-a38",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "python3-awscrt",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "python3-cryptography",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "python3-ecflow",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "python3-grpcio",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "python3-lib389",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "python3-libtorrent",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "python3-m2crypto",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "python3-network",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "python3-nova",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "python3-ntp",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "python3-openvswitch",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "python3-pygit2",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "python3-sage",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "python3-scrypt",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "python3-securestring",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "python3-uamqp",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "qbittorrent",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "qbittorrent-nox",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "qcalcfilehash",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "qterm",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "quassel-core",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "r-cran-openssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "r-cran-pki",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "r-cran-rsclient",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "r-cran-rserve",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "r-cran-s2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "rabbitmq-server",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "racket",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "radosgw",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "radsecproxy",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "rauc",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "rbd-mirror",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "rear",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "redis-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "refind",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "rhash",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ripasso-cursive",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "rpki-client",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "rspamd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "rsync",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "rsyncrypto",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "rsyslog-openssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "rtpengine-daemon",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "rtpengine-recording-daemon",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ruby-eventmachine",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "s-nail",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "s3270",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "s3backer",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sachesi",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "samdump2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sasl2-bin",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sbsigntool",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "scrypt",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "secsipidx",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "sendmail-bin",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "shairport-sync",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "shellinabox",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "shibboleth-sp-utils",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "siege",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "simple-tpm-pk11",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sipcrack",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sisu",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "sisu-complete",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "slowhttptest",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "slrn",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "slrnpull",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "smartdns",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "snmp",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "socat",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sofia-sip-bin",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "softether-vpnbridge",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "softether-vpnclient",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "softether-vpncmd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "softether-vpnserver",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "softhsm2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sogo",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sogo-activesync",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "spamc",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "spiped",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "springlobby",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sq",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "squeezelite",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "squeezelite-pa",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "squeezelite-pulseaudio",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "squid-openssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sra-toolkit",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "srain",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sscg",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ssl-cert",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "ssl-cert-check",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "ssldump",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sslscan",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sslsniff",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sslsplit",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sssd-common",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sstp-client",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ssvnc",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ssvnc",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "stenographer-common",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "stone",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "stone",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "storm-lang-crypto",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "stubby",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "stunnel4",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "stunnel4",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "suck",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "swi-prolog-nox",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "swirc",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "swtpm-libs",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "swtpm-libs",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "swtpm-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "swugenerator",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "swupdate",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "sylpheed",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "syslog-ng-core",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "syslog-ng-mod-slog",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "syslog-ng-mod-sql",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "systemd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "systemd-container",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "systemd-homed",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "systemd-resolved",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "systemd-tests",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tarantool",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tarantool",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "tarantool-common",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "tboot",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tcl-tls",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tcl-trf",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tcpdump",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tcpflow",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tcpflow-nox",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "telegram-desktop",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "telnet-ssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "telnetd-ssl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "telnetd-ssl",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "testssl.sh",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "tf5",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "thc-ipv6",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tin",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tinc",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tnftp",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "topal",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "tor",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tpm-quote-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tpm-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tpm-tools-pkcs11",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tpm2-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "trafficserver",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "transmission-cli",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "transmission-daemon",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "transmission-gtk",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "transmission-qt",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "trojan",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "trousers",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "trustedqsl",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tsdecrypt",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "tss2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "u-boot-tools",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "uftp",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "uget",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "uhub",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "unbound",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "unbound-anchor",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "unbound-host",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "unworkable",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "urlextractor",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "uuu",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "uwsgi-core",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "uxplay",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "validns",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "vboot-kernel-utils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "vboot-utils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "vde2-cryptcab",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "veyon-service",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "virtuoso-opensource-7-bin",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "virtuoso-opensource-7-common",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "vlc-plugin-bittorrent",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "voms-clients",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "voms-mysql-plugin",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "voms-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "vsftpd",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "vtun",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "w3m",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "waagent",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "watchman",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "weborf",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "weex",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "wesnoth-1.16-core",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "wesnoth-1.16-server",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "wpasupplicant",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "wrk",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "x11vnc",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "x11vnc",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "x3270",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "xca",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "xilinx-bootgen",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "xml-security-c-utils",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "xrdp",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "xrootd-plugins",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "xrootd-server-plugins",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "xva-img",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "xymon",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "yadifa",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "yafc",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "yapet",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ykcs11",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "ylva",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "yubico-piv-tool",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "yuzu",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "zabbix-agent2",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "zbackup",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "zfs-fuse",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "znc",
+      "provides": "libssl3"
+    },
+    {
+      "dependent": "znc",
+      "provides": "openssl"
+    },
+    {
+      "dependent": "zurl",
+      "provides": "libssl3"
+    }
+  ],
+  "source_id": "debian-rdepends"
+}

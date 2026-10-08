@@ -36048,3 +36048,112 @@ obligation's rationale no longer reads "no 4.x authority is admitted" (four now 
 boundary rather than a manufactured pass. The measured corrections are recorded in
 `docs/PHASE-23-MULTITRACK-SUBPHASES.md` section 4.17 and in `docs/PHASE-23-MULTITRACK-SEAL.md`
 section 9 item 5, and each is checked by the Phase-23 courts rather than asserted here.
+
+## D548 -- Phase 24 activates: the downstream-1000 replacement atlas, and its non-export unit
+
+Phase 24 is the stratum `docs/RELEASE_GATES.md` section 1 names "Downstream-1000 replacement atlas
+and empirical drop-in corpus". It is dependency-ordered after the multitrack authority stratum
+(Phase 23): its first subphase, 24.0, lands `docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md`,
+`forensics/tools/downstream_schemas.py`, the Docker-only execution guard
+`forensics/tools/phase24_guard.py`, the committed venue manifest
+`forensics/downstream/container.json`, the contract ledger `forensics/phase24-obligations.json` and
+the courts scaffold `artifacts/phase24/COURTS.json`, and its seal
+`docs/PHASE-24-DOWNSTREAM-1000-SEAL.md` is a later subphase's. No existing phase is renumbered,
+and `REQUIRES[24] = (23,)`; because Phase 23 requires Phase 21 (which requires Phase 22), that
+single edge transitively requires the authority archaeology, the maintenance-delta machinery and
+the multitrack authority lineage.
+
+**The model.** A content-addressed, reproducible, machine-queryable atlas of **1,000 precommitted
+real OpenSSL downstream project families**, built to measure whether `openssl-rs` survives the ways
+real software depends on OpenSSL. The vocabulary is fixed in `docs/PHASE-24-DOWNSTREAM-1000-
+SUBPHASES.md` section 0 and validated by `forensics/tools/downstream_schemas.py`: a **family** (the
+counted unit, never a package alias), a **specimen** (one concrete pristine source tree, separate
+from its family), a **variant** (one profile/patch set), a **ranking source** (a frozen,
+multi-source evidence row), a **run** (one execution at one level under one subject), the
+**execution level** ladder L0-L8 with an **authority-applicable baseline**, a **residual**
+classified from the closed residual-class vocabulary, and a **drop-in verdict** that is never a
+boolean of its own. Phase 24 owns **no exported symbol**: reading
+`forensics/atlas/symbol-ownership.json` for `owner_phase == 24` yields no record, so its ledger's
+unit is not a symbol but the non-export `downstream 1000 contract`, named in
+`atlas_common.NON_EXPORT_UNITS` so the export-partitioning tools skip it. Its ledger's working set
+is fifteen contract units, one per subphase 24.1 through 24.15, all open at activation
+(`open_in_this_stratum` 15); the ledger fails closed if the ownership atlas ever assigns this
+stratum an export, the provider census a registration row, or the prerequisite plane a unit.
+
+**The four non-claims the stratum never exceeds.** A **selected** empirical population is not a
+random sample, so its rates do not generalise to all downstream software; **1000/1000 is not a
+security proof**, so a full pass is not a guarantee that any consumer is safe; **a build is not a
+functional proof**, so compiling and linking is not behaving; and **transitive and direct
+consumers are different evidence**, so the two are never summed. The five load-bearing choices this
+activation records are D549 through D553.
+
+## D549 -- The population is frozen from multi-source ranking evidence before any candidate result
+
+The 1,000 families are selected from **frozen** ranking sources -- `popularity`,
+`language-registry`, `distro-package`, `issue-tracker`, `vendor-adoption`, `security-advisory` and
+`curated` -- each acquired and content-addressed (URL, fetch date, SHA-256, row count) **before**
+the candidate is run against anything. The pre-commitment is what makes the atlas a measurement
+rather than a selection of the tests the candidate happens to pass: a family the candidate fails
+cannot be quietly dropped from the population, because the population was fixed first.
+`downstream_schemas.validate_ranking_source` refuses a ranking source whose `frozen` flag is false,
+and the P1000 freeze (24.4) and the holdout partition (24.5) are both derived from the frozen
+sources rather than typed. The population is **selected**, not random, and every rate is a rate for
+that population (`docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md` section 4.6).
+
+## D550 -- Nothing in this stratum executes on the host, and the guard is the stratum's precondition
+
+Phase 24's subject is other software's build and run behaviour, so `docs/REPRODUCIBILITY.md`
+section 1's "nothing executes on the host" is this stratum's own precondition rather than a
+procedural rule: a host invocation would produce unreproducible evidence that looks entirely
+green. `forensics/tools/phase24_guard.py` is a module the Phase-24 entry points import and call
+**first**; it fails closed unless **all** of the container marker `/.dockerenv`, the opt-in
+`PHASE24_CONTAINER=1`, and an admitted image identity and platform (`PHASE24_IMAGE`,
+`PHASE24_PLATFORM`) matching the committed manifest `forensics/downstream/container.json` are
+present. The venue records the admitted values -- every `docker/openssl-rs-court.sh exec` sets the
+three variables -- so a host invocation, which has no marker, is refused with a clear message; the
+check is exposed as a pure function so the runner's self-test proves a host invocation is refused
+without running on a host. The manifest lists the single Phase-24 **metadata-only** generator
+(`phase24_obligations.py`), which reads committed atlases and executes nothing: the guard admits it
+on any host exactly as the other strata's obligation generators run host-side in CI's static job,
+while every **execution** entry point (the runner `phase24_courts.py`, and every later subphase
+tool that configures, builds, links or runs a downstream project) is deliberately absent from the
+list and is refused on the host. Widening the list is a reviewable act, not a silent one.
+
+## D551 -- The counted unit is the family, and a specimen is separate from it
+
+A **family** is the counted unit -- a real downstream project family, **never a package alias** --
+and a **specimen** is one concrete, pristine source tree of a family at a named version. Counting
+package aliases would let one project inflate the population (a distro package name, a language
+registry entry and a GitHub repository can all be the same project), so the atlas records the
+family and its ranking provenance rather than the name a package manager happens to use. Keeping
+the specimen separate from the family is the other half: a family measured on one version is not
+claimed for all its versions, and the family's `openssl_linkage` (`direct` or `transitive`) is a
+property of the family's relationship to OpenSSL rather than of the alias. `family` and `specimen`
+are distinct record kinds with distinct identities.
+
+## D552 -- `DROP_IN_PASS` is baseline-normalized, and a candidate-specific patch forbids it
+
+There is no boolean "works with `openssl-rs`". A drop-in verdict is **baseline-normalized**: a
+`DROP_IN_PASS` requires all five of the **same pristine source** (a `pristine` variant sharing the
+specimen's `pristine_source_id`), the **authority baseline succeeded**, the candidate **reached the
+authority-applicable level** (its `candidate_level` at least the `authority_applicable_level` the
+authority reached), **candidate linkage proven**, and **zero candidate-specific downstream patches**
+(`candidate_specific_patch_count` 0). `downstream_schemas.validate_drop_in_verdict` refuses a
+`DROP_IN_PASS` asserted without an authority baseline or with a positive patch count, and the
+schema's self-test proves both refusals by name. The rule generalises `docs/RELEASE_GATES.md`
+section 8's "only the exercised delta is claimed": a pass is evidence about how one pristine
+consumer behaved against the candidate at the level the authority itself reached, and a consumer
+the candidate had to patch is not a drop-in at all.
+
+## D553 -- The hostility augmentation and the holdout are separate from the counted population
+
+Two corpora are deliberately kept apart from the 1,000 counted families. The **hostility
+augmentation** (24.10) is a separate corpus that stresses the candidate past what a normal
+consumer does; it is never mixed into the counted families' rates, because a hostile case is
+evidence about robustness rather than about replacement. The **holdout partition** (24.5) is
+precommitted before the candidate is run against the development population, frozen from the same
+ranking evidence, and run **exactly once** against the frozen candidate (24.11), so it is a real
+out-of-sample measurement rather than a set of families that happened to be inconvenient. Neither
+corpus can be used to choose a patch: the holdout's partition is fixed before any candidate result
+exists, and the hostility corpus is named as separate rather than counted.
+

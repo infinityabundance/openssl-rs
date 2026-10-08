@@ -33,6 +33,14 @@ before its evidence exists.
 | 21 | Maintenance delta machinery |
 | 22 | Authority exhaustiveness / whole-program compatibility atlas |
 | 23 | Multitrack authority compatibility and OpenSSL lineage |
+| 24 | Downstream-1000 replacement atlas and empirical drop-in corpus |
+
+**Phase 24 is dependency-ordered after the multitrack authority stratum, not after the highest
+number.** It is admitted once Phase 23 is complete, and because Phase 23 requires Phase 21 (which
+requires Phase 22) the single edge transitively requires the authority archaeology, the
+maintenance-delta machinery and the multitrack authority lineage; no existing phase is renumbered.
+The dependency is declared rather than read off the numbers (`forensics/tools/phase_state.py`'s
+`REQUIRES`; `docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md` section 0).
 
 **Phase 23 is dependency-ordered after the authority archaeology and the maintenance-delta
 machinery, not after the highest number.** It is admitted once Phase 21 is complete, and because

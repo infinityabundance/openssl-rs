@@ -32,6 +32,7 @@ enforced here:
 | 21 | Maintenance delta machinery | `complete` |  |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 | 23 | Multitrack authority compatibility and OpenSSL lineage | `complete` |  |
+| 24 | Downstream-1000 replacement atlas and empirical drop-in corpus | `complete` |  |
 
 Deferred out of phase 3 (recorded hand-offs, not parity
 claims):

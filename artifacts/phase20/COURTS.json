@@ -388,6 +388,7 @@
           "21": "complete",
           "22": "complete",
           "23": "complete",
+          "24": "complete",
           "3": "complete",
           "4": "complete",
           "5": "complete",
@@ -3836,7 +3837,7 @@
     {
       "name": "release-gates",
       "path": "docs/RELEASE_GATES.md",
-      "sha256": "e908c495f0fa9dc36c1394c4d460960f533e60cf1ea1f6f1e48e474f6fe107e5"
+      "sha256": "3a4892d36740ccefa48e3361c5fe792513597bf9e7f7b55b7f03e1248593abe6"
     },
     {
       "name": "custodian-contract",
@@ -3911,7 +3912,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "270e6b73dece2871322b7283b81ab650dddd0c114f1aa0508c952a911f4c096a"
+      "sha256": "b2fe6b68761c2968e224ba17e0862a646be3bd85ff2bb8be00e2a627969da165"
     },
     {
       "name": "court-coverage-rows",
@@ -3921,7 +3922,7 @@
     {
       "name": "divergence-obligations",
       "path": "forensics/divergence-obligations.json",
-      "sha256": "b5e0ea6f90652c32e3b8355a204c5b1b3e7bee8d2f86bdcf8fede9e70b4aec31"
+      "sha256": "5118c892b8e0ce712a6ded9500efb63ca5b7643f4905cbe57098f17b974a3ebf"
     },
     {
       "name": "prerequisites",

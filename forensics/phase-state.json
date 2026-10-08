@@ -746,16 +746,39 @@
         "seal_sha256": "ae74b4d9726b0abe8a1e74a81124eed52a1dc37edeb731794c58bfbe4585ed7e",
         "state": "complete",
         "stratum": "Multitrack authority compatibility and OpenSSL lineage"
+      },
+      {
+        "blocking": "",
+        "deferred": [],
+        "evidence_absent": [],
+        "evidence_present": [
+          "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
+          "forensics/tools/phase24_obligations.py",
+          "forensics/tools/phase24_guard.py",
+          "forensics/tools/downstream_schemas.py",
+          "docs/PHASE-24-DOWNSTREAM-1000-SEAL.md",
+          "forensics/phase24-obligations.json",
+          "artifacts/phase24/COURTS.json",
+          "forensics/atlas/court-coverage.json",
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
+        ],
+        "name": "downstream-1000",
+        "phase": 24,
+        "provider_rows": null,
+        "seal_sha256": "df89a6fa16c4bc954fa3d6817a13888b1e06fe3f35259ea931245b314dbbcf5a",
+        "state": "complete",
+        "stratum": "Downstream-1000 replacement atlas and empirical drop-in corpus"
       }
     ],
     "rule": "a phase may be complete only if every phase it requires is complete (forensics/tools/phase_state.py REQUIRES; docs/PHASE-22-SUBPHASES.md section 8)",
     "summary": {
-      "complete": 24,
+      "complete": 25,
       "in_progress": 0,
       "not_started": 0
     }
   },
-  "body_hash": "835fc5b6aa447e91f9f214bfa05730addc42603705ea64047b3d0a711b3e44ef",
+  "body_hash": "74fc3cf5b52c2a3ec0281f2c6d1040a0c00e400662e41cec5c8cb5bd2e8defa6",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

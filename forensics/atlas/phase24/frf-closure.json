@@ -1,0 +1,643 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "chain": {
+      "declarable_courts": [],
+      "declared_courts": [],
+      "phase": 24,
+      "probe_pairs": [],
+      "reason": "the stratum stages a declarable court only if a Phase-24 court is declared in gen_frf_courts.py and its artifacts/phase24/probes/<probe>.{authority,candidate} pair is staged. Neither holds: the registry declares no Phase-24 court and the tree holds no such pair, so every Phase-24 court reads committed evidence and carries no {fixture}-driven FRF declaration (D13, D201) and phase_state.py's frf_gemel_blocking_reason(24) is empty by its own scoping -- the stratum owes no .frf declaration, receipt, adjudicated challenge or sensitivity-backed claim, and no Gemel checkpoint",
+      "registry": "forensics/tools/gen_frf_courts.py",
+      "stands_in_place": [
+        "the RT-FRF-CLOSURE harness challenge: each Phase-24 plane's own pure checker is driven over its committed artefact and over the controlled mutations its own sensitivity control seeds, and the classifier is proved not a rubber stamp",
+        "the Gemel checkpoint projection forensics/GEMEL_TRAJECTORY.md, which records the current checkpoint the release re-creates the store at"
+      ],
+      "vacuous": true
+    },
+    "challenges": [
+      {
+        "artefact": "forensics/downstream/ranking-sources.json",
+        "defect_class": "a source whose raw or normalization digest is missing or whose committed normalized bytes do not hash to it, an unavailable source counted present, a missing retrieval timestamp",
+        "expected": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 4,
+          "mutations_seeded": 4,
+          "specificity_holds": true
+        },
+        "instrument": "ranking-sources",
+        "mutations": {
+          "missing_retrieval_timestamp": true,
+          "mutated_payload": true,
+          "no_hash": true,
+          "unavailable_counted_present": true
+        },
+        "observed": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 4,
+          "mutations_seeded": 4,
+          "specificity_holds": true
+        },
+        "plane": "24.1",
+        "reason": null,
+        "status": "DETECTED"
+      },
+      {
+        "artefact": "forensics/downstream/candidates.json",
+        "defect_class": "a distro alias double-counted, a transitive consumer promoted to direct, a fork counted independent with no evidence, a family with no provenance",
+        "expected": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 4,
+          "mutations_seeded": 4,
+          "specificity_holds": true
+        },
+        "instrument": "candidate-universe",
+        "mutations": {
+          "alias_double_counted": true,
+          "family_without_provenance": true,
+          "fork_independent_without_evidence": true,
+          "transitive_promoted_to_direct": true
+        },
+        "observed": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 4,
+          "mutations_seeded": 4,
+          "specificity_holds": true
+        },
+        "plane": "24.2",
+        "reason": null,
+        "status": "DETECTED"
+      },
+      {
+        "artefact": "forensics/downstream/authority-baselines.jsonl",
+        "defect_class": "an authority-linkage claim resolving a system library, an authority failure counted as a candidate failure, a cohort member with no source hash, a fingerprint with no imported symbols claimed as a pass",
+        "expected": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 4,
+          "mutations_seeded": 4,
+          "specificity_holds": true
+        },
+        "instrument": "authority-census",
+        "mutations": {
+          "authority_fail_as_candidate_failure": true,
+          "authority_linkage_but_system": true,
+          "cohort_member_without_source_hash": true,
+          "fingerprint_without_symbols_claimed_pass": true
+        },
+        "observed": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 4,
+          "mutations_seeded": 4,
+          "specificity_holds": true
+        },
+        "plane": "24.3",
+        "reason": null,
+        "status": "DETECTED"
+      },
+      {
+        "artefact": "forensics/downstream/family-freeze.json",
+        "defect_class": "two P1000 members reordered, a P1000 member deleted, a family shared with the reserve, a mutated selection root, a fabricated candidate-subject run",
+        "expected": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 5,
+          "mutations_seeded": 5,
+          "specificity_holds": true
+        },
+        "instrument": "family-freeze",
+        "mutations": {
+          "candidate_result_present": true,
+          "mutated_selection_root": true,
+          "p1000_order_swapped": true,
+          "p1000_reserve_overlap": true,
+          "p1000_short": true
+        },
+        "observed": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 5,
+          "mutations_seeded": 5,
+          "specificity_holds": true
+        },
+        "plane": "24.4",
+        "reason": null,
+        "status": "DETECTED"
+      },
+      {
+        "artefact": "forensics/downstream/holdout.json",
+        "defect_class": "a development family moved into the holdout, a holdout member deleted, a family_id in both cohorts, a P1000-external family added, a mutated root",
+        "expected": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "instrument": "holdout-partition",
+        "mutations": {
+          "candidate_result_present": true,
+          "family_id_in_both_cohorts": true,
+          "holdout_member_deleted": true,
+          "holdout_member_moved": true,
+          "mutated_partition_root": true,
+          "p1000_external_family": true
+        },
+        "observed": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "plane": "24.5",
+        "reason": null,
+        "status": "DETECTED"
+      },
+      {
+        "artefact": "forensics/downstream/build-link-atlas.json",
+        "defect_class": "a candidate L4 row resolving the authority, a missing authority row, a positive patch count, a failed row with no residual, a system-libssl linkage",
+        "expected": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "instrument": "build-link-atlas",
+        "mutations": {
+          "candidate_different_source_root": true,
+          "candidate_linkage_resolves_authority": true,
+          "candidate_system_libssl": true,
+          "failed_row_without_residual": true,
+          "positive_candidate_specific_patch_count": true,
+          "recipe_family_missing_authority_row": true
+        },
+        "observed": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "plane": "24.6",
+        "reason": null,
+        "status": "DETECTED"
+      },
+      {
+        "artefact": "forensics/downstream/runtime-functional-atlas.json",
+        "defect_class": "a candidate level above the authority baseline, a load proof missing, an empty transcript, a missing authority runtime row, a normalisation that erases a return code, a row above its build/link permit",
+        "expected": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "instrument": "runtime-functional-atlas",
+        "mutations": {
+          "candidate_level_above_authority_baseline": true,
+          "loaded_row_without_proof": true,
+          "missing_authority_runtime_row": true,
+          "normalisation_erases_return_code": true,
+          "runtime_above_build_link_permit": true,
+          "runtime_row_without_transcript": true
+        },
+        "observed": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "plane": "24.7",
+        "reason": null,
+        "status": "DETECTED"
+      },
+      {
+        "artefact": "forensics/downstream/failures.json",
+        "defect_class": "a candidate-specific label without an authority failure, a venue-limited record with no authority failure, an unclassified or omitted leftover, a missing minimized fixture, a fabricated fix commit",
+        "expected": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "instrument": "failure-minimization",
+        "mutations": {
+          "candidate_specific_not_derived": true,
+          "fabricated_fix_commit": true,
+          "leftover_marked_unclassified": true,
+          "leftover_omitted": true,
+          "minimized_fixture_missing": true,
+          "venue_limited_without_authority_failure": true
+        },
+        "observed": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "plane": "24.8",
+        "reason": null,
+        "status": "DETECTED"
+      },
+      {
+        "artefact": "forensics/downstream/high-value-tier.json",
+        "defect_class": "a tier member dropped, a family added by a candidate result, a candidate level above the baseline, a load proof missing, an empty transcript, a not-selected family with no reason",
+        "expected": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "instrument": "high-value-tier",
+        "mutations": {
+          "candidate_level_above_authority_baseline": true,
+          "family_added_by_candidate_result": true,
+          "loaded_row_without_proof": true,
+          "non_selected_family_without_reason": true,
+          "runtime_row_without_transcript": true,
+          "tier_member_dropped": true
+        },
+        "observed": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "plane": "24.9",
+        "reason": null,
+        "status": "DETECTED"
+      },
+      {
+        "artefact": "forensics/downstream/hostility-corpus.json",
+        "defect_class": "a hostility member injected into the P1000 counts, a member with no new entity, a candidate row resolving the authority, a missing authority run, an unnormalised transcript, a member beyond the bound",
+        "expected": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "instrument": "hostility-augmentation",
+        "mutations": {
+          "candidate_row_resolves_authority": true,
+          "corpus_member_beyond_bound": true,
+          "corpus_member_without_new_entity": true,
+          "hostility_member_injected_into_p1000": true,
+          "missing_authority_run": true,
+          "unnormalised_transcript": true
+        },
+        "observed": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "plane": "24.10",
+        "reason": null,
+        "status": "DETECTED"
+      },
+      {
+        "artefact": "forensics/downstream/candidate-freeze.json",
+        "defect_class": "a precommitted holdout member swapped for a development member, a mutated partition root, a first_run rewritten after a rerun, a level above the baseline, a holdout family cited as a fix source, a mutated count",
+        "expected": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "instrument": "candidate-freeze",
+        "mutations": {
+          "candidate_level_above_authority_baseline": true,
+          "first_run_rewritten_after_rerun": true,
+          "holdout_family_cited_as_fix": true,
+          "holdout_member_swapped_for_development": true,
+          "mutated_count": true,
+          "mutated_partition_root": true
+        },
+        "observed": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "plane": "24.11",
+        "reason": null,
+        "status": "DETECTED"
+      },
+      {
+        "artefact": "forensics/downstream/p1000-run.json",
+        "defect_class": "a PASS without an authority baseline, a PASS with a positive patch count, a duplicated verdict, a level below the baseline marked PASS, a mismatched candidate identity",
+        "expected": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 5,
+          "mutations_seeded": 5,
+          "specificity_holds": true
+        },
+        "instrument": "p1000-run",
+        "mutations": {
+          "candidate_level_below_baseline_marked_pass": true,
+          "duplicated_verdict": true,
+          "mismatched_candidate_identity": true,
+          "pass_with_positive_patch_count": true,
+          "pass_without_authority_baseline": true
+        },
+        "observed": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 5,
+          "mutations_seeded": 5,
+          "specificity_holds": true
+        },
+        "plane": "24.12",
+        "reason": null,
+        "status": "DETECTED"
+      },
+      {
+        "artefact": "forensics/downstream/reconciliation.json",
+        "defect_class": "a counted family with no verdict, a residual left unknown, a failure dropped from the summary, a hostility result mixed into the P1000 rate, a typed rate, a failure not preserved",
+        "expected": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "instrument": "atlas-reconciliation",
+        "mutations": {
+          "counted_family_without_a_verdict": true,
+          "failure_dropped_from_summary": true,
+          "failure_not_preserved": true,
+          "hostility_mixed_into_p1000_rate": true,
+          "residual_left_unknown": true,
+          "typed_rate_disagrees_with_verdicts": true
+        },
+        "observed": {
+          "baseline_findings": 0,
+          "honest": true,
+          "mutations_caught": 6,
+          "mutations_seeded": 6,
+          "specificity_holds": true
+        },
+        "plane": "24.13",
+        "reason": null,
+        "status": "DETECTED"
+      }
+    ],
+    "counts": {
+      "detected": 13,
+      "not_detected": 0,
+      "not_driven": 0,
+      "planes": 13
+    },
+    "gemel": {
+      "checkpoint_count": 70,
+      "checkpoint_owed": false,
+      "checkpoints_naming_frf_chain": [
+        "K45",
+        "K48",
+        "K49",
+        "K50",
+        "K51",
+        "K52",
+        "K53",
+        "K54",
+        "K55",
+        "K56",
+        "K57",
+        "K58",
+        "K59",
+        "K60",
+        "K61",
+        "K62",
+        "K63",
+        "K64",
+        "K65",
+        "K66",
+        "K67",
+        "K68",
+        "K69",
+        "K70"
+      ],
+      "checkpoints_naming_phase": [],
+      "current": "checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d",
+      "identity": {
+        "checkpoint_state_hash": "a887e4176ee59aec0a6d958696c805efffe6df8a2620c4b9339b849138ac805d",
+        "plan": {
+          "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
+          "sha256": "309e0f8c062db07be0c529bb53878b17761ac7cddcfdc14ff674820ae8de663d"
+        },
+        "registry": {
+          "path": "forensics/tools/gen_frf_courts.py",
+          "sha256": "f413e98312e470ee93eb483766e93e9860855349c8a0deea41bf258f4df7c1ca"
+        }
+      },
+      "projection": "forensics/GEMEL_TRAJECTORY.md",
+      "reason": "the FRF/Gemel chain entry is vacuous (no Phase-24 court is declarable), so the stratum owes no Gemel change or checkpoint of its own; the release's current checkpoint in the committed projection is the boundary a later session resumes from, and this record binds it rather than reading the uncommitted store"
+    },
+    "harness": {
+      "classifier": "DETECTED iff expected == observed, NOT_DETECTED otherwise",
+      "court": "RT-FRF-CLOSURE mutates a registered challenge's observed result in memory and requires NOT_DETECTED, proving the classifier is not a rubber stamp",
+      "statuses": [
+        "DETECTED",
+        "NOT_DETECTED",
+        "NOT_DRIVEN"
+      ]
+    },
+    "property_findings": [
+      "the stratum stages no declarable court: the registry declares no Phase-24 court and no artifacts/phase24/probes/<probe>.{authority,candidate} pair is staged, so by phase_state.py's frf_gemel_blocking_reason scoping the FRF/Gemel chain entry is vacuous and no .frf object or Gemel checkpoint is owed; the RT-FRF-CLOSURE harness challenge and the Gemel projection stand in its place, and a passing atlas is not a chain that ran"
+    ],
+    "property_status": "NOT_CLAIMED",
+    "sort_key": "challenges by plane (numeric); mutations by name; counts numeric; chain.declared_courts and chain.probe_pairs sorted; gemel so the current checkpoint and the naming sets are derived from the committed projection; every list sorted",
+    "what_this_is": "Phase 24.14's FRF/Gemel closure: the per-plane FRF challenges (each Phase-24 plane's own pure checker driven over its committed artefact and over the controlled mutations its own sensitivity control seeds, with the caught/not-caught delta recorded), the FRF chain staging (why no Phase-24 court is declarable, and what stands in its place), and the Gemel checkpoint projection (the state of the committed forensics/GEMEL_TRAJECTORY.md, never the store). It is an instrument plus an observation record, not a claim that the stratum has a declarable court."
+  },
+  "generator": "forensics/tools/phase24_frf.py",
+  "inputs": [
+    {
+      "name": "phase-24-plan",
+      "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
+      "sha256": "309e0f8c062db07be0c529bb53878b17761ac7cddcfdc14ff674820ae8de663d"
+    },
+    {
+      "name": "frf-registry",
+      "path": "forensics/tools/gen_frf_courts.py",
+      "sha256": "f413e98312e470ee93eb483766e93e9860855349c8a0deea41bf258f4df7c1ca"
+    },
+    {
+      "name": "gemel-trajectory",
+      "path": "forensics/GEMEL_TRAJECTORY.md",
+      "sha256": "02d0faf30973faaa59f66098ff85d399df4ee9f2746f9ef73c8b117fa99db6b1"
+    },
+    {
+      "name": "phase24-guard",
+      "path": "forensics/tools/phase24_guard.py",
+      "sha256": "94ea35a66565d01f3a82dc7113e571e7f59eb5c5f378911196c0783600b41192"
+    },
+    {
+      "name": "phase24-container-manifest",
+      "path": "forensics/downstream/container.json",
+      "sha256": "88ecf75ef46748663fbbf277215e7ef8ae36963c735dce8ab9f23975a2c4b9df"
+    },
+    {
+      "name": "downstream-schemas",
+      "path": "forensics/tools/downstream_schemas.py",
+      "sha256": "fbb7bd6cd48dcf1fda8aad6d2fa686dcbc09b53dfe185ad192659348e4dc4bbc"
+    },
+    {
+      "name": "downstream-sources",
+      "path": "forensics/tools/downstream_sources.py",
+      "sha256": "16bec81d57c0ed0b0eeeb7571f1fc7728bd87a9435cfa20d179eb8ef074cedc6"
+    },
+    {
+      "name": "downstream-universe",
+      "path": "forensics/tools/downstream_universe.py",
+      "sha256": "b829a577c68718b4b2c6fdf7c1b502f1c57e8089c375a61490e61ad9e53c982b"
+    },
+    {
+      "name": "downstream-census",
+      "path": "forensics/tools/downstream_census.py",
+      "sha256": "025921fa1197d6e56d5c6e664b3685150bf31a270a7b3150f719c27d85807875"
+    },
+    {
+      "name": "downstream-freeze",
+      "path": "forensics/tools/downstream_freeze.py",
+      "sha256": "c7489dc2f2a85c5b56e75f2392d66406f804e9b7edad4f825edb5e171b954ebf"
+    },
+    {
+      "name": "downstream-holdout",
+      "path": "forensics/tools/downstream_holdout.py",
+      "sha256": "42a27668ccd590e5b6812cc2c4c775fb185522379818149a13670b9a8b9fe553"
+    },
+    {
+      "name": "downstream-build-link",
+      "path": "forensics/tools/downstream_build_link.py",
+      "sha256": "f13829868dc917601b369760983c6113d4b7eddecf8f9a1f17ed94c8fc8942af"
+    },
+    {
+      "name": "downstream-runtime",
+      "path": "forensics/tools/downstream_runtime.py",
+      "sha256": "15739bd787925b78a19e379d6fbf34a95662efef12cc3b50fcd10d3af70f45b5"
+    },
+    {
+      "name": "downstream-failures",
+      "path": "forensics/tools/downstream_failures.py",
+      "sha256": "3d636875e64719b56fe900d0cbc438267e27843ad72eb92ebc9f1a50e11b042c"
+    },
+    {
+      "name": "downstream-high-value",
+      "path": "forensics/tools/downstream_high_value.py",
+      "sha256": "18929c904e79d73d8e762c031bd584bee5176f4098935358e857ae67a8b836cc"
+    },
+    {
+      "name": "downstream-hostility",
+      "path": "forensics/tools/downstream_hostility.py",
+      "sha256": "e4016ab9e6e3236ac34e2862aa60be822f78ad0c503811bfcf048dc1a895c4b6"
+    },
+    {
+      "name": "downstream-candidate-freeze",
+      "path": "forensics/tools/downstream_candidate_freeze.py",
+      "sha256": "55131524bcf770bc443f5565f4848688901023e9ba42bb78f0e06f78b494678b"
+    },
+    {
+      "name": "downstream-p1000-run",
+      "path": "forensics/tools/downstream_p1000_run.py",
+      "sha256": "f5bb66ce3901b48a2e0757164aed0ddb8348bba85eb20dcc8340125fb21ef422"
+    },
+    {
+      "name": "downstream-reconciliation",
+      "path": "forensics/tools/downstream_reconciliation.py",
+      "sha256": "c32039606aed20185d2b563f6606466b73e6ead5f97c43d1ef9cf0613c850daa"
+    },
+    {
+      "name": "ranking-sources",
+      "path": "forensics/downstream/ranking-sources.json",
+      "sha256": "5728e84a22fae4659e3f660c2ada29e67b6afcc564a6b0e09ad0373c971cb61b"
+    },
+    {
+      "name": "candidates",
+      "path": "forensics/downstream/candidates.json",
+      "sha256": "917e3ffcc95885cdd88dfac0e7b4a1d0e005dfb4ae946b9bfbf03290e260e76c"
+    },
+    {
+      "name": "families",
+      "path": "forensics/downstream/families.json",
+      "sha256": "4682c5c2523be6f64ca4be9d349747d4055b2a777d0441fee801448b3a17b60a"
+    },
+    {
+      "name": "authority-baselines",
+      "path": "forensics/downstream/authority-baselines.jsonl",
+      "sha256": "30ee7cc37fcbdbf7adca22ac47bffe335e5336f8fbdb67ae0b30dfdb2f0e7068"
+    },
+    {
+      "name": "usage-fingerprints",
+      "path": "forensics/downstream/usage-fingerprints.json",
+      "sha256": "02ce3cf1fd2fdf57cbfae7bf2bfb5c526292a9d055b69de16165c8d363424fff"
+    },
+    {
+      "name": "family-freeze",
+      "path": "forensics/downstream/family-freeze.json",
+      "sha256": "4998431074406050e409fcc47a8b81e259f899e804387aca3dff88fb71963fc5"
+    },
+    {
+      "name": "holdout",
+      "path": "forensics/downstream/holdout.json",
+      "sha256": "3bb4acc99379d9f1a041193f59af1d64f51da7711ec2b6177b2f170992928f31"
+    },
+    {
+      "name": "build-link-atlas",
+      "path": "forensics/downstream/build-link-atlas.json",
+      "sha256": "569aad0dc237c450dbb94119ac9034cbeaa420fd3acece383df5c3a0bcf794f5"
+    },
+    {
+      "name": "runtime-functional-atlas",
+      "path": "forensics/downstream/runtime-functional-atlas.json",
+      "sha256": "2904cc61b06aec31edfe58dd6263ac4747ed9097d5f30c0807885b3a32df98eb"
+    },
+    {
+      "name": "failures",
+      "path": "forensics/downstream/failures.json",
+      "sha256": "9518b53e94af01c5d8584cfaa4a0566ab51537ee5d14a36352e8215627696ba7"
+    },
+    {
+      "name": "high-value-tier",
+      "path": "forensics/downstream/high-value-tier.json",
+      "sha256": "7945b279794504d6079832db4ef0fde3062fc9912494249fe55ea4824ce7a6f2"
+    },
+    {
+      "name": "hostility-corpus",
+      "path": "forensics/downstream/hostility-corpus.json",
+      "sha256": "306bbf34f741988ff4558d65e11420e63a625b49d29852b79977bdf259023e51"
+    },
+    {
+      "name": "candidate-freeze",
+      "path": "forensics/downstream/candidate-freeze.json",
+      "sha256": "a29b53b76e3452696191edf1fa6d483aa1069fe510f41bb7e3a33662f8af4cf9"
+    },
+    {
+      "name": "p1000-run",
+      "path": "forensics/downstream/p1000-run.json",
+      "sha256": "8a6d0c033c2105fee0f1be3624cad1d29fc8e410abb91f706c4cc7d6af70b1d2"
+    },
+    {
+      "name": "reconciliation",
+      "path": "forensics/downstream/reconciliation.json",
+      "sha256": "5d0c4b53af6f450fa2636ae1a9f8e730d3c4e06c9b99bbd69ff55b415e79c53c"
+    }
+  ],
+  "kind": "phase24-frf-closure",
+  "schema": "openssl-rs/atlas/phase24-frf-closure/v1"
+}
