@@ -16,12 +16,16 @@
       },
       {
         "closure": "the `MS-SOURCE-CENSUS` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-SOURCE-CENSUS is pending",
+        "findings": [
+          "2470 compiler-identified unsafe context(s) carry no source-stated SAFETY contract (recorded open; 25.3 owns the obligations)",
+          "6664 unsafe context(s) hold no classified operation (a declaration, not an operation)",
+          "3 cross-check residual(s): lexical/out_of_scope; geiger/out_of_scope; geiger/out_of_scope"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-SOURCE-CENSUS is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "source-census",
         "what": "one compiler-derived row per shipped first-party source/build file, with the unsafe operations the **compiler** establishes rather than a regex or a LOC projection, so the primary unit is a compiler-derived unsafe operation and LOC is a secondary projection"
@@ -272,8 +276,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 0,
-      "open_in_this_stratum": 22,
+      "implemented": 1,
+      "open_in_this_stratum": 21,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -314,7 +318,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "fb01447156900445af4535cf1979c53caa0e015139ab17b6bc364337199850a4"
+      "sha256": "432b1318c99353c2fa72709eee208d7728aafcfe2cdb2400b1e13422ca01950f"
     },
     {
       "name": "phase25-guard",
