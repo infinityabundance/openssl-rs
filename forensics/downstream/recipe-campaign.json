@@ -131,19 +131,19 @@
         "candidate-link-failure": 0,
         "candidate-load-failure": 0,
         "candidate-runtime-failure": 0,
-        "no-admitted-recipe": 970,
+        "no-admitted-recipe": 965,
         "no-fixture": 0,
-        "none": 28,
+        "none": 33,
         "out-of-scope": 0,
         "recipe-build-dependency-missing": 0,
         "recipe-build-system-unsupported": 2
       },
-      "drop_in_pass": 28,
+      "drop_in_pass": 33,
       "families": 1000,
-      "linked": 28,
-      "measurable_families": 28,
-      "recipe_backed_families": 30,
-      "recipe_less_families": 970
+      "linked": 33,
+      "measurable_families": 33,
+      "recipe_backed_families": 35,
+      "recipe_less_families": 965
     },
     "attempts": [
       {
@@ -372,9 +372,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "rsync",
         "failure_class": "configure-failure",
         "family": "rsync",
@@ -582,9 +582,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "ssmtp",
         "failure_class": "link-failure",
         "family": "ssmtp",
@@ -778,9 +778,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "squid",
         "failure_class": "link-failure",
         "family": "squid",
@@ -1165,34 +1165,34 @@
     },
     "movement": {
       "drop_in_pass": {
-        "after": 28,
+        "after": 33,
         "before": 18,
-        "delta": 10
+        "delta": 15
       },
       "linked": {
-        "after": 28,
+        "after": 33,
         "before": 18,
-        "delta": 10
+        "delta": 15
       },
       "measurable_families": {
-        "after": 28,
+        "after": 33,
         "before": 18,
-        "delta": 10
+        "delta": 15
       },
       "no_admitted_recipe": {
-        "after": 970,
+        "after": 965,
         "before": 980,
-        "delta": -10
+        "delta": -15
       },
       "recipe_backed_families": {
-        "after": 30,
+        "after": 35,
         "before": 20,
-        "delta": 10
+        "delta": 15
       },
       "resolved_none": {
-        "after": 28,
+        "after": 33,
         "before": 18,
-        "delta": 10
+        "delta": 15
       }
     },
     "non_claims": [
@@ -1218,7 +1218,7 @@
       "priority_rule": "the recipe-less counted families in the frozen 24.16 recipe-queue order -- source breadth descending, then distro breadth descending, then popularity descending, then canonical name ascending, then family_id ascending -- preferring well-known direct OpenSSL consumers with stable upstream release tarballs. It is a **heuristic** ranking over frozen breadth signals, never a measurement of buildability"
     }
   },
-  "body_hash": "0c1528a86833fc9acf0d62f24d50c63116c176e66371f4863e2be491851ae1b4",
+  "body_hash": "98418e41b59da5486c42060cae98cf9e9edae93efdc84964ae1d5ba6931179ae",
   "generator": "forensics/tools/downstream_recipe_campaign.py",
   "inputs": [
     {
@@ -1229,22 +1229,22 @@
     {
       "name": "shared-blockers",
       "path": "forensics/downstream/shared-blockers.json",
-      "sha256": "09c0fe3b5878c2dea965caecc912d52568c7ec6e2e1b21d0b73e396f910be37c"
+      "sha256": "6e7807aa9fb2efe5cf6edbaaf8c37a8f6977e63d6b13b675123a0ba43548c041"
     },
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "f0eaf8f1241cb9b7e53c90efd617a09a9f39b7cd38391341c961e5998c0ebd87"
+      "sha256": "edba5a53394093ec5e36cec2c88f1d34994bd418d266de5d59055daeeb70350c"
     },
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "73eec67eba712447eb7958a9a2baa2ee60da7e757c79f0694729f8e00d8362d3"
+      "sha256": "4b0c4bfd813e2bf023ae656535ae838ec6bf06199bd6f33d1be1b6cc5f688782"
     },
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "aaf393ce40475789ae824cb96cf63539cdceb9fccefc27bd9bbd738ade8dacac"
+      "sha256": "cf7a8968d400dda2984fe772c8b8851aa732d922ad14e74bf3958eb6e2eae04a"
     },
     {
       "name": "families",
@@ -1264,7 +1264,7 @@
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "ee5cbdd84a8503ae49d18f70399ed15e56866e01cec3ef144cce4adc58f42122"
+      "sha256": "bc10c361ba294d371b56983fbde06725df3f777e357c3729ac93e05d51c3fdf8"
     },
     {
       "name": "downstream-schemas",
@@ -1279,7 +1279,7 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "b39d46b1f6b48d0cd55e26867c71d7081aecb9e4777261f693259ab87f37943d"
+      "sha256": "beb0417ee8a6f610f89f41dcaf17825fafa4f2a568efe8729e787ec4c275498a"
     }
   ],
   "kind": "downstream-recipe-campaign",

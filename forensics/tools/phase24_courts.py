@@ -323,6 +323,14 @@ import downstream_remediation  # noqa: E402
 # `metadata_only` in the container manifest.
 import downstream_recipe_campaign  # noqa: E402
 
+# The 24.19 close-candidate reclamation batch, imported so the court re-derives the whole record (the
+# attempts, the admitted recipes, the classification findings, the counts and the movement) from the
+# committed Phase-24 planes and the preserved pre-batch baseline, and re-runs its findings and
+# sensitivity control, through the same code path the artefact was produced by. The tool executes
+# nothing (the recipes it admits are built by `downstream_build_link.py`, which imports its
+# catalogue), so it is declared `metadata_only` in the container manifest.
+import downstream_close_batch  # noqa: E402
+
 # The generated seal census, imported for the one function that renders the census's biggest-movers
 # section, so the court re-derives the markers the census must carry rather than restating them. It
 # writes no Phase-24 artefact and reads no Phase-24 state.
@@ -447,6 +455,14 @@ RECIPE_CAMPAIGN = REPO_ROOT / "forensics" / "downstream" / "recipe-campaign.json
 RECIPE_CAMPAIGN_BASELINE = REPO_ROOT / "forensics" / "downstream" / "recipe-campaign-baseline.json"
 RECIPE_CAMPAIGN_COURT = "RT-RECIPE-CAMPAIGN"
 
+# 24.19's subject: the close-candidate reclamation batch record, the preserved pre-batch baseline it
+# reads, the authored attempt record it carries and the movement it measures. The court reads them and
+# re-derives the whole record; it never rebuilds and never launches anything.
+CLOSE_BATCH = REPO_ROOT / "forensics" / "downstream" / "close-batch.json"
+CLOSE_BATCH_BASELINE = REPO_ROOT / "forensics" / "downstream" / "close-batch-baseline.json"
+CLOSE_BATCH_ATTEMPTS = REPO_ROOT / "forensics" / "downstream" / "close-batch-attempts.json"
+CLOSE_BATCH_COURT = "RT-CLOSE-BATCH"
+
 # 24.15's subject: the seal, and the closure of the atlas as the stratum's claim. It reads the
 # committed reconciliation, the final P1000 run, the candidate freeze and the FRF closure -- never
 # the derived state of its own stratum (`forensics/phase-state.json`, the obligations ledger or
@@ -484,6 +500,7 @@ SEAL_REQUIRED_MARKERS = (
     biggest_movers.REPORT_PATH,
     "forensics/downstream/blocker-remediation.json",
     "forensics/downstream/recipe-campaign.json",
+    "forensics/downstream/close-batch.json",
     "DOWNSTREAM-1000-SEAL",
     "the four non-claims",
     "a selected population is not a random sample",
@@ -520,6 +537,7 @@ COURTS: list[tuple[str, str]] = [
     (BLOCKER_LEVERAGE_COURT, "_blocker_leverage_court"),
     (BLOCKER_REMEDIATION_COURT, "_blocker_remediation_court"),
     (RECIPE_CAMPAIGN_COURT, "_recipe_campaign_court"),
+    (CLOSE_BATCH_COURT, "_close_batch_court"),
     (SEAL_COURT, "_downstream_1000_seal_court"),
 ]
 
@@ -2400,6 +2418,108 @@ def _recipe_campaign_court(name: str) -> dict:
 
 
 # --------------------------------------------------------------------------------------------
+# 24.19 -- the close-candidate reclamation: the second bounded admission batch
+# --------------------------------------------------------------------------------------------
+
+
+def _close_batch_court(name: str) -> dict:
+    """`RT-CLOSE-BATCH`: 24.19's court, the close-candidate reclamation batch.
+
+    Stages no probe. It reads the committed record `forensics/downstream/close-batch.json`, its
+    preserved pre-batch baseline `forensics/downstream/close-batch-baseline.json`, the authored
+    attempt record `forensics/downstream/close-batch-attempts.json`, the committed build/link atlas
+    and final P1000 run, and re-derives the whole record through the same code path it was produced
+    by, re-running its findings and sensitivity control. It establishes that every attempted family
+    is accounted for exactly once; that every admitted recipe was **really built and linked** against
+    both subjects (the committed atlas shows both reached L4 with linkage proven); that a
+    classification finding built in the venue but links no OpenSSL subject and is never forced to
+    link one; that a non-admitted family carries an outcome from the closed vocabulary and a reason;
+    that the admitted recipes are exactly the attempts marked admitted and exactly the module
+    catalogue the build/link tool imports; that the movement is the subtraction of the preserved
+    before and the derived after; and that the counts are derived rather than typed. Five seeded
+    mutations are each detected with specificity holding. A passing record is an **instrument**: it
+    says what was admitted and what the planes then measured, not that the population now passes, and
+    its yield is a property of this venue and this batch, not of the whole set.
+    """
+    problems: list[str] = []
+    for path in (CLOSE_BATCH, CLOSE_BATCH_BASELINE, CLOSE_BATCH_ATTEMPTS, SHARED_BLOCKERS,
+                 BUILD_LINK_ATLAS, P1000_RUN, FAMILY_FREEZE, FAMILIES):
+        if not path.is_file():
+            problems.append(f"{rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    committed = json.loads(CLOSE_BATCH.read_text(encoding="utf-8"))
+    body = _seal_body(committed)
+    inputs = downstream_close_batch.load_inputs()
+
+    findings: list[str] = []
+    if committed.get("body_hash") != content_hash(body):
+        findings.append("the recorded close-batch body_hash does not match its body")
+    derived = downstream_close_batch.derive_close_batch(inputs)
+    if content_hash(derived) != content_hash(body):
+        findings.append("the committed close-batch record does not reproduce from the planes")
+    findings += downstream_close_batch.close_batch_findings(inputs, body)
+    control = downstream_close_batch.close_batch_sensitivity_control(inputs, body)
+
+    counts = body.get("counts") or {}
+    movement = body.get("movement") or {}
+    admitted = body.get("admitted_recipes") or []
+    findings_rows = body.get("classification_findings") or []
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/close-batch.json, its preserved "
+            "pre-batch baseline forensics/downstream/close-batch-baseline.json and its authored "
+            "attempt record forensics/downstream/close-batch-attempts.json, re-derives the whole "
+            "record from the committed Phase-24 planes (the build/link atlas, the final P1000 run "
+            "and the frozen P1000) through forensics/tools/downstream_close_batch.py, and re-runs "
+            "its findings and sensitivity control, without rebuilding and without launching "
+            "anything. It establishes that every attempted family is accounted for exactly once; "
+            "that every admitted recipe was really built and linked against both subjects; that a "
+            "classification finding built in the venue but links no OpenSSL subject and is never "
+            "forced to link one; that a non-admitted family carries an outcome from the closed "
+            "vocabulary and a reason; that the admitted recipes are exactly the attempts marked "
+            "admitted and exactly the module catalogue the build/link tool imports; that the "
+            "movement is the subtraction of the preserved before and the derived after; and that "
+            "the counts are derived rather than typed. A rejected family marked admitted, a dropped "
+            "admitted recipe, a movement figure disagreeing with the planes, a classification "
+            "finding stripped of its class and a typed count are each detected with specificity "
+            "holding (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 4.15 and 3.8)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the close-batch court reads committed evidence and the record derived from it and "
+            "stages no artifacts/phase24/probes/<probe>.{authority,candidate} pair, so it takes no "
+            "transcript to diff and carries no FRF declaration"
+        ),
+        "record": rel(CLOSE_BATCH),
+        "baseline": rel(CLOSE_BATCH_BASELINE),
+        "attempts_record": rel(CLOSE_BATCH_ATTEMPTS),
+        "counts": {
+            "attempted": counts.get("attempted", 0),
+            "admitted": counts.get("admitted", 0),
+            "classification_findings": counts.get("classification_findings", 0),
+            "built": counts.get("built", 0),
+            "linked": counts.get("linked", 0),
+            "authority_linked": counts.get("authority_linked", 0),
+            "by_outcome": counts.get("by_outcome") or {},
+            "yield": counts.get("yield") or {},
+        },
+        "movement": movement,
+        "admitted_families": [r.get("family") for r in admitted],
+        "finding_families": [r.get("family") for r in findings_rows],
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
+# --------------------------------------------------------------------------------------------
 # 24.15 -- the seal: the closure of the atlas, the bound and the four non-claims
 # --------------------------------------------------------------------------------------------
 
@@ -3194,6 +3314,20 @@ def main(argv: list[str]) -> int:
             "dropped, the ranking reordered and a per-fix leverage changed are each detected with "
             "specificity holding. The court is an instrument, not a repair: it names which blocker "
             "moves the most families, and its recipe queue is a labelled heuristic. "
+            "`RT-CLOSE-BATCH` is 24.19's court: the close-candidate reclamation batch. It stages no "
+            "probe and reads forensics/downstream/close-batch.json, its preserved pre-batch "
+            "baseline and its authored attempt record, re-deriving the whole record from the "
+            "committed Phase-24 planes. It establishes that every attempted family is accounted for "
+            "exactly once; that every admitted recipe was really built and linked against both "
+            "subjects; that a classification finding built in the venue but links no OpenSSL "
+            "subject and is never forced to link one; that a non-admitted family carries an outcome "
+            "from the closed vocabulary and a reason; that the admitted recipes are exactly the "
+            "module catalogue the build/link tool imports; that the movement is the subtraction of "
+            "the preserved before and the derived after; and that the counts are derived rather "
+            "than typed. A rejected family marked admitted, a dropped admitted recipe, a movement "
+            "figure disagreeing with the planes, a classification finding stripped of its class "
+            "and a typed count are each detected with specificity holding. The court is an "
+            "instrument, not a pass: its yield is a property of this venue and this batch. "
             "Phase 24 owns no exported "
             "symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
@@ -3366,7 +3500,20 @@ def main(argv: list[str]) -> int:
                            ("downstream-blockers", REPO_ROOT / "forensics" / "tools"
                             / "downstream_blockers.py"),
                            ("render-biggest-movers", REPO_ROOT / "forensics" / "tools"
-                            / "render_biggest_movers.py")):
+                            / "render_biggest_movers.py"),
+                           ("recipe-campaign", RECIPE_CAMPAIGN),
+                           ("recipe-campaign-baseline", RECIPE_CAMPAIGN_BASELINE),
+                           ("downstream-recipe-campaign", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_recipe_campaign.py"),
+                           ("blocker-remediation", BLOCKER_REMEDIATION),
+                           ("blocker-remediation-baseline", BLOCKER_REMEDIATION_BASELINE),
+                           ("downstream-remediation", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_remediation.py"),
+                           ("close-batch", CLOSE_BATCH),
+                           ("close-batch-baseline", CLOSE_BATCH_BASELINE),
+                           ("close-batch-attempts", CLOSE_BATCH_ATTEMPTS),
+                           ("downstream-close-batch", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_close_batch.py")):
         if path.is_file():
             inputs.append(InputRef(name=ref_name, path=path))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,

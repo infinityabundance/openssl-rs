@@ -19,11 +19,13 @@
         "family:hiredis-ssl": "L4-linked",
         "family:iperf3": "L4-linked",
         "family:isync": "L7-functional",
+        "family:keepalived": "L4-linked",
         "family:kmod": "L4-linked",
         "family:ldns": "L4-linked",
         "family:libarchive": "L4-linked",
         "family:libevent": "L4-linked",
         "family:librdkafka": "L4-linked",
+        "family:libretls": "L4-linked",
         "family:libssh": "L1-admitted-source",
         "family:lighttpd": "L1-admitted-source",
         "family:links": "L4-linked",
@@ -35,8 +37,11 @@
         "family:proxytunnel": "L4-linked",
         "family:pure-ftpd": "L7-functional",
         "family:redis": "L7-functional",
+        "family:rsync": "L4-linked",
         "family:socat": "L4-linked",
+        "family:squid": "L4-linked",
         "family:sslscan": "L4-linked",
+        "family:ssmtp": "L4-linked",
         "family:stunnel": "L4-linked",
         "family:tinc": "L4-linked",
         "family:tnftp": "L4-linked"
@@ -46,30 +51,30 @@
           "failed": 0,
           "functional": 8,
           "loaded": 8,
-          "not_attempted": 972,
+          "not_attempted": 967,
           "runtime": 8
         },
         "candidate": {
           "failed": 0,
           "functional": 8,
           "loaded": 8,
-          "not_attempted": 972,
+          "not_attempted": 967,
           "runtime": 8
         }
       },
       "candidate_baseline_not_linked": 2,
       "candidate_below_baseline": 0,
       "candidate_failures": {
-        "acquire-failure": 970,
+        "acquire-failure": 965,
         "link-failure": 2
       },
-      "candidate_reaches_baseline": 30,
-      "candidate_reaches_linked_baseline": 28,
+      "candidate_reaches_baseline": 35,
+      "candidate_reaches_linked_baseline": 33,
       "candidate_specific_patch_count": 0,
-      "no_recipe": 970,
+      "no_recipe": 965,
       "p1000": 1000,
       "rows": 2000,
-      "with_recipe": 30
+      "with_recipe": 35
     },
     "non_claims": [
       "a selected population is not a random sample: the 1,000 families chosen from frozen ranking evidence are a selected population, and their rates do not generalise to all downstream software",
@@ -258,6 +263,36 @@
         "program": null,
         "recipe_id": "recipe:tnftp:20230507",
         "version": "20230507"
+      },
+      {
+        "family": "keepalived",
+        "program": null,
+        "recipe_id": "recipe:keepalived:2.3.1",
+        "version": "2.3.1"
+      },
+      {
+        "family": "libretls",
+        "program": null,
+        "recipe_id": "recipe:libretls:3.8.1",
+        "version": "3.8.1"
+      },
+      {
+        "family": "rsync",
+        "program": null,
+        "recipe_id": "recipe:rsync:3.3.0",
+        "version": "3.3.0"
+      },
+      {
+        "family": "squid",
+        "program": null,
+        "recipe_id": "recipe:squid:6.12",
+        "version": "6.12"
+      },
+      {
+        "family": "ssmtp",
+        "program": null,
+        "recipe_id": "recipe:ssmtp:2.64",
+        "version": "2.64"
       }
     ],
     "resource_limits": {
@@ -25124,12 +25159,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1090343:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "1090343:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "1090343:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "1090343:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "1090343:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "1090343:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "2636520:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "2636520:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "2636520:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "2636520:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "2636520:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "2636520:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -25219,10 +25254,10 @@
           "how to fix it, please visit the webpage mentioned above.",
           "== s_server ==",
           "exit=0",
-          "80BB0BB13D7F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
-          "80BB0BB13D7F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
+          "804BF1FFA97F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
+          "804BF1FFA97F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
         ],
-        "transcript_sha256": "36a47714b6f8c7a48749ecb4c8d8d4775356b17faac7a61ed2c5c5675becf616",
+        "transcript_sha256": "4ec467e57b9c9f4977f26d0bd9f8a78f26fa59eb2d370799d810c2bdc9ff6161",
         "variant_id": "variant:curl:8.10.1:pristine",
         "workload": "curl: verified TLS1.3 fetch + unrelated-CA reject",
         "workload_result": {
@@ -25274,12 +25309,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1090359:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "1090359:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "1090359:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "1090359:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "1090359:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "1090359:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "2636536:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "2636536:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "2636536:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "2636536:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "2636536:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "2636536:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -25369,10 +25404,10 @@
           "how to fix it, please visit the webpage mentioned above.",
           "== s_server ==",
           "exit=0",
-          "80CB70F3217F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
-          "80CB70F3217F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
+          "802B6B6D717F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
+          "802B6B6D717F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
         ],
-        "transcript_sha256": "0b4a2c8ea74018d4966cd97f6490c78734ad6f741ab92d4843c46ea18421937f",
+        "transcript_sha256": "6e1debdef0606c2cc38ebff5f4bc60820089723367aa19db67b5c1f60a3c126b",
         "variant_id": "variant:curl:8.10.1:pristine",
         "workload": "curl: verified TLS1.3 fetch + unrelated-CA reject",
         "workload_result": {
@@ -64888,12 +64923,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1091500:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "1091500:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "1091500:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "1091500:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "1091500:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "1091500:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "2637677:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "2637677:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "2637677:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "2637677:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "2637677:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "2637677:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -65047,12 +65082,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1091536:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "1091536:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "1091536:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "1091536:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "1091536:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "1091536:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "2637713:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "2637713:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "2637713:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "2637713:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "2637713:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "2637713:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -74714,14 +74749,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1093681:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
-            "1093681:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
-            "1093681:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
-            "1093681:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libssl.so.3",
-            "1093681:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
-            "1093681:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
-            "1093681:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libssl.so.3",
-            "1093681:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libssl.so.3"
+            "2639857:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "2639857:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "2639857:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "2639857:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libssl.so.3",
+            "2639857:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "2639857:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "2639857:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libssl.so.3",
+            "2639857:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libssl.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -74853,14 +74888,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1093697:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
-            "1093697:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
-            "1093697:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
-            "1093697:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libssl.so.3",
-            "1093697:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
-            "1093697:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
-            "1093697:\t  trying file=/work/artifacts/phase2/install/lib/tls/libssl.so.3",
-            "1093697:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libssl.so.3"
+            "2639873:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "2639873:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "2639873:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "2639873:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libssl.so.3",
+            "2639873:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "2639873:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "2639873:\t  trying file=/work/artifacts/phase2/install/lib/tls/libssl.so.3",
+            "2639873:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libssl.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -78119,7 +78154,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "keepalived",
@@ -78127,14 +78162,15 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:keepalived"
+          "family:family:keepalived",
+          "recipe:recipe:keepalived:2.3.1"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:keepalived",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
-        "level": "L0-catalogued",
+        "level": "L4-linked",
         "link": null,
         "linkage": null,
         "linkage_proven": false,
@@ -78158,12 +78194,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 73,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
+        "recipe_id": "recipe:keepalived:2.3.1",
+        "residual_class": "out-of-scope",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -78174,10 +78210,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:keepalived",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "05a3f55cf14bcbbd5c8305c478e641a4cc428a17181b183cdef5b38a0ea85454",
+        "source_sha256": "92f4b69bfd998e2306d1995ad16fdad1b59e70be694c883385c5f55e02c62aa3",
+        "source_url": "https://keepalived.org/software/keepalived-2.3.1.tar.gz",
+        "specimen_id": "specimen:keepalived:2.3.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -78187,11 +78223,11 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:keepalived:2.3.1:pristine",
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "keepalived",
@@ -78199,14 +78235,15 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:keepalived"
+          "family:family:keepalived",
+          "recipe:recipe:keepalived:2.3.1"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:keepalived",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
-        "level": "L0-catalogued",
+        "level": "L4-linked",
         "link": null,
         "linkage": null,
         "linkage_proven": false,
@@ -78230,12 +78267,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 73,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
+        "recipe_id": "recipe:keepalived:2.3.1",
+        "residual_class": "out-of-scope",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -78246,10 +78283,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:keepalived",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "05a3f55cf14bcbbd5c8305c478e641a4cc428a17181b183cdef5b38a0ea85454",
+        "source_sha256": "92f4b69bfd998e2306d1995ad16fdad1b59e70be694c883385c5f55e02c62aa3",
+        "source_url": "https://keepalived.org/software/keepalived-2.3.1.tar.gz",
+        "specimen_id": "specimen:keepalived:2.3.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -78259,7 +78296,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:keepalived:2.3.1:pristine",
         "workload": null
       },
       {
@@ -100017,7 +100054,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libretls",
@@ -100025,14 +100062,15 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libretls"
+          "family:family:libretls",
+          "recipe:recipe:libretls:3.8.1"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libretls",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
-        "level": "L0-catalogued",
+        "level": "L4-linked",
         "link": null,
         "linkage": null,
         "linkage_proven": false,
@@ -100056,12 +100094,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 145,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
+        "recipe_id": "recipe:libretls:3.8.1",
+        "residual_class": "out-of-scope",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -100072,10 +100110,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:libretls",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "aa285d8d1b06a88eb5f5faa372fe9e4e4f6aa77a5af3d78d90c7e5414b3ac20e",
+        "source_sha256": "3bc9fc0e61827ee2f608e5e44993a8fda6d610b80a1e01a9c75610cc292997b5",
+        "source_url": "https://causal.agency/libretls/libretls-3.8.1.tar.gz",
+        "specimen_id": "specimen:libretls:3.8.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -100085,11 +100123,11 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:libretls:3.8.1:pristine",
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libretls",
@@ -100097,14 +100135,15 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libretls"
+          "family:family:libretls",
+          "recipe:recipe:libretls:3.8.1"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libretls",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
-        "level": "L0-catalogued",
+        "level": "L4-linked",
         "link": null,
         "linkage": null,
         "linkage_proven": false,
@@ -100128,12 +100167,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 145,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
+        "recipe_id": "recipe:libretls:3.8.1",
+        "residual_class": "out-of-scope",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -100144,10 +100183,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:libretls",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "aa285d8d1b06a88eb5f5faa372fe9e4e4f6aa77a5af3d78d90c7e5414b3ac20e",
+        "source_sha256": "3bc9fc0e61827ee2f608e5e44993a8fda6d610b80a1e01a9c75610cc292997b5",
+        "source_url": "https://causal.agency/libretls/libretls-3.8.1.tar.gz",
+        "specimen_id": "specimen:libretls:3.8.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -100157,7 +100196,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:libretls:3.8.1:pristine",
         "workload": null
       },
       {
@@ -105964,12 +106003,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1108685:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "1108685:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "1108685:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "1108685:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "1108685:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "1108685:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "2654859:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "2654859:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "2654859:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "2654859:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "2654859:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "2654859:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -106128,12 +106167,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1108703:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "1108703:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "1108703:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "1108703:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "1108703:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "1108703:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "2654877:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "2654877:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "2654877:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "2654877:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "2654877:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "2654877:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -110326,12 +110365,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1148299:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "1148299:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "1148299:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "1148299:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "1148299:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "1148299:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "2694471:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "2694471:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "2694471:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "2694471:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "2694471:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "2694471:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -110427,7 +110466,7 @@
           "Content-Length: 25",
           "Last-Modified: Thu, 08 Oct 2026 {clock} GMT",
           "Connection: close",
-          "ETag: \"6ac770c1-19\"",
+          "ETag: \"6ac788e4-19\"",
           "Accept-Ranges: bytes",
           "",
           "phase24-runtime-nginx-ok",
@@ -110437,7 +110476,7 @@
           "depth=0 CN={addr}",
           "verify return:1"
         ],
-        "transcript_sha256": "77567f5aa5174179cdd20f9724955651f8956ccbe941d5e47a8d0e56cecf4651",
+        "transcript_sha256": "82d26d89867c34ef2dcff1c7d0ffbc057814874bced1e79d59e12590f47c0fa0",
         "variant_id": "variant:nginx:1.26.3:pristine",
         "workload": "nginx: verified TLS1.3 server response",
         "workload_result": {
@@ -110489,12 +110528,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1148317:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "1148317:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "1148317:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "1148317:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "1148317:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "1148317:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "2694489:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "2694489:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "2694489:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "2694489:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "2694489:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "2694489:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -110590,7 +110629,7 @@
           "Content-Length: 25",
           "Last-Modified: Thu, 08 Oct 2026 {clock} GMT",
           "Connection: close",
-          "ETag: \"6ac770c1-19\"",
+          "ETag: \"6ac788e4-19\"",
           "Accept-Ranges: bytes",
           "",
           "phase24-runtime-nginx-ok",
@@ -110600,7 +110639,7 @@
           "depth=0 CN={addr}",
           "verify return:1"
         ],
-        "transcript_sha256": "53858a39f3d6b463dc1340758529660dd1b248b2020126d85ed79f8f16d1b2bb",
+        "transcript_sha256": "a7c62a184fddcadd66e5476a9020db5a4faa80d3163767dca167348b28045501",
         "variant_id": "variant:nginx:1.26.3:pristine",
         "workload": "nginx: verified TLS1.3 server response",
         "workload_result": {
@@ -115687,14 +115726,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1123984:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
-            "1123984:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
-            "1123984:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
-            "1123984:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
-            "1123984:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
-            "1123984:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
-            "1123984:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
-            "1123984:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
+            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
+            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -115794,9 +115833,9 @@
           "Write signature to msg.sig",
           "== ssh-keygen -Y verify ==",
           "exit=0",
-          "Good \"file\" signature for runtime with ED25519 key SHA256:fHsOhyJOoMTJ6R+IyAn+Cyvl8wnE3RWtm7fDyFfdsZ4"
+          "Good \"file\" signature for runtime with ED25519 key SHA256:I3NwMZXaqC+dP4o57xXgd8hsrrFLn+wreSiHOEaB4+Y"
         ],
-        "transcript_sha256": "a2f5fc4129ee1f5c6d3edfa4b33d974b4abe1af37850d8a4ba5321c015beb371",
+        "transcript_sha256": "dcf49dcc403f91bc9753b49cace5b3239cb04f12f55cc078f30504ade9fa3e7a",
         "variant_id": "variant:openssh:9.9p1:pristine",
         "workload": "openssh: ssh-keygen Ed25519 sign/verify (libcrypto)",
         "workload_result": {
@@ -115843,14 +115882,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1124008:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
-            "1124008:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
-            "1124008:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
-            "1124008:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
-            "1124008:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
-            "1124008:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
-            "1124008:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
-            "1124008:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
+            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
+            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -115950,9 +115989,9 @@
           "Write signature to msg.sig",
           "== ssh-keygen -Y verify ==",
           "exit=0",
-          "Good \"file\" signature for runtime with ED25519 key SHA256:6mJV10y5S7n1R0gN/o92Ui4Yeu1VM++6ytNoGPetLbE"
+          "Good \"file\" signature for runtime with ED25519 key SHA256:gM8Th+xEcLOej+qMvFnKcdZGJDl564WAzWHVv1AVhP8"
         ],
-        "transcript_sha256": "c0410c55257e18c69382e8cf8112f89eacaa31ab3548b6db4e356c3129bcafb1",
+        "transcript_sha256": "72bac827201298d59d0c99b50a40441fcda07920cae46d10e713745c235fef25",
         "variant_id": "variant:openssh:9.9p1:pristine",
         "workload": "openssh: ssh-keygen Ed25519 sign/verify (libcrypto)",
         "workload_result": {
@@ -123928,14 +123967,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1132408:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
-            "1132408:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
-            "1132408:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
-            "1132408:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libssl.so.3",
-            "1132408:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
-            "1132408:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
-            "1132408:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libssl.so.3",
-            "1132408:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libssl.so.3"
+            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libssl.so.3",
+            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libssl.so.3",
+            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libssl.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -124037,12 +124076,12 @@
           "Verification: OK",
           "Negotiated TLS1.3 group: X25519MLKEM768",
           "220 You will be disconnected after 15 minutes of inactivity.",
-          "80EBD2DB857F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
-          "80EBD2DB857F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
+          "80CB1E2CBC7F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
+          "80CB1E2CBC7F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
           "== pure-ftpd ==",
           "exit=0"
         ],
-        "transcript_sha256": "674e05d438a5dfea7488f32989bec788550a78fe0a49d076288f959c94febf0b",
+        "transcript_sha256": "9260311a3537cf75310fa927cf599df4f638317ecb7161d20964aac22006982a",
         "variant_id": "variant:pure-ftpd:1.0.52:pristine",
         "workload": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS",
         "workload_result": {
@@ -124094,14 +124133,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1132428:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
-            "1132428:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
-            "1132428:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
-            "1132428:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libssl.so.3",
-            "1132428:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
-            "1132428:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
-            "1132428:\t  trying file=/work/artifacts/phase2/install/lib/tls/libssl.so.3",
-            "1132428:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libssl.so.3"
+            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libssl.so.3",
+            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/tls/libssl.so.3",
+            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libssl.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -124203,12 +124242,12 @@
           "Verification: OK",
           "Peer Temp Key: X25519, 253 bits",
           "220 You will be disconnected after 15 minutes of inactivity.",
-          "807BD60D0E7F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
-          "807BD60D0E7F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
+          "809B770CDF7F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
+          "809B770CDF7F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
           "== pure-ftpd ==",
           "exit=0"
         ],
-        "transcript_sha256": "d113210806352bb0c1a5a2a7662c49e4c5eef0386acca3efced5d52fa85188a9",
+        "transcript_sha256": "53c9b293dae3aa57fdfd15489d682298e621e832d588ca5f0aa59cbc566e74be",
         "variant_id": "variant:pure-ftpd:1.0.52:pristine",
         "workload": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS",
         "workload_result": {
@@ -126996,12 +127035,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1142874:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "1142874:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "1142874:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "1142874:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "1142874:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "1142874:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "2689047:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "2689047:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "2689047:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "2689047:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "2689047:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "2689047:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -127069,7 +127108,7 @@
         "transcript_excerpt": [
           "== launch ==",
           "exit=0",
-          "Redis server v=7.4.1 sha=c34793e5:0 malloc=jemalloc-5.3.0 bits=64 build=6c1096617a6ffc72",
+          "Redis server v=7.4.1 sha=2eb6a8e8:0 malloc=jemalloc-5.3.0 bits=64 build=4caad29ca5f84438",
           "== workload ==",
           "exit=0",
           "== authority s_client -brief ==",
@@ -127097,7 +127136,7 @@
           "== redis-server ==",
           "exit=0"
         ],
-        "transcript_sha256": "1caa1192a4f7ebe09819de318bad8be538a9fa7f6fcbb88c65a783d68336000f",
+        "transcript_sha256": "87381898a227d5e1cb3da35a67b8454d09c40a4f4ba2622237d825a25c892670",
         "variant_id": "variant:redis:7.4.1:pristine",
         "workload": "redis: TLS handshake + encrypted PING/+PONG",
         "workload_result": {
@@ -127149,12 +127188,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1142895:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "1142895:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "1142895:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "1142895:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "1142895:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "1142895:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "2689068:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "2689068:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "2689068:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "2689068:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "2689068:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "2689068:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -127222,7 +127261,7 @@
         "transcript_excerpt": [
           "== launch ==",
           "exit=0",
-          "Redis server v=7.4.1 sha=c34793e5:0 malloc=jemalloc-5.3.0 bits=64 build=43bdcd3e901f2ec0",
+          "Redis server v=7.4.1 sha=2eb6a8e8:0 malloc=jemalloc-5.3.0 bits=64 build=92b9e4884d3da01f",
           "== workload ==",
           "exit=0",
           "== authority s_client -brief ==",
@@ -127250,7 +127289,7 @@
           "== redis-server ==",
           "exit=0"
         ],
-        "transcript_sha256": "6c90a1830110a5790f23e4c5ba906b5fec0dabb126e5c5a04b5f456b013c2551",
+        "transcript_sha256": "070a0a7ae1b78cf289d56e138157d77689f1820d918db60fb89a92311cc66740",
         "variant_id": "variant:redis:7.4.1:pristine",
         "workload": "redis: TLS handshake + encrypted PING/+PONG",
         "workload_result": {
@@ -128125,7 +128164,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "rsync",
@@ -128133,14 +128172,15 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:rsync"
+          "family:family:rsync",
+          "recipe:recipe:rsync:3.3.0"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:rsync",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
-        "level": "L0-catalogued",
+        "level": "L4-linked",
         "link": null,
         "linkage": null,
         "linkage_proven": false,
@@ -128164,12 +128204,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 381,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
+        "recipe_id": "recipe:rsync:3.3.0",
+        "residual_class": "out-of-scope",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -128180,10 +128220,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:rsync",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "186a1fd44c5d8b2e7b7d4ca967becfdd5a81d78daa1485b25442d6503edbab6c",
+        "source_sha256": "7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90",
+        "source_url": "https://download.samba.org/pub/rsync/src/rsync-3.3.0.tar.gz",
+        "specimen_id": "specimen:rsync:3.3.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -128193,11 +128233,11 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:rsync:3.3.0:pristine",
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "rsync",
@@ -128205,14 +128245,15 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:rsync"
+          "family:family:rsync",
+          "recipe:recipe:rsync:3.3.0"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:rsync",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
-        "level": "L0-catalogued",
+        "level": "L4-linked",
         "link": null,
         "linkage": null,
         "linkage_proven": false,
@@ -128236,12 +128277,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 381,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
+        "recipe_id": "recipe:rsync:3.3.0",
+        "residual_class": "out-of-scope",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -128252,10 +128293,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:rsync",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "186a1fd44c5d8b2e7b7d4ca967becfdd5a81d78daa1485b25442d6503edbab6c",
+        "source_sha256": "7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90",
+        "source_url": "https://download.samba.org/pub/rsync/src/rsync-3.3.0.tar.gz",
+        "specimen_id": "specimen:rsync:3.3.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -128265,7 +128306,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:rsync:3.3.0:pristine",
         "workload": null
       },
       {
@@ -132735,7 +132776,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "squid",
@@ -132743,14 +132784,15 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:squid"
+          "family:family:squid",
+          "recipe:recipe:squid:6.12"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:squid",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
-        "level": "L0-catalogued",
+        "level": "L4-linked",
         "link": null,
         "linkage": null,
         "linkage_proven": false,
@@ -132774,12 +132816,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 45,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
+        "recipe_id": "recipe:squid:6.12",
+        "residual_class": "out-of-scope",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -132790,10 +132832,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:squid",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "72530f59336aa891c3587347f56060a803ba143bb94e45eea2758cc30bb94c91",
+        "source_sha256": "20d6c79214f75b5f889952ed79e1ab8b8c3f909b079671d77bb558a6f0b28625",
+        "source_url": "http://www.squid-cache.org/Versions/v6/squid-6.12.tar.gz",
+        "specimen_id": "specimen:squid:6.12",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -132803,11 +132845,11 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:squid:6.12:pristine",
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "squid",
@@ -132815,14 +132857,15 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:squid"
+          "family:family:squid",
+          "recipe:recipe:squid:6.12"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:squid",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
-        "level": "L0-catalogued",
+        "level": "L4-linked",
         "link": null,
         "linkage": null,
         "linkage_proven": false,
@@ -132846,12 +132889,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 45,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
+        "recipe_id": "recipe:squid:6.12",
+        "residual_class": "out-of-scope",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -132862,10 +132905,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:squid",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "72530f59336aa891c3587347f56060a803ba143bb94e45eea2758cc30bb94c91",
+        "source_sha256": "20d6c79214f75b5f889952ed79e1ab8b8c3f909b079671d77bb558a6f0b28625",
+        "source_url": "http://www.squid-cache.org/Versions/v6/squid-6.12.tar.gz",
+        "specimen_id": "specimen:squid:6.12",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -132875,7 +132918,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:squid:6.12:pristine",
         "workload": null
       },
       {
@@ -133889,7 +133932,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "ssmtp",
@@ -133897,14 +133940,15 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:ssmtp"
+          "family:family:ssmtp",
+          "recipe:recipe:ssmtp:2.64"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:ssmtp",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
-        "level": "L0-catalogued",
+        "level": "L4-linked",
         "link": null,
         "linkage": null,
         "linkage_proven": false,
@@ -133928,12 +133972,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 401,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
+        "recipe_id": "recipe:ssmtp:2.64",
+        "residual_class": "out-of-scope",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -133944,10 +133988,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:ssmtp",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "32cb6135b699cbdd6e7c6a6073dbfbd9093e26cae1b1daca84813183e89735f5",
+        "source_sha256": "22c37dc90c871e8e052b2cab0ad219d010fa938608cd66b21c8f3c759046fa36",
+        "source_url": "https://ftp.debian.org/debian/pool/main/s/ssmtp/ssmtp_2.64.orig.tar.bz2",
+        "specimen_id": "specimen:ssmtp:2.64",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -133957,11 +134001,11 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:ssmtp:2.64:pristine",
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "ssmtp",
@@ -133969,14 +134013,15 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:ssmtp"
+          "family:family:ssmtp",
+          "recipe:recipe:ssmtp:2.64"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:ssmtp",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
-        "level": "L0-catalogued",
+        "level": "L4-linked",
         "link": null,
         "linkage": null,
         "linkage_proven": false,
@@ -134000,12 +134045,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 401,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
+        "recipe_id": "recipe:ssmtp:2.64",
+        "residual_class": "out-of-scope",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -134016,10 +134061,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:ssmtp",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "32cb6135b699cbdd6e7c6a6073dbfbd9093e26cae1b1daca84813183e89735f5",
+        "source_sha256": "22c37dc90c871e8e052b2cab0ad219d010fa938608cd66b21c8f3c759046fa36",
+        "source_url": "https://ftp.debian.org/debian/pool/main/s/ssmtp/ssmtp_2.64.orig.tar.bz2",
+        "specimen_id": "specimen:ssmtp:2.64",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -134029,7 +134074,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:ssmtp:2.64:pristine",
         "workload": null
       },
       {
@@ -145916,13 +145961,13 @@
       }
     ]
   },
-  "body_hash": "abcadd9c8caaff7d7ab299b91c880689f91163892a545b1cda33c6ded1f5ba75",
+  "body_hash": "aa9e9d0fc356ada2e80dd6d487456c716fec53ff604488a5fdb992d6ee604549",
   "generator": "forensics/tools/downstream_runtime.py",
   "inputs": [
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "7a8cd080d082a8648eab2f6a2c7b5631b481f4b7688ed36481601cf2954d7e2e"
+      "sha256": "aaf393ce40475789ae824cb96cf63539cdceb9fccefc27bd9bbd738ade8dacac"
     },
     {
       "name": "families",
@@ -145932,12 +145977,12 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "f0eaf8f1241cb9b7e53c90efd617a09a9f39b7cd38391341c961e5998c0ebd87"
+      "sha256": "edba5a53394093ec5e36cec2c88f1d34994bd418d266de5d59055daeeb70350c"
     },
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "8a04ccc5b7e3d29eae790abd782b4e712b3aa5e4b64d6f1dedcb19a7b29e51cc"
+      "sha256": "bc10c361ba294d371b56983fbde06725df3f777e357c3729ac93e05d51c3fdf8"
     },
     {
       "name": "downstream-census",
@@ -145957,7 +146002,7 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "5ba5ecc4f39af970e3c4bcf12c79342492dde919af58f9bb64383ba407223a31"
+      "sha256": "beb0417ee8a6f610f89f41dcaf17825fafa4f2a568efe8729e787ec4c275498a"
     }
   ],
   "kind": "downstream-runtime-functional-atlas",

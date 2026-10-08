@@ -118,6 +118,12 @@ import downstream_census as census  # noqa: E402
 # nothing), so importing it here adds no execution.
 import downstream_recipe_campaign as campaign  # noqa: E402
 
+# The 24.19 close-candidate reclamation batch, imported for the same reason: its admitted recipes are
+# extensions to the shared catalogue, and the record and the catalogue are the same single source of
+# truth. It is a pure derivation (it executes nothing; its recipes were built by this tool), so
+# importing it here adds no execution.
+import downstream_close_batch as close_batch  # noqa: E402
+
 # The stratum's four non-claims, imported from 24.4 so the atlas and the freeze cannot drift about
 # what the model never claims.
 from downstream_freeze import NON_CLAIMS as STRATUM_NON_CLAIMS  # noqa: E402
@@ -407,6 +413,10 @@ def _build_catalogue() -> tuple[dict, ...]:
     # it was admitted, and `campaign.admitted_recipe_specs()` is the single source of truth, so the
     # catalogue and the campaign record cannot disagree about which families were admitted.
     for spec in campaign.admitted_recipe_specs():
+        recipes.append(dict(spec))
+    # The 24.19 close-candidate reclamation's recipes, admitted the same way and from the same
+    # single source of truth in `close_batch.admitted_recipe_specs()`.
+    for spec in close_batch.admitted_recipe_specs():
         recipes.append(dict(spec))
     return tuple(recipes)
 

@@ -439,7 +439,7 @@
         "checkpoint_state_hash": "a887e4176ee59aec0a6d958696c805efffe6df8a2620c4b9339b849138ac805d",
         "plan": {
           "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-          "sha256": "b39d46b1f6b48d0cd55e26867c71d7081aecb9e4777261f693259ab87f37943d"
+          "sha256": "beb0417ee8a6f610f89f41dcaf17825fafa4f2a568efe8729e787ec4c275498a"
         },
         "registry": {
           "path": "forensics/tools/gen_frf_courts.py",
@@ -470,7 +470,7 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "b39d46b1f6b48d0cd55e26867c71d7081aecb9e4777261f693259ab87f37943d"
+      "sha256": "beb0417ee8a6f610f89f41dcaf17825fafa4f2a568efe8729e787ec4c275498a"
     },
     {
       "name": "frf-registry",
@@ -490,7 +490,7 @@
     {
       "name": "phase24-container-manifest",
       "path": "forensics/downstream/container.json",
-      "sha256": "9bf54f7a2b93957d3e7afc83aa831f4b9a9d1966ff4eb9e95dfac1bf907b80ee"
+      "sha256": "8f9768e8c34867662aa873fea19bc541dd4e3eb6e1ecae6d5e586826fcf1d5d9"
     },
     {
       "name": "downstream-schemas",
@@ -525,7 +525,7 @@
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "ee5cbdd84a8503ae49d18f70399ed15e56866e01cec3ef144cce4adc58f42122"
+      "sha256": "bc10c361ba294d371b56983fbde06725df3f777e357c3729ac93e05d51c3fdf8"
     },
     {
       "name": "downstream-runtime",
@@ -590,32 +590,32 @@
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "aaf393ce40475789ae824cb96cf63539cdceb9fccefc27bd9bbd738ade8dacac"
+      "sha256": "cf7a8968d400dda2984fe772c8b8851aa732d922ad14e74bf3958eb6e2eae04a"
     },
     {
       "name": "holdout",
       "path": "forensics/downstream/holdout.json",
-      "sha256": "b3ae7a579697a7724d4aa6bd9452020c5b8143852b9a1317f679882d6dc80be5"
+      "sha256": "53edab09762af37e514453a8c0e7c3fcff1aaad9d7e993dc6f187bc48fe14601"
     },
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "f0eaf8f1241cb9b7e53c90efd617a09a9f39b7cd38391341c961e5998c0ebd87"
+      "sha256": "edba5a53394093ec5e36cec2c88f1d34994bd418d266de5d59055daeeb70350c"
     },
     {
       "name": "runtime-functional-atlas",
       "path": "forensics/downstream/runtime-functional-atlas.json",
-      "sha256": "77ba907d606cd2d37e078e9607a4abf996f08d387f8183de7ad295d9e852fe8b"
+      "sha256": "5ffb3b7be6268f23ca206b14db902b1bbdb0a23c175c93fb26817952bd86c67e"
     },
     {
       "name": "failures",
       "path": "forensics/downstream/failures.json",
-      "sha256": "82aee711263f5f8fb2f5ddd7c9405cfe9839e980d4f12f2c3eaa29a3268786a1"
+      "sha256": "4236e53bad43f413129dad37aea5a900e25bf9820371c84ffca4e6e1359f6872"
     },
     {
       "name": "high-value-tier",
       "path": "forensics/downstream/high-value-tier.json",
-      "sha256": "52b8331f292914cf6e8aa799f829c120db8d6f47ad66515be7695d10bd5d1554"
+      "sha256": "88cf859a2bc8e4647850c26adadfa8fcc102332a71509b3456727415a315591d"
     },
     {
       "name": "hostility-corpus",
@@ -625,17 +625,17 @@
     {
       "name": "candidate-freeze",
       "path": "forensics/downstream/candidate-freeze.json",
-      "sha256": "277d18ee72dcf2cb6ae8e211bafd1f8a2912a17b4f79328af5d9990f471dfed0"
+      "sha256": "43ca472dbb82dab134bdb241a4fc3cbfe522046e0623070a4efd238f6ac37fdf"
     },
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "73eec67eba712447eb7958a9a2baa2ee60da7e757c79f0694729f8e00d8362d3"
+      "sha256": "4b0c4bfd813e2bf023ae656535ae838ec6bf06199bd6f33d1be1b6cc5f688782"
     },
     {
       "name": "reconciliation",
       "path": "forensics/downstream/reconciliation.json",
-      "sha256": "fe940199c6800b9f08777dc9bd2ba4633bffecc5631974012886da71f06df5d8"
+      "sha256": "8af4d8fec6df9a1b33e104dbc69793943aeecb997dfb2c904e0191181bdeaf61"
     }
   ],
   "kind": "phase24-frf-closure",

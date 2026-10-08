@@ -1252,13 +1252,14 @@ PHASE23_MODULES = [
 # unit is not a symbol. `forensics/phase24-obligations.json` records its unit as `downstream 1000
 # contract` (in `atlas_common.NON_EXPORT_UNITS`, so the export-partitioning tools skip it, as they
 # skip Phase 16's `cli-config contract` through Phase 23's `multitrack authority contract`), and its
-# working set is eighteen contract units -- one per subphase 24.1 through 24.18: the ranking-source
+# working set is nineteen contract units -- one per subphase 24.1 through 24.19: the ranking-source
 # acquisition, the candidate universe, the authority-baseline census, the P1000+reserve freeze, the
 # holdout partition, the build/link atlas, the runtime/functional atlas, the failure
 # discovery/minimization loop, the high-value deep tier, the hostility augmentation, the candidate
 # freeze and holdout, the final full P1000 run, the atlas reconciliation, the FRF/Gemel closure, the
 # downstream-1000 seal, the biggest-mover shared-blocker analysis (24.16), the biggest-mover
-# remediation (24.17) and the recipe-admission campaign (24.18).
+# remediation (24.17), the recipe-admission campaign (24.18) and the close-candidate reclamation
+# batch (24.19).
 # Like Phases 18 through 23 it hands nothing forward and receives nothing: it owns no provider
 # registration row, no symbol deferral and no prerequisite unit, because it measures downstream
 # replacement over real projects that are already identified rather than adding library surface.
@@ -1308,6 +1309,13 @@ PHASE24_MODULES = [
     # a seal that has lost the link to them.
     "forensics/downstream/recipe-campaign.json",
     "forensics/downstream/recipe-campaign-baseline.json",
+    # 24.19's close-candidate reclamation record, its preserved pre-batch baseline and its authored
+    # attempt record. Naming them here makes the second bounded batch required evidence: a stratum
+    # whose admission record is present but whose close-candidate reclamation is absent is
+    # incomplete, and the seal court refuses a seal that has lost the link to them.
+    "forensics/downstream/close-batch.json",
+    "forensics/downstream/close-batch-baseline.json",
+    "forensics/downstream/close-batch-attempts.json",
 ]
 
 
@@ -1850,7 +1858,7 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "not a symbol: `forensics/phase24-obligations.json` publishes "
                             "`unit: downstream 1000 contract` and its `implemented`/`open` "
                             "*export* lists are empty by measurement, while "
-                            "`open_in_this_stratum` counts the eighteen contract units "
+                            "`open_in_this_stratum` counts the nineteen contract units "
                             "(`ranking-sources`, `candidate-universe`, "
                             "`authority-census`, `family-freeze`, `holdout-partition`, "
                             "`build-link-atlas`, `runtime-functional-atlas`, "
@@ -1858,7 +1866,8 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "`hostility-augmentation`, `candidate-freeze`, `p1000-run`, "
                             "`atlas-reconciliation`, `frf-gemel-closure`, "
                             "`downstream-1000-seal`, `blocker-leverage`, "
-                            "`blocker-remediation` and `recipe-campaign`). It owns no provider "
+                            "`blocker-remediation`, `recipe-campaign` and `close-batch`). It owns no "
+                            "provider "
                             "registration row, no "
                             "symbol deferral and no prerequisite unit: it activates no provider "
                             "and adds no library surface, because it measures downstream "
