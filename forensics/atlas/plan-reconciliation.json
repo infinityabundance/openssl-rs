@@ -25,13 +25,14 @@
         "docs/PHASE-22-SUBPHASES.md",
         "docs/PHASE-23-MULTITRACK-SUBPHASES.md",
         "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
+        "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
         "docs/PHASE-7-SUBPHASES.md",
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 249,
+      "rows_judged": 271,
       "symbols_named_by_a_row": 115,
       "symbols_reached": 115,
       "unit_records": 152,
@@ -8115,7 +8116,7 @@
       "transcribed_units": 599
     }
   },
-  "body_hash": "29dbe6f89a3a0d915df16466628cb44d0a413ef2d1d48b9633bbcfd01c2c1fc4",
+  "body_hash": "4cde401162cf64400a47290d8339f725e36d660aa68e7918903f8bf0f07a6e06",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -8136,7 +8137,7 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "7e8b2c035a8b4131d8cc6af854c29c0dfa90773eb430aa02669923bf99007692"
+      "sha256": "1640af8b36199d4da3fcfa9f30b13a7e08ba17a08b87a648a4a54c0b370e5d26"
     },
     {
       "name": "prerequisites",
@@ -8222,6 +8223,11 @@
       "name": "plan-PHASE-24-DOWNSTREAM-1000-SUBPHASES",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
       "sha256": "beb0417ee8a6f610f89f41dcaf17825fafa4f2a568efe8729e787ec4c275498a"
+    },
+    {
+      "name": "plan-PHASE-25-MEMORY-SAFETY-SUBPHASES",
+      "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
+      "sha256": "de8c54477c63b853e5177ec28c2fb0adb278603ca156e690bd898c61f95a8659"
     },
     {
       "name": "plan-PHASE-5-SUBPHASES",

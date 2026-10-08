@@ -1,0 +1,433 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "No court is registered at activation: Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence, and its twenty-two courts -- MS-CONSTITUTION, MS-SOURCE-CENSUS, MS-NON-RUST-TCB, MS-SAFETY-OBLIGATIONS, MS-OWNERSHIP-PLANES, MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.0 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
+    "courts": [],
+    "cve_replay_states": [
+      "UPSTREAM_VULNERABLE_REPRODUCED",
+      "CANDIDATE_STRUCTURALLY_EXCLUDED",
+      "CANDIDATE_SAFE_REJECTION",
+      "CANDIDATE_NO_MEMORY_FAULT_OBSERVED",
+      "CANDIDATE_UNSAFE_PATH_REMAINS",
+      "CANDIDATE_REPRODUCES_MEMORY_FAULT",
+      "CANDIDATE_FEATURE_NOT_APPLICABLE",
+      "UNKNOWN"
+    ],
+    "cve_taxonomy": [
+      "HEAP_OOB_READ",
+      "HEAP_OOB_WRITE",
+      "STACK_OOB_READ",
+      "STACK_OOB_WRITE",
+      "USE_AFTER_FREE",
+      "DOUBLE_FREE",
+      "NULL_DEREFERENCE",
+      "UNINITIALIZED_READ",
+      "INTEGER_OVERFLOW",
+      "INTEGER_UNDERFLOW",
+      "TYPE_CONFUSION",
+      "UNALIGNED_ACCESS",
+      "RACE_CONDITION",
+      "DATA_RACE",
+      "BUFFER_OVERFLOW",
+      "MEMORY_LEAK",
+      "IMPROPER_FREE",
+      "SIDE_CHANNEL",
+      "PROTOCOL_LOGIC",
+      "ALGORITHM_COMPLEXITY",
+      "OTHER"
+    ],
+    "exposure_classes": [
+      "UNREACHABLE_PROFILE",
+      "TEST_ONLY",
+      "INTERNAL_REACHABLE",
+      "LOCAL_API_REACHABLE",
+      "CONFIG_REACHABLE",
+      "CLI_INPUT_REACHABLE",
+      "NETWORK_CLIENT_REACHABLE",
+      "NETWORK_SERVER_REACHABLE",
+      "DOWNSTREAM_RUNTIME_OBSERVED"
+    ],
+    "externally_reachable_exposure": [
+      "CLI_INPUT_REACHABLE",
+      "CONFIG_REACHABLE",
+      "DOWNSTREAM_RUNTIME_OBSERVED",
+      "LOCAL_API_REACHABLE",
+      "NETWORK_CLIENT_REACHABLE",
+      "NETWORK_SERVER_REACHABLE"
+    ],
+    "obligation_dimensions": [
+      "NULLABILITY",
+      "LIFETIME",
+      "ALIASING",
+      "ALIGNMENT",
+      "INITIALIZATION",
+      "BOUNDS",
+      "OWNERSHIP",
+      "REFCOUNT",
+      "THREAD_AFFINITY",
+      "ABI",
+      "UNWIND",
+      "TYPE_VALIDITY",
+      "SEND_SYNC",
+      "PANIC_SAFETY",
+      "POINTER_PROVENANCE",
+      "INIT_ONCE",
+      "VALIDITY"
+    ],
+    "panic_unwind_classes": [
+      "CATCHES_PANIC",
+      "CANNOT_PANIC_BY_CONSTRUCTION",
+      "C_UNWIND_EXPLICIT",
+      "UNKNOWN"
+    ],
+    "pending_courts": {
+      "MS-ASAN-MSMAN": "25.10 -- ASan/MSan",
+      "MS-CLEAN-REGEN": "25.19 -- the full clean regeneration",
+      "MS-CONSTITUTION": "25.0 -- the constitution (the plan, schemas, guard, manifest, ledger and runner)",
+      "MS-CVE-REPLAY": "25.16 -- the historical CVE replay",
+      "MS-EXPOSURE-CLASSIFICATION": "25.7 -- the exposure/data-flow classification",
+      "MS-FRF-CLOSURE": "25.20 -- the FRF/Gemel closure",
+      "MS-HISTORICAL-CVE": "25.15 -- the historical CVE census",
+      "MS-KANI": "25.12 -- Kani",
+      "MS-MECHANISM-RECONCILIATION": "25.17 -- the vulnerability-mechanism reconciliation",
+      "MS-MIRI": "25.9 -- Miri",
+      "MS-NON-RUST-TCB": "25.2 -- the non-Rust trusted computing base",
+      "MS-OWNERSHIP-PLANES": "25.4 -- the ownership/allocation/callback planes",
+      "MS-PHASE18-FUZZ-CROSSWALK": "25.13 -- the Phase-18 fuzz crosswalk",
+      "MS-PHASE22-CROSSWALK": "25.5 -- the Phase-22 reachability crosswalk",
+      "MS-PHASE24-CROSSWALK": "25.6 -- the Phase-24 downstream crosswalk",
+      "MS-PHASE24-SAFETY-COVERAGE": "25.14 -- the Phase-24 downstream safety coverage",
+      "MS-RED-TEAM": "25.18 -- the red team",
+      "MS-SAFETY-OBLIGATIONS": "25.3 -- the safety obligations",
+      "MS-SEAL": "25.21 -- the memory-safety seal",
+      "MS-SOURCE-CENSUS": "25.1 -- the compiler-backed source census",
+      "MS-TSAN": "25.11 -- TSan",
+      "MS-UNSAFE-REDUCTION": "25.8 -- the unsafe reduction"
+    },
+    "risk_tiers": [
+      "S0",
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "schemas": {
+      "allocation_site": {
+        "fields": [
+          "allocation_id",
+          "site_id",
+          "allocator",
+          "size_expr",
+          "freed_by",
+          "paired",
+          "evidence"
+        ],
+        "valid": "validate_allocation_site"
+      },
+      "c_adapter": {
+        "fields": [
+          "adapter_id",
+          "path",
+          "purpose",
+          "exported_symbols",
+          "memory_operations",
+          "evidence"
+        ],
+        "valid": "validate_c_adapter"
+      },
+      "callback_lifetime": {
+        "fields": [
+          "callback_id",
+          "registered_at",
+          "invoked_by",
+          "lifetime",
+          "may_outlive",
+          "evidence"
+        ],
+        "valid": "validate_callback_lifetime"
+      },
+      "coverage": {
+        "fields": [
+          "coverage_id",
+          "profile",
+          "tool",
+          "covered_sites",
+          "uncovered_sites",
+          "tool_state",
+          "evidence"
+        ],
+        "valid": "validate_coverage"
+      },
+      "cve_replay": {
+        "fields": [
+          "replay_id",
+          "cve_id",
+          "state",
+          "candidate_identity",
+          "evidence"
+        ],
+        "valid": "validate_cve_replay"
+      },
+      "ffi_boundary": {
+        "fields": [
+          "boundary_id",
+          "symbol",
+          "direction",
+          "abi",
+          "c_variadic",
+          "unwind",
+          "sites",
+          "evidence"
+        ],
+        "valid": "validate_ffi_boundary"
+      },
+      "fuzz_crosswalk": {
+        "fields": [
+          "crosswalk_id",
+          "phase18_target",
+          "unsafe_site_ids",
+          "covered",
+          "tool_state",
+          "evidence"
+        ],
+        "valid": "validate_fuzz_crosswalk"
+      },
+      "global_state": {
+        "fields": [
+          "global_id",
+          "name",
+          "mutability",
+          "initialization",
+          "safety_contract",
+          "evidence"
+        ],
+        "valid": "validate_global_state"
+      },
+      "historical_cve": {
+        "fields": [
+          "cve_id",
+          "taxonomy",
+          "affected_versions",
+          "fix_commit",
+          "memory_safety",
+          "evidence"
+        ],
+        "valid": "validate_historical_cve"
+      },
+      "kani_result": {
+        "fields": [
+          "result_id",
+          "harness",
+          "target",
+          "tool_state",
+          "findings",
+          "unsupported_reason",
+          "evidence"
+        ],
+        "valid": "validate_kani_result"
+      },
+      "miri_result": {
+        "fields": [
+          "result_id",
+          "target",
+          "tool_state",
+          "tool_version",
+          "findings",
+          "unsupported_reason",
+          "evidence"
+        ],
+        "valid": "validate_miri_result"
+      },
+      "ownership_edge": {
+        "fields": [
+          "edge_id",
+          "from_site",
+          "to_site",
+          "kind",
+          "evidence"
+        ],
+        "valid": "validate_ownership_edge"
+      },
+      "panic_boundary": {
+        "fields": [
+          "panic_id",
+          "site_id",
+          "class",
+          "caught_at",
+          "evidence"
+        ],
+        "valid": "validate_panic_boundary"
+      },
+      "residual": {
+        "fields": [
+          "residual_id",
+          "subject",
+          "class",
+          "disposition",
+          "detail",
+          "evidence"
+        ],
+        "valid": "validate_residual"
+      },
+      "safety_obligation": {
+        "fields": [
+          "obligation_id",
+          "site_id",
+          "dimension",
+          "discharged_by",
+          "status",
+          "evidence"
+        ],
+        "valid": "validate_safety_obligation"
+      },
+      "sanitizer_result": {
+        "fields": [
+          "result_id",
+          "sanitizer",
+          "target",
+          "tool_state",
+          "findings",
+          "unsupported_reason",
+          "evidence"
+        ],
+        "valid": "validate_sanitizer_result"
+      },
+      "send_sync_impl": {
+        "fields": [
+          "impl_id",
+          "type",
+          "trait",
+          "justification",
+          "evidence"
+        ],
+        "valid": "validate_send_sync_impl"
+      },
+      "source_census": {
+        "fields": [
+          "census_id",
+          "path",
+          "kind",
+          "language",
+          "origin",
+          "shipped",
+          "file_sha256",
+          "unsafe_operations",
+          "evidence"
+        ],
+        "valid": "validate_source_census"
+      },
+      "summary": {
+        "fields": [
+          "summary_id",
+          "profile",
+          "candidate_identity",
+          "counts",
+          "reachable_unsafe_sites",
+          "bounded_claim",
+          "non_claims",
+          "passed",
+          "evidence"
+        ],
+        "valid": "validate_summary"
+      },
+      "unsafe_context": {
+        "fields": [
+          "context_id",
+          "kind",
+          "file",
+          "line",
+          "safety_contract",
+          "site_ids",
+          "evidence"
+        ],
+        "valid": "validate_unsafe_context"
+      },
+      "unsafe_site": {
+        "fields": [
+          "site_id",
+          "file",
+          "line",
+          "column",
+          "operation_kind",
+          "context_id",
+          "compiler",
+          "compiler_derived",
+          "exposure_class",
+          "risk_tier",
+          "safety_obligation_ids",
+          "evidence"
+        ],
+        "valid": "validate_unsafe_site"
+      },
+      "vulnerability_mechanism": {
+        "fields": [
+          "mechanism_id",
+          "taxonomy",
+          "class_present",
+          "candidate_structurally_immune",
+          "reason",
+          "cve_ids",
+          "evidence"
+        ],
+        "valid": "validate_vulnerability_mechanism"
+      }
+    },
+    "summary": {
+      "fail": 0,
+      "pass": 0,
+      "total": 0
+    },
+    "tool_states": [
+      "PASS",
+      "FAIL",
+      "NOT_REACHABLE",
+      "UNSUPPORTED"
+    ],
+    "unsafe_operation_kinds": [
+      "RAW_POINTER_DEREFERENCE",
+      "RAW_POINTER_READ",
+      "RAW_POINTER_WRITE",
+      "UNSAFE_FUNCTION_CALL",
+      "UNSAFE_METHOD_CALL",
+      "UNSAFE_TRAIT_METHOD",
+      "UNSAFE_IMPL",
+      "EXTERN_FUNCTION_CALL",
+      "UNION_FIELD_ACCESS",
+      "TRANSMUTE",
+      "UNSAFE_CAST",
+      "INLINE_ASM",
+      "FFI_EXPORT",
+      "C_VARIADIC_BOUNDARY",
+      "STATIC_MUT_ACCESS",
+      "UNALIGNED_ACCESS",
+      "ASSERT_UNCHECKED"
+    ]
+  },
+  "generator": "forensics/tools/phase25_courts.py",
+  "inputs": [
+    {
+      "name": "phase-25-plan",
+      "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
+      "sha256": "de8c54477c63b853e5177ec28c2fb0adb278603ca156e690bd898c61f95a8659"
+    },
+    {
+      "name": "memory-safety-schemas",
+      "path": "forensics/tools/memory_safety_schemas.py",
+      "sha256": "da3c15776c4701edee88d9a5a37545e14d5f7ed1ac1b7f987d8134c3d06b80a4"
+    },
+    {
+      "name": "phase25-guard",
+      "path": "forensics/tools/phase25_guard.py",
+      "sha256": "fa88056a76e69be741d9b41d9c3c683329ccb6f885ac1f6cd5fa0e0358a37e10"
+    },
+    {
+      "name": "phase25-container-manifest",
+      "path": "forensics/memory-safety/container.json",
+      "sha256": "cbdd39e7340fb32696802307d1f179a5c7d3175122a4db18854cf23e7894ef64"
+    }
+  ],
+  "kind": "phase25-courts",
+  "schema": "openssl-rs/atlas/phase25-courts/v1"
+}
