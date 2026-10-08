@@ -57,6 +57,105 @@ def load(relpath: str):
     return json.loads(p.read_text(encoding="utf-8")) if p.is_file() else None
 
 
+def _share(n: int, total: int) -> str:
+    """`n` of `total` as a fraction and a **computed** percentage, never a typed rate."""
+    pct = (n / total * 100.0) if total else 0.0
+    return f"{n}/{total} ({pct:.1f}%)"
+
+
+def _downstream_outcome_lines(p1000: dict) -> list[str]:
+    """The generated downstream-1000 outcome section: how many of the 1,000 were successful.
+
+    Every figure is read from the committed final full P1000 run
+    `forensics/downstream/p1000-run.json` or computed from its verdict histogram. The shares are
+    computed rather than typed, and the successful count is the `DROP_IN_PASS` bucket of that
+    histogram rather than a literal, so a stale sentence cannot survive a regeneration. This is
+    the census's one view of the Phase-24 population; the seal cites it rather than restating it.
+    """
+    body = p1000.get("body") or {}
+    counts = body.get("counts") or {}
+    ladder = body.get("ladder") or {}
+    levels = ladder.get("levels") or {}
+    families = counts.get("families") or 0
+    measurable = counts.get("measurable_families") or 0
+    not_applicable = counts.get("not_applicable_families") or 0
+    recipe = counts.get("recipe_backed_families") or 0
+    reaches = counts.get("measurable_reaches_baseline") or 0
+    verdicts = counts.get("verdicts") or {}
+    non_claims = body.get("non_claims") or []
+    successful = verdicts.get("DROP_IN_PASS") or 0
+
+    def rate(n: int, d: int) -> str:
+        return f"{n}/{d} = {n / d * 100.0:.1f}%" if d else "n/a"
+
+    L: list[str] = []
+    L.append("## Downstream-1000 outcomes (generated)")
+    L.append("")
+    L.append("How many of the counted population the frozen candidate passed, from the committed")
+    L.append("final full P1000 run `forensics/downstream/p1000-run.json`. The counted population is")
+    L.append(f"the frozen P1000: **{families}** selected project families, each measured under both")
+    L.append("subjects exactly once. This is the arithmetic the Phase-24 seal cites; the seal's")
+    L.append("prose is about what was established, not about these counts.")
+    L.append("")
+    L.append("| outcome | families | share of the 1,000 |")
+    L.append("|---|---|---|")
+    for verdict in ("DROP_IN_PASS", "DROP_IN_PARTIAL", "DROP_IN_FAIL",
+                    "DROP_IN_UNKNOWN", "DROP_IN_NOT_APPLICABLE"):
+        n = verdicts.get(verdict) or 0
+        L.append(f"| `{verdict}` | {n} | {_share(n, families)} |")
+    L.append(f"| **total** | **{families}** | **{_share(families, families)}** |")
+    L.append("")
+    L.append(f"**{successful} of the {families} counted families are `DROP_IN_PASS`.** That is")
+    L.append(f"{rate(successful, families)} of the counted population, "
+             f"{rate(successful, measurable)}")
+    L.append(f"of the {measurable} measurable families, and {rate(successful, recipe)} of the")
+    L.append(f"{recipe} recipe-backed families. A `DROP_IN_NOT_APPLICABLE` family is **neither a")
+    L.append("success nor a failure**: it is a counted family this venue could not pose the")
+    L.append("drop-in question for because it has no admitted pristine-source recipe, so its")
+    L.append(f"{not_applicable} rows are neither passes nor failures.")
+    L.append("")
+    L.append("### The measurable families, in detail")
+    L.append("")
+    L.append("Every family whose verdict is not `DROP_IN_NOT_APPLICABLE`, sorted by the frozen")
+    L.append("`p1000_rank`. The authority-applicable baseline is the highest level the authority")
+    L.append("itself reached, and the candidate is judged against it, so a `DROP_IN_PASS` is")
+    L.append("baseline-normalized rather than an aspirational claim.")
+    L.append("")
+    L.append("| family | verdict | authority-applicable baseline | candidate level | "
+             "linkage proven | residual |")
+    L.append("|---|---|---|---|---|---|")
+    measurable_rows = [v for v in (body.get("verdicts") or [])
+                       if v.get("verdict") != "DROP_IN_NOT_APPLICABLE"]
+    for v in sorted(measurable_rows, key=lambda r: r.get("p1000_rank") or 0):
+        L.append(
+            f"| {v.get('canonical_name')} | `{v.get('verdict')}` | "
+            f"{v.get('authority_applicable_level')} | {v.get('candidate_level')} | "
+            f"{'yes' if v.get('linkage_proven') else 'no'} | {v.get('residual_class')} |")
+    L.append("")
+    L.append("### The ladder")
+    L.append("")
+    L.append("| level | families |")
+    L.append("|---|---|")
+    for level in (body.get("rule") or {}).get("levels") or list(levels):
+        L.append(f"| {level} | {levels.get(level)} |")
+    L.append("")
+    L.append(f"The ladder is over the frozen P1000: {families} counted families, {measurable}")
+    L.append(f"measurable and {not_applicable} not applicable. **UNKNOWN is 0** -- every counted")
+    L.append("family is measured, and a family this venue cannot pose the drop-in question for is")
+    L.append("an honest non-applicability, not an unknown.")
+    L.append("")
+    L.append("### Authority baseline and the non-claims")
+    L.append("")
+    L.append(f"The candidate reached its authority-applicable baseline for **all {measurable}")
+    L.append(f"measurable families** ({reaches}/{measurable}). The {len(non_claims)} non-claims")
+    L.append("recorded with the run apply in full:")
+    L.append("")
+    for claim in non_claims:
+        L.append(f"* {claim}")
+    L.append("")
+    return L
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.parse_args(argv)
@@ -223,6 +322,15 @@ def main(argv: list[str]) -> int:
                 L.append(f"| {x['court']} | `{x['verdict']}` | "
                          f"{n if has_transcript(x) else '— (structural)'} |")
             L.append("")
+
+    # The Phase-24 downstream-1000 outcomes. Rendered only when the committed final run is
+    # present, so an earlier branch -- which has no frozen P1000 -- produces no section at all
+    # rather than an empty one. Driven only by the committed artefact, and placed here, beside
+    # the other global sections, rather than inside the per-phase loop whose per-stratum courts
+    # cannot state how many of the 1,000 passed.
+    p1000 = load("forensics/downstream/p1000-run.json")
+    if p1000 is not None:
+        L.extend(_downstream_outcome_lines(p1000))
 
     if coverage is not None:
         L.append("## Court coverage")
