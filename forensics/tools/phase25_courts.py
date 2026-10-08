@@ -12,8 +12,9 @@ court reads the artefact that holds its subject rather than typing the expectati
 two cannot disagree, and a court whose control is not honest is `fail` rather than `pass`.
 
 **25.0 registers `MS-CONSTITUTION`, 25.1 registers the compiler-backed census, 25.2 registers the
-non-Rust trusted computing base, 25.3 registers the safety obligations, and 25.4 registers the
-ownership/allocation/callback planes.** The stratum's
+non-Rust trusted computing base, 25.3 registers the safety obligations, 25.4 registers the
+ownership/allocation/callback planes and 25.5 registers the Phase-22 reachability crosswalk.** The
+stratum's
 obligations are not exports, so its courts read committed evidence rather than diffing a staged
 probe pair, and `run_courts.py` would refuse a stratum in `in-progress` with no runner at all -- so
 this runner landed at activation with an empty registry, naming the twenty-two courts it stages
@@ -33,13 +34,18 @@ on-disk file universe, so the inventory of the first-party C, the generated C sc
 committed census it is derived from and the committed TCB it cross-references, so one obligation set
 per compiler-derived unsafe site -- every census site bound, every census context represented, no
 `discharged` without a source-stated contract and a discharging proof -- is the court's subject.
-**25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes: it reads the
+court's subject. **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes: it reads the
 committed `artifacts/phase25/ownership-planes.json` and re-runs the 25.4 pure checks
 (`ms_ownership_planes.ownership_findings`, `ms_ownership_planes.ownership_sensitivity_control`) over
 it, the committed census, the committed TCB and the committed source tree, so the allocation/
 deallocation associations, the ownership edges across the Rust/C boundary, the callback lifetimes,
 the unsafe `Send`/`Sync` impls, the global/static state and the panic/unwind boundaries are the
-court's subject. The
+court's subject. **25.5 registers `MS-PHASE22-CROSSWALK`**, the Phase-22 reachability crosswalk: it
+reads the committed `artifacts/phase25/phase22-crosswalk.json` and re-runs the 25.5 pure checks
+(`ms_phase22_crosswalk.crosswalk_findings`, `ms_phase22_crosswalk.crosswalk_sensitivity_control`)
+over it, the committed census and the committed Phase-22 whole-program atlas, so every unsafe site's
+reachability is the Phase-22 authority's answer (mapped to a public root or an explicit unresolved
+residual) rather than a second, typed one. The
 registry is the file
 `run_courts.py` checks is reproduced, so a court
 silently dropped is a finding rather than a smaller green run. This is the reverse of Phase 16's
@@ -149,6 +155,12 @@ import ms_obligations  # noqa: E402
 # TCB and the source context it classifies.
 import ms_ownership_planes  # noqa: E402
 
+# 25.5's Phase-22 reachability crosswalk and the tool that derives it from the committed census and
+# the committed Phase-22 whole-program atlas. The court re-runs the tool's pure
+# `crosswalk_findings` / `crosswalk_sensitivity_control` over the committed artefact, the census and
+# the committed Phase-22 closure, its entity plane and the module -> authority-unit correspondence.
+import ms_phase22_crosswalk  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase25" / "COURTS.json"
 GENERATOR = "forensics/tools/phase25_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-25-MEMORY-SAFETY-SUBPHASES.md"
@@ -176,6 +188,17 @@ OWNERSHIP_PLANES = REPO_ROOT / "artifacts" / "phase25" / "ownership-planes.json"
 MS_OWNERSHIP_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_ownership_planes.py"
 OWNERSHIP_PLANES_COURT = "MS-OWNERSHIP-PLANES"
 
+# 25.5's Phase-22 reachability crosswalk and the pure tool that derives it from the committed
+# census and the committed Phase-22 whole-program atlas.
+PHASE22_CROSSWALK = REPO_ROOT / "artifacts" / "phase25" / "phase22-crosswalk.json"
+MS_PHASE22_CROSSWALK_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_phase22_crosswalk.py"
+PHASE22_CROSSWALK_COURT = "MS-PHASE22-CROSSWALK"
+PHASE22_CLOSURE = REPO_ROOT / "forensics" / "atlas" / "phase22" / "compatibility-closure.json"
+PHASE22_RECONCILIATION = REPO_ROOT / "forensics" / "atlas" / "phase22" / "reconciliation.json"
+TRANSCRIPTION_EDGES = REPO_ROOT / "forensics" / "atlas" / "transcription-edges.json"
+INTERNAL_SYMBOLS = REPO_ROOT / "forensics" / "atlas" / "internal-symbols.json"
+EXPORT_DEFINING_UNITS = REPO_ROOT / "forensics" / "atlas" / "export-defining-units.json"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -200,13 +223,14 @@ COURTS: list[tuple[str, str]] = [
     (NON_RUST_TCB_COURT, "_ms_non_rust_tcb_court"),
     (SAFETY_OBLIGATIONS_COURT, "_ms_safety_obligations_court"),
     (OWNERSHIP_PLANES_COURT, "_ms_ownership_planes_court"),
+    (PHASE22_CROSSWALK_COURT, "_ms_phase22_crosswalk_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
-# `MS-SOURCE-CENSUS`, 25.2 removed `MS-NON-RUST-TCB`, 25.3 removed `MS-SAFETY-OBLIGATIONS` and 25.4
-# removed `MS-OWNERSHIP-PLANES`, so seventeen remain. Ordered as the plan orders them.
+# `MS-SOURCE-CENSUS`, 25.2 removed `MS-NON-RUST-TCB`, 25.3 removed `MS-SAFETY-OBLIGATIONS`, 25.4
+# removed `MS-OWNERSHIP-PLANES` and 25.5 removed `MS-PHASE22-CROSSWALK`, so sixteen remain. Ordered
+# as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-PHASE22-CROSSWALK": "25.5 -- the Phase-22 reachability crosswalk",
     "MS-PHASE24-CROSSWALK": "25.6 -- the Phase-24 downstream crosswalk",
     "MS-EXPOSURE-CLASSIFICATION": "25.7 -- the exposure/data-flow classification",
     "MS-UNSAFE-REDUCTION": "25.8 -- the unsafe reduction",
@@ -757,6 +781,101 @@ def _ms_ownership_planes_court(name: str) -> dict:
     }
 
 
+def _ms_phase22_crosswalk_court(name: str) -> dict:
+    """`MS-PHASE22-CROSSWALK`: 25.5's court, the Phase-22 reachability crosswalk.
+
+    Stages no probe. It reads the committed `artifacts/phase25/phase22-crosswalk.json` and re-runs
+    the 25.5 pure checks `ms_phase22_crosswalk.crosswalk_findings` and
+    `ms_phase22_crosswalk.crosswalk_sensitivity_control` over it together with the committed 25.1
+    census it maps and the committed Phase-22 whole-program atlas it reads -- the reachability
+    closure `compatibility-closure.json`, its entity plane `reconciliation.json` and the module ->
+    authority-unit correspondence (`transcription-edges.json`, `internal-symbols.json`,
+    `export-defining-units.json`) -- no compiler, no tool; the derivation that produced the plane is
+    `ms_phase22_crosswalk.py --measure`, and this court only re-derives from what it wrote. It
+    establishes that every census site has a disposition (mapped to at least one public root, or an
+    explicit unresolved residual with a reason); that the site map, the unit map, the inverse root
+    view, the counts and the residuals equal their derivation; that the inverse view reproduces from
+    the site map; that the reachability is the atlas's own answer (the walk over its committed typed
+    edges equals its committed `by_root`, so a site hidden behind a callback slot, a provider
+    dispatch slot or a relocation is still reached and recorded with that edge kind); and that the
+    mapping rule names the compatibility-closure atlas rather than a re-derived graph. Five seeded
+    mutations -- a site silently dropped, a site mapped to a root the atlas does not reach, an
+    inverse view that disagrees with the forward map, an unresolved site defaulted to a root and the
+    authority re-pointed away from the atlas -- are each caught with specificity holding. It is an
+    **instrument**: it can pass while the crosswalk records real property findings (the sites whose
+    module transcribes no authority unit and are preserved as unresolved residuals, the
+    `distribution` root that reaches no site, and the graph-reachability-not-execution non-claim),
+    which are recorded as the row's `findings` so a passing crosswalk court is never read as a
+    memory-safety claim.
+    """
+    if not PHASE22_CROSSWALK.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "crosswalk-missing",
+                "problems": [f"the Phase-22 crosswalk {rel(PHASE22_CROSSWALK)} is absent"],
+                "findings": [], "control": {}}
+    if not SOURCE_CENSUS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "census-missing",
+                "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
+                "findings": [], "control": {}}
+    if not PHASE22_CLOSURE.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "atlas-missing",
+                "problems": [f"the Phase-22 reachability atlas {rel(PHASE22_CLOSURE)} is absent"],
+                "findings": [], "control": {}}
+
+    body = json.loads(PHASE22_CROSSWALK.read_text(encoding="utf-8")).get("body", {})
+    census_body = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8")).get("body", {})
+    authority = ms_phase22_crosswalk.load_authority()
+    problems = ms_phase22_crosswalk.crosswalk_findings(body, census_body, authority)
+    control = ms_phase22_crosswalk.crosswalk_sensitivity_control(body, census_body, authority)
+
+    counts = body.get("counts") or {}
+    findings = list(body.get("findings") or [])
+
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/phase22-crosswalk.json and "
+            "re-runs the 25.5 pure checks (ms_phase22_crosswalk.crosswalk_findings and "
+            "ms_phase22_crosswalk.crosswalk_sensitivity_control) over it, the committed 25.1 census "
+            "it maps and the committed Phase-22 whole-program atlas it reads, without a compiler. "
+            "The plane is a pure derivation: each census site's module is resolved to the authority "
+            "translation unit the transcription atlas measures it transcribes, that unit's authority "
+            "symbols are canonicalised to their Phase-22 entity keys, and the public roots are read "
+            "from the closure's own committed `by_root` reachability (corroborated by walking its "
+            "typed edges and naming the witness kinds). It establishes site-disposition completeness, "
+            "the site/unit/inverse/counts reproduction, the inverse/forward agreement, the atlas' "
+            "own reachability and that no competing graph is derived; five seeded mutations are each "
+            "caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, "
+            "3.1, 3.8)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the Phase-22 crosswalk court reads the committed crosswalk and re-derives only its pure "
+            "checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "census_sites": counts.get("census_sites", 0),
+            "sites_mapped": counts.get("sites_mapped", 0),
+            "sites_unresolved": counts.get("sites_unresolved", 0),
+            "unresolved_by_class": counts.get("unresolved_by_class") or {},
+            "public_roots": counts.get("public_roots", 0),
+            "roots_with_sites": counts.get("roots_with_sites", 0),
+            "authority_units": counts.get("authority_units", 0),
+            "authority_entities": counts.get("authority_entities", 0),
+            "transcription_modules": counts.get("transcription_modules", 0),
+            "edge_kinds": counts.get("edge_kinds") or {},
+        },
+        "sites_by_root": {f: (body.get("roots") or {}).get(f, {}).get("sites", 0)
+                          for f in sorted(body.get("roots") or {})},
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -826,16 +945,18 @@ def main(argv: list[str]) -> int:
             "**25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, "
             "**25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, "
             "**25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived "
-            "unsafe site, and "
-            "**25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes. "
+            "unsafe site, "
+            "**25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and "
+            "**25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the "
+            "Phase-22 whole-program reachability atlas. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining seventeen of its twenty-two courts -- "
-            "MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, "
+            "remaining sixteen of its twenty-two courts -- "
+            "MS-PHASE24-CROSSWALK, "
             "MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, "
             "MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.5 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.6 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -879,6 +1000,13 @@ def main(argv: list[str]) -> int:
         InputRef(name="ms-obligations-tool", path=MS_OBLIGATIONS_TOOL),
         InputRef(name="ownership-planes", path=OWNERSHIP_PLANES),
         InputRef(name="ms-ownership-planes-tool", path=MS_OWNERSHIP_TOOL),
+        InputRef(name="phase22-crosswalk", path=PHASE22_CROSSWALK),
+        InputRef(name="ms-phase22-crosswalk-tool", path=MS_PHASE22_CROSSWALK_TOOL),
+        InputRef(name="phase22-compatibility-closure", path=PHASE22_CLOSURE),
+        InputRef(name="phase22-reconciliation", path=PHASE22_RECONCILIATION),
+        InputRef(name="transcription-edges", path=TRANSCRIPTION_EDGES),
+        InputRef(name="internal-symbols", path=INTERNAL_SYMBOLS),
+        InputRef(name="export-defining-units", path=EXPORT_DEFINING_UNITS),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

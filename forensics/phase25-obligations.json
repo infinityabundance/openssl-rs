@@ -85,12 +85,17 @@
       },
       {
         "closure": "the `MS-PHASE22-CROSSWALK` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-PHASE22-CROSSWALK is pending",
+        "findings": [
+          "4354 census site(s) have no authority translation unit in the Phase-22 transcription atlas and are recorded as explicit unresolved residuals (class evidence_missing); none is dropped and none is defaulted to a root",
+          "the `distribution` compatibility root family reaches 0 of the 53309 mapped census site(s) over the atlas's typed edges: its members are installed-file entries, so it is a declared root that no unsafe site's authority entity is reached from",
+          "reachability is the Phase-22 graph's answer, not execution: the 53309 mapped site(s) are reachable from a public root through the typed edges, not exercised",
+          "8490 authority implementation entit(ies) across 638 translation unit(s) anchor the map to the OpenSSL authority"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-PHASE22-CROSSWALK is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "phase22-crosswalk",
         "what": "the crosswalk from the memory-safety census to the Phase-22 whole-program reachability atlas, so each unsafe site's reachability is the Phase-22 authority's answer rather than a second, typed one"
@@ -293,8 +298,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 5,
-      "open_in_this_stratum": 17,
+      "implemented": 6,
+      "open_in_this_stratum": 16,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -335,7 +340,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "6a331de4705e541da399a4fc27ce387d236e9c661bc5136effb99c15fac5c6a4"
+      "sha256": "0104051b5cdf2d7fadc85a5f0b1e4d9d19aa451fdfd37810d48dd0751a3b7cb3"
     },
     {
       "name": "phase25-guard",

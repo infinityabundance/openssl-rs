@@ -3913,7 +3913,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "ddbc207bab42b8b9504716f6d58f83954dd9b9c489117d40077c93941101a9b5"
+      "sha256": "0c67662456efaff4900f515d2aad37a80016e09e0a6371c7510aebf2ce3f373c"
     },
     {
       "name": "court-coverage-rows",
@@ -3923,7 +3923,7 @@
     {
       "name": "divergence-obligations",
       "path": "forensics/divergence-obligations.json",
-      "sha256": "bc341bc071624f2bff9e781055152d4f49198ebda4e4b9879b3677dab8b0b7fb"
+      "sha256": "b44a128494c0e266ecd800498ddf98f44a9a72228286da1af066ccb7a6787b00"
     },
     {
       "name": "prerequisites",
