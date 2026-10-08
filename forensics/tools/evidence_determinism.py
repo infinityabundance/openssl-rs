@@ -406,6 +406,21 @@ GENERATORS_BEFORE_LEDGERS = [
     # the `MS-OWNERSHIP-PLANES` court re-runs the same pure checks over the committed artefact, the
     # census, the TCB and the source it classifies.
     "forensics/tools/ms_ownership_planes.py",
+    # **Phase 25.5's Phase-22 reachability crosswalk (`forensics/tools/ms_phase22_crosswalk.py` ->
+    # `artifacts/phase25/phase22-crosswalk.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It maps every compiler-derived unsafe site of the 25.1
+    # census to the OpenSSL public compatibility roots that can reach it, reading the committed
+    # Phase-22 reachability atlas (`compatibility-closure.json`), its entity plane
+    # (`reconciliation.json`) and the module -> authority-unit correspondence
+    # (`transcription-edges.json`, `internal-symbols.json`, `export-defining-units.json`). It
+    # compiles nothing -- no compiler, no tool, no probe -- so `forensics/memory-safety/container.json`
+    # lists it `metadata_only` and the Docker-only guard admits it on any host, exactly as
+    # `ms_ownership_planes` is. A stale committed crosswalk -- or a dropped site, a site mapped to a
+    # root the atlas does not reach, an inverse view that disagrees with the site map, an unresolved
+    # site defaulted to a root or a re-derived graph -- is a failure rather than a silent divergence,
+    # and the `MS-PHASE22-CROSSWALK` court re-runs the same pure checks over the committed artefact,
+    # the census and the committed Phase-22 atlas.
+    "forensics/tools/ms_phase22_crosswalk.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -735,6 +750,14 @@ COMPARED = [
     # silent divergence. It compiles nothing and reads no authority, so re-deriving it needs no
     # compiler and no candidate.
     "artifacts/phase25/ownership-planes.json",
+    # Phase 25.5's Phase-22 reachability crosswalk: a pure function of the committed 25.1 census and
+    # the committed Phase-22 reachability atlas (its closure, its entity plane and the module ->
+    # authority-unit correspondence), so a stale crosswalk -- or a dropped site, a site mapped to a
+    # root the atlas does not reach, an inverse view that disagrees with the site map, an unresolved
+    # site defaulted to a root or a re-derived graph -- is a failure rather than a silent divergence.
+    # It executes nothing and reads no compiler output, so re-deriving it needs no compiler and no
+    # candidate.
+    "artifacts/phase25/phase22-crosswalk.json",
 ]
 
 # ---------------------------------------------------------------------------

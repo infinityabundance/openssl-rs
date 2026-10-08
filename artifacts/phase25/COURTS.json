@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, and **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining seventeen of its twenty-two courts -- MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.5 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining sixteen of its twenty-two courts -- MS-PHASE24-CROSSWALK, MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.6 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -370,6 +370,90 @@
         "probe": "",
         "problems": [],
         "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught": 5,
+          "honest": true,
+          "mutations": {
+            "authority_not_atlas": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "does not name the Phase-22 compatibility-closure atlas"
+            },
+            "inverse_view_disagrees": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "inverse root view disagrees with the site map"
+            },
+            "root_without_path": {
+              "caught": true,
+              "delta": 3,
+              "findings": 3,
+              "marker": "does not reach this site's authority entity"
+            },
+            "site_dropped": {
+              "caught": true,
+              "delta": 8,
+              "findings": 8,
+              "marker": "no crosswalk disposition"
+            },
+            "unresolved_defaulted_to_root": {
+              "caught": true,
+              "delta": 3,
+              "findings": 3,
+              "marker": "defaults it to the root"
+            }
+          },
+          "seeded": 5,
+          "specificity_holds": true
+        },
+        "counts": {
+          "authority_entities": 8490,
+          "authority_units": 638,
+          "census_sites": 57663,
+          "edge_kinds": {
+            "ADDRESS_TAKEN": 13913,
+            "CLI_DISPATCH": 52444,
+            "DIRECT_CALL": 51672,
+            "ENV_READ": 52444,
+            "EXPORTED_AS": 52444,
+            "RELOCATION_REFERENCE": 52444
+          },
+          "public_roots": 7,
+          "roots_with_sites": 6,
+          "sites_mapped": 53309,
+          "sites_unresolved": 4354,
+          "transcription_modules": 664,
+          "unresolved_by_class": {
+            "evidence_missing": 117
+          }
+        },
+        "court": "MS-PHASE22-CROSSWALK",
+        "findings": [
+          "4354 census site(s) have no authority translation unit in the Phase-22 transcription atlas and are recorded as explicit unresolved residuals (class evidence_missing); none is dropped and none is defaulted to a root",
+          "the `distribution` compatibility root family reaches 0 of the 53309 mapped census site(s) over the atlas's typed edges: its members are installed-file entries, so it is a declared root that no unsafe site's authority entity is reached from",
+          "reachability is the Phase-22 graph's answer, not execution: the 53309 mapped site(s) are reachable from a public root through the typed edges, not exercised",
+          "8490 authority implementation entit(ies) across 638 translation unit(s) anchor the map to the OpenSSL authority"
+        ],
+        "frf_declarable": false,
+        "frf_exclusion": "the Phase-22 crosswalk court reads the committed crosswalk and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
+        "method": "stages no probe: it reads the committed artifacts/phase25/phase22-crosswalk.json and re-runs the 25.5 pure checks (ms_phase22_crosswalk.crosswalk_findings and ms_phase22_crosswalk.crosswalk_sensitivity_control) over it, the committed 25.1 census it maps and the committed Phase-22 whole-program atlas it reads, without a compiler. The plane is a pure derivation: each census site's module is resolved to the authority translation unit the transcription atlas measures it transcribes, that unit's authority symbols are canonicalised to their Phase-22 entity keys, and the public roots are read from the closure's own committed `by_root` reachability (corroborated by walking its typed edges and naming the witness kinds). It establishes site-disposition completeness, the site/unit/inverse/counts reproduction, the inverse/forward agreement, the atlas' own reachability and that no competing graph is derived; five seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.8).",
+        "probe": "",
+        "problems": [],
+        "sites_by_root": {
+          "binary-abi": 53309,
+          "callbacks": 52444,
+          "cli": 52444,
+          "configuration": 52444,
+          "distribution": 0,
+          "modules": 52444,
+          "source-api": 53309
+        },
+        "verdict": "pass"
       }
     ],
     "cve_replay_states": [
@@ -460,7 +544,6 @@
       "MS-MECHANISM-RECONCILIATION": "25.17 -- the vulnerability-mechanism reconciliation",
       "MS-MIRI": "25.9 -- Miri",
       "MS-PHASE18-FUZZ-CROSSWALK": "25.13 -- the Phase-18 fuzz crosswalk",
-      "MS-PHASE22-CROSSWALK": "25.5 -- the Phase-22 reachability crosswalk",
       "MS-PHASE24-CROSSWALK": "25.6 -- the Phase-24 downstream crosswalk",
       "MS-PHASE24-SAFETY-COVERAGE": "25.14 -- the Phase-24 downstream safety coverage",
       "MS-RED-TEAM": "25.18 -- the red team",
@@ -738,8 +821,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 5,
-      "total": 5
+      "pass": 6,
+      "total": 6
     },
     "tool_states": [
       "PASS",
@@ -787,7 +870,7 @@
     {
       "name": "phase25-container-manifest",
       "path": "forensics/memory-safety/container.json",
-      "sha256": "c81156f82f07070c044d30aa8273d950f1dcb4fde798d44c5b8c379a18880acc"
+      "sha256": "3130455f23b2b7abdbda468aa2888b19c2744057253d8f2d30ac938a753822d7"
     },
     {
       "name": "cargo-toml",
@@ -822,7 +905,7 @@
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "f322ddf6ceb727f0ead4c4a3e1a2fba93817696d24b83a91846415bfc55e2a27"
+      "sha256": "ec962ec9cb82cb9e6e5f3c494f484cb758897f01b4c0968ef9c97dd03a903f7e"
     },
     {
       "name": "ms-obligations-tool",
@@ -832,12 +915,47 @@
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "d5a687530fa21d4749ca0cb4298f24cc42e73feaf3b9744f09f415c2e60d1663"
+      "sha256": "d6fcbe12c16b78023a7344818c39cb254f51895627e3fae4ac7a586f0ba0f61e"
     },
     {
       "name": "ms-ownership-planes-tool",
       "path": "forensics/tools/ms_ownership_planes.py",
       "sha256": "953a5a33534ca49b83bce375ccc7f238019519bc33b2cb785a550047f4136fcd"
+    },
+    {
+      "name": "phase22-crosswalk",
+      "path": "artifacts/phase25/phase22-crosswalk.json",
+      "sha256": "1fc168189ad5fed26230923d6db5c7f15d55a8752c2b2a3736a5424707122d29"
+    },
+    {
+      "name": "ms-phase22-crosswalk-tool",
+      "path": "forensics/tools/ms_phase22_crosswalk.py",
+      "sha256": "c2e13aaffabe99aab1e6075dfc5ac1ceb1fc7f8fe1d778bbbdc3eb7a22e86721"
+    },
+    {
+      "name": "phase22-compatibility-closure",
+      "path": "forensics/atlas/phase22/compatibility-closure.json",
+      "sha256": "58734faebbd0b99bfdd612a0b799c1892eb2bcf8f0288ddefc9c97917d1183a6"
+    },
+    {
+      "name": "phase22-reconciliation",
+      "path": "forensics/atlas/phase22/reconciliation.json",
+      "sha256": "a9d17ba2e4602221d244701d002004d04218977021745bcc83cba1220cfffcba"
+    },
+    {
+      "name": "transcription-edges",
+      "path": "forensics/atlas/transcription-edges.json",
+      "sha256": "bc26d5c9151789f84c7b4af90d2421010d04deeebeb373bb0e2c2bd66920cd47"
+    },
+    {
+      "name": "internal-symbols",
+      "path": "forensics/atlas/internal-symbols.json",
+      "sha256": "22de7db7aa07fb8239f380f235f678e182351d38b56e253cf6496ef37c92b018"
+    },
+    {
+      "name": "export-defining-units",
+      "path": "forensics/atlas/export-defining-units.json",
+      "sha256": "fed68223839cb890b8d34359d806945316f67bf2fa08353b7e43e608a3722fed"
     }
   ],
   "kind": "phase25-courts",
