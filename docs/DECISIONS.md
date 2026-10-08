@@ -36157,3 +36157,118 @@ out-of-sample measurement rather than a set of families that happened to be inco
 corpus can be used to choose a patch: the holdout's partition is fixed before any candidate result
 exists, and the hostility corpus is named as separate rather than counted.
 
+## D554 -- Phase 25 activates: the memory-safety atlas, and its non-export unit
+
+Phase 25 is the stratum `docs/RELEASE_GATES.md` section 1 names "Memory-safety atlas, unsafe
+trusted-computing-base census and historical CVE extinction court". It is dependency-ordered after
+the downstream-1000 stratum (Phase 24): its first subphase, 25.0, lands
+`docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md`, `forensics/tools/memory_safety_schemas.py`, the
+Docker-only execution guard `forensics/tools/phase25_guard.py`, the committed venue manifest
+`forensics/memory-safety/container.json`, the contract ledger `forensics/phase25-obligations.json`
+and the courts scaffold `artifacts/phase25/COURTS.json`, and its seal
+`docs/PHASE-25-MEMORY-SAFETY-SEAL.md` is a later subphase's. No existing phase is renumbered, and
+`REQUIRES[25] = (24,)`; because Phase 24 requires Phase 23 (which requires Phase 21, which requires
+Phase 22) that single edge transitively requires the multitrack authority lineage, the
+maintenance-delta machinery and the authority archaeology, and its crosswalks additionally read
+Phase-18 hostile-fuzz evidence and Phase-22 whole-program reachability evidence, so it depends on
+Phases 18, 22, 23 and 24.
+
+**The model.** A memory-safety atlas, an unsafe trusted-computing-base census and a historical CVE
+extinction court over the exact admitted candidate's first-party shipped source/build surface. The
+vocabulary is fixed in `docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md` section 0 and validated by
+`forensics/tools/memory_safety_schemas.py`: a **compiler-derived unsafe site** (the primary unit), a
+**source-census row**, an **unsafe context** with its **safety contract**, a **safety obligation**
+along its dimension, the **ownership/allocation/callback planes**, a **tool result** with its tool
+state, a **historical CVE** classified from the CVE taxonomy, its **replay** in the closed replay
+states, and a **seal-class summary**. Phase 25 owns **no exported symbol**: reading
+`forensics/atlas/symbol-ownership.json` for `owner_phase == 25` yields no record, so its ledger's
+unit is not a symbol but the non-export `memory-safety contract`, named in
+`atlas_common.NON_EXPORT_UNITS` so the export-partitioning tools skip it. Its ledger's working set
+is twenty-two contract units, one per subphase 25.0 through 25.21, all open at activation
+(`open_in_this_stratum` 22); the ledger fails closed if the ownership atlas ever assigns this
+stratum an export, the provider census a registration row, or the prerequisite plane a unit.
+
+**The bounded claim the stratum records, and the non-claims it never exceeds.** The claim is that
+the memory-safety-relevant trusted computing base of the exact admitted candidate has been
+exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations
+mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available
+dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It
+is **not** "no memory-safety bug can exist" and not "100% memory safe". The non-claims are: safe
+Rust does not prove protocol correctness; unsafe Rust is not inherently vulnerable; unsafe LOC is
+not a vulnerability count; Miri, ASan and TSan are not exhaustive; Kani does not prove unsupported
+or concurrent whole-program behaviour; historical CVE extinction does not predict a future CVE
+count; compatibility is not security; memory safety is not cryptographic correctness; and absence
+of a crash is not structural proof. The six load-bearing choices this activation records are D555
+through D560.
+
+## D555 -- The compiler is the authority for unsafe operations, never a regex
+
+A memory-safety census is only evidence if its unit is a fact the compiler establishes. Every
+`unsafe_site` record therefore carries the exact `compiler` toolchain and a `compiler_derived` flag
+that **must** be true, and `memory_safety_schemas.validate_unsafe_site` refuses a site that is not
+compiler-derived. A regular-expression scan or a text grep is a *projection* of the source, and a
+metric built on it would move when a comment moves; the unsafe trusted computing base is the
+compiler's own account of the operations it emitted, not the words in the file. This is the same
+rule the strata that read an authority's own tables already follow: the authority is the oracle for
+its surface, and a second, hand-written reading of it is a place a claim can hide.
+
+## D556 -- The primary unit is a compiler-derived unsafe operation, not a LOC ratio
+
+The counted unit is the compiler-derived unsafe operation. Lines of unsafe code (`unsafe LOC`) are a
+**secondary projection** of the census: they move with formatting and with the shape of the code
+around a block, and a ratio of them is not a vulnerability count. A later subphase that publishes an
+unsafe LOC ratio publishes it as a projection of the census, with the census beside it, so the
+projection can never be read as the security claim. `docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md`
+section 3.2 and 4.7 fix this, and the `MS-SOURCE-CENSUS` court checks the projection against the
+census rather than this paragraph asserting it.
+
+## D557 -- The unsafe trusted computing base includes first-party C and assembly
+
+Phase 25's trusted computing base is not Rust-only. The first-party C sources and headers, the
+inline assembly, the exported FFI boundaries, the C adapters and the variadic boundaries are part
+of the same census, because a memory-safety claim that stopped at the Rust/C boundary would omit
+precisely the surface where the two languages' guarantees meet. The `non-rust-tcb` contract unit
+(25.2) inventories them and gives each a safety contract, and a `VENDORED` dependency is recorded
+but is deliberately **not** part of the claimed first-party TCB, so the boundary of the claim is
+auditable rather than implied.
+
+## D558 -- The tool-specific Docker environments are derived from one minimal base
+
+Phase 25 runs one tool-specific environment per instrument -- the compiler-backed census, Miri,
+ASan, MSan, TSan, Kani and the CVE replays -- and every one of them is derived from the single
+minimal base `forensics/memory-safety/container.json` names (the Debian official image, pinned by
+digest), in the subphase that lands it. The stratum deliberately does not maintain one mutable
+kitchen-sink image that accumulates every tool: a kitchen-sink image makes the environment a
+function of whoever last rebuilt it, so a result depends on state nothing binds, whereas deriving
+each environment from one pinned base makes the toolchain a fact the manifest records. The running
+court image `openssl-rs-court:1` is the admitted venue `forensics/tools/phase25_guard.py` binds;
+a later subphase that needs an extra tool adds a derived environment and records it rather than
+widening the court image (`docs/DECISIONS.md` D550 is the same guard pattern for Phase 24).
+
+## D559 -- The unsafe budget gate is an authored bound, not a side effect
+
+The stratum fixes an authored **unsafe budget**: the maximum number of unreduced reachable unsafe
+sites in the claimed profile. The gate fails a candidate whose compiler-derived reachable unsafe
+site count exceeds the budget, and the budget moves only by an explicit recorded decision, not as a
+side effect of a measurement. The budget is a bound on the atlas's residual, never a claim that the
+sites within it are safe, and no subphase weakens the ABI or silences an unsafe lint to shrink the
+count: a reduction is a real safe intrinsic or a checked wrapper, recorded with its before/after
+compiler-derived sites.
+
+## D560 -- The bounded memory-safety claim, and `UNSUPPORTED` is never `PASS`
+
+The claim `docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md` section 0 records is deliberately bounded: the
+memory-safety-relevant trusted computing base of the **exact admitted candidate** has been
+exhaustively inventoried over its first-party shipped surface, with unsafe operations mapped to
+their safety contracts and to the available evidence, and no unexplained reachable unsafe site in
+the claimed profile. It is not a proof that no memory-safety bug can exist and not a claim of
+"100% memory safe". Three rules make the boundary enforceable rather than rhetorical. A tool result
+names one of four states (`PASS`, `FAIL`, `NOT_REACHABLE`, `UNSUPPORTED`), and `UNSUPPORTED` -- which
+records that the tool could not express the question -- is **never** a pass: `validate_summary`
+refuses a seal-class record that marks an externally reachable unsafe site's tool state
+`UNSUPPORTED` as a pass, and each tool-result validator refuses an `UNSUPPORTED` record with no
+`unsupported_reason`. A `CANDIDATE_STRUCTURALLY_EXCLUDED` CVE replay must cite the structure that
+makes the mechanism inexpressible, and `validate_cve_replay` refuses one with no evidence. And the
+seal's property is `NOT_CLAIMED` with the non-claims named as findings, so a passing `MS-SEAL` is an
+instrument plus an observation record and must never be read as "the candidate is memory safe".
+

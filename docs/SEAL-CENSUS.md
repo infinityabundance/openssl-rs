@@ -50,6 +50,7 @@ declared owner; this is that assignment.
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
 | 23 | Multitrack authority compatibility and OpenSSL lineage | `complete` | 0 | 17 | 17 | 0 | 0 |
 | 24 | Downstream-1000 replacement atlas and empirical drop-in corpus | `complete` | 0 | 19 | 19 | 0 | 0 |
+| 25 | Memory-safety atlas, unsafe trusted-computing-base census and historical CVE extinction court | `in-progress` | 0 | 22 | 0 | 0 | 22 |
 
 ## Phase 3 — Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects
 
@@ -863,6 +864,51 @@ The other 19 compare ELF structure rather than a transcript and observe nothing 
 | RT-RECIPE-CAMPAIGN | `pass` | — (structural) |
 | RT-CLOSE-BATCH | `pass` | — (structural) |
 | DOWNSTREAM-1000-SEAL | `pass` | — (structural) |
+
+## Phase 25 — Memory-safety atlas, unsafe trusted-computing-base census and historical CVE extinction court
+
+* state: `in-progress`
+* blocking: 22 open obligation(s) of this stratum recorded in forensics/phase25-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase25-obligations.json` publishes `unit: memory-safety contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the twenty-two contract units (`constitution`, `source-census`, `non-rust-tcb`, `safety-obligations`, `ownership-planes`, `phase22-crosswalk`, `phase24-crosswalk`, `exposure-classification`, `unsafe-reduction`, `miri`, `asan-msan`, `tsan`, `kani`, `phase18-fuzz-crosswalk`, `phase24-safety-coverage`, `historical-cve-census`, `cve-replay`, `mechanism-reconciliation`, `red-team`, `clean-regeneration`, `frf-gemel-closure` and `memory-safety-seal`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it inventories the shipped first-party source/build surface of a candidate that is already identified. Its courts stage no probe, because it owns no symbol for a differential probe to observe: they read committed evidence about the compiler-derived unsafe operations of a fixed candidate. Every entry point calls the Docker-only execution guard (`forensics/tools/phase25_guard.py`) first, so on the host the stratum refuses rather than compiling, instrumenting, proving or replaying anything (docs/REPRODUCIBILITY.md section 1). The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. A passing court is an **instrument**, not a property claim: the property it names may still carry findings, so `measurement_state` says the instrument completed while `property_status`/`findings` say what is claimed. The stratum's non-claims are: safe Rust does not prove protocol correctness; unsafe Rust is not inherently vulnerable; unsafe LOC is not a vulnerability count; Miri, ASan and TSan are not exhaustive; Kani does not prove unsupported or concurrent whole-program behaviour; historical CVE extinction does not predict a future CVE count; compatibility is not security; memory safety is not cryptographic correctness; and absence of a crash is not structural proof. A tool state of `UNSUPPORTED` is never `PASS`, and a `CANDIDATE_STRUCTURALLY_EXCLUDED` CVE replay must cite its evidence. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md` sections 0 and 4 and docs/DECISIONS.md D554 through D560 record the measurement
+* seal: none written yet (`docs/PHASE-25-MEMORY-SAFETY-SEAL.md`)
+* ledger: `forensics/phase25-obligations.json`
+* atlas-owned: 0
+* owned working set: 22
+* implemented: 0
+* deferred to a later stratum with a stated reason: 0
+* **open in this stratum: 22**
+
+Contract units (measurement vs property):
+
+| unit | measurement_state | property_status | findings |
+|---|---|---|---|
+| constitution | `not_measured` | `not_claimed` | — |
+| source-census | `not_measured` | `not_claimed` | — |
+| non-rust-tcb | `not_measured` | `not_claimed` | — |
+| safety-obligations | `not_measured` | `not_claimed` | — |
+| ownership-planes | `not_measured` | `not_claimed` | — |
+| phase22-crosswalk | `not_measured` | `not_claimed` | — |
+| phase24-crosswalk | `not_measured` | `not_claimed` | — |
+| exposure-classification | `not_measured` | `not_claimed` | — |
+| unsafe-reduction | `not_measured` | `not_claimed` | — |
+| miri | `not_measured` | `not_claimed` | — |
+| asan-msan | `not_measured` | `not_claimed` | — |
+| tsan | `not_measured` | `not_claimed` | — |
+| kani | `not_measured` | `not_claimed` | — |
+| phase18-fuzz-crosswalk | `not_measured` | `not_claimed` | — |
+| phase24-safety-coverage | `not_measured` | `not_claimed` | — |
+| historical-cve-census | `not_measured` | `not_claimed` | — |
+| cve-replay | `not_measured` | `not_claimed` | — |
+| mechanism-reconciliation | `not_measured` | `not_claimed` | — |
+| red-team | `not_measured` | `not_claimed` | — |
+| clean-regeneration | `not_measured` | `not_claimed` | — |
+| frf-gemel-closure | `not_measured` | `not_claimed` | — |
+| memory-safety-seal | `not_measured` | `not_claimed` | — |
+
+A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
+Courts: `all pass`, 0 court(s), **0** authority observation(s) over 0 transcript court(s).
+
+| court | verdict | observations |
+|---|---|---|
 
 ## Downstream-1000 outcomes (generated)
 

@@ -69,7 +69,10 @@ MULTITRACK = FORENSICS / "multitrack"
 # contract over twelve contract units and no deferral, which a symbol-counting ledger would
 # count zero. **Phase 24 owns no export either**: the ownership atlas assigns `owner_phase == 24`
 # no row, and its unit is the downstream 1000 contract over sixteen contract units and no
-# deferral, which a symbol-counting ledger would count zero. The marker is a property
+# deferral, which a symbol-counting ledger would count zero. **Phase 25 owns no export either**:
+# the ownership atlas assigns `owner_phase == 25` no row, and its unit is the memory-safety
+# contract over twenty-two contract units and no deferral, which a symbol-counting ledger would
+# count zero. The marker is a property
 # of the document rather than a phase number those tools know (`docs/PHASE-22-SUBPHASES.md`, D485;
 # `docs/PHASE-16-SUBPHASES.md`, section 1; `docs/PHASE-17-SUBPHASES.md`, section 1;
 # `docs/PHASE-18-SUBPHASES.md`, section 1; `docs/PHASE-19-SUBPHASES.md`, section 1;
@@ -86,6 +89,7 @@ NON_EXPORT_UNITS = {
     "maintenance delta contract",
     "multitrack authority contract",
     "downstream 1000 contract",
+    "memory-safety contract",
 }
 HISTORICAL_AUTHORITY = "openssl-3.6.3-historical"
 
@@ -140,6 +144,11 @@ SEAL_DOCS: dict[int, str] = {
     # plan, so its absence is the record that the stratum is still open rather than a missing table
     # row.
     24: "docs/PHASE-24-DOWNSTREAM-1000-SEAL.md",
+    # Phase 25 is another non-export stratum (its unit is the memory-safety contract), so it too
+    # is read by the generic `STRATUM_EVIDENCE` rule. Its seal is named from the day 25.0 lands the
+    # plan, so its absence is the record that the stratum is still open rather than a missing table
+    # row.
+    25: "docs/PHASE-25-MEMORY-SAFETY-SEAL.md",
 }
 
 

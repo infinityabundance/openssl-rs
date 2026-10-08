@@ -1,0 +1,332 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "contract_units": [
+      {
+        "closure": "the `MS-CONSTITUTION` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-CONSTITUTION is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "constitution",
+        "what": "the plan, the record schemas, the Docker-only execution guard, the committed venue manifest, the ledger and the runner -- the authored non-export constitution the later subphases fill, with the closed vocabularies of unsafe-operation kinds, obligation dimensions, exposure classes, tool states, CVE taxonomy, CVE replay states, risk tiers and panic/unwind classes"
+      },
+      {
+        "closure": "the `MS-SOURCE-CENSUS` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-SOURCE-CENSUS is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "source-census",
+        "what": "one compiler-derived row per shipped first-party source/build file, with the unsafe operations the **compiler** establishes rather than a regex or a LOC projection, so the primary unit is a compiler-derived unsafe operation and LOC is a secondary projection"
+      },
+      {
+        "closure": "the `MS-NON-RUST-TCB` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-NON-RUST-TCB is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "non-rust-tcb",
+        "what": "the non-Rust part of the trusted computing base: the first-party C sources and headers, the inline assembly, the exported FFI boundaries, the C adapters and the variadic boundaries, each classified and given a safety contract"
+      },
+      {
+        "closure": "the `MS-SAFETY-OBLIGATIONS` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-SAFETY-OBLIGATIONS is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "safety-obligations",
+        "what": "one safety obligation per unsafe site along its dimension (nullability, lifetime, aliasing, alignment, initialization, bounds, ownership, refcount, thread affinity, ABI, unwind, type validity and the rest), each naming how it is discharged or recorded open"
+      },
+      {
+        "closure": "the `MS-OWNERSHIP-PLANES` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-OWNERSHIP-PLANES is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "ownership-planes",
+        "what": "the ownership, allocation and callback planes: the allocation/deallocation associations, the ownership edges across the Rust/C boundary, the callback lifetimes, the unsafe Send/Sync impls, the global/static state and the panic/unwind boundaries"
+      },
+      {
+        "closure": "the `MS-PHASE22-CROSSWALK` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-PHASE22-CROSSWALK is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "phase22-crosswalk",
+        "what": "the crosswalk from the memory-safety census to the Phase-22 whole-program reachability atlas, so each unsafe site's reachability is the Phase-22 authority's answer rather than a second, typed one"
+      },
+      {
+        "closure": "the `MS-PHASE24-CROSSWALK` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-PHASE24-CROSSWALK is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "phase24-crosswalk",
+        "what": "the crosswalk from the memory-safety census to the Phase-24 downstream-1000 atlas, so each unsafe site's downstream usage is the Phase-24 measurement's answer rather than a typed one"
+      },
+      {
+        "closure": "the `MS-EXPOSURE-CLASSIFICATION` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-EXPOSURE-CLASSIFICATION is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "exposure-classification",
+        "what": "the exposure/data-flow classification of every unsafe site into the closed exposure classes (unreachable-profile, test-only, internal, local-API, config, CLI-input, network-client, network-server, downstream-runtime-observed), so a site is reachable by measurement rather than by assertion"
+      },
+      {
+        "closure": "the `MS-UNSAFE-REDUCTION` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-UNSAFE-REDUCTION is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "unsafe-reduction",
+        "what": "the unsafe reduction worklist: the reachable unsafe sites reduced by a safe intrinsic or a checked wrapper where the venue can, each reduction with its before/after compiler-derived sites and the sites that remain named rather than dropped, so nothing is weakened to shrink the count"
+      },
+      {
+        "closure": "the `MS-MIRI` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-MIRI is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "miri",
+        "what": "the Miri results over the claimed profile, each with its tool state (pass, fail, not-reachable or unsupported) and its unsupported reason where it could not express the question, so an unsupported target is never read as a pass"
+      },
+      {
+        "closure": "the `MS-ASAN-MSMAN` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-ASAN-MSMAN is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "asan-msan",
+        "what": "the ASan and MSan results over the claimed profile, each with its tool state and its unsupported reason, so a sanitizer that cannot instrument a target is recorded rather than counted as clean"
+      },
+      {
+        "closure": "the `MS-TSAN` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-TSAN is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "tsan",
+        "what": "the TSan results over the concurrency-relevant surface of the claimed profile, each with its tool state and its unsupported reason, so a data race the tool could not observe is not read as absent"
+      },
+      {
+        "closure": "the `MS-KANI` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-KANI is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "kani",
+        "what": "the Kani harness results over the stated harnesses and their targets, each with its tool state and its unsupported reason, and no claim beyond the harnesses that exist: Kani proves what a supported harness expresses, not unsupported or concurrent whole-program behaviour"
+      },
+      {
+        "closure": "the `MS-PHASE18-FUZZ-CROSSWALK` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-PHASE18-FUZZ-CROSSWALK is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "phase18-fuzz-crosswalk",
+        "what": "the crosswalk from the memory-safety census to the Phase-18 hostile-fuzz courts, so a discovered memory-safety failure is a preserved Phase-18 record rather than a discarded run"
+      },
+      {
+        "closure": "the `MS-PHASE24-SAFETY-COVERAGE` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-PHASE24-SAFETY-COVERAGE is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "phase24-safety-coverage",
+        "what": "the safety coverage of the Phase-24 downstream corpus: which unreduced unsafe sites the downstream runs actually exercise, and which reachable sites no downstream measurement observes, so a reachable site is never assumed exercised"
+      },
+      {
+        "closure": "the `MS-HISTORICAL-CVE` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-HISTORICAL-CVE is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "historical-cve-census",
+        "what": "the historical OpenSSL CVE census, each memory-safety-relevant CVE classified from the closed CVE taxonomy with its affected versions and its fix, so the record is a classified census rather than a count"
+      },
+      {
+        "closure": "the `MS-CVE-REPLAY` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-CVE-REPLAY is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "cve-replay",
+        "what": "the historical CVE replay: each CVE's disposition for the exact admitted candidate in the closed replay states, where a `CANDIDATE_STRUCTURALLY_EXCLUDED` disposition must cite the structure that makes the mechanism inexpressible and an unsafe path that remains is named rather than erased"
+      },
+      {
+        "closure": "the `MS-MECHANISM-RECONCILIATION` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-MECHANISM-RECONCILIATION is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "mechanism-reconciliation",
+        "what": "the vulnerability-mechanism reconciliation: each mechanism class is reconciled against the candidate's structure and the replay evidence, and a structural immunity is stated with its reason and its evidence, so historical CVE extinction is a mechanism statement and never a prediction of a future CVE count"
+      },
+      {
+        "closure": "the `MS-RED-TEAM` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-RED-TEAM is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "red-team",
+        "what": "the red-team pass over the claimed profile: the reachable unsafe sites attacked with adversarial inputs and configurations, each attempt recorded with its outcome, so an unexplained reachable unsafe site is a finding rather than an omission"
+      },
+      {
+        "closure": "the `MS-CLEAN-REGEN` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-CLEAN-REGEN is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "clean-regeneration",
+        "what": "the full clean regeneration of the memory-safety census and its evidence from the frozen candidate and the frozen toolchain, so the atlas is reproducible rather than assembled, and a PASS that does not survive the regeneration is a finding"
+      },
+      {
+        "closure": "the `MS-FRF-CLOSURE` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-FRF-CLOSURE is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "frf-gemel-closure",
+        "what": "the FRF/Gemel chain closure where the stratum stages a declarable court, so a passing atlas is not read as a chain that never ran"
+      },
+      {
+        "closure": "the `MS-SEAL` court passes",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "not_measured",
+        "observation": "MS-SEAL is pending",
+        "property_status": "not_claimed",
+        "state": "open",
+        "surface": "artifacts/phase25/COURTS.json",
+        "unit": "memory-safety-seal",
+        "what": "the seal `docs/PHASE-25-MEMORY-SAFETY-SEAL.md`, which closes the bounded claim and records the non-claims it never exceeds"
+      }
+    ],
+    "counts": {
+      "atlas_owned": 0,
+      "contract_units": 22,
+      "deferrals_received": 0,
+      "deferred_to_later_phase": 0,
+      "implemented": 0,
+      "open_in_this_stratum": 22,
+      "owned": 22,
+      "provider_rows_open": 0,
+      "provider_rows_owned": 0,
+      "unit_deferrals_received": 0
+    },
+    "deferrals": [],
+    "deferred": [],
+    "implemented": [],
+    "note": "`open` is the only list that blocks this stratum, and its count is over the memory-safety contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. Phase 25 owns no provider registration row and no export: it activates no provider and adds no library surface, because it measures compiler-derived unsafe operations over the shipped first-party surface. Its twenty-two contract units are the memory-safety contract docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 1 names -- the constitution, the compiler-backed source census, the non-Rust TCB, the safety obligations, the ownership/allocation/callback planes, the Phase-22 and Phase-24 crosswalks, the exposure/data-flow classification, the unsafe reduction, Miri, ASan/MSan, TSan, Kani, the Phase-18 fuzz crosswalk, the Phase-24 downstream safety coverage, the historical CVE census, the historical CVE replay, the vulnerability-mechanism reconciliation, the red team, the full clean regeneration, the FRF/Gemel closure and the memory-safety seal -- and its `counts` block is the live record of which of them are implemented: at activation none has a court, so `open_in_this_stratum` is twenty-two. Every entry point calls the Docker-only execution guard (`forensics/tools/phase25_guard.py`) first, so on the host the stratum refuses rather than compiling, instrumenting, proving or replaying anything (docs/REPRODUCIBILITY.md section 1). The primary unit is a **compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. The stratum's explicit non-claims are: safe Rust does not prove protocol correctness; unsafe Rust is not inherently vulnerable; unsafe LOC is not a vulnerability count; Miri, ASan and TSan are not exhaustive; Kani does not prove unsupported or concurrent whole-program behaviour; historical CVE extinction does not predict a future CVE count; compatibility is not security; memory safety is not cryptographic correctness; and absence of a crash is not structural proof. A tool state of `UNSUPPORTED` is never `PASS`, and a `CANDIDATE_STRUCTURALLY_EXCLUDED` CVE replay must cite its evidence. Each contract unit records its two axes separately: `measurement_state` says the instrument completed, and `property_status`/`findings` say what is claimed. The `memory-safety-seal` unit's property is `NOT_CLAIMED` with the non-claims named as findings, so a passing `MS-SEAL` is an instrument plus an observation record and must never be read as 'the candidate is memory safe'.",
+    "open": [],
+    "provider_rows": [],
+    "rule": "this stratum's working set is not a set of exported symbols: Phase 25 owns no export, no provider registration row and no prerequisite deferral, so its working set is exactly the memory-safety contract units docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md names, each measured by the Phase-25 courts registry. Every row is read from those atlases; the ledger types none of them, and `main` fails closed if the ownership atlas assigns this stratum an export, the provider census assigns it a row, or the prerequisite plane assigns it a deferral or unit",
+    "unit": "memory-safety contract",
+    "unit_deferrals": []
+  },
+  "generator": "forensics/tools/phase25_obligations.py",
+  "inputs": [
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "provider-algorithms",
+      "path": "forensics/atlas/provider-algorithms.json",
+      "sha256": "8a767c9f5c456e1b3b8e2d01a88f0b17f2184313d421c0a9e513c1dd2d118589"
+    },
+    {
+      "name": "prerequisites",
+      "path": "forensics/prerequisites.json",
+      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+    },
+    {
+      "name": "phase-25-plan",
+      "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
+      "sha256": "de8c54477c63b853e5177ec28c2fb0adb278603ca156e690bd898c61f95a8659"
+    },
+    {
+      "name": "phase-25-courts",
+      "path": "artifacts/phase25/COURTS.json",
+      "sha256": "fb01447156900445af4535cf1979c53caa0e015139ab17b6bc364337199850a4"
+    },
+    {
+      "name": "phase25-guard",
+      "path": "forensics/tools/phase25_guard.py",
+      "sha256": "fa88056a76e69be741d9b41d9c3c683329ccb6f885ac1f6cd5fa0e0358a37e10"
+    },
+    {
+      "name": "memory-safety-schemas",
+      "path": "forensics/tools/memory_safety_schemas.py",
+      "sha256": "da3c15776c4701edee88d9a5a37545e14d5f7ed1ac1b7f987d8134c3d06b80a4"
+    }
+  ],
+  "kind": "phase25-obligations",
+  "schema": "openssl-rs/atlas/phase25-obligations/v1"
+}

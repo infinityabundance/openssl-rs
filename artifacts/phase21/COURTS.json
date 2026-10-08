@@ -1058,7 +1058,7 @@
     {
       "name": "release-gates",
       "path": "docs/RELEASE_GATES.md",
-      "sha256": "3a4892d36740ccefa48e3361c5fe792513597bf9e7f7b55b7f03e1248593abe6"
+      "sha256": "760af7678886e85bc533b9965918dc5ad52e30f212b87fa883d8d6f1f3166c25"
     },
     {
       "name": "non-claims",
