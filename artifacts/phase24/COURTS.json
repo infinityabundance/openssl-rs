@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-RANKING-SOURCES` is 24.1's court: the frozen ranking-source acquisition. It stages no probe and reads forensics/downstream/ranking-sources.json and the committed normalized inputs under forensics/downstream/ranking/normalized/, re-running the 24.1 validation and sensitivity control without fetching. It establishes that every acquired ranking / reverse-dependency source -- the Debian reverse-dependency graph and Popcon counts, the Fedora and Alpine reverse package dependencies, Homebrew openssl@3's dependency relationships and analytics, the OpenSSF Scorecard and the crates.io reverse-dependency count -- is content-addressed by its raw payload SHA-256 and its normalization SHA-256, carries a retrieval timestamp and a parser version, and is reproducible from its deterministic retrieval recipe; that the frozen selection_input_root_hash reproduces from the present sources; and that an unavailable source (the OpenSSF Criticality Score, which has no reproducible public endpoint) carries a reason and is not counted present. A source stripped of its hash, a mutated normalized payload, an unavailable source counted present and a missing retrieval timestamp are each detected with specificity holding. A passing ranking-source manifest is a precommitment, not a ranking claim: it says the selection input was frozen before any candidate result. `RT-CANDIDATE-UNIVERSE` is 24.2's court: the candidate family universe. It stages no probe and reads forensics/downstream/candidates.json and forensics/downstream/families.json, re-deriving both from the committed forensics/downstream/ranking/normalized/ inputs. It establishes that every family is schema-valid (kind `family`) and provenance-backed; that aliases of one upstream collapse to one family (the libcurl4/curl/curl-dev/curl-doc set is one family, not four); that the OpenSSL providers and a name collision (`libcrypto++`) are not counted as consumers; that a fork is not independent without explicit evidence of materially different OpenSSL integration; that a transitive consumer is not counted as direct; and that the universe is substantially larger than 1,000 before deduplication. A double-counted distro alias, a transitive consumer promoted to direct, a fork counted independent with no evidence and a family with no provenance are each detected with specificity holding. `RT-AUTHORITY-CENSUS` is 24.3's court: the authority-baseline census. It stages no probe and reads forensics/downstream/authority-baselines.jsonl and forensics/downstream/usage-fingerprints.json, re-deriving the provisional census cohort from the committed families. It establishes that every cohort member has an authority result classified; that an `AUTHORITY_BASELINE_FAIL` carries an authority failure class from the taxonomy and a reason, and is never counted as a candidate failure; that a `AUTHORITY_BASELINE_PASS`'s linkage proof resolves the admitted authority's own libssl/libcrypto and never a system one; that the cohort selection rule is recorded and reproduces from the frozen sources; and that no candidate execution occurred. A build claiming authority linkage while resolving a system libssl, an authority failure counted as a candidate failure, a cohort member with no source hash and a fingerprint with no imported symbols claimed as a pass are each detected with specificity holding. A passing census is a measurement, not a candidate result: the authority side reached the level it records, and no candidate ran. `RT-FAMILY-FREEZE` is 24.4's court: the P1000 + reserve freeze. It stages no probe and reads forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-deriving the ranked universe from the committed families by the frozen selection rule (source breadth, then distro breadth, then popularity, then canonical name, then family_id). It establishes that the recorded P1000 is exactly the derived top-1,000 and the reserve the derived remainder in rank order; that the P1000 is distinct and disjoint from the reserve; that both are a subset of the universe; that ranks are positions and the recorded signal is each family's own; that the recorded selection root reproduces and its selection_input_root_hash, families sha256 and rule sha256 match the committed files; and that no candidate-subject run exists in the pre-freeze plane (the candidate-result artefacts the stratum produces after the freeze -- 24.6's build/link atlas onward -- are excluded), so the population is frozen before any candidate result. Two P1000 members' order swapped, a P1000 member deleted so the count is wrong, a family id shared between the P1000 and the reserve, a mutated selection root, and a fabricated candidate-subject run row in the downstream plane are each detected with specificity holding. A passing freeze is a precommitment, not a result, and it refuses the anti-pattern of a family typed into the 1,000 because a candidate passed it. `RT-HOLDOUT-PARTITION` is 24.5's court: the precommitted holdout partition. It stages no probe and reads forensics/downstream/holdout.json, forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-deriving the partition from the committed frozen P1000 by the frozen rank-band rule (bands of 100, each band ordered by content_hash('phase24-holdout-v1:'+family_id) ascending, tiebreak by family_id, the first 20 holdout and the remaining 80 development). It establishes that the two cohorts union to exactly the frozen P1000; that they are disjoint and each family_id appears exactly once; that every family_id is a real committed family; that each band contributes exactly 20 holdout / 80 development; that the cohorts reproduce from the frozen rule; that the partition root reproduces; that the counts are read rather than typed; that the partition is a pure function of the frozen P1000 (no family outside it); and that no candidate-subject run exists anywhere in the downstream plane, so the split is fixed before any candidate result. One development family moved into the holdout cohort, one holdout member deleted, a family_id duplicated into both cohorts, a P1000-external family added, a mutated partition root, and a fabricated candidate-subject run row in the downstream plane are each detected with specificity holding. A passing partition is a precommitment, not a result, and it refuses the anti-pattern of a holdout chosen after seeing a candidate failure -- a holdout that is no longer out-of-sample. `RT-BUILD-LINK-ATLAS` is 24.6's court: the build/link atlas. It stages no probe and reads forensics/downstream/build-link-atlas.json, forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-running the 24.6 validation and sensitivity control over the committed artefact without rebuilding. It establishes that every frozen P1000 family is accounted for under both subjects; that every recipe-backed family has both an authority and a candidate row for the same specimen and the same recipe (identical build intent); that a candidate L4-linked row's linkage proof resolves the candidate install and never the authority prefix nor a system library; that an authority L4-linked row resolves the authority; that candidate_specific_patch_count is 0; that every non-measured row carries a reason and a schema-valid residual/failure class; and that the counts are derived rather than typed. A candidate L4 row whose linkage resolves the authority, a recipe-backed family missing its authority row, a positive candidate-specific patch count, a non-measured row with no residual class, and a candidate L4 row whose linkage resolves a system library are each detected with specificity holding. A passing atlas is a measurement, not a functional proof: the linkage proof says the candidate's libssl/libcrypto resolved, not that any consumer works. `RT-RUNTIME-FUNCTIONAL-ATLAS` is 24.7's court: the runtime/functional atlas. It stages no probe and reads forensics/downstream/runtime-functional-atlas.json, forensics/downstream/family-freeze.json, forensics/downstream/families.json and the 24.6 build/link atlas, re-running the 24.7 validation and sensitivity control over the committed artefact without rebuilding and without launching anything. It establishes that every frozen P1000 family is accounted for under both subjects; that a family that reached L4-linked in 24.6 has runtime rows under both subjects; that a runtime row never reaches above the level its build/link row permits; that an L5+ row is backed by a real load proof resolving the subject prefix and never the authority's; that an L6/L7 row carries a non-empty normalised transcript hash and a normalisation tag that erases no evidence; that the candidate's authority-applicable baseline is re-derived from the authority rows rather than inflated to justify a pass; that candidate_specific_patch_count is 0; and that the counts are derived rather than typed. A candidate row whose level passes only by inflating its authority baseline, an L5 row with no load proof, an L6 row with an empty transcript, a missing authority runtime row for an L4 family, a normalisation that erases a return code, and a runtime row above its build/link permit are each detected with specificity holding. A passing atlas is a measurement, not a security proof: it says a pristine downstream program loaded the subject's libssl/libcrypto and completed one deterministic local workload, not that any consumer is safe. `RT-FAILURE-MINIMIZATION` is 24.8's court: the failure discovery/minimization loop. It stages no probe and reads forensics/downstream/failures.json and its minimized fixtures under forensics/downstream/failures/, the 24.6 build/link atlas, the 24.7 runtime/functional atlas, forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-running the 24.8 validation and sensitivity control over the committed plane without rebuilding, launching or minimizing anything. It establishes that every non-resolved leftover the two atlases record has exactly one classified record and that none is fabricated; that a candidate-specific record derives from the authority-applicable baseline (the candidate fell below a level the authority reached) and a venue-limited record has an authority failure at the same or a lower level in the same admitted venue, so a venue/environment limitation is never counted as a candidate defect; that every candidate-specific record carries a minimized fixture on disk that hashes to its record and a runnable command; that unclassified is 0; that the genealogy references only real failures and asserts no fix commit; and that the counts are derived rather than typed. A candidate failure mislabeled candidate-specific without an authority failure to justify it, a venue-limited failure with no authority failure behind it, a settled leftover marked unclassified, a settled leftover omitted, a minimized claim whose fixture is missing on disk, and a fabricated fix commit are each detected with specificity holding. A passing court is an instrument: a discovered-and-minimized failure is a preserved record, not a fix, and a minimized reproducer is not the consumer. `RT-HIGH-VALUE-TIER` is 24.9's court: the high-value deep tier. It stages no probe and reads forensics/downstream/high-value-tier.json, forensics/downstream/usage-fingerprints.json, the 24.7 runtime/functional atlas, forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-running the 24.9 validation and sensitivity control over the committed artefact without rebuilding and without launching anything. It establishes that the tier reproduces from the frozen depth rule (the committed 24.3 usage fingerprints, ordered by distinct imported OpenSSL symbols, then API-family breadth, then distinct headers, then direct-before-transitive, then canonical name/family_id) and reads no candidate row; that every tier member is a real committed direct-consumer family with both-subject runs; that a carried row cites a committed 24.7 row agreeing on its level and transcript hash; that an L5+ row is backed by a real load proof resolving the subject prefix and never the authority's; that an L6/L7 row carries a non-empty normalised transcript hash and a normalisation that erases no evidence; that a candidate row never claims a level above the authority-applicable baseline; that every non-selected P1000 family carries a reason and the accounting covers the whole P1000; that candidate_specific_patch_count is 0; and that the counts are derived rather than typed. A tier member dropped, a family added to the tier by a candidate result, a candidate L7 above the authority baseline marked pass, an L5 row with no load proof, an empty transcript at L6, and a not-selected P1000 family with no reason are each detected with specificity holding. A passing tier is a measurement, not a security proof: it says the deepest families the committed evidence selects loaded the subject's libssl/libcrypto and completed one deterministic local workload, not that any consumer outside it is safe. `RT-HOSTILITY-AUGMENTATION` is 24.10's court: the separate hostility-augmentation corpus. It stages no probe and reads forensics/downstream/hostility-corpus.json, the committed P1000 union inputs (the 24.3 usage fingerprints and the 24.6/24.7/24.9 atlases), the Phase-22 public-entity inventory and forensics/downstream/family-freeze.json, re-running the 24.10 maximum-marginal-novelty selection, validation and sensitivity control over the committed artefact without rebuilding a probe. It establishes that the corpus reproduces from the frozen novelty rule over the covered surface; that the corpus is separate -- no member is a P1000 counted family, no member carries a frozen family_id and the frozen P1000 count is unchanged; that every member contributes at least one new public entity and has both-subject runs; that each member's linkage is subject-correct with a real load proof on an L5+ row; that the transcript normalisation is applied identically to both subjects; that candidate_specific_patch_count is 0; and that the counts are derived rather than typed. A hostility member injected into the P1000 counts, a corpus member with no new entity, a candidate row resolving the authority, a missing authority run, an unnormalised transcript and a corpus member beyond the bound are each detected with specificity holding. A passing corpus is a separate instrument, not a rate: its results are never mixed into the counted population's rates. `RT-CANDIDATE-FREEZE` is 24.11's court: the candidate freeze and the once-run holdout. It stages no probe and reads forensics/downstream/candidate-freeze.json, forensics/downstream/holdout.json, forensics/downstream/family-freeze.json, the 24.6 build/link atlas, the 24.7 runtime/functional atlas, the 24.8 failures plane, the 24.9 high-value tier and the 24.10 hostility corpus, re-deriving the frozen candidate identity from the committed install and the precommitted holdout set from the frozen P1000 by the 24.5 rule without re-running the holdout and without rebuilding anything. It establishes that the candidate identity reproduces from the committed install (the libssl/libcrypto digests, the exported headers, pkg-config metadata, provider modules and the crate version, with the source commit carried as recorded, existence-checked provenance rather than a live-HEAD binding); that the holdout set equals the precommitted partition and carries a matching partition_root_hash; that first_run is present, equals the summary derived from the holdout run, and is attested unchanged by every rerun; that every holdout family has an accounting row; that a candidate row never claims a level above the authority-applicable baseline; that a family's verdict is the derived baseline-normalized one; that candidate_specific_patch_count is 0; that the counts are derived rather than typed; and that no holdout family is a source of a fix in the development-side failure plane. A precommitted holdout member swapped for a development member, a mutated partition root, a first_run rewritten after a rerun, a candidate level above the authority baseline, a holdout family cited as a fix source and a mutated count are each detected with specificity holding. A passing freeze is a measurement, not a security proof: a holdout result over a selected population is an out-of-sample measurement of that population, not of all downstream software, and a venue-limited holdout member is neither a pass nor a fail. `RT-P1000-RUN` is 24.12's court: the final full P1000 run at the frozen candidate. It stages no probe and reads forensics/downstream/p1000-run.json, forensics/downstream/family-freeze.json and forensics/downstream/candidate-freeze.json, re-deriving the candidate install's identity and re-running the 24.12 validation and sensitivity control over the committed run without rebuilding anything. It establishes that the candidate identity equals the frozen 24.11 identity (excluding the recorded provenance, so the run is against the same candidate); that there is exactly one drop_in_verdict per counted family, with none missing, extra or fabricated; that a DROP_IN_PASS is refused without all five of the brief's section 20 conditions (the same pristine source, a succeeded authority baseline that reached at least L4-linked, the candidate reaching the authority-applicable level, candidate linkage proven and zero candidate-specific patches); that DROP_IN_UNKNOWN is 0; that the ladder equals the derived per-level counts and the verdict histogram; that a family this venue cannot pose the drop-in question for is DROP_IN_NOT_APPLICABLE with a reason; that candidate_specific_patch_count is 0; and that the counts are derived rather than typed. A PASS asserted without an authority baseline, a PASS with a positive patch count, a duplicated verdict, a candidate level below the authority-applicable level marked PASS, and a mismatched candidate identity are each detected with specificity holding. A passing run is a measurement, not a security proof: the ladder is over a selected population of 1,000 families, not a percentage of all downstream software, and a venue-limited family is neither a pass nor a fail. The remaining three courts -- RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.13 through 24.15). Phase 24 owns no exported symbol, so no differential probe over a symbol set is its evidence. The stratum's record kinds are defined and self-tested in forensics/tools/downstream_schemas.py, whose inventory this registry records: the family (the counted unit, never a package alias), the separate specimen, the variant, the frozen ranking-source row, the execution-level row over the L0-L8 ladder, the run, the classified residual, the preserved-and-minimized failure and the baseline-normalized drop-in verdict. Every entry point calls the Docker-only execution guard (forensics/tools/phase24_guard.py) first, so nothing in this stratum executes on the host. The four things the model never claims are: a selected empirical population is not a random sample; 1000/1000 is not a security proof; a build is not a functional proof; and transitive and direct consumers are different evidence. DROP_IN_PASS is baseline-normalized -- the same pristine source, a succeeded authority baseline, the candidate reaching the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches. docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "`RT-RANKING-SOURCES` is 24.1's court: the frozen ranking-source acquisition. It stages no probe and reads forensics/downstream/ranking-sources.json and the committed normalized inputs under forensics/downstream/ranking/normalized/, re-running the 24.1 validation and sensitivity control without fetching. It establishes that every acquired ranking / reverse-dependency source -- the Debian reverse-dependency graph and Popcon counts, the Fedora and Alpine reverse package dependencies, Homebrew openssl@3's dependency relationships and analytics, the OpenSSF Scorecard and the crates.io reverse-dependency count -- is content-addressed by its raw payload SHA-256 and its normalization SHA-256, carries a retrieval timestamp and a parser version, and is reproducible from its deterministic retrieval recipe; that the frozen selection_input_root_hash reproduces from the present sources; and that an unavailable source (the OpenSSF Criticality Score, which has no reproducible public endpoint) carries a reason and is not counted present. A source stripped of its hash, a mutated normalized payload, an unavailable source counted present and a missing retrieval timestamp are each detected with specificity holding. A passing ranking-source manifest is a precommitment, not a ranking claim: it says the selection input was frozen before any candidate result. `RT-CANDIDATE-UNIVERSE` is 24.2's court: the candidate family universe. It stages no probe and reads forensics/downstream/candidates.json and forensics/downstream/families.json, re-deriving both from the committed forensics/downstream/ranking/normalized/ inputs. It establishes that every family is schema-valid (kind `family`) and provenance-backed; that aliases of one upstream collapse to one family (the libcurl4/curl/curl-dev/curl-doc set is one family, not four); that the OpenSSL providers and a name collision (`libcrypto++`) are not counted as consumers; that a fork is not independent without explicit evidence of materially different OpenSSL integration; that a transitive consumer is not counted as direct; and that the universe is substantially larger than 1,000 before deduplication. A double-counted distro alias, a transitive consumer promoted to direct, a fork counted independent with no evidence and a family with no provenance are each detected with specificity holding. `RT-AUTHORITY-CENSUS` is 24.3's court: the authority-baseline census. It stages no probe and reads forensics/downstream/authority-baselines.jsonl and forensics/downstream/usage-fingerprints.json, re-deriving the provisional census cohort from the committed families. It establishes that every cohort member has an authority result classified; that an `AUTHORITY_BASELINE_FAIL` carries an authority failure class from the taxonomy and a reason, and is never counted as a candidate failure; that a `AUTHORITY_BASELINE_PASS`'s linkage proof resolves the admitted authority's own libssl/libcrypto and never a system one; that the cohort selection rule is recorded and reproduces from the frozen sources; and that no candidate execution occurred. A build claiming authority linkage while resolving a system libssl, an authority failure counted as a candidate failure, a cohort member with no source hash and a fingerprint with no imported symbols claimed as a pass are each detected with specificity holding. A passing census is a measurement, not a candidate result: the authority side reached the level it records, and no candidate ran. `RT-FAMILY-FREEZE` is 24.4's court: the P1000 + reserve freeze. It stages no probe and reads forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-deriving the ranked universe from the committed families by the frozen selection rule (source breadth, then distro breadth, then popularity, then canonical name, then family_id). It establishes that the recorded P1000 is exactly the derived top-1,000 and the reserve the derived remainder in rank order; that the P1000 is distinct and disjoint from the reserve; that both are a subset of the universe; that ranks are positions and the recorded signal is each family's own; that the recorded selection root reproduces and its selection_input_root_hash, families sha256 and rule sha256 match the committed files; and that no candidate-subject run exists in the pre-freeze plane (the candidate-result artefacts the stratum produces after the freeze -- 24.6's build/link atlas onward -- are excluded), so the population is frozen before any candidate result. Two P1000 members' order swapped, a P1000 member deleted so the count is wrong, a family id shared between the P1000 and the reserve, a mutated selection root, and a fabricated candidate-subject run row in the downstream plane are each detected with specificity holding. A passing freeze is a precommitment, not a result, and it refuses the anti-pattern of a family typed into the 1,000 because a candidate passed it. `RT-HOLDOUT-PARTITION` is 24.5's court: the precommitted holdout partition. It stages no probe and reads forensics/downstream/holdout.json, forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-deriving the partition from the committed frozen P1000 by the frozen rank-band rule (bands of 100, each band ordered by content_hash('phase24-holdout-v1:'+family_id) ascending, tiebreak by family_id, the first 20 holdout and the remaining 80 development). It establishes that the two cohorts union to exactly the frozen P1000; that they are disjoint and each family_id appears exactly once; that every family_id is a real committed family; that each band contributes exactly 20 holdout / 80 development; that the cohorts reproduce from the frozen rule; that the partition root reproduces; that the counts are read rather than typed; that the partition is a pure function of the frozen P1000 (no family outside it); and that no candidate-subject run exists anywhere in the downstream plane, so the split is fixed before any candidate result. One development family moved into the holdout cohort, one holdout member deleted, a family_id duplicated into both cohorts, a P1000-external family added, a mutated partition root, and a fabricated candidate-subject run row in the downstream plane are each detected with specificity holding. A passing partition is a precommitment, not a result, and it refuses the anti-pattern of a holdout chosen after seeing a candidate failure -- a holdout that is no longer out-of-sample. `RT-BUILD-LINK-ATLAS` is 24.6's court: the build/link atlas. It stages no probe and reads forensics/downstream/build-link-atlas.json, forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-running the 24.6 validation and sensitivity control over the committed artefact without rebuilding. It establishes that every frozen P1000 family is accounted for under both subjects; that every recipe-backed family has both an authority and a candidate row for the same specimen and the same recipe (identical build intent); that a candidate L4-linked row's linkage proof resolves the candidate install and never the authority prefix nor a system library; that an authority L4-linked row resolves the authority; that candidate_specific_patch_count is 0; that every non-measured row carries a reason and a schema-valid residual/failure class; and that the counts are derived rather than typed. A candidate L4 row whose linkage resolves the authority, a recipe-backed family missing its authority row, a positive candidate-specific patch count, a non-measured row with no residual class, and a candidate L4 row whose linkage resolves a system library are each detected with specificity holding. A passing atlas is a measurement, not a functional proof: the linkage proof says the candidate's libssl/libcrypto resolved, not that any consumer works. `RT-RUNTIME-FUNCTIONAL-ATLAS` is 24.7's court: the runtime/functional atlas. It stages no probe and reads forensics/downstream/runtime-functional-atlas.json, forensics/downstream/family-freeze.json, forensics/downstream/families.json and the 24.6 build/link atlas, re-running the 24.7 validation and sensitivity control over the committed artefact without rebuilding and without launching anything. It establishes that every frozen P1000 family is accounted for under both subjects; that a family that reached L4-linked in 24.6 has runtime rows under both subjects; that a runtime row never reaches above the level its build/link row permits; that an L5+ row is backed by a real load proof resolving the subject prefix and never the authority's; that an L6/L7 row carries a non-empty normalised transcript hash and a normalisation tag that erases no evidence; that the candidate's authority-applicable baseline is re-derived from the authority rows rather than inflated to justify a pass; that candidate_specific_patch_count is 0; and that the counts are derived rather than typed. A candidate row whose level passes only by inflating its authority baseline, an L5 row with no load proof, an L6 row with an empty transcript, a missing authority runtime row for an L4 family, a normalisation that erases a return code, and a runtime row above its build/link permit are each detected with specificity holding. A passing atlas is a measurement, not a security proof: it says a pristine downstream program loaded the subject's libssl/libcrypto and completed one deterministic local workload, not that any consumer is safe. `RT-FAILURE-MINIMIZATION` is 24.8's court: the failure discovery/minimization loop. It stages no probe and reads forensics/downstream/failures.json and its minimized fixtures under forensics/downstream/failures/, the 24.6 build/link atlas, the 24.7 runtime/functional atlas, forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-running the 24.8 validation and sensitivity control over the committed plane without rebuilding, launching or minimizing anything. It establishes that every non-resolved leftover the two atlases record has exactly one classified record and that none is fabricated; that a candidate-specific record derives from the authority-applicable baseline (the candidate fell below a level the authority reached) and a venue-limited record has an authority failure at the same or a lower level in the same admitted venue, so a venue/environment limitation is never counted as a candidate defect; that every candidate-specific record carries a minimized fixture on disk that hashes to its record and a runnable command; that unclassified is 0; that the genealogy references only real failures and asserts no fix commit; and that the counts are derived rather than typed. A candidate failure mislabeled candidate-specific without an authority failure to justify it, a venue-limited failure with no authority failure behind it, a settled leftover marked unclassified, a settled leftover omitted, a minimized claim whose fixture is missing on disk, and a fabricated fix commit are each detected with specificity holding. A passing court is an instrument: a discovered-and-minimized failure is a preserved record, not a fix, and a minimized reproducer is not the consumer. `RT-HIGH-VALUE-TIER` is 24.9's court: the high-value deep tier. It stages no probe and reads forensics/downstream/high-value-tier.json, forensics/downstream/usage-fingerprints.json, the 24.7 runtime/functional atlas, forensics/downstream/family-freeze.json and forensics/downstream/families.json, re-running the 24.9 validation and sensitivity control over the committed artefact without rebuilding and without launching anything. It establishes that the tier reproduces from the frozen depth rule (the committed 24.3 usage fingerprints, ordered by distinct imported OpenSSL symbols, then API-family breadth, then distinct headers, then direct-before-transitive, then canonical name/family_id) and reads no candidate row; that every tier member is a real committed direct-consumer family with both-subject runs; that a carried row cites a committed 24.7 row agreeing on its level and transcript hash; that an L5+ row is backed by a real load proof resolving the subject prefix and never the authority's; that an L6/L7 row carries a non-empty normalised transcript hash and a normalisation that erases no evidence; that a candidate row never claims a level above the authority-applicable baseline; that every non-selected P1000 family carries a reason and the accounting covers the whole P1000; that candidate_specific_patch_count is 0; and that the counts are derived rather than typed. A tier member dropped, a family added to the tier by a candidate result, a candidate L7 above the authority baseline marked pass, an L5 row with no load proof, an empty transcript at L6, and a not-selected P1000 family with no reason are each detected with specificity holding. A passing tier is a measurement, not a security proof: it says the deepest families the committed evidence selects loaded the subject's libssl/libcrypto and completed one deterministic local workload, not that any consumer outside it is safe. `RT-HOSTILITY-AUGMENTATION` is 24.10's court: the separate hostility-augmentation corpus. It stages no probe and reads forensics/downstream/hostility-corpus.json, the committed P1000 union inputs (the 24.3 usage fingerprints and the 24.6/24.7/24.9 atlases), the Phase-22 public-entity inventory and forensics/downstream/family-freeze.json, re-running the 24.10 maximum-marginal-novelty selection, validation and sensitivity control over the committed artefact without rebuilding a probe. It establishes that the corpus reproduces from the frozen novelty rule over the covered surface; that the corpus is separate -- no member is a P1000 counted family, no member carries a frozen family_id and the frozen P1000 count is unchanged; that every member contributes at least one new public entity and has both-subject runs; that each member's linkage is subject-correct with a real load proof on an L5+ row; that the transcript normalisation is applied identically to both subjects; that candidate_specific_patch_count is 0; and that the counts are derived rather than typed. A hostility member injected into the P1000 counts, a corpus member with no new entity, a candidate row resolving the authority, a missing authority run, an unnormalised transcript and a corpus member beyond the bound are each detected with specificity holding. A passing corpus is a separate instrument, not a rate: its results are never mixed into the counted population's rates. `RT-CANDIDATE-FREEZE` is 24.11's court: the candidate freeze and the once-run holdout. It stages no probe and reads forensics/downstream/candidate-freeze.json, forensics/downstream/holdout.json, forensics/downstream/family-freeze.json, the 24.6 build/link atlas, the 24.7 runtime/functional atlas, the 24.8 failures plane, the 24.9 high-value tier and the 24.10 hostility corpus, re-deriving the frozen candidate identity from the committed install and the precommitted holdout set from the frozen P1000 by the 24.5 rule without re-running the holdout and without rebuilding anything. It establishes that the candidate identity reproduces from the committed install (the libssl/libcrypto digests, the exported headers, pkg-config metadata, provider modules and the crate version, with the source commit carried as recorded, existence-checked provenance rather than a live-HEAD binding); that the holdout set equals the precommitted partition and carries a matching partition_root_hash; that first_run is present, equals the summary derived from the holdout run, and is attested unchanged by every rerun; that every holdout family has an accounting row; that a candidate row never claims a level above the authority-applicable baseline; that a family's verdict is the derived baseline-normalized one; that candidate_specific_patch_count is 0; that the counts are derived rather than typed; and that no holdout family is a source of a fix in the development-side failure plane. A precommitted holdout member swapped for a development member, a mutated partition root, a first_run rewritten after a rerun, a candidate level above the authority baseline, a holdout family cited as a fix source and a mutated count are each detected with specificity holding. A passing freeze is a measurement, not a security proof: a holdout result over a selected population is an out-of-sample measurement of that population, not of all downstream software, and a venue-limited holdout member is neither a pass nor a fail. `RT-P1000-RUN` is 24.12's court: the final full P1000 run at the frozen candidate. It stages no probe and reads forensics/downstream/p1000-run.json, forensics/downstream/family-freeze.json and forensics/downstream/candidate-freeze.json, re-deriving the candidate install's identity and re-running the 24.12 validation and sensitivity control over the committed run without rebuilding anything. It establishes that the candidate identity equals the frozen 24.11 identity (excluding the recorded provenance, so the run is against the same candidate); that there is exactly one drop_in_verdict per counted family, with none missing, extra or fabricated; that a DROP_IN_PASS is refused without all five of the brief's section 20 conditions (the same pristine source, a succeeded authority baseline that reached at least L4-linked, the candidate reaching the authority-applicable level, candidate linkage proven and zero candidate-specific patches); that DROP_IN_UNKNOWN is 0; that the ladder equals the derived per-level counts and the verdict histogram; that a family this venue cannot pose the drop-in question for is DROP_IN_NOT_APPLICABLE with a reason; that candidate_specific_patch_count is 0; and that the counts are derived rather than typed. A PASS asserted without an authority baseline, a PASS with a positive patch count, a duplicated verdict, a candidate level below the authority-applicable level marked PASS, and a mismatched candidate identity are each detected with specificity holding. A passing run is a measurement, not a security proof: the ladder is over a selected population of 1,000 families, not a percentage of all downstream software, and a venue-limited family is neither a pass nor a fail. `RT-ATLAS-RECONCILIATION` is 24.13's court: the reconciliation of the atlas. It stages no probe and reads forensics/downstream/reconciliation.json and every committed downstream plane it reconciles, re-running the 24.13 re-derivation and sensitivity control over the committed artefact without rebuilding anything. It establishes that every counted family has exactly one re-derived drop_in_verdict with DROP_IN_UNKNOWN 0; that every residual across every plane is classified from the closed vocabulary with an unclassified and an unknown count of 0; that every failure is preserved -- the counted P1000 measured set's plus the separate hostility corpus's two candidate failures, scoped out of every P1000 rate; that the drop-in rates equal the derived rates, are unweighted over the frozen population and never sum the direct and transitive consumers; that the ladder equals the verdict counts with UNKNOWN 0 and the raw family count visible; that the coverage and the Phase-22 direct/inferred projection are consistent with the planes; and that the counts are derived rather than typed. A counted family with no verdict, a residual left unknown, a failure dropped from the summary, a hostility result mixed into the P1000 rate, a typed rate that disagrees with the verdicts, and a failure not preserved are each detected with specificity holding. The court is an instrument, not the property: it can pass while the atlas carries real property findings (a large NOT_APPLICABLE share, a thin measured surface, a non-empty residual set), which are recorded as findings and make property_status NOT_CLAIMED. The remaining two courts -- RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending with the subphases that land them (24.14 and 24.15). Phase 24 owns no exported symbol, so no differential probe over a symbol set is its evidence. The stratum's record kinds are defined and self-tested in forensics/tools/downstream_schemas.py, whose inventory this registry records: the family (the counted unit, never a package alias), the separate specimen, the variant, the frozen ranking-source row, the execution-level row over the L0-L8 ladder, the run, the classified residual, the preserved-and-minimized failure and the baseline-normalized drop-in verdict. Every entry point calls the Docker-only execution guard (forensics/tools/phase24_guard.py) first, so nothing in this stratum executes on the host. The four things the model never claims are: a selected empirical population is not a random sample; 1000/1000 is not a security proof; a build is not a functional proof; and transitive and direct consumers are different evidence. DROP_IN_PASS is baseline-normalized -- the same pristine source, a succeeded authority baseline, the candidate reaching the authority-applicable level, candidate linkage proven, and zero candidate-specific downstream patches. docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -3488,6 +3488,617 @@
         "probe": "",
         "problems": [],
         "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught_counted_family_without_a_verdict": true,
+          "caught_failure_dropped_from_summary": true,
+          "caught_failure_not_preserved": true,
+          "caught_hostility_mixed_into_p1000_rate": true,
+          "caught_residual_left_unknown": true,
+          "caught_typed_rate_disagrees_with_verdicts": true,
+          "honest": true,
+          "injected_counted_family_without_a_verdict": "counted_family_without_a_verdict",
+          "injected_failure_dropped_from_summary": "failure_dropped_from_summary",
+          "injected_failure_not_preserved": "failure_not_preserved",
+          "injected_hostility_mixed_into_p1000_rate": "hostility_mixed_into_p1000_rate",
+          "injected_residual_left_unknown": "residual_left_unknown",
+          "injected_typed_rate_disagrees_with_verdicts": "typed_rate_disagrees_with_verdicts",
+          "specificity_holds": true
+        },
+        "counts": {
+          "candidate_specific_patch_count": 0,
+          "coverage_api_families": 39,
+          "coverage_headers": 42,
+          "coverage_symbols": 600,
+          "distinct_stressors": 3,
+          "failures_hostility": 2,
+          "failures_p1000": 3973,
+          "failures_preserved": 3975,
+          "families": 1000,
+          "marginal_consumers": 6,
+          "measurable_families": 7,
+          "not_applicable_families": 993,
+          "phase22_reachable_entities": 35432,
+          "residuals_total": 11418,
+          "residuals_unclassified": 0,
+          "residuals_unknown": 0,
+          "residuals_unresolved": 11330,
+          "status": {
+            "FAIL": 0,
+            "NOT_APPLICABLE": 993,
+            "PARTIAL": 1,
+            "PASS": 6,
+            "UNKNOWN": 0
+          },
+          "usage_clusters": 3,
+          "verdicts": {
+            "DROP_IN_NOT_APPLICABLE": 993,
+            "DROP_IN_PARTIAL": 1,
+            "DROP_IN_PASS": 6
+          }
+        },
+        "court": "RT-ATLAS-RECONCILIATION",
+        "coverage": {
+          "known_universe": {
+            "api_families": 152,
+            "authority": "openssl-3.6.4-production",
+            "exported_symbols": 6499,
+            "headers": 81,
+            "label": "known universe: the Phase-22 authority atlases' exported symbols, exported public functions, public headers and the API families derived from the exported symbols",
+            "public_functions": 6473
+          },
+          "measured": {
+            "api_families": 39,
+            "headers": 42,
+            "label": "measured: the unique public entities the committed usage fingerprints and atlases record the counted consumers actually importing (execution/import evidence)",
+            "surface_hash": "c18b7a4f90919ac4c69ff0bacf8f97e03c1f77cd3f8f050878c4c590f785d68c",
+            "symbols": 600
+          },
+          "ratios": {
+            "api_families": 0.256579,
+            "exported_symbols": 0.092322,
+            "headers": 0.518519
+          }
+        },
+        "examples": {
+          "clusters": {
+            "cluster_count": 3,
+            "clusters": [
+              {
+                "cluster_id": "cluster:curl",
+                "members": [
+                  "curl",
+                  "haproxy"
+                ],
+                "size": 2
+              },
+              {
+                "cluster_id": "cluster:monit",
+                "members": [
+                  "monit",
+                  "pure-ftpd",
+                  "redis"
+                ],
+                "size": 3
+              },
+              {
+                "cluster_id": "cluster:openssh",
+                "members": [
+                  "openssh"
+                ],
+                "size": 1
+              }
+            ],
+            "distinct_stressors": 3,
+            "marginal": [
+              {
+                "family": "curl",
+                "marginal_symbols": 88,
+                "symbols": 227
+              },
+              {
+                "family": "haproxy",
+                "marginal_symbols": 170,
+                "symbols": 338
+              },
+              {
+                "family": "monit",
+                "marginal_symbols": 13,
+                "symbols": 65
+              },
+              {
+                "family": "openssh",
+                "marginal_symbols": 124,
+                "symbols": 179
+              },
+              {
+                "family": "pure-ftpd",
+                "marginal_symbols": 9,
+                "symbols": 43
+              },
+              {
+                "family": "redis",
+                "marginal_symbols": 3,
+                "symbols": 51
+              }
+            ],
+            "marginal_consumers": 6
+          },
+          "coverage": {
+            "known_universe": {
+              "api_families": 152,
+              "authority": "openssl-3.6.4-production",
+              "exported_symbols": 6499,
+              "headers": 81,
+              "label": "known universe: the Phase-22 authority atlases' exported symbols, exported public functions, public headers and the API families derived from the exported symbols",
+              "public_functions": 6473
+            },
+            "measured": {
+              "api_families": 39,
+              "headers": 42,
+              "label": "measured: the unique public entities the committed usage fingerprints and atlases record the counted consumers actually importing (execution/import evidence)",
+              "surface_hash": "c18b7a4f90919ac4c69ff0bacf8f97e03c1f77cd3f8f050878c4c590f785d68c",
+              "symbols": 600
+            },
+            "measured_vs_inferred": "the measured surface is what the counted consumers are observed to import; the inferred surface is the Phase-22 reachability closure, which is inference from the committed reference graph and is never execution",
+            "ratios": {
+              "api_families": 0.256579,
+              "exported_symbols": 0.092322,
+              "headers": 0.518519
+            }
+          },
+          "failures_summary": {
+            "all_preserved": true,
+            "hostility": {
+              "candidate_specific": 0,
+              "minimized": 0,
+              "preserved": 2,
+              "scoped": "the separate hostility corpus is not the counted P1000 population: these candidate failures are classified and preserved, and excluded from every P1000 rate (the plan's section 3.7)",
+              "total": 2
+            },
+            "hostility_records": [
+              {
+                "class": "link-failure",
+                "failure_id": "failure:hostility:link-failure:run:hostility:static:candidate",
+                "minimized": false,
+                "preserved": true,
+                "run_id": "run:hostility:static:candidate"
+              },
+              {
+                "class": "runtime-failure",
+                "failure_id": "failure:hostility:runtime-failure:run:hostility:tls:candidate-candidate->authority-tls1.2",
+                "minimized": false,
+                "preserved": true,
+                "run_id": "run:hostility:tls:candidate-candidate->authority-tls1.2"
+              }
+            ],
+            "p1000": {
+              "by_disposition": {
+                "out-of-scope": 3,
+                "venue-limited": 3970
+              },
+              "by_failure_class": {
+                "acquire-failure": 3952,
+                "configure-failure": 9,
+                "harness-failure": 3,
+                "link-failure": 9
+              },
+              "by_residual_class": {
+                "out-of-scope": 3,
+                "unavailable": 3952,
+                "unbuildable": 9,
+                "unlinked": 9
+              },
+              "candidate_specific": 0,
+              "divergences": 1,
+              "minimized": 0,
+              "preserved": 3973,
+              "total": 3973
+            }
+          },
+          "ladder": {
+            "families": 1000,
+            "levels": {
+              "L2-configured": 8,
+              "L3-built": 8,
+              "L4-linked": 8,
+              "L5-loaded": 8,
+              "L6-runtime": 7,
+              "L7-functional": 6
+            },
+            "measurable_families": 7,
+            "not_applicable_families": 993,
+            "population": "the frozen P1000",
+            "raw_family_count": 1000,
+            "status": {
+              "FAIL": 0,
+              "NOT_APPLICABLE": 993,
+              "PARTIAL": 1,
+              "PASS": 6,
+              "UNKNOWN": 0
+            },
+            "unknown": 0
+          },
+          "measurable_rates": {
+            "FAIL": {
+              "count": 0,
+              "rate": 0.0
+            },
+            "PARTIAL": {
+              "count": 1,
+              "rate": 0.142857
+            },
+            "PASS": {
+              "count": 6,
+              "rate": 0.857143
+            },
+            "UNKNOWN": {
+              "count": 0,
+              "rate": 0.0
+            },
+            "denominator": 7,
+            "note": "the drop-in question was posed for this many of the counted families: NOT_APPLICABLE is not a pass"
+          },
+          "measured_verdicts": [
+            {
+              "authority_applicable_level": "L7-functional",
+              "candidate_level": "L7-functional",
+              "canonical_name": "curl",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L7-functional",
+              "candidate_level": "L7-functional",
+              "canonical_name": "haproxy",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L7-functional",
+              "candidate_level": "L7-functional",
+              "canonical_name": "monit",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L7-functional",
+              "candidate_level": "L7-functional",
+              "canonical_name": "openssh",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L6-runtime",
+              "candidate_level": "L6-runtime",
+              "canonical_name": "pure-ftpd",
+              "residual_class": "out-of-scope",
+              "verdict": "DROP_IN_PARTIAL"
+            },
+            {
+              "authority_applicable_level": "L7-functional",
+              "candidate_level": "L7-functional",
+              "canonical_name": "redis",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L7-functional",
+              "candidate_level": "L7-functional",
+              "canonical_name": "nginx",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            }
+          ],
+          "not_applicable_head": [
+            {
+              "canonical_name": "libssh",
+              "residual_class": "unbuildable"
+            },
+            {
+              "canonical_name": "jwt",
+              "residual_class": "unavailable"
+            },
+            {
+              "canonical_name": "cargo",
+              "residual_class": "unavailable"
+            },
+            {
+              "canonical_name": "alpine",
+              "residual_class": "unavailable"
+            },
+            {
+              "canonical_name": "borgbackup",
+              "residual_class": "unavailable"
+            }
+          ],
+          "phase22_projection": {
+            "compatibility_views": {
+              "by_status": {
+                "compatible": 8,
+                "not_measured": 6
+              },
+              "not_derivable": 16,
+              "source": "forensics/multitrack/compatibility-views.json",
+              "views": 14
+            },
+            "direct": {
+              "api_families": 39,
+              "headers": 42,
+              "label": "directly-referenced public entities: the measured set's imported symbols, headers and derived API families (execution/import evidence)",
+              "source": "the committed 24.3 usage fingerprints and the 24.6/24.7/24.9 atlases",
+              "symbols": 600
+            },
+            "inferred": {
+              "edges": 148275,
+              "internal_symbols": 4547,
+              "label": "graph-reachable inferred internal entities: a read of the committed Phase-22 reachability closure, which is inference and never execution",
+              "reachable_entities": 35432,
+              "root_members": 27495,
+              "roots": 7,
+              "source": "forensics/atlas/phase22/compatibility-closure.json",
+              "unpopulated_families": [
+                "runtime-behaviour",
+                "protocol",
+                "dynamic-loading"
+              ]
+            },
+            "separated": true
+          },
+          "population": {
+            "all_direct": true,
+            "families": 1000,
+            "linkage": {
+              "direct": 1000
+            },
+            "reserve": 1100,
+            "rule_id": "downstream-p1000-freeze/1",
+            "selection": "a selected population of 1,000 families frozen before any candidate result",
+            "selection_root_hash": "f2a0454fe4dca98556da2e958b6e70cebaf76becbebba69b2abd752e63deba4e",
+            "source": "forensics/downstream/family-freeze.json",
+            "universe": 2100
+          },
+          "property_findings": [
+            "993/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 7 of 1000, so the drop-in rate is measured over 7 families and is not a population-wide rate",
+            "the measured set exercised 600/6499 exported symbols, 42/81 public headers and 39/152 API families, so the atlas speaks for a thin slice of the authority's public surface",
+            "3973 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate",
+            "11330 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty"
+          ],
+          "residuals": {
+            "histogram": {
+              "authority-unsupported": 0,
+              "candidate-patch-required": 0,
+              "functional-divergence": 1,
+              "none": 88,
+              "out-of-scope": 13,
+              "runtime-failure": 0,
+              "unavailable": 11266,
+              "unbuildable": 31,
+              "unknown": 0,
+              "unlinked": 19
+            },
+            "total": 11418,
+            "unclassified": 0,
+            "unknown": 0,
+            "unresolved": 11330
+          },
+          "rule": {
+            "clusters": "the marginal-consumer and usage-cluster analysis over the measured set, so the counted families are not read as that many independent stressors (the brief's sections 36 and 37)",
+            "constants": {
+              "cluster_threshold": 0.2,
+              "ladder_rungs": [
+                "L2-configured",
+                "L3-built",
+                "L4-linked",
+                "L5-loaded",
+                "L6-runtime",
+                "L7-functional"
+              ]
+            },
+            "coverage": "the measured set's unique public symbols, headers and API families against the Phase-22 known-universe denominators, with the measured/inferred distinction explicit (the brief's section 35)",
+            "failures": "every failure is preserved: the counted P1000 measured set's failures from 24.8's plane and the separate hostility corpus's two candidate failures, classified from the failure taxonomy, with the hostility ones clearly scoped as not P1000 rates",
+            "id": "downstream-atlas-reconciliation/1",
+            "ladder": "the result is a ladder, never one percentage (the brief's section 52): per-level family counts (configured, compiled/built, linked, loaded, runtime, functional) and the verdict status histogram (PASS/PARTIAL/FAIL/UNKNOWN/NOT_APPLICABLE), with the raw family count visible and UNKNOWN 0",
+            "name": "the atlas reconciliation",
+            "no_statistical_confidence": "the population is selected, not sampled, so no population-wide confidence interval or test statistic is computed; the brief's section 53 forbids manufacturing confidence a selected population cannot carry",
+            "phase22": "the directly-referenced public entities and the graph-reachable inferred internal entities are reported separately and never summed; reachability is a read of the committed Phase-22 closure, not execution (the brief's section 34)",
+            "population": "the counted population is the frozen P1000 forensics/downstream/family-freeze.json: a selected population of 1,000 downstream project families, not a random sample",
+            "rates": "the drop-in rates are computed over the frozen population from the derived verdicts -- unweighted, with any weighted summary kept separate -- and the direct and transitive consumers are never summed; the frozen P1000 is all-direct, so the transitive rate is empty rather than zero",
+            "residuals": "every residual across every committed plane is classified from the closed residual vocabulary, and the count of an unclassified or unknown residual is 0: a genuinely unclassifiable leftover is a finding, never silently dropped",
+            "verdict": "exactly one drop_in_verdict per counted family, re-derived from the committed 24.12 run rows by the 24.11 baseline-normalized rule, never copied and never typed; DROP_IN_UNKNOWN is 0, because a family this venue cannot pose the drop-in question for is an honest DROP_IN_NOT_APPLICABLE"
+          },
+          "unweighted_rates": {
+            "FAIL": {
+              "count": 0,
+              "rate": 0.0
+            },
+            "NOT_APPLICABLE": {
+              "count": 993,
+              "rate": 0.993
+            },
+            "PARTIAL": {
+              "count": 1,
+              "rate": 0.001
+            },
+            "PASS": {
+              "count": 6,
+              "rate": 0.006
+            },
+            "UNKNOWN": {
+              "count": 0,
+              "rate": 0.0
+            },
+            "denominator": 1000
+          }
+        },
+        "findings": [
+          "993/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 7 of 1000, so the drop-in rate is measured over 7 families and is not a population-wide rate",
+          "the measured set exercised 600/6499 exported symbols, 42/81 public headers and 39/152 API families, so the atlas speaks for a thin slice of the authority's public surface",
+          "3973 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate",
+          "11330 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty"
+        ],
+        "frf_declarable": false,
+        "frf_exclusion": "the atlas-reconciliation court reads committed artefacts and brings no artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
+        "instrument_findings": [],
+        "ladder": {
+          "families": 1000,
+          "levels": {
+            "L2-configured": 8,
+            "L3-built": 8,
+            "L4-linked": 8,
+            "L5-loaded": 8,
+            "L6-runtime": 7,
+            "L7-functional": 6
+          },
+          "measurable_families": 7,
+          "not_applicable_families": 993,
+          "population": "the frozen P1000",
+          "raw_family_count": 1000,
+          "status": {
+            "FAIL": 0,
+            "NOT_APPLICABLE": 993,
+            "PARTIAL": 1,
+            "PASS": 6,
+            "UNKNOWN": 0
+          },
+          "unknown": 0
+        },
+        "method": "stages no probe: it reads forensics/downstream/reconciliation.json and every committed downstream plane it reconciles, and re-runs the 24.13 re-derivation and sensitivity control over the committed artefact without rebuilding anything. It establishes that every counted family has exactly one re-derived drop_in_verdict with DROP_IN_UNKNOWN 0; that every residual across every plane is classified from the closed vocabulary with an unclassified and an unknown count of 0; that every failure is preserved -- the counted P1000 measured set's plus the separate hostility corpus's two candidate failures, classified and scoped out of every P1000 rate; that the drop-in rates equal the derived rates, are unweighted over the frozen population and never sum the direct and transitive consumers; that the ladder equals the verdict counts with UNKNOWN 0 and the raw family count visible; that the coverage and the Phase-22 direct/inferred projection are consistent with the planes; and that the counts are derived rather than typed. The six seeded mutations -- a counted family with no verdict, a residual left unknown, a failure dropped from the summary, a hostility result mixed into the P1000 rate, a typed rate that disagrees with the verdicts, and a failure not preserved -- are each detected with specificity holding. The court is an instrument, not the property: it can pass while the atlas carries real property findings, which are recorded as findings and make property_status NOT_CLAIMED (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 3.3, 3.5, 3.6 and 3.7 and the brief's sections 34, 35, 36, 37, 52 and 53).",
+        "probe": "",
+        "problems": [],
+        "property_status": "NOT_CLAIMED",
+        "rates": {
+          "all_direct": true,
+          "direct": {
+            "FAIL": {
+              "count": 0,
+              "rate": 0.0
+            },
+            "NOT_APPLICABLE": {
+              "count": 993,
+              "rate": 0.993
+            },
+            "PARTIAL": {
+              "count": 1,
+              "rate": 0.001
+            },
+            "PASS": {
+              "count": 6,
+              "rate": 0.006
+            },
+            "UNKNOWN": {
+              "count": 0,
+              "rate": 0.0
+            },
+            "denominator": 1000
+          },
+          "direct_and_transitive_summed": false,
+          "measurable": {
+            "FAIL": {
+              "count": 0,
+              "rate": 0.0
+            },
+            "PARTIAL": {
+              "count": 1,
+              "rate": 0.142857
+            },
+            "PASS": {
+              "count": 6,
+              "rate": 0.857143
+            },
+            "UNKNOWN": {
+              "count": 0,
+              "rate": 0.0
+            },
+            "denominator": 7,
+            "note": "the drop-in question was posed for this many of the counted families: NOT_APPLICABLE is not a pass"
+          },
+          "population": {
+            "families": 1000,
+            "measurable_families": 7,
+            "not_applicable_families": 993,
+            "selection": "a selected population, not a random sample",
+            "source": "forensics/downstream/family-freeze.json"
+          },
+          "statistical_confidence": {
+            "computed": false,
+            "reason": "the population is selected, not sampled, so no population-wide confidence interval or test statistic is computed (the brief's section 53)"
+          },
+          "transitive": {
+            "FAIL": {
+              "count": 0,
+              "rate": null
+            },
+            "NOT_APPLICABLE": {
+              "count": 0,
+              "rate": null
+            },
+            "PARTIAL": {
+              "count": 0,
+              "rate": null
+            },
+            "PASS": {
+              "count": 0,
+              "rate": null
+            },
+            "UNKNOWN": {
+              "count": 0,
+              "rate": null
+            },
+            "denominator": 0
+          },
+          "unweighted": {
+            "FAIL": {
+              "count": 0,
+              "rate": 0.0
+            },
+            "NOT_APPLICABLE": {
+              "count": 993,
+              "rate": 0.993
+            },
+            "PARTIAL": {
+              "count": 1,
+              "rate": 0.001
+            },
+            "PASS": {
+              "count": 6,
+              "rate": 0.006
+            },
+            "UNKNOWN": {
+              "count": 0,
+              "rate": 0.0
+            },
+            "denominator": 1000
+          },
+          "weighted": {
+            "FAIL": {
+              "rate": 0.0,
+              "weight": 0
+            },
+            "NOT_APPLICABLE": {
+              "rate": 0.98442,
+              "weight": 1706
+            },
+            "PARTIAL": {
+              "rate": 0.002308,
+              "weight": 4
+            },
+            "PASS": {
+              "rate": 0.013272,
+              "weight": 23
+            },
+            "UNKNOWN": {
+              "rate": 0.0,
+              "weight": 0
+            },
+            "denominator": 1733,
+            "signal": "source_breadth"
+          },
+          "weighted_is_the_headline": false
+        },
+        "verdict": "pass"
       }
     ],
     "drop_in_verdicts": [
@@ -3526,7 +4137,6 @@
     ],
     "pending_courts": {
       "DOWNSTREAM-1000-SEAL": "24.15 -- the downstream-1000 seal",
-      "RT-ATLAS-RECONCILIATION": "24.13 -- the atlas reconciliation",
       "RT-FRF-CLOSURE": "24.14 -- the FRF/Gemel closure"
     },
     "residual_classes": [
@@ -3669,8 +4279,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 12,
-      "total": 12
+      "pass": 13,
+      "total": 13
     }
   },
   "generator": "forensics/tools/phase24_courts.py",
@@ -3693,7 +4303,7 @@
     {
       "name": "phase24-container-manifest",
       "path": "forensics/downstream/container.json",
-      "sha256": "5f734c87ff0824110345ff0086a24b0cc259b6b605bb8ca108976840c37c278b"
+      "sha256": "6bc351019a739df62e5b62b1256dbcd52e3f88c2267df3d7cdd15cdfde084383"
     },
     {
       "name": "ranking-sources",
@@ -3949,6 +4559,16 @@
       "name": "downstream-p1000-run",
       "path": "forensics/tools/downstream_p1000_run.py",
       "sha256": "f5bb66ce3901b48a2e0757164aed0ddb8348bba85eb20dcc8340125fb21ef422"
+    },
+    {
+      "name": "reconciliation",
+      "path": "forensics/downstream/reconciliation.json",
+      "sha256": "1027a813c0e5e1185a8bf44cb8cec3d0fea42f2723d4ae4e88ec22bc3a33d837"
+    },
+    {
+      "name": "downstream-reconciliation",
+      "path": "forensics/tools/downstream_reconciliation.py",
+      "sha256": "c32039606aed20185d2b563f6606466b73e6ead5f97c43d1ef9cf0613c850daa"
     }
   ],
   "kind": "phase24-courts",

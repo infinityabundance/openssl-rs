@@ -27,8 +27,9 @@ registers `RT-HOLDOUT-PARTITION`**, the precommitted holdout partition, and **24
 `RT-FAILURE-MINIMIZATION`**, the failure discovery/minimization loop, and **24.9 registers
 `RT-HIGH-VALUE-TIER`**, the high-value deep tier, and **24.10 registers
 `RT-HOSTILITY-AUGMENTATION`**, the separate hostility-augmentation corpus, and **24.11 registers
-`RT-CANDIDATE-FREEZE`**, the candidate freeze and the once-run holdout, and **24.12 registers
-`RT-P1000-RUN`**, the final full P1000 run at the frozen candidate. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
+`RT-CANDIDATE-FREEZE`**, the candidate freeze and the once-run holdout, **24.12 registers
+`RT-P1000-RUN`**, the final full P1000 run at the frozen candidate, and **24.13 registers
+`RT-ATLAS-RECONCILIATION`**, the reconciliation of the atlas. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
 normalized inputs under `forensics/downstream/ranking/normalized/`, re-derives the frozen
 `selection_input_root_hash`, and checks every source is content-addressed with a retrieval
 timestamp and a parser version, that an unavailable source carries a reason and is not counted
@@ -90,7 +91,20 @@ one `drop_in_verdict` per counted family, with none missing, extra or fabricated
 histogram; that a family this venue cannot pose the drop-in question for is `DROP_IN_NOT_APPLICABLE`
 with a reason; that `candidate_specific_patch_count` is 0; and that the counts are derived rather
 than typed -- with an instrument-sensitivity control that seeds five mutations and requires each
-caught. The
+caught. `RT-ATLAS-RECONCILIATION` reads the committed `forensics/downstream/reconciliation.json` and
+re-runs the 24.13 re-derivation and sensitivity control over the committed artefact without
+rebuilding anything. It establishes that every counted family has exactly one re-derived
+`drop_in_verdict` with `DROP_IN_UNKNOWN` 0; that every residual across every plane is classified from
+the closed vocabulary with an unclassified and an `unknown` count of 0; that every failure is
+preserved -- the counted P1000 measured set's plus the separate hostility corpus's two candidate
+failures, scoped out of every P1000 rate; that the drop-in rates equal the derived rates and never sum
+the direct and transitive consumers; that the ladder equals the verdict counts with `UNKNOWN` 0 and
+the raw family count visible; that the coverage and the Phase-22 direct/inferred projection are
+consistent with the planes; and that the counts are derived rather than typed -- with an
+instrument-sensitivity control that seeds six mutations and requires each caught. It is an
+**instrument**: it can pass while the atlas carries real property findings (a large
+`NOT_APPLICABLE` share, a thin measured surface, a non-empty residual set), which are recorded as the
+row's `findings` so the ledger reads `property_status` honestly. The
 registry is the file `run_courts.py`
 checks is reproduced, so a court silently dropped is a finding rather than a smaller green run.
 This is the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this
@@ -121,7 +135,7 @@ The fifteen courts, and the subphase that lands each
   * `RT-HOSTILITY-AUGMENTATION` -- 24.10, the separate hostility corpus (registered).
   * `RT-CANDIDATE-FREEZE` -- 24.11, the candidate freeze and holdout (registered).
   * `RT-P1000-RUN` -- 24.12, the final full P1000 run (registered).
-  * `RT-ATLAS-RECONCILIATION` -- 24.13, the atlas reconciliation.
+  * `RT-ATLAS-RECONCILIATION` -- 24.13, the atlas reconciliation (registered).
   * `RT-FRF-CLOSURE` -- 24.14, the FRF/Gemel closure.
   * `DOWNSTREAM-1000-SEAL` -- 24.15, the seal.
 
@@ -130,8 +144,8 @@ Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2
 `RT-FAMILY-FREEZE`, 24.5 registers `RT-HOLDOUT-PARTITION`, 24.6 registers
 `RT-BUILD-LINK-ATLAS`, 24.7 registers `RT-RUNTIME-FUNCTIONAL-ATLAS`, 24.8 registers
 `RT-FAILURE-MINIMIZATION`, 24.9 registers `RT-HIGH-VALUE-TIER`, 24.10 registers
-`RT-HOSTILITY-AUGMENTATION`, 24.11 registers `RT-CANDIDATE-FREEZE` and 24.12 registers
-`RT-P1000-RUN`, and the remaining three are
+`RT-HOSTILITY-AUGMENTATION`, 24.11 registers `RT-CANDIDATE-FREEZE`, 24.12 registers
+`RT-P1000-RUN` and 24.13 registers `RT-ATLAS-RECONCILIATION`, and the remaining two are
 pending. A passing court is an instrument,
 not a property claim, and this stratum makes no property claim beyond the atlas: a selected
 empirical population is not a random sample, 1000/1000 is not a security proof, a build is not a
@@ -235,6 +249,12 @@ import downstream_candidate_freeze  # noqa: E402
 # rebuilding and never launching anything) through the same code path the artefact was produced by.
 import downstream_p1000_run  # noqa: E402
 
+# The 24.13 atlas-reconciliation tool, imported so the court re-derives the whole accounted view from
+# the committed planes and re-runs the validation and sensitivity control over the committed
+# reconciliation (never rebuilding and never launching anything) through the same code path the
+# artefact was produced by.
+import downstream_reconciliation  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -313,12 +333,22 @@ CANDIDATE_FREEZE_COURT = "RT-CANDIDATE-FREEZE"
 P1000_RUN = REPO_ROOT / "forensics" / "downstream" / "p1000-run.json"
 P1000_RUN_COURT = "RT-P1000-RUN"
 
+# 24.13's subject: the reconciliation of the atlas, one accounted view of every committed plane --
+# every counted family's re-derived verdict, every classified residual, every preserved failure (the
+# P1000 measured set's plus the separate hostility corpus's two), the computed rates over the frozen
+# population, the ladder, the Phase-22 coverage projection and the usage clusters. The court reads it
+# and re-runs the pure re-derivation; it never rebuilds and never launches anything.
+RECONCILIATION = REPO_ROOT / "forensics" / "downstream" / "reconciliation.json"
+ATLAS_RECONCILIATION_COURT = "RT-ATLAS-RECONCILIATION"
+
 # The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES`, 24.2 `RT-CANDIDATE-UNIVERSE`,
 # 24.3 `RT-AUTHORITY-CENSUS`, 24.4 `RT-FAMILY-FREEZE`, 24.5 `RT-HOLDOUT-PARTITION`, 24.6
 # `RT-BUILD-LINK-ATLAS`, 24.7 `RT-RUNTIME-FUNCTIONAL-ATLAS`, 24.8 `RT-FAILURE-MINIMIZATION`, 24.9
-# `RT-HIGH-VALUE-TIER`, 24.10 `RT-HOSTILITY-AUGMENTATION` and 24.11 `RT-CANDIDATE-FREEZE`; each later
-# subphase appends its court here in the commit that lands its instrument, and a court removed from
-# the table leaves the registry and fails `run_courts.py`.
+# 24.9
+# `RT-HIGH-VALUE-TIER`, 24.10 `RT-HOSTILITY-AUGMENTATION`, 24.11 `RT-CANDIDATE-FREEZE`, 24.12
+# `RT-P1000-RUN` and 24.13 `RT-ATLAS-RECONCILIATION`; each later subphase appends its court here in the
+# commit that lands its instrument, and a court removed from the table leaves the registry and fails
+# `run_courts.py`.
 COURTS: list[tuple[str, str]] = [
     (RANKING_SOURCES_COURT, "_ranking_sources_court"),
     (CANDIDATE_UNIVERSE_COURT, "_candidate_universe_court"),
@@ -332,13 +362,13 @@ COURTS: list[tuple[str, str]] = [
     (HOSTILITY_AUGMENTATION_COURT, "_hostility_augmentation_court"),
     (CANDIDATE_FREEZE_COURT, "_candidate_freeze_court"),
     (P1000_RUN_COURT, "_p1000_run_court"),
+    (ATLAS_RECONCILIATION_COURT, "_atlas_reconciliation_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order. A court moves out of this table
 # and into `COURTS` in the commit that lands its instrument.
 PENDING_COURTS: dict[str, str] = {
-    "RT-ATLAS-RECONCILIATION": "24.13 -- the atlas reconciliation",
     "RT-FRF-CLOSURE": "24.14 -- the FRF/Gemel closure",
     "DOWNSTREAM-1000-SEAL": "24.15 -- the downstream-1000 seal",
 }
@@ -1628,6 +1658,170 @@ def _p1000_run_court(name: str) -> dict:
     }
 
 
+def _atlas_reconciliation_court(name: str) -> dict:
+    """`RT-ATLAS-RECONCILIATION`: 24.13's court, the reconciliation of the atlas.
+
+    Stages no probe. It reads the committed reconciliation
+    `forensics/downstream/reconciliation.json` and re-runs the 24.13 re-derivation and sensitivity
+    control over the committed artefact **without rebuilding anything**. It establishes that every
+    counted family has exactly one re-derived `drop_in_verdict` with `DROP_IN_UNKNOWN` 0; that every
+    residual across every plane is classified from the closed vocabulary with an unclassified and an
+    `unknown` count of 0; that every failure is preserved -- the counted P1000 measured set's plus
+    the separate hostility corpus's two candidate failures, which are scoped **out** of every P1000
+    rate; that the drop-in rates equal the derived rates and that the direct and transitive consumers
+    are never summed; that the ladder equals the verdict counts with `UNKNOWN` 0 and the raw family
+    count visible; that the coverage and the Phase-22 projection are consistent with the planes; and
+    that the counts are derived rather than typed. Six seeded mutations are each caught with
+    specificity holding.
+
+    The court is an **instrument**, not the property: it can pass while the atlas carries real
+    property findings (a large `NOT_APPLICABLE` share, a thin measured surface, a non-empty residual
+    set). Those are recorded as the row's `findings`, so the ledger reads `property_status`
+    honestly; the invariant violations that fail the instrument are `instrument_findings`.
+    """
+    if not RECONCILIATION.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the reconciliation artefact {rel(RECONCILIATION)} is absent"],
+                "findings": [], "instrument_findings": [], "control": {}}
+
+    inputs = downstream_reconciliation.load_inputs()
+    body = json.loads(RECONCILIATION.read_text(encoding="utf-8"))["body"]
+    instrument_findings = downstream_reconciliation.reconciliation_findings(inputs, body)
+    control = downstream_reconciliation.reconciliation_sensitivity_control(inputs, body)
+    prop = downstream_reconciliation.reconciliation_property(body)
+
+    rates = body.get("rates") or {}
+    ladder = body.get("ladder") or {}
+    coverage = body.get("coverage") or {}
+    counts = body.get("counts") or {}
+    residuals = body.get("residuals") or {}
+    failures = body.get("failures_summary") or {}
+    clusters = body.get("clusters") or {}
+    phase22 = body.get("phase22_projection") or {}
+    verdicts = body.get("verdicts") or []
+    measured = [v for v in verdicts if str(v.get("verdict")) != "DROP_IN_NOT_APPLICABLE"]
+    fp1000 = failures.get("p1000") or {}
+    fhost = failures.get("hostility") or {}
+    examples = {
+        "rule": body.get("rule"),
+        "population": body.get("population"),
+        "unweighted_rates": rates.get("unweighted"),
+        "measurable_rates": rates.get("measurable"),
+        "ladder": ladder,
+        "coverage": coverage,
+        "phase22_projection": {
+            "direct": phase22.get("direct"),
+            "inferred": phase22.get("inferred"),
+            "compatibility_views": phase22.get("compatibility_views"),
+            "separated": phase22.get("separated"),
+        },
+        "residuals": {
+            "total": residuals.get("total"),
+            "unresolved": residuals.get("unresolved"),
+            "unknown": residuals.get("unknown"),
+            "unclassified": residuals.get("unclassified"),
+            "histogram": residuals.get("histogram"),
+        },
+        "failures_summary": {
+            "p1000": {k: fp1000.get(k) for k in
+                      ("total", "preserved", "minimized", "candidate_specific",
+                       "by_failure_class", "by_disposition", "by_residual_class", "divergences")},
+            "hostility": {k: fhost.get(k) for k in ("total", "preserved", "minimized",
+                                                   "candidate_specific", "scoped")},
+            "all_preserved": failures.get("all_preserved"),
+            "hostility_records": [
+                {k: r.get(k) for k in ("failure_id", "run_id", "class", "preserved",
+                                       "minimized")}
+                for r in fhost.get("records") or []],
+        },
+        "clusters": {
+            "cluster_count": clusters.get("cluster_count"),
+            "distinct_stressors": clusters.get("distinct_stressors"),
+            "clusters": clusters.get("clusters"),
+            "marginal": clusters.get("marginal"),
+            "marginal_consumers": clusters.get("marginal_consumers"),
+        },
+        "measured_verdicts": [
+            {k: v.get(k) for k in ("canonical_name", "verdict", "authority_applicable_level",
+                                   "candidate_level", "residual_class")}
+            for v in measured],
+        "not_applicable_head": [
+            {k: v.get(k) for k in ("canonical_name", "residual_class")}
+            for v in verdicts if str(v.get("verdict")) == "DROP_IN_NOT_APPLICABLE"][:5],
+        "property_findings": body.get("property_findings"),
+    }
+
+    verdict = "pass" if (not instrument_findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/reconciliation.json and every committed "
+            "downstream plane it reconciles, and re-runs the 24.13 re-derivation and sensitivity "
+            "control over the committed artefact without rebuilding anything. It establishes that "
+            "every counted family has exactly one re-derived drop_in_verdict with DROP_IN_UNKNOWN "
+            "0; that every residual across every plane is classified from the closed vocabulary "
+            "with an unclassified and an unknown count of 0; that every failure is preserved -- the "
+            "counted P1000 measured set's plus the separate hostility corpus's two candidate "
+            "failures, classified and scoped out of every P1000 rate; that the drop-in rates equal "
+            "the derived rates, are unweighted over the frozen population and never sum the direct "
+            "and transitive consumers; that the ladder equals the verdict counts with UNKNOWN 0 and "
+            "the raw family count visible; that the coverage and the Phase-22 direct/inferred "
+            "projection are consistent with the planes; and that the counts are derived rather "
+            "than typed. The six seeded mutations -- a counted family with no verdict, a residual "
+            "left unknown, a failure dropped from the summary, a hostility result mixed into the "
+            "P1000 rate, a typed rate that disagrees with the verdicts, and a failure not "
+            "preserved -- are each detected with specificity holding. The court is an instrument, "
+            "not the property: it can pass while the atlas carries real property findings, which "
+            "are recorded as findings and make property_status NOT_CLAIMED "
+            "(docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 3.3, 3.5, 3.6 and 3.7 and "
+            "the brief's sections 34, 35, 36, 37, 52 and 53)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the atlas-reconciliation court reads committed artefacts and brings no "
+            "artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF "
+            "declaration"
+        ),
+        "findings": prop["property_findings"],
+        "property_status": prop["property_status"],
+        "instrument_findings": instrument_findings,
+        "rates": rates,
+        "ladder": ladder,
+        "coverage": {
+            "measured": coverage.get("measured"),
+            "known_universe": coverage.get("known_universe"),
+            "ratios": coverage.get("ratios"),
+        },
+        "counts": {
+            "families": counts.get("families", 0),
+            "measurable_families": counts.get("measurable_families", 0),
+            "not_applicable_families": counts.get("not_applicable_families", 0),
+            "verdicts": counts.get("verdicts") or {},
+            "status": counts.get("status") or {},
+            "residuals_total": counts.get("residuals_total", 0),
+            "residuals_unresolved": counts.get("residuals_unresolved", 0),
+            "residuals_unknown": counts.get("residuals_unknown", 0),
+            "residuals_unclassified": counts.get("residuals_unclassified", 0),
+            "failures_p1000": counts.get("failures_p1000", 0),
+            "failures_hostility": counts.get("failures_hostility", 0),
+            "failures_preserved": counts.get("failures_preserved", 0),
+            "coverage_symbols": counts.get("coverage_symbols", 0),
+            "coverage_headers": counts.get("coverage_headers", 0),
+            "coverage_api_families": counts.get("coverage_api_families", 0),
+            "phase22_reachable_entities": counts.get("phase22_reachable_entities", 0),
+            "usage_clusters": counts.get("usage_clusters", 0),
+            "distinct_stressors": counts.get("distinct_stressors", 0),
+            "marginal_consumers": counts.get("marginal_consumers", 0),
+            "candidate_specific_patch_count": counts.get("candidate_specific_patch_count", 0),
+        },
+        "examples": examples,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1916,10 +2110,30 @@ def main(argv: list[str]) -> int:
             "holding. A passing run is a measurement, not a security proof: the ladder is over a "
             "selected population of 1,000 families, not a percentage of all downstream software, "
             "and a venue-limited family is neither a pass nor a fail. "
+            "`RT-ATLAS-RECONCILIATION` is 24.13's court: the reconciliation of the atlas. It stages "
+            "no probe and reads forensics/downstream/reconciliation.json and every committed "
+            "downstream plane it reconciles, re-running the 24.13 re-derivation and sensitivity "
+            "control over the committed artefact without rebuilding anything. It establishes that "
+            "every counted family has exactly one re-derived drop_in_verdict with DROP_IN_UNKNOWN "
+            "0; that every residual across every plane is classified from the closed vocabulary "
+            "with an unclassified and an unknown count of 0; that every failure is preserved -- "
+            "the counted P1000 measured set's plus the separate hostility corpus's two candidate "
+            "failures, scoped out of every P1000 rate; that the drop-in rates equal the derived "
+            "rates, are unweighted over the frozen population and never sum the direct and "
+            "transitive consumers; that the ladder equals the verdict counts with UNKNOWN 0 and "
+            "the raw family count visible; that the coverage and the Phase-22 direct/inferred "
+            "projection are consistent with the planes; and that the counts are derived rather "
+            "than typed. A counted family with no verdict, a residual left unknown, a failure "
+            "dropped from the summary, a hostility result mixed into the P1000 rate, a typed rate "
+            "that disagrees with the verdicts, and a failure not preserved are each detected with "
+            "specificity holding. The court is an instrument, not the property: it can pass while "
+            "the atlas carries real property findings (a large NOT_APPLICABLE share, a thin "
+            "measured surface, a non-empty residual set), which are recorded as findings and make "
+            "property_status NOT_CLAIMED. "
             "The remaining "
-            "three courts -- "
-            "RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending "
-            "with the subphases that land them (24.13 through 24.15). Phase 24 owns no exported "
+            "two courts -- "
+            "RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending "
+            "with the subphases that land them (24.14 and 24.15). Phase 24 owns no exported "
             "symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
@@ -2055,6 +2269,14 @@ def main(argv: list[str]) -> int:
     for ref_name, path in (("p1000-run", P1000_RUN),
                            ("downstream-p1000-run", REPO_ROOT / "forensics" / "tools"
                             / "downstream_p1000_run.py")):
+        if path.is_file():
+            inputs.append(InputRef(name=ref_name, path=path))
+    # 24.13's subject: the committed reconciliation and the tool that produced it, bound so a
+    # verdict, a residual, a preserved failure, a rate, a ladder count, a coverage figure and a
+    # cluster the court reads are content-addressed rather than restated.
+    for ref_name, path in (("reconciliation", RECONCILIATION),
+                           ("downstream-reconciliation", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_reconciliation.py")):
         if path.is_file():
             inputs.append(InputRef(name=ref_name, path=path))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
@@ -2441,6 +2663,65 @@ def main(argv: list[str]) -> int:
                       f"{(v['reason'] or '')[:70]}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == ATLAS_RECONCILIATION_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            lad = r["ladder"]
+            rates = r["rates"]["unweighted"]
+            cov = r["coverage"]
+            ex = r["examples"]
+            print(f"  {r['court']:<32} pass   (no probe, families={counts['families']} "
+                  f"measurable={counts['measurable_families']} "
+                  f"not_applicable={counts['not_applicable_families']} "
+                  f"verdicts={counts['verdicts']}; "
+                  f"{len(r['instrument_findings'])} instrument finding(s); "
+                  f"control honest={c['honest']} specificity={c['specificity_holds']} "
+                  f"no-verdict->{c['caught_counted_family_without_a_verdict']} "
+                  f"unknown-residual->{c['caught_residual_left_unknown']} "
+                  f"dropped-failure->{c['caught_failure_dropped_from_summary']} "
+                  f"hostility-rate->{c['caught_hostility_mixed_into_p1000_rate']} "
+                  f"typed-rate->{c['caught_typed_rate_disagrees_with_verdicts']} "
+                  f"not-preserved->{c['caught_failure_not_preserved']})")
+            print(f"      unweighted rates: PASS={rates['PASS']['count']}({rates['PASS']['rate']}) "
+                  f"PARTIAL={rates['PARTIAL']['count']}({rates['PARTIAL']['rate']}) "
+                  f"FAIL={rates['FAIL']['count']} UNKNOWN={rates['UNKNOWN']['count']} "
+                  f"NOT_APPLICABLE={rates['NOT_APPLICABLE']['count']}"
+                  f"({rates['NOT_APPLICABLE']['rate']})")
+            print(f"      ladder: levels={lad['levels']} status={lad['status']} "
+                  f"raw_family_count={lad['raw_family_count']} UNKNOWN={lad['unknown']}")
+            print(f"      coverage: symbols={cov['measured']['symbols']}/"
+                  f"{cov['known_universe']['exported_symbols']} "
+                  f"headers={cov['measured']['headers']}/{cov['known_universe']['headers']} "
+                  f"api_families={cov['measured']['api_families']}/"
+                  f"{cov['known_universe']['api_families']} ratios={cov['ratios']}")
+            print(f"      residuals: total={counts['residuals_total']} "
+                  f"unresolved={counts['residuals_unresolved']} "
+                  f"unknown={counts['residuals_unknown']} "
+                  f"unclassified={counts['residuals_unclassified']} "
+                  f"histogram={ex['residuals']['histogram']}")
+            print(f"      failures: p1000={counts['failures_p1000']} "
+                  f"hostility={counts['failures_hostility']} "
+                  f"preserved={counts['failures_preserved']} "
+                  f"all_preserved={ex['failures_summary']['all_preserved']}")
+            for fr in ex["failures_summary"]["hostility_records"] or []:
+                print(f"      hostility-failure {fr['class']:<18} {fr['run_id']:<46} "
+                      f"preserved={fr['preserved']} minimized={fr['minimized']}")
+            print(f"      clusters: {counts['usage_clusters']} cluster(s) over "
+                  f"{ex['clusters']['clusters']} "
+                  f"distinct_stressors={counts['distinct_stressors']} "
+                  f"marginal_consumers={counts['marginal_consumers']}")
+            phase22 = ex["phase22_projection"]
+            print(f"      phase22: direct(symbols={phase22['direct']['symbols']}) "
+                  f"inferred(reachable_entities={phase22['inferred']['reachable_entities']}) "
+                  f"views={phase22['compatibility_views']['by_status']}")
+            for v in ex.get("measured_verdicts") or []:
+                print(f"      verdict {v['canonical_name']:<12} {v['verdict']:<24} "
+                      f"baseline={v['authority_applicable_level']} "
+                      f"candidate={v['candidate_level']} residual={v['residual_class']}")
+            print(f"      property_status={r['property_status']} "
+                  f"property_findings={len(r['findings'])}")
+            for f in r["instrument_findings"]:
+                print(f"      instrument finding: {f}")
         elif r["verdict"] != "pass":
             print(f"  {r['court']:<32} FAIL   stage={r.get('stage', 'derive')}")
             for p in (r.get("problems") or [])[:12]:

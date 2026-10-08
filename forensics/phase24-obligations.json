@@ -148,12 +148,17 @@
       },
       {
         "closure": "the `RT-ATLAS-RECONCILIATION` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-ATLAS-RECONCILIATION is pending",
-        "property_status": "not_claimed",
-        "state": "open",
+        "findings": [
+          "993/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 7 of 1000, so the drop-in rate is measured over 7 families and is not a population-wide rate",
+          "the measured set exercised 600/6499 exported symbols, 42/81 public headers and 39/152 API families, so the atlas speaks for a thin slice of the authority's public surface",
+          "3973 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate",
+          "11330 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "RT-ATLAS-RECONCILIATION is pass",
+        "property_status": "NOT_CLAIMED",
+        "state": "implemented",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "atlas-reconciliation",
         "what": "the reconciliation of the atlas: every counted family has a verdict, every residual is classified, every failure is preserved and minimized, and the drop-in rates are computed over the frozen population rather than typed"
@@ -188,8 +193,8 @@
       "contract_units": 15,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 12,
-      "open_in_this_stratum": 3,
+      "implemented": 13,
+      "open_in_this_stratum": 2,
       "owned": 15,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -230,7 +235,7 @@
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "c2338032a6d3caeca2c8ebc19abbe2f82df9380398a94fc9469e90a6a263968d"
+      "sha256": "ffba9109bf65240a624b75dac602706040defe786c6073a3e7448cc5e3994067"
     },
     {
       "name": "phase24-guard",

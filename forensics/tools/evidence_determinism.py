@@ -244,6 +244,18 @@ GENERATORS_BEFORE_LEDGERS = [
     # because it reads no ledger; the RT-FAILURE-MINIMIZATION court re-derives the whole plane through
     # the same functions and refuses a candidate-specific label the authority baseline does not justify.
     "forensics/tools/downstream_failures.py",
+    # Phase 24.13's atlas reconciliation. Like 24.8's failures plane it executes nothing: it is a
+    # **pure function of committed inputs** -- every committed Phase-24 plane (the frozen P1000 and
+    # holdout, the build/link and runtime/functional atlases, the failures plane, the high-value tier,
+    # the hostility corpus, the candidate freeze, the full P1000 run, the usage fingerprints) plus the
+    # committed Phase-22 known-universe and reachability atlases it reads for coverage and the
+    # direct/inferred projection -- so a stale committed reconciliation, or a rate/residual/failure
+    # re-typed rather than re-derived, is a failure rather than a silent divergence. It is exactly the
+    # pure aggregate the 24.6/24.7 comments below name ("the reconciliation") and the 24.8 comment
+    # named as the pattern; the RT-ATLAS-RECONCILIATION court re-derives the whole accounted view
+    # through the same functions and refuses a counted family with no verdict, an unknown residual, a
+    # dropped failure or a hostility result mixed into the P1000 rate.
+    "forensics/tools/downstream_reconciliation.py",
     # Phase 24.6's **build/link atlas is deliberately not here, and not in `COMPARED`.** It is
     # produced by measurement -- real builds of real downstream releases inside the court container --
     # so the level each build reaches and the ELF it links are a function of the court's toolchain and
@@ -561,6 +573,12 @@ COMPARED = [
     # references are re-hashed from disk by the RT-FAILURE-MINIMIZATION court, so a fixture drifting
     # from its record fails the court rather than passing here.
     "forensics/downstream/failures.json",
+    # Phase 24.13's reconciliation of the atlas: a pure function of every committed Phase-24 plane
+    # (and the Phase-22 denominators), so a stale accounted view -- or a rate, a residual
+    # classification or a failure summary that was typed rather than re-derived -- is a failure rather
+    # than a silent divergence. It carries no measurement (it executes nothing and reads nothing that
+    # moves), which is why re-deriving it needs no compiler, no prefix and no network.
+    "forensics/downstream/reconciliation.json",
 ]
 
 # ---------------------------------------------------------------------------
