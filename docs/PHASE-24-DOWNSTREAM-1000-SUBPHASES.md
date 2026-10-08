@@ -326,6 +326,20 @@ that set. The population's own frozen-before-any-candidate property is enforced 
 freeze is a pure function of the committed families and ranking evidence and its court re-derives
 it. `RT-FAMILY-FREEZE`, `RT-HOLDOUT-PARTITION` and `RT-BUILD-LINK-ATLAS` check this.
 
+**4.10 The frozen candidate identity is the install content-address, and the source commit is
+recorded provenance, not a live-HEAD binding (24.11, corrected in 24.12).** 24.11 first built the
+candidate identity from the drop-in install digests together with `source_commit = git rev-parse
+HEAD` and compared the whole record against a freshly re-derived one. That is a self-reference: the
+commit necessarily moves when the artefact's own commit lands, so the recorded identity can never
+equal live HEAD afterwards and the court fails on the next commit. The identity is corrected to
+content-address the **install** -- the `libssl`/`libcrypto` digests, the headers, the pkg-config
+metadata, the provider modules, the crate name and version and the admitted venue -- and to carry
+the source commit as **recorded provenance** that is excluded from `identity_hash` and from the live
+equality check, and is instead required to name a commit that exists in the repository history
+(`git cat-file -e <sha>^{commit}`). A recorded `unknown` is admitted only where git is genuinely
+absent. `RT-CANDIDATE-FREEZE` and `RT-P1000-RUN` check this, and 24.12's full run asserts the
+install still matches the frozen identity by its install fields, not by live HEAD.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 23's process unchanged: a subphase lands its code, its court
