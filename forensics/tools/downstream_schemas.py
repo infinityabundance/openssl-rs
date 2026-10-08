@@ -3,8 +3,8 @@
 
 Phase 24 is the downstream-1000 stratum (`docs/RELEASE_GATES.md` section 1,
 `docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md`). It owns no exported symbol: its unit is the
-non-export `downstream 1000 contract`, and its working set is fifteen contract units the later
-subphases 24.1 through 24.15 populate. This module is 24.0's own half of that work: it **defines
+non-export `downstream 1000 contract`, and its working set is sixteen contract units the later
+subphases 24.1 through 24.16 populate. This module is 24.0's own half of that work: it **defines
 and validates** the record kinds those subphases will emit, fixes the vocabulary the atlas is
 queryable by, and closes the two class lists the brief names (the failure taxonomy and the
 residual classes).
@@ -13,10 +13,10 @@ Why the schemas live in one module
 ----------------------------------
 A record kind that can be invented is a record kind that cannot be checked. Each record the
 downstream evidence plane carries -- a family, a specimen, a variant, a ranking-source row, a run,
-an execution-level row, a residual, a failure and a drop-in verdict -- is a **claim that can be
-falsified**: this module names the fields it requires and the closed vocabularies its values come
-from, so a record that omits a load-bearing field, or uses a value outside the vocabulary, fails
-rather than reads plausibly. The self-test (`--self-test`) proves every validator accepts a
+an execution-level row, a residual, a failure, a drop-in verdict and a blocker -- is a **claim that
+can be falsified**: this module names the fields it requires and the closed vocabularies its values
+come from, so a record that omits a load-bearing field, or uses a value outside the vocabulary,
+fails rather than reads plausibly. The self-test (`--self-test`) proves every validator accepts a
 documented-good record and rejects a documented-bad one, so a validator that can no longer fail is
 visible.
 
@@ -181,6 +181,46 @@ DROP_IN_VERDICTS: tuple[str, ...] = (
     "DROP_IN_NOT_APPLICABLE",
 )
 
+# The **blocker classes** (24.16): the closed vocabulary a counted family's *deepest blocker* is
+# named from, so the 1,000 families are partitioned by what actually stops each one rather than by
+# a description of it. A family with no admitted specimen recipe is `no-admitted-recipe`; a
+# recipe-backed family is named by the **first unmet condition at the level it stopped** -- a
+# recipe-level build-system or build-dependency gap (`recipe-build-system-unsupported`,
+# `recipe-build-dependency-missing`), a candidate-side stop (`candidate-configure-failure` through
+# `candidate-functional-failure`), the authority itself unable to go higher
+# (`authority-baseline-limited`, which is **not** a candidate blocker), a missing deterministic
+# workload or fixture (`no-fixture`), or a family genuinely outside the venue (`out-of-scope`).
+# `none` is the resolved state: a family that reached `DROP_IN_PASS` and so has no blocker.
+BLOCKER_CLASSES: tuple[str, ...] = (
+    "none",
+    "no-admitted-recipe",
+    "recipe-build-system-unsupported",
+    "recipe-build-dependency-missing",
+    "candidate-configure-failure",
+    "candidate-link-failure",
+    "candidate-load-failure",
+    "candidate-runtime-failure",
+    "candidate-functional-failure",
+    "authority-baseline-limited",
+    "no-fixture",
+    "out-of-scope",
+)
+
+# The **fixability classes** (24.16): the closed vocabulary a blocker is dispositioned by, with the
+# fix mechanism named in prose beside it. `resolved` is the `none` blocker's disposition -- no repair
+# is required -- and it is a class rather than a null so a reader can see the resolved share without
+# special-casing a missing value.
+BLOCKER_FIXABILITY: tuple[str, ...] = (
+    "resolved",
+    "recipe-admission",
+    "recipe-build-system",
+    "recipe-build-dependency",
+    "candidate-fix",
+    "fixture-addition",
+    "authority-limited",
+    "out-of-scope",
+)
+
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 _DATE = re.compile(r"^\d{4}(-\d{2}(-\d{2})?)?$")
 
@@ -233,6 +273,14 @@ def _int(rec: dict, field: str) -> list[str]:
         return []
     if not isinstance(rec[field], int) or isinstance(rec[field], bool):
         return [f"{field} must be an integer"]
+    return []
+
+
+def _number(rec: dict, field: str) -> list[str]:
+    if field not in rec:
+        return []
+    if not isinstance(rec[field], (int, float)) or isinstance(rec[field], bool):
+        return [f"{field} must be a number"]
     return []
 
 
@@ -438,6 +486,51 @@ def validate_drop_in_verdict(rec: dict) -> list[str]:
     return problems
 
 
+def validate_blocker(rec: dict) -> list[str]:
+    """A blocker: one class of the deepest-blocker partition, derived not typed (24.16).
+
+    A blocker record is a claim about the counted population that can be falsified: `blocked_families`
+    must equal the length of `shared_by` (the distinct family ids that carry the class), the class
+    and its `fixability` must come from the closed vocabularies, `mover_potential` (families that
+    rise a level if the blocker alone is resolved) may not exceed `blocked_families`, and every
+    record names its `fix_mechanism` and its `evidence`. `none` is the resolved class: a family that
+    reached `DROP_IN_PASS` has a blocker of `none`, a `fixability` of `resolved`, and a
+    `mover_potential` of 0.
+    """
+    fields = ("blocker_id", "blocker_class", "blocked_families", "shared_by", "mover_potential",
+              "mover_potential_basis", "to_pass_potential", "fixability", "fix_mechanism",
+              "distinct_fix_mechanisms", "per_fix_leverage", "evidence", "description")
+    problems = _missing(rec, fields)
+    problems += _nonempty(rec, "blocker_id")
+    problems += _nonempty(rec, "fix_mechanism")
+    problems += _nonempty(rec, "description")
+    problems += _enum(rec, "blocker_class", BLOCKER_CLASSES)
+    problems += _enum(rec, "fixability", BLOCKER_FIXABILITY)
+    for field in ("blocked_families", "mover_potential", "to_pass_potential",
+                  "distinct_fix_mechanisms"):
+        problems += _int(rec, field)
+    problems += _number(rec, "per_fix_leverage")
+    if "shared_by" in rec and not isinstance(rec["shared_by"], list):
+        problems.append("shared_by must be a list")
+    if "evidence" in rec and not isinstance(rec["evidence"], list):
+        problems.append("evidence must be a list")
+    blocked = rec.get("blocked_families")
+    shared = rec.get("shared_by")
+    if isinstance(blocked, int) and not isinstance(blocked, bool) and isinstance(shared, list) \
+            and blocked != len(shared):
+        problems.append(
+            f"blocked_families={blocked} disagrees with the {len(shared)} family id(s) in shared_by")
+    mover = rec.get("mover_potential")
+    if isinstance(blocked, int) and not isinstance(blocked, bool) \
+            and isinstance(mover, int) and not isinstance(mover, bool) and mover > blocked:
+        problems.append("mover_potential cannot exceed blocked_families")
+    if rec.get("blocker_class") == "none" and mover not in (0, None):
+        problems.append("the `none` blocker is the resolved class and has mover_potential 0")
+    if rec.get("blocker_class") == "none" and rec.get("fixability") not in (None, "resolved"):
+        problems.append("the `none` blocker's fixability is `resolved`")
+    return problems
+
+
 # The registries the ledger, the runner and the later subphases read. `SCHEMAS` names each record
 # kind and its validator; `REQUIRED_FIELDS` is what the inventory publishes.
 REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
@@ -461,6 +554,9 @@ REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
                         "authority_baseline", "authority_applicable_level", "candidate_level",
                         "linkage_proven", "candidate_specific_patch_count", "residual_class",
                         "evidence"),
+    "blocker": ("blocker_id", "blocker_class", "blocked_families", "shared_by", "mover_potential",
+                "mover_potential_basis", "to_pass_potential", "fixability", "fix_mechanism",
+                "distinct_fix_mechanisms", "per_fix_leverage", "evidence", "description"),
 }
 
 SCHEMAS = {
@@ -473,6 +569,7 @@ SCHEMAS = {
     "residual": validate_residual,
     "failure": validate_failure,
     "drop_in_verdict": validate_drop_in_verdict,
+    "blocker": validate_blocker,
 }
 
 
@@ -590,6 +687,22 @@ _GOOD: dict[str, dict] = {
         "detail": "minimized to a one-symbol reproducer",
         "evidence": ["forensics/downstream/failures/fail-curl-8.5.0-link.json"],
     },
+    "blocker": {
+        "blocker_id": "blocker:recipe-build-dependency-missing",
+        "blocker_class": "recipe-build-dependency-missing",
+        "blocked_families": 2,
+        "shared_by": ["family:kmod", "family:openvpn"],
+        "mover_potential": 2,
+        "mover_potential_basis": "measured",
+        "to_pass_potential": 2,
+        "fixability": "recipe-build-dependency",
+        "fix_mechanism": "add the missing build dependency to the family's recipe",
+        "distinct_fix_mechanisms": 2,
+        "per_fix_leverage": 1.0,
+        "evidence": ["forensics/downstream/p1000-run.json",
+                     "forensics/downstream/shared-blockers.json"],
+        "description": "a recipe-level build dependency is missing in this venue",
+    },
     "drop_in_verdict": {
         "verdict_id": "d-curl-8.5.0-default",
         "specimen_id": "s-curl-8.5.0",
@@ -630,6 +743,8 @@ def _bad(kind: str) -> dict:
         rec["class"] = "bad-vibes"  # not one of the failure taxonomy
     elif kind == "drop_in_verdict":
         rec["verdict"] = "compatible"  # not one of the drop-in verdicts
+    elif kind == "blocker":
+        rec["blocker_class"] = "unclear"  # not one of the blocker classes
     else:
         raise AssertionError(f"no bad case for {kind}")
     return rec

@@ -105,14 +105,15 @@ for `owner_phase == 24`: no `deferrals` row and no `units` row. The plane's reco
 are all owned by earlier strata, so this stratum's working set is entirely its own authored
 contract.
 
-**The downstream 1000 contract is fifteen units**, each derived from the court that measures it,
+**The downstream 1000 contract is sixteen units**, each derived from the court that measures it,
 and each court lands with the subphase that builds its instrument: `ranking-sources`,
 `candidate-universe`, `authority-census`, `family-freeze`, `holdout-partition`,
 `build-link-atlas`, `runtime-functional-atlas`, `failure-minimization`, `high-value-tier`,
 `hostility-augmentation`, `candidate-freeze`, `p1000-run`, `atlas-reconciliation`,
-`frf-gemel-closure` and `downstream-1000-seal`. All fifteen are open at activation, so the ledger's
-live `counts.open_in_this_stratum` is fifteen, and the corrected activation measurement is fifteen
-`pending` courts over fifteen units.
+`frf-gemel-closure`, `downstream-1000-seal` and `blocker-leverage`. All sixteen are open at
+activation, so the ledger's live `counts.open_in_this_stratum` was sixteen at activation, and the
+corrected activation measurement was sixteen `pending` courts over sixteen units; 24.16 re-opens
+the stratum with a sixteenth unit after the seal (the plan's §4.12 correction).
 
 **The downstream evidence plane already has its schema.** 24.0 lands
 `forensics/tools/downstream_schemas.py`, which defines and validates the record kinds the later
@@ -121,7 +122,7 @@ the residual classes). 24.0 invents none of the evidence: it names the record ki
 subphases will fill.
 
 **This stratum begins on nothing of its own.** No downstream-1000 court exists at activation, so
-`open_in_this_stratum` opens at the whole working set (fifteen) and moves only as the subphases
+`open_in_this_stratum` opens at the whole working set (sixteen) and moves only as the subphases
 below land. **That split moves as the stratum lands its own units: the ledger's `counts` is the
 live record and this section is the activation measurement.**
 
@@ -145,9 +146,10 @@ live record and this section is the activation measurement.**
 | 24.13 | **The atlas reconciliation** | the reconciliation of the atlas (`forensics/downstream/reconciliation.json`): every counted family has a verdict, every residual is classified, every failure is preserved and minimized, and the drop-in rates are computed over the frozen population rather than typed. | 24.12 | `RT-ATLAS-RECONCILIATION` |
 | 24.14 | **The FRF/Gemel closure** | the FRF/Gemel chain closure where the stratum stages a declarable court, so a passing atlas is not read as a chain that never ran. | 24.13 | `RT-FRF-CLOSURE` |
 | 24.15 | **The seal** | the closure of the atlas as the stratum's claim and the four non-claims it never exceeds. Evidence: `docs/PHASE-24-DOWNSTREAM-1000-SEAL.md` (at the seal). | 24.0-24.14 | `DOWNSTREAM-1000-SEAL` |
+| 24.16 | **The biggest-mover shared-blocker analysis** | the partitioned, ranked shared-blocker analysis of the counted population (`forensics/downstream/shared-blockers.json`), the detailed report `docs/PHASE-24-BIGGEST-MOVERS.md`, the compact marker-bounded block in `README.md` and the `Biggest movers` section of the generated `docs/SEAL-CENSUS.md`, so 24.17 can act on the biggest movers rather than on the largest class by breadth. It is analysis, not repair, and its recipe queue is a labelled **heuristic**. | 24.15 | `RT-BLOCKER-LEVERAGE` |
 
 The rows above the seal partition the working set by source: each subphase row lands the instrument
-for exactly one of the fifteen contract units. The partition is derived from
+for exactly one of the sixteen contract units. The partition is derived from
 `forensics/phase24-obligations.json` joined to `artifacts/phase24/COURTS.json`, not typed.
 
 **The evidence artefacts this stratum produces (brief §26).** The later subphases populate the
@@ -216,8 +218,9 @@ kept apart and never mixed into the counted P1000 families' rates.
 (`forensics/tools/phase24_guard.py`) first, so a host invocation is refused rather than producing
 unreproducible evidence (`docs/REPRODUCIBILITY.md` §1).
 
-**3.9 The fifteen units land in one ordered chain behind the runner.** 24.1 through 24.14 land the
-fourteen instruments; 24.15 lands the seal that closes the atlas; each lands its code, its court
+**3.9 The sixteen units land in one ordered chain behind the runner.** 24.1 through 24.14 land the
+fourteen instruments; 24.15 lands the seal that closes the atlas; 24.16 lands the biggest-mover
+shared-blocker analysis over the finished measurement; each lands its code, its court
 and its regenerated artefacts in one commit, and the ledger's `open_in_this_stratum` moves only
 when a court in `artifacts/phase24/COURTS.json` passes.
 
@@ -235,7 +238,7 @@ because then the non-export unit would be the wrong shape.
 **4.2 The precondition this plan places on 24.0, and it is not optional.** `run_courts.py` refuses
 a stratum that is not `not-started` and has no runner, so this stratum lands
 `forensics/tools/phase24_courts.py` with **no runnable court**: its obligations are not exports, so
-no differential probe over a symbol set is its evidence, and its fifteen courts are named in
+no differential probe over a symbol set is its evidence, and its sixteen courts are named in
 `PENDING_COURTS` and land with the subphases that build the instruments they drive. **The direction
 of the `phase24_courts.py` ↔ `phase24_obligations.py` edge is the reverse of Phase 16's**: the
 ledger's contract-unit states are measured from the courts registry, so the registry is generated
@@ -342,6 +345,8 @@ install still matches the frozen identity by its install fields, not by live HEA
 
 **4.11 The stratum stages no declarable court, so 24.14's FRF/Gemel chain entry is vacuous, and the plan's "where the stratum stages a declarable court" is the conditional this no-probe shape resolves to the vacuity (24.14).** §2's 24.14 row gives the subphase one obligation -- the FRF/Gemel chain closure *"where the stratum stages a declarable court, so a passing atlas is not read as a chain that never ran"* -- and Phase 24 owns no exported symbol and stages no probe, so **no Phase-24 court is declared in `gen_frf_courts.py` and no `artifacts/phase24/probes/<probe>.{authority,candidate}` pair is staged**. The chain entry is therefore **vacuous by `phase_state.py`'s own scoping**: `frf_gemel_blocking_reason(24)` is `""`, and the stratum owes no `.frf` declaration, receipt, adjudicated challenge or sensitivity-backed claim, and no Gemel checkpoint. That is not a chain that never ran, and what stands in the chain's place is recorded in `forensics/atlas/phase24/frf-closure.json` and re-checked by `RT-FRF-CLOSURE`: the **`RT-FRF-CLOSURE` harness challenge** -- each of the thirteen Phase-24 planes' own pure checker driven over its committed artefact and over the controlled mutations its own sensitivity control seeds, with the classifier proved not a rubber stamp (13 `DETECTED`, 0 `NOT_DETECTED`, 0 `NOT_DRIVEN`) -- plus the committed **Gemel checkpoint projection** `forensics/GEMEL_TRAJECTORY.md`, whose `current:` is the boundary a later session resumes from. The correction is that §2's wording is a **conditional**, and this stratum's shape resolves it to the vacuity rather than to a row: the plan is not rewritten to stage a declarable court that does not exist, and the seal records the same reading (`docs/PHASE-24-DOWNSTREAM-1000-SEAL.md` §8 and §13). `RT-FRF-CLOSURE` checks the correction rather than this paragraph asserting it.
 
+**4.12 The biggest-mover shared-blocker analysis is a new contract unit after the seal, and it re-opens the stratum (24.16).** The seal (24.15) closed the atlas, and this subphase adds a sixteenth unit -- `blocker-leverage`, closed by the `RT-BLOCKER-LEVERAGE` court -- so a complete stratum is re-opened while the new court is unregistered and closes again when it passes. The correction is that the stratum's working set is now **sixteen** contract units, not fifteen: §1's count, §2's row and §3.9 are updated, `phase24_obligations.py`'s `COURT_UNITS` gains the unit, and `phase_state.py`'s ledger note names sixteen. The unit is an **analysis**, not a repair: `forensics/tools/downstream_blockers.py` partitions the 1,000 counted families by their deepest blocker (each counted exactly once) and ranks the classes by their **mover potential** and **per-fix leverage**, and `forensics/tools/render_biggest_movers.py` renders the detailed report `docs/PHASE-24-BIGGEST-MOVERS.md`, the compact marker-bounded block in `README.md` and the `Biggest movers (generated)` section of `docs/SEAL-CENSUS.md`, each from `forensics/downstream/shared-blockers.json` alone. **A heuristic ranking of buildability is not a measurement of buildability**: the feasible recipe queue the analysis emits is labelled a heuristic wherever it appears, and moving one-rung-per-blocker is a structural count, not a measurement that any family would pass if repaired. The seal court is re-derived to require the report link, so a seal that has lost the analysis fails rather than passing as a smaller green run. `RT-BLOCKER-LEVERAGE` and `DOWNSTREAM-1000-SEAL` check the correction rather than this paragraph asserting it.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 23's process unchanged: a subphase lands its code, its court
@@ -350,7 +355,7 @@ where it has one; and an artefact that a source change moves is regenerated in t
 `docs/DECISIONS.md` is append-only and this document is not a decision record.
 
 **This plan's own boundaries are the evidence plane's, and it will correct them.** The subphase
-table above was written from the fifteen-unit measurement in §1. A subphase that discovers its unit
+table above was written from the sixteen-unit measurement in §1. A subphase that discovers its unit
 is elsewhere records that rather than forcing the row. The activation is recorded in
 `docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md` itself and in `forensics/phase-state.json`.
 
@@ -361,5 +366,5 @@ ledger's implemented list is empty by measurement, not by omission.
 
 **Open exports (checked against the ledger):**
 
-None. This stratum owns no export, so its obligations are the fifteen downstream 1000 contract
+None. This stratum owns no export, so its obligations are the sixteen downstream 1000 contract
 units, recorded in the ledger's contract-unit block rather than as open exports.

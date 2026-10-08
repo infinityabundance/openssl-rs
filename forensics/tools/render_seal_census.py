@@ -156,6 +156,65 @@ def _downstream_outcome_lines(p1000: dict) -> list[str]:
     return L
 
 
+def _biggest_movers_lines(shared: dict) -> list[str]:
+    """The generated biggest-movers section: the ranked blocker classes, the funnel and a link.
+
+    Every figure is read from the committed analysis `forensics/downstream/shared-blockers.json`
+    (24.16), which `forensics/tools/downstream_blockers.py` derives from the Phase-24 planes. The
+    section renders **nothing** when the analysis is absent, so an earlier branch produces no
+    section rather than an empty one. It is the census's detailed view of the shared blockers; the
+    compact view is the `downstream-blockers` block in `README.md`, and both link to the report.
+    """
+    body = (shared or {}).get("body") or {}
+    if not body:
+        return []
+    counts = body.get("counts") or {}
+    by = {b["blocker_class"]: b for b in body.get("blockers") or []}
+    rows = [by[c] for c in body.get("ranking") or []
+            if c in by and by[c]["blocked_families"] and c != "none"]
+    funnel = body.get("funnel") or []
+    L: list[str] = []
+    L.append("## Biggest movers (generated)")
+    L.append("")
+    L.append("Every one of the "
+             f"{counts.get('families')} counted families is partitioned by its **deepest "
+             "blocker**, each counted exactly once, and the classes are ranked by **mover "
+             "potential** (how many families rise a level if the blocker alone is resolved), with "
+             "the **per-fix leverage** (how many families one instance of the fix unlocks). The "
+             "detailed report is "
+             "[`docs/PHASE-24-BIGGEST-MOVERS.md`](https://github.com/infinityabundance/openssl-rs/"
+             "blob/main/docs/PHASE-24-BIGGEST-MOVERS.md); the compact table is the "
+             "`downstream-blockers` block in `README.md`. Every figure is derived from "
+             "`forensics/downstream/shared-blockers.json` and none is typed here.")
+    L.append("")
+    L.append("| rank | blocker class | blocked families | mover potential | to-pass potential | "
+             "fixability | per-fix leverage |")
+    L.append("|---|---|---|---|---|---|---|")
+    for i, b in enumerate(rows, start=1):
+        L.append(f"| {i} | `{b['blocker_class']}` | {b['blocked_families']} | "
+                 f"{b['mover_potential']} | {b['to_pass_potential']} | `{b['fixability']}` | "
+                 f"{b['per_fix_leverage']} |")
+    L.append("")
+    L.append(f"**{counts.get('blocked_families')} of the {counts.get('families')} counted families "
+             f"are blocked; {counts.get('resolved_families')} are `DROP_IN_PASS`.** The "
+             f"{counts.get('shared_blocker_classes')} shared blocker classes are the recipe-backed "
+             "failures and the missing fixtures, not the breadth of recipe admission "
+             f"(`no-admitted-recipe`, {counts.get('recipe_less_families')} families, has per-fix "
+             "leverage 1).")
+    L.append("")
+    L.append("The funnel, from the committed candidate rows:")
+    L.append("")
+    L.append("| step | families | share of the counted population |")
+    L.append("|---|---|---|")
+    for f in funnel:
+        L.append(f"| {f['step']} | {f['families']} | {f['share_of_counted']} |")
+    L.append("")
+    L.append("The recipe-less decomposition and the (heuristic) feasible recipe queue are in the "
+             "detailed report; a heuristic ranking of buildability is not a measurement of it.")
+    L.append("")
+    return L
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.parse_args(argv)
@@ -331,6 +390,14 @@ def main(argv: list[str]) -> int:
     p1000 = load("forensics/downstream/p1000-run.json")
     if p1000 is not None:
         L.extend(_downstream_outcome_lines(p1000))
+
+    # The Phase-24 biggest-mover shared-blocker analysis (24.16). Rendered only when the committed
+    # analysis is present, so an earlier branch produces no section rather than an empty one. It is
+    # the census's link to `docs/PHASE-24-BIGGEST-MOVERS.md`, so the analysis is reachable from the
+    # seal, this census and `README.md` alike.
+    shared = load("forensics/downstream/shared-blockers.json")
+    if shared is not None:
+        L.extend(_biggest_movers_lines(shared))
 
     if coverage is not None:
         L.append("## Court coverage")

@@ -14750,12 +14750,12 @@
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "4998431074406050e409fcc47a8b81e259f899e804387aca3dff88fb71963fc5"
+      "sha256": "3fc56af9f6a60fcc427a30e4131f92ce3892090a0e5e37e7365db6894459ea48"
     },
     {
       "name": "holdout",
       "path": "forensics/downstream/holdout.json",
-      "sha256": "3bb4acc99379d9f1a041193f59af1d64f51da7711ec2b6177b2f170992928f31"
+      "sha256": "d35093619508ab1047b14bfc78ba19e14d48d81bfe2b31e0efd44bcb076ddb32"
     },
     {
       "name": "build-link-atlas",
@@ -14770,7 +14770,7 @@
     {
       "name": "failures",
       "path": "forensics/downstream/failures.json",
-      "sha256": "9518b53e94af01c5d8584cfaa4a0566ab51537ee5d14a36352e8215627696ba7"
+      "sha256": "ee9a099706248c56b0d95158781f38f4189bb190e72323e6ab42d213a189a9e2"
     },
     {
       "name": "high-value-tier",
@@ -14860,7 +14860,7 @@
     {
       "name": "downstream-schemas",
       "path": "forensics/tools/downstream_schemas.py",
-      "sha256": "fbb7bd6cd48dcf1fda8aad6d2fa686dcbc09b53dfe185ad192659348e4dc4bbc"
+      "sha256": "e6cf8ac709446344dfb7f7330881abe034f020c91cf75c84d7875670dfce31c6"
     },
     {
       "name": "phase24-guard",
@@ -14870,7 +14870,7 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "309e0f8c062db07be0c529bb53878b17761ac7cddcfdc14ff674820ae8de663d"
+      "sha256": "67aea42008c29255080dfd6f0c6030e28330541f12acd16d7251b24a024687bf"
     }
   ],
   "kind": "downstream-atlas-reconciliation",

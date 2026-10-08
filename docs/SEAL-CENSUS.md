@@ -49,7 +49,7 @@ declared owner; this is that assignment.
 | 21 | Maintenance delta machinery | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
 | 23 | Multitrack authority compatibility and OpenSSL lineage | `complete` | 0 | 17 | 17 | 0 | 0 |
-| 24 | Downstream-1000 replacement atlas and empirical drop-in corpus | `complete` | 0 | 15 | 15 | 0 | 0 |
+| 24 | Downstream-1000 replacement atlas and empirical drop-in corpus | `complete` | 0 | 16 | 16 | 0 | 0 |
 
 ## Phase 3 — Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects
 
@@ -808,8 +808,8 @@ The other 17 compare ELF structure rather than a transcript and observe nothing 
 * seal: `docs/PHASE-24-DOWNSTREAM-1000-SEAL.md`
 * ledger: `forensics/phase24-obligations.json`
 * atlas-owned: 0
-* owned working set: 15
-* implemented: 15
+* owned working set: 16
+* implemented: 16
 * deferred to a later stratum with a stated reason: 0
 * **open in this stratum: 0**
 
@@ -832,11 +832,12 @@ Contract units (measurement vs property):
 | atlas-reconciliation | `complete` | `NOT_CLAIMED` | `993/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 7 of 1000, so the drop-in rate is measured over 7 families and is not a population-wide rate`, `the measured set exercised 600/6499 exported symbols, 42/81 public headers and 39/152 API families, so the atlas speaks for a thin slice of the authority's public surface`, `3973 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate`, `11330 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty` |
 | frf-gemel-closure | `complete` | `not_claimed` | `the stratum stages no declarable court: the registry declares no Phase-24 court and no artifacts/phase24/probes/<probe>.{authority,candidate} pair is staged, so by phase_state.py's frf_gemel_blocking_reason scoping the FRF/Gemel chain entry is vacuous and no .frf object or Gemel checkpoint is owed; the RT-FRF-CLOSURE harness challenge and the Gemel projection stand in its place, and a passing atlas is not a chain that ran` |
 | downstream-1000-seal | `complete` | `NOT_CLAIMED` | `993 of the 1000 counted families are DROP_IN_NOT_APPLICABLE: only 12 have an admitted pristine-source recipe in this venue, so the drop-in rate is measured over 7 families and is not a population-wide rate; a NOT_APPLICABLE family is neither a pass nor a fail`, `a selected population is not a random sample: the population is selected from frozen ranking evidence, so its rates do not generalise to all downstream software`, `1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and it makes no statement about an unmeasured consumer`, `a build is not a functional proof: reaching the built or linked levels is not behaving, and only the functional levels are behavioural evidence`, `direct and transitive consumers are different evidence: the two are never summed into one rate` |
+| blocker-leverage | `complete` | `not_claimed` | — |
 
 A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
-Courts: `all pass`, 15 court(s), **0** authority observation(s) over 0 transcript court(s).
+Courts: `all pass`, 16 court(s), **0** authority observation(s) over 0 transcript court(s).
 
-The other 15 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
+The other 16 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
@@ -854,6 +855,7 @@ The other 15 compare ELF structure rather than a transcript and observe nothing 
 | RT-P1000-RUN | `pass` | — (structural) |
 | RT-ATLAS-RECONCILIATION | `pass` | — (structural) |
 | RT-FRF-CLOSURE | `pass` | — (structural) |
+| RT-BLOCKER-LEVERAGE | `pass` | — (structural) |
 | DOWNSTREAM-1000-SEAL | `pass` | — (structural) |
 
 ## Downstream-1000 outcomes (generated)
@@ -925,6 +927,34 @@ recorded with the run apply in full:
 * a build is not a functional proof: reaching the built or linked levels is not behaving, and only the functional levels are behavioural evidence
 * transitive and direct consumers are different evidence: a project that only links a library transitively is a different measurement from one that calls the API directly, and the two are never summed
 * the ladder is over a selected population of 1,000 families, not a percentage of all downstream software
+
+## Biggest movers (generated)
+
+Every one of the 1000 counted families is partitioned by its **deepest blocker**, each counted exactly once, and the classes are ranked by **mover potential** (how many families rise a level if the blocker alone is resolved), with the **per-fix leverage** (how many families one instance of the fix unlocks). The detailed report is [`docs/PHASE-24-BIGGEST-MOVERS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/PHASE-24-BIGGEST-MOVERS.md); the compact table is the `downstream-blockers` block in `README.md`. Every figure is derived from `forensics/downstream/shared-blockers.json` and none is typed here.
+
+| rank | blocker class | blocked families | mover potential | to-pass potential | fixability | per-fix leverage |
+|---|---|---|---|---|---|---|
+| 1 | `no-admitted-recipe` | 988 | 988 | 0 | `recipe-admission` | 1.0 |
+| 2 | `no-fixture` | 2 | 2 | 2 | `fixture-addition` | 1.0 |
+| 3 | `recipe-build-dependency-missing` | 2 | 2 | 2 | `recipe-build-dependency` | 1.0 |
+| 4 | `recipe-build-system-unsupported` | 2 | 2 | 2 | `recipe-build-system` | 2.0 |
+
+**994 of the 1000 counted families are blocked; 6 are `DROP_IN_PASS`.** The 4 shared blocker classes are the recipe-backed failures and the missing fixtures, not the breadth of recipe admission (`no-admitted-recipe`, 988 families, has per-fix leverage 1).
+
+The funnel, from the committed candidate rows:
+
+| step | families | share of the counted population |
+|---|---|---|
+| counted | 1000 | 1000/1000 (100.0%) |
+| with-admitted-recipe | 12 | 12/1000 (1.2%) |
+| configured | 8 | 8/1000 (0.8%) |
+| linked | 8 | 8/1000 (0.8%) |
+| loaded | 8 | 8/1000 (0.8%) |
+| runtime | 7 | 7/1000 (0.7%) |
+| functional | 6 | 6/1000 (0.6%) |
+| drop-in-pass | 6 | 6/1000 (0.6%) |
+
+The recipe-less decomposition and the (heuristic) feasible recipe queue are in the detailed report; a heuristic ranking of buildability is not a measurement of it.
 
 ## Court coverage
 
