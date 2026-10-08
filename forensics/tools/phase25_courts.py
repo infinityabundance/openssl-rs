@@ -11,8 +11,8 @@ structure. The method is Phases 3 through 24's where an artefact carries the exp
 court reads the artefact that holds its subject rather than typing the expectation beside it, so the
 two cannot disagree, and a court whose control is not honest is `fail` rather than `pass`.
 
-**25.0 registers `MS-CONSTITUTION`, 25.1 registers the compiler-backed census, and 25.2 registers the
-non-Rust trusted computing base.** The stratum's
+**25.0 registers `MS-CONSTITUTION`, 25.1 registers the compiler-backed census, 25.2 registers the
+non-Rust trusted computing base, and 25.3 registers the safety obligations.** The stratum's
 obligations are not exports, so its courts read committed evidence rather than diffing a staged
 probe pair, and `run_courts.py` would refuse a stratum in `in-progress` with no runner at all -- so
 this runner landed at activation with an empty registry, naming the twenty-two courts it stages
@@ -25,7 +25,14 @@ is the court's subject. **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trust
 reads the committed `artifacts/phase25/non-rust-tcb.json` and re-runs the 25.2 pure checks
 (`ms_non_rust_tcb.non_rust_findings`, `ms_non_rust_tcb.non_rust_sensitivity_control`) over it and the
 on-disk file universe, so the inventory of the first-party C, the generated C scaffolds, the
-`core::arch` assembly surface and the FFI boundaries is the court's subject. The registry is the file
+`core::arch` assembly surface and the FFI boundaries is the court's subject. **25.3 registers
+`MS-SAFETY-OBLIGATIONS`**, the safety obligations: it reads the committed
+`artifacts/phase25/safety-obligations.json` and re-runs the 25.3 pure checks
+(`ms_obligations.obligation_findings`, `ms_obligations.obligation_sensitivity_control`) over it, the
+committed census it is derived from and the committed TCB it cross-references, so one obligation set
+per compiler-derived unsafe site -- every census site bound, every census context represented, no
+`discharged` without a source-stated contract and a discharging proof -- is the court's subject. The
+registry is the file
 `run_courts.py` checks is reproduced, so a court
 silently dropped is a finding rather than a smaller green run. This is the reverse of Phase 16's
 edge: the ledger's contract-unit states are measured from this registry, so this runner does
@@ -122,6 +129,12 @@ import ms_census  # noqa: E402
 # `non_rust_sensitivity_control` over the committed artefact and the on-disk file universe.
 import ms_non_rust_tcb  # noqa: E402
 
+# 25.3's safety obligations (one obligation set per compiler-derived unsafe site) and the tool that
+# derives it from the committed 25.1 census and 25.2 TCB. The court re-runs the tool's pure
+# `obligation_findings` / `obligation_sensitivity_control` over the committed artefact and the
+# census it is derived from.
+import ms_obligations  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase25" / "COURTS.json"
 GENERATOR = "forensics/tools/phase25_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-25-MEMORY-SAFETY-SUBPHASES.md"
@@ -137,6 +150,11 @@ SOURCE_CENSUS_COURT = "MS-SOURCE-CENSUS"
 NON_RUST_TCB = REPO_ROOT / "artifacts" / "phase25" / "non-rust-tcb.json"
 MS_NON_RUST_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_non_rust_tcb.py"
 NON_RUST_TCB_COURT = "MS-NON-RUST-TCB"
+
+# 25.3's safety obligations and the pure tool that derives them from the committed census and TCB.
+SAFETY_OBLIGATIONS = REPO_ROOT / "artifacts" / "phase25" / "safety-obligations.json"
+MS_OBLIGATIONS_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_obligations.py"
+SAFETY_OBLIGATIONS_COURT = "MS-SAFETY-OBLIGATIONS"
 
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
@@ -160,13 +178,13 @@ COURTS: list[tuple[str, str]] = [
     (CONSTITUTION_COURT, "_ms_constitution_court"),
     (SOURCE_CENSUS_COURT, "_ms_source_census_court"),
     (NON_RUST_TCB_COURT, "_ms_non_rust_tcb_court"),
+    (SAFETY_OBLIGATIONS_COURT, "_ms_safety_obligations_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
-# `MS-SOURCE-CENSUS` and 25.2 removed `MS-NON-RUST-TCB`, so nineteen remain. Ordered as the plan
-# orders them.
+# `MS-SOURCE-CENSUS`, 25.2 removed `MS-NON-RUST-TCB` and 25.3 removed `MS-SAFETY-OBLIGATIONS`, so
+# eighteen remain. Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-SAFETY-OBLIGATIONS": "25.3 -- the safety obligations",
     "MS-OWNERSHIP-PLANES": "25.4 -- the ownership/allocation/callback planes",
     "MS-PHASE22-CROSSWALK": "25.5 -- the Phase-22 reachability crosswalk",
     "MS-PHASE24-CROSSWALK": "25.6 -- the Phase-24 downstream crosswalk",
@@ -541,6 +559,92 @@ def _ms_non_rust_tcb_court(name: str) -> dict:
     }
 
 
+def _ms_safety_obligations_court(name: str) -> dict:
+    """`MS-SAFETY-OBLIGATIONS`: 25.3's court, the safety obligations per unsafe site.
+
+    Stages no probe. It reads the committed `artifacts/phase25/safety-obligations.json` and re-runs
+    the 25.3 pure checks `ms_obligations.obligation_findings` and
+    `ms_obligations.obligation_sensitivity_control` over it together with the committed 25.1 census
+    it is derived from and the 25.2 TCB it cross-references -- no compiler, no clippy; the
+    derivation that produced the plane is `ms_obligations.py --measure`, and this court only
+    re-derives from what it wrote. It establishes that every census site is bound exactly once and
+    every census context represented; that each site's grouped contract reproduces from the census
+    and the recorded kind -> dimension rule; that no obligation is `discharged` without a
+    source-stated contract and a discharging proof (a `// SAFETY:` comment is a statement, so naming
+    a dimension makes it `stated`, never `discharged`); that the cross-check against the non-Rust
+    TCB reproduces; and that every count is derived. Five seeded mutations -- a removed contract, a
+    forged discharge, a dropped obligation, a forged dimension set and forged named dimensions --
+    are each caught with specificity holding. It is an **instrument**: it can pass while the plane
+    records real property findings (the open obligations, the sites whose contract escapes to a
+    caller, and the recorded discharge gap), which are recorded as the row's `findings` so a
+    passing obligations court is never read as a memory-safety claim.
+    """
+    if not SAFETY_OBLIGATIONS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "obligations-missing",
+                "problems": [f"the safety obligations plane {rel(SAFETY_OBLIGATIONS)} is absent"],
+                "findings": [], "control": {}}
+    if not SOURCE_CENSUS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "census-missing",
+                "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
+                "findings": [], "control": {}}
+
+    body = json.loads(SAFETY_OBLIGATIONS.read_text(encoding="utf-8")).get("body", {})
+    census_body = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8")).get("body", {})
+    tcb_body = (json.loads(NON_RUST_TCB.read_text(encoding="utf-8")).get("body", {})
+                if NON_RUST_TCB.is_file() else {})
+    problems = ms_obligations.obligation_findings(body, census_body, tcb_body)
+    control = ms_obligations.obligation_sensitivity_control(body, census_body, tcb_body)
+
+    counts = body.get("counts") or {}
+    findings = list(body.get("findings") or [])
+
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/safety-obligations.json and "
+            "re-runs the 25.3 pure checks (ms_obligations.obligation_findings and "
+            "ms_obligations.obligation_sensitivity_control) over it, the committed 25.1 census it "
+            "is derived from and the committed 25.2 non-Rust TCB it cross-references, without a "
+            "compiler. The plane is a pure derivation: each census site is bound once by "
+            "reference to a grouped contract whose per-dimension obligations follow from the "
+            "recorded operation-kind -> dimension rule and the source-stated contract. It "
+            "establishes site and context completeness, contract reproduction, the no-discharge "
+            "invariant and derived counts; five seeded mutations are each caught with specificity "
+            "holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.8)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the obligations court reads the committed plane and re-derives only its pure checks, "
+            "so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "census_sites": counts.get("census_sites", 0),
+            "census_contexts": counts.get("census_contexts", 0),
+            "sites_bound": counts.get("sites_bound", 0),
+            "contexts_represented": counts.get("contexts_represented", 0),
+            "contexts_without_site": counts.get("contexts_without_site", 0),
+            "contracts": counts.get("contracts", 0),
+            "obligations": counts.get("obligations", 0),
+            "discharged": counts.get("discharged", 0),
+            "stated": counts.get("stated", 0),
+            "open": counts.get("open", 0),
+            "escaping_sites": counts.get("escaping_sites", 0),
+            "escaping_obligations": counts.get("escaping_obligations", 0),
+            "uncontracted_sites": counts.get("uncontracted_sites", 0),
+            "uncontracted_contexts": counts.get("uncontracted_contexts", 0),
+            "high_risk_sites": counts.get("high_risk_sites", 0),
+        },
+        "crosschecks": body.get("crosschecks") or {},
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -607,15 +711,17 @@ def main(argv: list[str]) -> int:
         "claim": (
             "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, "
             "guard, venue manifest, obligation ledger and the frozen safety lint policy, "
-            "**25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, and "
-            "**25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base. Phase 25 owns "
+            "**25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, "
+            "**25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, and "
+            "**25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived "
+            "unsafe site. Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining nineteen of its twenty-two courts -- MS-SAFETY-OBLIGATIONS, "
+            "remaining eighteen of its twenty-two courts -- "
             "MS-OWNERSHIP-PLANES, MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, "
             "MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, "
             "MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.3 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.4 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -655,6 +761,8 @@ def main(argv: list[str]) -> int:
         InputRef(name="ms-census-tool", path=MS_CENSUS_TOOL),
         InputRef(name="non-rust-tcb", path=NON_RUST_TCB),
         InputRef(name="ms-non-rust-tcb-tool", path=MS_NON_RUST_TOOL),
+        InputRef(name="safety-obligations", path=SAFETY_OBLIGATIONS),
+        InputRef(name="ms-obligations-tool", path=MS_OBLIGATIONS_TOOL),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
