@@ -554,7 +554,10 @@ def derive_blockers(inputs: dict) -> dict:
         "funnel": (
             "the counted population down the execution ladder: 1,000 counted, the recipe-backed "
             "families, then the families that reached each rung, then the DROP_IN_PASS count, each "
-            "derived from the committed candidate rows"
+            "derived from the committed candidate rows. `drop-in-pass` is the baseline-normalized "
+            "verdict count rather than an execution rung: a family can pass at L4-linked when the "
+            "candidate reached the same level the authority did, so the verdict count is not "
+            "required to be non-increasing with the rungs above it"
         ),
         "recipe_queue": (
             "a ranked, deterministic list of the recipe-less counted families to admit next, by the "
@@ -670,11 +673,20 @@ def blocker_findings(inputs: dict, body: dict) -> list[str]:
     if body.get("recipe_queue_rule") != derived["recipe_queue_rule"]:
         out.append("the recorded recipe-queue rule does not reproduce")
 
-    # 5. The funnel is a non-increasing count down the ladder.
-    families = [(f["step"], f["families"]) for f in body.get("funnel") or []]
+    # 5. The funnel is a non-increasing count down the execution rungs. `drop-in-pass` is the
+    #    baseline-normalized verdict count, not an execution rung: a family can pass at L4-linked
+    #    (the candidate reached the same level the authority did), so it is checked separately and
+    #    only required not to exceed the counted population.
+    families = [(f["step"], f["families"]) for f in body.get("funnel") or []
+                if f.get("step") != "drop-in-pass"]
     for (s0, n0), (s1, n1) in zip(families, families[1:]):
         if n1 > n0:
             out.append(f"the funnel is not non-increasing: {s0}={n0} then {s1}={n1}")
+    counted = (body.get("counts") or {}).get("families") or 0
+    pass_step = next((f for f in body.get("funnel") or [] if f.get("step") == "drop-in-pass"), None)
+    if pass_step is not None and int(pass_step.get("families") or 0) > counted:
+        out.append(f"the funnel's drop-in-pass count {pass_step.get('families')!r} exceeds the "
+                   f"counted population {counted}")
 
     # 6. Every class with blocked families is a shared blocker or a single one, and the counts say
     #    so; the non-claims are the stratum's four plus the heuristic label.
@@ -699,13 +711,15 @@ def blocker_sensitivity_control(inputs: dict, body: dict) -> dict:
 
     flipped = copy.deepcopy(body)
     recorded = flipped.get("partition") or {}
-    # Flip one blocked family to `none` and one resolved family to `no-admitted-recipe`, holding the
-    # coverage so only the class membership is wrong.
-    blocked_fid = next((f for f, c in recorded.items() if c == "no-fixture"), None)
+    # Flip one blocked family to `none` and one resolved family to that blocked class, holding the
+    # coverage so only the class membership is wrong. The blocked class is whichever a blocked family
+    # actually carries, so the mutation is defined for any partition the derivation produces.
+    blocked_fid = next((f for f, c in recorded.items() if c != "none"), None)
     resolved_fid = next((f for f, c in recorded.items() if c == "none"), None)
     if blocked_fid and resolved_fid:
+        flipped_class = recorded[blocked_fid]
         flipped["partition"][blocked_fid] = "none"
-        flipped["partition"][resolved_fid] = "no-fixture"
+        flipped["partition"][resolved_fid] = flipped_class
     flipped_findings = blocker_findings(inputs, flipped)
 
     counted = copy.deepcopy(body)

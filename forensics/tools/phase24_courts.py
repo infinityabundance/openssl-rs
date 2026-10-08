@@ -308,6 +308,13 @@ import downstream_blockers  # noqa: E402
 # `metadata_only` in the container manifest.
 import render_biggest_movers as biggest_movers  # noqa: E402
 
+# The 24.17 biggest-mover remediation record, imported so the court re-derives the whole before/after
+# record from the committed Phase-24 planes and the preserved baseline and re-runs its findings and
+# sensitivity control (never rebuilding and never launching anything) through the same code path the
+# artefact was produced by. The tool executes nothing, so it is declared `metadata_only` in the
+# container manifest.
+import downstream_remediation  # noqa: E402
+
 # The generated seal census, imported for the one function that renders the census's biggest-movers
 # section, so the court re-derives the markers the census must carry rather than restating them. It
 # writes no Phase-24 artefact and reads no Phase-24 state.
@@ -417,6 +424,14 @@ BIGGEST_MOVERS = REPO_ROOT / "docs" / "PHASE-24-BIGGEST-MOVERS.md"
 README_DOC = REPO_ROOT / "README.md"
 BLOCKER_LEVERAGE_COURT = "RT-BLOCKER-LEVERAGE"
 
+# 24.17's subject: the biggest-mover remediation record, the preserved pre-remediation baseline it
+# reads, and the recipe/workload machinery the repairs live in. The court reads them and re-derives
+# the whole before/after record; it never rebuilds and never launches anything.
+BLOCKER_REMEDIATION = REPO_ROOT / "forensics" / "downstream" / "blocker-remediation.json"
+BLOCKER_REMEDIATION_BASELINE = (REPO_ROOT / "forensics" / "downstream" /
+                                "blocker-remediation-baseline.json")
+BLOCKER_REMEDIATION_COURT = "RT-BLOCKER-REMEDIATION"
+
 # 24.15's subject: the seal, and the closure of the atlas as the stratum's claim. It reads the
 # committed reconciliation, the final P1000 run, the candidate freeze and the FRF closure -- never
 # the derived state of its own stratum (`forensics/phase-state.json`, the obligations ledger or
@@ -452,6 +467,7 @@ SEAL_REQUIRED_MARKERS = (
     "STATUS: derived",
     "docs/SEAL-CENSUS.md",
     biggest_movers.REPORT_PATH,
+    "forensics/downstream/blocker-remediation.json",
     "DOWNSTREAM-1000-SEAL",
     "the four non-claims",
     "a selected population is not a random sample",
@@ -486,6 +502,7 @@ COURTS: list[tuple[str, str]] = [
     (ATLAS_RECONCILIATION_COURT, "_atlas_reconciliation_court"),
     (FRF_CLOSURE_COURT, "_frf_closure_court"),
     (BLOCKER_LEVERAGE_COURT, "_blocker_leverage_court"),
+    (BLOCKER_REMEDIATION_COURT, "_blocker_remediation_court"),
     (SEAL_COURT, "_downstream_1000_seal_court"),
 ]
 
@@ -2167,6 +2184,103 @@ def _blocker_leverage_court(name: str) -> dict:
         "ranking": ranked,
         "top": top,
         "funnel": body.get("funnel") or [],
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
+# --------------------------------------------------------------------------------------------
+# 24.17 -- the biggest-mover remediation: the before/after record of the repairs
+# --------------------------------------------------------------------------------------------
+
+
+def _blocker_remediation_court(name: str) -> dict:
+    """`RT-BLOCKER-REMEDIATION`: 24.17's court, the biggest-mover remediation record.
+
+    Stages no probe. It reads the committed record `forensics/downstream/blocker-remediation.json`,
+    re-derives the whole before/after record from the committed Phase-24 planes and the preserved
+    pre-remediation baseline `forensics/downstream/blocker-remediation-baseline.json` through the same
+    code path the record was produced by, and re-runs the record's own findings and sensitivity
+    control. It establishes that the preserved `before` partition is the 24.16 partition (1,000
+    families, content-addressed), that the `after` partition and the movement reproduce from the
+    re-measured planes, that every action's observed family transitions match the two partitions,
+    that a still-blocked action shows no movement and names its missing tool, that a resolving action
+    shows its families moved, and that the admitted recipes are exactly the catalogue families outside
+    the 24.16 baseline. Five seeded mutations are each detected with specificity holding. A passing
+    record is an **instrument**: it says what was repaired and what the planes then measured, not that
+    the population now passes, and a still-blocked record is a measurement of the fixed venue rather
+    than of the project.
+    """
+    problems: list[str] = []
+    for path in (BLOCKER_REMEDIATION, BLOCKER_REMEDIATION_BASELINE, SHARED_BLOCKERS, FAMILY_FREEZE,
+                 FAMILIES, BUILD_LINK_ATLAS, RUNTIME_FUNCTIONAL_ATLAS, P1000_RUN):
+        if not path.is_file():
+            problems.append(f"{rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    committed = json.loads(BLOCKER_REMEDIATION.read_text(encoding="utf-8"))
+    body = _seal_body(committed)
+    inputs = downstream_remediation.load_inputs()
+
+    findings: list[str] = []
+    if committed.get("body_hash") != content_hash(body):
+        findings.append("the recorded blocker-remediation body_hash does not match its body")
+    derived = downstream_remediation.derive_remediation(inputs)
+    if content_hash(derived) != content_hash(body):
+        findings.append("the committed remediation record does not reproduce from the planes")
+    findings += downstream_remediation.remediation_findings(inputs, body)
+    control = downstream_remediation.remediation_sensitivity_control(inputs, body)
+
+    # The preserved before partition is the 24.16 partition: 1,000 families and its own content hash.
+    before = body.get("before") or {}
+    if len(before.get("partition") or {}) != 1000:
+        findings.append("the preserved `before` partition does not cover 1,000 families")
+
+    counts = body.get("counts") or {}
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/blocker-remediation.json and its preserved "
+            "baseline and re-derives the whole before/after record from the committed Phase-24 planes "
+            "(the 24.16 analysis, the build/link and runtime/functional atlases, the final P1000 run "
+            "and the frozen P1000) through forensics/tools/downstream_remediation.py, re-running its "
+            "findings and sensitivity control, without rebuilding and without launching anything. It "
+            "establishes that the preserved `before` partition is the 24.16 partition (1,000 "
+            "families, content-addressed); that the `after` partition and the movement reproduce from "
+            "the re-measured planes; that every action's observed family transitions match the two "
+            "partitions; that a still-blocked action shows no movement and names its missing tool; "
+            "that a resolving action shows its families moved; and that the admitted recipes are "
+            "exactly the catalogue families outside the 24.16 baseline. A claimed fix with no "
+            "re-measured movement, a still-blocked class marked resolved, a movement figure that "
+            "disagrees with the planes, a fabricated new recipe and a mutated before count are each "
+            "detected with specificity holding (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections "
+            "2, 4.13 and 3.8)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the remediation court reads committed evidence and the record derived from it and stages "
+            "no artifacts/phase24/probes/<probe>.{authority,candidate} pair, so it takes no transcript "
+            "to diff and carries no FRF declaration"
+        ),
+        "record": rel(BLOCKER_REMEDIATION),
+        "baseline": rel(BLOCKER_REMEDIATION_BASELINE),
+        "pre_remediation_capture": bool(body.get("pre_remediation_capture")),
+        "counts": {
+            "actions": counts.get("actions", 0),
+            "fix_actions": counts.get("fix_actions", 0),
+            "still_blocked_actions": counts.get("still_blocked_actions", 0),
+            "families_moved": counts.get("families_moved", 0),
+            "new_recipes": counts.get("new_recipes", 0),
+            "new_recipes_linked": counts.get("new_recipes_linked", 0),
+        },
+        "movement": body.get("movement") or {},
+        "new_recipes": [r.get("family") for r in body.get("new_recipes") or []],
         "findings": findings,
         "control": control,
         "problems": [],

@@ -266,6 +266,16 @@ GENERATORS_BEFORE_LEDGERS = [
     # refuses a family the partition omits or double-counts. It must run **after** the planes above it
     # in this block, which it reads.
     "forensics/tools/downstream_blockers.py",
+    # Phase 24.17's biggest-mover remediation record. Like 24.16's analysis it executes nothing: it
+    # is a **pure function of the committed Phase-24 planes** (the committed analysis, the build/link
+    # and runtime/functional atlases, the final P1000 run, the frozen P1000) plus the preserved
+    # pre-remediation baseline `forensics/downstream/blocker-remediation-baseline.json`, so a stale
+    # committed record -- or a movement figure that disagrees with the planes -- is a failure rather
+    # than a silent divergence. It reads no ledger; the RT-BLOCKER-REMEDIATION court re-derives the
+    # whole record through the same functions and refuses a claimed fix with no measured movement or
+    # a still-blocked class marked resolved. It must run **after** the analysis above it, which it
+    # reads.
+    "forensics/tools/downstream_remediation.py",
     # Phase 24.6's **build/link atlas is deliberately not here, and not in `COMPARED`.** It is
     # produced by measurement -- real builds of real downstream releases inside the court container --
     # so the level each build reaches and the ELF it links are a function of the court's toolchain and
@@ -590,6 +600,12 @@ COMPARED = [
     # planes, so a stale analysis -- or a blocker, a count, the funnel or the recipe queue typed
     # rather than re-derived -- is a failure rather than a silent divergence. It reads no ledger.
     "forensics/downstream/shared-blockers.json",
+    # Phase 24.17's preserved pre-remediation baseline and the before/after record derived from it:
+    # the baseline is the 24.16 partition captured once, and the record re-derives the re-measured
+    # `after` from the planes, so a stale record -- or a movement figure typed rather than subtracted
+    # -- is a failure rather than a silent divergence.
+    "forensics/downstream/blocker-remediation-baseline.json",
+    "forensics/downstream/blocker-remediation.json",
     # The detailed report 24.16 renders from `shared-blockers.json`, byte-compared so its prose
     # cannot drift from the analysis it cites. The marker-bounded `downstream-blockers` block of
     # `README.md` is compared in the same pass.
