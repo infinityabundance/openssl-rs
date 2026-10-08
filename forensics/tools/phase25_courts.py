@@ -188,6 +188,12 @@ import ms_phase24_crosswalk  # noqa: E402
 # committed artefact and those planes.
 import ms_exposure  # noqa: E402
 
+# 25.8's unsafe reduction and the tool that derives its worklist from the committed census, the
+# committed exposure classification and the committed source spans the census names. The court
+# re-runs the tool's pure `reduction_findings` / `reduction_sensitivity_control` over the committed
+# artefact, the census and the exposure classification.
+import ms_reduction  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase25" / "COURTS.json"
 GENERATOR = "forensics/tools/phase25_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-25-MEMORY-SAFETY-SUBPHASES.md"
@@ -247,6 +253,12 @@ EXPOSURE = REPO_ROOT / "artifacts" / "phase25" / "exposure.json"
 MS_EXPOSURE_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_exposure.py"
 EXPOSURE_COURT = "MS-EXPOSURE-CLASSIFICATION"
 
+# 25.8's unsafe reduction and the pure tool that derives it from the committed census, the committed
+# exposure classification and the committed source spans the census names.
+UNSAFE_REDUCTION = REPO_ROOT / "artifacts" / "phase25" / "unsafe-reduction.json"
+MS_REDUCTION_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_reduction.py"
+UNSAFE_REDUCTION_COURT = "MS-UNSAFE-REDUCTION"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -274,15 +286,15 @@ COURTS: list[tuple[str, str]] = [
     (PHASE22_CROSSWALK_COURT, "_ms_phase22_crosswalk_court"),
     (PHASE24_CROSSWALK_COURT, "_ms_phase24_crosswalk_court"),
     (EXPOSURE_COURT, "_ms_exposure_classification_court"),
+    (UNSAFE_REDUCTION_COURT, "_ms_unsafe_reduction_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
 # `MS-SOURCE-CENSUS`, 25.2 removed `MS-NON-RUST-TCB`, 25.3 removed `MS-SAFETY-OBLIGATIONS`, 25.4
 # removed `MS-OWNERSHIP-PLANES`, 25.5 removed `MS-PHASE22-CROSSWALK`, 25.6 removed
-# `MS-PHASE24-CROSSWALK` and 25.7 removed `MS-EXPOSURE-CLASSIFICATION`, so fourteen remain. Ordered
-# as the plan orders them.
+# `MS-PHASE24-CROSSWALK`, 25.7 removed `MS-EXPOSURE-CLASSIFICATION` and 25.8 removed
+# `MS-UNSAFE-REDUCTION`, so thirteen remain. Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-UNSAFE-REDUCTION": "25.8 -- the unsafe reduction",
     "MS-MIRI": "25.9 -- Miri",
     "MS-ASAN-MSMAN": "25.10 -- ASan/MSan",
     "MS-TSAN": "25.11 -- TSan",
@@ -1113,6 +1125,99 @@ def _ms_exposure_classification_court(name: str) -> dict:
     }
 
 
+def _ms_unsafe_reduction_court(name: str) -> dict:
+    """`MS-UNSAFE-REDUCTION`: 25.8's court, the unsafe reduction.
+
+    Stages no probe. It reads the committed `artifacts/phase25/unsafe-reduction.json` and re-runs the
+    25.8 pure checks `ms_reduction.reduction_findings` and
+    `ms_reduction.reduction_sensitivity_control` over it together with the committed 25.1 census it
+    reduces and the committed 25.7 exposure classification it reads for reachability -- no compiler,
+    no tool; the derivation that produced the worklist is `ms_reduction.py --measure`, and this court
+    only re-derives from what it wrote. It establishes that every applied reduction cites its
+    before/after sites, its passing tests and its evidence; that no reduction changes a lint or the
+    ABI and every named before site is gone from the live census; that the worklist accounts for
+    exactly the reachable sites not reduced; that the counts are derived, not typed; that the frozen
+    census matches the live census (its body hash and its bytes); and that the frozen lint policy is
+    untouched. Six seeded mutations -- a reduction with no test evidence, a weakened lint, a
+    reduced site still present, a frozen census that disagrees, a worklist that omits a class and a
+    typed count -- are each caught with specificity holding. It is an **instrument**: it can pass
+    while the reduction records property findings (the reachable sites no admissible safe intrinsic
+    removes), which are recorded as the row's `findings` so a passing reduction court is never read
+    as a memory-safety claim, and a smaller unsafe count is never read as memory safety.
+    """
+    if not UNSAFE_REDUCTION.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "reduction-missing",
+                "problems": [f"the unsafe reduction {rel(UNSAFE_REDUCTION)} is absent"],
+                "findings": [], "control": {}}
+    if not SOURCE_CENSUS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "census-missing",
+                "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
+                "findings": [], "control": {}}
+    if not EXPOSURE.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "exposure-missing",
+                "problems": [f"the exposure classification {rel(EXPOSURE)} is absent"],
+                "findings": [], "control": {}}
+
+    body = json.loads(UNSAFE_REDUCTION.read_text(encoding="utf-8")).get("body", {})
+    census_body = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8")).get("body", {})
+    authority = ms_reduction.load_authority()
+    problems = ms_reduction.reduction_findings(body, census_body, authority)
+    control = ms_reduction.reduction_sensitivity_control(body, census_body, authority)
+
+    # The frozen census also binds the bytes on disk, so a census edited without re-deriving the
+    # reduction is a failure rather than a frozen hash that silently tracks a hand edit.
+    frozen = body.get("frozen_census") or {}
+    live_sha = ms_reduction.live_census_sha256()
+    if frozen.get("sha256") != live_sha:
+        problems.append("the frozen census sha256 does not bind the census artefact on disk")
+
+    counts = body.get("counts") or {}
+    findings = list(body.get("findings") or [])
+
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/unsafe-reduction.json and "
+            "re-runs the 25.8 pure checks (ms_reduction.reduction_findings and "
+            "ms_reduction.reduction_sensitivity_control) over it, the committed 25.1 census it reduces "
+            "and the committed 25.7 exposure classification it reads for reachability, without a "
+            "compiler. The plane is a pure derivation: each reachable compiler-derived site is "
+            "assigned one candidate class by a total function of its operation kind and its committed "
+            "source span, and for each class the worklist records the proposed safe-intrinsic "
+            "replacement or the reason it is not behaviour-preserving. It establishes the applied "
+            "reductions' evidence and before/after sites, the unchanged lint policy and ABI, the "
+            "worklist's exact accounting of the reachable sites not reduced, the derived counts and "
+            "the frozen census; six seeded mutations are each caught with specificity holding "
+            "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.4)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the unsafe-reduction court reads the committed worklist and re-derives only its pure "
+            "checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "census_sites": counts.get("sites_after", 0),
+            "reachable_sites": counts.get("reachable_after", 0),
+            "candidate_classes": counts.get("patterns", 0),
+            "candidates": counts.get("candidates", 0),
+            "applied": counts.get("applied", 0),
+            "reduced": counts.get("reduced", 0),
+            "rejected": counts.get("rejected", 0),
+            "residuals": len(body.get("residuals") or []),
+        },
+        "worklist": {e.get("pattern"): (e.get("sites") or {}).get("count", 0)
+                     for e in sorted(body.get("worklist") or [],
+                                     key=lambda e: str(e.get("pattern")))},
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1190,14 +1295,17 @@ def main(argv: list[str]) -> int:
             "Phase-24 downstream-1000 measurement, and "
             "**25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification "
             "that gives every unsafe site exactly one exposure class and records the attacker-input "
-            "routes and the buffer-operation census. "
+            "routes and the buffer-operation census, and "
+            "**25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable "
+            "compiler-derived sites that records each candidate safe-intrinsic replacement, the sites "
+            "that remain named rather than dropped, and the frozen post-reduction census. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining fourteen of its twenty-two courts -- "
-            "MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, "
+            "remaining thirteen of its twenty-two courts -- "
+            "MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, "
             "MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.8 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.9 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -1258,6 +1366,8 @@ def main(argv: list[str]) -> int:
         InputRef(name="downstream-family-freeze", path=DOWNSTREAM_FAMILY_FREEZE),
         InputRef(name="exposure", path=EXPOSURE),
         InputRef(name="ms-exposure-tool", path=MS_EXPOSURE_TOOL),
+        InputRef(name="unsafe-reduction", path=UNSAFE_REDUCTION),
+        InputRef(name="ms-reduction-tool", path=MS_REDUCTION_TOOL),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
