@@ -393,6 +393,19 @@ GENERATORS_BEFORE_LEDGERS = [
     # failure rather than a silent divergence, and the `MS-SAFETY-OBLIGATIONS` court re-runs the same
     # pure checks over the committed artefact and the census it is derived from.
     "forensics/tools/ms_obligations.py",
+    # **Phase 25.4's ownership/allocation/callback planes (`forensics/tools/ms_ownership_planes.py` ->
+    # `artifacts/phase25/ownership-planes.json`) are a pure function of committed inputs too, so they
+    # belong here and are byte-compared.** The plane classifies the compiler-derived sites of the
+    # 25.1 census, the FFI boundaries of the 25.2 TCB and the committed source text (the allocation
+    # families, the set/get/up_ref conventions, the callback registrations, the unsafe Send/Sync
+    # impls, the globals and the exported bodies) against tables recorded in the plane. It compiles
+    # nothing -- no compiler, no tool, no probe -- so `forensics/memory-safety/container.json` lists
+    # it `metadata_only` and the Docker-only guard admits it on any host, exactly as `ms_obligations`
+    # is. A stale committed plane -- or a typed count, a dropped record, a hidden UNKNOWN panic class
+    # or an unmatched FREES edge with no finding -- is a failure rather than a silent divergence, and
+    # the `MS-OWNERSHIP-PLANES` court re-runs the same pure checks over the committed artefact, the
+    # census, the TCB and the source it classifies.
+    "forensics/tools/ms_ownership_planes.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -715,6 +728,13 @@ COMPARED = [
     # is a failure rather than a silent divergence. It executes nothing and reads no source tree, so
     # re-deriving it needs no compiler and no authority.
     "artifacts/phase25/safety-obligations.json",
+    # Phase 25.4's ownership/allocation/callback planes: a pure function of the committed 25.1
+    # census, the committed 25.2 non-Rust TCB and the committed source text it classifies against the
+    # tables the plane records, so a stale plane -- or a typed count, a dropped record, a hidden
+    # UNKNOWN panic class or an unmatched `FREES` edge with no finding -- is a failure rather than a
+    # silent divergence. It compiles nothing and reads no authority, so re-deriving it needs no
+    # compiler and no candidate.
+    "artifacts/phase25/ownership-planes.json",
 ]
 
 # ---------------------------------------------------------------------------

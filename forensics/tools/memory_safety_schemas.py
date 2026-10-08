@@ -181,16 +181,21 @@ SANITIZERS: tuple[str, ...] = ("ASAN", "MSAN", "TSAN")
 FFI_DIRECTIONS: tuple[str, ...] = ("INBOUND", "OUTBOUND")
 FFI_ABIS: tuple[str, ...] = ("C", "SYSTEM", "CDECL", "STDCALL", "WIN64", "OTHER")
 
-# The ownership-edge kinds (brief section 4): how a value or a pointer crosses the Rust/C boundary.
+# The ownership-edge kinds (brief section 4): how a value or a pointer crosses the Rust/C boundary
+# and how its lifetime is managed. The vocabulary is owned by 25.4, the subphase that measures the
+# ownership plane: an allocation, a borrowed reference, an ownership transfer in either direction,
+# a reference-count increment or decrement, and a release. 25.0's earlier placeholder
+# (MOVE/BORROW/TRANSFER_*/REFCOUNT_*/RETURN/OTHER) named the boundary crossing but not the
+# allocation/release half, so it could not express the plane's pairing rule; 25.4 refined it in the
+# commit that landed the plane.
 OWNERSHIP_KINDS: tuple[str, ...] = (
-    "MOVE",
-    "BORROW",
-    "TRANSFER_TO_C",
-    "TRANSFER_FROM_C",
-    "REFCOUNT_TAKE",
-    "REFCOUNT_DROP",
-    "RETURN",
-    "OTHER",
+    "ALLOCATES",
+    "RETURNS_OWNERSHIP",
+    "BORROWS",
+    "TRANSFERS_OWNERSHIP",
+    "INCREMENTS_REFCOUNT",
+    "DECREMENTS_REFCOUNT",
+    "FREES",
 )
 
 SEND_SYNC_TRAITS: tuple[str, ...] = ("SEND", "SYNC")
@@ -940,7 +945,7 @@ _GOOD: dict[str, dict] = {
         "edge_id": "oe-lib-ctx-to-c",
         "from_site": "us-runtime-alloc-40",
         "to_site": "us-ffi-register-12",
-        "kind": "TRANSFER_TO_C",
+        "kind": "TRANSFERS_OWNERSHIP",
         "evidence": ["artifacts/phase25/ownership.json"],
     },
     "callback_lifetime": {
