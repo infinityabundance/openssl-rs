@@ -97,6 +97,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "DOWNSTREAM-1000-SEAL": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "HOSTILE-BOUNDARY-REGISTER": {
       "observations": 0,
       "verdict": "pass"
@@ -158,6 +162,10 @@
       "verdict": "pass"
     },
     "RT-ATLAS-PARAMETERIZATION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-ATLAS-RECONCILIATION": {
       "observations": 0,
       "verdict": "pass"
     },
@@ -247,6 +255,14 @@
     },
     "RT-BN-RAND": {
       "observations": 487,
+      "verdict": "pass"
+    },
+    "RT-BUILD-LINK-ATLAS": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-CANDIDATE-FREEZE": {
+      "observations": 0,
       "verdict": "pass"
     },
     "RT-CANDIDATE-UNIVERSE": {
@@ -497,12 +513,28 @@
       "observations": 38,
       "verdict": "pass"
     },
+    "RT-FAILURE-MINIMIZATION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-FAMILY-FREEZE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-FETCH": {
       "observations": 217,
       "verdict": "pass"
     },
+    "RT-FRF-CLOSURE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-HANDOFF": {
       "observations": 30,
+      "verdict": "pass"
+    },
+    "RT-HIGH-VALUE-TIER": {
+      "observations": 0,
       "verdict": "pass"
     },
     "RT-HISTORICAL-POPULATION": {
@@ -513,12 +545,20 @@
       "observations": 32,
       "verdict": "pass"
     },
+    "RT-HOLDOUT-PARTITION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-HOSTILE-TLS": {
       "observations": 1046,
       "verdict": "pass"
     },
     "RT-HOSTILE-X509": {
       "observations": 1066,
+      "verdict": "pass"
+    },
+    "RT-HOSTILITY-AUGMENTATION": {
+      "observations": 0,
       "verdict": "pass"
     },
     "RT-HPKE": {
@@ -587,6 +627,10 @@
     },
     "RT-OCSP": {
       "observations": 266,
+      "verdict": "pass"
+    },
+    "RT-P1000-RUN": {
+      "observations": 0,
       "verdict": "pass"
     },
     "RT-PARAM": {
@@ -751,6 +795,10 @@
     },
     "RT-RUNTIME-EXT": {
       "observations": 94,
+      "verdict": "pass"
+    },
+    "RT-RUNTIME-FUNCTIONAL-ATLAS": {
+      "observations": 0,
       "verdict": "pass"
     },
     "RT-RUNTIME-REF": {
@@ -945,7 +993,7 @@
     "phase21": 0,
     "phase22": 0,
     "phase23": 0,
-    "phase24": 12,
+    "phase24": 0,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
@@ -996,7 +1044,7 @@
     "21": "complete",
     "22": "complete",
     "23": "complete",
-    "24": "in-progress",
+    "24": "complete",
     "3": "complete",
     "4": "complete",
     "5": "complete",
