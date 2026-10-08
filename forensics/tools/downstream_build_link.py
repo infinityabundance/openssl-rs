@@ -112,6 +112,12 @@ import downstream_schemas  # noqa: E402
 # predicate").
 import downstream_census as census  # noqa: E402
 
+# The 24.18 admission campaign, imported so the shared recipe catalogue includes exactly the recipes
+# the campaign admitted (empirically built against both subjects) and the two can never disagree
+# about which families are recipe-backed. The campaign module is a pure derivation (it executes
+# nothing), so importing it here adds no execution.
+import downstream_recipe_campaign as campaign  # noqa: E402
+
 # The stratum's four non-claims, imported from 24.4 so the atlas and the freeze cannot drift about
 # what the model never claims.
 from downstream_freeze import NON_CLAIMS as STRATUM_NON_CLAIMS  # noqa: E402
@@ -355,6 +361,12 @@ _PHASE17_PINS: dict[str, str] = {
     "nginx": "69ee2b237744036e61d24b836668aad3040dda461fe6f570f1787eab570c75aa",
 }
 
+# 24.17's own admission batch, exposed so 24.17's remediation record scopes its `new_recipes` to the
+# families **24.17** admitted rather than to every later subphase's admissions (24.18's campaign adds
+# its own; without this scoping the remediation record's admission-batch consistency check would
+# mistake a 24.18 admission for a 24.17 rejected probe).
+ADMISSION_BATCH_24_17: frozenset[str] = frozenset(s["family"] for s in _EXTRA_SPECS)
+
 
 def _build_catalogue() -> tuple[dict, ...]:
     """The admitted recipe catalogue: the 24.3 census recipes (with the 24.17 overrides applied),
@@ -391,6 +403,11 @@ def _build_catalogue() -> tuple[dict, ...]:
                  "http_ssl module against the subject prefix through --with-cc-opt/--with-ld-opt"),
         "recipe_id": "recipe:nginx:1.26.3",
     })
+    # The 24.18 admission campaign's recipes: each was empirically built against both subjects before
+    # it was admitted, and `campaign.admitted_recipe_specs()` is the single source of truth, so the
+    # catalogue and the campaign record cannot disagree about which families were admitted.
+    for spec in campaign.admitted_recipe_specs():
+        recipes.append(dict(spec))
     return tuple(recipes)
 
 
@@ -568,6 +585,12 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
     # both subjects, so the identical-build-intent rule holds.
     if recipe.get("ldflags_extra"):
         env["LDFLAGS"] = env["LDFLAGS"] + " " + str(recipe["ldflags_extra"]).format(prefix=prefix)
+    # A recipe may extend the environment with prefix-derived variables (24.18's admitted recipes
+    # carry the consumer's own `OPENSSL_CFLAGS`/`OPENSSL_LIBS` override, because the candidate install
+    # ships no `openssl.pc` while the authority does). Substituted identically for both subjects, so
+    # the identical-build-intent rule holds.
+    for key, val in (recipe.get("env_extra") or {}).items():
+        env[str(key)] = str(val).format(prefix=prefix)
 
     level = L1
     if recipe["build_system"] in ("autotools", "configure"):
@@ -841,6 +864,7 @@ def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str) -> d
             {"family": r["family"], "version": r["version"], "url": r["url"],
              "archive": r["archive"], "sha256": r.get("sha256"),
              "build_system": r["build_system"], "artifact": r["artifact"],
+             "env_extra": r.get("env_extra"),
              "recipe_id": r["recipe_id"], "note": r.get("note")}
             for r in RECIPES
         ],

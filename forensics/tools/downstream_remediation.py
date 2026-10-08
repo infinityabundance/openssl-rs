@@ -95,6 +95,11 @@ BASELINE_RECIPE_FAMILIES: frozenset[str] = frozenset({
     "kmod", "lighttpd", "openvpn", "isync", "nginx",
 })
 
+# 24.17's own batch, so the record's `new_recipes` are the families 24.17 admitted and not a later
+# subphase's (24.18's campaign adds its own; scoping keeps 24.17's admission-batch consistency check
+# honest without rewriting its historical probe).
+BATCH_24_17: frozenset[str] = bl.ADMISSION_BATCH_24_17
+
 # The remediation actions, keyed by id. `blocker_class` is the 24.16 class the action targets;
 # `families` are the counted families it names; `fix_kind` is the mechanism; `still_blocked` marks an
 # action where the venue cannot host the fix (and `missing_tool` names what is absent); `change` is
@@ -270,13 +275,16 @@ def _baseline() -> dict | None:
 
 
 def _new_recipes(build_link_body: dict) -> list[dict]:
-    """The admitted recipes that are not in the 24.16 baseline catalogue, with their measured level."""
+    """The recipes 24.17 admitted (its own batch), with their measured level."""
     rows = {(str(r.get("canonical_name")), str(r.get("subject"))): r
             for r in build_link_body.get("runs") or []}
     out: list[dict] = []
     for r in bl.RECIPES:
         fam = r["family"]
         if fam in BASELINE_RECIPE_FAMILIES:
+            continue
+        if fam not in BATCH_24_17:
+            # a later subphase's admission (24.18's campaign): not this record's `new_recipes`
             continue
         out.append({
             "family": fam,

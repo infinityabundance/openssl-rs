@@ -458,8 +458,8 @@ ownership atlas assigns Phase 24, or that an earlier stratum
 handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
-* authority exports in the Phase 24 working set: 17
-* implemented: 17
+* authority exports in the Phase 24 working set: 18
+* implemented: 18
 * deferred to a later phase with a stated reason: 0
 * open in this stratum: 0
 
@@ -479,11 +479,12 @@ Contract units (measurement vs property):
 | hostility-augmentation | `complete` | `not_claimed` | — |
 | candidate-freeze | `complete` | `not_claimed` | — |
 | p1000-run | `complete` | `not_claimed` | — |
-| atlas-reconciliation | `complete` | `NOT_CLAIMED` | `982/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 18 of 1000, so the drop-in rate is measured over 18 families and is not a population-wide rate`, `the measured set exercised 600/6499 exported symbols, 42/81 public headers and 39/152 API families, so the atlas speaks for a thin slice of the authority's public surface`, `3948 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate`, `11242 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty` |
+| atlas-reconciliation | `complete` | `NOT_CLAIMED` | `972/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 28 of 1000, so the drop-in rate is measured over 28 families and is not a population-wide rate`, `the measured set exercised 600/6499 exported symbols, 42/81 public headers and 39/152 API families, so the atlas speaks for a thin slice of the authority's public surface`, `3928 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate`, `11172 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty` |
 | frf-gemel-closure | `complete` | `not_claimed` | `the stratum stages no declarable court: the registry declares no Phase-24 court and no artifacts/phase24/probes/<probe>.{authority,candidate} pair is staged, so by phase_state.py's frf_gemel_blocking_reason scoping the FRF/Gemel chain entry is vacuous and no .frf object or Gemel checkpoint is owed; the RT-FRF-CLOSURE harness challenge and the Gemel projection stand in its place, and a passing atlas is not a chain that ran` |
-| downstream-1000-seal | `complete` | `NOT_CLAIMED` | `982 of the 1000 counted families are DROP_IN_NOT_APPLICABLE: only 20 have an admitted pristine-source recipe in this venue, so the drop-in rate is measured over 18 families and is not a population-wide rate; a NOT_APPLICABLE family is neither a pass nor a fail`, `a selected population is not a random sample: the population is selected from frozen ranking evidence, so its rates do not generalise to all downstream software`, `1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and it makes no statement about an unmeasured consumer`, `a build is not a functional proof: reaching the built or linked levels is not behaving, and only the functional levels are behavioural evidence`, `direct and transitive consumers are different evidence: the two are never summed into one rate` |
+| downstream-1000-seal | `complete` | `NOT_CLAIMED` | `972 of the 1000 counted families are DROP_IN_NOT_APPLICABLE: only 30 have an admitted pristine-source recipe in this venue, so the drop-in rate is measured over 28 families and is not a population-wide rate; a NOT_APPLICABLE family is neither a pass nor a fail`, `a selected population is not a random sample: the population is selected from frozen ranking evidence, so its rates do not generalise to all downstream software`, `1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and it makes no statement about an unmeasured consumer`, `a build is not a functional proof: reaching the built or linked levels is not behaving, and only the functional levels are behavioural evidence`, `direct and transitive consumers are different evidence: the two are never summed into one rate` |
 | blocker-leverage | `complete` | `not_claimed` | — |
 | blocker-remediation | `complete` | `not_claimed` | — |
+| recipe-campaign | `complete` | `not_claimed` | — |
 
 A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
 ### Phase 3 obligation ledger

@@ -105,17 +105,18 @@ for `owner_phase == 24`: no `deferrals` row and no `units` row. The plane's reco
 are all owned by earlier strata, so this stratum's working set is entirely its own authored
 contract.
 
-**The downstream 1000 contract is seventeen units**, each derived from the court that measures it,
+**The downstream 1000 contract is eighteen units**, each derived from the court that measures it,
 and each court lands with the subphase that builds its instrument: `ranking-sources`,
 `candidate-universe`, `authority-census`, `family-freeze`, `holdout-partition`,
 `build-link-atlas`, `runtime-functional-atlas`, `failure-minimization`, `high-value-tier`,
 `hostility-augmentation`, `candidate-freeze`, `p1000-run`, `atlas-reconciliation`,
-`frf-gemel-closure`, `downstream-1000-seal`, `blocker-leverage` and `blocker-remediation`. All
-fifteen of the first units are open at activation, so the ledger's live
+`frf-gemel-closure`, `downstream-1000-seal`, `blocker-leverage`, `blocker-remediation` and
+`recipe-campaign`. All fifteen of the first units are open at activation, so the ledger's live
 `counts.open_in_this_stratum` was fifteen at activation, and the corrected activation measurement
 was fifteen `pending` courts over fifteen units; 24.16 re-opens the stratum with a sixteenth unit
-after the seal (the plan's §4.12 correction), and 24.17 re-opens it once more with a seventeenth
-unit (the plan's §4.13 correction).
+after the seal (the plan's §4.12 correction), 24.17 re-opens it once more with a seventeenth
+unit (the plan's §4.13 correction), and 24.18 re-opens it once more with an eighteenth unit (the
+plan's §4.14 correction).
 
 **The downstream evidence plane already has its schema.** 24.0 lands
 `forensics/tools/downstream_schemas.py`, which defines and validates the record kinds the later
@@ -150,9 +151,10 @@ live record and this section is the activation measurement.**
 | 24.15 | **The seal** | the closure of the atlas as the stratum's claim and the four non-claims it never exceeds. Evidence: `docs/PHASE-24-DOWNSTREAM-1000-SEAL.md` (at the seal). | 24.0-24.14 | `DOWNSTREAM-1000-SEAL` |
 | 24.16 | **The biggest-mover shared-blocker analysis** | the partitioned, ranked shared-blocker analysis of the counted population (`forensics/downstream/shared-blockers.json`), the detailed report `docs/PHASE-24-BIGGEST-MOVERS.md`, the compact marker-bounded block in `README.md` and the `Biggest movers` section of the generated `docs/SEAL-CENSUS.md`, so 24.17 can act on the biggest movers rather than on the largest class by breadth. It is analysis, not repair, and its recipe queue is a labelled **heuristic**. | 24.15 | `RT-BLOCKER-LEVERAGE` |
 | 24.17 | **The biggest-mover remediation** | the before/after record of the repairs (`forensics/downstream/blocker-remediation.json`) and the preserved pre-remediation baseline it reads (`forensics/downstream/blocker-remediation-baseline.json`): for every blocker class 24.16 named it records the exact recipe/flag/fixture each repair applied, preserves the 24.16 partition as `before`, re-derives the re-measured `after` from the committed planes and computes the movement. It fixes only what the fixed venue can run and records what it cannot as still-blocked. | 24.16 | `RT-BLOCKER-REMEDIATION` |
+| 24.18 | **The recipe-admission campaign** | the empirical admission record (`forensics/downstream/recipe-campaign.json`) and the preserved pre-campaign baseline it reads (`forensics/downstream/recipe-campaign-baseline.json`): over the recipe-less counted families it selects a candidate list by a stated, reproducible priority rule, finds each candidate's official release tarball, pins its URL and SHA-256, classifies its build system **empirically**, and admits only the venue-buildable ones into the shared recipe catalogue under the identical-build-intent rule. Every attempt (admitted or not) is recorded with its outcome, its failure class and its reason, and the movement over the frozen P1000 is re-derived from the re-measured planes. | 24.17 | `RT-RECIPE-CAMPAIGN` |
 
 The rows above the seal partition the working set by source: each subphase row lands the instrument
-for exactly one of the seventeen contract units. The partition is derived from
+for exactly one of the eighteen contract units. The partition is derived from
 `forensics/phase24-obligations.json` joined to `artifacts/phase24/COURTS.json`, not typed.
 
 **The evidence artefacts this stratum produces (brief §26).** The later subphases populate the
@@ -221,10 +223,11 @@ kept apart and never mixed into the counted P1000 families' rates.
 (`forensics/tools/phase24_guard.py`) first, so a host invocation is refused rather than producing
 unreproducible evidence (`docs/REPRODUCIBILITY.md` §1).
 
-**3.9 The seventeen units land in one ordered chain behind the runner.** 24.1 through 24.14 land the
+**3.9 The eighteen units land in one ordered chain behind the runner.** 24.1 through 24.14 land the
 fourteen instruments; 24.15 lands the seal that closes the atlas; 24.16 lands the biggest-mover
 shared-blocker analysis over the finished measurement; 24.17 lands the remediation of the biggest
-movers it named; each lands its code, its court and its regenerated artefacts in one commit, and the
+movers it named; 24.18 lands the recipe-admission campaign that attacks the breadth mover directly;
+each lands its code, its court and its regenerated artefacts in one commit, and the
 ledger's `open_in_this_stratum` moves only when a court in `artifacts/phase24/COURTS.json` passes.
 
 ## 4. Measured corrections, and the precondition
@@ -352,6 +355,8 @@ install still matches the frozen identity by its install fields, not by live HEA
 
 **4.13 The biggest-mover remediation is a new contract unit after the seal, and it re-opens the stratum once more (24.17).** 24.16 partitioned the counted families by their deepest blocker and named which moves the most, but it repaired nothing: its recipe queue is a labelled heuristic. This subphase adds a seventeenth unit -- `blocker-remediation`, closed by the `RT-BLOCKER-REMEDIATION` court -- so a complete stratum is re-opened while the new court is unregistered and closes again when it passes. It acts on the biggest movers **empirically**: it fixes the recipe-backed blockers the fixed venue can run (24.17's `recipe-fix:kmod` adds `--disable-manpages`; `recipe-fix:openvpn` pins the 2.5 line and configures without libnl/libcap-ng; `recipe-fix:isync` adds `-Wl,-rpath-link` so the authority prefix resolves libssl's transitive libcrypto), and it records the two it cannot as `still-blocked` with the exact missing tool (`libssh` needs `cmake`; `lighttpd` needs autotools/cmake/meson, admitting no generated `configure`); it adds the two missing deterministic local fixtures (`fixture:pure-ftpd`, an authenticated explicit-TLS FTPS login driven by the authority's own `openssl s_client`; `fixture:isync`, a local IMAP4rev1-over-TLS peer the subject `mbsync` syncs from); and it admits a bounded, deterministic batch of recipe-less counted families whose pinned release tarball ships a build entry point the venue can execute. The criterion is **empirical**, not a heuristic: the batch is the families actually built and measured, and the candidates the venue could not build are recorded with the reason. `forensics/tools/downstream_remediation.py` records it: for every blocker class 24.16 named it reads the preserved pre-remediation baseline `forensics/downstream/blocker-remediation-baseline.json` as `before`, re-derives the re-measured `after` from the committed planes through 24.16's own code path, computes the `movement`, and names the exact recipe/flag/fixture each `action` applied. **Before/after are measured, never typed**: a resolving action must show its families moved in the re-measured planes, a still-blocked action must show they did not and name its missing tool, and a movement figure that disagrees with the planes is a finding. It executes nothing, so it is declared `metadata_only` in the container manifest. The correction is that the stratum's working set is now **seventeen** contract units, not sixteen: §1's count, §2's row and §3.9 are updated, `phase24_obligations.py`'s `COURT_UNITS` gains the unit, and `phase_state.py`'s ledger note names seventeen. The seal cites the record and its measured movement, so a seal that has lost the remediation fails rather than passing as a smaller green run. `RT-BLOCKER-REMEDIATION` and `DOWNSTREAM-1000-SEAL` check the correction rather than this paragraph asserting it.
 
+**4.14 The recipe-admission campaign is a new contract unit after the seal, and it re-opens the stratum once more (24.18).** 24.16 named the dominant mover -- `no-admitted-recipe` -- and 24.17 acted on the recipe-backed blockers and a first bounded batch, but the breadth mover itself was untouched: its recipe queue is a labelled heuristic. This subphase adds an eighteenth unit -- `recipe-campaign`, closed by the `RT-RECIPE-CAMPAIGN` court -- so a complete stratum is re-opened while the new court is unregistered and closes again when it passes. It attacks the breadth mover **empirically**: over the recipe-less counted families it builds a candidate list deterministically from the committed evidence (the frozen 24.16 recipe-queue order, a stated heuristic preferring well-known direct OpenSSL consumers with stable release tarballs), finds each candidate's official release tarball, pins its URL and SHA-256, extracts it, and classifies its build system empirically; it admits only the venue-buildable ones into the **shared recipe catalogue** under the identical-build-intent rule, and it records **every** attempt -- admitted or not -- with its outcome, its failure class and its reason, so the campaign's yield is visible and a recipe that was not built is never admitted. The measured batch attempts **69** recipe-less counted families and admits **10** (each really built and linked against both subjects), moving the frozen P1000's measurable count, candidate-linked count and `DROP_IN_PASS` count from **18 to 28** and its `no-admitted-recipe` count from **980 to 970**. `forensics/tools/downstream_recipe_campaign.py` records it: the rule (the priority rule, the empirical admission criterion, the identical-build-intent rule and the local-only/normalisation policy), the attempts, the admitted recipes, the counts and the movement; it reads the preserved pre-campaign baseline `forensics/downstream/recipe-campaign-baseline.json` as `before` and re-derives the re-measured `after` from the committed planes through 24.16's own code path, so **before/after are measured, never typed**. The recipes it admits are built by `downstream_build_link.py`, which imports its catalogue, so the catalogue and the record cannot disagree about which families were admitted. It executes nothing, so it is declared `metadata_only` in the container manifest. The correction is that the stratum's working set is now **eighteen** contract units, not seventeen: §1's count, §2's row and §3.9 are updated, `phase24_obligations.py`'s `COURT_UNITS` gains the unit, and `phase_state.py`'s ledger note names eighteen. The seal cites the record and its measured movement, so a seal that has lost the campaign fails rather than passing as a smaller green run. `RT-RECIPE-CAMPAIGN` and `DOWNSTREAM-1000-SEAL` check the correction rather than this paragraph asserting it.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 23's process unchanged: a subphase lands its code, its court
@@ -360,7 +365,7 @@ where it has one; and an artefact that a source change moves is regenerated in t
 `docs/DECISIONS.md` is append-only and this document is not a decision record.
 
 **This plan's own boundaries are the evidence plane's, and it will correct them.** The subphase
-table above was written from the seventeen-unit measurement in §1. A subphase that discovers its unit
+table above was written from the eighteen-unit measurement in §1. A subphase that discovers its unit
 is elsewhere records that rather than forcing the row. The activation is recorded in
 `docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md` itself and in `forensics/phase-state.json`.
 
@@ -371,5 +376,5 @@ ledger's implemented list is empty by measurement, not by omission.
 
 **Open exports (checked against the ledger):**
 
-None. This stratum owns no export, so its obligations are the seventeen downstream 1000 contract
+None. This stratum owns no export, so its obligations are the eighteen downstream 1000 contract
 units, recorded in the ledger's contract-unit block rather than as open exports.

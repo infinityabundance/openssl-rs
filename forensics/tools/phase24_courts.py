@@ -315,6 +315,14 @@ import render_biggest_movers as biggest_movers  # noqa: E402
 # container manifest.
 import downstream_remediation  # noqa: E402
 
+# The 24.18 recipe-admission campaign, imported so the court re-derives the whole record (the
+# attempts, the admitted recipes, the counts and the movement) from the committed Phase-24 planes and
+# the preserved pre-campaign baseline, and re-runs its findings and sensitivity control, through the
+# same code path the artefact was produced by. The tool executes nothing (the recipes it admits are
+# built by `downstream_build_link.py`, which imports its catalogue), so it is declared
+# `metadata_only` in the container manifest.
+import downstream_recipe_campaign  # noqa: E402
+
 # The generated seal census, imported for the one function that renders the census's biggest-movers
 # section, so the court re-derives the markers the census must carry rather than restating them. It
 # writes no Phase-24 artefact and reads no Phase-24 state.
@@ -432,6 +440,13 @@ BLOCKER_REMEDIATION_BASELINE = (REPO_ROOT / "forensics" / "downstream" /
                                 "blocker-remediation-baseline.json")
 BLOCKER_REMEDIATION_COURT = "RT-BLOCKER-REMEDIATION"
 
+# 24.18's subject: the recipe-admission campaign record, the preserved pre-campaign baseline it reads,
+# the attempt record it carries and the movement it measures. The court reads them and re-derives the
+# whole record; it never rebuilds and never launches anything.
+RECIPE_CAMPAIGN = REPO_ROOT / "forensics" / "downstream" / "recipe-campaign.json"
+RECIPE_CAMPAIGN_BASELINE = REPO_ROOT / "forensics" / "downstream" / "recipe-campaign-baseline.json"
+RECIPE_CAMPAIGN_COURT = "RT-RECIPE-CAMPAIGN"
+
 # 24.15's subject: the seal, and the closure of the atlas as the stratum's claim. It reads the
 # committed reconciliation, the final P1000 run, the candidate freeze and the FRF closure -- never
 # the derived state of its own stratum (`forensics/phase-state.json`, the obligations ledger or
@@ -468,6 +483,7 @@ SEAL_REQUIRED_MARKERS = (
     "docs/SEAL-CENSUS.md",
     biggest_movers.REPORT_PATH,
     "forensics/downstream/blocker-remediation.json",
+    "forensics/downstream/recipe-campaign.json",
     "DOWNSTREAM-1000-SEAL",
     "the four non-claims",
     "a selected population is not a random sample",
@@ -503,6 +519,7 @@ COURTS: list[tuple[str, str]] = [
     (FRF_CLOSURE_COURT, "_frf_closure_court"),
     (BLOCKER_LEVERAGE_COURT, "_blocker_leverage_court"),
     (BLOCKER_REMEDIATION_COURT, "_blocker_remediation_court"),
+    (RECIPE_CAMPAIGN_COURT, "_recipe_campaign_court"),
     (SEAL_COURT, "_downstream_1000_seal_court"),
 ]
 
@@ -2281,6 +2298,100 @@ def _blocker_remediation_court(name: str) -> dict:
         },
         "movement": body.get("movement") or {},
         "new_recipes": [r.get("family") for r in body.get("new_recipes") or []],
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
+# --------------------------------------------------------------------------------------------
+# 24.18 -- the recipe-admission campaign: the empirical admission record
+# --------------------------------------------------------------------------------------------
+
+
+def _recipe_campaign_court(name: str) -> dict:
+    """`RT-RECIPE-CAMPAIGN`: 24.18's court, the recipe-admission campaign record.
+
+    Stages no probe. It reads the committed record `forensics/downstream/recipe-campaign.json`, its
+    preserved pre-campaign baseline `forensics/downstream/recipe-campaign-baseline.json`, the
+    committed build/link atlas and final P1000 run, and re-derives the whole record through the same
+    code path it was produced by, re-running its findings and sensitivity control. It establishes
+    that every attempted family is accounted for exactly once; that every admitted recipe was
+    **really built** against both subjects (the committed atlas shows both linked it) and that a
+    non-admitted family carries a reason; that the admitted recipes are exactly the attempts marked
+    admitted and exactly the module catalogue the build/link tool imports; that the movement is the
+    subtraction of the preserved before and the derived after; and that the counts are derived rather
+    than typed. Five seeded mutations are each detected with specificity holding. A passing record is
+    an **instrument**: it says what was admitted and what the planes then measured, not that the
+    population now passes, and its yield is a property of this venue and this batch, not of the whole
+    980.
+    """
+    problems: list[str] = []
+    for path in (RECIPE_CAMPAIGN, RECIPE_CAMPAIGN_BASELINE, SHARED_BLOCKERS, BUILD_LINK_ATLAS,
+                 P1000_RUN, FAMILY_FREEZE, FAMILIES):
+        if not path.is_file():
+            problems.append(f"{rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    committed = json.loads(RECIPE_CAMPAIGN.read_text(encoding="utf-8"))
+    body = _seal_body(committed)
+    inputs = downstream_recipe_campaign.load_inputs()
+
+    findings: list[str] = []
+    if committed.get("body_hash") != content_hash(body):
+        findings.append("the recorded recipe-campaign body_hash does not match its body")
+    derived = downstream_recipe_campaign.derive_campaign(inputs)
+    if content_hash(derived) != content_hash(body):
+        findings.append("the committed campaign record does not reproduce from the planes")
+    findings += downstream_recipe_campaign.campaign_findings(inputs, body)
+    control = downstream_recipe_campaign.campaign_sensitivity_control(inputs, body)
+
+    counts = body.get("counts") or {}
+    movement = body.get("movement") or {}
+    admitted = body.get("admitted_recipes") or []
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/recipe-campaign.json and its preserved "
+            "pre-campaign baseline forensics/downstream/recipe-campaign-baseline.json, re-derives the "
+            "whole record from the committed Phase-24 planes (the build/link and runtime/functional "
+            "atlases, the final P1000 run and the frozen P1000) through "
+            "forensics/tools/downstream_recipe_campaign.py, and re-runs its findings and sensitivity "
+            "control, without rebuilding and without launching anything. It establishes that every "
+            "attempted family is accounted for exactly once; that every admitted recipe was really "
+            "built against both subjects; that a non-admitted family carries a reason; that the "
+            "admitted recipes are exactly the attempts marked admitted and exactly the module "
+            "catalogue the build/link tool imports; that the movement is the subtraction of the "
+            "preserved before and the derived after; and that the counts are derived rather than "
+            "typed. A rejected family marked admitted, a dropped admitted recipe, a movement figure "
+            "disagreeing with the planes, a non-admitted family stripped of its reason and a typed "
+            "count are each detected with specificity holding "
+            "(docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 4.14 and 3.8)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the recipe-campaign court reads committed evidence and the record derived from it and "
+            "stages no artifacts/phase24/probes/<probe>.{authority,candidate} pair, so it takes no "
+            "transcript to diff and carries no FRF declaration"
+        ),
+        "record": rel(RECIPE_CAMPAIGN),
+        "baseline": rel(RECIPE_CAMPAIGN_BASELINE),
+        "counts": {
+            "attempted": counts.get("attempted", 0),
+            "admitted": counts.get("admitted", 0),
+            "rejected": counts.get("rejected", 0),
+            "built": counts.get("built", 0),
+            "linked": counts.get("linked", 0),
+            "authority_linked": counts.get("authority_linked", 0),
+            "yield": counts.get("yield") or {},
+        },
+        "movement": movement,
+        "admitted_families": [r.get("family") for r in admitted],
         "findings": findings,
         "control": control,
         "problems": [],

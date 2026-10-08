@@ -993,17 +993,17 @@
           "specificity_holds": true
         },
         "counts": {
-          "authority_linked": 18,
-          "candidate_built": 18,
-          "candidate_configured": 18,
+          "authority_linked": 28,
+          "candidate_built": 28,
+          "candidate_configured": 28,
           "candidate_failed": 2,
-          "candidate_linkage_proven": 18,
-          "candidate_linked": 18,
+          "candidate_linkage_proven": 28,
+          "candidate_linked": 28,
           "candidate_specific_patch_count": 0,
-          "no_recipe": 980,
+          "no_recipe": 970,
           "p1000": 1000,
           "rows": 2000,
-          "with_recipe": 20
+          "with_recipe": 30
         },
         "court": "RT-BUILD-LINK-ATLAS",
         "examples": {
@@ -1064,6 +1064,19 @@
                 "OPENSSL_3.0.0"
               ]
             },
+            "fetchmail": {
+              "default_resolution": {
+                "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+                "libssl.so.3": "/work/artifacts/phase2/install/lib/libssl.so.3"
+              },
+              "resolved": {
+                "libcrypto.so.3": "prefix:libcrypto.so.3",
+                "libssl.so.3": "prefix:libssl.so.3"
+              },
+              "version_needs": [
+                "OPENSSL_3.0.0"
+              ]
+            },
             "fossil": {
               "default_resolution": {
                 "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
@@ -1089,6 +1102,30 @@
               "version_needs": [
                 "OPENSSL_3.0.0",
                 "OPENSSL_3.2.0"
+              ]
+            },
+            "hiredis-ssl": {
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+                "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+              },
+              "resolved": {
+                "libcrypto.so.3": "prefix:libcrypto.so.3",
+                "libssl.so.3": "prefix:libssl.so.3"
+              },
+              "version_needs": [
+                "OPENSSL_3.0.0"
+              ]
+            },
+            "iperf3": {
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3"
+              },
+              "resolved": {
+                "libcrypto.so.3": "prefix:libcrypto.so.3"
+              },
+              "version_needs": [
+                "OPENSSL_3.0.0"
               ]
             },
             "isync": {
@@ -1126,7 +1163,31 @@
                 "OPENSSL_3.0.0"
               ]
             },
+            "libarchive": {
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3"
+              },
+              "resolved": {
+                "libcrypto.so.3": "prefix:libcrypto.so.3"
+              },
+              "version_needs": [
+                "OPENSSL_3.0.0"
+              ]
+            },
             "libevent": {
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+                "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+              },
+              "resolved": {
+                "libcrypto.so.3": "prefix:libcrypto.so.3",
+                "libssl.so.3": "prefix:libssl.so.3"
+              },
+              "version_needs": [
+                "OPENSSL_3.0.0"
+              ]
+            },
+            "librdkafka": {
               "default_resolution": {
                 "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
                 "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
@@ -1153,6 +1214,19 @@
               ]
             },
             "monit": {
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+                "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+              },
+              "resolved": {
+                "libcrypto.so.3": "prefix:libcrypto.so.3",
+                "libssl.so.3": "prefix:libssl.so.3"
+              },
+              "version_needs": [
+                "OPENSSL_3.0.0"
+              ]
+            },
+            "mosquitto": {
               "default_resolution": {
                 "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
                 "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
@@ -1203,6 +1277,19 @@
                 "OPENSSL_3.4.0"
               ]
             },
+            "proxytunnel": {
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+                "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+              },
+              "resolved": {
+                "libcrypto.so.3": "prefix:libcrypto.so.3",
+                "libssl.so.3": "prefix:libssl.so.3"
+              },
+              "version_needs": [
+                "OPENSSL_3.0.0"
+              ]
+            },
             "pure-ftpd": {
               "default_resolution": {
                 "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
@@ -1242,6 +1329,19 @@
                 "OPENSSL_3.0.0"
               ]
             },
+            "sslscan": {
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+                "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+              },
+              "resolved": {
+                "libcrypto.so.3": "prefix:libcrypto.so.3",
+                "libssl.so.3": "prefix:libssl.so.3"
+              },
+              "version_needs": [
+                "OPENSSL_3.0.0"
+              ]
+            },
             "stunnel": {
               "default_resolution": {
                 "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
@@ -1254,6 +1354,30 @@
               "version_needs": [
                 "OPENSSL_3.0.0",
                 "OPENSSL_3.6.0"
+              ]
+            },
+            "tinc": {
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3"
+              },
+              "resolved": {
+                "libcrypto.so.3": "prefix:libcrypto.so.3"
+              },
+              "version_needs": [
+                "OPENSSL_3.0.0"
+              ]
+            },
+            "tnftp": {
+              "default_resolution": {
+                "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+                "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+              },
+              "resolved": {
+                "libcrypto.so.3": "prefix:libcrypto.so.3",
+                "libssl.so.3": "prefix:libssl.so.3"
+              },
+              "version_needs": [
+                "OPENSSL_3.0.0"
               ]
             }
           },
@@ -1320,14 +1444,14 @@
           "candidate_below_baseline": 0,
           "candidate_functional": 8,
           "candidate_loaded": 8,
-          "candidate_reaches_baseline": 20,
-          "candidate_reaches_linked_baseline": 18,
+          "candidate_reaches_baseline": 30,
+          "candidate_reaches_linked_baseline": 28,
           "candidate_runtime": 8,
           "candidate_specific_patch_count": 0,
-          "no_recipe": 980,
+          "no_recipe": 970,
           "p1000": 1000,
           "rows": 2000,
-          "with_recipe": 20
+          "with_recipe": 30
         },
         "court": "RT-RUNTIME-FUNCTIONAL-ATLAS",
         "examples": {
@@ -1335,23 +1459,33 @@
             "family:curl": "L7-functional",
             "family:cyrus-sasl": "L4-linked",
             "family:dovecot": "L4-linked",
+            "family:fetchmail": "L4-linked",
             "family:fossil": "L4-linked",
             "family:haproxy": "L7-functional",
+            "family:hiredis-ssl": "L4-linked",
+            "family:iperf3": "L4-linked",
             "family:isync": "L7-functional",
             "family:kmod": "L4-linked",
             "family:ldns": "L4-linked",
+            "family:libarchive": "L4-linked",
             "family:libevent": "L4-linked",
+            "family:librdkafka": "L4-linked",
             "family:libssh": "L1-admitted-source",
             "family:lighttpd": "L1-admitted-source",
             "family:links": "L4-linked",
             "family:monit": "L7-functional",
+            "family:mosquitto": "L4-linked",
             "family:nginx": "L7-functional",
             "family:openssh": "L7-functional",
             "family:openvpn": "L4-linked",
+            "family:proxytunnel": "L4-linked",
             "family:pure-ftpd": "L7-functional",
             "family:redis": "L7-functional",
             "family:socat": "L4-linked",
-            "family:stunnel": "L4-linked"
+            "family:sslscan": "L4-linked",
+            "family:stunnel": "L4-linked",
+            "family:tinc": "L4-linked",
+            "family:tnftp": "L4-linked"
           },
           "candidate_failures": [
             {
@@ -1576,27 +1710,27 @@
         "counts": {
           "candidate_specific": 0,
           "divergences": 0,
-          "intentional_out_of_scope": 20,
-          "leftovers": 3948,
+          "intentional_out_of_scope": 40,
+          "leftovers": 3928,
           "minimized": 0,
           "unclassified": 0,
-          "venue_limited": 3928
+          "venue_limited": 3888
         },
         "court": "RT-FAILURE-MINIMIZATION",
         "examples": {
           "by_disposition": {
-            "out-of-scope": 20,
-            "venue-limited": 3928
+            "out-of-scope": 40,
+            "venue-limited": 3888
           },
           "by_failure_class": {
-            "acquire-failure": 3920,
+            "acquire-failure": 3880,
             "configure-failure": 4,
-            "harness-failure": 20,
+            "harness-failure": 40,
             "link-failure": 4
           },
           "by_residual_class": {
-            "out-of-scope": 20,
-            "unavailable": 3920,
+            "out-of-scope": 40,
+            "unavailable": 3880,
             "unbuildable": 4,
             "unlinked": 4
           },
@@ -2657,7 +2791,7 @@
             "present": true,
             "sha256": "9d746f0900a36f97a1ef19bc12b34759717ebf8f77895f375b442369e402ce33"
           },
-          "source_commit": "d9dd8ef8847be7988620ec08268d10299c2620cf"
+          "source_commit": "c34793e57cae9275b2b46e9a7b1df6530ae281a8"
         },
         "control": {
           "baseline_findings": 0,
@@ -2689,7 +2823,7 @@
           "holdout_families": 200,
           "measurable_families": 1,
           "recipe_backed_families": 1,
-          "reruns": 2,
+          "reruns": 3,
           "rows": 400,
           "venue_limited_families": 199,
           "verdicts": {
@@ -2818,7 +2952,7 @@
               "present": true,
               "sha256": "9d746f0900a36f97a1ef19bc12b34759717ebf8f77895f375b442369e402ce33"
             },
-            "source_commit": "d9dd8ef8847be7988620ec08268d10299c2620cf"
+            "source_commit": "c34793e57cae9275b2b46e9a7b1df6530ae281a8"
           },
           "candidate_specific_patch_count": 0,
           "first_run": {
@@ -2969,6 +3103,11 @@
               "candidate_identity_hash": "de196adbd84f63c4d1f931a8982cb57df2ec6e20361d6dd25ce72d23d6694e8f",
               "first_run_hash": "93f2c518f214e72aca2ae3e462aa596324552d5ead9a1d9468bcf381196934f7",
               "rerun_index": 2
+            },
+            {
+              "candidate_identity_hash": "de196adbd84f63c4d1f931a8982cb57df2ec6e20361d6dd25ce72d23d6694e8f",
+              "first_run_hash": "93f2c518f214e72aca2ae3e462aa596324552d5ead9a1d9468bcf381196934f7",
+              "rerun_index": 3
             }
           ],
           "rule": {
@@ -3064,7 +3203,7 @@
             "present": true,
             "sha256": "9d746f0900a36f97a1ef19bc12b34759717ebf8f77895f375b442369e402ce33"
           },
-          "source_commit": "d9dd8ef8847be7988620ec08268d10299c2620cf"
+          "source_commit": "c34793e57cae9275b2b46e9a7b1df6530ae281a8"
         },
         "control": {
           "baseline_findings": 0,
@@ -3084,16 +3223,16 @@
         "counts": {
           "candidate_specific_patch_count": 0,
           "families": 1000,
-          "measurable_families": 18,
-          "measurable_reaches_baseline": 18,
-          "not_applicable_families": 982,
-          "recipe_backed_families": 20,
+          "measurable_families": 28,
+          "measurable_reaches_baseline": 28,
+          "not_applicable_families": 972,
+          "recipe_backed_families": 30,
           "rows": 2000,
           "verdicts": {
             "DROP_IN_FAIL": 0,
-            "DROP_IN_NOT_APPLICABLE": 982,
+            "DROP_IN_NOT_APPLICABLE": 972,
             "DROP_IN_PARTIAL": 0,
-            "DROP_IN_PASS": 18,
+            "DROP_IN_PASS": 28,
             "DROP_IN_UNKNOWN": 0
           }
         },
@@ -3128,42 +3267,42 @@
               "present": true,
               "sha256": "9d746f0900a36f97a1ef19bc12b34759717ebf8f77895f375b442369e402ce33"
             },
-            "source_commit": "d9dd8ef8847be7988620ec08268d10299c2620cf"
+            "source_commit": "c34793e57cae9275b2b46e9a7b1df6530ae281a8"
           },
           "counts": {
             "candidate_specific_patch_count": 0,
             "families": 1000,
-            "measurable_families": 18,
-            "measurable_reaches_baseline": 18,
-            "not_applicable_families": 982,
-            "recipe_backed_families": 20,
+            "measurable_families": 28,
+            "measurable_reaches_baseline": 28,
+            "not_applicable_families": 972,
+            "recipe_backed_families": 30,
             "rows": 2000,
             "verdicts": {
               "DROP_IN_FAIL": 0,
-              "DROP_IN_NOT_APPLICABLE": 982,
+              "DROP_IN_NOT_APPLICABLE": 972,
               "DROP_IN_PARTIAL": 0,
-              "DROP_IN_PASS": 18,
+              "DROP_IN_PASS": 28,
               "DROP_IN_UNKNOWN": 0
             }
           },
           "ladder": {
             "families": 1000,
             "levels": {
-              "L2-configured": 18,
-              "L3-built": 18,
-              "L4-linked": 18,
+              "L2-configured": 28,
+              "L3-built": 28,
+              "L4-linked": 28,
               "L5-loaded": 8,
               "L6-runtime": 8,
               "L7-functional": 8
             },
-            "measurable_families": 18,
-            "not_applicable_families": 982,
+            "measurable_families": 28,
+            "not_applicable_families": 972,
             "population": "the frozen P1000",
             "verdicts": {
               "DROP_IN_FAIL": 0,
-              "DROP_IN_NOT_APPLICABLE": 982,
+              "DROP_IN_NOT_APPLICABLE": 972,
               "DROP_IN_PARTIAL": 0,
-              "DROP_IN_PASS": 18,
+              "DROP_IN_PASS": 28,
               "DROP_IN_UNKNOWN": 0
             }
           },
@@ -3193,7 +3332,7 @@
               "what_ran": {
                 "level": "L7-functional",
                 "outcome": "reached",
-                "transcript_sha256": "2aa0ab0eafc3c9111d99afb963ad5c9d1e35207573817c8293acb3ea98a57139"
+                "transcript_sha256": "6f77aea493c4c0629c6f40f18ba04becd46c5319d5cf21912bcadf37e5292429"
               },
               "which_source": {
                 "recipe_id": "recipe:curl:8.10.1",
@@ -3376,6 +3515,47 @@
                   "soname": "libssl.so.3"
                 }
               ],
+              "canonical_name": "librdkafka",
+              "family_id": "family:librdkafka",
+              "openssl_linkage": "direct",
+              "p1000_rank": 21,
+              "passed_against_the_authority": {
+                "authority_applicable_level": "L4-linked",
+                "reaches_baseline": true
+              },
+              "residual": "none",
+              "result": "DROP_IN_PASS",
+              "surface_used": "src/librdkafka.so.1",
+              "what_ran": {
+                "level": "L4-linked",
+                "outcome": "reached",
+                "transcript_sha256": ""
+              },
+              "which_source": {
+                "recipe_id": "recipe:librdkafka:2.6.0",
+                "source_sha256": "abe0212ecd3e7ed3c4818a4f2baf7bf916e845e902bb15ae48834ca2d36ac745",
+                "source_url": "https://github.com/confluentinc/librdkafka/archive/refs/tags/v2.6.0.tar.gz",
+                "specimen_id": "specimen:librdkafka:2.6.0"
+              },
+              "why_selected": {
+                "distro_breadth": 3,
+                "family_role": "p1000",
+                "popularity": 0,
+                "selection_status": "selected",
+                "source_breadth": 4
+              }
+            },
+            {
+              "candidate_libs_loaded": [
+                {
+                  "resolved": "prefix:libcrypto.so.3",
+                  "soname": "libcrypto.so.3"
+                },
+                {
+                  "resolved": "prefix:libssl.so.3",
+                  "soname": "libssl.so.3"
+                }
+              ],
               "canonical_name": "monit",
               "family_id": "family:monit",
               "openssl_linkage": "direct",
@@ -3411,70 +3591,33 @@
                 {
                   "resolved": "prefix:libcrypto.so.3",
                   "soname": "libcrypto.so.3"
-                }
-              ],
-              "canonical_name": "openssh",
-              "family_id": "family:openssh",
-              "openssl_linkage": "direct",
-              "p1000_rank": 34,
-              "passed_against_the_authority": {
-                "authority_applicable_level": "L7-functional",
-                "reaches_baseline": true
-              },
-              "residual": "none",
-              "result": "DROP_IN_PASS",
-              "surface_used": "openssh: ssh-keygen Ed25519 sign/verify (libcrypto)",
-              "what_ran": {
-                "level": "L7-functional",
-                "outcome": "reached",
-                "transcript_sha256": "f27929a6326a0bdcc82b4c495a1dc33dbdde9e46b7bfb53d624447c0536a3789"
-              },
-              "which_source": {
-                "recipe_id": "recipe:openssh:9.9p1",
-                "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
-                "source_url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz",
-                "specimen_id": "specimen:openssh:9.9p1"
-              },
-              "why_selected": {
-                "distro_breadth": 3,
-                "family_role": "p1000",
-                "popularity": 0,
-                "selection_status": "selected",
-                "source_breadth": 4
-              }
-            },
-            {
-              "candidate_libs_loaded": [
-                {
-                  "resolved": "prefix:libcrypto.so.3",
-                  "soname": "libcrypto.so.3"
                 },
                 {
                   "resolved": "prefix:libssl.so.3",
                   "soname": "libssl.so.3"
                 }
               ],
-              "canonical_name": "openvpn",
-              "family_id": "family:openvpn",
+              "canonical_name": "mosquitto",
+              "family_id": "family:mosquitto",
               "openssl_linkage": "direct",
-              "p1000_rank": 35,
+              "p1000_rank": 28,
               "passed_against_the_authority": {
                 "authority_applicable_level": "L4-linked",
                 "reaches_baseline": true
               },
               "residual": "none",
               "result": "DROP_IN_PASS",
-              "surface_used": "src/openvpn/openvpn",
+              "surface_used": "lib/libmosquitto.so.1",
               "what_ran": {
                 "level": "L4-linked",
                 "outcome": "reached",
                 "transcript_sha256": ""
               },
               "which_source": {
-                "recipe_id": "recipe:openvpn:2.5.10",
-                "source_sha256": "d1d38a3fc7e200f9221f988ef1cc9c7a7d62b69bb5fa52742da1229e5f24d36f",
-                "source_url": "https://swupdate.openvpn.net/community/releases/openvpn-2.5.10.tar.gz",
-                "specimen_id": "specimen:openvpn:2.5.10"
+                "recipe_id": "recipe:mosquitto:2.0.20",
+                "source_sha256": "ebd07d89d2a446a7f74100ad51272e4a8bf300b61634a7812e19f068f2759de8",
+                "source_url": "https://mosquitto.org/files/source/mosquitto-2.0.20.tar.gz",
+                "specimen_id": "specimen:mosquitto:2.0.20"
               },
               "why_selected": {
                 "distro_breadth": 3,
@@ -3513,6 +3656,14 @@
             {
               "authority_applicable_level": "L4-linked",
               "candidate_level": "L4-linked",
+              "family": "fetchmail",
+              "reason": null,
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
               "family": "fossil",
               "reason": null,
               "residual_class": "none",
@@ -3522,6 +3673,22 @@
               "authority_applicable_level": "L7-functional",
               "candidate_level": "L7-functional",
               "family": "haproxy",
+              "reason": null,
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
+              "family": "hiredis-ssl",
+              "reason": null,
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
+              "family": "iperf3",
               "reason": null,
               "residual_class": "none",
               "verdict": "DROP_IN_PASS"
@@ -3553,7 +3720,23 @@
             {
               "authority_applicable_level": "L4-linked",
               "candidate_level": "L4-linked",
+              "family": "libarchive",
+              "reason": null,
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
               "family": "libevent",
+              "reason": null,
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
+              "family": "librdkafka",
               "reason": null,
               "residual_class": "none",
               "verdict": "DROP_IN_PASS"
@@ -3570,6 +3753,14 @@
               "authority_applicable_level": "L7-functional",
               "candidate_level": "L7-functional",
               "family": "monit",
+              "reason": null,
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
+              "family": "mosquitto",
               "reason": null,
               "residual_class": "none",
               "verdict": "DROP_IN_PASS"
@@ -3594,6 +3785,14 @@
               "authority_applicable_level": "L4-linked",
               "candidate_level": "L4-linked",
               "family": "openvpn",
+              "reason": null,
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
+              "family": "proxytunnel",
               "reason": null,
               "residual_class": "none",
               "verdict": "DROP_IN_PASS"
@@ -3625,7 +3824,31 @@
             {
               "authority_applicable_level": "L4-linked",
               "candidate_level": "L4-linked",
+              "family": "sslscan",
+              "reason": null,
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
               "family": "stunnel",
+              "reason": null,
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
+              "family": "tinc",
+              "reason": null,
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
+              "family": "tnftp",
               "reason": null,
               "residual_class": "none",
               "verdict": "DROP_IN_PASS"
@@ -3700,21 +3923,21 @@
         "ladder": {
           "families": 1000,
           "levels": {
-            "L2-configured": 18,
-            "L3-built": 18,
-            "L4-linked": 18,
+            "L2-configured": 28,
+            "L3-built": 28,
+            "L4-linked": 28,
             "L5-loaded": 8,
             "L6-runtime": 8,
             "L7-functional": 8
           },
-          "measurable_families": 18,
-          "not_applicable_families": 982,
+          "measurable_families": 28,
+          "not_applicable_families": 972,
           "population": "the frozen P1000",
           "verdicts": {
             "DROP_IN_FAIL": 0,
-            "DROP_IN_NOT_APPLICABLE": 982,
+            "DROP_IN_NOT_APPLICABLE": 972,
             "DROP_IN_PARTIAL": 0,
-            "DROP_IN_PASS": 18,
+            "DROP_IN_PASS": 28,
             "DROP_IN_UNKNOWN": 0
           }
         },
@@ -3748,28 +3971,28 @@
           "coverage_symbols": 600,
           "distinct_stressors": 3,
           "failures_hostility": 2,
-          "failures_p1000": 3948,
-          "failures_preserved": 3950,
+          "failures_p1000": 3928,
+          "failures_preserved": 3930,
           "families": 1000,
           "marginal_consumers": 6,
-          "measurable_families": 18,
-          "not_applicable_families": 982,
+          "measurable_families": 28,
+          "not_applicable_families": 972,
           "phase22_reachable_entities": 35432,
-          "residuals_total": 11393,
+          "residuals_total": 11373,
           "residuals_unclassified": 0,
           "residuals_unknown": 0,
-          "residuals_unresolved": 11242,
+          "residuals_unresolved": 11172,
           "status": {
             "FAIL": 0,
-            "NOT_APPLICABLE": 982,
+            "NOT_APPLICABLE": 972,
             "PARTIAL": 0,
-            "PASS": 18,
+            "PASS": 28,
             "UNKNOWN": 0
           },
           "usage_clusters": 3,
           "verdicts": {
-            "DROP_IN_NOT_APPLICABLE": 982,
-            "DROP_IN_PASS": 18
+            "DROP_IN_NOT_APPLICABLE": 972,
+            "DROP_IN_PASS": 28
           }
         },
         "court": "RT-ATLAS-RECONCILIATION",
@@ -3909,47 +4132,47 @@
             ],
             "p1000": {
               "by_disposition": {
-                "out-of-scope": 20,
-                "venue-limited": 3928
+                "out-of-scope": 40,
+                "venue-limited": 3888
               },
               "by_failure_class": {
-                "acquire-failure": 3920,
+                "acquire-failure": 3880,
                 "configure-failure": 4,
-                "harness-failure": 20,
+                "harness-failure": 40,
                 "link-failure": 4
               },
               "by_residual_class": {
-                "out-of-scope": 20,
-                "unavailable": 3920,
+                "out-of-scope": 40,
+                "unavailable": 3880,
                 "unbuildable": 4,
                 "unlinked": 4
               },
               "candidate_specific": 0,
               "divergences": 0,
               "minimized": 0,
-              "preserved": 3948,
-              "total": 3948
+              "preserved": 3928,
+              "total": 3928
             }
           },
           "ladder": {
             "families": 1000,
             "levels": {
-              "L2-configured": 18,
-              "L3-built": 18,
-              "L4-linked": 18,
+              "L2-configured": 28,
+              "L3-built": 28,
+              "L4-linked": 28,
               "L5-loaded": 8,
               "L6-runtime": 8,
               "L7-functional": 8
             },
-            "measurable_families": 18,
-            "not_applicable_families": 982,
+            "measurable_families": 28,
+            "not_applicable_families": 972,
             "population": "the frozen P1000",
             "raw_family_count": 1000,
             "status": {
               "FAIL": 0,
-              "NOT_APPLICABLE": 982,
+              "NOT_APPLICABLE": 972,
               "PARTIAL": 0,
-              "PASS": 18,
+              "PASS": 28,
               "UNKNOWN": 0
             },
             "unknown": 0
@@ -3964,14 +4187,14 @@
               "rate": 0.0
             },
             "PASS": {
-              "count": 18,
+              "count": 28,
               "rate": 1.0
             },
             "UNKNOWN": {
               "count": 0,
               "rate": 0.0
             },
-            "denominator": 18,
+            "denominator": 28,
             "note": "the drop-in question was posed for this many of the counted families: NOT_APPLICABLE is not a pass"
           },
           "measured_verdicts": [
@@ -4011,9 +4234,23 @@
               "verdict": "DROP_IN_PASS"
             },
             {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
+              "canonical_name": "librdkafka",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
               "authority_applicable_level": "L7-functional",
               "candidate_level": "L7-functional",
               "canonical_name": "monit",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
+              "canonical_name": "mosquitto",
               "residual_class": "none",
               "verdict": "DROP_IN_PASS"
             },
@@ -4048,6 +4285,13 @@
             {
               "authority_applicable_level": "L4-linked",
               "candidate_level": "L4-linked",
+              "canonical_name": "fetchmail",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
               "canonical_name": "fossil",
               "residual_class": "none",
               "verdict": "DROP_IN_PASS"
@@ -4076,6 +4320,13 @@
             {
               "authority_applicable_level": "L4-linked",
               "candidate_level": "L4-linked",
+              "canonical_name": "tinc",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
               "canonical_name": "ldns",
               "residual_class": "none",
               "verdict": "DROP_IN_PASS"
@@ -4090,6 +4341,34 @@
             {
               "authority_applicable_level": "L4-linked",
               "candidate_level": "L4-linked",
+              "canonical_name": "sslscan",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
+              "canonical_name": "iperf3",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
+              "canonical_name": "libarchive",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
+              "canonical_name": "proxytunnel",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
               "canonical_name": "stunnel",
               "residual_class": "none",
               "verdict": "DROP_IN_PASS"
@@ -4097,7 +4376,21 @@
             {
               "authority_applicable_level": "L4-linked",
               "candidate_level": "L4-linked",
+              "canonical_name": "tnftp",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
               "canonical_name": "cyrus-sasl",
+              "residual_class": "none",
+              "verdict": "DROP_IN_PASS"
+            },
+            {
+              "authority_applicable_level": "L4-linked",
+              "candidate_level": "L4-linked",
+              "canonical_name": "hiredis-ssl",
               "residual_class": "none",
               "verdict": "DROP_IN_PASS"
             }
@@ -4171,28 +4464,28 @@
             "universe": 2100
           },
           "property_findings": [
-            "982/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 18 of 1000, so the drop-in rate is measured over 18 families and is not a population-wide rate",
+            "972/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 28 of 1000, so the drop-in rate is measured over 28 families and is not a population-wide rate",
             "the measured set exercised 600/6499 exported symbols, 42/81 public headers and 39/152 API families, so the atlas speaks for a thin slice of the authority's public surface",
-            "3948 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate",
-            "11242 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty"
+            "3928 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate",
+            "11172 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty"
           ],
           "residuals": {
             "histogram": {
               "authority-unsupported": 0,
               "candidate-patch-required": 0,
               "functional-divergence": 1,
-              "none": 151,
-              "out-of-scope": 40,
+              "none": 201,
+              "out-of-scope": 80,
               "runtime-failure": 0,
-              "unavailable": 11178,
+              "unavailable": 11068,
               "unbuildable": 14,
               "unknown": 0,
               "unlinked": 9
             },
-            "total": 11393,
+            "total": 11373,
             "unclassified": 0,
             "unknown": 0,
-            "unresolved": 11242
+            "unresolved": 11172
           },
           "rule": {
             "clusters": "the marginal-consumer and usage-cluster analysis over the measured set, so the counted families are not read as that many independent stressors (the brief's sections 36 and 37)",
@@ -4225,16 +4518,16 @@
               "rate": 0.0
             },
             "NOT_APPLICABLE": {
-              "count": 982,
-              "rate": 0.982
+              "count": 972,
+              "rate": 0.972
             },
             "PARTIAL": {
               "count": 0,
               "rate": 0.0
             },
             "PASS": {
-              "count": 18,
-              "rate": 0.018
+              "count": 28,
+              "rate": 0.028
             },
             "UNKNOWN": {
               "count": 0,
@@ -4244,10 +4537,10 @@
           }
         },
         "findings": [
-          "982/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 18 of 1000, so the drop-in rate is measured over 18 families and is not a population-wide rate",
+          "972/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 28 of 1000, so the drop-in rate is measured over 28 families and is not a population-wide rate",
           "the measured set exercised 600/6499 exported symbols, 42/81 public headers and 39/152 API families, so the atlas speaks for a thin slice of the authority's public surface",
-          "3948 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate",
-          "11242 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty"
+          "3928 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate",
+          "11172 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty"
         ],
         "frf_declarable": false,
         "frf_exclusion": "the atlas-reconciliation court reads committed artefacts and brings no artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
@@ -4255,22 +4548,22 @@
         "ladder": {
           "families": 1000,
           "levels": {
-            "L2-configured": 18,
-            "L3-built": 18,
-            "L4-linked": 18,
+            "L2-configured": 28,
+            "L3-built": 28,
+            "L4-linked": 28,
             "L5-loaded": 8,
             "L6-runtime": 8,
             "L7-functional": 8
           },
-          "measurable_families": 18,
-          "not_applicable_families": 982,
+          "measurable_families": 28,
+          "not_applicable_families": 972,
           "population": "the frozen P1000",
           "raw_family_count": 1000,
           "status": {
             "FAIL": 0,
-            "NOT_APPLICABLE": 982,
+            "NOT_APPLICABLE": 972,
             "PARTIAL": 0,
-            "PASS": 18,
+            "PASS": 28,
             "UNKNOWN": 0
           },
           "unknown": 0
@@ -4287,16 +4580,16 @@
               "rate": 0.0
             },
             "NOT_APPLICABLE": {
-              "count": 982,
-              "rate": 0.982
+              "count": 972,
+              "rate": 0.972
             },
             "PARTIAL": {
               "count": 0,
               "rate": 0.0
             },
             "PASS": {
-              "count": 18,
-              "rate": 0.018
+              "count": 28,
+              "rate": 0.028
             },
             "UNKNOWN": {
               "count": 0,
@@ -4315,20 +4608,20 @@
               "rate": 0.0
             },
             "PASS": {
-              "count": 18,
+              "count": 28,
               "rate": 1.0
             },
             "UNKNOWN": {
               "count": 0,
               "rate": 0.0
             },
-            "denominator": 18,
+            "denominator": 28,
             "note": "the drop-in question was posed for this many of the counted families: NOT_APPLICABLE is not a pass"
           },
           "population": {
             "families": 1000,
-            "measurable_families": 18,
-            "not_applicable_families": 982,
+            "measurable_families": 28,
+            "not_applicable_families": 972,
             "selection": "a selected population, not a random sample",
             "source": "forensics/downstream/family-freeze.json"
           },
@@ -4365,16 +4658,16 @@
               "rate": 0.0
             },
             "NOT_APPLICABLE": {
-              "count": 982,
-              "rate": 0.982
+              "count": 972,
+              "rate": 0.972
             },
             "PARTIAL": {
               "count": 0,
               "rate": 0.0
             },
             "PASS": {
-              "count": 18,
-              "rate": 0.018
+              "count": 28,
+              "rate": 0.028
             },
             "UNKNOWN": {
               "count": 0,
@@ -4388,16 +4681,16 @@
               "weight": 0
             },
             "NOT_APPLICABLE": {
-              "rate": 0.964224,
-              "weight": 1671
+              "rate": 0.949221,
+              "weight": 1645
             },
             "PARTIAL": {
               "rate": 0.0,
               "weight": 0
             },
             "PASS": {
-              "rate": 0.035776,
-              "weight": 62
+              "rate": 0.050779,
+              "weight": 88
             },
             "UNKNOWN": {
               "rate": 0.0,
@@ -4676,7 +4969,7 @@
               "checkpoint_state_hash": "a887e4176ee59aec0a6d958696c805efffe6df8a2620c4b9339b849138ac805d",
               "plan": {
                 "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-                "sha256": "5ba5ecc4f39af970e3c4bcf12c79342492dde919af58f9bb64383ba407223a31"
+                "sha256": "b39d46b1f6b48d0cd55e26867c71d7081aecb9e4777261f693259ab87f37943d"
               },
               "registry": {
                 "path": "forensics/tools/gen_frf_courts.py",
@@ -4740,7 +5033,7 @@
             "checkpoint_state_hash": "a887e4176ee59aec0a6d958696c805efffe6df8a2620c4b9339b849138ac805d",
             "plan": {
               "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-              "sha256": "5ba5ecc4f39af970e3c4bcf12c79342492dde919af58f9bb64383ba407223a31"
+              "sha256": "b39d46b1f6b48d0cd55e26867c71d7081aecb9e4777261f693259ab87f37943d"
             },
             "registry": {
               "path": "forensics/tools/gen_frf_courts.py",
@@ -4772,11 +5065,11 @@
           "specificity_holds": true
         },
         "counts": {
-          "blocked_families": 982,
+          "blocked_families": 972,
           "blocker_classes_present": 3,
           "families": 1000,
-          "recipe_less_families": 980,
-          "resolved_families": 18,
+          "recipe_less_families": 970,
+          "resolved_families": 28,
           "shared_blocker_classes": 2
         },
         "court": "RT-BLOCKER-LEVERAGE",
@@ -4791,21 +5084,21 @@
             "step": "counted"
           },
           {
-            "families": 20,
+            "families": 30,
             "level": "L1-admitted-source",
-            "share_of_counted": "20/1000 (2.0%)",
+            "share_of_counted": "30/1000 (3.0%)",
             "step": "with-admitted-recipe"
           },
           {
-            "families": 18,
+            "families": 28,
             "level": "L2-configured",
-            "share_of_counted": "18/1000 (1.8%)",
+            "share_of_counted": "28/1000 (2.8%)",
             "step": "configured"
           },
           {
-            "families": 18,
+            "families": 28,
             "level": "L4-linked",
-            "share_of_counted": "18/1000 (1.8%)",
+            "share_of_counted": "28/1000 (2.8%)",
             "step": "linked"
           },
           {
@@ -4827,14 +5120,14 @@
             "step": "functional"
           },
           {
-            "families": 18,
+            "families": 28,
             "level": "",
-            "share_of_counted": "18/1000 (1.8%)",
+            "share_of_counted": "28/1000 (2.8%)",
             "step": "drop-in-pass"
           }
         ],
         "method": "stages no probe: it reads forensics/downstream/shared-blockers.json and re-derives the whole analysis from the committed Phase-24 planes (the frozen P1000, the families, the build/link and runtime/functional atlases, the failures plane, the final P1000 run and the reconciliation) through forensics/tools/downstream_blockers.py, and re-runs its findings and sensitivity control, without rebuilding and without launching anything. It establishes that the partition covers the 1,000 counted families exactly once and reproduces; that every blocker record (its blocked families, shared set, mover potential and basis, to-pass potential, fixability, named fix mechanism and leverage) reproduces and is schema-valid; that the ranking is ordered by mover potential; that the counts, the ladder funnel, the recipe-less decomposition and the recipe queue are derived rather than typed; and that the detailed report, the compact README block and the census's biggest-movers section each re-render from the committed analysis and cross-link. A blocker flipped, a class count changed, a family dropped, the ranking reordered and a per-fix leverage changed are each detected with specificity holding (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 4.12 and 3.8).",
-        "partition_hash": "5e1c08d15ed92444504591a51569d7464ee28a92645e81e9efc97a9f4467cfec",
+        "partition_hash": "53af85fcc46fc7ce6dcce255e68e701183f9d54480dad2a54a0ec17d4fec78d9",
         "probe": "",
         "problems": [],
         "ranking": [
@@ -4855,10 +5148,10 @@
         "report": "docs/PHASE-24-BIGGEST-MOVERS.md",
         "top": [
           {
-            "blocked_families": 980,
+            "blocked_families": 970,
             "blocker_class": "no-admitted-recipe",
             "fixability": "recipe-admission",
-            "mover_potential": 980,
+            "mover_potential": 970,
             "per_fix_leverage": 1.0,
             "to_pass_potential": 0
           },
@@ -4871,7 +5164,7 @@
             "to_pass_potential": 2
           },
           {
-            "blocked_families": 18,
+            "blocked_families": 28,
             "blocker_class": "none",
             "fixability": "resolved",
             "mover_potential": 0,
@@ -4895,7 +5188,7 @@
         },
         "counts": {
           "actions": 8,
-          "families_moved": 12,
+          "families_moved": 22,
           "fix_actions": 5,
           "new_recipes": 8,
           "new_recipes_linked": 8,
@@ -4938,9 +5231,9 @@
             "delta": 0
           },
           "no-admitted-recipe": {
-            "after": 980,
+            "after": 970,
             "before": 988,
-            "delta": -8
+            "delta": -18
           },
           "no-fixture": {
             "after": 0,
@@ -4948,9 +5241,9 @@
             "delta": -2
           },
           "none": {
-            "after": 18,
+            "after": 28,
             "before": 6,
-            "delta": 12
+            "delta": 22
           },
           "out-of-scope": {
             "after": 0,
@@ -4985,14 +5278,93 @@
         "verdict": "pass"
       },
       {
+        "admitted_families": [
+          "fetchmail",
+          "hiredis-ssl",
+          "iperf3",
+          "libarchive",
+          "librdkafka",
+          "mosquitto",
+          "proxytunnel",
+          "sslscan",
+          "tinc",
+          "tnftp"
+        ],
+        "baseline": "forensics/downstream/recipe-campaign-baseline.json",
+        "control": {
+          "baseline_findings": 0,
+          "caught_admitted_recipe_dropped": 2,
+          "caught_movement_disagrees": 2,
+          "caught_non_admitted_no_reason": 2,
+          "caught_rejected_marked_admitted": 1,
+          "caught_typed_count": 2,
+          "honest": true,
+          "specificity_holds": true
+        },
+        "counts": {
+          "admitted": 10,
+          "attempted": 69,
+          "authority_linked": 10,
+          "built": 10,
+          "linked": 10,
+          "rejected": 59,
+          "yield": {
+            "admission_rate": 0.1449,
+            "admitted_per_attempted": "10/69",
+            "linked_per_attempted": "10/69"
+          }
+        },
+        "court": "RT-RECIPE-CAMPAIGN",
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the recipe-campaign court reads committed evidence and the record derived from it and stages no artifacts/phase24/probes/<probe>.{authority,candidate} pair, so it takes no transcript to diff and carries no FRF declaration",
+        "method": "stages no probe: it reads forensics/downstream/recipe-campaign.json and its preserved pre-campaign baseline forensics/downstream/recipe-campaign-baseline.json, re-derives the whole record from the committed Phase-24 planes (the build/link and runtime/functional atlases, the final P1000 run and the frozen P1000) through forensics/tools/downstream_recipe_campaign.py, and re-runs its findings and sensitivity control, without rebuilding and without launching anything. It establishes that every attempted family is accounted for exactly once; that every admitted recipe was really built against both subjects; that a non-admitted family carries a reason; that the admitted recipes are exactly the attempts marked admitted and exactly the module catalogue the build/link tool imports; that the movement is the subtraction of the preserved before and the derived after; and that the counts are derived rather than typed. A rejected family marked admitted, a dropped admitted recipe, a movement figure disagreeing with the planes, a non-admitted family stripped of its reason and a typed count are each detected with specificity holding (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 4.14 and 3.8).",
+        "movement": {
+          "drop_in_pass": {
+            "after": 28,
+            "before": 18,
+            "delta": 10
+          },
+          "linked": {
+            "after": 28,
+            "before": 18,
+            "delta": 10
+          },
+          "measurable_families": {
+            "after": 28,
+            "before": 18,
+            "delta": 10
+          },
+          "no_admitted_recipe": {
+            "after": 970,
+            "before": 980,
+            "delta": -10
+          },
+          "recipe_backed_families": {
+            "after": 30,
+            "before": 20,
+            "delta": 10
+          },
+          "resolved_none": {
+            "after": 28,
+            "before": 18,
+            "delta": 10
+          }
+        },
+        "probe": "",
+        "problems": [],
+        "record": "forensics/downstream/recipe-campaign.json",
+        "verdict": "pass"
+      },
+      {
         "bound_roots": {
-          "atlas": "72e5f4e3b42675121bbbee22d5ab293db7ca2930860c59c86d626db7d63d2fe4",
+          "atlas": "41ee2f6a5332f967b654fccb73f64cd06d9daf36ba758e08955e0f7043cb5e6b",
           "candidate_identity": "de196adbd84f63c4d1f931a8982cb57df2ec6e20361d6dd25ce72d23d6694e8f",
-          "consumer_receipts": "b7db1c2336c91d65d125f19ed90cc3a90d157c1b12ec0434f81617fa7fa3a984",
+          "consumer_receipts": "54cc244ed4852d5067b0dd184ed6a082baf4ebc4169db9708170406a17d17846",
           "coverage": "c18b7a4f90919ac4c69ff0bacf8f97e03c1f77cd3f8f050878c4c590f785d68c",
           "frf_checkpoint": "checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d",
           "p1000_selection": "f2a0454fe4dca98556da2e958b6e70cebaf76becbebba69b2abd752e63deba4e",
-          "residuals": "cbb17fa2554e610c19fd6b94bd117fadc2be44963daf34f4f415751c5d9f959b"
+          "residuals": "6ca4295efe9cf655be476c1c3bd251c42ab6a3865aa2373f1c882fdfa71f3853"
         },
         "chain": {
           "declared_courts": [],
@@ -5015,25 +5387,25 @@
         "counts": {
           "candidate_specific_patch_count": 0,
           "families": 1000,
-          "measurable_families": 18,
-          "not_applicable_families": 982,
-          "recipe_backed_families": 20,
+          "measurable_families": 28,
+          "not_applicable_families": 972,
+          "recipe_backed_families": 30,
           "status": {
             "FAIL": 0,
-            "NOT_APPLICABLE": 982,
+            "NOT_APPLICABLE": 972,
             "PARTIAL": 0,
-            "PASS": 18,
+            "PASS": 28,
             "UNKNOWN": 0
           },
           "verdicts": {
-            "DROP_IN_NOT_APPLICABLE": 982,
-            "DROP_IN_PASS": 18
+            "DROP_IN_NOT_APPLICABLE": 972,
+            "DROP_IN_PASS": 28
           }
         },
         "court": "DOWNSTREAM-1000-SEAL",
         "derived_markers": 16,
         "findings": [
-          "982 of the 1000 counted families are DROP_IN_NOT_APPLICABLE: only 20 have an admitted pristine-source recipe in this venue, so the drop-in rate is measured over 18 families and is not a population-wide rate; a NOT_APPLICABLE family is neither a pass nor a fail",
+          "972 of the 1000 counted families are DROP_IN_NOT_APPLICABLE: only 30 have an admitted pristine-source recipe in this venue, so the drop-in rate is measured over 28 families and is not a population-wide rate; a NOT_APPLICABLE family is neither a pass nor a fail",
           "a selected population is not a random sample: the population is selected from frozen ranking evidence, so its rates do not generalise to all downstream software",
           "1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and it makes no statement about an unmeasured consumer",
           "a build is not a functional proof: reaching the built or linked levels is not behaving, and only the functional levels are behavioural evidence",
@@ -5045,22 +5417,22 @@
         "ladder": {
           "families": 1000,
           "levels": {
-            "L2-configured": 18,
-            "L3-built": 18,
-            "L4-linked": 18,
+            "L2-configured": 28,
+            "L3-built": 28,
+            "L4-linked": 28,
             "L5-loaded": 8,
             "L6-runtime": 8,
             "L7-functional": 8
           },
-          "measurable_families": 18,
-          "not_applicable_families": 982,
+          "measurable_families": 28,
+          "not_applicable_families": 972,
           "population": "the frozen P1000",
           "raw_family_count": 1000,
           "status": {
             "FAIL": 0,
-            "NOT_APPLICABLE": 982,
+            "NOT_APPLICABLE": 972,
             "PARTIAL": 0,
-            "PASS": 18,
+            "PASS": 28,
             "UNKNOWN": 0
           },
           "unknown": 0
@@ -5269,8 +5641,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 17,
-      "total": 17
+      "pass": 18,
+      "total": 18
     }
   },
   "generator": "forensics/tools/phase24_courts.py",
@@ -5278,7 +5650,7 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "5ba5ecc4f39af970e3c4bcf12c79342492dde919af58f9bb64383ba407223a31"
+      "sha256": "b39d46b1f6b48d0cd55e26867c71d7081aecb9e4777261f693259ab87f37943d"
     },
     {
       "name": "downstream-schemas",
@@ -5293,7 +5665,7 @@
     {
       "name": "phase24-container-manifest",
       "path": "forensics/downstream/container.json",
-      "sha256": "a74a14c978fa5b274628396fd781ba9036af488760ce8c06a5b506887751383b"
+      "sha256": "9bf54f7a2b93957d3e7afc83aa831f4b9a9d1966ff4eb9e95dfac1bf907b80ee"
     },
     {
       "name": "ranking-sources",
@@ -5388,7 +5760,7 @@
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "7a8cd080d082a8648eab2f6a2c7b5631b481f4b7688ed36481601cf2954d7e2e"
+      "sha256": "aaf393ce40475789ae824cb96cf63539cdceb9fccefc27bd9bbd738ade8dacac"
     },
     {
       "name": "downstream-freeze",
@@ -5398,7 +5770,7 @@
     {
       "name": "holdout",
       "path": "forensics/downstream/holdout.json",
-      "sha256": "1ab6d4a7314600bd03b49da4d6a47436029f44c03b13b5eaa43ac2a193f993fe"
+      "sha256": "b3ae7a579697a7724d4aa6bd9452020c5b8143852b9a1317f679882d6dc80be5"
     },
     {
       "name": "downstream-holdout",
@@ -5408,17 +5780,17 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "7264b612110df46e9b91c39a51a6ca02d8a2a3a9a4921845033aac15932a3d3c"
+      "sha256": "f0eaf8f1241cb9b7e53c90efd617a09a9f39b7cd38391341c961e5998c0ebd87"
     },
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "163c1affb86296e7558280147d938c1173f162215f77739a6e4d237b02575753"
+      "sha256": "ee5cbdd84a8503ae49d18f70399ed15e56866e01cec3ef144cce4adc58f42122"
     },
     {
       "name": "runtime-functional-atlas",
       "path": "forensics/downstream/runtime-functional-atlas.json",
-      "sha256": "081eb3596e3ff5e9a2f14234f56e71053580aca5c3dc091ae421c6d8e05f5245"
+      "sha256": "77ba907d606cd2d37e078e9607a4abf996f08d387f8183de7ad295d9e852fe8b"
     },
     {
       "name": "downstream-runtime",
@@ -5428,7 +5800,7 @@
     {
       "name": "failures",
       "path": "forensics/downstream/failures.json",
-      "sha256": "58b3fbe1a508c7297599a8a0a4c313052bd813ed086308010f3799b5538b8659"
+      "sha256": "82aee711263f5f8fb2f5ddd7c9405cfe9839e980d4f12f2c3eaa29a3268786a1"
     },
     {
       "name": "downstream-failures",
@@ -5438,7 +5810,7 @@
     {
       "name": "high-value-tier",
       "path": "forensics/downstream/high-value-tier.json",
-      "sha256": "6afc6b74bc1b4fdcb860661066f0341bc356a6a2f92b2436fbc432ad9ed2fa43"
+      "sha256": "52b8331f292914cf6e8aa799f829c120db8d6f47ad66515be7695d10bd5d1554"
     },
     {
       "name": "downstream-high-value",
@@ -5533,7 +5905,7 @@
     {
       "name": "candidate-freeze",
       "path": "forensics/downstream/candidate-freeze.json",
-      "sha256": "908b1fb9ff0710bdc4724e6c3739c2d6d78d6cd744808aa0f46166513ad048be"
+      "sha256": "277d18ee72dcf2cb6ae8e211bafd1f8a2912a17b4f79328af5d9990f471dfed0"
     },
     {
       "name": "downstream-candidate-freeze",
@@ -5543,7 +5915,7 @@
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "1efe637da9c23f3bb640f9f16305885335dcd8977557d53766de24b98c62abe9"
+      "sha256": "73eec67eba712447eb7958a9a2baa2ee60da7e757c79f0694729f8e00d8362d3"
     },
     {
       "name": "downstream-p1000-run",
@@ -5553,7 +5925,7 @@
     {
       "name": "reconciliation",
       "path": "forensics/downstream/reconciliation.json",
-      "sha256": "474e239d0d54a9ab11bb1882965117111d7e861dc9728584a091450b2927ccdd"
+      "sha256": "fe940199c6800b9f08777dc9bd2ba4633bffecc5631974012886da71f06df5d8"
     },
     {
       "name": "downstream-reconciliation",
@@ -5563,7 +5935,7 @@
     {
       "name": "frf-closure",
       "path": "forensics/atlas/phase24/frf-closure.json",
-      "sha256": "fcd570a26cb7a595ac32d155099bf9c55a3a8af93247567712b99faefc178f2f"
+      "sha256": "7ab7516813c231a96e3b888c6cc2105c4bdaa99459b9cc0177074af6139d6a33"
     },
     {
       "name": "phase24-frf",
@@ -5578,27 +5950,27 @@
     {
       "name": "phase-24-seal",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SEAL.md",
-      "sha256": "e0099ad932938bf38a4156393e097a2607e5a18b5792840749ae8bcb84b25de1"
+      "sha256": "db123aaa253e46a4a21cdd69c3997b5fa4cfd46ad4ca26636a6fd2762830c7c9"
     },
     {
       "name": "seal-census",
       "path": "docs/SEAL-CENSUS.md",
-      "sha256": "8ffa81000829bb62ebc0dcc067aa0d71a064121f46bb321f2329a27dd3e4c513"
+      "sha256": "1fe832ac44c25959d56fe3b4dd578c41e1ef429f12639be4abf0ced411b4e93a"
     },
     {
       "name": "shared-blockers",
       "path": "forensics/downstream/shared-blockers.json",
-      "sha256": "25a86f96c00ebbdfe665ba51f29984f5ce89520e97d64b6da94d6ee7bc229c13"
+      "sha256": "09c0fe3b5878c2dea965caecc912d52568c7ec6e2e1b21d0b73e396f910be37c"
     },
     {
       "name": "biggest-movers",
       "path": "docs/PHASE-24-BIGGEST-MOVERS.md",
-      "sha256": "ef2a6384abec36c010211207395165b2c21deee77cf9e0841f84be9d3823d65d"
+      "sha256": "e25abcd4a6220a5c7db35192d90fe89807b56decfdd990c35bda10987b265537"
     },
     {
       "name": "readme",
       "path": "README.md",
-      "sha256": "e197bd4c9cb0612d363a6d718af62bd43914117a56c25c329278a522b182a67c"
+      "sha256": "36f9a1b202cad2774808a1eb41ea73aefbbf71a83af9c87bb1a8f746041b2568"
     },
     {
       "name": "downstream-blockers",

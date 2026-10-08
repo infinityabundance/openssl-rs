@@ -3,7 +3,7 @@
   "body": {
     "blockers": [
       {
-        "blocked_families": 18,
+        "blocked_families": 28,
         "blocker_class": "none",
         "blocker_id": "blocker:none",
         "description": "the family is not blocked: it reached DROP_IN_PASS",
@@ -23,30 +23,40 @@
           "family:curl",
           "family:cyrus-sasl",
           "family:dovecot",
+          "family:fetchmail",
           "family:fossil",
           "family:haproxy",
+          "family:hiredis-ssl",
+          "family:iperf3",
           "family:isync",
           "family:kmod",
           "family:ldns",
+          "family:libarchive",
           "family:libevent",
+          "family:librdkafka",
           "family:links",
           "family:monit",
+          "family:mosquitto",
           "family:nginx",
           "family:openssh",
           "family:openvpn",
+          "family:proxytunnel",
           "family:pure-ftpd",
           "family:redis",
           "family:socat",
-          "family:stunnel"
+          "family:sslscan",
+          "family:stunnel",
+          "family:tinc",
+          "family:tnftp"
         ],
         "to_pass_potential": 0
       },
       {
-        "blocked_families": 980,
+        "blocked_families": 970,
         "blocker_class": "no-admitted-recipe",
         "blocker_id": "blocker:no-admitted-recipe",
         "description": "no admitted pristine-source recipe is recorded for this family in this venue, so the run is not attempted and manufactures no source URL",
-        "distinct_fix_mechanisms": 980,
+        "distinct_fix_mechanisms": 970,
         "evidence": [
           "forensics/downstream/p1000-run.json",
           "forensics/downstream/build-link-atlas.json",
@@ -353,7 +363,6 @@
           "admit-recipe:family:fdo-rendezvous-server",
           "admit-recipe:family:fedora-update-feedback",
           "admit-recipe:family:fetch-crl",
-          "admit-recipe:family:fetchmail",
           "admit-recipe:family:ffmpeg-libavformat",
           "admit-recipe:family:ffmpeg-libavutil",
           "admit-recipe:family:fido2",
@@ -509,7 +518,6 @@
           "admit-recipe:family:hinsightd",
           "admit-recipe:family:hippotat-client",
           "admit-recipe:family:hiredict-ssl",
-          "admit-recipe:family:hiredis-ssl",
           "admit-recipe:family:hitch",
           "admit-recipe:family:hopm",
           "admit-recipe:family:hostapd",
@@ -553,7 +561,6 @@
           "admit-recipe:family:input-leap",
           "admit-recipe:family:intel-hdcp",
           "admit-recipe:family:intel-ipp-crypto-mb",
-          "admit-recipe:family:iperf3",
           "admit-recipe:family:ipmievd",
           "admit-recipe:family:ipmitool",
           "admit-recipe:family:ipmiutil",
@@ -637,7 +644,6 @@
           "admit-recipe:family:libapache2-mod-qos",
           "admit-recipe:family:libaprutil1",
           "admit-recipe:family:libarccommon3v5",
-          "admit-recipe:family:libarchive",
           "admit-recipe:family:libbobcat6",
           "admit-recipe:family:libboinc7",
           "admit-recipe:family:libc-client2007e",
@@ -731,7 +737,6 @@
           "admit-recipe:family:librabbitmq",
           "admit-recipe:family:librados2",
           "admit-recipe:family:librbd1",
-          "admit-recipe:family:librdkafka",
           "admit-recipe:family:libre",
           "admit-recipe:family:librelp",
           "admit-recipe:family:librepo",
@@ -775,7 +780,6 @@
           "admit-recipe:family:mongo-c-driver",
           "admit-recipe:family:monitoring-plugins",
           "admit-recipe:family:mosh",
-          "admit-recipe:family:mosquitto",
           "admit-recipe:family:mstflint",
           "admit-recipe:family:mtxclient",
           "admit-recipe:family:mumble",
@@ -887,7 +891,6 @@
           "admit-recipe:family:proftpd",
           "admit-recipe:family:prosody",
           "admit-recipe:family:proxygen",
-          "admit-recipe:family:proxytunnel",
           "admit-recipe:family:psi-plus-plugins",
           "admit-recipe:family:pulseaudio",
           "admit-recipe:family:pwsafe",
@@ -952,7 +955,6 @@
           "admit-recipe:family:srtp",
           "admit-recipe:family:sscg",
           "admit-recipe:family:ssldump",
-          "admit-recipe:family:sslscan",
           "admit-recipe:family:sslsplit",
           "admit-recipe:family:ssmtp",
           "admit-recipe:family:sssd-common",
@@ -978,9 +980,7 @@
           "admit-recipe:family:thrift-glib",
           "admit-recipe:family:tiledb",
           "admit-recipe:family:tin",
-          "admit-recipe:family:tinc",
           "admit-recipe:family:tinyfugue",
-          "admit-recipe:family:tnftp",
           "admit-recipe:family:tomcat-native",
           "admit-recipe:family:tor",
           "admit-recipe:family:tpm-tools",
@@ -1036,7 +1036,7 @@
           "admit-recipe:family:zfs-fuse",
           "admit-recipe:family:znc"
         ],
-        "mover_potential": 980,
+        "mover_potential": 970,
         "mover_potential_basis": "structural-upper-bound",
         "per_fix_leverage": 1.0,
         "shared_by": [
@@ -1338,7 +1338,6 @@
           "family:fdo-rendezvous-server",
           "family:fedora-update-feedback",
           "family:fetch-crl",
-          "family:fetchmail",
           "family:ffmpeg-libavformat",
           "family:ffmpeg-libavutil",
           "family:fido2",
@@ -1494,7 +1493,6 @@
           "family:hinsightd",
           "family:hippotat-client",
           "family:hiredict-ssl",
-          "family:hiredis-ssl",
           "family:hitch",
           "family:hopm",
           "family:hostapd",
@@ -1538,7 +1536,6 @@
           "family:input-leap",
           "family:intel-hdcp",
           "family:intel-ipp-crypto-mb",
-          "family:iperf3",
           "family:ipmievd",
           "family:ipmitool",
           "family:ipmiutil",
@@ -1622,7 +1619,6 @@
           "family:libapache2-mod-qos",
           "family:libaprutil1",
           "family:libarccommon3v5",
-          "family:libarchive",
           "family:libbobcat6",
           "family:libboinc7",
           "family:libc-client2007e",
@@ -1716,7 +1712,6 @@
           "family:librabbitmq",
           "family:librados2",
           "family:librbd1",
-          "family:librdkafka",
           "family:libre",
           "family:librelp",
           "family:librepo",
@@ -1760,7 +1755,6 @@
           "family:mongo-c-driver",
           "family:monitoring-plugins",
           "family:mosh",
-          "family:mosquitto",
           "family:mstflint",
           "family:mtxclient",
           "family:mumble",
@@ -1872,7 +1866,6 @@
           "family:proftpd",
           "family:prosody",
           "family:proxygen",
-          "family:proxytunnel",
           "family:psi-plus-plugins",
           "family:pulseaudio",
           "family:pwsafe",
@@ -1937,7 +1930,6 @@
           "family:srtp",
           "family:sscg",
           "family:ssldump",
-          "family:sslscan",
           "family:sslsplit",
           "family:ssmtp",
           "family:sssd-common",
@@ -1963,9 +1955,7 @@
           "family:thrift-glib",
           "family:tiledb",
           "family:tin",
-          "family:tinc",
           "family:tinyfugue",
-          "family:tnftp",
           "family:tomcat-native",
           "family:tor",
           "family:tpm-tools",
@@ -2230,15 +2220,15 @@
       }
     ],
     "counts": {
-      "blocked_families": 982,
+      "blocked_families": 972,
       "blocker_classes": 12,
       "blocker_classes_present": 3,
       "families": 1000,
-      "measurable_families": 18,
-      "not_applicable_families": 982,
-      "recipe_backed_families": 20,
-      "recipe_less_families": 980,
-      "resolved_families": 18,
+      "measurable_families": 28,
+      "not_applicable_families": 972,
+      "recipe_backed_families": 30,
+      "recipe_less_families": 970,
+      "resolved_families": 28,
       "shared_blocker_classes": 2
     },
     "funnel": [
@@ -2249,21 +2239,21 @@
         "step": "counted"
       },
       {
-        "families": 20,
+        "families": 30,
         "level": "L1-admitted-source",
-        "share_of_counted": "20/1000 (2.0%)",
+        "share_of_counted": "30/1000 (3.0%)",
         "step": "with-admitted-recipe"
       },
       {
-        "families": 18,
+        "families": 28,
         "level": "L2-configured",
-        "share_of_counted": "18/1000 (1.8%)",
+        "share_of_counted": "28/1000 (2.8%)",
         "step": "configured"
       },
       {
-        "families": 18,
+        "families": 28,
         "level": "L4-linked",
-        "share_of_counted": "18/1000 (1.8%)",
+        "share_of_counted": "28/1000 (2.8%)",
         "step": "linked"
       },
       {
@@ -2285,9 +2275,9 @@
         "step": "functional"
       },
       {
-        "families": 18,
+        "families": 28,
         "level": "",
-        "share_of_counted": "18/1000 (1.8%)",
+        "share_of_counted": "28/1000 (2.8%)",
         "step": "drop-in-pass"
       }
     ],
@@ -2600,7 +2590,7 @@
       "family:fdo-rendezvous-server": "no-admitted-recipe",
       "family:fedora-update-feedback": "no-admitted-recipe",
       "family:fetch-crl": "no-admitted-recipe",
-      "family:fetchmail": "no-admitted-recipe",
+      "family:fetchmail": "none",
       "family:ffmpeg-libavformat": "no-admitted-recipe",
       "family:ffmpeg-libavutil": "no-admitted-recipe",
       "family:fido2": "no-admitted-recipe",
@@ -2758,7 +2748,7 @@
       "family:hinsightd": "no-admitted-recipe",
       "family:hippotat-client": "no-admitted-recipe",
       "family:hiredict-ssl": "no-admitted-recipe",
-      "family:hiredis-ssl": "no-admitted-recipe",
+      "family:hiredis-ssl": "none",
       "family:hitch": "no-admitted-recipe",
       "family:hopm": "no-admitted-recipe",
       "family:hostapd": "no-admitted-recipe",
@@ -2802,7 +2792,7 @@
       "family:input-leap": "no-admitted-recipe",
       "family:intel-hdcp": "no-admitted-recipe",
       "family:intel-ipp-crypto-mb": "no-admitted-recipe",
-      "family:iperf3": "no-admitted-recipe",
+      "family:iperf3": "none",
       "family:ipmievd": "no-admitted-recipe",
       "family:ipmitool": "no-admitted-recipe",
       "family:ipmiutil": "no-admitted-recipe",
@@ -2889,7 +2879,7 @@
       "family:libapache2-mod-qos": "no-admitted-recipe",
       "family:libaprutil1": "no-admitted-recipe",
       "family:libarccommon3v5": "no-admitted-recipe",
-      "family:libarchive": "no-admitted-recipe",
+      "family:libarchive": "none",
       "family:libbobcat6": "no-admitted-recipe",
       "family:libboinc7": "no-admitted-recipe",
       "family:libc-client2007e": "no-admitted-recipe",
@@ -2984,7 +2974,7 @@
       "family:librabbitmq": "no-admitted-recipe",
       "family:librados2": "no-admitted-recipe",
       "family:librbd1": "no-admitted-recipe",
-      "family:librdkafka": "no-admitted-recipe",
+      "family:librdkafka": "none",
       "family:libre": "no-admitted-recipe",
       "family:librelp": "no-admitted-recipe",
       "family:librepo": "no-admitted-recipe",
@@ -3032,7 +3022,7 @@
       "family:monit": "none",
       "family:monitoring-plugins": "no-admitted-recipe",
       "family:mosh": "no-admitted-recipe",
-      "family:mosquitto": "no-admitted-recipe",
+      "family:mosquitto": "none",
       "family:mstflint": "no-admitted-recipe",
       "family:mtxclient": "no-admitted-recipe",
       "family:mumble": "no-admitted-recipe",
@@ -3147,7 +3137,7 @@
       "family:proftpd": "no-admitted-recipe",
       "family:prosody": "no-admitted-recipe",
       "family:proxygen": "no-admitted-recipe",
-      "family:proxytunnel": "no-admitted-recipe",
+      "family:proxytunnel": "none",
       "family:psi-plus-plugins": "no-admitted-recipe",
       "family:pulseaudio": "no-admitted-recipe",
       "family:pure-ftpd": "none",
@@ -3215,7 +3205,7 @@
       "family:srtp": "no-admitted-recipe",
       "family:sscg": "no-admitted-recipe",
       "family:ssldump": "no-admitted-recipe",
-      "family:sslscan": "no-admitted-recipe",
+      "family:sslscan": "none",
       "family:sslsplit": "no-admitted-recipe",
       "family:ssmtp": "no-admitted-recipe",
       "family:sssd-common": "no-admitted-recipe",
@@ -3242,9 +3232,9 @@
       "family:thrift-glib": "no-admitted-recipe",
       "family:tiledb": "no-admitted-recipe",
       "family:tin": "no-admitted-recipe",
-      "family:tinc": "no-admitted-recipe",
+      "family:tinc": "none",
       "family:tinyfugue": "no-admitted-recipe",
-      "family:tnftp": "no-admitted-recipe",
+      "family:tnftp": "none",
       "family:tomcat-native": "no-admitted-recipe",
       "family:tor": "no-admitted-recipe",
       "family:tpm-tools": "no-admitted-recipe",
@@ -3300,7 +3290,7 @@
       "family:zfs-fuse": "no-admitted-recipe",
       "family:znc": "no-admitted-recipe"
     },
-    "partition_hash": "5e1c08d15ed92444504591a51569d7464ee28a92645e81e9efc97a9f4467cfec",
+    "partition_hash": "53af85fcc46fc7ce6dcce255e68e701183f9d54480dad2a54a0ec17d4fec78d9",
     "ranked_present": [
       "no-admitted-recipe",
       "recipe-build-system-unsupported",
@@ -3323,25 +3313,25 @@
     "recipe_less_decomposition": {
       "by_distro_breadth": {
         "0": 2,
-        "1": 557,
-        "2": 316,
-        "3": 105
+        "1": 556,
+        "2": 311,
+        "3": 101
       },
       "by_openssl_linkage": {
-        "direct": 980
+        "direct": 970
       },
       "by_source_breadth": {
-        "1": 494,
-        "2": 331,
-        "3": 114,
-        "4": 41
+        "1": 493,
+        "2": 327,
+        "3": 111,
+        "4": 39
       },
       "by_source_ecosystem": {
         "crates": 6,
-        "distro": 974
+        "distro": 964
       },
       "criterion": "the frozen universe's own signals, read from forensics/downstream/families.json and forensics/downstream/family-freeze.json: the source ecosystem and the direct/transitive linkage a family carries, its distro breadth (how many distro packages list it) and its consensus source breadth (how many frozen ranking sources selected it). No signal here is a claim about the family's buildability",
-      "families": 980
+      "families": 970
     },
     "recipe_queue": [
       {
@@ -3485,16 +3475,6 @@
         "source_ecosystem": "distro"
       },
       {
-        "canonical_name": "librdkafka",
-        "distro_breadth": 3,
-        "family_id": "family:librdkafka",
-        "openssl_linkage": "direct",
-        "p1000_rank": 21,
-        "popularity": 0,
-        "source_breadth": 4,
-        "source_ecosystem": "distro"
-      },
-      {
         "canonical_name": "libshout",
         "distro_breadth": 3,
         "family_id": "family:libshout",
@@ -3530,16 +3510,6 @@
         "family_id": "family:mariadb",
         "openssl_linkage": "direct",
         "p1000_rank": 26,
-        "popularity": 0,
-        "source_breadth": 4,
-        "source_ecosystem": "distro"
-      },
-      {
-        "canonical_name": "mosquitto",
-        "distro_breadth": 3,
-        "family_id": "family:mosquitto",
-        "openssl_linkage": "direct",
-        "p1000_rank": 28,
         "popularity": 0,
         "source_breadth": 4,
         "source_ecosystem": "distro"
@@ -3743,13 +3713,33 @@
         "popularity": 0,
         "source_breadth": 4,
         "source_ecosystem": "distro"
+      },
+      {
+        "canonical_name": "znc",
+        "distro_breadth": 3,
+        "family_id": "family:znc",
+        "openssl_linkage": "direct",
+        "p1000_rank": 53,
+        "popularity": 0,
+        "source_breadth": 4,
+        "source_ecosystem": "distro"
+      },
+      {
+        "canonical_name": "ausweisapp2",
+        "distro_breadth": 3,
+        "family_id": "family:ausweisapp2",
+        "openssl_linkage": "direct",
+        "p1000_rank": 54,
+        "popularity": 0,
+        "source_breadth": 3,
+        "source_ecosystem": "distro"
       }
     ],
     "recipe_queue_rule": {
       "criterion": "source breadth descending, then distro breadth descending, then popularity descending, then canonical name ascending, then family_id ascending; the list is a **heuristic** ranking of which recipe-less counted families to admit next, never a measurement that any of them builds",
       "heuristic": true,
       "limit": 40,
-      "recipe_less_total": 980
+      "recipe_less_total": 970
     },
     "rule": {
       "constants": {
@@ -3844,13 +3834,13 @@
       }
     }
   },
-  "body_hash": "09f1513502de613563e2010a8f4899bcbf8476f686dd0c77e006938771d7263c",
+  "body_hash": "d4655412644e3870ba94bab59100917c841cfabdeb83a856ce698ee767f7a99f",
   "generator": "forensics/tools/downstream_blockers.py",
   "inputs": [
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "7a8cd080d082a8648eab2f6a2c7b5631b481f4b7688ed36481601cf2954d7e2e"
+      "sha256": "aaf393ce40475789ae824cb96cf63539cdceb9fccefc27bd9bbd738ade8dacac"
     },
     {
       "name": "families",
@@ -3860,27 +3850,27 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "7264b612110df46e9b91c39a51a6ca02d8a2a3a9a4921845033aac15932a3d3c"
+      "sha256": "f0eaf8f1241cb9b7e53c90efd617a09a9f39b7cd38391341c961e5998c0ebd87"
     },
     {
       "name": "runtime-functional-atlas",
       "path": "forensics/downstream/runtime-functional-atlas.json",
-      "sha256": "081eb3596e3ff5e9a2f14234f56e71053580aca5c3dc091ae421c6d8e05f5245"
+      "sha256": "77ba907d606cd2d37e078e9607a4abf996f08d387f8183de7ad295d9e852fe8b"
     },
     {
       "name": "failures",
       "path": "forensics/downstream/failures.json",
-      "sha256": "58b3fbe1a508c7297599a8a0a4c313052bd813ed086308010f3799b5538b8659"
+      "sha256": "82aee711263f5f8fb2f5ddd7c9405cfe9839e980d4f12f2c3eaa29a3268786a1"
     },
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "1efe637da9c23f3bb640f9f16305885335dcd8977557d53766de24b98c62abe9"
+      "sha256": "73eec67eba712447eb7958a9a2baa2ee60da7e757c79f0694729f8e00d8362d3"
     },
     {
       "name": "reconciliation",
       "path": "forensics/downstream/reconciliation.json",
-      "sha256": "474e239d0d54a9ab11bb1882965117111d7e861dc9728584a091450b2927ccdd"
+      "sha256": "fe940199c6800b9f08777dc9bd2ba4633bffecc5631974012886da71f06df5d8"
     },
     {
       "name": "downstream-blockers",
@@ -3900,7 +3890,7 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "5ba5ecc4f39af970e3c4bcf12c79342492dde919af58f9bb64383ba407223a31"
+      "sha256": "b39d46b1f6b48d0cd55e26867c71d7081aecb9e4777261f693259ab87f37943d"
     }
   ],
   "kind": "downstream-shared-blockers",

@@ -3,33 +3,33 @@
   "body": {
     "counts": {
       "by_atlas": {
-        "build-link-atlas": 1964,
+        "build-link-atlas": 1944,
         "runtime-functional-atlas": 1984
       },
       "by_disposition": {
-        "out-of-scope": 20,
-        "venue-limited": 3928
+        "out-of-scope": 40,
+        "venue-limited": 3888
       },
       "by_failure_class": {
-        "acquire-failure": 3920,
+        "acquire-failure": 3880,
         "configure-failure": 4,
-        "harness-failure": 20,
+        "harness-failure": 40,
         "link-failure": 4
       },
       "by_residual_class": {
-        "out-of-scope": 20,
-        "unavailable": 3920,
+        "out-of-scope": 40,
+        "unavailable": 3880,
         "unbuildable": 4,
         "unlinked": 4
       },
       "candidate_specific": 0,
       "candidate_specific_families": [],
       "divergences": 0,
-      "intentional_out_of_scope": 20,
-      "leftovers": 3948,
+      "intentional_out_of_scope": 40,
+      "leftovers": 3928,
       "minimized": 0,
       "unclassified": 0,
-      "venue_limited": 3928
+      "venue_limited": 3888
     },
     "divergences": [],
     "failures": [
@@ -10466,41 +10466,6 @@
       {
         "atlas": "build-link-atlas",
         "class": "acquire-failure",
-        "consumer": "fetchmail",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": null,
-          "from_authority_row": "run:build-link:authority:fetchmail",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:authority:fetchmail",
-          "row_sha256:f2b4ea50b07f722a66ec14c706a7621c8c1c01bd4998d17df06fb30458752de7",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:f2b4ea50b07f722a66ec14c706a7621c8c1c01bd4998d17df06fb30458752de7"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:fetchmail",
-        "family_id": "family:fetchmail",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:authority:fetchmail",
-        "subject": "authority"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
         "consumer": "ffmpeg-libavformat",
         "derivation": {
           "authority_applicable_level": "L0-catalogued",
@@ -15926,41 +15891,6 @@
       {
         "atlas": "build-link-atlas",
         "class": "acquire-failure",
-        "consumer": "hiredis-ssl",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": null,
-          "from_authority_row": "run:build-link:authority:hiredis-ssl",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:authority:hiredis-ssl",
-          "row_sha256:0e8abc4e89b38f4892e000c418e6478d1dc7990a9f0c51df298a3ecb04277cd9",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:0e8abc4e89b38f4892e000c418e6478d1dc7990a9f0c51df298a3ecb04277cd9"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:hiredis-ssl",
-        "family_id": "family:hiredis-ssl",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:authority:hiredis-ssl",
-        "subject": "authority"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
         "consumer": "hitch",
         "derivation": {
           "authority_applicable_level": "L0-catalogued",
@@ -17461,41 +17391,6 @@
         "reproducer": null,
         "residual_class": "unavailable",
         "run_id": "run:build-link:authority:intel-ipp-crypto-mb",
-        "subject": "authority"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
-        "consumer": "iperf3",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": null,
-          "from_authority_row": "run:build-link:authority:iperf3",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:authority:iperf3",
-          "row_sha256:abf15f79029416b11b6df36a114e6b8d6b3c759e52520338e084abecc00cb33d",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:abf15f79029416b11b6df36a114e6b8d6b3c759e52520338e084abecc00cb33d"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:iperf3",
-        "family_id": "family:iperf3",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:authority:iperf3",
         "subject": "authority"
       },
       {
@@ -20401,41 +20296,6 @@
         "reproducer": null,
         "residual_class": "unavailable",
         "run_id": "run:build-link:authority:libarccommon3v5",
-        "subject": "authority"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
-        "consumer": "libarchive",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": null,
-          "from_authority_row": "run:build-link:authority:libarchive",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:authority:libarchive",
-          "row_sha256:26348f3aaf0eec450503f549318bc91c2550478bc21931a56f96247c6df6384d",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:26348f3aaf0eec450503f549318bc91c2550478bc21931a56f96247c6df6384d"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:libarchive",
-        "family_id": "family:libarchive",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:authority:libarchive",
         "subject": "authority"
       },
       {
@@ -23696,41 +23556,6 @@
       {
         "atlas": "build-link-atlas",
         "class": "acquire-failure",
-        "consumer": "librdkafka",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": null,
-          "from_authority_row": "run:build-link:authority:librdkafka",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:authority:librdkafka",
-          "row_sha256:bee32755b09a7be06aa5e935a9533d263e105aa6d7b85c4229093a0610f51f3f",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:bee32755b09a7be06aa5e935a9533d263e105aa6d7b85c4229093a0610f51f3f"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:librdkafka",
-        "family_id": "family:librdkafka",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:authority:librdkafka",
-        "subject": "authority"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
         "consumer": "libre",
         "derivation": {
           "authority_applicable_level": "L0-catalogued",
@@ -23955,9 +23780,9 @@
         "evidence": [
           "atlas:build-link-atlas",
           "run_id:run:build-link:authority:libssh",
-          "row_sha256:bf8aa0abbdecfceee1250509becb2a9ca58a81c245a3c68551937bbc9816bf90",
+          "row_sha256:32f8789cfc3fdd0b0868e41af83040afe831c2a75fd410ed065768651ec8b989",
           "authority_applicable_level:L1-admitted-source",
-          "authority_row_sha256:bf8aa0abbdecfceee1250509becb2a9ca58a81c245a3c68551937bbc9816bf90"
+          "authority_row_sha256:32f8789cfc3fdd0b0868e41af83040afe831c2a75fd410ed065768651ec8b989"
         ],
         "failure_class": "configure-failure",
         "failure_id": "failure:build-link-atlas:authority:libssh",
@@ -24340,9 +24165,9 @@
         "evidence": [
           "atlas:build-link-atlas",
           "run_id:run:build-link:authority:lighttpd",
-          "row_sha256:02f5804b92d8b216ad01325fa81ad02f08136dc8947de5ad669361700b316d9f",
+          "row_sha256:65683ecc6a8412fe21d29cc83b5882c6ac69044e2b888a89938e46c885245282",
           "authority_applicable_level:L1-admitted-source",
-          "authority_row_sha256:02f5804b92d8b216ad01325fa81ad02f08136dc8947de5ad669361700b316d9f"
+          "authority_row_sha256:65683ecc6a8412fe21d29cc83b5882c6ac69044e2b888a89938e46c885245282"
         ],
         "failure_class": "configure-failure",
         "failure_id": "failure:build-link-atlas:authority:lighttpd",
@@ -25301,41 +25126,6 @@
         "reproducer": null,
         "residual_class": "unavailable",
         "run_id": "run:build-link:authority:mosh",
-        "subject": "authority"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
-        "consumer": "mosquitto",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": null,
-          "from_authority_row": "run:build-link:authority:mosquitto",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:authority:mosquitto",
-          "row_sha256:15ae83383e5aef03660fc66735d686e2f6a333d3051b8ba9ff6b4352a4278a57",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:15ae83383e5aef03660fc66735d686e2f6a333d3051b8ba9ff6b4352a4278a57"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:mosquitto",
-        "family_id": "family:mosquitto",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:authority:mosquitto",
         "subject": "authority"
       },
       {
@@ -29226,41 +29016,6 @@
       {
         "atlas": "build-link-atlas",
         "class": "acquire-failure",
-        "consumer": "proxytunnel",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": null,
-          "from_authority_row": "run:build-link:authority:proxytunnel",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:authority:proxytunnel",
-          "row_sha256:81f0f8e03e767a2c0c241fd3edafa3824a8b8f65d7ab809837737d60d41cb349",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:81f0f8e03e767a2c0c241fd3edafa3824a8b8f65d7ab809837737d60d41cb349"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:proxytunnel",
-        "family_id": "family:proxytunnel",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:authority:proxytunnel",
-        "subject": "authority"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
         "consumer": "psi-plus-plugins",
         "derivation": {
           "authority_applicable_level": "L0-catalogued",
@@ -31501,41 +31256,6 @@
       {
         "atlas": "build-link-atlas",
         "class": "acquire-failure",
-        "consumer": "sslscan",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": null,
-          "from_authority_row": "run:build-link:authority:sslscan",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:authority:sslscan",
-          "row_sha256:e53a0c8c51b516ca916991bb7130b1d72a1ffa3d3f7a536bb0d6290ee55e3201",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:e53a0c8c51b516ca916991bb7130b1d72a1ffa3d3f7a536bb0d6290ee55e3201"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:sslscan",
-        "family_id": "family:sslscan",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:authority:sslscan",
-        "subject": "authority"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
         "consumer": "sslsplit",
         "derivation": {
           "authority_applicable_level": "L0-catalogued",
@@ -32411,41 +32131,6 @@
       {
         "atlas": "build-link-atlas",
         "class": "acquire-failure",
-        "consumer": "tinc",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": null,
-          "from_authority_row": "run:build-link:authority:tinc",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:authority:tinc",
-          "row_sha256:c682d60a8d535ba1f88fe5032f2cf4ed467f16661c6f2caceaf3e54c20a1b5bf",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:c682d60a8d535ba1f88fe5032f2cf4ed467f16661c6f2caceaf3e54c20a1b5bf"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:tinc",
-        "family_id": "family:tinc",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:authority:tinc",
-        "subject": "authority"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
         "consumer": "tinyfugue",
         "derivation": {
           "authority_applicable_level": "L0-catalogued",
@@ -32476,41 +32161,6 @@
         "reproducer": null,
         "residual_class": "unavailable",
         "run_id": "run:build-link:authority:tinyfugue",
-        "subject": "authority"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
-        "consumer": "tnftp",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": null,
-          "from_authority_row": "run:build-link:authority:tnftp",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:authority:tnftp",
-          "row_sha256:9f1bc9db2de218847ec9d6b9deed3427cad96b272da850e75e5659d29298fd05",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:9f1bc9db2de218847ec9d6b9deed3427cad96b272da850e75e5659d29298fd05"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:tnftp",
-        "family_id": "family:tnftp",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:authority:tnftp",
         "subject": "authority"
       },
       {
@@ -44836,41 +44486,6 @@
       {
         "atlas": "build-link-atlas",
         "class": "acquire-failure",
-        "consumer": "fetchmail",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
-          "from_authority_row": "run:build-link:authority:fetchmail",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:candidate:fetchmail",
-          "row_sha256:947cd1d39de4ad6e18731617e2aeebce468021dab618b75b56c42f118b8588d9",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:f2b4ea50b07f722a66ec14c706a7621c8c1c01bd4998d17df06fb30458752de7"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:fetchmail",
-        "family_id": "family:fetchmail",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:candidate:fetchmail",
-        "subject": "candidate"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
         "consumer": "ffmpeg-libavformat",
         "derivation": {
           "authority_applicable_level": "L0-catalogued",
@@ -50296,41 +49911,6 @@
       {
         "atlas": "build-link-atlas",
         "class": "acquire-failure",
-        "consumer": "hiredis-ssl",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
-          "from_authority_row": "run:build-link:authority:hiredis-ssl",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:candidate:hiredis-ssl",
-          "row_sha256:c2fd56f737c45af82ae376bbc6358c3fb13acc964e27ff7d3be7ec0010fdd1d9",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:0e8abc4e89b38f4892e000c418e6478d1dc7990a9f0c51df298a3ecb04277cd9"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:hiredis-ssl",
-        "family_id": "family:hiredis-ssl",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:candidate:hiredis-ssl",
-        "subject": "candidate"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
         "consumer": "hitch",
         "derivation": {
           "authority_applicable_level": "L0-catalogued",
@@ -51831,41 +51411,6 @@
         "reproducer": null,
         "residual_class": "unavailable",
         "run_id": "run:build-link:candidate:intel-ipp-crypto-mb",
-        "subject": "candidate"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
-        "consumer": "iperf3",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
-          "from_authority_row": "run:build-link:authority:iperf3",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:candidate:iperf3",
-          "row_sha256:25f607a64e02fdcc130bcfa6fcf01379a0010b089d1a3d231a12313ecf519bc9",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:abf15f79029416b11b6df36a114e6b8d6b3c759e52520338e084abecc00cb33d"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:iperf3",
-        "family_id": "family:iperf3",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:candidate:iperf3",
         "subject": "candidate"
       },
       {
@@ -54771,41 +54316,6 @@
         "reproducer": null,
         "residual_class": "unavailable",
         "run_id": "run:build-link:candidate:libarccommon3v5",
-        "subject": "candidate"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
-        "consumer": "libarchive",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
-          "from_authority_row": "run:build-link:authority:libarchive",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:candidate:libarchive",
-          "row_sha256:74ac830fe52f6b131b5288bb7dd8c498da9a1a145abbb989a5b80e7fe00a0287",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:26348f3aaf0eec450503f549318bc91c2550478bc21931a56f96247c6df6384d"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:libarchive",
-        "family_id": "family:libarchive",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:candidate:libarchive",
         "subject": "candidate"
       },
       {
@@ -58066,41 +57576,6 @@
       {
         "atlas": "build-link-atlas",
         "class": "acquire-failure",
-        "consumer": "librdkafka",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
-          "from_authority_row": "run:build-link:authority:librdkafka",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:candidate:librdkafka",
-          "row_sha256:823d846549ce12c3545819adf269339357b57690178f6b9250622d0f9593ff01",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:bee32755b09a7be06aa5e935a9533d263e105aa6d7b85c4229093a0610f51f3f"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:librdkafka",
-        "family_id": "family:librdkafka",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:candidate:librdkafka",
-        "subject": "candidate"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
         "consumer": "libre",
         "derivation": {
           "authority_applicable_level": "L0-catalogued",
@@ -58325,9 +57800,9 @@
         "evidence": [
           "atlas:build-link-atlas",
           "run_id:run:build-link:candidate:libssh",
-          "row_sha256:f752b795ffafce9ab30668b85549e0ba9306a4bbf892d819e96008fa7dd48644",
+          "row_sha256:cc35460b650b0aa7a30d80baa1200f59239c9ce6509d76a8f08c0db6579f16af",
           "authority_applicable_level:L1-admitted-source",
-          "authority_row_sha256:bf8aa0abbdecfceee1250509becb2a9ca58a81c245a3c68551937bbc9816bf90"
+          "authority_row_sha256:32f8789cfc3fdd0b0868e41af83040afe831c2a75fd410ed065768651ec8b989"
         ],
         "failure_class": "configure-failure",
         "failure_id": "failure:build-link-atlas:candidate:libssh",
@@ -58710,9 +58185,9 @@
         "evidence": [
           "atlas:build-link-atlas",
           "run_id:run:build-link:candidate:lighttpd",
-          "row_sha256:bdf49aaa13248e5565c2ff1ebb0d2d28de75b7ef34c14823f85970378dfe7103",
+          "row_sha256:9a35d89a80c9b7a51f719454a6f1dd44933f0fa814fc69469978cddd766b81e1",
           "authority_applicable_level:L1-admitted-source",
-          "authority_row_sha256:02f5804b92d8b216ad01325fa81ad02f08136dc8947de5ad669361700b316d9f"
+          "authority_row_sha256:65683ecc6a8412fe21d29cc83b5882c6ac69044e2b888a89938e46c885245282"
         ],
         "failure_class": "configure-failure",
         "failure_id": "failure:build-link-atlas:candidate:lighttpd",
@@ -59671,41 +59146,6 @@
         "reproducer": null,
         "residual_class": "unavailable",
         "run_id": "run:build-link:candidate:mosh",
-        "subject": "candidate"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
-        "consumer": "mosquitto",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
-          "from_authority_row": "run:build-link:authority:mosquitto",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:candidate:mosquitto",
-          "row_sha256:9ac2fef6413fbc437a106d84fdbca8bff3da349e42433d4918e92f9b714c8daa",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:15ae83383e5aef03660fc66735d686e2f6a333d3051b8ba9ff6b4352a4278a57"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:mosquitto",
-        "family_id": "family:mosquitto",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:candidate:mosquitto",
         "subject": "candidate"
       },
       {
@@ -63596,41 +63036,6 @@
       {
         "atlas": "build-link-atlas",
         "class": "acquire-failure",
-        "consumer": "proxytunnel",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
-          "from_authority_row": "run:build-link:authority:proxytunnel",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:candidate:proxytunnel",
-          "row_sha256:a83f8c80c5486727e5f27cedbe241aff3b67af9793ee82c3ac1c73a9af6a4763",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:81f0f8e03e767a2c0c241fd3edafa3824a8b8f65d7ab809837737d60d41cb349"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:proxytunnel",
-        "family_id": "family:proxytunnel",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:candidate:proxytunnel",
-        "subject": "candidate"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
         "consumer": "psi-plus-plugins",
         "derivation": {
           "authority_applicable_level": "L0-catalogued",
@@ -65871,41 +65276,6 @@
       {
         "atlas": "build-link-atlas",
         "class": "acquire-failure",
-        "consumer": "sslscan",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
-          "from_authority_row": "run:build-link:authority:sslscan",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:candidate:sslscan",
-          "row_sha256:9f469d7d84834284de181364395a5734f0c614dc5887c36c1865a8cbec45024e",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:e53a0c8c51b516ca916991bb7130b1d72a1ffa3d3f7a536bb0d6290ee55e3201"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:sslscan",
-        "family_id": "family:sslscan",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:candidate:sslscan",
-        "subject": "candidate"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
         "consumer": "sslsplit",
         "derivation": {
           "authority_applicable_level": "L0-catalogued",
@@ -66781,41 +66151,6 @@
       {
         "atlas": "build-link-atlas",
         "class": "acquire-failure",
-        "consumer": "tinc",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
-          "from_authority_row": "run:build-link:authority:tinc",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:candidate:tinc",
-          "row_sha256:2f9fddff91f00bb6b33673f69c40730c8c1bbd65c4333a82c92766196373e424",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:c682d60a8d535ba1f88fe5032f2cf4ed467f16661c6f2caceaf3e54c20a1b5bf"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:tinc",
-        "family_id": "family:tinc",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:candidate:tinc",
-        "subject": "candidate"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
         "consumer": "tinyfugue",
         "derivation": {
           "authority_applicable_level": "L0-catalogued",
@@ -66846,41 +66181,6 @@
         "reproducer": null,
         "residual_class": "unavailable",
         "run_id": "run:build-link:candidate:tinyfugue",
-        "subject": "candidate"
-      },
-      {
-        "atlas": "build-link-atlas",
-        "class": "acquire-failure",
-        "consumer": "tnftp",
-        "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
-          "from_authority_row": "run:build-link:authority:tnftp",
-          "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
-        },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
-        "evidence": [
-          "atlas:build-link-atlas",
-          "run_id:run:build-link:candidate:tnftp",
-          "row_sha256:2acd54fc3683e8b0d3aa8b835edda188c29544508faf2fc843f1d40552f8a35a",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:9f1bc9db2de218847ec9d6b9deed3427cad96b272da850e75e5659d29298fd05"
-        ],
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:tnftp",
-        "family_id": "family:tnftp",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
-        "minimized": false,
-        "openssl_linkage": "direct",
-        "outcome": "not_attempted",
-        "preserved": true,
-        "reproducer": null,
-        "residual_class": "unavailable",
-        "run_id": "run:build-link:candidate:tnftp",
         "subject": "candidate"
       },
       {
@@ -79275,36 +78575,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "fetchmail",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
           "candidate_level": null,
           "from_authority_row": "run:runtime:authority:fetchmail",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:authority:fetchmail",
-          "row_sha256:0a97715418c909f3f9c0cf74d43d2226f171055d943788016327ff0103d82544",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:0a97715418c909f3f9c0cf74d43d2226f171055d943788016327ff0103d82544"
+          "row_sha256:40aeeaae8a8080e071d033bc4988db1c63cbb592c2f7224ecb365fe9e7e3e887",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:40aeeaae8a8080e071d033bc4988db1c63cbb592c2f7224ecb365fe9e7e3e887"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:fetchmail",
         "family_id": "family:fetchmail",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:authority:fetchmail",
         "subject": "authority"
       },
@@ -84770,36 +84070,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "hiredis-ssl",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
           "candidate_level": null,
           "from_authority_row": "run:runtime:authority:hiredis-ssl",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:authority:hiredis-ssl",
-          "row_sha256:79dbef744b2a9a3d01c72cb330dc045a1d98290f8b55d65bcd3dd815435c965d",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:79dbef744b2a9a3d01c72cb330dc045a1d98290f8b55d65bcd3dd815435c965d"
+          "row_sha256:898398ed9745a07bd42173bf7c49d151b921e821773bbd463fe72254d24b1f1d",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:898398ed9745a07bd42173bf7c49d151b921e821773bbd463fe72254d24b1f1d"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:hiredis-ssl",
         "family_id": "family:hiredis-ssl",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:authority:hiredis-ssl",
         "subject": "authority"
       },
@@ -86310,36 +85610,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "iperf3",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
           "candidate_level": null,
           "from_authority_row": "run:runtime:authority:iperf3",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:authority:iperf3",
-          "row_sha256:353ea77e48dbaaab6acc77955475cb2dc3215c8bf3b0651d8ecc2a921e239b02",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:353ea77e48dbaaab6acc77955475cb2dc3215c8bf3b0651d8ecc2a921e239b02"
+          "row_sha256:f44ca260ae15292e846ed8aefff3907fb92f20ee020e95571e2aaf8d24316bf1",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:f44ca260ae15292e846ed8aefff3907fb92f20ee020e95571e2aaf8d24316bf1"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:iperf3",
         "family_id": "family:iperf3",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:authority:iperf3",
         "subject": "authority"
       },
@@ -89320,36 +88620,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "libarchive",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
           "candidate_level": null,
           "from_authority_row": "run:runtime:authority:libarchive",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:authority:libarchive",
-          "row_sha256:e6b583c387d69ba832342c2c9a4731b2b04c92d84aaf4dbef100f19fe8625e8f",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:e6b583c387d69ba832342c2c9a4731b2b04c92d84aaf4dbef100f19fe8625e8f"
+          "row_sha256:5cb5edebb53d20ab902f4229d805afdf3cccaabd98dee48a13b42ce68cdb2e2d",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:5cb5edebb53d20ab902f4229d805afdf3cccaabd98dee48a13b42ce68cdb2e2d"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:libarchive",
         "family_id": "family:libarchive",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:authority:libarchive",
         "subject": "authority"
       },
@@ -92645,36 +91945,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "librdkafka",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
           "candidate_level": null,
           "from_authority_row": "run:runtime:authority:librdkafka",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:authority:librdkafka",
-          "row_sha256:1181f69dafed66be42b1e1f72d18dc5e7e9932a2752629da2bcc70a43a57ef67",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:1181f69dafed66be42b1e1f72d18dc5e7e9932a2752629da2bcc70a43a57ef67"
+          "row_sha256:2efc50dc813d6eedba1accd675eea0296cb45535ac95d9480781ff5a88d28ecc",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:2efc50dc813d6eedba1accd675eea0296cb45535ac95d9480781ff5a88d28ecc"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:librdkafka",
         "family_id": "family:librdkafka",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:authority:librdkafka",
         "subject": "authority"
       },
@@ -94290,36 +93590,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "mosquitto",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
           "candidate_level": null,
           "from_authority_row": "run:runtime:authority:mosquitto",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:authority:mosquitto",
-          "row_sha256:945f1ee922ff56a00fa36eb421a3d3425a745e0c3f5727fa1c7b703cb8256a74",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:945f1ee922ff56a00fa36eb421a3d3425a745e0c3f5727fa1c7b703cb8256a74"
+          "row_sha256:42b1051b884e174912cbed12939621fc728deada4946ac46cdbf7bbab3249a24",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:42b1051b884e174912cbed12939621fc728deada4946ac46cdbf7bbab3249a24"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:mosquitto",
         "family_id": "family:mosquitto",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:authority:mosquitto",
         "subject": "authority"
       },
@@ -98245,36 +97545,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "proxytunnel",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
           "candidate_level": null,
           "from_authority_row": "run:runtime:authority:proxytunnel",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:authority:proxytunnel",
-          "row_sha256:8431fe0d377a85aadcf12d487140e2374b5ffc780b9e67edc74e8c8c1ecb3f7c",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:8431fe0d377a85aadcf12d487140e2374b5ffc780b9e67edc74e8c8c1ecb3f7c"
+          "row_sha256:91f832e509fc4d21f76fed8ffd78158d1cd1b21efe2fcb76b6ab8d215e9fb1f7",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:91f832e509fc4d21f76fed8ffd78158d1cd1b21efe2fcb76b6ab8d215e9fb1f7"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:proxytunnel",
         "family_id": "family:proxytunnel",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:authority:proxytunnel",
         "subject": "authority"
       },
@@ -100555,36 +99855,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "sslscan",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
           "candidate_level": null,
           "from_authority_row": "run:runtime:authority:sslscan",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:authority:sslscan",
-          "row_sha256:129d02eb5ae726fc643b4540f04c0ed87f45574eab51617476a7706a6408a250",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:129d02eb5ae726fc643b4540f04c0ed87f45574eab51617476a7706a6408a250"
+          "row_sha256:aa0c2ab11313917940b47bfb520b4d65c30fcee21e88947b904377a133180a1f",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:aa0c2ab11313917940b47bfb520b4d65c30fcee21e88947b904377a133180a1f"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:sslscan",
         "family_id": "family:sslscan",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:authority:sslscan",
         "subject": "authority"
       },
@@ -101500,36 +100800,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "tinc",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
           "candidate_level": null,
           "from_authority_row": "run:runtime:authority:tinc",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:authority:tinc",
-          "row_sha256:863ccb19e56918403e9f61b9ddd7f4190815d249e6f07684e0a96031d615fcc9",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:863ccb19e56918403e9f61b9ddd7f4190815d249e6f07684e0a96031d615fcc9"
+          "row_sha256:3b59b344e1d41fd0eb29c71731e50d866003daf4670984b9190adac18afdd2ee",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:3b59b344e1d41fd0eb29c71731e50d866003daf4670984b9190adac18afdd2ee"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:tinc",
         "family_id": "family:tinc",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:authority:tinc",
         "subject": "authority"
       },
@@ -101570,36 +100870,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "tnftp",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
           "candidate_level": null,
           "from_authority_row": "run:runtime:authority:tnftp",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:authority:tnftp",
-          "row_sha256:3a883cf430c87378d737db38aac892d9f5fbce4488fc69585daa519124bba8d7",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:3a883cf430c87378d737db38aac892d9f5fbce4488fc69585daa519124bba8d7"
+          "row_sha256:a11857f9ee26281fc21286d8e52bc3e9ce9677c17f6c5414f70f7ee6b3783d32",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:a11857f9ee26281fc21286d8e52bc3e9ce9677c17f6c5414f70f7ee6b3783d32"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:tnftp",
         "family_id": "family:tnftp",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:authority:tnftp",
         "subject": "authority"
       },
@@ -113995,36 +113295,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "fetchmail",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
+          "candidate_level": "L4-linked",
           "from_authority_row": "run:runtime:authority:fetchmail",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:candidate:fetchmail",
-          "row_sha256:d92abda5ca63d7fc898bf76578713d8c2aff9bf3aee0d1eadcc697a38fa65d42",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:0a97715418c909f3f9c0cf74d43d2226f171055d943788016327ff0103d82544"
+          "row_sha256:c457d3a2fdd9d7f9233fce99d646c2992cdfbc1956f6840fc08091be9a049947",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:40aeeaae8a8080e071d033bc4988db1c63cbb592c2f7224ecb365fe9e7e3e887"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:fetchmail",
         "family_id": "family:fetchmail",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:candidate:fetchmail",
         "subject": "candidate"
       },
@@ -119490,36 +118790,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "hiredis-ssl",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
+          "candidate_level": "L4-linked",
           "from_authority_row": "run:runtime:authority:hiredis-ssl",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:candidate:hiredis-ssl",
-          "row_sha256:636c9864606d39b93dde24393533dcc4bb73d0a194e05780a1647e4cf8e61be7",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:79dbef744b2a9a3d01c72cb330dc045a1d98290f8b55d65bcd3dd815435c965d"
+          "row_sha256:a07e0223c24dc337ea234e02b8c623f64b40419ed9f19714173c1607bba0868b",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:898398ed9745a07bd42173bf7c49d151b921e821773bbd463fe72254d24b1f1d"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:hiredis-ssl",
         "family_id": "family:hiredis-ssl",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:candidate:hiredis-ssl",
         "subject": "candidate"
       },
@@ -121030,36 +120330,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "iperf3",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
+          "candidate_level": "L4-linked",
           "from_authority_row": "run:runtime:authority:iperf3",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:candidate:iperf3",
-          "row_sha256:6c2c6f2f16ff1df9a66af63b77f5928daabd29bcadeb5b62b697f1817c1f4052",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:353ea77e48dbaaab6acc77955475cb2dc3215c8bf3b0651d8ecc2a921e239b02"
+          "row_sha256:6280efa8e7f1ce64a7e57291c3e6eac6a4f127e240cf555724504ded57724bd3",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:f44ca260ae15292e846ed8aefff3907fb92f20ee020e95571e2aaf8d24316bf1"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:iperf3",
         "family_id": "family:iperf3",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:candidate:iperf3",
         "subject": "candidate"
       },
@@ -124040,36 +123340,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "libarchive",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
+          "candidate_level": "L4-linked",
           "from_authority_row": "run:runtime:authority:libarchive",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:candidate:libarchive",
-          "row_sha256:8fbd90a3c1afa1800a24cc10735c3ca928eccd670d85e61b6d25432e38594791",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:e6b583c387d69ba832342c2c9a4731b2b04c92d84aaf4dbef100f19fe8625e8f"
+          "row_sha256:5521be04c34ee1134f5404718ee4057b57f06059a424b79fb11105dffd751db3",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:5cb5edebb53d20ab902f4229d805afdf3cccaabd98dee48a13b42ce68cdb2e2d"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:libarchive",
         "family_id": "family:libarchive",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:candidate:libarchive",
         "subject": "candidate"
       },
@@ -127365,36 +126665,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "librdkafka",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
+          "candidate_level": "L4-linked",
           "from_authority_row": "run:runtime:authority:librdkafka",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:candidate:librdkafka",
-          "row_sha256:a63bc6c7de65fd28f9c4f2bed1a6bae270ca45a1b778a976065fd17b66012406",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:1181f69dafed66be42b1e1f72d18dc5e7e9932a2752629da2bcc70a43a57ef67"
+          "row_sha256:470b742228cd09013657c2cc61eb7ff6be8b256db0b99bae258569c22b0e77cf",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:2efc50dc813d6eedba1accd675eea0296cb45535ac95d9480781ff5a88d28ecc"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:librdkafka",
         "family_id": "family:librdkafka",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:candidate:librdkafka",
         "subject": "candidate"
       },
@@ -129010,36 +128310,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "mosquitto",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
+          "candidate_level": "L4-linked",
           "from_authority_row": "run:runtime:authority:mosquitto",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:candidate:mosquitto",
-          "row_sha256:9c61484d7ef5cd4ed312bbf94c8eb2f40070e44442967a84a0713b676c7e8f10",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:945f1ee922ff56a00fa36eb421a3d3425a745e0c3f5727fa1c7b703cb8256a74"
+          "row_sha256:ef31a46fe97f0f99aad7d254299e5d917741e7ac9d8ee8b3604e1c031169185f",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:42b1051b884e174912cbed12939621fc728deada4946ac46cdbf7bbab3249a24"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:mosquitto",
         "family_id": "family:mosquitto",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:candidate:mosquitto",
         "subject": "candidate"
       },
@@ -132965,36 +132265,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "proxytunnel",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
+          "candidate_level": "L4-linked",
           "from_authority_row": "run:runtime:authority:proxytunnel",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:candidate:proxytunnel",
-          "row_sha256:584502319431945156507daa6d80e60918f8f745f35d69367b690d66d4c85aaa",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:8431fe0d377a85aadcf12d487140e2374b5ffc780b9e67edc74e8c8c1ecb3f7c"
+          "row_sha256:8847b6475efcdfc2241ea6d57237711e4d286d0e52f730773281bc2fd93705be",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:91f832e509fc4d21f76fed8ffd78158d1cd1b21efe2fcb76b6ab8d215e9fb1f7"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:proxytunnel",
         "family_id": "family:proxytunnel",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:candidate:proxytunnel",
         "subject": "candidate"
       },
@@ -135275,36 +134575,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "sslscan",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
+          "candidate_level": "L4-linked",
           "from_authority_row": "run:runtime:authority:sslscan",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:candidate:sslscan",
-          "row_sha256:faf9516b47259f08ab7baf4aaebabf381e579a6bc45279c562390796396ce322",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:129d02eb5ae726fc643b4540f04c0ed87f45574eab51617476a7706a6408a250"
+          "row_sha256:e4d563078b5849df10404d1eda5e2d9a42474b4050b30598c5631a38d0427f84",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:aa0c2ab11313917940b47bfb520b4d65c30fcee21e88947b904377a133180a1f"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:sslscan",
         "family_id": "family:sslscan",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:candidate:sslscan",
         "subject": "candidate"
       },
@@ -136220,36 +135520,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "tinc",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
+          "candidate_level": "L4-linked",
           "from_authority_row": "run:runtime:authority:tinc",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:candidate:tinc",
-          "row_sha256:c434501659dca7fe879120712a2143be45417c480e743971ae99469318806d84",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:863ccb19e56918403e9f61b9ddd7f4190815d249e6f07684e0a96031d615fcc9"
+          "row_sha256:97502bb22fa9aaf1125bd6816876629951fe77ea03062a17d3b352104c029480",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:3b59b344e1d41fd0eb29c71731e50d866003daf4670984b9190adac18afdd2ee"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:tinc",
         "family_id": "family:tinc",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:candidate:tinc",
         "subject": "candidate"
       },
@@ -136290,36 +135590,36 @@
       },
       {
         "atlas": "runtime-functional-atlas",
-        "class": "acquire-failure",
+        "class": "harness-failure",
         "consumer": "tnftp",
         "derivation": {
-          "authority_applicable_level": "L0-catalogued",
-          "authority_failure_class": "acquire-failure",
-          "candidate_level": "L0-catalogued",
+          "authority_applicable_level": "L4-linked",
+          "authority_failure_class": "harness-failure",
+          "candidate_level": "L4-linked",
           "from_authority_row": "run:runtime:authority:tnftp",
           "rule": "a leftover is candidate-specific only when the candidate failed at a level the authority reached (the authority-applicable baseline); a failure the authority also hit at the same or a lower level in the same admitted venue is a venue/environment limitation, not a candidate compatibility defect, and is classified `venue-limited`; a residual of `out-of-scope` -- no admitted recipe or workload -- is `out-of-scope`. The ruling derives from the committed authority row each candidate leftover is compared against, never typed"
         },
-        "detail": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
+        "detail": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "disposition": "venue-limited",
+        "disposition": "out-of-scope",
         "evidence": [
           "atlas:runtime-functional-atlas",
           "run_id:run:runtime:candidate:tnftp",
-          "row_sha256:8387350dcec00946a4598114558694efb5bb17c76377b966a215245a4925efe8",
-          "authority_applicable_level:L0-catalogued",
-          "authority_row_sha256:3a883cf430c87378d737db38aac892d9f5fbce4488fc69585daa519124bba8d7"
+          "row_sha256:3c95ccbb6a8b64d30d584c8b94b0ce3d1c261f659e511118c18bc1014b1eff2e",
+          "authority_applicable_level:L4-linked",
+          "authority_row_sha256:a11857f9ee26281fc21286d8e52bc3e9ce9677c17f6c5414f70f7ee6b3783d32"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:tnftp",
         "family_id": "family:tnftp",
-        "first_divergent_observation": "the authority-applicable baseline L0-catalogued also left unavailable/acquire-failure (no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL); the candidate reached L0-catalogued, so the leftover is a venue/environment limitation, not a candidate-specific defect",
-        "level": "L0-catalogued",
+        "first_divergent_observation": "no admitted deterministic local recipe/workload at L4-linked: the level is the honest reach, not a candidate defect (no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured)",
+        "level": "L4-linked",
         "minimized": false,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "preserved": true,
         "reproducer": null,
-        "residual_class": "unavailable",
+        "residual_class": "out-of-scope",
         "run_id": "run:runtime:candidate:tnftp",
         "subject": "candidate"
       },
@@ -142090,19 +141390,6 @@
         "suspected_subsystem": "venue-source-acquisition"
       },
       {
-        "consumer": "fetchmail",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:fetchmail",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
         "consumer": "ffmpeg-libavformat",
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
@@ -144118,19 +143405,6 @@
         "suspected_subsystem": "venue-source-acquisition"
       },
       {
-        "consumer": "hiredis-ssl",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:hiredis-ssl",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
         "consumer": "hitch",
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
@@ -144681,19 +143955,6 @@
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
         "failure_id": "failure:build-link-atlas:authority:intel-ipp-crypto-mb",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
-        "consumer": "iperf3",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:iperf3",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
@@ -145773,19 +145034,6 @@
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
         "failure_id": "failure:build-link-atlas:authority:libarccommon3v5",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
-        "consumer": "libarchive",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:libarchive",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
@@ -147004,19 +146252,6 @@
         "suspected_subsystem": "venue-source-acquisition"
       },
       {
-        "consumer": "librdkafka",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:librdkafka",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
         "consumer": "libre",
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
@@ -147593,19 +146828,6 @@
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
         "failure_id": "failure:build-link-atlas:authority:mosh",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
-        "consumer": "mosquitto",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:mosquitto",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
@@ -149058,19 +148280,6 @@
         "suspected_subsystem": "venue-source-acquisition"
       },
       {
-        "consumer": "proxytunnel",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:proxytunnel",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
         "consumer": "psi-plus-plugins",
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
@@ -149903,19 +149112,6 @@
         "suspected_subsystem": "venue-source-acquisition"
       },
       {
-        "consumer": "sslscan",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:sslscan",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
         "consumer": "sslsplit",
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
@@ -150241,36 +149437,10 @@
         "suspected_subsystem": "venue-source-acquisition"
       },
       {
-        "consumer": "tinc",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:tinc",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
         "consumer": "tinyfugue",
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
         "failure_id": "failure:build-link-atlas:authority:tinyfugue",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
-        "consumer": "tnftp",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:authority:tnftp",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
@@ -154856,19 +154026,6 @@
         "suspected_subsystem": "venue-source-acquisition"
       },
       {
-        "consumer": "fetchmail",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:fetchmail",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
         "consumer": "ffmpeg-libavformat",
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
@@ -156884,19 +156041,6 @@
         "suspected_subsystem": "venue-source-acquisition"
       },
       {
-        "consumer": "hiredis-ssl",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:hiredis-ssl",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
         "consumer": "hitch",
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
@@ -157447,19 +156591,6 @@
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
         "failure_id": "failure:build-link-atlas:candidate:intel-ipp-crypto-mb",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
-        "consumer": "iperf3",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:iperf3",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
@@ -158539,19 +157670,6 @@
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
         "failure_id": "failure:build-link-atlas:candidate:libarccommon3v5",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
-        "consumer": "libarchive",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:libarchive",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
@@ -159770,19 +158888,6 @@
         "suspected_subsystem": "venue-source-acquisition"
       },
       {
-        "consumer": "librdkafka",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:librdkafka",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
         "consumer": "libre",
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
@@ -160359,19 +159464,6 @@
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
         "failure_id": "failure:build-link-atlas:candidate:mosh",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
-        "consumer": "mosquitto",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:mosquitto",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
@@ -161824,19 +160916,6 @@
         "suspected_subsystem": "venue-source-acquisition"
       },
       {
-        "consumer": "proxytunnel",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:proxytunnel",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
         "consumer": "psi-plus-plugins",
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
@@ -162669,19 +161748,6 @@
         "suspected_subsystem": "venue-source-acquisition"
       },
       {
-        "consumer": "sslscan",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:sslscan",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
         "consumer": "sslsplit",
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
@@ -163007,36 +162073,10 @@
         "suspected_subsystem": "venue-source-acquisition"
       },
       {
-        "consumer": "tinc",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:tinc",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
         "consumer": "tinyfugue",
         "disposition": "venue-limited",
         "failure_class": "acquire-failure",
         "failure_id": "failure:build-link-atlas:candidate:tinyfugue",
-        "fix_commit": null,
-        "fix_status": "none",
-        "regression_court": null,
-        "reproducer": null,
-        "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
-      },
-      {
-        "consumer": "tnftp",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
-        "failure_id": "failure:build-link-atlas:candidate:tnftp",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
@@ -167649,16 +166689,16 @@
       },
       {
         "consumer": "fetchmail",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:fetchmail",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "ffmpeg-libavformat",
@@ -169690,16 +168730,16 @@
       },
       {
         "consumer": "hiredis-ssl",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:hiredis-ssl",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "hitch",
@@ -170262,16 +169302,16 @@
       },
       {
         "consumer": "iperf3",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:iperf3",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "ipmievd",
@@ -171380,16 +170420,16 @@
       },
       {
         "consumer": "libarchive",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:libarchive",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "libbobcat6",
@@ -172615,16 +171655,16 @@
       },
       {
         "consumer": "librdkafka",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:librdkafka",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "libre",
@@ -173226,16 +172266,16 @@
       },
       {
         "consumer": "mosquitto",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:mosquitto",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "mstflint",
@@ -174695,16 +173735,16 @@
       },
       {
         "consumer": "proxytunnel",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:proxytunnel",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "psi-plus-plugins",
@@ -175553,16 +174593,16 @@
       },
       {
         "consumer": "sslscan",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:sslscan",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "sslsplit",
@@ -175904,16 +174944,16 @@
       },
       {
         "consumer": "tinc",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:tinc",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "tinyfugue",
@@ -175930,16 +174970,16 @@
       },
       {
         "consumer": "tnftp",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:authority:tnftp",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "tomcat-native",
@@ -180545,16 +179585,16 @@
       },
       {
         "consumer": "fetchmail",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:fetchmail",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "ffmpeg-libavformat",
@@ -182586,16 +181626,16 @@
       },
       {
         "consumer": "hiredis-ssl",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:hiredis-ssl",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "hitch",
@@ -183158,16 +182198,16 @@
       },
       {
         "consumer": "iperf3",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:iperf3",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "ipmievd",
@@ -184276,16 +183316,16 @@
       },
       {
         "consumer": "libarchive",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:libarchive",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "libbobcat6",
@@ -185511,16 +184551,16 @@
       },
       {
         "consumer": "librdkafka",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:librdkafka",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "libre",
@@ -186122,16 +185162,16 @@
       },
       {
         "consumer": "mosquitto",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:mosquitto",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "mstflint",
@@ -187591,16 +186631,16 @@
       },
       {
         "consumer": "proxytunnel",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:proxytunnel",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "psi-plus-plugins",
@@ -188449,16 +187489,16 @@
       },
       {
         "consumer": "sslscan",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:sslscan",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "sslsplit",
@@ -188800,16 +187840,16 @@
       },
       {
         "consumer": "tinc",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:tinc",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "tinyfugue",
@@ -188826,16 +187866,16 @@
       },
       {
         "consumer": "tnftp",
-        "disposition": "venue-limited",
-        "failure_class": "acquire-failure",
+        "disposition": "out-of-scope",
+        "failure_class": "harness-failure",
         "failure_id": "failure:runtime-functional-atlas:candidate:tnftp",
         "fix_commit": null,
         "fix_status": "none",
         "regression_court": null,
         "reproducer": null,
         "reproduction": null,
-        "residual": "unavailable",
-        "suspected_subsystem": "venue-source-acquisition"
+        "residual": "out-of-scope",
+        "suspected_subsystem": "venue-workload-harness"
       },
       {
         "consumer": "tomcat-native",
@@ -189592,13 +188632,13 @@
       ]
     }
   },
-  "body_hash": "3824d522173d3b4e36677ad048881aafe25dca938f8ce77e93e2f6594565f334",
+  "body_hash": "7c93312203bd3c169ae0318a67cc6faba2053bd672eea8a3ffceac12f604094f",
   "generator": "forensics/tools/downstream_failures.py",
   "inputs": [
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "7a8cd080d082a8648eab2f6a2c7b5631b481f4b7688ed36481601cf2954d7e2e"
+      "sha256": "aaf393ce40475789ae824cb96cf63539cdceb9fccefc27bd9bbd738ade8dacac"
     },
     {
       "name": "families",
@@ -189608,17 +188648,17 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "7264b612110df46e9b91c39a51a6ca02d8a2a3a9a4921845033aac15932a3d3c"
+      "sha256": "f0eaf8f1241cb9b7e53c90efd617a09a9f39b7cd38391341c961e5998c0ebd87"
     },
     {
       "name": "runtime-functional-atlas",
       "path": "forensics/downstream/runtime-functional-atlas.json",
-      "sha256": "081eb3596e3ff5e9a2f14234f56e71053580aca5c3dc091ae421c6d8e05f5245"
+      "sha256": "77ba907d606cd2d37e078e9607a4abf996f08d387f8183de7ad295d9e852fe8b"
     },
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "163c1affb86296e7558280147d938c1173f162215f77739a6e4d237b02575753"
+      "sha256": "ee5cbdd84a8503ae49d18f70399ed15e56866e01cec3ef144cce4adc58f42122"
     },
     {
       "name": "downstream-runtime",
@@ -189638,7 +188678,7 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "5ba5ecc4f39af970e3c4bcf12c79342492dde919af58f9bb64383ba407223a31"
+      "sha256": "b39d46b1f6b48d0cd55e26867c71d7081aecb9e4777261f693259ab87f37943d"
     }
   ],
   "kind": "downstream-failures",
