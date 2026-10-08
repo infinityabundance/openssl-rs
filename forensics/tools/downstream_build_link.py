@@ -207,13 +207,147 @@ _CENSUS_PINS: dict[str, str] = {
     "haproxy": "cf1bf58b5bc79c48db7b01667596ffd98343adb29a41096f075f00a8f90a7335",
     "monit": "669d8b95ddec124d1444ba5264f67fdeae8e90e53b2929719f4750fc5ff3ba60",
     "openssh": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
-    "openvpn": "1c610fddeb686e34f1367c347e027e418e07523a10f4d8ce4a2c2af2f61a1929",
+    # 24.17 pinned openvpn to the 2.5 line (2.6.12 requires libnl-genl-3.0 for DCO and then
+    # libcap-ng on Linux, neither admitted in this venue), so the pin moves with the version.
+    "openvpn": "d1d38a3fc7e200f9221f988ef1cc9c7a7d62b69bb5fa52742da1229e5f24d36f",
     "pure-ftpd": "1126f3a95856d08889ff89703cb1aa9ec9924d939d154e96904c920f05dc3c74",
     "redis": "bc34b878eb89421bbfca6fa78752343bf37af312a09eb0fae47c9575977dfaa2",
     "isync": "a0c81e109387bf279da161453103399e77946afecf5c51f9413c5e773557f78d",
     "kmod": "dc768b3155172091f56dc69430b5481f2d76ecd9ccb54ead8c2540dbcf5ea9bc",
     "lighttpd": "ba14a030889518194fd88b33e419d51cc38c8fe917126d5a7a965be79b53e995",
 }
+
+# The 24.17 remediation overrides, applied in `_build_catalogue` rather than in the 24.3 census so
+# the census's own provisional measurement (`authority-baselines.jsonl`, `usage-fingerprints.json`)
+# is untouched: the build/link, runtime and P1000-run tools all import this catalogue, the census
+# does not. `ldflags_extra` is appended to the configure/link environment with `{prefix}` substituted.
+_RECIPE_OVERRIDES: dict[str, dict] = {
+    "kmod": {
+        "configure": ["--with-openssl", "--disable-manpages", "--silent"],
+        "artifact": "tools/kmod",
+        "note": ("kmod 33 with --disable-manpages (24.17): the scdoc man-page build is disabled, so "
+                 "the configure no longer stops on the absent scdoc tool; the built kmod links "
+                 "libcrypto"),
+    },
+    "openvpn": {
+        "version": "2.5.10",
+        "url": "https://swupdate.openvpn.net/community/releases/openvpn-2.5.10.tar.gz",
+        "archive": "tar.gz",
+        "configure": ["--with-crypto-library=openssl", "--disable-lzo", "--disable-lz4",
+                      "--disable-plugin-auth-pam", "--silent"],
+        "artifact": "src/openvpn/openvpn",
+        "note": ("openvpn 2.5.10 (24.17): pinned to the 2.5 line, whose build system the venue "
+                 "supports, because 2.6.12 requires libnl-genl-3.0 for DCO and then libcap-ng on "
+                 "Linux, neither admitted here"),
+    },
+    "isync": {
+        "ldflags_extra": "-Wl,-rpath-link,{prefix}/lib",
+        "note": ("isync 1.5.0 with -Wl,-rpath-link (24.17): the linker is given the prefix lib "
+                 "directory so libssl's transitive libcrypto dependency resolves, which the "
+                 "authority prefix needs and the candidate prefix did not (both subjects are "
+                 "measured with the identical recipe)"),
+    },
+    "libssh": {
+        "note": ("libssh 0.10.6 ships only CMakeLists.txt: still blocked in this venue, which "
+                 "admits no cmake; 24.17 recorded it still-blocked rather than faking a build"),
+    },
+    "lighttpd": {
+        "note": ("lighttpd 1.4.76 ships no generated ./configure (a source tree with "
+                 "configure.ac, CMakeLists.txt, meson.build and SConstruct only): still blocked in "
+                 "this venue, which admits no autoconf/automake, cmake or meson; 24.17 recorded it "
+                 "still-blocked"),
+    },
+}
+
+# The 24.17 admission batch: recipe-less counted families whose pinned release tarball ships a
+# build entry point the venue can execute (a generated `configure`, or a plain `Makefile`) and needs
+# no tool the venue lacks, empirically verified before authoring. Each carries its own pinned
+# digest; the batch is bounded and deterministic, not an attempt at all 988.
+_EXTRA_SPECS: tuple[dict, ...] = (
+    {
+        "family": "socat", "version": "1.8.0.0",
+        "url": "http://www.dest-unreach.org/socat/download/socat-1.8.0.0.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "6010f4f311e5ebe0e63c77f78613d264253680006ac8979f52b0711a9a231e82",
+        "configure": ["--disable-readline"], "make": [MAKE_JOBS], "artifact": "socat",
+        "launch": ["-V"],
+        "note": "socat 1.8.0.0's own configure links the subject OpenSSL (24.17 admission)",
+    },
+    {
+        "family": "ldns", "version": "1.8.3",
+        "url": "https://www.nlnetlabs.nl/downloads/ldns/ldns-1.8.3.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "c3f72dd1036b2907e3a56e6acf9dfb2e551256b3c1bbd9787942deeeb70e7860",
+        "configure": ["--with-ssl={prefix}", "--disable-dane-verify"], "make": [MAKE_JOBS],
+        "artifact": ".libs/libldns.so*", "launch": None,
+        "note": "ldns 1.8.3's libldns links the subject libcrypto (24.17 admission)",
+    },
+    {
+        "family": "stunnel", "version": "5.73",
+        "url": "https://www.stunnel.org/downloads/archive/5.x/stunnel-5.73.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "bc917c3bcd943a4d632360c067977a31e85e385f5f4845f69749bce88183cb38",
+        "configure": ["--with-ssl={prefix}", "--disable-systemd", "--disable-libwrap",
+                      "--disable-fips"], "make": [MAKE_JOBS], "artifact": "src/stunnel",
+        "launch": ["-version"],
+        "note": "stunnel 5.73 links the subject libssl/libcrypto (24.17 admission)",
+    },
+    {
+        "family": "links", "version": "2.30",
+        "url": "http://links.twibright.com/download/links-2.30.tar.bz2",
+        "archive": "tar.bz2", "build_system": "autotools",
+        "sha256": "c4631c6b5a11527cdc3cb7872fc23b7f2b25c2b021d596be410dadb40315f166",
+        "configure": ["--with-ssl={prefix}", "--without-gpm", "--without-x",
+                      "--without-libtiff", "--without-lzma", "--without-zstd",
+                      "--without-libevent"], "make": [MAKE_JOBS], "artifact": "links",
+        "launch": ["-version"],
+        "note": "links 2.30 links the subject libssl (24.17 admission)",
+    },
+    {
+        "family": "libevent", "version": "2.1.12-stable",
+        "url": ("https://github.com/libevent/libevent/releases/download/release-2.1.12-stable/"
+                "libevent-2.1.12-stable.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "92e6de1be9ec176428fd2367677e61ceffc2ee1cb119035037a27d346b0403bb",
+        "configure": ["--disable-samples", "--disable-libevent-regress"], "make": [MAKE_JOBS],
+        "artifact": ".libs/libevent_openssl*.so*", "launch": None,
+        "note": "libevent 2.1.12's libevent_openssl links the subject libcrypto (24.17 admission)",
+    },
+    {
+        "family": "dovecot", "version": "2.3.21",
+        "url": "https://dovecot.org/releases/2.3/dovecot-2.3.21.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "05b11093a71c237c2ef309ad587510721cc93bbee6828251549fc1586c36502d",
+        "configure": ["--with-ssl=openssl", "--without-ldap", "--without-sql", "--without-pam",
+                      "--without-gssapi", "--without-lua", "--without-lz4", "--without-zstd",
+                      "--without-lzma", "--without-bzlib", "--disable-static"],
+        "make": [MAKE_JOBS], "artifact": "src/lib-dcrypt/.libs/libdcrypt_openssl.so*",
+        "launch": None,
+        "note": ("dovecot 2.3.21's libdcrypt_openssl links the subject libcrypto (24.17 "
+                 "admission)"),
+    },
+    {
+        "family": "cyrus-sasl", "version": "2.1.28",
+        "url": ("https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/"
+                "cyrus-sasl-2.1.28.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "7ccfc6abd01ed67c1a0924b353e526f1b766b21f42d4562ee635a8ebfc5bb38c",
+        "configure": ["--with-openssl={prefix}", "--disable-static", "--enable-shared",
+                      "--disable-otp", "--disable-ldapdb", "--without-pam", "--disable-sql"],
+        "make": [MAKE_JOBS], "artifact": "plugins/.libs/libdigestmd5.so*", "launch": None,
+        "note": ("cyrus-sasl 2.1.28's digestmd5 plugin links the subject libcrypto (24.17 "
+                 "admission)"),
+    },
+    {
+        "family": "fossil", "version": "2.24",
+        "url": "https://fossil-scm.org/home/tarball/version-2.24/fossil-src-2.24.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "01aafcff3309ba9eb0ca6bcf4267108961676af336727b8adbc05475d96edd36",
+        "configure": ["--with-openssl={prefix}", "--disable-fusefs"], "make": [MAKE_JOBS],
+        "artifact": "fossil", "launch": ["version"],
+        "note": "fossil 2.24 links the subject libssl/libcrypto (24.17 admission)",
+    },
+)
 
 # The Phase-17 downstream harnesses' pinned releases, added to widen the direct-consumer set. nginx
 # 1.26.3 is the TLS-server slice (its own `configure`, so it is treated like autotools).
@@ -223,16 +357,23 @@ _PHASE17_PINS: dict[str, str] = {
 
 
 def _build_catalogue() -> tuple[dict, ...]:
-    """The admitted recipe catalogue: the 24.3 census recipes, pinned, plus the Phase-17 nginx slice.
+    """The admitted recipe catalogue: the 24.3 census recipes (with the 24.17 overrides applied),
+    the 24.17 admission batch, and the Phase-17 nginx slice.
 
     Each recipe carries a `recipe_id`, the pinned archive digest, and the exact argv templates with
     the single `{prefix}` substitution. Nothing here is candidate-specific: the same recipe is run
-    against both subjects.
+    against both subjects. The 24.17 overrides fix the four recipe-backed blockers (kmod, openvpn,
+    isync; libssh/lighttpd stay blocked) and the extra specs admit the bounded 24.17 batch.
     """
     recipes: list[dict] = []
     for spec in census.SPECS:
         rec = dict(spec)
+        rec.update(_RECIPE_OVERRIDES.get(rec["family"], {}))
         rec["sha256"] = _CENSUS_PINS.get(rec["family"])
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    for spec in _EXTRA_SPECS:
+        rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
     recipes.append({
@@ -422,6 +563,11 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
                PKG_CONFIG_PATH=f"{prefix}/lib/pkgconfig",
                CPPFLAGS=f"-I{prefix}/include",
                LDFLAGS=f"-L{prefix}/lib")
+    # A recipe may extend the link environment (24.17's isync override adds -Wl,-rpath-link so the
+    # subject lib dir resolves libssl's transitive libcrypto dependency). Substituted identically for
+    # both subjects, so the identical-build-intent rule holds.
+    if recipe.get("ldflags_extra"):
+        env["LDFLAGS"] = env["LDFLAGS"] + " " + str(recipe["ldflags_extra"]).format(prefix=prefix)
 
     level = L1
     if recipe["build_system"] in ("autotools", "configure"):

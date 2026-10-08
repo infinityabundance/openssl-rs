@@ -439,7 +439,7 @@
         "checkpoint_state_hash": "a887e4176ee59aec0a6d958696c805efffe6df8a2620c4b9339b849138ac805d",
         "plan": {
           "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-          "sha256": "67aea42008c29255080dfd6f0c6030e28330541f12acd16d7251b24a024687bf"
+          "sha256": "5ba5ecc4f39af970e3c4bcf12c79342492dde919af58f9bb64383ba407223a31"
         },
         "registry": {
           "path": "forensics/tools/gen_frf_courts.py",
@@ -470,7 +470,7 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "67aea42008c29255080dfd6f0c6030e28330541f12acd16d7251b24a024687bf"
+      "sha256": "5ba5ecc4f39af970e3c4bcf12c79342492dde919af58f9bb64383ba407223a31"
     },
     {
       "name": "frf-registry",
@@ -490,7 +490,7 @@
     {
       "name": "phase24-container-manifest",
       "path": "forensics/downstream/container.json",
-      "sha256": "797216ec341a0fa6b5d7539947624bc0287007019030caafcd83e953c1111765"
+      "sha256": "a74a14c978fa5b274628396fd781ba9036af488760ce8c06a5b506887751383b"
     },
     {
       "name": "downstream-schemas",
@@ -525,12 +525,12 @@
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "f13829868dc917601b369760983c6113d4b7eddecf8f9a1f17ed94c8fc8942af"
+      "sha256": "163c1affb86296e7558280147d938c1173f162215f77739a6e4d237b02575753"
     },
     {
       "name": "downstream-runtime",
       "path": "forensics/tools/downstream_runtime.py",
-      "sha256": "15739bd787925b78a19e379d6fbf34a95662efef12cc3b50fcd10d3af70f45b5"
+      "sha256": "16816d86925743598732223d2374f85eabd2193bcee891e752f05a6f3bcfb3e9"
     },
     {
       "name": "downstream-failures",
@@ -540,7 +540,7 @@
     {
       "name": "downstream-high-value",
       "path": "forensics/tools/downstream_high_value.py",
-      "sha256": "18929c904e79d73d8e762c031bd584bee5176f4098935358e857ae67a8b836cc"
+      "sha256": "97e4e969647e2c69c5b201cdcef90f33fe0c36a72fd33b6582383f3e47a73807"
     },
     {
       "name": "downstream-hostility",
@@ -590,32 +590,32 @@
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "3fc56af9f6a60fcc427a30e4131f92ce3892090a0e5e37e7365db6894459ea48"
+      "sha256": "7a8cd080d082a8648eab2f6a2c7b5631b481f4b7688ed36481601cf2954d7e2e"
     },
     {
       "name": "holdout",
       "path": "forensics/downstream/holdout.json",
-      "sha256": "d35093619508ab1047b14bfc78ba19e14d48d81bfe2b31e0efd44bcb076ddb32"
+      "sha256": "1ab6d4a7314600bd03b49da4d6a47436029f44c03b13b5eaa43ac2a193f993fe"
     },
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "569aad0dc237c450dbb94119ac9034cbeaa420fd3acece383df5c3a0bcf794f5"
+      "sha256": "7264b612110df46e9b91c39a51a6ca02d8a2a3a9a4921845033aac15932a3d3c"
     },
     {
       "name": "runtime-functional-atlas",
       "path": "forensics/downstream/runtime-functional-atlas.json",
-      "sha256": "2904cc61b06aec31edfe58dd6263ac4747ed9097d5f30c0807885b3a32df98eb"
+      "sha256": "081eb3596e3ff5e9a2f14234f56e71053580aca5c3dc091ae421c6d8e05f5245"
     },
     {
       "name": "failures",
       "path": "forensics/downstream/failures.json",
-      "sha256": "ee9a099706248c56b0d95158781f38f4189bb190e72323e6ab42d213a189a9e2"
+      "sha256": "58b3fbe1a508c7297599a8a0a4c313052bd813ed086308010f3799b5538b8659"
     },
     {
       "name": "high-value-tier",
       "path": "forensics/downstream/high-value-tier.json",
-      "sha256": "7945b279794504d6079832db4ef0fde3062fc9912494249fe55ea4824ce7a6f2"
+      "sha256": "6afc6b74bc1b4fdcb860661066f0341bc356a6a2f92b2436fbc432ad9ed2fa43"
     },
     {
       "name": "hostility-corpus",
@@ -625,17 +625,17 @@
     {
       "name": "candidate-freeze",
       "path": "forensics/downstream/candidate-freeze.json",
-      "sha256": "a29b53b76e3452696191edf1fa6d483aa1069fe510f41bb7e3a33662f8af4cf9"
+      "sha256": "908b1fb9ff0710bdc4724e6c3739c2d6d78d6cd744808aa0f46166513ad048be"
     },
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "8a6d0c033c2105fee0f1be3624cad1d29fc8e410abb91f706c4cc7d6af70b1d2"
+      "sha256": "1efe637da9c23f3bb640f9f16305885335dcd8977557d53766de24b98c62abe9"
     },
     {
       "name": "reconciliation",
       "path": "forensics/downstream/reconciliation.json",
-      "sha256": "2a75de997c95f222aa1b32f3fa501742f4e8cb042673dc9a86d92350dc1afc12"
+      "sha256": "474e239d0d54a9ab11bb1882965117111d7e861dc9728584a091450b2927ccdd"
     }
   ],
   "kind": "phase24-frf-closure",

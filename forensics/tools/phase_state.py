@@ -1252,12 +1252,13 @@ PHASE23_MODULES = [
 # unit is not a symbol. `forensics/phase24-obligations.json` records its unit as `downstream 1000
 # contract` (in `atlas_common.NON_EXPORT_UNITS`, so the export-partitioning tools skip it, as they
 # skip Phase 16's `cli-config contract` through Phase 23's `multitrack authority contract`), and its
-# working set is sixteen contract units -- one per subphase 24.1 through 24.16: the ranking-source
+# working set is seventeen contract units -- one per subphase 24.1 through 24.17: the ranking-source
 # acquisition, the candidate universe, the authority-baseline census, the P1000+reserve freeze, the
 # holdout partition, the build/link atlas, the runtime/functional atlas, the failure
 # discovery/minimization loop, the high-value deep tier, the hostility augmentation, the candidate
 # freeze and holdout, the final full P1000 run, the atlas reconciliation, the FRF/Gemel closure, the
-# downstream-1000 seal and the biggest-mover shared-blocker analysis (24.16).
+# downstream-1000 seal, the biggest-mover shared-blocker analysis (24.16) and the biggest-mover
+# remediation (24.17).
 # Like Phases 18 through 23 it hands nothing forward and receives nothing: it owns no provider
 # registration row, no symbol deferral and no prerequisite unit, because it measures downstream
 # replacement over real projects that are already identified rather than adding library surface.
@@ -1297,6 +1298,10 @@ PHASE24_MODULES = [
     # the analysis it lands is absent, and the seal court refuses a seal that has lost the link to
     # it.
     "docs/PHASE-24-BIGGEST-MOVERS.md",
+    # 24.17's biggest-mover remediation record. Naming it here makes the before/after record required
+    # evidence: a stratum whose report names repairs but whose measured remediation is absent is
+    # incomplete, and the seal court refuses a seal that has lost the link to it.
+    "forensics/downstream/blocker-remediation.json",
 ]
 
 
@@ -1839,14 +1844,15 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "not a symbol: `forensics/phase24-obligations.json` publishes "
                             "`unit: downstream 1000 contract` and its `implemented`/`open` "
                             "*export* lists are empty by measurement, while "
-                            "`open_in_this_stratum` counts the sixteen contract units "
+                            "`open_in_this_stratum` counts the seventeen contract units "
                             "(`ranking-sources`, `candidate-universe`, "
                             "`authority-census`, `family-freeze`, `holdout-partition`, "
                             "`build-link-atlas`, `runtime-functional-atlas`, "
                             "`failure-minimization`, `high-value-tier`, "
                             "`hostility-augmentation`, `candidate-freeze`, `p1000-run`, "
                             "`atlas-reconciliation`, `frf-gemel-closure`, "
-                            "`downstream-1000-seal` and `blocker-leverage`). It owns no provider "
+                            "`downstream-1000-seal`, `blocker-leverage` and "
+                            "`blocker-remediation`). It owns no provider "
                             "registration row, no "
                             "symbol deferral and no prerequisite unit: it activates no provider "
                             "and adds no library surface, because it measures downstream "

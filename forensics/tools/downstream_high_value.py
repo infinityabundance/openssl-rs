@@ -1389,13 +1389,11 @@ def _mutations(tier_body: dict, fingerprints_body: dict, runtime_body: dict) -> 
             fid = str(r.get("family_id"))
             base[fid] = max(base.get(fid, -1), RANK.get(str(r.get("level")), -1))
     cand = next((r for r in m3["runs"] if r.get("subject") == "candidate"
-                 and RANK.get(str(r.get("level")), -1) < RANK[L7]
-                 and base.get(str(r.get("family_id")), -1) < RANK[L7]), None)
+                 and base.get(str(r.get("family_id")), -1) < RANK["L8-authority-equivalent"]), None)
     if cand is not None:
-        cand["level"] = L7
+        cand["level"] = "L8-authority-equivalent"
         cand["outcome"] = "reached"
         cand["residual_class"] = "none"
-        cand["reaches_baseline"] = True
     out.append(("candidate_level_above_authority_baseline",
                 "above the authority-applicable baseline", m3))
 
