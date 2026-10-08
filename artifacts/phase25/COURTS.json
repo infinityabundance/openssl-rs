@@ -3,8 +3,39 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "**25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census: it reads the committed artifacts/phase25/source-census.json and re-runs the 25.1 pure checks over it without a compiler, so the census's own measurement (`ms_census.py --measure`, one clippy run plus a pinned-nightly expansion) is the court's subject and the court is a pure re-derivation of it. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining twenty-one of its twenty-two courts -- MS-CONSTITUTION, MS-NON-RUST-TCB, MS-SAFETY-OBLIGATIONS, MS-OWNERSHIP-PLANES, MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.2 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, and **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining twenty of its twenty-two courts -- MS-NON-RUST-TCB, MS-SAFETY-OBLIGATIONS, MS-OWNERSHIP-PLANES, MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.2 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught_lint_weakened": 2,
+          "caught_metadata_only_widened": 1,
+          "caught_plan_court_renamed": 1,
+          "caught_subphase_dropped": 2,
+          "caught_unit_dropped": 1,
+          "honest": true,
+          "seed_lint_weakened": true,
+          "seed_metadata_only_widened": true,
+          "seed_plan_court_renamed": true,
+          "seed_subphase_dropped": true,
+          "seed_unit_dropped": true,
+          "specificity_holds": true
+        },
+        "counts": {
+          "ledger_units": 22,
+          "planned_units": 22,
+          "registered_or_pending_courts": 22,
+          "schema_kinds": 22
+        },
+        "court": "MS-CONSTITUTION",
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the constitution court reads committed authored artefacts and re-derives their claims, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
+        "method": "stages no probe: it re-derives the constitution from the plan's section-2 table (the 22 subphases and their courts), the schema inventory, the Docker-only guard, the venue manifest, the obligation ledger and the frozen safety lint policy, and fails if any has drifted -- including if a Phase-25 tool has weakened unsafe_op_in_unsafe_fn, undocumented_unsafe_blocks or missing_safety_doc. Five seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3).",
+        "probe": "",
+        "problems": [],
+        "verdict": "pass"
+      },
       {
         "contexts_by_kind": {
           "EXTERN_BLOCK": 10,
@@ -196,7 +227,6 @@
     "pending_courts": {
       "MS-ASAN-MSMAN": "25.10 -- ASan/MSan",
       "MS-CLEAN-REGEN": "25.19 -- the full clean regeneration",
-      "MS-CONSTITUTION": "25.0 -- the constitution (the plan, schemas, guard, manifest, ledger and runner)",
       "MS-CVE-REPLAY": "25.16 -- the historical CVE replay",
       "MS-EXPOSURE-CLASSIFICATION": "25.7 -- the exposure/data-flow classification",
       "MS-FRF-CLOSURE": "25.20 -- the FRF/Gemel closure",
@@ -486,8 +516,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 1,
-      "total": 1
+      "pass": 2,
+      "total": 2
     },
     "tool_states": [
       "PASS",
@@ -536,6 +566,21 @@
       "name": "phase25-container-manifest",
       "path": "forensics/memory-safety/container.json",
       "sha256": "cbdd39e7340fb32696802307d1f179a5c7d3175122a4db18854cf23e7894ef64"
+    },
+    {
+      "name": "phase25-ledger",
+      "path": "forensics/phase25-obligations.json",
+      "sha256": "12245002857c9f367529a98c0ba31d63874357676d5ad71c31be1087d2f4f865"
+    },
+    {
+      "name": "cargo-toml",
+      "path": "Cargo.toml",
+      "sha256": "36a32914475754059067153cb064d4a7a2fe06d6904310d171506446cc101028"
+    },
+    {
+      "name": "lib-rs",
+      "path": "src/lib.rs",
+      "sha256": "12a75c398ea4a85023aa88c7515cfd985c102ab6b032b9a9c8770fa3bf5ea7ec"
     },
     {
       "name": "source-census",
