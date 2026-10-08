@@ -142,14 +142,18 @@ OBLIGATION_PROOFS: tuple[str, ...] = (
 )
 OBLIGATION_STATES: tuple[str, ...] = ("DISCHARGED", "OPEN", "UNKNOWN")
 
-# The exposure classes (brief section 7): whether a person, a configuration, a CLI input, a network
-# peer or a downstream program can reach the site. `UNREACHABLE_PROFILE` and `TEST_ONLY` are the
-# two classes that are not reachable in the claimed profile.
+# The exposure classes (brief section 7): whether a person, a configuration, a CLI input, a local
+# file, a network peer or a downstream program can reach the site. `UNREACHABLE_PROFILE`, `TEST_ONLY`
+# and `TOOLING_ONLY` are the classes that are not reachable in the claimed profile. 25.7 added
+# `TOOLING_ONLY` and `LOCAL_FILE_INPUT_REACHABLE`, the two members the brief names that 25.0 did not
+# carry, and recorded the correction in docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4.5.
 EXPOSURE_CLASSES: tuple[str, ...] = (
     "UNREACHABLE_PROFILE",
     "TEST_ONLY",
+    "TOOLING_ONLY",
     "INTERNAL_REACHABLE",
     "LOCAL_API_REACHABLE",
+    "LOCAL_FILE_INPUT_REACHABLE",
     "CONFIG_REACHABLE",
     "CLI_INPUT_REACHABLE",
     "NETWORK_CLIENT_REACHABLE",
@@ -158,10 +162,11 @@ EXPOSURE_CLASSES: tuple[str, ...] = (
 )
 
 # The exposure classes that name a site **externally** reachable in the claimed profile: a caller,
-# a configuration, a CLI input, a network peer or a downstream program can reach it. A seal-class
-# record may not report a pass while one of these carries tool state `UNSUPPORTED`.
+# a configuration, a CLI input, a local file, a network peer or a downstream program can reach it. A
+# seal-class record may not report a pass while one of these carries tool state `UNSUPPORTED`.
 EXTERNALLY_REACHABLE_EXPOSURE: frozenset[str] = frozenset({
     "LOCAL_API_REACHABLE",
+    "LOCAL_FILE_INPUT_REACHABLE",
     "CONFIG_REACHABLE",
     "CLI_INPUT_REACHABLE",
     "NETWORK_CLIENT_REACHABLE",

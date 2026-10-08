@@ -120,12 +120,18 @@
       },
       {
         "closure": "the `MS-EXPOSURE-CLASSIFICATION` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-EXPOSURE-CLASSIFICATION is pending",
+        "findings": [
+          "57663 census site(s) carry exactly one exposure class: 1314 are network-reachable (981 server, 333 client), 53822 are externally reachable and 3841 are `UNREACHABLE_PROFILE` (the 25.5 residual)",
+          "7781 site(s) are attacker-input reachable across 17 of 18 route(s); the largest are X509_CERTIFICATE=2406, PROVIDER_PARAMETERS=1171, DER=975. The routes are a rule over committed parser identities, not a dynamic taint result",
+          "16794 externally reachable buffer operation(s) are censused by buffer origin, pointer origin and capacity origin; the length origin, the integer-conversion path and the copy primitive are `NOT_MEASURED` and are the dynamic subphases' subject",
+          "the risk tiers are a review priority: S0=3841, S1=37028, S2=16204, S3=0, S4=590; 3 network site(s) are named as the review head",
+          "the Phase-22 closure's `protocol` family is unpopulated, so a network class is grounded in the parser's committed role (the module or authority unit the peer drives) and is recorded as an `evidence_missing` residual, never read as a wire observation"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-EXPOSURE-CLASSIFICATION is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "exposure-classification",
         "what": "the exposure/data-flow classification of every unsafe site into the closed exposure classes (unreachable-profile, test-only, internal, local-API, config, CLI-input, network-client, network-server, downstream-runtime-observed), so a site is reachable by measurement rather than by assertion"
@@ -304,8 +310,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 7,
-      "open_in_this_stratum": 15,
+      "implemented": 8,
+      "open_in_this_stratum": 14,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -341,12 +347,12 @@
     {
       "name": "phase-25-plan",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "30e45a52634e1f3296e2b2d160fda43d9ba597b7051a1dccff217eac321577d8"
+      "sha256": "4cf2bb80a6a94d1cf50d496144dae08f58a54efee74764eef68a62aca2f65b98"
     },
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "70288f895e65a774b0f26fa8db182b27e7c096b7be59216bc95c2f77f4d93c5a"
+      "sha256": "ed1e2bc8300c0d292870db3fd3a1b420167ee880a23724f123990c44e2515f8d"
     },
     {
       "name": "phase25-guard",
@@ -356,7 +362,7 @@
     {
       "name": "memory-safety-schemas",
       "path": "forensics/tools/memory_safety_schemas.py",
-      "sha256": "e2de24c2612b597c93cd4f5456c11346e4949723c91e0d685131660cbb522708"
+      "sha256": "424f8fb23b56029f1ae9fc8897f61d96a760cc872cecdad0d69646447b85cfcd"
     }
   ],
   "kind": "phase25-obligations",

@@ -437,6 +437,21 @@ GENERATORS_BEFORE_LEDGERS = [
     # than a silent divergence, and the `MS-PHASE24-CROSSWALK` court re-runs the same pure checks
     # over the committed artefact, the census and the committed Phase-24 measurement.
     "forensics/tools/ms_phase24_crosswalk.py",
+    # **Phase 25.7's exposure/data-flow classification (`forensics/tools/ms_exposure.py` ->
+    # `artifacts/phase25/exposure.json`) is a pure function of committed inputs too, so it belongs
+    # here and is byte-compared.** It gives every compiler-derived unsafe site of the 25.1 census
+    # exactly one class from the closed exposure vocabulary, reading the committed 25.5 crosswalk
+    # for the authority unit and public roots, the committed 25.6 crosswalk for the downstream
+    # state, the committed 25.4 ownership planes for the manual allocation sites, and the census's
+    # own file/module context; the attacker-input routes and the buffer-operation census follow from
+    # the same committed parser identities. It compiles nothing -- no compiler, no tool, no probe --
+    # so `forensics/memory-safety/container.json` lists it `metadata_only` and the Docker-only guard
+    # admits it on any host, exactly as `ms_phase24_crosswalk` is. A stale committed classification
+    # -- or a dropped site, a remote class with no justification, an attacker route with no path, an
+    # inverse view that disagrees, a boundary plan marked executed or a typed count -- is a failure
+    # rather than a silent divergence, and the `MS-EXPOSURE-CLASSIFICATION` court re-runs the same
+    # pure checks over the committed artefact and the committed planes it is derived from.
+    "forensics/tools/ms_exposure.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -782,6 +797,13 @@ COMPARED = [
     # or a partial join with no residual -- is a failure rather than a silent divergence. It executes
     # nothing and reads no compiler output, so re-deriving it needs no compiler and no candidate.
     "artifacts/phase25/phase24-crosswalk.json",
+    # Phase 25.7's exposure/data-flow classification: a pure function of the committed 25.1 census,
+    # the committed 25.5 crosswalk, the committed 25.6 crosswalk and the committed 25.4 ownership
+    # planes. A dropped site, a remote class with no justification, an attacker route with no path,
+    # an inverse view that disagrees, a boundary plan marked executed or a typed count is a failure
+    # rather than a silent divergence. It executes nothing and reads no compiler output, so
+    # re-deriving it needs no compiler and no candidate.
+    "artifacts/phase25/exposure.json",
 ]
 
 # ---------------------------------------------------------------------------

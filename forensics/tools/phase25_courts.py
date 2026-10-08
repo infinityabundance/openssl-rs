@@ -13,8 +13,9 @@ two cannot disagree, and a court whose control is not honest is `fail` rather th
 
 **25.0 registers `MS-CONSTITUTION`, 25.1 registers the compiler-backed census, 25.2 registers the
 non-Rust trusted computing base, 25.3 registers the safety obligations, 25.4 registers the
-ownership/allocation/callback planes, 25.5 registers the Phase-22 reachability crosswalk and 25.6
-registers the Phase-24 downstream crosswalk.** The
+ownership/allocation/callback planes, 25.5 registers the Phase-22 reachability crosswalk, 25.6
+registers the Phase-24 downstream crosswalk and 25.7 registers the exposure/data-flow
+classification.** The
 stratum's
 obligations are not exports, so its courts read committed evidence rather than diffing a staged
 probe pair, and `run_courts.py` would refuse a stratum in `in-progress` with no runner at all -- so
@@ -52,7 +53,13 @@ the 25.6 pure checks (`ms_phase24_crosswalk.crosswalk_findings`,
 `ms_phase24_crosswalk.crosswalk_sensitivity_control`) over it, the committed census and the committed
 Phase-24 downstream measurement, so every unsafe site's downstream usage is the Phase-24
 measurement's answer (a measured consumer that imports the site's public surface, or an explicit
-not-observed disposition with a reason) rather than a typed one. The
+not-observed disposition with a reason) rather than a typed one. **25.7 registers
+`MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification: it reads the committed
+`artifacts/phase25/exposure.json` and re-runs the 25.7 pure checks (`ms_exposure.exposure_findings`,
+`ms_exposure.exposure_sensitivity_control`) over it, the committed census, the committed 25.5 and
+25.6 crosswalks and the committed 25.4 ownership planes, so every unsafe site's exposure class and
+the attacker-input routes that reach its memory operations are the committed evidence's answer
+rather than a typed one. The
 registry is the file
 `run_courts.py` checks is reproduced, so a court
 silently dropped is a finding rather than a smaller green run. This is the reverse of Phase 16's
@@ -175,6 +182,12 @@ import ms_phase22_crosswalk  # noqa: E402
 # the reconciliation clusters and the family freeze) it joins to.
 import ms_phase24_crosswalk  # noqa: E402
 
+# 25.7's exposure/data-flow classification and the tool that derives it from the committed census, the
+# committed 25.5 crosswalk, the committed 25.6 crosswalk and the committed 25.4 ownership planes. The
+# court re-runs the tool's pure `exposure_findings` / `exposure_sensitivity_control` over the
+# committed artefact and those planes.
+import ms_exposure  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase25" / "COURTS.json"
 GENERATOR = "forensics/tools/phase25_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-25-MEMORY-SAFETY-SUBPHASES.md"
@@ -228,6 +241,12 @@ DOWNSTREAM_BUILD_LINK_ATLAS = REPO_ROOT / "forensics" / "downstream" / "build-li
 DOWNSTREAM_P1000_RUN = REPO_ROOT / "forensics" / "downstream" / "p1000-run.json"
 DOWNSTREAM_FAMILY_FREEZE = REPO_ROOT / "forensics" / "downstream" / "family-freeze.json"
 
+# 25.7's exposure/data-flow classification and the pure tool that derives it from the committed
+# census, the committed 25.5 and 25.6 crosswalks and the committed 25.4 ownership planes.
+EXPOSURE = REPO_ROOT / "artifacts" / "phase25" / "exposure.json"
+MS_EXPOSURE_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_exposure.py"
+EXPOSURE_COURT = "MS-EXPOSURE-CLASSIFICATION"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -254,14 +273,15 @@ COURTS: list[tuple[str, str]] = [
     (OWNERSHIP_PLANES_COURT, "_ms_ownership_planes_court"),
     (PHASE22_CROSSWALK_COURT, "_ms_phase22_crosswalk_court"),
     (PHASE24_CROSSWALK_COURT, "_ms_phase24_crosswalk_court"),
+    (EXPOSURE_COURT, "_ms_exposure_classification_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
 # `MS-SOURCE-CENSUS`, 25.2 removed `MS-NON-RUST-TCB`, 25.3 removed `MS-SAFETY-OBLIGATIONS`, 25.4
-# removed `MS-OWNERSHIP-PLANES`, 25.5 removed `MS-PHASE22-CROSSWALK` and 25.6 removed
-# `MS-PHASE24-CROSSWALK`, so fifteen remain. Ordered as the plan orders them.
+# removed `MS-OWNERSHIP-PLANES`, 25.5 removed `MS-PHASE22-CROSSWALK`, 25.6 removed
+# `MS-PHASE24-CROSSWALK` and 25.7 removed `MS-EXPOSURE-CLASSIFICATION`, so fourteen remain. Ordered
+# as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-EXPOSURE-CLASSIFICATION": "25.7 -- the exposure/data-flow classification",
     "MS-UNSAFE-REDUCTION": "25.8 -- the unsafe reduction",
     "MS-MIRI": "25.9 -- Miri",
     "MS-ASAN-MSMAN": "25.10 -- ASan/MSan",
@@ -1002,6 +1022,97 @@ def _ms_phase24_crosswalk_court(name: str) -> dict:
     }
 
 
+def _ms_exposure_classification_court(name: str) -> dict:
+    """`MS-EXPOSURE-CLASSIFICATION`: 25.7's court, the exposure/data-flow classification.
+
+    Stages no probe. It reads the committed `artifacts/phase25/exposure.json` and re-runs the 25.7
+    pure checks `ms_exposure.exposure_findings` and `ms_exposure.exposure_sensitivity_control` over it
+    together with the committed 25.1 census it classifies, the committed 25.5 Phase-22 crosswalk it
+    reads for the authority unit and public roots, the committed 25.6 Phase-24 crosswalk it reads for
+    the downstream state and the committed 25.4 ownership planes it reads for the manual allocation
+    sites -- no compiler, no tool; the derivation that produced the plane is `ms_exposure.py
+    --measure`, and this court only re-derives from what it wrote. It establishes that every census
+    site has exactly one class from the closed vocabulary; that every externally reachable site has a
+    justification (a network class one that names a network route, so a remote class with no
+    justification is caught); that every attacker route's sites are named and equal the derivation;
+    that the inverse exposure view and the buffer-operation census reproduce; that the
+    length-boundary plan is marked unexecuted; and that the sites, justifications, counts and
+    residuals equal their derivation. Six seeded mutations -- a remote class with no justification, an
+    attacker route with no path, an inverse view that disagrees, a boundary plan marked executed, a
+    dropped site and a typed count -- are each caught with specificity holding. It is an
+    **instrument**: it can pass while the classification records real property findings (the sites no
+    authority unit reaches, the routes that carry no attributable operation, the buffer-operation
+    fields the census does not measure and the network classes grounded in a parser role rather than
+    the unpopulated Phase-22 `protocol` family), which are recorded as the row's `findings` so a
+    passing classification court is never read as a memory-safety claim.
+    """
+    if not EXPOSURE.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "exposure-missing",
+                "problems": [f"the exposure classification {rel(EXPOSURE)} is absent"],
+                "findings": [], "control": {}}
+    if not SOURCE_CENSUS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "census-missing",
+                "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
+                "findings": [], "control": {}}
+
+    body = json.loads(EXPOSURE.read_text(encoding="utf-8")).get("body", {})
+    census_body = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8")).get("body", {})
+    authority = ms_exposure.load_authority()
+    problems = ms_exposure.exposure_findings(body, census_body, authority)
+    control = ms_exposure.exposure_sensitivity_control(body, census_body, authority)
+
+    counts = body.get("counts") or {}
+    findings = list(body.get("findings") or [])
+
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/exposure.json and re-runs the "
+            "25.7 pure checks (ms_exposure.exposure_findings and "
+            "ms_exposure.exposure_sensitivity_control) over it, the committed 25.1 census, the "
+            "committed 25.5 Phase-22 crosswalk, the committed 25.6 Phase-24 crosswalk and the "
+            "committed 25.4 ownership planes, without a compiler. The plane is a pure derivation: "
+            "each census site gets one class from the closed vocabulary by the recorded precedence "
+            "(a wire-parser route, a config/local-file parser, the cli root, the 25.6 downstream "
+            "state, the api roots, the callbacks root, or the 25.5 residual); a network class needs a "
+            "justified entry semantics, never a static edge. It establishes site-class completeness, "
+            "the justification of every externally reachable site, the attacker-route and "
+            "buffer-operation reproduction, the unexecuted boundary plan and the inverse view; six "
+            "seeded mutations are each caught with specificity holding "
+            "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.8)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the exposure court reads the committed classification and re-derives only its pure "
+            "checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "census_sites": counts.get("census_sites", 0),
+            "sites_classified": counts.get("sites_classified", 0),
+            "externally_reachable": counts.get("externally_reachable", 0),
+            "network_reachable": counts.get("network_reachable", 0),
+            "unreachable_profile": counts.get("unreachable_profile", 0),
+            "routed_sites": counts.get("routed_sites", 0),
+            "attacker_routes": counts.get("attacker_routes", 0),
+            "attacker_routes_with_sites": counts.get("attacker_routes_with_sites", 0),
+            "buffer_operations": counts.get("buffer_operations", 0),
+            "justifications": counts.get("justifications", 0),
+            "residuals": len(body.get("residuals") or []),
+        },
+        "sites_by_exposure": counts.get("sites_by_exposure") or {},
+        "sites_by_risk_tier": counts.get("sites_by_risk_tier") or {},
+        "routes_by_count": {r: (body.get("attacker_routes") or {}).get(r, {}).get("count", 0)
+                            for r in sorted(body.get("attacker_routes") or {})},
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1076,14 +1187,17 @@ def main(argv: list[str]) -> int:
             "**25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the "
             "Phase-22 whole-program reachability atlas, and "
             "**25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the "
-            "Phase-24 downstream-1000 measurement. "
+            "Phase-24 downstream-1000 measurement, and "
+            "**25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification "
+            "that gives every unsafe site exactly one exposure class and records the attacker-input "
+            "routes and the buffer-operation census. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining fifteen of its twenty-two courts -- "
-            "MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, "
+            "remaining fourteen of its twenty-two courts -- "
+            "MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, "
             "MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.7 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.8 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -1142,6 +1256,8 @@ def main(argv: list[str]) -> int:
         InputRef(name="downstream-build-link-atlas", path=DOWNSTREAM_BUILD_LINK_ATLAS),
         InputRef(name="downstream-p1000-run", path=DOWNSTREAM_P1000_RUN),
         InputRef(name="downstream-family-freeze", path=DOWNSTREAM_FAMILY_FREEZE),
+        InputRef(name="exposure", path=EXPOSURE),
+        InputRef(name="ms-exposure-tool", path=MS_EXPOSURE_TOOL),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
