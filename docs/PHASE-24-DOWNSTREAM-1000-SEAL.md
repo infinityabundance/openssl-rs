@@ -181,7 +181,10 @@ below:
 - **The ladder is `PASS 33 / PARTIAL 0 / FAIL 0 / UNKNOWN 0 / NOT_APPLICABLE 967`.** Of the thirty-five
   recipe-backed families, thirty-three reach an authority-applicable baseline at L4 or above, so the
   drop-in question is posed for those thirty-three: **the candidate reaches its authority-applicable baseline for all 33 measurable families**.
-  All thirty-three are `DROP_IN_PASS`; `DROP_IN_FAIL` is 0 and `DROP_IN_UNKNOWN` is 0.
+  All thirty-three are `DROP_IN_PASS`; `DROP_IN_FAIL` is 0 and `DROP_IN_UNKNOWN` is 0. The **pass
+  level** behind each pass is not uniform: `drop-in-pass` is a baseline-normalized verdict count, not
+  an execution rung, so some passes have no admitted runtime workload behind them, and §5 states that
+  split rather than leaving the ladder to be misread as a nested funnel.
 - **A `NOT_APPLICABLE` family is neither a pass nor a fail.** The 967 `DROP_IN_NOT_APPLICABLE`
   verdicts are the honest consequence of the admitted recipe coverage, not a measurement of those
   families: this venue did not pose the drop-in question for them, so it records that it did not
@@ -223,6 +226,8 @@ Not: "proof that any consumer is safe"; not "the ecosystem drops in"; not "1000/
 claim wider than the population, the venue, the measured surface and the candidate named. A
 `NOT_APPLICABLE` family is neither a pass nor a fail, and the atlas makes no statement about an
 unmeasured consumer.
+
+**The pass-level bound.** The ladder is not a nested funnel: `drop-in-pass` is the baseline-normalized verdict count rather than an execution rung, so it is not required to be non-increasing with the rungs above it, and the figure does not hide where the passes sit — thus of the 33 drop-in passes, 25 are at L4-linked with no admitted runtime workload for those families and 8 reach L5 or above. A pass at `L4-linked` is a link-level pass: the candidate reached exactly the level the authority itself reached and the venue admits no runtime or functional workload for that family, so only the eight families that reach `L5` or above have a runtime level behind their pass. This is the material caveat §4 states, and it is generated — `docs/SEAL-CENSUS.md` and `docs/PHASE-24-BIGGEST-MOVERS.md` derive the same split from the final run's verdict rows, and the `DOWNSTREAM-1000-SEAL` court requires this sentence of the seal.
 
 ## 6. The four non-claims
 

@@ -493,7 +493,10 @@ SEAL_CENSUS_BIGGEST_MOVERS_MARKERS = (
 
 # The scaffolding every seal carries plus the four non-claims, the bound and the separation the seal
 # must state. Each is a literal line the document must carry, so a seal stripped of its bound reads
-# `fail` rather than passing as a smaller green run.
+# `fail` rather than passing as a smaller green run. The `with no admitted runtime workload` marker
+# is the static anchor for the pass-level split: the seal must state it at all, and
+# `seal_derived_markers` re-derives the counts that sentence carries from the final run's verdict
+# rows, so a seal that hides the split -- or states one that no longer matches the run -- fails.
 SEAL_REQUIRED_MARKERS = (
     "STATUS: derived",
     "docs/SEAL-CENSUS.md",
@@ -507,6 +510,7 @@ SEAL_REQUIRED_MARKERS = (
     "1000/1000 is not a security proof",
     "a build is not a functional proof",
     "direct and transitive consumers are different evidence",
+    "with no admitted runtime workload for those families",
     "measured / inferred / known-divergence / not-tested / not-claimed",
     "SPDX-License-Identifier: Apache-2.0",
 )
@@ -2134,6 +2138,9 @@ def _blocker_leverage_court(name: str) -> dict:
     committed = json.loads(SHARED_BLOCKERS.read_text(encoding="utf-8"))
     body = _seal_body(committed)
     inputs = downstream_blockers.load_inputs()
+    # The final run, so the report, the README block and the census section re-render with the
+    # pass-level caveat they derive from its verdict rows' `candidate_level`.
+    p1000_body = _seal_body(json.loads(P1000_RUN.read_text(encoding="utf-8")))
 
     findings: list[str] = []
     if committed.get("body_hash") != content_hash(body):
@@ -2146,10 +2153,10 @@ def _blocker_leverage_court(name: str) -> dict:
 
     # The detailed report and the compact README block re-render from the committed analysis.
     report_text = BIGGEST_MOVERS.read_text(encoding="utf-8")
-    if report_text != biggest_movers.render_report(body):
+    if report_text != biggest_movers.render_report(body, p1000_body):
         findings.append(f"{rel(BIGGEST_MOVERS)} does not reproduce from the committed analysis")
     readme_text = README_DOC.read_text(encoding="utf-8")
-    block = biggest_movers.readme_block(body)
+    block = biggest_movers.readme_block(body, p1000_body)
     try:
         committed_block = biggest_movers.extract_readme_block(readme_text)
     except ValueError as exc:
@@ -2167,7 +2174,8 @@ def _blocker_leverage_court(name: str) -> dict:
         findings.append(f"{rel(BIGGEST_MOVERS)} does not link back to README.md")
 
     census_text = SEAL_CENSUS.read_text(encoding="utf-8")
-    section = "\n".join(render_seal_census._biggest_movers_lines({"body": body}))
+    section = "\n".join(render_seal_census._biggest_movers_lines(
+        {"body": body}, {"body": p1000_body}))
     if section and section not in census_text:
         findings.append(f"{rel(SEAL_CENSUS)} does not carry the biggest-movers section")
 
@@ -2561,7 +2569,10 @@ def seal_derived_markers(ev: dict) -> list[str]:
     Each is a literal substring the court requires the document to contain, so a figure the seal
     states that no longer matches the landing artefacts stops reproducing here. Every one is read
     from `forensics/downstream/reconciliation.json`, `forensics/downstream/p1000-run.json`,
-    `forensics/downstream/candidate-freeze.json` or `forensics/atlas/phase24/frf-closure.json`.
+    `forensics/downstream/candidate-freeze.json` or `forensics/atlas/phase24/frf-closure.json`. The
+    pass-level split marker is derived from `forensics/downstream/p1000-run.json`'s verdict rows'
+    `candidate_level`, so the seal cannot hide how many passes sit at `L4-linked` with no admitted
+    runtime workload without failing.
     """
     rb = _seal_body(ev["reconciliation"])
     pb = _seal_body(ev["p1000_run"])
@@ -2585,6 +2596,9 @@ def seal_derived_markers(ev: dict) -> list[str]:
         f"NOT_APPLICABLE {status.get('NOT_APPLICABLE') or 0}",
         f"the candidate reaches its authority-applicable baseline for all "
         f"{counts.get('measurable_families') or 0} measurable families",
+        # The pass-level split: how many baseline-normalized passes have no admitted runtime workload
+        # behind them versus how many reached a runtime level, derived from the verdict rows.
+        biggest_movers.pass_split_sentence(biggest_movers.pass_level_split(pb)),
         f"{measured.get('symbols') or 0}/{known.get('exported_symbols') or 0} exported symbols",
         f"{measured.get('headers') or 0}/{known.get('headers') or 0} public headers",
         f"{measured.get('api_families') or 0}/{known.get('api_families') or 0} API families",
