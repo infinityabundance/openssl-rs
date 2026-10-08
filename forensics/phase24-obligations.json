@@ -179,12 +179,18 @@
       },
       {
         "closure": "the `DOWNSTREAM-1000-SEAL` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "DOWNSTREAM-1000-SEAL is pending",
-        "property_status": "not_claimed",
-        "state": "open",
+        "findings": [
+          "993 of the 1000 counted families are DROP_IN_NOT_APPLICABLE: only 12 have an admitted pristine-source recipe in this venue, so the drop-in rate is measured over 7 families and is not a population-wide rate; a NOT_APPLICABLE family is neither a pass nor a fail",
+          "a selected population is not a random sample: the population is selected from frozen ranking evidence, so its rates do not generalise to all downstream software",
+          "1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and it makes no statement about an unmeasured consumer",
+          "a build is not a functional proof: reaching the built or linked levels is not behaving, and only the functional levels are behavioural evidence",
+          "direct and transitive consumers are different evidence: the two are never summed into one rate"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "DOWNSTREAM-1000-SEAL is pass",
+        "property_status": "NOT_CLAIMED",
+        "state": "implemented",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "downstream-1000-seal",
         "what": "the seal `docs/PHASE-24-DOWNSTREAM-1000-SEAL.md`, which closes the atlas as the stratum's claim and records the four non-claims it never exceeds"
@@ -195,8 +201,8 @@
       "contract_units": 15,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 14,
-      "open_in_this_stratum": 1,
+      "implemented": 15,
+      "open_in_this_stratum": 0,
       "owned": 15,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -232,12 +238,12 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "431e01d97a06052f310793e864ead3576705c719896bcc174c41644b03bb1fc5"
+      "sha256": "309e0f8c062db07be0c529bb53878b17761ac7cddcfdc14ff674820ae8de663d"
     },
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "55dadd434cac6b459de58c5c240815fbdd59b3cf8aa2c4f71432e34a31edb143"
+      "sha256": "4710b4bb910e0856003b9239f440aa9f3a4898ec454aa103cb374fc831155ef6"
     },
     {
       "name": "phase24-guard",

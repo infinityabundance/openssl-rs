@@ -8061,7 +8061,7 @@
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "84b276647aaa7525aa1a04f7523c2cd0fd2baf10cd3ab80d1d170bd3097aa2cc"
+      "sha256": "4998431074406050e409fcc47a8b81e259f899e804387aca3dff88fb71963fc5"
     },
     {
       "name": "downstream-freeze",
@@ -8076,7 +8076,7 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "431e01d97a06052f310793e864ead3576705c719896bcc174c41644b03bb1fc5"
+      "sha256": "309e0f8c062db07be0c529bb53878b17761ac7cddcfdc14ff674820ae8de663d"
     }
   ],
   "kind": "downstream-holdout",
