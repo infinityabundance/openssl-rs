@@ -17,15 +17,15 @@ hands no new library surface forward and receives none. The universe is therefor
 atlas-derived row kind plus a fail-closed reading of the machinery that would be wrong if it
 silently acquired work:
 
-  * **the downstream 1000 contract units** — seventeen authored policy rows naming the surfaces
+  * **the downstream 1000 contract units** — eighteen authored policy rows naming the surfaces
     `docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md` records, each state derived from the atlas that
     measures it: the ranking-source acquisition, the candidate universe, the authority-baseline
     census, the P1000+reserve freeze, the holdout partition, the build/link atlas, the
     runtime/functional atlas, the failure discovery/minimization loop, the high-value deep tier,
     the hostility augmentation, the candidate freeze and holdout, the final full P1000 run, the
     atlas reconciliation, the FRF/Gemel closure, the downstream-1000 seal, the biggest-mover
-    shared-blocker analysis and the biggest-mover remediation (seventeen courts in
-    `artifacts/phase24/COURTS.json`);
+    shared-blocker analysis, the biggest-mover remediation and the recipe-admission campaign
+    (eighteen courts in `artifacts/phase24/COURTS.json`);
   * **nothing else.** The ownership atlas assigns this stratum no export, the provider census
     assigns it no registration row, and `forensics/prerequisites.json` records no deferral or
     translation unit owned by phase 24. `main` fails closed if any of those ever stops being true,
@@ -116,7 +116,7 @@ SCHEMAS = "forensics/tools/downstream_schemas.py"
 # number those tools know.
 UNIT = "downstream 1000 contract"
 
-# The seventeen contract units whose closure is measured by a court this stratum stages. Each unit is
+# The eighteen contract units whose closure is measured by a court this stratum stages. Each unit is
 # a surface the stratum owes downstream-1000 evidence over, and each is closed only when its court
 # passes; none of them is a symbol, because the model measures runs over a frozen population of
 # downstream project families. `(unit, court, closure, what)`.
@@ -200,6 +200,14 @@ COURT_UNITS: tuple[tuple[str, str, str, str], ...] = (
      "computes the movement -- so what was repaired and what the planes then measured is a "
      "measurement rather than a claim, and what could not be repaired in the fixed venue is "
      "recorded still-blocked"),
+    ("recipe-campaign", "RT-RECIPE-CAMPAIGN",
+     "the `RT-RECIPE-CAMPAIGN` court passes",
+     "the recipe-admission campaign record `forensics/downstream/recipe-campaign.json`, which selects "
+     "a candidate list from the committed evidence by a stated heuristic rule, attempts at least 40 "
+     "recipe-less counted families, classifies each release tarball's build system empirically, and "
+     "admits only the venue-buildable ones into the shared recipe catalogue under the "
+     "identical-build-intent rule -- recording every attempt (admitted or not) with its outcome and "
+     "reason, so the campaign's yield is visible and a recipe that was not built is never admitted"),
 )
 
 # The contract units that measure a **property** rather than an instrument behaviour. The atlas
@@ -435,14 +443,15 @@ def main(argv: list[str]) -> int:
             "and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the "
             "live count. Phase 24 owns no provider registration row and no export: it activates "
             "no provider and adds no library surface, because it measures runs over a frozen "
-            "population of downstream project families. Its seventeen contract units are the "
+            "population of downstream project families. Its eighteen contract units are the "
             "downstream 1000 contract docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md section 1 names "
             "-- the ranking-source acquisition, the candidate universe, the authority-baseline "
             "census, the P1000+reserve freeze, the holdout partition, the build/link atlas, the "
             "runtime/functional atlas, the failure discovery/minimization loop, the high-value "
             "deep tier, the hostility augmentation, the candidate freeze and holdout, the final "
             "full P1000 run, the atlas reconciliation, the FRF/Gemel closure, the downstream-1000 "
-            "seal, the biggest-mover shared-blocker analysis and the biggest-mover remediation -- "
+            "seal, the biggest-mover shared-blocker analysis, the biggest-mover remediation and the "
+            "recipe-admission campaign -- "
             "and its `counts` block is the live record of which of them are implemented. "
             "Every entry point calls the Docker-only execution guard "
             "(`forensics/tools/phase24_guard.py`) first, so on the host the stratum refuses "

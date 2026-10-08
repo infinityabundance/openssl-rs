@@ -348,9 +348,9 @@
         "candidate-link-failure": 0,
         "candidate-load-failure": 0,
         "candidate-runtime-failure": 0,
-        "no-admitted-recipe": 980,
+        "no-admitted-recipe": 970,
         "no-fixture": 0,
-        "none": 18,
+        "none": 28,
         "out-of-scope": 0,
         "recipe-build-dependency-missing": 0,
         "recipe-build-system-unsupported": 2
@@ -363,21 +363,21 @@
           "step": "counted"
         },
         {
-          "families": 20,
+          "families": 30,
           "level": "L1-admitted-source",
-          "share_of_counted": "20/1000 (2.0%)",
+          "share_of_counted": "30/1000 (3.0%)",
           "step": "with-admitted-recipe"
         },
         {
-          "families": 18,
+          "families": 28,
           "level": "L2-configured",
-          "share_of_counted": "18/1000 (1.8%)",
+          "share_of_counted": "28/1000 (2.8%)",
           "step": "configured"
         },
         {
-          "families": 18,
+          "families": 28,
           "level": "L4-linked",
-          "share_of_counted": "18/1000 (1.8%)",
+          "share_of_counted": "28/1000 (2.8%)",
           "step": "linked"
         },
         {
@@ -399,13 +399,13 @@
           "step": "functional"
         },
         {
-          "families": 18,
+          "families": 28,
           "level": "",
-          "share_of_counted": "18/1000 (1.8%)",
+          "share_of_counted": "28/1000 (2.8%)",
           "step": "drop-in-pass"
         }
       ],
-      "measurable_families": 18,
+      "measurable_families": 28,
       "partition": {
         "family:389-ds-base": "no-admitted-recipe",
         "family:abuild": "no-admitted-recipe",
@@ -708,7 +708,7 @@
         "family:fdo-rendezvous-server": "no-admitted-recipe",
         "family:fedora-update-feedback": "no-admitted-recipe",
         "family:fetch-crl": "no-admitted-recipe",
-        "family:fetchmail": "no-admitted-recipe",
+        "family:fetchmail": "none",
         "family:ffmpeg-libavformat": "no-admitted-recipe",
         "family:ffmpeg-libavutil": "no-admitted-recipe",
         "family:fido2": "no-admitted-recipe",
@@ -866,7 +866,7 @@
         "family:hinsightd": "no-admitted-recipe",
         "family:hippotat-client": "no-admitted-recipe",
         "family:hiredict-ssl": "no-admitted-recipe",
-        "family:hiredis-ssl": "no-admitted-recipe",
+        "family:hiredis-ssl": "none",
         "family:hitch": "no-admitted-recipe",
         "family:hopm": "no-admitted-recipe",
         "family:hostapd": "no-admitted-recipe",
@@ -910,7 +910,7 @@
         "family:input-leap": "no-admitted-recipe",
         "family:intel-hdcp": "no-admitted-recipe",
         "family:intel-ipp-crypto-mb": "no-admitted-recipe",
-        "family:iperf3": "no-admitted-recipe",
+        "family:iperf3": "none",
         "family:ipmievd": "no-admitted-recipe",
         "family:ipmitool": "no-admitted-recipe",
         "family:ipmiutil": "no-admitted-recipe",
@@ -997,7 +997,7 @@
         "family:libapache2-mod-qos": "no-admitted-recipe",
         "family:libaprutil1": "no-admitted-recipe",
         "family:libarccommon3v5": "no-admitted-recipe",
-        "family:libarchive": "no-admitted-recipe",
+        "family:libarchive": "none",
         "family:libbobcat6": "no-admitted-recipe",
         "family:libboinc7": "no-admitted-recipe",
         "family:libc-client2007e": "no-admitted-recipe",
@@ -1092,7 +1092,7 @@
         "family:librabbitmq": "no-admitted-recipe",
         "family:librados2": "no-admitted-recipe",
         "family:librbd1": "no-admitted-recipe",
-        "family:librdkafka": "no-admitted-recipe",
+        "family:librdkafka": "none",
         "family:libre": "no-admitted-recipe",
         "family:librelp": "no-admitted-recipe",
         "family:librepo": "no-admitted-recipe",
@@ -1140,7 +1140,7 @@
         "family:monit": "none",
         "family:monitoring-plugins": "no-admitted-recipe",
         "family:mosh": "no-admitted-recipe",
-        "family:mosquitto": "no-admitted-recipe",
+        "family:mosquitto": "none",
         "family:mstflint": "no-admitted-recipe",
         "family:mtxclient": "no-admitted-recipe",
         "family:mumble": "no-admitted-recipe",
@@ -1255,7 +1255,7 @@
         "family:proftpd": "no-admitted-recipe",
         "family:prosody": "no-admitted-recipe",
         "family:proxygen": "no-admitted-recipe",
-        "family:proxytunnel": "no-admitted-recipe",
+        "family:proxytunnel": "none",
         "family:psi-plus-plugins": "no-admitted-recipe",
         "family:pulseaudio": "no-admitted-recipe",
         "family:pure-ftpd": "none",
@@ -1323,7 +1323,7 @@
         "family:srtp": "no-admitted-recipe",
         "family:sscg": "no-admitted-recipe",
         "family:ssldump": "no-admitted-recipe",
-        "family:sslscan": "no-admitted-recipe",
+        "family:sslscan": "none",
         "family:sslsplit": "no-admitted-recipe",
         "family:ssmtp": "no-admitted-recipe",
         "family:sssd-common": "no-admitted-recipe",
@@ -1350,9 +1350,9 @@
         "family:thrift-glib": "no-admitted-recipe",
         "family:tiledb": "no-admitted-recipe",
         "family:tin": "no-admitted-recipe",
-        "family:tinc": "no-admitted-recipe",
+        "family:tinc": "none",
         "family:tinyfugue": "no-admitted-recipe",
-        "family:tnftp": "no-admitted-recipe",
+        "family:tnftp": "none",
         "family:tomcat-native": "no-admitted-recipe",
         "family:tor": "no-admitted-recipe",
         "family:tpm-tools": "no-admitted-recipe",
@@ -1408,10 +1408,10 @@
         "family:zfs-fuse": "no-admitted-recipe",
         "family:znc": "no-admitted-recipe"
       },
-      "partition_hash": "5e1c08d15ed92444504591a51569d7464ee28a92645e81e9efc97a9f4467cfec",
-      "recipe_backed_families": 20,
-      "recipe_less_families": 980,
-      "resolved_families": 18
+      "partition_hash": "53af85fcc46fc7ce6dcce255e68e701183f9d54480dad2a54a0ec17d4fec78d9",
+      "recipe_backed_families": 30,
+      "recipe_less_families": 970,
+      "resolved_families": 28
     },
     "before": {
       "captured_by": "forensics/tools/downstream_remediation.py --capture-baseline",
@@ -2491,7 +2491,7 @@
     },
     "counts": {
       "actions": 8,
-      "families_moved": 12,
+      "families_moved": 22,
       "fix_actions": 5,
       "new_recipes": 8,
       "new_recipes_linked": 8,
@@ -2513,7 +2513,22 @@
       {
         "after": "none",
         "before": "no-admitted-recipe",
+        "family_id": "family:fetchmail"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
         "family_id": "family:fossil"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:hiredis-ssl"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:iperf3"
       },
       {
         "after": "none",
@@ -2533,7 +2548,17 @@
       {
         "after": "none",
         "before": "no-admitted-recipe",
+        "family_id": "family:libarchive"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
         "family_id": "family:libevent"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:librdkafka"
       },
       {
         "after": "none",
@@ -2542,8 +2567,18 @@
       },
       {
         "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:mosquitto"
+      },
+      {
+        "after": "none",
         "before": "recipe-build-dependency-missing",
         "family_id": "family:openvpn"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:proxytunnel"
       },
       {
         "after": "none",
@@ -2558,7 +2593,22 @@
       {
         "after": "none",
         "before": "no-admitted-recipe",
+        "family_id": "family:sslscan"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
         "family_id": "family:stunnel"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:tinc"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:tnftp"
       }
     ],
     "movement": {
@@ -2593,9 +2643,9 @@
         "delta": 0
       },
       "no-admitted-recipe": {
-        "after": 980,
+        "after": 970,
         "before": 988,
-        "delta": -8
+        "delta": -18
       },
       "no-fixture": {
         "after": 0,
@@ -2603,9 +2653,9 @@
         "delta": -2
       },
       "none": {
-        "after": 18,
+        "after": 28,
         "before": 6,
-        "delta": 12
+        "delta": 22
       },
       "out-of-scope": {
         "after": 0,
@@ -2767,13 +2817,13 @@
       "name": "the biggest-mover remediation record"
     }
   },
-  "body_hash": "f1151e3565939e7466cb264740cfc0793fb47058d2e3fe70d12af0e9dc2c31d6",
+  "body_hash": "1a01321a0ef784891864297f28f2449a375709262824dad44807644ef1cbd792",
   "generator": "forensics/tools/downstream_remediation.py",
   "inputs": [
     {
       "name": "shared-blockers",
       "path": "forensics/downstream/shared-blockers.json",
-      "sha256": "25a86f96c00ebbdfe665ba51f29984f5ce89520e97d64b6da94d6ee7bc229c13"
+      "sha256": "09c0fe3b5878c2dea965caecc912d52568c7ec6e2e1b21d0b73e396f910be37c"
     },
     {
       "name": "blocker-remediation-baseline",
@@ -2783,22 +2833,22 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "7264b612110df46e9b91c39a51a6ca02d8a2a3a9a4921845033aac15932a3d3c"
+      "sha256": "f0eaf8f1241cb9b7e53c90efd617a09a9f39b7cd38391341c961e5998c0ebd87"
     },
     {
       "name": "runtime-functional-atlas",
       "path": "forensics/downstream/runtime-functional-atlas.json",
-      "sha256": "081eb3596e3ff5e9a2f14234f56e71053580aca5c3dc091ae421c6d8e05f5245"
+      "sha256": "77ba907d606cd2d37e078e9607a4abf996f08d387f8183de7ad295d9e852fe8b"
     },
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "1efe637da9c23f3bb640f9f16305885335dcd8977557d53766de24b98c62abe9"
+      "sha256": "73eec67eba712447eb7958a9a2baa2ee60da7e757c79f0694729f8e00d8362d3"
     },
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "7a8cd080d082a8648eab2f6a2c7b5631b481f4b7688ed36481601cf2954d7e2e"
+      "sha256": "aaf393ce40475789ae824cb96cf63539cdceb9fccefc27bd9bbd738ade8dacac"
     },
     {
       "name": "families",
@@ -2808,7 +2858,7 @@
     {
       "name": "downstream-remediation",
       "path": "forensics/tools/downstream_remediation.py",
-      "sha256": "85c2a0c23cda87af963e271d15ef4c2ea2fe1b576b328da5b548a9ad344560d6"
+      "sha256": "99de9b8a896ebb3a351ee135606c6a7631eb2a5aa09d465ba4fd7ad480f4ec04"
     },
     {
       "name": "downstream-blockers",
@@ -2818,7 +2868,7 @@
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "163c1affb86296e7558280147d938c1173f162215f77739a6e4d237b02575753"
+      "sha256": "ee5cbdd84a8503ae49d18f70399ed15e56866e01cec3ef144cce4adc58f42122"
     },
     {
       "name": "phase24-guard",
@@ -2828,7 +2878,7 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "5ba5ecc4f39af970e3c4bcf12c79342492dde919af58f9bb64383ba407223a31"
+      "sha256": "b39d46b1f6b48d0cd55e26867c71d7081aecb9e4777261f693259ab87f37943d"
     }
   ],
   "kind": "downstream-blocker-remediation",
