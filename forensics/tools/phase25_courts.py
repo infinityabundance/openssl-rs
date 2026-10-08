@@ -13,7 +13,8 @@ two cannot disagree, and a court whose control is not honest is `fail` rather th
 
 **25.0 registers `MS-CONSTITUTION`, 25.1 registers the compiler-backed census, 25.2 registers the
 non-Rust trusted computing base, 25.3 registers the safety obligations, 25.4 registers the
-ownership/allocation/callback planes and 25.5 registers the Phase-22 reachability crosswalk.** The
+ownership/allocation/callback planes, 25.5 registers the Phase-22 reachability crosswalk and 25.6
+registers the Phase-24 downstream crosswalk.** The
 stratum's
 obligations are not exports, so its courts read committed evidence rather than diffing a staged
 probe pair, and `run_courts.py` would refuse a stratum in `in-progress` with no runner at all -- so
@@ -45,7 +46,13 @@ reads the committed `artifacts/phase25/phase22-crosswalk.json` and re-runs the 2
 (`ms_phase22_crosswalk.crosswalk_findings`, `ms_phase22_crosswalk.crosswalk_sensitivity_control`)
 over it, the committed census and the committed Phase-22 whole-program atlas, so every unsafe site's
 reachability is the Phase-22 authority's answer (mapped to a public root or an explicit unresolved
-residual) rather than a second, typed one. The
+residual) rather than a second, typed one. **25.6 registers `MS-PHASE24-CROSSWALK`**, the Phase-24
+downstream crosswalk: it reads the committed `artifacts/phase25/phase24-crosswalk.json` and re-runs
+the 25.6 pure checks (`ms_phase24_crosswalk.crosswalk_findings`,
+`ms_phase24_crosswalk.crosswalk_sensitivity_control`) over it, the committed census and the committed
+Phase-24 downstream measurement, so every unsafe site's downstream usage is the Phase-24
+measurement's answer (a measured consumer that imports the site's public surface, or an explicit
+not-observed disposition with a reason) rather than a typed one. The
 registry is the file
 `run_courts.py` checks is reproduced, so a court
 silently dropped is a finding rather than a smaller green run. This is the reverse of Phase 16's
@@ -161,6 +168,13 @@ import ms_ownership_planes  # noqa: E402
 # the committed Phase-22 closure, its entity plane and the module -> authority-unit correspondence.
 import ms_phase22_crosswalk  # noqa: E402
 
+# 25.6's Phase-24 downstream crosswalk and the tool that derives it from the committed census, the
+# committed 25.5 crosswalk and the committed Phase-24 downstream measurement. The court re-runs the
+# tool's pure `crosswalk_findings` / `crosswalk_sensitivity_control` over the committed artefact, the
+# census and the committed Phase-24 planes (the usage fingerprints, the runtime/build-link atlases,
+# the reconciliation clusters and the family freeze) it joins to.
+import ms_phase24_crosswalk  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase25" / "COURTS.json"
 GENERATOR = "forensics/tools/phase25_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-25-MEMORY-SAFETY-SUBPHASES.md"
@@ -199,6 +213,21 @@ TRANSCRIPTION_EDGES = REPO_ROOT / "forensics" / "atlas" / "transcription-edges.j
 INTERNAL_SYMBOLS = REPO_ROOT / "forensics" / "atlas" / "internal-symbols.json"
 EXPORT_DEFINING_UNITS = REPO_ROOT / "forensics" / "atlas" / "export-defining-units.json"
 
+# 25.6's Phase-24 downstream crosswalk, the pure tool that derives it from the committed census, the
+# committed 25.5 crosswalk and the committed Phase-24 downstream measurement, and the Phase-24 planes
+# it reads.
+PHASE24_CROSSWALK = REPO_ROOT / "artifacts" / "phase25" / "phase24-crosswalk.json"
+MS_PHASE24_CROSSWALK_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_phase24_crosswalk.py"
+PHASE24_CROSSWALK_COURT = "MS-PHASE24-CROSSWALK"
+DOWNSTREAM_USAGE_FINGERPRINTS = (REPO_ROOT / "forensics" / "downstream"
+                                / "usage-fingerprints.json")
+DOWNSTREAM_RECONCILIATION = REPO_ROOT / "forensics" / "downstream" / "reconciliation.json"
+DOWNSTREAM_RUNTIME_ATLAS = (REPO_ROOT / "forensics" / "downstream"
+                            / "runtime-functional-atlas.json")
+DOWNSTREAM_BUILD_LINK_ATLAS = REPO_ROOT / "forensics" / "downstream" / "build-link-atlas.json"
+DOWNSTREAM_P1000_RUN = REPO_ROOT / "forensics" / "downstream" / "p1000-run.json"
+DOWNSTREAM_FAMILY_FREEZE = REPO_ROOT / "forensics" / "downstream" / "family-freeze.json"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -224,14 +253,14 @@ COURTS: list[tuple[str, str]] = [
     (SAFETY_OBLIGATIONS_COURT, "_ms_safety_obligations_court"),
     (OWNERSHIP_PLANES_COURT, "_ms_ownership_planes_court"),
     (PHASE22_CROSSWALK_COURT, "_ms_phase22_crosswalk_court"),
+    (PHASE24_CROSSWALK_COURT, "_ms_phase24_crosswalk_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
 # `MS-SOURCE-CENSUS`, 25.2 removed `MS-NON-RUST-TCB`, 25.3 removed `MS-SAFETY-OBLIGATIONS`, 25.4
-# removed `MS-OWNERSHIP-PLANES` and 25.5 removed `MS-PHASE22-CROSSWALK`, so sixteen remain. Ordered
-# as the plan orders them.
+# removed `MS-OWNERSHIP-PLANES`, 25.5 removed `MS-PHASE22-CROSSWALK` and 25.6 removed
+# `MS-PHASE24-CROSSWALK`, so fifteen remain. Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-PHASE24-CROSSWALK": "25.6 -- the Phase-24 downstream crosswalk",
     "MS-EXPOSURE-CLASSIFICATION": "25.7 -- the exposure/data-flow classification",
     "MS-UNSAFE-REDUCTION": "25.8 -- the unsafe reduction",
     "MS-MIRI": "25.9 -- Miri",
@@ -876,6 +905,103 @@ def _ms_phase22_crosswalk_court(name: str) -> dict:
     }
 
 
+def _ms_phase24_crosswalk_court(name: str) -> dict:
+    """`MS-PHASE24-CROSSWALK`: 25.6's court, the Phase-24 downstream crosswalk.
+
+    Stages no probe. It reads the committed `artifacts/phase25/phase24-crosswalk.json` and re-runs
+    the 25.6 pure checks `ms_phase24_crosswalk.crosswalk_findings` and
+    `ms_phase24_crosswalk.crosswalk_sensitivity_control` over it together with the committed 25.1
+    census it maps and the committed Phase-24 downstream measurement it joins to -- the 24.3 usage
+    fingerprints, the 24.12 reconciliation clusters, the 24.9 runtime atlas, the 24.6 build/link
+    atlas, the 24.11 drop-in run and the family freeze -- no compiler, no tool; the derivation that
+    produced the plane is `ms_phase24_crosswalk.py --measure`, and this court only re-derives from
+    what it wrote. It establishes that every census site has a disposition (observed with the
+    measured consumers that reach its surface, or `NOT_OBSERVED` with a closed reason); that a
+    runtime-observed site has a runtime-observed consumer; that the inverse consumer view reproduces
+    from the forward site map; that the site map, the consumer view, the counts and the residuals
+    equal their derivation; that every partial join is a residual; and that the mapping rule names
+    the committed Phase-24 measurement rather than a typed consumer. Five seeded mutations -- a site
+    silently dropped, a site marked runtime-observed with no runtime row, an inverse view that
+    disagrees with the forward map, a typed consumer count and a partial join with no residual -- are
+    each caught with specificity holding. It is an **instrument**: it can pass while the crosswalk
+    records real property findings (the sites no measured consumer reaches, the families without a
+    usage fingerprint that cannot be attributed, the imported symbols with no clean entity mapping
+    and the import-not-execution non-claim), which are recorded as the row's `findings` so a passing
+    crosswalk court is never read as a memory-safety claim.
+    """
+    if not PHASE24_CROSSWALK.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "crosswalk-missing",
+                "problems": [f"the Phase-24 crosswalk {rel(PHASE24_CROSSWALK)} is absent"],
+                "findings": [], "control": {}}
+    if not SOURCE_CENSUS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "census-missing",
+                "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
+                "findings": [], "control": {}}
+    if not DOWNSTREAM_USAGE_FINGERPRINTS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "measurement-missing",
+                "problems": [f"the Phase-24 usage fingerprints "
+                             f"{rel(DOWNSTREAM_USAGE_FINGERPRINTS)} are absent"],
+                "findings": [], "control": {}}
+
+    body = json.loads(PHASE24_CROSSWALK.read_text(encoding="utf-8")).get("body", {})
+    census_body = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8")).get("body", {})
+    authority = ms_phase24_crosswalk.load_authority()
+    problems = ms_phase24_crosswalk.crosswalk_findings(body, census_body, authority)
+    control = ms_phase24_crosswalk.crosswalk_sensitivity_control(body, census_body, authority)
+
+    counts = body.get("counts") or {}
+    findings = list(body.get("findings") or [])
+
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/phase24-crosswalk.json and "
+            "re-runs the 25.6 pure checks (ms_phase24_crosswalk.crosswalk_findings and "
+            "ms_phase24_crosswalk.crosswalk_sensitivity_control) over it, the committed 25.1 census "
+            "and the committed Phase-24 downstream measurement it joins to, without a compiler. The "
+            "plane is a pure derivation: each census site's authority unit (the 25.5 resolution) "
+            "names a set of Phase-22 authority entities, and the measured consumers whose imported "
+            "OpenSSL symbols canonicalise to those entity keys reach the site; the runtime atlas "
+            "decides whether the reaching consumer was observed functionally, and the reconciliation "
+            "clusters are read. It establishes site-disposition completeness, the runtime/import "
+            "split, the site/consumer/counts/residuals reproduction, the inverse/forward agreement "
+            "and that every partial join is a residual; five seeded mutations are each caught with "
+            "specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.8)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the Phase-24 crosswalk court reads the committed crosswalk and re-derives only its pure "
+            "checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "census_sites": counts.get("census_sites", 0),
+            "sites_runtime_observed": counts.get("sites_runtime_observed", 0),
+            "sites_import_observed": counts.get("sites_import_observed", 0),
+            "sites_not_observed": counts.get("sites_not_observed", 0),
+            "not_observed_by_reason": counts.get("not_observed_by_reason") or {},
+            "consumers": counts.get("consumers", 0),
+            "consumers_runtime_observed": counts.get("consumers_runtime_observed", 0),
+            "counted_families": counts.get("counted_families", 0),
+            "usage_clusters": counts.get("usage_clusters", 0),
+            "imported_symbols": counts.get("imported_symbols", 0),
+            "imported_symbols_unmapped": counts.get("imported_symbols_unmapped", 0),
+            "runtime_families_without_a_fingerprint":
+                counts.get("runtime_families_without_a_fingerprint", 0),
+            "reachable_sites": counts.get("reachable_sites", 0),
+            "residuals": len(body.get("residuals") or []),
+        },
+        "sites_by_consumer": {n: (body.get("consumers") or {}).get(n, {}).get("reachable_sites", 0)
+                              for n in sorted(body.get("consumers") or {})},
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -948,15 +1074,16 @@ def main(argv: list[str]) -> int:
             "unsafe site, "
             "**25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and "
             "**25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the "
-            "Phase-22 whole-program reachability atlas. "
+            "Phase-22 whole-program reachability atlas, and "
+            "**25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the "
+            "Phase-24 downstream-1000 measurement. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining sixteen of its twenty-two courts -- "
-            "MS-PHASE24-CROSSWALK, "
+            "remaining fifteen of its twenty-two courts -- "
             "MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, "
             "MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.6 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.7 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -1007,6 +1134,14 @@ def main(argv: list[str]) -> int:
         InputRef(name="transcription-edges", path=TRANSCRIPTION_EDGES),
         InputRef(name="internal-symbols", path=INTERNAL_SYMBOLS),
         InputRef(name="export-defining-units", path=EXPORT_DEFINING_UNITS),
+        InputRef(name="phase24-crosswalk", path=PHASE24_CROSSWALK),
+        InputRef(name="ms-phase24-crosswalk-tool", path=MS_PHASE24_CROSSWALK_TOOL),
+        InputRef(name="downstream-usage-fingerprints", path=DOWNSTREAM_USAGE_FINGERPRINTS),
+        InputRef(name="downstream-reconciliation", path=DOWNSTREAM_RECONCILIATION),
+        InputRef(name="downstream-runtime-functional-atlas", path=DOWNSTREAM_RUNTIME_ATLAS),
+        InputRef(name="downstream-build-link-atlas", path=DOWNSTREAM_BUILD_LINK_ATLAS),
+        InputRef(name="downstream-p1000-run", path=DOWNSTREAM_P1000_RUN),
+        InputRef(name="downstream-family-freeze", path=DOWNSTREAM_FAMILY_FREEZE),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
