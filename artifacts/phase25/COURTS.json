@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, and **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining eighteen of its twenty-two courts -- MS-OWNERSHIP-PLANES, MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.4 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, and **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining seventeen of its twenty-two courts -- MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.5 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -288,6 +288,88 @@
         "probe": "",
         "problems": [],
         "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught": 4,
+          "honest": true,
+          "mutations": {
+            "frees_without_allocation": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "FREES"
+            },
+            "refcount_decrement_without_increment": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "ownership_edges"
+            },
+            "send_sync_without_justification": {
+              "caught": true,
+              "delta": 3,
+              "findings": 3,
+              "marker": "justification"
+            },
+            "unknown_panic_hidden": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "panic_boundaries"
+            }
+          },
+          "seeded": 4,
+          "specificity_holds": true
+        },
+        "counts": {
+          "allocation_sites": 2418,
+          "callback_lifetimes": 266,
+          "callbacks_that_may_outlive": 150,
+          "double_free_contexts": 35,
+          "globals": 273,
+          "globals_without_source_contract": 25,
+          "ownership_edges": 8972,
+          "ownership_edges_by_kind": {
+            "ALLOCATES": 926,
+            "BORROWS": 101,
+            "DECREMENTS_REFCOUNT": 6016,
+            "FREES": 1468,
+            "INCREMENTS_REFCOUNT": 326,
+            "RETURNS_OWNERSHIP": 5,
+            "TRANSFERS_OWNERSHIP": 130
+          },
+          "panic_boundaries": 6823,
+          "panic_by_class": {
+            "CANNOT_PANIC_BY_CONSTRUCTION": 258,
+            "CATCHES_PANIC": 1485,
+            "UNKNOWN": 5080
+          },
+          "panic_unknown": 5080,
+          "send_sync": 135,
+          "send_sync_without_source_justification": 0,
+          "unmatched_frees": 187,
+          "unmatched_refcount_decrements": 367,
+          "unpaired_allocations": 0
+        },
+        "court": "MS-OWNERSHIP-PLANES",
+        "findings": [
+          "187 FREES edge(s) are in a file with no ALLOCATES/RETURNS_OWNERSHIP edge: the release cannot be paired to a creation in the same translation unit, so a free of a caller-owned pointer, of a value created elsewhere, or a double free is structurally possible; recorded, never asserted as a defect",
+          "367 object family/-ies carry a DECREMENTS_REFCOUNT edge with no INCREMENTS_REFCOUNT edge in the plane: a release below the object's initial refcount of one, or an over-release, is structurally possible; recorded",
+          "35 context(s) name two or more deallocating families: a double free of the same block, or a free of two aliases of it, is structurally possible; recorded",
+          "0 allocation edge(s) name an allocator with no known deallocator: a leak is structurally possible; recorded",
+          "0 manual unsafe Send/Sync impl(s) carry no source-stated justification: an unexplained unsafe impl is an unexplained reachable unsoundness; recorded",
+          "25 MUTABLE_UNSYNCHRONIZED global(s) carry no source-stated safety contract: an unsynchronized mutable global with no contract is an unexplained reachable data race; recorded",
+          "5080 exported C-ABI function(s) are UNKNOWN: the body contains no guard_ffi/catch_unwind and no explicit unwind token, so whether it can unwind across the C ABI is not measured here; an UNKNOWN class blocks the seal rather than passing it (the panic-injection measurement belongs to a later subphase)",
+          "150 callback(s) are recorded as possibly outliving their registrar (process-global allocation/async/bio-method/provider-dispatch hooks); the lifetime is a structural classification, not an observed one"
+        ],
+        "frf_declarable": false,
+        "frf_exclusion": "the ownership-planes court reads the committed plane and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
+        "method": "stages no probe: it reads the committed artifacts/phase25/ownership-planes.json and re-runs the 25.4 pure checks (ms_ownership_planes.ownership_findings and ms_ownership_planes.ownership_sensitivity_control) over it, the committed 25.1 census, the committed 25.2 non-Rust TCB and the committed source tree, without a compiler. The plane is a pure derivation: each compiler-derived site is classified from its own comment-stripped context text against the recorded allocation/convention tables, and the panic boundary is classified from the exported body. It establishes that every plane equals the derivation, that every record validates, that every FREES edge is matched or found, that every callback has a lifetime, that every unsafe Send/Sync has a justification, that no UNKNOWN panic class is hidden, and that every count is derived; four seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.8).",
+        "probe": "",
+        "problems": [],
+        "verdict": "pass"
       }
     ],
     "cve_replay_states": [
@@ -377,7 +459,6 @@
       "MS-KANI": "25.12 -- Kani",
       "MS-MECHANISM-RECONCILIATION": "25.17 -- the vulnerability-mechanism reconciliation",
       "MS-MIRI": "25.9 -- Miri",
-      "MS-OWNERSHIP-PLANES": "25.4 -- the ownership/allocation/callback planes",
       "MS-PHASE18-FUZZ-CROSSWALK": "25.13 -- the Phase-18 fuzz crosswalk",
       "MS-PHASE22-CROSSWALK": "25.5 -- the Phase-22 reachability crosswalk",
       "MS-PHASE24-CROSSWALK": "25.6 -- the Phase-24 downstream crosswalk",
@@ -657,8 +738,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 4,
-      "total": 4
+      "pass": 5,
+      "total": 5
     },
     "tool_states": [
       "PASS",
@@ -696,7 +777,7 @@
     {
       "name": "memory-safety-schemas",
       "path": "forensics/tools/memory_safety_schemas.py",
-      "sha256": "da3c15776c4701edee88d9a5a37545e14d5f7ed1ac1b7f987d8134c3d06b80a4"
+      "sha256": "22cfc412f3a8fe3095be0b09386fa02b68d8604d439c5be8963a4bdb1274b5f1"
     },
     {
       "name": "phase25-guard",
@@ -706,7 +787,7 @@
     {
       "name": "phase25-container-manifest",
       "path": "forensics/memory-safety/container.json",
-      "sha256": "ff59cf0be609f6e24e8cfacad98495c54da8f389f706b3c88c79082b3a3c9549"
+      "sha256": "c81156f82f07070c044d30aa8273d950f1dcb4fde798d44c5b8c379a18880acc"
     },
     {
       "name": "cargo-toml",
@@ -741,12 +822,22 @@
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "8bf60b43c74c372d290ad6336284f9557cb76ae39021bb4d698643d9cf6cabb1"
+      "sha256": "f322ddf6ceb727f0ead4c4a3e1a2fba93817696d24b83a91846415bfc55e2a27"
     },
     {
       "name": "ms-obligations-tool",
       "path": "forensics/tools/ms_obligations.py",
       "sha256": "fad271349e2e7afe3a40c31171c263e62856a80bf52550cd805fd7b326a34d2a"
+    },
+    {
+      "name": "ownership-planes",
+      "path": "artifacts/phase25/ownership-planes.json",
+      "sha256": "d5a687530fa21d4749ca0cb4298f24cc42e73feaf3b9744f09f415c2e60d1663"
+    },
+    {
+      "name": "ms-ownership-planes-tool",
+      "path": "forensics/tools/ms_ownership_planes.py",
+      "sha256": "953a5a33534ca49b83bce375ccc7f238019519bc33b2cb785a550047f4136fcd"
     }
   ],
   "kind": "phase25-courts",

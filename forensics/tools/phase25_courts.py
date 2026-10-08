@@ -12,7 +12,8 @@ court reads the artefact that holds its subject rather than typing the expectati
 two cannot disagree, and a court whose control is not honest is `fail` rather than `pass`.
 
 **25.0 registers `MS-CONSTITUTION`, 25.1 registers the compiler-backed census, 25.2 registers the
-non-Rust trusted computing base, and 25.3 registers the safety obligations.** The stratum's
+non-Rust trusted computing base, 25.3 registers the safety obligations, and 25.4 registers the
+ownership/allocation/callback planes.** The stratum's
 obligations are not exports, so its courts read committed evidence rather than diffing a staged
 probe pair, and `run_courts.py` would refuse a stratum in `in-progress` with no runner at all -- so
 this runner landed at activation with an empty registry, naming the twenty-two courts it stages
@@ -31,7 +32,14 @@ on-disk file universe, so the inventory of the first-party C, the generated C sc
 (`ms_obligations.obligation_findings`, `ms_obligations.obligation_sensitivity_control`) over it, the
 committed census it is derived from and the committed TCB it cross-references, so one obligation set
 per compiler-derived unsafe site -- every census site bound, every census context represented, no
-`discharged` without a source-stated contract and a discharging proof -- is the court's subject. The
+`discharged` without a source-stated contract and a discharging proof -- is the court's subject.
+**25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes: it reads the
+committed `artifacts/phase25/ownership-planes.json` and re-runs the 25.4 pure checks
+(`ms_ownership_planes.ownership_findings`, `ms_ownership_planes.ownership_sensitivity_control`) over
+it, the committed census, the committed TCB and the committed source tree, so the allocation/
+deallocation associations, the ownership edges across the Rust/C boundary, the callback lifetimes,
+the unsafe `Send`/`Sync` impls, the global/static state and the panic/unwind boundaries are the
+court's subject. The
 registry is the file
 `run_courts.py` checks is reproduced, so a court
 silently dropped is a finding rather than a smaller green run. This is the reverse of Phase 16's
@@ -135,6 +143,12 @@ import ms_non_rust_tcb  # noqa: E402
 # census it is derived from.
 import ms_obligations  # noqa: E402
 
+# 25.4's ownership, allocation and callback planes and the tool that derives them from the committed
+# census, the committed TCB and the committed source text. The court re-runs the tool's pure
+# `ownership_findings` / `ownership_sensitivity_control` over the committed artefact, the census, the
+# TCB and the source context it classifies.
+import ms_ownership_planes  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase25" / "COURTS.json"
 GENERATOR = "forensics/tools/phase25_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-25-MEMORY-SAFETY-SUBPHASES.md"
@@ -155,6 +169,12 @@ NON_RUST_TCB_COURT = "MS-NON-RUST-TCB"
 SAFETY_OBLIGATIONS = REPO_ROOT / "artifacts" / "phase25" / "safety-obligations.json"
 MS_OBLIGATIONS_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_obligations.py"
 SAFETY_OBLIGATIONS_COURT = "MS-SAFETY-OBLIGATIONS"
+
+# 25.4's ownership/allocation/callback planes and the pure tool that derives them from the committed
+# census, TCB and source text.
+OWNERSHIP_PLANES = REPO_ROOT / "artifacts" / "phase25" / "ownership-planes.json"
+MS_OWNERSHIP_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_ownership_planes.py"
+OWNERSHIP_PLANES_COURT = "MS-OWNERSHIP-PLANES"
 
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
@@ -179,13 +199,13 @@ COURTS: list[tuple[str, str]] = [
     (SOURCE_CENSUS_COURT, "_ms_source_census_court"),
     (NON_RUST_TCB_COURT, "_ms_non_rust_tcb_court"),
     (SAFETY_OBLIGATIONS_COURT, "_ms_safety_obligations_court"),
+    (OWNERSHIP_PLANES_COURT, "_ms_ownership_planes_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
-# `MS-SOURCE-CENSUS`, 25.2 removed `MS-NON-RUST-TCB` and 25.3 removed `MS-SAFETY-OBLIGATIONS`, so
-# eighteen remain. Ordered as the plan orders them.
+# `MS-SOURCE-CENSUS`, 25.2 removed `MS-NON-RUST-TCB`, 25.3 removed `MS-SAFETY-OBLIGATIONS` and 25.4
+# removed `MS-OWNERSHIP-PLANES`, so seventeen remain. Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-OWNERSHIP-PLANES": "25.4 -- the ownership/allocation/callback planes",
     "MS-PHASE22-CROSSWALK": "25.5 -- the Phase-22 reachability crosswalk",
     "MS-PHASE24-CROSSWALK": "25.6 -- the Phase-24 downstream crosswalk",
     "MS-EXPOSURE-CLASSIFICATION": "25.7 -- the exposure/data-flow classification",
@@ -645,6 +665,98 @@ def _ms_safety_obligations_court(name: str) -> dict:
     }
 
 
+def _ms_ownership_planes_court(name: str) -> dict:
+    """`MS-OWNERSHIP-PLANES`: 25.4's court, the ownership/allocation/callback planes.
+
+    Stages no probe. It reads the committed `artifacts/phase25/ownership-planes.json` and re-runs the
+    25.4 pure checks `ms_ownership_planes.ownership_findings` and
+    `ms_ownership_planes.ownership_sensitivity_control` over it together with the committed 25.1
+    census it classifies, the committed 25.2 TCB whose boundaries it panic-classifies, and the
+    committed source tree it scans -- no compiler, no tool; the derivation that produced the plane is
+    `ms_ownership_planes.py --measure`, and this court only re-derives from what it wrote. It
+    establishes that every plane equals its derivation; that every record validates against its
+    schema; that every allocation site names an allocator provenance; that every `FREES` edge has a
+    matching `ALLOCATES`/`RETURNS_OWNERSHIP` edge or a recorded finding; that every callback has a
+    stored-lifetime classification; that every manual `Send`/`Sync` has a justification; that every
+    export has a panic/unwind class and none is `UNKNOWN` without a finding; and that every count is
+    derived. Four seeded mutations -- a `FREES` with no allocation, a `Send`/`Sync` impl with no
+    justification, a hidden `UNKNOWN` panic class and a refcount decrement with no increment -- are
+    each caught with specificity holding. It is an **instrument**: it can pass while the plane
+    records real property findings (the unequalized frees, the unmatched refcount decrements, the
+    double-free-possible contexts, the unjustified impls, the uncontracted globals and the
+    `UNKNOWN` panic boundaries), which are recorded as the row's `findings` so a passing ownership
+    court is never read as a memory-safety claim.
+    """
+    if not OWNERSHIP_PLANES.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "plane-missing",
+                "problems": [f"the ownership planes {rel(OWNERSHIP_PLANES)} are absent"],
+                "findings": [], "control": {}}
+    if not SOURCE_CENSUS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "census-missing",
+                "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
+                "findings": [], "control": {}}
+
+    body = json.loads(OWNERSHIP_PLANES.read_text(encoding="utf-8")).get("body", {})
+    census_body = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8")).get("body", {})
+    tcb_body = (json.loads(NON_RUST_TCB.read_text(encoding="utf-8")).get("body", {})
+                if NON_RUST_TCB.is_file() else {})
+    ctx = ms_ownership_planes.build_context()
+    problems = ms_ownership_planes.ownership_findings(body, census_body, tcb_body, ctx)
+    control = ms_ownership_planes.ownership_sensitivity_control(body, census_body, tcb_body, ctx)
+
+    counts = body.get("counts") or {}
+    findings = list(body.get("findings") or [])
+
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/ownership-planes.json and "
+            "re-runs the 25.4 pure checks (ms_ownership_planes.ownership_findings and "
+            "ms_ownership_planes.ownership_sensitivity_control) over it, the committed 25.1 census, "
+            "the committed 25.2 non-Rust TCB and the committed source tree, without a compiler. The "
+            "plane is a pure derivation: each compiler-derived site is classified from its own "
+            "comment-stripped context text against the recorded allocation/convention tables, and "
+            "the panic boundary is classified from the exported body. It establishes that every "
+            "plane equals the derivation, that every record validates, that every FREES edge is "
+            "matched or found, that every callback has a lifetime, that every unsafe Send/Sync has "
+            "a justification, that no UNKNOWN panic class is hidden, and that every count is "
+            "derived; four seeded mutations are each caught with specificity holding "
+            "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.8)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the ownership-planes court reads the committed plane and re-derives only its pure "
+            "checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "allocation_sites": counts.get("allocation_sites", 0),
+            "ownership_edges": counts.get("ownership_edges", 0),
+            "ownership_edges_by_kind": counts.get("ownership_edges_by_kind") or {},
+            "unmatched_frees": counts.get("unmatched_frees", 0),
+            "unmatched_refcount_decrements": counts.get("unmatched_refcount_decrements", 0),
+            "double_free_contexts": counts.get("double_free_contexts", 0),
+            "unpaired_allocations": counts.get("unpaired_allocations", 0),
+            "callback_lifetimes": counts.get("callback_lifetimes", 0),
+            "callbacks_that_may_outlive": counts.get("callbacks_that_may_outlive", 0),
+            "send_sync": counts.get("send_sync", 0),
+            "send_sync_without_source_justification":
+                counts.get("send_sync_without_source_justification", 0),
+            "globals": counts.get("globals", 0),
+            "globals_without_source_contract": counts.get("globals_without_source_contract", 0),
+            "panic_boundaries": counts.get("panic_boundaries", 0),
+            "panic_by_class": counts.get("panic_by_class") or {},
+            "panic_unknown": counts.get("panic_unknown", 0),
+        },
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -712,16 +824,18 @@ def main(argv: list[str]) -> int:
             "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, "
             "guard, venue manifest, obligation ledger and the frozen safety lint policy, "
             "**25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, "
-            "**25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, and "
+            "**25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, "
             "**25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived "
-            "unsafe site. Phase 25 owns "
+            "unsafe site, and "
+            "**25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes. "
+            "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining eighteen of its twenty-two courts -- "
-            "MS-OWNERSHIP-PLANES, MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, "
+            "remaining seventeen of its twenty-two courts -- "
+            "MS-PHASE22-CROSSWALK, MS-PHASE24-CROSSWALK, "
             "MS-EXPOSURE-CLASSIFICATION, MS-UNSAFE-REDUCTION, MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, "
             "MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.4 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.5 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -763,6 +877,8 @@ def main(argv: list[str]) -> int:
         InputRef(name="ms-non-rust-tcb-tool", path=MS_NON_RUST_TOOL),
         InputRef(name="safety-obligations", path=SAFETY_OBLIGATIONS),
         InputRef(name="ms-obligations-tool", path=MS_OBLIGATIONS_TOOL),
+        InputRef(name="ownership-planes", path=OWNERSHIP_PLANES),
+        InputRef(name="ms-ownership-planes-tool", path=MS_OWNERSHIP_TOOL),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

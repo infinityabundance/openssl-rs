@@ -64,12 +64,21 @@
       },
       {
         "closure": "the `MS-OWNERSHIP-PLANES` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-OWNERSHIP-PLANES is pending",
+        "findings": [
+          "187 FREES edge(s) are in a file with no ALLOCATES/RETURNS_OWNERSHIP edge: the release cannot be paired to a creation in the same translation unit, so a free of a caller-owned pointer, of a value created elsewhere, or a double free is structurally possible; recorded, never asserted as a defect",
+          "367 object family/-ies carry a DECREMENTS_REFCOUNT edge with no INCREMENTS_REFCOUNT edge in the plane: a release below the object's initial refcount of one, or an over-release, is structurally possible; recorded",
+          "35 context(s) name two or more deallocating families: a double free of the same block, or a free of two aliases of it, is structurally possible; recorded",
+          "0 allocation edge(s) name an allocator with no known deallocator: a leak is structurally possible; recorded",
+          "0 manual unsafe Send/Sync impl(s) carry no source-stated justification: an unexplained unsafe impl is an unexplained reachable unsoundness; recorded",
+          "25 MUTABLE_UNSYNCHRONIZED global(s) carry no source-stated safety contract: an unsynchronized mutable global with no contract is an unexplained reachable data race; recorded",
+          "5080 exported C-ABI function(s) are UNKNOWN: the body contains no guard_ffi/catch_unwind and no explicit unwind token, so whether it can unwind across the C ABI is not measured here; an UNKNOWN class blocks the seal rather than passing it (the panic-injection measurement belongs to a later subphase)",
+          "150 callback(s) are recorded as possibly outliving their registrar (process-global allocation/async/bio-method/provider-dispatch hooks); the lifetime is a structural classification, not an observed one"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-OWNERSHIP-PLANES is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "ownership-planes",
         "what": "the ownership, allocation and callback planes: the allocation/deallocation associations, the ownership edges across the Rust/C boundary, the callback lifetimes, the unsafe Send/Sync impls, the global/static state and the panic/unwind boundaries"
@@ -284,8 +293,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 4,
-      "open_in_this_stratum": 18,
+      "implemented": 5,
+      "open_in_this_stratum": 17,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -326,7 +335,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "37201b0d5c84ff3046f8bd234de9881bf5066573e53b098874e794877ee36731"
+      "sha256": "6a331de4705e541da399a4fc27ce387d236e9c661bc5136effb99c15fac5c6a4"
     },
     {
       "name": "phase25-guard",
@@ -336,7 +345,7 @@
     {
       "name": "memory-safety-schemas",
       "path": "forensics/tools/memory_safety_schemas.py",
-      "sha256": "da3c15776c4701edee88d9a5a37545e14d5f7ed1ac1b7f987d8134c3d06b80a4"
+      "sha256": "22cfc412f3a8fe3095be0b09386fa02b68d8604d439c5be8963a4bdb1274b5f1"
     }
   ],
   "kind": "phase25-obligations",
