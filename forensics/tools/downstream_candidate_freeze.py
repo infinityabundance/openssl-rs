@@ -16,11 +16,17 @@ The frozen candidate identity
 -----------------------------
 The candidate the holdout is measured against is a **content-addressed** record of the drop-in
 install: the `libssl`/`libcrypto` soname digests, the exported headers, the pkg-config metadata and
-the provider modules, plus the crate name and version (read from `Cargo.toml`), the source commit
-(`git rev-parse HEAD`) and the admitted container venue (the image identity and platform the
-committed manifest `forensics/downstream/container.json` records). The identity must **reproduce
+the provider modules, plus the crate name and version (read from `Cargo.toml`) and the admitted
+container venue (the image identity and platform the committed manifest
+`forensics/downstream/container.json` records). The install content this hashes **must reproduce
 from the committed install**, so the holdout is measured against a candidate a reader can recompute,
-not a banner.
+not a banner. The source commit (`git rev-parse HEAD`) is carried **as recorded provenance**, not as
+part of the reproducible install identity: it is excluded from `identity_hash` and from the
+live-equality comparison, because the live HEAD necessarily moves when this artefact's own commit
+lands -- a self-reference the earlier record could never satisfy. A recorded commit that is not the
+literal `unknown` must name a commit that exists in the repository's history (checked with
+`git cat-file -e <sha>^{commit}`); `unknown` is accepted only when git is genuinely absent from the
+venue.
 
 The exactly-once holdout, and the immutable first run
 -----------------------------------------------------
@@ -78,6 +84,8 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import re
+import shutil
 import subprocess
 import sys
 import time
@@ -189,10 +197,15 @@ RULE: dict = {
     "candidate_identity": (
         "the candidate is content-addressed from its drop-in install: the libssl.so.3 and "
         "libcrypto.so.3 digests, the exported OpenSSL headers, the pkg-config metadata and the "
-        "provider modules (ossl-modules), plus the crate name and version (read from Cargo.toml), the "
-        "source commit (git rev-parse HEAD) and the admitted container venue (the image identity and "
-        "platform the committed manifest forensics/downstream/container.json records). The identity "
-        "must reproduce from the committed install, and the holdout is measured against exactly it"
+        "provider modules (ossl-modules), plus the crate name and version (read from Cargo.toml) and "
+        "the admitted container venue (the image identity and platform the committed manifest "
+        "forensics/downstream/container.json records). The install content this hashes must "
+        "reproduce from the committed install, and the holdout is measured against exactly it. The "
+        "source commit (git rev-parse HEAD) is carried as recorded provenance, not as part of the "
+        "reproducible identity: it is excluded from identity_hash and from the live-equality "
+        "comparison, because live HEAD moves when this artefact's own commit lands; a recorded "
+        "commit other than the literal `unknown` must name a commit that exists in the repository "
+        "history (git cat-file -e), and `unknown` is accepted only when git is genuinely absent"
     ),
     "holdout_policy": (
         "the holdout set is read from the precommitted 24.5 partition and never re-selected; the "
@@ -281,10 +294,48 @@ def _cargo_meta() -> dict:
 
 
 def _source_commit() -> str:
-    """The source commit the candidate is at (`git rev-parse HEAD`); `unknown` if git is absent."""
+    """The source commit the candidate is at (`git rev-parse HEAD`); `unknown` if git is absent.
+
+    This is **recorded provenance**, not part of the reproducible install identity: it is never
+    compared to live HEAD (see `candidate_identity` and `candidate_freeze_findings`).
+    """
     res = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(REPO_ROOT),
                          capture_output=True, text=True, check=False)
     return res.stdout.strip() if res.returncode == 0 and res.stdout.strip() else "unknown"
+
+
+def _git_present() -> bool:
+    """Whether git is available in the venue, so a recorded `unknown` commit is not a failure."""
+    return shutil.which("git") is not None
+
+
+def _commit_exists(sha: str) -> bool:
+    """Whether `sha` names a commit in this repository's history (`git cat-file -e <sha>^{commit}`).
+
+    The recorded source commit's provenance check: a commit that does not exist in the repository
+    is not provenance, it is an unverifiable claim.
+    """
+    if not re.fullmatch(r"[0-9a-fA-F]{7,40}", sha):
+        return False
+    res = subprocess.run(["git", "cat-file", "-e", f"{sha}^{{commit}}"], cwd=str(REPO_ROOT),
+                         capture_output=True, text=True, check=False)
+    return res.returncode == 0
+
+
+# The identity keys that are **not** part of the reproducible install content: the recorded
+# `source_commit` (provenance, existence-checked separately, never a live-HEAD binding) and the
+# `identity_hash` itself (derived from the content). Excluding them is what lets the identity
+# reproduce across the commit that lands this artefact.
+_PROVENANCE_KEYS = ("source_commit", "identity_hash")
+
+
+def identity_content(ident: dict) -> dict:
+    """The reproducible install identity: the candidate record minus its recorded provenance.
+
+    Used both to compute `identity_hash` and to compare a recorded identity against a freshly
+    derived one, so a live-HEAD move cannot fail an otherwise-reproducible identity.
+    """
+    return {k: v for k, v in ident.items() if k not in _PROVENANCE_KEYS}
 
 
 def _container_venue() -> dict:
@@ -295,7 +346,12 @@ def _container_venue() -> dict:
 
 
 def candidate_identity() -> dict:
-    """The frozen candidate identity: the drop-in install content-addressed, plus version/commit."""
+    """The frozen candidate install identity, plus the source commit as recorded provenance.
+
+    `identity_hash` is the content hash of the **install identity** -- everything except the
+    recorded `source_commit` and `identity_hash` itself -- so it reproduces from the committed
+    install rather than moving with the commit that lands this artefact.
+    """
     libssl = CANDIDATE_PREFIX / "lib" / "libssl.so.3"
     libcrypto = CANDIDATE_PREFIX / "lib" / "libcrypto.so.3"
     meta = _cargo_meta()
@@ -310,10 +366,10 @@ def candidate_identity() -> dict:
         "ossl_modules": _tree_digest(CANDIDATE_PREFIX / "lib" / "ossl-modules"),
         "crate_name": meta["crate_name"],
         "crate_version": meta["crate_version"],
-        "source_commit": _source_commit(),
         "container": _container_venue(),
     }
     ident = dict(core)
+    ident["source_commit"] = _source_commit()          # recorded provenance, excluded from the hash
     ident["identity_hash"] = content_hash(core)
     return ident
 
@@ -809,17 +865,31 @@ def candidate_freeze_findings(inputs: dict, body: dict) -> list[str]:
         findings.append("the recorded non_claims are not the stratum's four plus the holdout "
                         "non-claim")
 
-    # 2. The frozen candidate identity reproduces from the committed install.
+    # 2. The frozen candidate identity reproduces from the committed install. The recorded
+    #    `source_commit` is provenance, not install identity, so it is excluded from the equality and
+    #    from the hash (a live HEAD necessarily moves when this artefact's own commit lands); its
+    #    existence is checked separately below.
     live = candidate_identity()
     recorded_ident = body.get("candidate_identity") or {}
-    if recorded_ident != live:
+    if identity_content(recorded_ident) != identity_content(live):
         findings.append("the frozen candidate identity does not reproduce from the committed "
                         f"install: recorded identity_hash "
                         f"{recorded_ident.get('identity_hash')!r} vs derived "
                         f"{live.get('identity_hash')!r}")
-    core = {k: v for k, v in recorded_ident.items() if k != "identity_hash"}
-    if recorded_ident.get("identity_hash") != content_hash(core):
+    if recorded_ident.get("identity_hash") != content_hash(identity_content(recorded_ident)):
         findings.append("candidate_identity.identity_hash does not reproduce from its own record")
+    # The recorded source commit is provenance: it must name a commit that exists in this
+    # repository's history (existence-checked with `git cat-file -e <sha>^{commit}`), and `unknown`
+    # is acceptable only when git is genuinely absent from the venue. It is never compared to live
+    # HEAD, so the artefact's own commit landing cannot make it wrong.
+    recorded_commit = str(recorded_ident.get("source_commit") or "unknown")
+    if recorded_commit == "unknown":
+        if _git_present():
+            findings.append("the recorded source_commit is 'unknown' while git is present in the "
+                            "venue, so the provenance was not recorded")
+    elif not _commit_exists(recorded_commit):
+        findings.append(f"the recorded source_commit {recorded_commit!r} does not name a commit in "
+                        f"this repository's history (git cat-file -e <sha>^{{commit}} failed)")
 
     # 3. The holdout set equals the precommitted partition and reproduces from the frozen rule.
     want_block = holdout_block(holdout_body)

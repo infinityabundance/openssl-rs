@@ -290,6 +290,17 @@ GENERATORS_BEFORE_LEDGERS = [
     # committed install, the precommitted-set check, the first_run immutability (every rerun attests
     # the recorded first_run), the verdict re-derivation and the fix-source check -- over the
     # committed artefact.
+    #
+    # Phase 24.12's final P1000 run follows the same precedent, for the same reason: it re-runs the
+    # whole frozen population under both subjects against the frozen candidate using the exact
+    # 24.6/24.7 recipe/workload machinery, so the level a run reaches and its normalised transcript
+    # are a measurement, not a function of committed inputs -- a CI runner has no compiler, no install
+    # prefix and no network, and the Docker-only guard refuses a host invocation before it builds
+    # anything. It is therefore not listed here and not in `COMPARED`; the `RT-P1000-RUN` court
+    # re-runs only its pure checks -- the identity re-derivation from the committed install and its
+    # equality with the 24.11 freeze, the one-verdict-per-counted-family re-derivation, the section-20
+    # PASS refusal, the UNKNOWN-is-zero check, the ladder and the counts -- over the committed
+    # artefact.
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court

@@ -27,7 +27,8 @@ registers `RT-HOLDOUT-PARTITION`**, the precommitted holdout partition, and **24
 `RT-FAILURE-MINIMIZATION`**, the failure discovery/minimization loop, and **24.9 registers
 `RT-HIGH-VALUE-TIER`**, the high-value deep tier, and **24.10 registers
 `RT-HOSTILITY-AUGMENTATION`**, the separate hostility-augmentation corpus, and **24.11 registers
-`RT-CANDIDATE-FREEZE`**, the candidate freeze and the once-run holdout. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
+`RT-CANDIDATE-FREEZE`**, the candidate freeze and the once-run holdout, and **24.12 registers
+`RT-P1000-RUN`**, the final full P1000 run at the frozen candidate. `RT-RANKING-SOURCES` reads `forensics/downstream/ranking-sources.json` and the committed
 normalized inputs under `forensics/downstream/ranking/normalized/`, re-derives the frozen
 `selection_input_root_hash`, and checks every source is content-addressed with a retrieval
 timestamp and a parser version, that an unavailable source carries a reason and is not counted
@@ -77,7 +78,19 @@ accounting row; that a candidate row never claims a level above the authority-ap
 that a family's verdict is the derived baseline-normalized one; that `candidate_specific_patch_count`
 is 0; that the counts are derived rather than typed; and that no holdout family is a source of a fix
 in the development-side failure plane -- with an instrument-sensitivity control that seeds six
-mutations and requires each caught. The
+mutations and requires each caught. `RT-P1000-RUN` reads the committed
+`forensics/downstream/p1000-run.json`, the frozen `forensics/downstream/family-freeze.json` and the
+committed 24.11 `forensics/downstream/candidate-freeze.json`, re-deriving the candidate install's
+identity and re-running the 24.12 validation and sensitivity control over the committed run without
+rebuilding anything. It establishes that the candidate identity equals the frozen 24.11 identity
+(excluding the recorded provenance, so the run is against the same candidate); that there is exactly
+one `drop_in_verdict` per counted family, with none missing, extra or fabricated; that a
+`DROP_IN_PASS` is refused without all five of the brief's section 20 conditions; that
+`DROP_IN_UNKNOWN` is 0; that the ladder equals the derived per-level counts and the verdict
+histogram; that a family this venue cannot pose the drop-in question for is `DROP_IN_NOT_APPLICABLE`
+with a reason; that `candidate_specific_patch_count` is 0; and that the counts are derived rather
+than typed -- with an instrument-sensitivity control that seeds five mutations and requires each
+caught. The
 registry is the file `run_courts.py`
 checks is reproduced, so a court silently dropped is a finding rather than a smaller green run.
 This is the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this
@@ -107,7 +120,7 @@ The fifteen courts, and the subphase that lands each
   * `RT-HIGH-VALUE-TIER` -- 24.9, the high-value deep tier (registered).
   * `RT-HOSTILITY-AUGMENTATION` -- 24.10, the separate hostility corpus (registered).
   * `RT-CANDIDATE-FREEZE` -- 24.11, the candidate freeze and holdout (registered).
-  * `RT-P1000-RUN` -- 24.12, the final full P1000 run.
+  * `RT-P1000-RUN` -- 24.12, the final full P1000 run (registered).
   * `RT-ATLAS-RECONCILIATION` -- 24.13, the atlas reconciliation.
   * `RT-FRF-CLOSURE` -- 24.14, the FRF/Gemel closure.
   * `DOWNSTREAM-1000-SEAL` -- 24.15, the seal.
@@ -117,7 +130,8 @@ Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2
 `RT-FAMILY-FREEZE`, 24.5 registers `RT-HOLDOUT-PARTITION`, 24.6 registers
 `RT-BUILD-LINK-ATLAS`, 24.7 registers `RT-RUNTIME-FUNCTIONAL-ATLAS`, 24.8 registers
 `RT-FAILURE-MINIMIZATION`, 24.9 registers `RT-HIGH-VALUE-TIER`, 24.10 registers
-`RT-HOSTILITY-AUGMENTATION` and 24.11 registers `RT-CANDIDATE-FREEZE`, and the remaining four are
+`RT-HOSTILITY-AUGMENTATION`, 24.11 registers `RT-CANDIDATE-FREEZE` and 24.12 registers
+`RT-P1000-RUN`, and the remaining three are
 pending. A passing court is an instrument,
 not a property claim, and this stratum makes no property claim beyond the atlas: a selected
 empirical population is not a random sample, 1000/1000 is not a security proof, a build is not a
@@ -216,6 +230,11 @@ import downstream_hostility  # noqa: E402
 # path the artefact was produced by.
 import downstream_candidate_freeze  # noqa: E402
 
+# The 24.12 final-P1000-run tool, imported so the court re-derives the candidate identity from the
+# committed install and re-runs the validation and sensitivity control over the committed run (never
+# rebuilding and never launching anything) through the same code path the artefact was produced by.
+import downstream_p1000_run  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -288,6 +307,12 @@ HOSTILITY_AUGMENTATION_COURT = "RT-HOSTILITY-AUGMENTATION"
 CANDIDATE_FREEZE = REPO_ROOT / "forensics" / "downstream" / "candidate-freeze.json"
 CANDIDATE_FREEZE_COURT = "RT-CANDIDATE-FREEZE"
 
+# 24.12's subject: the final full P1000 run at the frozen candidate, one derived `drop_in_verdict`
+# per counted family and the ladder. The court reads it and re-runs the pure validation; it
+# re-derives the candidate identity from the committed install and never rebuilds.
+P1000_RUN = REPO_ROOT / "forensics" / "downstream" / "p1000-run.json"
+P1000_RUN_COURT = "RT-P1000-RUN"
+
 # The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES`, 24.2 `RT-CANDIDATE-UNIVERSE`,
 # 24.3 `RT-AUTHORITY-CENSUS`, 24.4 `RT-FAMILY-FREEZE`, 24.5 `RT-HOLDOUT-PARTITION`, 24.6
 # `RT-BUILD-LINK-ATLAS`, 24.7 `RT-RUNTIME-FUNCTIONAL-ATLAS`, 24.8 `RT-FAILURE-MINIMIZATION`, 24.9
@@ -306,13 +331,13 @@ COURTS: list[tuple[str, str]] = [
     (HIGH_VALUE_TIER_COURT, "_high_value_tier_court"),
     (HOSTILITY_AUGMENTATION_COURT, "_hostility_augmentation_court"),
     (CANDIDATE_FREEZE_COURT, "_candidate_freeze_court"),
+    (P1000_RUN_COURT, "_p1000_run_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order. A court moves out of this table
 # and into `COURTS` in the commit that lands its instrument.
 PENDING_COURTS: dict[str, str] = {
-    "RT-P1000-RUN": "24.12 -- the final full P1000 run",
     "RT-ATLAS-RECONCILIATION": "24.13 -- the atlas reconciliation",
     "RT-FRF-CLOSURE": "24.14 -- the FRF/Gemel closure",
     "DOWNSTREAM-1000-SEAL": "24.15 -- the downstream-1000 seal",
@@ -1378,8 +1403,9 @@ def _candidate_freeze_court(name: str) -> dict:
     and the committed 24.10 hostility corpus, and re-runs the 24.11 validation and sensitivity control
     over the committed artefact **without re-running the holdout and without rebuilding anything**.
     It establishes that the frozen candidate identity reproduces from the committed install (the
-    libssl/libcrypto digests, the headers, pkg-config, provider modules, the crate version and the
-    source commit); that the holdout set equals the precommitted partition, reproduces from the frozen
+    libssl/libcrypto digests, the headers, pkg-config, provider modules and the crate version, with
+    the source commit carried as recorded, existence-checked provenance rather than a live-HEAD
+    binding); that the holdout set equals the precommitted partition, reproduces from the frozen
     P1000 by the 24.5 rule, and carries a matching `partition_root_hash`; that `first_run` is present,
     equals the summary derived from the holdout run, and is attested unchanged by every rerun; that
     every holdout family has an accounting row; that a candidate row never claims a level above the
@@ -1444,8 +1470,9 @@ def _candidate_freeze_court(name: str) -> dict:
             "sensitivity control over the committed artefact without re-running the holdout and "
             "without rebuilding anything. It establishes that the frozen candidate identity "
             "reproduces from the committed install (the libssl/libcrypto digests, the exported "
-            "headers, pkg-config metadata, provider modules, the crate version and the source "
-            "commit); that the holdout set equals the precommitted partition, reproduces from the "
+            "headers, pkg-config metadata, provider modules and the crate version, with the source "
+            "commit carried as recorded, existence-checked provenance rather than a live-HEAD "
+            "binding); that the holdout set equals the precommitted partition, reproduces from the "
             "frozen P1000 by the 24.5 rule and carries a matching partition_root_hash; that "
             "first_run is present, equals the summary derived from the holdout run, and is attested "
             "unchanged by every rerun; that every holdout family has an accounting row; that a "
@@ -1484,6 +1511,113 @@ def _candidate_freeze_court(name: str) -> dict:
             "candidate_failures": counts.get("candidate_failures") or {},
             "verdicts": counts.get("verdicts") or {},
             "reruns": len(body.get("reruns") or []),
+            "candidate_specific_patch_count": counts.get("candidate_specific_patch_count", 0),
+        },
+        "examples": examples,
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
+def _p1000_run_court(name: str) -> dict:
+    """`RT-P1000-RUN`: 24.12's court, the final full P1000 run at the frozen candidate.
+
+    Stages no probe. It reads the committed run `forensics/downstream/p1000-run.json`, the frozen
+    P1000 `forensics/downstream/family-freeze.json` and the committed 24.11 candidate freeze
+    `forensics/downstream/candidate-freeze.json`, and re-runs the 24.12 validation and sensitivity
+    control over the committed artefact **without rebuilding anything**. It establishes that the
+    candidate identity equals the frozen 24.11 identity (excluding the recorded provenance, so the
+    run is against the same candidate); that there is exactly one `drop_in_verdict` per counted
+    family, with none missing, extra or fabricated; that a `DROP_IN_PASS` is refused without all
+    five of the brief's section 20 conditions; that `DROP_IN_UNKNOWN` is 0; that the ladder equals
+    the derived per-level counts and the verdict histogram; that a family this venue cannot pose the
+    drop-in question for is `DROP_IN_NOT_APPLICABLE` with a reason; that
+    `candidate_specific_patch_count` is 0; and that the counts are derived rather than typed. Five
+    seeded mutations are each caught with specificity holding. A passing run is a **measurement**:
+    the ladder is over a selected population of 1,000 families, not a percentage of all downstream
+    software.
+    """
+    if not P1000_RUN.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the P1000-run artefact {rel(P1000_RUN)} is absent"],
+                "findings": [], "control": {}}
+
+    inputs = downstream_p1000_run.load_inputs()
+    body = json.loads(P1000_RUN.read_text(encoding="utf-8"))["body"]
+    findings = downstream_p1000_run.p1000_findings(inputs, body)
+    control = downstream_p1000_run.p1000_sensitivity_control(inputs, body)
+
+    ladder = body.get("ladder") or {}
+    counts = body.get("counts") or {}
+    verdicts = body.get("verdicts") or []
+    receipts = body.get("per_consumer_receipts") or []
+    measured = [v for v in verdicts if str(v.get("verdict")) != "DROP_IN_NOT_APPLICABLE"]
+    examples = {
+        "rule": body.get("rule"),
+        "candidate_identity": body.get("candidate_identity"),
+        "population": body.get("population"),
+        "ladder": ladder,
+        "counts": counts,
+        "measured_verdicts": [
+            {"family": v.get("canonical_name"), "verdict": v.get("verdict"),
+             "authority_applicable_level": v.get("authority_applicable_level"),
+             "candidate_level": v.get("candidate_level"),
+             "residual_class": v.get("residual_class"), "reason": v.get("reason")}
+            for v in measured],
+        "not_applicable_head": [
+            {"family": v.get("canonical_name"), "residual_class": v.get("residual_class"),
+             "reason": v.get("reason")}
+            for v in verdicts if str(v.get("verdict")) == "DROP_IN_NOT_APPLICABLE"][:5],
+        "measured_receipts": [r for r in receipts
+                              if str(r.get("result")) != "DROP_IN_NOT_APPLICABLE"][:8],
+    }
+
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/p1000-run.json, "
+            "forensics/downstream/family-freeze.json and forensics/downstream/candidate-freeze.json, "
+            "and re-runs the 24.12 validation and sensitivity control over the committed artefact "
+            "without rebuilding anything. It establishes that the candidate identity equals the "
+            "frozen 24.11 identity (excluding the recorded provenance, so the run is against the "
+            "same candidate); that there is exactly one drop_in_verdict per counted family, with "
+            "none missing, extra or fabricated; that a DROP_IN_PASS is refused without all five of "
+            "the brief's section 20 conditions (the same pristine source, a succeeded authority "
+            "baseline that reached at least L4-linked, the candidate reaching the "
+            "authority-applicable level, candidate linkage proven and zero candidate-specific "
+            "patches); that DROP_IN_UNKNOWN is 0; that the ladder equals the derived per-level "
+            "counts and the verdict histogram; that a family this venue cannot pose the drop-in "
+            "question for is DROP_IN_NOT_APPLICABLE with a reason; that "
+            "candidate_specific_patch_count is 0; and that the counts are derived rather than "
+            "typed. The five seeded mutations -- a PASS asserted without an authority baseline, a "
+            "PASS with a positive patch count, a duplicated verdict, a candidate level below the "
+            "authority-applicable level marked PASS, and a mismatched candidate identity -- are "
+            "each detected with specificity holding. A passing run is a measurement, not a security "
+            "proof: the ladder is over a selected population of 1,000 families, not a percentage "
+            "of all downstream software, and a venue-limited family is neither a pass nor a fail "
+            "(docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 3.4 and 4.9 and the brief's "
+            "sections 20, 52 and 55)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the P1000-run court reads committed artefacts and brings no "
+            "artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF "
+            "declaration"
+        ),
+        "candidate_identity": body.get("candidate_identity") or {},
+        "ladder": ladder,
+        "counts": {
+            "families": counts.get("families", 0),
+            "rows": counts.get("rows", 0),
+            "recipe_backed_families": counts.get("recipe_backed_families", 0),
+            "measurable_families": counts.get("measurable_families", 0),
+            "not_applicable_families": counts.get("not_applicable_families", 0),
+            "measurable_reaches_baseline": counts.get("measurable_reaches_baseline", 0),
+            "verdicts": counts.get("verdicts") or {},
             "candidate_specific_patch_count": counts.get("candidate_specific_patch_count", 0),
         },
         "examples": examples,
@@ -1745,8 +1879,9 @@ def main(argv: list[str]) -> int:
             "identity from the committed install and the precommitted holdout set from the frozen "
             "P1000 by the 24.5 rule without re-running the holdout and without rebuilding anything. "
             "It establishes that the candidate identity reproduces from the committed install (the "
-            "libssl/libcrypto digests, the exported headers, pkg-config metadata, provider modules, "
-            "the crate version and the source commit); that the holdout set equals the precommitted "
+            "libssl/libcrypto digests, the exported headers, pkg-config metadata, provider modules "
+            "and the crate version, with the source commit carried as recorded, existence-checked "
+            "provenance rather than a live-HEAD binding); that the holdout set equals the precommitted "
             "partition and carries a matching partition_root_hash; that first_run is present, equals "
             "the summary derived from the holdout run, and is attested unchanged by every rerun; "
             "that every holdout family has an accounting row; that a candidate row never claims a "
@@ -1760,11 +1895,31 @@ def main(argv: list[str]) -> int:
             "measurement, not a security proof: a holdout result over a selected population is an "
             "out-of-sample measurement of that population, not of all downstream software, and a "
             "venue-limited holdout member is neither a pass nor a fail. "
+            "`RT-P1000-RUN` is 24.12's court: the final full P1000 run at the frozen candidate. "
+            "It stages no probe and reads forensics/downstream/p1000-run.json, "
+            "forensics/downstream/family-freeze.json and forensics/downstream/candidate-freeze.json, "
+            "re-deriving the candidate install's identity and re-running the 24.12 validation and "
+            "sensitivity control over the committed run without rebuilding anything. It establishes "
+            "that the candidate identity equals the frozen 24.11 identity (excluding the recorded "
+            "provenance, so the run is against the same candidate); that there is exactly one "
+            "drop_in_verdict per counted family, with none missing, extra or fabricated; that a "
+            "DROP_IN_PASS is refused without all five of the brief's section 20 conditions (the "
+            "same pristine source, a succeeded authority baseline that reached at least L4-linked, "
+            "the candidate reaching the authority-applicable level, candidate linkage proven and "
+            "zero candidate-specific patches); that DROP_IN_UNKNOWN is 0; that the ladder equals "
+            "the derived per-level counts and the verdict histogram; that a family this venue "
+            "cannot pose the drop-in question for is DROP_IN_NOT_APPLICABLE with a reason; that "
+            "candidate_specific_patch_count is 0; and that the counts are derived rather than "
+            "typed. A PASS asserted without an authority baseline, a PASS with a positive patch "
+            "count, a duplicated verdict, a candidate level below the authority-applicable level "
+            "marked PASS, and a mismatched candidate identity are each detected with specificity "
+            "holding. A passing run is a measurement, not a security proof: the ladder is over a "
+            "selected population of 1,000 families, not a percentage of all downstream software, "
+            "and a venue-limited family is neither a pass nor a fail. "
             "The remaining "
-            "four courts -- "
-            "RT-P1000-RUN, "
+            "three courts -- "
             "RT-ATLAS-RECONCILIATION, RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending "
-            "with the subphases that land them (24.12 through 24.15). Phase 24 owns no exported "
+            "with the subphases that land them (24.13 through 24.15). Phase 24 owns no exported "
             "symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
@@ -1892,6 +2047,14 @@ def main(argv: list[str]) -> int:
     for ref_name, path in (("candidate-freeze", CANDIDATE_FREEZE),
                            ("downstream-candidate-freeze", REPO_ROOT / "forensics" / "tools"
                             / "downstream_candidate_freeze.py")):
+        if path.is_file():
+            inputs.append(InputRef(name=ref_name, path=path))
+    # 24.12's subject: the committed final P1000 run and the tool that produced it, bound so a run
+    # row, a verdict, a ladder count and a receipt the court reads are content-addressed rather than
+    # restated.
+    for ref_name, path in (("p1000-run", P1000_RUN),
+                           ("downstream-p1000-run", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_p1000_run.py")):
         if path.is_file():
             inputs.append(InputRef(name=ref_name, path=path))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
@@ -2238,6 +2401,44 @@ def main(argv: list[str]) -> int:
                 print(f"      verdict {v['family']:<12} {v['verdict']:<24} "
                       f"baseline={v['authority_applicable_level']} candidate={v['candidate_level']}")
             print(f"      candidate_failures: {counts['candidate_failures']}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == P1000_RUN_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            lad = r["ladder"]
+            ex = r["examples"]
+            ident = r["candidate_identity"]
+            print(f"  {r['court']:<32} pass   (no probe, families={counts['families']} "
+                  f"recipe_backed={counts['recipe_backed_families']} "
+                  f"measurable={counts['measurable_families']} "
+                  f"not_applicable={counts['not_applicable_families']} "
+                  f"reaches_baseline={counts['measurable_reaches_baseline']} "
+                  f"verdicts={counts['verdicts']} "
+                  f"patches={counts['candidate_specific_patch_count']}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"no-baseline->{c['caught_pass_without_authority_baseline']} "
+                  f"patch-count->{c['caught_pass_with_positive_patch_count']} "
+                  f"duplicate->{c['caught_duplicated_verdict']} "
+                  f"below-baseline->{c['caught_candidate_level_below_baseline_marked_pass']} "
+                  f"identity->{c['caught_mismatched_candidate_identity']})")
+            print(f"      candidate identity: libssl={str(ident.get('libssl_sha256'))[:12]} "
+                  f"libcrypto={str(ident.get('libcrypto_sha256'))[:12]} "
+                  f"version={ident.get('crate_version')} "
+                  f"identity_hash={ident.get('identity_hash')}")
+            print(f"      ladder: families={lad.get('families')} "
+                  f"measurable={lad.get('measurable_families')} "
+                  f"not_applicable={lad.get('not_applicable_families')} "
+                  f"levels={lad.get('levels')}")
+            print(f"      verdicts: {lad.get('verdicts')}")
+            for v in ex.get("measured_verdicts") or []:
+                print(f"      verdict {v['family']:<12} {v['verdict']:<24} "
+                      f"baseline={v['authority_applicable_level']} "
+                      f"candidate={v['candidate_level']} residual={v['residual_class']}")
+            for v in ex.get("not_applicable_head") or []:
+                print(f"      not-applicable {v['family']:<12} residual={v['residual_class']} "
+                      f"{(v['reason'] or '')[:70]}")
             for f in r["findings"]:
                 print(f"      finding: {f}")
         elif r["verdict"] != "pass":
