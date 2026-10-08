@@ -108,7 +108,18 @@ row's `findings` so the ledger reads `property_status` honestly. The
 registry is the file `run_courts.py`
 checks is reproduced, so a court silently dropped is a finding rather than a smaller green run.
 This is the reverse of Phase 16's edge: the ledger's contract-unit states are measured from this
-registry, so this runner does **not** bind the obligations ledger as an input.
+registry, so this runner does **not** bind the obligations ledger as an input. **24.14 registers
+`RT-FRF-CLOSURE`**, the FRF/Gemel chain closure. It stages no probe: it reads the committed
+`forensics/atlas/phase24/frf-closure.json`, re-derives the FRF chain staging from the
+`gen_frf_courts.py` registry and the `artifacts/phase24/probes/` directory (never from `COURTS.json`,
+which would cycle) and the Gemel checkpoint projection from the committed
+`forensics/GEMEL_TRAJECTORY.md` (never the store), and re-runs the 24.14 classification over the
+committed challenges. It establishes that each Phase-24 plane's own pure checker detected its own
+defect class, that no Phase-24 court is declarable so the FRF/Gemel chain entry is vacuous by
+`frf_gemel_blocking_reason`'s own scoping, and that the classifier is not a rubber stamp -- a
+registered challenge whose observed result is mutated in memory is reported `NOT_DETECTED`. It is an
+**instrument**: it can pass while its property finding records that the stratum stages no declarable
+court, so a passing closure is never read as a chain that ran.
 
 **Every entry point calls the Docker-only execution guard first.** Phase 24's whole subject is
 compiling, linking and running other software, and `docs/REPRODUCIBILITY.md` section 1 says nothing
@@ -136,7 +147,7 @@ The fifteen courts, and the subphase that lands each
   * `RT-CANDIDATE-FREEZE` -- 24.11, the candidate freeze and holdout (registered).
   * `RT-P1000-RUN` -- 24.12, the final full P1000 run (registered).
   * `RT-ATLAS-RECONCILIATION` -- 24.13, the atlas reconciliation (registered).
-  * `RT-FRF-CLOSURE` -- 24.14, the FRF/Gemel closure.
+  * `RT-FRF-CLOSURE` -- 24.14, the FRF/Gemel closure (registered).
   * `DOWNSTREAM-1000-SEAL` -- 24.15, the seal.
 
 Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2 registers
@@ -145,8 +156,8 @@ Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2
 `RT-BUILD-LINK-ATLAS`, 24.7 registers `RT-RUNTIME-FUNCTIONAL-ATLAS`, 24.8 registers
 `RT-FAILURE-MINIMIZATION`, 24.9 registers `RT-HIGH-VALUE-TIER`, 24.10 registers
 `RT-HOSTILITY-AUGMENTATION`, 24.11 registers `RT-CANDIDATE-FREEZE`, 24.12 registers
-`RT-P1000-RUN` and 24.13 registers `RT-ATLAS-RECONCILIATION`, and the remaining two are
-pending. A passing court is an instrument,
+`RT-P1000-RUN`, 24.13 registers `RT-ATLAS-RECONCILIATION` and 24.14 registers `RT-FRF-CLOSURE`,
+and the remaining one -- the downstream-1000 seal -- is pending. A passing court is an instrument,
 not a property claim, and this stratum makes no property claim beyond the atlas: a selected
 empirical population is not a random sample, 1000/1000 is not a security proof, a build is not a
 functional proof, and transitive and direct consumers are different evidence.
@@ -255,6 +266,15 @@ import downstream_p1000_run  # noqa: E402
 # artefact was produced by.
 import downstream_reconciliation  # noqa: E402
 
+# The 24.14 FRF/Gemel closure tool, imported so the court re-runs its per-plane challenge
+# classification, its chain-staging derivation and its Gemel-projection derivation over the committed
+# closure (never fetching, never opening the store and never launching a probe) through the same code
+# path the artefact was produced by. The tool executes nothing, so it is declared `metadata_only` in
+# the container manifest and the guard admits it host-side; it does not import this runner, so the
+# edge runs closure -> court and binding it back would form a digest cycle neither artefact could
+# reproduce.
+import phase24_frf  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -341,14 +361,22 @@ P1000_RUN_COURT = "RT-P1000-RUN"
 RECONCILIATION = REPO_ROOT / "forensics" / "downstream" / "reconciliation.json"
 ATLAS_RECONCILIATION_COURT = "RT-ATLAS-RECONCILIATION"
 
+# 24.14's subject: the FRF/Gemel closure. The FRF challenges plane (one record per Phase-24 plane,
+# each the plane's own pure checker driven over its committed artefact and over the controlled
+# mutations its own sensitivity control seeds), the FRF chain staging (why no Phase-24 court is
+# declarable, and what stands in its place) and the Gemel checkpoint projection (the state of the
+# committed `forensics/GEMEL_TRAJECTORY.md`, never the store). The court reads it and re-runs the
+# pure classification, the chain derivation and the Gemel derivation; it stages no probe.
+FRF_CLOSURE = REPO_ROOT / "forensics" / "atlas" / "phase24" / "frf-closure.json"
+FRF_CLOSURE_COURT = "RT-FRF-CLOSURE"
+
 # The courts this stratum stages. 24.1 registers `RT-RANKING-SOURCES`, 24.2 `RT-CANDIDATE-UNIVERSE`,
 # 24.3 `RT-AUTHORITY-CENSUS`, 24.4 `RT-FAMILY-FREEZE`, 24.5 `RT-HOLDOUT-PARTITION`, 24.6
 # `RT-BUILD-LINK-ATLAS`, 24.7 `RT-RUNTIME-FUNCTIONAL-ATLAS`, 24.8 `RT-FAILURE-MINIMIZATION`, 24.9
-# 24.9
 # `RT-HIGH-VALUE-TIER`, 24.10 `RT-HOSTILITY-AUGMENTATION`, 24.11 `RT-CANDIDATE-FREEZE`, 24.12
-# `RT-P1000-RUN` and 24.13 `RT-ATLAS-RECONCILIATION`; each later subphase appends its court here in the
-# commit that lands its instrument, and a court removed from the table leaves the registry and fails
-# `run_courts.py`.
+# `RT-P1000-RUN`, 24.13 `RT-ATLAS-RECONCILIATION` and 24.14 `RT-FRF-CLOSURE`; each later subphase
+# appends its court here in the commit that lands its instrument, and a court removed from the table
+# leaves the registry and fails `run_courts.py`.
 COURTS: list[tuple[str, str]] = [
     (RANKING_SOURCES_COURT, "_ranking_sources_court"),
     (CANDIDATE_UNIVERSE_COURT, "_candidate_universe_court"),
@@ -363,13 +391,13 @@ COURTS: list[tuple[str, str]] = [
     (CANDIDATE_FREEZE_COURT, "_candidate_freeze_court"),
     (P1000_RUN_COURT, "_p1000_run_court"),
     (ATLAS_RECONCILIATION_COURT, "_atlas_reconciliation_court"),
+    (FRF_CLOSURE_COURT, "_frf_closure_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. Ordered as the
 # plan orders them, so the registry reads as the execution order. A court moves out of this table
 # and into `COURTS` in the commit that lands its instrument.
 PENDING_COURTS: dict[str, str] = {
-    "RT-FRF-CLOSURE": "24.14 -- the FRF/Gemel closure",
     "DOWNSTREAM-1000-SEAL": "24.15 -- the downstream-1000 seal",
 }
 
@@ -1822,6 +1850,111 @@ def _atlas_reconciliation_court(name: str) -> dict:
     }
 
 
+def _frf_closure_court(name: str) -> dict:
+    """`RT-FRF-CLOSURE`: 24.14's court, the FRF/Gemel chain closure.
+
+    Stages no probe. It reads the committed closure `forensics/atlas/phase24/frf-closure.json` and
+    re-runs the 24.14 classification with **no** side effects, plus two things re-derived from the
+    live committed tree: the FRF chain staging (read from the `gen_frf_courts.py` registry and the
+    tree's `artifacts/phase24/probes/` directory, never from `COURTS.json`) and the Gemel checkpoint
+    projection (read from the committed `forensics/GEMEL_TRAJECTORY.md`, never the store). It
+    establishes that every Phase-24 plane's own checker detected its own defect class, that the
+    classification of every registered challenge re-derives from its recorded expected/observed, that
+    the recorded chain staging and Gemel projection reproduce from the committed evidence, that no
+    Phase-24 court is declarable so the FRF/Gemel chain entry is vacuous by
+    `frf_gemel_blocking_reason`'s own scoping, and that the classifier is not a rubber stamp: a
+    registered challenge whose observed result is mutated in memory is reported `NOT_DETECTED`, an
+    injected Phase-24 declaration and an injected probe pair are each caught, a stripped current
+    checkpoint and a checkpointless projection are each caught, and a flipped recorded status is a
+    finding. The court is an **instrument**: it passes while its property finding records that the
+    stratum stages no declarable court, so a passing closure is never read as a chain that ran.
+    """
+    if not FRF_CLOSURE.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": [f"the FRF closure artefact {rel(FRF_CLOSURE)} is absent"],
+                "findings": [], "instrument_findings": [], "control": {}}
+
+    body = json.loads(FRF_CLOSURE.read_text(encoding="utf-8"))["body"]
+    evidence = phase24_frf.collect_evidence()
+    instrument_findings = phase24_frf.frf_closure_findings(body, evidence)
+    control = phase24_frf.frf_closure_sensitivity_control(body, evidence)
+    prop = phase24_frf.frf_closure_property(body, evidence)
+
+    counts = body.get("counts") or {}
+    chain = body.get("chain") or {}
+    gemel = body.get("gemel") or {}
+    challenges = body.get("challenges") or []
+    examples = {
+        "harness": body.get("harness"),
+        "chain": chain,
+        "gemel": gemel,
+        "challenges": [
+            {"plane": c.get("plane"), "instrument": c.get("instrument"),
+             "status": c.get("status"), "defect_class": c.get("defect_class"),
+             "mutations": c.get("mutations")}
+            for c in challenges
+        ],
+        "property_findings": body.get("property_findings"),
+    }
+
+    verdict = "pass" if (not instrument_findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/atlas/phase24/frf-closure.json and re-runs the "
+            "24.14 classification with no side effects, re-deriving the FRF chain staging from the "
+            "gen_frf_courts.py registry and the artifacts/phase24/probes/ directory and the Gemel "
+            "checkpoint projection from the committed forensics/GEMEL_TRAJECTORY.md (never the "
+            "store, never COURTS.json). It establishes that each Phase-24 plane's own pure checker "
+            "detected its own defect class, that every registered challenge's classification "
+            "re-derives from its recorded expected/observed, that the recorded chain staging and "
+            "Gemel projection reproduce, and that no Phase-24 court is declarable so the FRF/Gemel "
+            "chain entry is vacuous by frf_gemel_blocking_reason's own scoping. The classifier is "
+            "not a rubber stamp: a registered challenge whose observed result is mutated in memory "
+            "is reported NOT_DETECTED, an injected Phase-24 declaration and an injected probe pair "
+            "are each caught, a stripped current checkpoint and a checkpointless projection are "
+            "each caught, and a flipped recorded status is a finding, with specificity holding. "
+            "The court is an instrument, not the property: it can pass while its property finding "
+            "records that the stratum stages no declarable court, so a passing closure is never "
+            "read as a chain that ran (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md section 2's 24.14 "
+            "row and docs/RELEASE_GATES.md section 2 items 6, 8 and 10)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the FRF/Gemel closure court reads committed artefacts and the FRF registry and stages "
+            "no artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no "
+            "FRF declaration"
+        ),
+        "challenges": counts.get("planes", len(challenges)),
+        "detected": counts.get("detected", 0),
+        "not_detected": counts.get("not_detected", 0),
+        "not_driven": counts.get("not_driven", 0),
+        "failed_planes": [c.get("plane") for c in challenges if c.get("status") != "DETECTED"],
+        "chain": chain,
+        "gemel": gemel,
+        "findings": prop["property_findings"],
+        "property_status": prop["property_status"],
+        "instrument_findings": instrument_findings,
+        "counts": {
+            "planes": counts.get("planes", len(challenges)),
+            "detected": counts.get("detected", 0),
+            "not_detected": counts.get("not_detected", 0),
+            "not_driven": counts.get("not_driven", 0),
+            "declared_courts": len(chain.get("declared_courts") or []),
+            "probe_pairs": len(chain.get("probe_pairs") or []),
+            "chain_vacuous": bool(chain.get("vacuous")),
+            "gemel_current": gemel.get("current"),
+            "gemel_checkpoints": gemel.get("checkpoint_count", 0),
+            "gemel_checkpoint_owed": bool(gemel.get("checkpoint_owed")),
+        },
+        "examples": examples,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -2130,10 +2263,22 @@ def main(argv: list[str]) -> int:
             "the atlas carries real property findings (a large NOT_APPLICABLE share, a thin "
             "measured surface, a non-empty residual set), which are recorded as findings and make "
             "property_status NOT_CLAIMED. "
-            "The remaining "
-            "two courts -- "
-            "RT-FRF-CLOSURE and DOWNSTREAM-1000-SEAL -- are pending "
-            "with the subphases that land them (24.14 and 24.15). Phase 24 owns no exported "
+            "`RT-FRF-CLOSURE` is 24.14's court: the FRF/Gemel chain closure. It stages no probe and "
+            "reads forensics/atlas/phase24/frf-closure.json, re-running the 24.14 classification "
+            "with no side effects. It establishes that each Phase-24 plane's own pure checker "
+            "detected its own defect class (the thirteen challenges), that the recorded chain "
+            "staging reproduces from the gen_frf_courts.py registry and the artifacts/phase24/ "
+            "probes/ directory and the recorded Gemel projection from the committed "
+            "forensics/GEMEL_TRAJECTORY.md, and that no Phase-24 court is declarable so the "
+            "FRF/Gemel chain entry is vacuous by frf_gemel_blocking_reason's own scoping. A "
+            "registered challenge whose observed result is mutated in memory is reported "
+            "NOT_DETECTED, an injected Phase-24 declaration and an injected probe pair are each "
+            "caught, a stripped current checkpoint and a checkpointless projection are each caught, "
+            "and a flipped recorded status is a finding. The court is an instrument: it can pass "
+            "while its property finding records that the stratum stages no declarable court, so a "
+            "passing closure is never read as a chain that ran. "
+            "The remaining court -- DOWNSTREAM-1000-SEAL -- is pending with the subphase that lands "
+            "it (24.15). Phase 24 owns no exported "
             "symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
@@ -2277,6 +2422,15 @@ def main(argv: list[str]) -> int:
     for ref_name, path in (("reconciliation", RECONCILIATION),
                            ("downstream-reconciliation", REPO_ROOT / "forensics" / "tools"
                             / "downstream_reconciliation.py")):
+        if path.is_file():
+            inputs.append(InputRef(name=ref_name, path=path))
+    # 24.14's subject: the committed FRF/Gemel closure and the tool that produced it, bound so a
+    # challenge delta, the chain staging and the Gemel projection the court reads are content-
+    # addressed rather than restated.
+    for ref_name, path in (("frf-closure", FRF_CLOSURE),
+                           ("phase24-frf", REPO_ROOT / "forensics" / "tools"
+                            / "phase24_frf.py"),
+                           ("gemel-trajectory", REPO_ROOT / "forensics" / "GEMEL_TRAJECTORY.md")):
         if path.is_file():
             inputs.append(InputRef(name=ref_name, path=path))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
@@ -2720,6 +2874,35 @@ def main(argv: list[str]) -> int:
                       f"candidate={v['candidate_level']} residual={v['residual_class']}")
             print(f"      property_status={r['property_status']} "
                   f"property_findings={len(r['findings'])}")
+            for f in r["instrument_findings"]:
+                print(f"      instrument finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == FRF_CLOSURE_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            chain = r["chain"]
+            gemel = r["gemel"]
+            print(f"  {r['court']:<32} pass   (no probe, planes={counts['planes']} "
+                  f"detected={counts['detected']} not_detected={counts['not_detected']} "
+                  f"not_driven={counts['not_driven']}; "
+                  f"{len(r['instrument_findings'])} instrument finding(s); "
+                  f"control honest={c['honest']} specificity={c['specificity_holds']} "
+                  f"mutated->{c['caught_mutated_observed']} "
+                  f"declaration->{c['caught_injected_declaration']} "
+                  f"probe->{c['caught_injected_probe']} "
+                  f"checkpoint->{c['caught_missing_checkpoint']} "
+                  f"no-checkpoints->{c['caught_missing_checkpoints']} "
+                  f"flipped->{c['caught_flipped_status']})")
+            print(f"      chain: phase={chain['phase']} declared={chain['declared_courts']} "
+                  f"probes={chain['probe_pairs']} vacuous={chain['vacuous']}")
+            print(f"      gemel: projection={gemel['projection']} current={gemel['current']} "
+                  f"checkpoints={gemel['checkpoint_count']} "
+                  f"chain_named={gemel['checkpoints_naming_frf_chain']} "
+                  f"owed={gemel['checkpoint_owed']}")
+            for ch in r["examples"]["challenges"]:
+                caught = sum(1 for v in (ch["mutations"] or {}).values() if v)
+                print(f"      plane {ch['plane']:<6} {ch['instrument']:<26} {ch['status']:<12} "
+                      f"mutations={caught}/{len(ch['mutations'] or {})}")
+            print(f"      property_status={r['property_status']} findings={len(r['findings'])}")
             for f in r["instrument_findings"]:
                 print(f"      instrument finding: {f}")
         elif r["verdict"] != "pass":

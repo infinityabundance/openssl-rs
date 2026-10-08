@@ -384,6 +384,14 @@ GENERATORS_AFTER_LEDGERS = [
     # authority and no container.
     "courts/phase17/downstream/lib/build_corpus.py",
     "forensics/tools/gen_downstream_evidence.py",
+    # Phase 24.14's FRF/Gemel closure. It executes nothing -- it drives each Phase-24 plane's own
+    # pure `*_findings`/`*_sensitivity_control` over the committed artefact, records the per-mutation
+    # delta, and derives the FRF chain staging and the Gemel checkpoint projection from the committed
+    # `gen_frf_courts.py` registry and the committed `forensics/GEMEL_TRAJECTORY.md`. It sits after
+    # the ledgers because it reads the Phase-24 planes (several of them regenerated in the
+    # before-ledgers block) and none of them reads it; the RT-FRF-CLOSURE court re-runs the same pure
+    # functions over the committed artefact.
+    "forensics/tools/phase24_frf.py",
 ]
 
 
@@ -579,6 +587,13 @@ COMPARED = [
     # than a silent divergence. It carries no measurement (it executes nothing and reads nothing that
     # moves), which is why re-deriving it needs no compiler, no prefix and no network.
     "forensics/downstream/reconciliation.json",
+    # Phase 24.14's FRF/Gemel closure: the per-plane FRF challenges, the FRF chain staging and the
+    # Gemel checkpoint projection. A pure function of the committed Phase-24 planes, the committed
+    # `gen_frf_courts.py` registry and the committed `forensics/GEMEL_TRAJECTORY.md`, so a stale
+    # challenge delta, a chain record that no longer matches the registry, or a Gemel current
+    # checkpoint that moved is a failure rather than a silent divergence. It executes no probe and
+    # opens no store.
+    "forensics/atlas/phase24/frf-closure.json",
 ]
 
 # ---------------------------------------------------------------------------
