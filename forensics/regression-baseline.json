@@ -245,6 +245,14 @@
       "observations": 157,
       "verdict": "pass"
     },
+    "RT-BLOCKER-LEVERAGE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-BLOCKER-REMEDIATION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-BN": {
       "observations": 1510,
       "verdict": "pass"
@@ -283,6 +291,10 @@
     },
     "RT-CLI-BODIES": {
       "observations": 805,
+      "verdict": "pass"
+    },
+    "RT-CLOSE-BATCH": {
+      "observations": 0,
       "verdict": "pass"
     },
     "RT-CMAC": {
@@ -781,6 +793,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "RT-RECIPE-CAMPAIGN": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-RECORD": {
       "observations": 38,
       "verdict": "pass"
@@ -1017,7 +1033,7 @@
     "phase21": 5,
     "phase22": 18,
     "phase23": 17,
-    "phase24": 15,
+    "phase24": 19,
     "phase3": 294,
     "phase4": 272,
     "phase5": 565,

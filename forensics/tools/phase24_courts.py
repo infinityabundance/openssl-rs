@@ -17,7 +17,7 @@ honest is `fail` rather than `pass`.
 **The first court is registered by 24.1.** The stratum's obligations are not exports, so its
 first runnable court is a later subphase's, and `run_courts.py` would refuse a stratum in
 `in-progress` with no runner at all -- so this runner lands at activation with an empty registry
-and names the fifteen courts it will stage. **24.1 registers `RT-RANKING-SOURCES`**, the frozen
+and names the sixteen courts it will stage. **24.1 registers `RT-RANKING-SOURCES`**, the frozen
 ranking-source acquisition, **24.2 registers `RT-CANDIDATE-UNIVERSE`**, the candidate family
 universe, **24.3 registers `RT-AUTHORITY-CENSUS`**, the authority-baseline census, and **24.4
 registers `RT-FAMILY-FREEZE`**, the P1000 + reserve freeze, and **24.5 registers
@@ -121,13 +121,23 @@ registered challenge whose observed result is mutated in memory is reported `NOT
 **instrument**: it can pass while its property finding records that the stratum stages no declarable
 court, so a passing closure is never read as a chain that ran.
 
-**24.15 registers `DOWNSTREAM-1000-SEAL`**, the seal, and `PENDING_COURTS` is empty. It stages no
+**24.15 registers `DOWNSTREAM-1000-SEAL`**, the seal. It stages no
 probe: it reads the committed reconciliation, the final P1000 run, the candidate freeze and the FRF
 closure, and the seal document `docs/PHASE-24-DOWNSTREAM-1000-SEAL.md`, re-derives the claim/ladder
 markers from those artefacts, and checks the document carries every required marker. It is an
 **instrument**: it records the 993/1,000 `NOT_APPLICABLE` bound and the four non-claims as findings,
 so a passing seal is never read as "the downstream ecosystem is safe" and never as a security
 proof.
+
+**24.16 registers `RT-BLOCKER-LEVERAGE`**, the biggest-mover shared-blocker analysis, and
+`PENDING_COURTS` stays empty. It stages no probe: it reads the committed analysis
+`forensics/downstream/shared-blockers.json`, re-derives the partition, the ranking, the counts, the
+funnel and the recipe queue from the committed planes, and re-runs the analysis's own findings and
+sensitivity control. It also re-renders and checks `docs/PHASE-24-BIGGEST-MOVERS.md`, the
+marker-bounded `downstream-blockers` block in `README.md` and the `Biggest movers (generated)`
+section of `docs/SEAL-CENSUS.md`, and the seal court now requires the seal to cite the report. It is
+an **instrument**: it names which blocker moves the most families, not that any family would pass if
+repaired, and its recipe queue is a labelled heuristic.
 
 **Every entry point calls the Docker-only execution guard first.** Phase 24's whole subject is
 compiling, linking and running other software, and `docs/REPRODUCIBILITY.md` section 1 says nothing
@@ -140,8 +150,8 @@ The record kinds these courts will populate are defined and self-tested in
 vocabularies (the L0-L8 execution ladder, the failure taxonomy and the residual classes), so the
 record kinds are a file the evidence points at rather than prose the plan would have to restate.
 
-The fifteen courts, and the subphase that lands each
-----------------------------------------------------
+The sixteen courts, and the subphase that lands each
+-----------------------------------------------------
   * `RT-RANKING-SOURCES` -- 24.1, the frozen ranking-source acquisition (registered).
   * `RT-CANDIDATE-UNIVERSE` -- 24.2, the candidate family universe (registered).
   * `RT-AUTHORITY-CENSUS` -- 24.3, the authority-baseline census (registered).
@@ -157,6 +167,7 @@ The fifteen courts, and the subphase that lands each
   * `RT-ATLAS-RECONCILIATION` -- 24.13, the atlas reconciliation (registered).
   * `RT-FRF-CLOSURE` -- 24.14, the FRF/Gemel closure (registered).
   * `DOWNSTREAM-1000-SEAL` -- 24.15, the seal (registered).
+  * `RT-BLOCKER-LEVERAGE` -- 24.16, the biggest-mover shared-blocker analysis (registered).
 
 Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2 registers
 `RT-CANDIDATE-UNIVERSE`, 24.3 registers `RT-AUTHORITY-CENSUS`, 24.4 registers
@@ -164,8 +175,8 @@ Every one was `pending` at activation; 24.1 registers `RT-RANKING-SOURCES`, 24.2
 `RT-BUILD-LINK-ATLAS`, 24.7 registers `RT-RUNTIME-FUNCTIONAL-ATLAS`, 24.8 registers
 `RT-FAILURE-MINIMIZATION`, 24.9 registers `RT-HIGH-VALUE-TIER`, 24.10 registers
 `RT-HOSTILITY-AUGMENTATION`, 24.11 registers `RT-CANDIDATE-FREEZE`, 24.12 registers
-`RT-P1000-RUN`, 24.13 registers `RT-ATLAS-RECONCILIATION`, 24.14 registers `RT-FRF-CLOSURE` and
-24.15 registers `DOWNSTREAM-1000-SEAL`, the seal; `PENDING_COURTS` is empty. A passing court is an
+`RT-P1000-RUN`, 24.13 registers `RT-ATLAS-RECONCILIATION`, 24.14 registers `RT-FRF-CLOSURE`,
+24.15 registers `DOWNSTREAM-1000-SEAL`, the seal, and 24.16 registers `RT-BLOCKER-LEVERAGE`; `PENDING_COURTS` is empty. A passing court is an
 instrument, not a property claim, and this stratum makes no property claim beyond the atlas: a
 selected empirical population is not a random sample, 1000/1000 is not a security proof, a build is
 not a functional proof, and transitive and direct consumers are different evidence.
@@ -284,6 +295,47 @@ import downstream_reconciliation  # noqa: E402
 # reproduce.
 import phase24_frf  # noqa: E402
 
+# The 24.16 biggest-mover shared-blocker analysis, imported so the court re-derives the partition,
+# the ranking, the counts, the funnel and the recipe queue from the committed Phase-24 planes and
+# re-runs its findings and sensitivity control over the committed analysis (never rebuilding and
+# never launching anything) through the same code path the artefact was produced by. The tool
+# executes nothing, so it is declared `metadata_only` in the container manifest.
+import downstream_blockers  # noqa: E402
+
+# The 24.16 report generator, imported so the court re-renders the detailed report and the compact
+# README block from the committed analysis and requires the committed files to reproduce, and so the
+# court can require the seal to cite the analysis. It executes nothing, so it is declared
+# `metadata_only` in the container manifest.
+import render_biggest_movers as biggest_movers  # noqa: E402
+
+# The 24.17 biggest-mover remediation record, imported so the court re-derives the whole before/after
+# record from the committed Phase-24 planes and the preserved baseline and re-runs its findings and
+# sensitivity control (never rebuilding and never launching anything) through the same code path the
+# artefact was produced by. The tool executes nothing, so it is declared `metadata_only` in the
+# container manifest.
+import downstream_remediation  # noqa: E402
+
+# The 24.18 recipe-admission campaign, imported so the court re-derives the whole record (the
+# attempts, the admitted recipes, the counts and the movement) from the committed Phase-24 planes and
+# the preserved pre-campaign baseline, and re-runs its findings and sensitivity control, through the
+# same code path the artefact was produced by. The tool executes nothing (the recipes it admits are
+# built by `downstream_build_link.py`, which imports its catalogue), so it is declared
+# `metadata_only` in the container manifest.
+import downstream_recipe_campaign  # noqa: E402
+
+# The 24.19 close-candidate reclamation batch, imported so the court re-derives the whole record (the
+# attempts, the admitted recipes, the classification findings, the counts and the movement) from the
+# committed Phase-24 planes and the preserved pre-batch baseline, and re-runs its findings and
+# sensitivity control, through the same code path the artefact was produced by. The tool executes
+# nothing (the recipes it admits are built by `downstream_build_link.py`, which imports its
+# catalogue), so it is declared `metadata_only` in the container manifest.
+import downstream_close_batch  # noqa: E402
+
+# The generated seal census, imported for the one function that renders the census's biggest-movers
+# section, so the court re-derives the markers the census must carry rather than restating them. It
+# writes no Phase-24 artefact and reads no Phase-24 state.
+import render_seal_census  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase24" / "COURTS.json"
 GENERATOR = "forensics/tools/phase24_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SUBPHASES.md"
@@ -379,6 +431,38 @@ ATLAS_RECONCILIATION_COURT = "RT-ATLAS-RECONCILIATION"
 FRF_CLOSURE = REPO_ROOT / "forensics" / "atlas" / "phase24" / "frf-closure.json"
 FRF_CLOSURE_COURT = "RT-FRF-CLOSURE"
 
+# 24.16's subject: the biggest-mover shared-blocker analysis, its detailed report, the compact
+# marker-bounded block in `README.md`, and the biggest-movers section of the generated seal census.
+# The court reads them and re-derives the whole analysis from the committed planes; it never
+# rebuilds and never launches anything.
+SHARED_BLOCKERS = REPO_ROOT / "forensics" / "downstream" / "shared-blockers.json"
+BIGGEST_MOVERS = REPO_ROOT / "docs" / "PHASE-24-BIGGEST-MOVERS.md"
+README_DOC = REPO_ROOT / "README.md"
+BLOCKER_LEVERAGE_COURT = "RT-BLOCKER-LEVERAGE"
+
+# 24.17's subject: the biggest-mover remediation record, the preserved pre-remediation baseline it
+# reads, and the recipe/workload machinery the repairs live in. The court reads them and re-derives
+# the whole before/after record; it never rebuilds and never launches anything.
+BLOCKER_REMEDIATION = REPO_ROOT / "forensics" / "downstream" / "blocker-remediation.json"
+BLOCKER_REMEDIATION_BASELINE = (REPO_ROOT / "forensics" / "downstream" /
+                                "blocker-remediation-baseline.json")
+BLOCKER_REMEDIATION_COURT = "RT-BLOCKER-REMEDIATION"
+
+# 24.18's subject: the recipe-admission campaign record, the preserved pre-campaign baseline it reads,
+# the attempt record it carries and the movement it measures. The court reads them and re-derives the
+# whole record; it never rebuilds and never launches anything.
+RECIPE_CAMPAIGN = REPO_ROOT / "forensics" / "downstream" / "recipe-campaign.json"
+RECIPE_CAMPAIGN_BASELINE = REPO_ROOT / "forensics" / "downstream" / "recipe-campaign-baseline.json"
+RECIPE_CAMPAIGN_COURT = "RT-RECIPE-CAMPAIGN"
+
+# 24.19's subject: the close-candidate reclamation batch record, the preserved pre-batch baseline it
+# reads, the authored attempt record it carries and the movement it measures. The court reads them and
+# re-derives the whole record; it never rebuilds and never launches anything.
+CLOSE_BATCH = REPO_ROOT / "forensics" / "downstream" / "close-batch.json"
+CLOSE_BATCH_BASELINE = REPO_ROOT / "forensics" / "downstream" / "close-batch-baseline.json"
+CLOSE_BATCH_ATTEMPTS = REPO_ROOT / "forensics" / "downstream" / "close-batch-attempts.json"
+CLOSE_BATCH_COURT = "RT-CLOSE-BATCH"
+
 # 24.15's subject: the seal, and the closure of the atlas as the stratum's claim. It reads the
 # committed reconciliation, the final P1000 run, the candidate freeze and the FRF closure -- never
 # the derived state of its own stratum (`forensics/phase-state.json`, the obligations ledger or
@@ -401,18 +485,32 @@ SEAL_CENSUS_REQUIRED_MARKERS = (
     "| outcome | families | share of the 1,000 |",
 )
 
+# The generated biggest-movers markers the seal court additionally requires the census to carry, so
+# the analysis 24.16 lands is cited by the seal's own arithmetic rather than left unlinked.
+SEAL_CENSUS_BIGGEST_MOVERS_MARKERS = (
+    "## Biggest movers (generated)",
+)
+
 # The scaffolding every seal carries plus the four non-claims, the bound and the separation the seal
 # must state. Each is a literal line the document must carry, so a seal stripped of its bound reads
-# `fail` rather than passing as a smaller green run.
+# `fail` rather than passing as a smaller green run. The `with no admitted runtime workload` marker
+# is the static anchor for the pass-level split: the seal must state it at all, and
+# `seal_derived_markers` re-derives the counts that sentence carries from the final run's verdict
+# rows, so a seal that hides the split -- or states one that no longer matches the run -- fails.
 SEAL_REQUIRED_MARKERS = (
     "STATUS: derived",
     "docs/SEAL-CENSUS.md",
+    biggest_movers.REPORT_PATH,
+    "forensics/downstream/blocker-remediation.json",
+    "forensics/downstream/recipe-campaign.json",
+    "forensics/downstream/close-batch.json",
     "DOWNSTREAM-1000-SEAL",
     "the four non-claims",
     "a selected population is not a random sample",
     "1000/1000 is not a security proof",
     "a build is not a functional proof",
     "direct and transitive consumers are different evidence",
+    "with no admitted runtime workload for those families",
     "measured / inferred / known-divergence / not-tested / not-claimed",
     "SPDX-License-Identifier: Apache-2.0",
 )
@@ -421,10 +519,10 @@ SEAL_REQUIRED_MARKERS = (
 # 24.3 `RT-AUTHORITY-CENSUS`, 24.4 `RT-FAMILY-FREEZE`, 24.5 `RT-HOLDOUT-PARTITION`, 24.6
 # `RT-BUILD-LINK-ATLAS`, 24.7 `RT-RUNTIME-FUNCTIONAL-ATLAS`, 24.8 `RT-FAILURE-MINIMIZATION`, 24.9
 # `RT-HIGH-VALUE-TIER`, 24.10 `RT-HOSTILITY-AUGMENTATION`, 24.11 `RT-CANDIDATE-FREEZE`, 24.12
-# `RT-P1000-RUN`, 24.13 `RT-ATLAS-RECONCILIATION`, 24.14 `RT-FRF-CLOSURE` and 24.15
-# `DOWNSTREAM-1000-SEAL`, the seal. Every one is registered and `PENDING_COURTS` is empty, so the
-# registry is the file `run_courts.py` checks is reproduced; a court removed from the table leaves
-# the registry and fails `run_courts.py`.
+# `RT-P1000-RUN`, 24.13 `RT-ATLAS-RECONCILIATION`, 24.14 `RT-FRF-CLOSURE`, 24.15
+# `DOWNSTREAM-1000-SEAL`, the seal, and 24.16 `RT-BLOCKER-LEVERAGE`. Every one is registered and
+# `PENDING_COURTS` is empty, so the registry is the file `run_courts.py` checks is reproduced; a
+# court removed from the table leaves the registry and fails `run_courts.py`.
 COURTS: list[tuple[str, str]] = [
     (RANKING_SOURCES_COURT, "_ranking_sources_court"),
     (CANDIDATE_UNIVERSE_COURT, "_candidate_universe_court"),
@@ -440,12 +538,16 @@ COURTS: list[tuple[str, str]] = [
     (P1000_RUN_COURT, "_p1000_run_court"),
     (ATLAS_RECONCILIATION_COURT, "_atlas_reconciliation_court"),
     (FRF_CLOSURE_COURT, "_frf_closure_court"),
+    (BLOCKER_LEVERAGE_COURT, "_blocker_leverage_court"),
+    (BLOCKER_REMEDIATION_COURT, "_blocker_remediation_court"),
+    (RECIPE_CAMPAIGN_COURT, "_recipe_campaign_court"),
+    (CLOSE_BATCH_COURT, "_close_batch_court"),
     (SEAL_COURT, "_downstream_1000_seal_court"),
 ]
 
-# The remaining courts the plan names, each pending with the subphase that lands it. 24.15 registered
-# the last one -- the downstream-1000 seal -- so the table is empty and the registry is complete at
-# fifteen of fifteen.
+# The remaining courts the plan names, each pending with the subphase that lands it. 24.16 registered
+# the last one -- the biggest-mover shared-blocker analysis -- so the table is empty and the registry
+# is complete at sixteen of sixteen.
 PENDING_COURTS: dict[str, str] = {}
 
 
@@ -2003,6 +2105,429 @@ def _frf_closure_court(name: str) -> dict:
 
 
 # --------------------------------------------------------------------------------------------
+# 24.16 -- the biggest-mover shared-blocker analysis: the partition, the ranking and the funnel
+# --------------------------------------------------------------------------------------------
+
+
+def _blocker_leverage_court(name: str) -> dict:
+    """`RT-BLOCKER-LEVERAGE`: 24.16's court, the biggest-mover shared-blocker analysis.
+
+    Stages no probe. It reads the committed analysis `forensics/downstream/shared-blockers.json`,
+    re-derives the whole analysis from the committed Phase-24 planes through the same code path the
+    artefact was produced by, and re-runs the analysis's own findings and sensitivity control. It
+    establishes that the partition covers the 1,000 counted families exactly once and reproduces;
+    that the blocker records, the ranking, the counts, the funnel and the recipe queue are derived
+    rather than typed; that every blocker has a named fix mechanism and evidence and is schema-valid;
+    and that the detailed report `docs/PHASE-24-BIGGEST-MOVERS.md`, the compact marker-bounded block
+    in `README.md` and the biggest-movers section of the generated `docs/SEAL-CENSUS.md` each
+    reproduce from the committed analysis and cross-link. Five seeded mutations are each detected
+    with specificity holding. A passing analysis is an **instrument**: it says the blockers were
+    partitioned and ranked over the selected population, not that any family would pass if repaired,
+    and the heuristic recipe ranking it emits is not a measurement of buildability.
+    """
+    problems: list[str] = []
+    for path in (SHARED_BLOCKERS, BIGGEST_MOVERS, README_DOC, SEAL_CENSUS, FAMILY_FREEZE, FAMILIES,
+                 BUILD_LINK_ATLAS, RUNTIME_FUNCTIONAL_ATLAS, DOWNSTREAM_FAILURES, P1000_RUN,
+                 RECONCILIATION):
+        if not path.is_file():
+            problems.append(f"{rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    committed = json.loads(SHARED_BLOCKERS.read_text(encoding="utf-8"))
+    body = _seal_body(committed)
+    inputs = downstream_blockers.load_inputs()
+    # The final run, so the report, the README block and the census section re-render with the
+    # pass-level caveat they derive from its verdict rows' `candidate_level`.
+    p1000_body = _seal_body(json.loads(P1000_RUN.read_text(encoding="utf-8")))
+
+    findings: list[str] = []
+    if committed.get("body_hash") != content_hash(body):
+        findings.append("the recorded shared-blockers body_hash does not match its body")
+    derived = downstream_blockers.derive_blockers(inputs)
+    if content_hash(derived) != content_hash(body):
+        findings.append("the committed shared-blocker analysis does not reproduce from the planes")
+    findings += downstream_blockers.blocker_findings(inputs, body)
+    control = downstream_blockers.blocker_sensitivity_control(inputs, body)
+
+    # The detailed report and the compact README block re-render from the committed analysis.
+    report_text = BIGGEST_MOVERS.read_text(encoding="utf-8")
+    if report_text != biggest_movers.render_report(body, p1000_body):
+        findings.append(f"{rel(BIGGEST_MOVERS)} does not reproduce from the committed analysis")
+    readme_text = README_DOC.read_text(encoding="utf-8")
+    block = biggest_movers.readme_block(body, p1000_body)
+    try:
+        committed_block = biggest_movers.extract_readme_block(readme_text)
+    except ValueError as exc:
+        findings.append(str(exc))
+        committed_block = None
+    if committed_block is not None and committed_block != block:
+        findings.append(f"the {rel(README_DOC)} downstream-blockers block does not reproduce")
+
+    # The three places cross-link, so the analysis is reachable from the report, README and census.
+    if biggest_movers.REPORT_PATH not in readme_text:
+        findings.append(f"{rel(README_DOC)} does not link to {biggest_movers.REPORT_PATH}")
+    if "docs/SEAL-CENSUS.md" not in report_text:
+        findings.append(f"{rel(BIGGEST_MOVERS)} does not link to docs/SEAL-CENSUS.md")
+    if "README" not in report_text:
+        findings.append(f"{rel(BIGGEST_MOVERS)} does not link back to README.md")
+
+    census_text = SEAL_CENSUS.read_text(encoding="utf-8")
+    section = "\n".join(render_seal_census._biggest_movers_lines(
+        {"body": body}, {"body": p1000_body}))
+    if section and section not in census_text:
+        findings.append(f"{rel(SEAL_CENSUS)} does not carry the biggest-movers section")
+
+    counts = body.get("counts") or {}
+    ranked = body.get("ranking") or []
+    by = {b["blocker_class"]: b for b in body.get("blockers") or []}
+    top = [{k: by[c].get(k) for k in ("blocker_class", "blocked_families", "mover_potential",
+                                      "to_pass_potential", "per_fix_leverage", "fixability")}
+           for c in ranked if c in by and by[c]["blocked_families"]][:6]
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/shared-blockers.json and re-derives the "
+            "whole analysis from the committed Phase-24 planes (the frozen P1000, the families, the "
+            "build/link and runtime/functional atlases, the failures plane, the final P1000 run and "
+            "the reconciliation) through forensics/tools/downstream_blockers.py, and re-runs its "
+            "findings and sensitivity control, without rebuilding and without launching anything. It "
+            "establishes that the partition covers the 1,000 counted families exactly once and "
+            "reproduces; that every blocker record (its blocked families, shared set, mover "
+            "potential and basis, to-pass potential, fixability, named fix mechanism and leverage) "
+            "reproduces and is schema-valid; that the ranking is ordered by mover potential; that "
+            "the counts, the ladder funnel, the recipe-less decomposition and the recipe queue are "
+            "derived rather than typed; and that the detailed report, the compact README block and "
+            "the census's biggest-movers section each re-render from the committed analysis and "
+            "cross-link. A blocker flipped, a class count changed, a family dropped, the ranking "
+            "reordered and a per-fix leverage changed are each detected with specificity holding "
+            "(docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 4.12 and 3.8)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the shared-blocker court reads committed evidence and the analysis derived from it and "
+            "stages no artifacts/phase24/probes/<probe>.{authority,candidate} pair, so it takes no "
+            "transcript to diff and carries no FRF declaration"
+        ),
+        "report": rel(BIGGEST_MOVERS),
+        "readme": rel(README_DOC),
+        "census": rel(SEAL_CENSUS),
+        "partition_hash": body.get("partition_hash"),
+        "counts": {
+            "families": counts.get("families", 0),
+            "blocked_families": counts.get("blocked_families", 0),
+            "resolved_families": counts.get("resolved_families", 0),
+            "blocker_classes_present": counts.get("blocker_classes_present", 0),
+            "shared_blocker_classes": counts.get("shared_blocker_classes", 0),
+            "recipe_less_families": counts.get("recipe_less_families", 0),
+        },
+        "ranking": ranked,
+        "top": top,
+        "funnel": body.get("funnel") or [],
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
+# --------------------------------------------------------------------------------------------
+# 24.17 -- the biggest-mover remediation: the before/after record of the repairs
+# --------------------------------------------------------------------------------------------
+
+
+def _blocker_remediation_court(name: str) -> dict:
+    """`RT-BLOCKER-REMEDIATION`: 24.17's court, the biggest-mover remediation record.
+
+    Stages no probe. It reads the committed record `forensics/downstream/blocker-remediation.json`,
+    re-derives the whole before/after record from the committed Phase-24 planes and the preserved
+    pre-remediation baseline `forensics/downstream/blocker-remediation-baseline.json` through the same
+    code path the record was produced by, and re-runs the record's own findings and sensitivity
+    control. It establishes that the preserved `before` partition is the 24.16 partition (1,000
+    families, content-addressed), that the `after` partition and the movement reproduce from the
+    re-measured planes, that every action's observed family transitions match the two partitions,
+    that a still-blocked action shows no movement and names its missing tool, that a resolving action
+    shows its families moved, and that the admitted recipes are exactly the catalogue families outside
+    the 24.16 baseline. Five seeded mutations are each detected with specificity holding. A passing
+    record is an **instrument**: it says what was repaired and what the planes then measured, not that
+    the population now passes, and a still-blocked record is a measurement of the fixed venue rather
+    than of the project.
+    """
+    problems: list[str] = []
+    for path in (BLOCKER_REMEDIATION, BLOCKER_REMEDIATION_BASELINE, SHARED_BLOCKERS, FAMILY_FREEZE,
+                 FAMILIES, BUILD_LINK_ATLAS, RUNTIME_FUNCTIONAL_ATLAS, P1000_RUN):
+        if not path.is_file():
+            problems.append(f"{rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    committed = json.loads(BLOCKER_REMEDIATION.read_text(encoding="utf-8"))
+    body = _seal_body(committed)
+    inputs = downstream_remediation.load_inputs()
+
+    findings: list[str] = []
+    if committed.get("body_hash") != content_hash(body):
+        findings.append("the recorded blocker-remediation body_hash does not match its body")
+    derived = downstream_remediation.derive_remediation(inputs)
+    if content_hash(derived) != content_hash(body):
+        findings.append("the committed remediation record does not reproduce from the planes")
+    findings += downstream_remediation.remediation_findings(inputs, body)
+    control = downstream_remediation.remediation_sensitivity_control(inputs, body)
+
+    # The preserved before partition is the 24.16 partition: 1,000 families and its own content hash.
+    before = body.get("before") or {}
+    if len(before.get("partition") or {}) != 1000:
+        findings.append("the preserved `before` partition does not cover 1,000 families")
+
+    counts = body.get("counts") or {}
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/blocker-remediation.json and its preserved "
+            "baseline and re-derives the whole before/after record from the committed Phase-24 planes "
+            "(the 24.16 analysis, the build/link and runtime/functional atlases, the final P1000 run "
+            "and the frozen P1000) through forensics/tools/downstream_remediation.py, re-running its "
+            "findings and sensitivity control, without rebuilding and without launching anything. It "
+            "establishes that the preserved `before` partition is the 24.16 partition (1,000 "
+            "families, content-addressed); that the `after` partition and the movement reproduce from "
+            "the re-measured planes; that every action's observed family transitions match the two "
+            "partitions; that a still-blocked action shows no movement and names its missing tool; "
+            "that a resolving action shows its families moved; and that the admitted recipes are "
+            "exactly the catalogue families outside the 24.16 baseline. A claimed fix with no "
+            "re-measured movement, a still-blocked class marked resolved, a movement figure that "
+            "disagrees with the planes, a fabricated new recipe and a mutated before count are each "
+            "detected with specificity holding (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections "
+            "2, 4.13 and 3.8)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the remediation court reads committed evidence and the record derived from it and stages "
+            "no artifacts/phase24/probes/<probe>.{authority,candidate} pair, so it takes no transcript "
+            "to diff and carries no FRF declaration"
+        ),
+        "record": rel(BLOCKER_REMEDIATION),
+        "baseline": rel(BLOCKER_REMEDIATION_BASELINE),
+        "pre_remediation_capture": bool(body.get("pre_remediation_capture")),
+        "counts": {
+            "actions": counts.get("actions", 0),
+            "fix_actions": counts.get("fix_actions", 0),
+            "still_blocked_actions": counts.get("still_blocked_actions", 0),
+            "families_moved": counts.get("families_moved", 0),
+            "new_recipes": counts.get("new_recipes", 0),
+            "new_recipes_linked": counts.get("new_recipes_linked", 0),
+        },
+        "movement": body.get("movement") or {},
+        "new_recipes": [r.get("family") for r in body.get("new_recipes") or []],
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
+# --------------------------------------------------------------------------------------------
+# 24.18 -- the recipe-admission campaign: the empirical admission record
+# --------------------------------------------------------------------------------------------
+
+
+def _recipe_campaign_court(name: str) -> dict:
+    """`RT-RECIPE-CAMPAIGN`: 24.18's court, the recipe-admission campaign record.
+
+    Stages no probe. It reads the committed record `forensics/downstream/recipe-campaign.json`, its
+    preserved pre-campaign baseline `forensics/downstream/recipe-campaign-baseline.json`, the
+    committed build/link atlas and final P1000 run, and re-derives the whole record through the same
+    code path it was produced by, re-running its findings and sensitivity control. It establishes
+    that every attempted family is accounted for exactly once; that every admitted recipe was
+    **really built** against both subjects (the committed atlas shows both linked it) and that a
+    non-admitted family carries a reason; that the admitted recipes are exactly the attempts marked
+    admitted and exactly the module catalogue the build/link tool imports; that the movement is the
+    subtraction of the preserved before and the derived after; and that the counts are derived rather
+    than typed. Five seeded mutations are each detected with specificity holding. A passing record is
+    an **instrument**: it says what was admitted and what the planes then measured, not that the
+    population now passes, and its yield is a property of this venue and this batch, not of the whole
+    980.
+    """
+    problems: list[str] = []
+    for path in (RECIPE_CAMPAIGN, RECIPE_CAMPAIGN_BASELINE, SHARED_BLOCKERS, BUILD_LINK_ATLAS,
+                 P1000_RUN, FAMILY_FREEZE, FAMILIES):
+        if not path.is_file():
+            problems.append(f"{rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    committed = json.loads(RECIPE_CAMPAIGN.read_text(encoding="utf-8"))
+    body = _seal_body(committed)
+    inputs = downstream_recipe_campaign.load_inputs()
+
+    findings: list[str] = []
+    if committed.get("body_hash") != content_hash(body):
+        findings.append("the recorded recipe-campaign body_hash does not match its body")
+    derived = downstream_recipe_campaign.derive_campaign(inputs)
+    if content_hash(derived) != content_hash(body):
+        findings.append("the committed campaign record does not reproduce from the planes")
+    findings += downstream_recipe_campaign.campaign_findings(inputs, body)
+    control = downstream_recipe_campaign.campaign_sensitivity_control(inputs, body)
+
+    counts = body.get("counts") or {}
+    movement = body.get("movement") or {}
+    admitted = body.get("admitted_recipes") or []
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/recipe-campaign.json and its preserved "
+            "pre-campaign baseline forensics/downstream/recipe-campaign-baseline.json, re-derives the "
+            "whole record from the committed Phase-24 planes (the build/link and runtime/functional "
+            "atlases, the final P1000 run and the frozen P1000) through "
+            "forensics/tools/downstream_recipe_campaign.py, and re-runs its findings and sensitivity "
+            "control, without rebuilding and without launching anything. It establishes that every "
+            "attempted family is accounted for exactly once; that every admitted recipe was really "
+            "built against both subjects; that a non-admitted family carries a reason; that the "
+            "admitted recipes are exactly the attempts marked admitted and exactly the module "
+            "catalogue the build/link tool imports; that the movement is the subtraction of the "
+            "preserved before and the derived after; and that the counts are derived rather than "
+            "typed. A rejected family marked admitted, a dropped admitted recipe, a movement figure "
+            "disagreeing with the planes, a non-admitted family stripped of its reason and a typed "
+            "count are each detected with specificity holding "
+            "(docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 4.14 and 3.8)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the recipe-campaign court reads committed evidence and the record derived from it and "
+            "stages no artifacts/phase24/probes/<probe>.{authority,candidate} pair, so it takes no "
+            "transcript to diff and carries no FRF declaration"
+        ),
+        "record": rel(RECIPE_CAMPAIGN),
+        "baseline": rel(RECIPE_CAMPAIGN_BASELINE),
+        "counts": {
+            "attempted": counts.get("attempted", 0),
+            "admitted": counts.get("admitted", 0),
+            "rejected": counts.get("rejected", 0),
+            "built": counts.get("built", 0),
+            "linked": counts.get("linked", 0),
+            "authority_linked": counts.get("authority_linked", 0),
+            "yield": counts.get("yield") or {},
+        },
+        "movement": movement,
+        "admitted_families": [r.get("family") for r in admitted],
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
+# --------------------------------------------------------------------------------------------
+# 24.19 -- the close-candidate reclamation: the second bounded admission batch
+# --------------------------------------------------------------------------------------------
+
+
+def _close_batch_court(name: str) -> dict:
+    """`RT-CLOSE-BATCH`: 24.19's court, the close-candidate reclamation batch.
+
+    Stages no probe. It reads the committed record `forensics/downstream/close-batch.json`, its
+    preserved pre-batch baseline `forensics/downstream/close-batch-baseline.json`, the authored
+    attempt record `forensics/downstream/close-batch-attempts.json`, the committed build/link atlas
+    and final P1000 run, and re-derives the whole record through the same code path it was produced
+    by, re-running its findings and sensitivity control. It establishes that every attempted family
+    is accounted for exactly once; that every admitted recipe was **really built and linked** against
+    both subjects (the committed atlas shows both reached L4 with linkage proven); that a
+    classification finding built in the venue but links no OpenSSL subject and is never forced to
+    link one; that a non-admitted family carries an outcome from the closed vocabulary and a reason;
+    that the admitted recipes are exactly the attempts marked admitted and exactly the module
+    catalogue the build/link tool imports; that the movement is the subtraction of the preserved
+    before and the derived after; and that the counts are derived rather than typed. Five seeded
+    mutations are each detected with specificity holding. A passing record is an **instrument**: it
+    says what was admitted and what the planes then measured, not that the population now passes, and
+    its yield is a property of this venue and this batch, not of the whole set.
+    """
+    problems: list[str] = []
+    for path in (CLOSE_BATCH, CLOSE_BATCH_BASELINE, CLOSE_BATCH_ATTEMPTS, SHARED_BLOCKERS,
+                 BUILD_LINK_ATLAS, P1000_RUN, FAMILY_FREEZE, FAMILIES):
+        if not path.is_file():
+            problems.append(f"{rel(path)} is absent")
+    if problems:
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "source-missing",
+                "problems": problems, "findings": [], "control": {}}
+
+    committed = json.loads(CLOSE_BATCH.read_text(encoding="utf-8"))
+    body = _seal_body(committed)
+    inputs = downstream_close_batch.load_inputs()
+
+    findings: list[str] = []
+    if committed.get("body_hash") != content_hash(body):
+        findings.append("the recorded close-batch body_hash does not match its body")
+    derived = downstream_close_batch.derive_close_batch(inputs)
+    if content_hash(derived) != content_hash(body):
+        findings.append("the committed close-batch record does not reproduce from the planes")
+    findings += downstream_close_batch.close_batch_findings(inputs, body)
+    control = downstream_close_batch.close_batch_sensitivity_control(inputs, body)
+
+    counts = body.get("counts") or {}
+    movement = body.get("movement") or {}
+    admitted = body.get("admitted_recipes") or []
+    findings_rows = body.get("classification_findings") or []
+    verdict = "pass" if (not findings and control.get("honest")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads forensics/downstream/close-batch.json, its preserved "
+            "pre-batch baseline forensics/downstream/close-batch-baseline.json and its authored "
+            "attempt record forensics/downstream/close-batch-attempts.json, re-derives the whole "
+            "record from the committed Phase-24 planes (the build/link atlas, the final P1000 run "
+            "and the frozen P1000) through forensics/tools/downstream_close_batch.py, and re-runs "
+            "its findings and sensitivity control, without rebuilding and without launching "
+            "anything. It establishes that every attempted family is accounted for exactly once; "
+            "that every admitted recipe was really built and linked against both subjects; that a "
+            "classification finding built in the venue but links no OpenSSL subject and is never "
+            "forced to link one; that a non-admitted family carries an outcome from the closed "
+            "vocabulary and a reason; that the admitted recipes are exactly the attempts marked "
+            "admitted and exactly the module catalogue the build/link tool imports; that the "
+            "movement is the subtraction of the preserved before and the derived after; and that "
+            "the counts are derived rather than typed. A rejected family marked admitted, a dropped "
+            "admitted recipe, a movement figure disagreeing with the planes, a classification "
+            "finding stripped of its class and a typed count are each detected with specificity "
+            "holding (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 4.15 and 3.8)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the close-batch court reads committed evidence and the record derived from it and "
+            "stages no artifacts/phase24/probes/<probe>.{authority,candidate} pair, so it takes no "
+            "transcript to diff and carries no FRF declaration"
+        ),
+        "record": rel(CLOSE_BATCH),
+        "baseline": rel(CLOSE_BATCH_BASELINE),
+        "attempts_record": rel(CLOSE_BATCH_ATTEMPTS),
+        "counts": {
+            "attempted": counts.get("attempted", 0),
+            "admitted": counts.get("admitted", 0),
+            "classification_findings": counts.get("classification_findings", 0),
+            "built": counts.get("built", 0),
+            "linked": counts.get("linked", 0),
+            "authority_linked": counts.get("authority_linked", 0),
+            "by_outcome": counts.get("by_outcome") or {},
+            "yield": counts.get("yield") or {},
+        },
+        "movement": movement,
+        "admitted_families": [r.get("family") for r in admitted],
+        "finding_families": [r.get("family") for r in findings_rows],
+        "findings": findings,
+        "control": control,
+        "problems": [],
+        "verdict": verdict,
+    }
+
+
+# --------------------------------------------------------------------------------------------
 # 24.15 -- the seal: the closure of the atlas, the bound and the four non-claims
 # --------------------------------------------------------------------------------------------
 
@@ -2044,7 +2569,10 @@ def seal_derived_markers(ev: dict) -> list[str]:
     Each is a literal substring the court requires the document to contain, so a figure the seal
     states that no longer matches the landing artefacts stops reproducing here. Every one is read
     from `forensics/downstream/reconciliation.json`, `forensics/downstream/p1000-run.json`,
-    `forensics/downstream/candidate-freeze.json` or `forensics/atlas/phase24/frf-closure.json`.
+    `forensics/downstream/candidate-freeze.json` or `forensics/atlas/phase24/frf-closure.json`. The
+    pass-level split marker is derived from `forensics/downstream/p1000-run.json`'s verdict rows'
+    `candidate_level`, so the seal cannot hide how many passes sit at `L4-linked` with no admitted
+    runtime workload without failing.
     """
     rb = _seal_body(ev["reconciliation"])
     pb = _seal_body(ev["p1000_run"])
@@ -2068,6 +2596,9 @@ def seal_derived_markers(ev: dict) -> list[str]:
         f"NOT_APPLICABLE {status.get('NOT_APPLICABLE') or 0}",
         f"the candidate reaches its authority-applicable baseline for all "
         f"{counts.get('measurable_families') or 0} measurable families",
+        # The pass-level split: how many baseline-normalized passes have no admitted runtime workload
+        # behind them versus how many reached a runtime level, derived from the verdict rows.
+        biggest_movers.pass_split_sentence(biggest_movers.pass_level_split(pb)),
         f"{measured.get('symbols') or 0}/{known.get('exported_symbols') or 0} exported symbols",
         f"{measured.get('headers') or 0}/{known.get('headers') or 0} public headers",
         f"{measured.get('api_families') or 0}/{known.get('api_families') or 0} API families",
@@ -2132,6 +2663,14 @@ def downstream_1000_seal_findings(ev: dict, seal_text: str, census_text: str) ->
             out.append(
                 f"the seal census {rel(SEAL_CENSUS)} does not carry the downstream-1000 outcome "
                 f"marker {marker!r}")
+
+    # 1c. the generated seal census carries the biggest-movers section 24.16 lands, so the seal's own
+    # arithmetic cites the shared-blocker analysis rather than leaving it unlinked.
+    for marker in SEAL_CENSUS_BIGGEST_MOVERS_MARKERS:
+        if marker not in census_text:
+            out.append(
+                f"the seal census {rel(SEAL_CENSUS)} does not carry the biggest-movers marker "
+                f"{marker!r}")
 
     rb = _seal_body(ev["reconciliation"])
     pb = _seal_body(ev["p1000_run"])
@@ -2775,14 +3314,43 @@ def main(argv: list[str]) -> int:
             "holding. The court is an instrument, not the property: it records the 993/1,000 "
             "NOT_APPLICABLE bound and the four non-claims as findings, so a passing seal is never "
             "read as a security proof. "
+            "`RT-BLOCKER-LEVERAGE` is 24.16's court: the biggest-mover shared-blocker analysis. It "
+            "stages no probe and reads forensics/downstream/shared-blockers.json, re-deriving the "
+            "whole analysis from the committed Phase-24 planes. It establishes that the partition "
+            "covers the 1,000 counted families exactly once and reproduces; that every blocker "
+            "record (its blocked families, shared set, mover potential and basis, to-pass "
+            "potential, fixability, named fix mechanism and per-fix leverage) reproduces and is "
+            "schema-valid; that the ranking is ordered by mover potential; that the counts, the "
+            "ladder funnel, the recipe-less decomposition and the recipe queue are derived rather "
+            "than typed; and that the detailed report docs/PHASE-24-BIGGEST-MOVERS.md, the compact "
+            "README block and the census's biggest-movers section each re-render from the "
+            "committed analysis and cross-link. A blocker flipped, a class count changed, a family "
+            "dropped, the ranking reordered and a per-fix leverage changed are each detected with "
+            "specificity holding. The court is an instrument, not a repair: it names which blocker "
+            "moves the most families, and its recipe queue is a labelled heuristic. "
+            "`RT-CLOSE-BATCH` is 24.19's court: the close-candidate reclamation batch. It stages no "
+            "probe and reads forensics/downstream/close-batch.json, its preserved pre-batch "
+            "baseline and its authored attempt record, re-deriving the whole record from the "
+            "committed Phase-24 planes. It establishes that every attempted family is accounted for "
+            "exactly once; that every admitted recipe was really built and linked against both "
+            "subjects; that a classification finding built in the venue but links no OpenSSL "
+            "subject and is never forced to link one; that a non-admitted family carries an outcome "
+            "from the closed vocabulary and a reason; that the admitted recipes are exactly the "
+            "module catalogue the build/link tool imports; that the movement is the subtraction of "
+            "the preserved before and the derived after; and that the counts are derived rather "
+            "than typed. A rejected family marked admitted, a dropped admitted recipe, a movement "
+            "figure disagreeing with the planes, a classification finding stripped of its class "
+            "and a typed count are each detected with specificity holding. The court is an "
+            "instrument, not a pass: its yield is a property of this venue and this batch. "
             "Phase 24 owns no exported "
             "symbol, so no differential probe over a symbol "
             "set is its evidence. The stratum's record kinds are defined and self-tested in "
             "forensics/tools/downstream_schemas.py, whose inventory this registry records: the "
             "family (the counted unit, never a package alias), the separate specimen, the "
             "variant, the frozen ranking-source row, the execution-level row over the L0-L8 "
-            "ladder, the run, the classified residual, the preserved-and-minimized failure and "
-            "the baseline-normalized drop-in verdict. Every entry point calls the Docker-only "
+            "ladder, the run, the classified residual, the preserved-and-minimized failure, the "
+            "baseline-normalized drop-in verdict and the blocker (the 24.16 partition class). Every "
+            "entry point calls the Docker-only "
             "execution guard (forensics/tools/phase24_guard.py) first, so nothing in this stratum "
             "executes on the host. The four things the model never claims are: a selected "
             "empirical population is not a random sample; 1000/1000 is not a security proof; a "
@@ -2937,6 +3505,31 @@ def main(argv: list[str]) -> int:
         inputs.append(InputRef(name="phase-24-seal", path=SEAL_DOC))
     if SEAL_CENSUS.is_file():
         inputs.append(InputRef(name="seal-census", path=SEAL_CENSUS))
+    # 24.16's subject: the committed shared-blocker analysis, the detailed report it renders, the
+    # compact README block and the tool that produced them, bound so a blocker row, a report line and
+    # a README marker the court reads are content-addressed rather than restated.
+    for ref_name, path in (("shared-blockers", SHARED_BLOCKERS),
+                           ("biggest-movers", BIGGEST_MOVERS),
+                           ("readme", README_DOC),
+                           ("downstream-blockers", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_blockers.py"),
+                           ("render-biggest-movers", REPO_ROOT / "forensics" / "tools"
+                            / "render_biggest_movers.py"),
+                           ("recipe-campaign", RECIPE_CAMPAIGN),
+                           ("recipe-campaign-baseline", RECIPE_CAMPAIGN_BASELINE),
+                           ("downstream-recipe-campaign", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_recipe_campaign.py"),
+                           ("blocker-remediation", BLOCKER_REMEDIATION),
+                           ("blocker-remediation-baseline", BLOCKER_REMEDIATION_BASELINE),
+                           ("downstream-remediation", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_remediation.py"),
+                           ("close-batch", CLOSE_BATCH),
+                           ("close-batch-baseline", CLOSE_BATCH_BASELINE),
+                           ("close-batch-attempts", CLOSE_BATCH_ATTEMPTS),
+                           ("downstream-close-batch", REPO_ROOT / "forensics" / "tools"
+                            / "downstream_close_batch.py")):
+        if path.is_file():
+            inputs.append(InputRef(name=ref_name, path=path))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
@@ -3409,6 +4002,32 @@ def main(argv: list[str]) -> int:
             print(f"      property_status={r['property_status']} findings={len(r['findings'])}")
             for f in r["instrument_findings"]:
                 print(f"      instrument finding: {f}")
+        elif r["verdict"] == "pass" and r["court"] == BLOCKER_LEVERAGE_COURT:
+            c = r["control"]
+            counts = r["counts"]
+            print(f"  {r['court']:<32} pass   (no probe, families={counts['families']} "
+                  f"blocked={counts['blocked_families']} resolved={counts['resolved_families']} "
+                  f"classes_present={counts['blocker_classes_present']} "
+                  f"shared={counts['shared_blocker_classes']} "
+                  f"recipe_less={counts['recipe_less_families']}; "
+                  f"{len(r['findings'])} finding(s); control honest={c['honest']} "
+                  f"specificity={c['specificity_holds']} "
+                  f"flip->{c['caught_partition_flip']} "
+                  f"count->{c['caught_class_count']} "
+                  f"drop->{c['caught_partition_drop']} "
+                  f"reorder->{c['caught_ranking_reorder']} "
+                  f"leverage->{c['caught_leverage_change']})")
+            print(f"      partition_hash={r['partition_hash']}")
+            print(f"      ranking: {' > '.join(r['ranking'])}")
+            for b in r["top"]:
+                print(f"      {b['blocker_class']:<32} blocked={b['blocked_families']:<4} "
+                      f"mover={b['mover_potential']:<4} to_pass={b['to_pass_potential']:<4} "
+                      f"leverage={b['per_fix_leverage']:<5} fix={b['fixability']}")
+            print(f"      funnel: "
+                  + " -> ".join(f"{f['step']}={f['families']}" for f in r["funnel"]))
+            print(f"      report={r['report']} readme={r['readme']} census={r['census']}")
+            for f in r["findings"]:
+                print(f"      finding: {f}")
         elif r["verdict"] == "pass" and r["court"] == SEAL_COURT:
             c = r["control"]
             counts = r["counts"]

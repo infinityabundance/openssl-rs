@@ -256,6 +256,48 @@ GENERATORS_BEFORE_LEDGERS = [
     # through the same functions and refuses a counted family with no verdict, an unknown residual, a
     # dropped failure or a hostility result mixed into the P1000 rate.
     "forensics/tools/downstream_reconciliation.py",
+    # Phase 24.16's biggest-mover shared-blocker analysis. Like 24.8's and 24.13's planes it
+    # executes nothing: it is a **pure function of the committed Phase-24 planes** (the frozen P1000,
+    # the families, the build/link and runtime/functional atlases, the failures plane, the final
+    # P1000 run and the reconciliation), so a stale committed analysis -- or a blocker, a count, a
+    # funnel figure or a recipe-queue entry typed rather than re-derived -- is a failure rather than a
+    # silent divergence. It reads no ledger; the RT-BLOCKER-LEVERAGE court re-derives the whole
+    # partition, the ranking, the counts, the funnel and the queue through the same functions and
+    # refuses a family the partition omits or double-counts. It must run **after** the planes above it
+    # in this block, which it reads.
+    "forensics/tools/downstream_blockers.py",
+    # Phase 24.17's biggest-mover remediation record. Like 24.16's analysis it executes nothing: it
+    # is a **pure function of the committed Phase-24 planes** (the committed analysis, the build/link
+    # and runtime/functional atlases, the final P1000 run, the frozen P1000) plus the preserved
+    # pre-remediation baseline `forensics/downstream/blocker-remediation-baseline.json`, so a stale
+    # committed record -- or a movement figure that disagrees with the planes -- is a failure rather
+    # than a silent divergence. It reads no ledger; the RT-BLOCKER-REMEDIATION court re-derives the
+    # whole record through the same functions and refuses a claimed fix with no measured movement or
+    # a still-blocked class marked resolved. It must run **after** the analysis above it, which it
+    # reads.
+    "forensics/tools/downstream_remediation.py",
+    # Phase 24.18's recipe-admission campaign record. Like 24.17's record it executes nothing: it is
+    # a **pure function of the committed Phase-24 planes** (the committed analysis, the build/link
+    # and runtime/functional atlases, the final P1000 run and the frozen P1000) plus the preserved
+    # pre-campaign baseline `forensics/downstream/recipe-campaign-baseline.json` and its own authored
+    # attempt record, so a stale committed record -- or a movement figure that disagrees with the
+    # planes, or an admitted recipe the atlas does not show linked -- is a failure rather than a
+    # silent divergence. It reads no ledger; the RT-RECIPE-CAMPAIGN court re-derives the whole record
+    # through the same functions and refuses a recipe that was not really built. The recipes it admits
+    # are built by `downstream_build_link.py`, which imports its catalogue. It must run **after** the
+    # analysis above it, which it reads.
+    "forensics/tools/downstream_recipe_campaign.py",
+    # Phase 24.19's close-candidate reclamation batch. Like 24.18's campaign it executes nothing: it
+    # is a **pure function of the committed Phase-24 planes** (the committed analysis, the build/link
+    # and runtime/functional atlases, the final P1000 run and the frozen P1000) plus the preserved
+    # pre-batch baseline `forensics/downstream/close-batch-baseline.json` and its own authored attempt
+    # record `forensics/downstream/close-batch-attempts.json`, so a stale committed record -- or a
+    # movement figure that disagrees with the planes, an admitted recipe the atlas does not show
+    # linked, or a classification finding that was not really built -- is a failure rather than a
+    # silent divergence. It reads no ledger; the RT-CLOSE-BATCH court re-derives the whole record
+    # through the same functions. The recipes it admits are built by `downstream_build_link.py`, which
+    # imports its catalogue. It must run **after** the campaign above it, which it reads.
+    "forensics/tools/downstream_close_batch.py",
     # Phase 24.6's **build/link atlas is deliberately not here, and not in `COMPARED`.** It is
     # produced by measurement -- real builds of real downstream releases inside the court container --
     # so the level each build reaches and the ELF it links are a function of the court's toolchain and
@@ -368,6 +410,14 @@ GENERATORS_AFTER_LEDGERS = [
     # *references* has an owner, and this asks whether every unit the plan *promises* is
     # reached -- and D132 was the case that fell between them.
     "forensics/tools/plan_reconciliation.py",
+    # Phase 24.16's biggest-mover report generator. It is a pure function of the committed analysis
+    # `forensics/downstream/shared-blockers.json` -- it renders `docs/PHASE-24-BIGGEST-MOVERS.md` and
+    # the marker-bounded `downstream-blockers` block in `README.md` -- so a hand-edited summary, a
+    # dropped marker or a report line that no longer matches the analysis is a failure rather than a
+    # silent divergence. It executes nothing and reads no ledger; the RT-BLOCKER-LEVERAGE court
+    # re-renders both from the committed analysis and requires them to reproduce and cross-link. It
+    # sits before `render_seal_census.py`, which cites its section, and after the analysis it reads.
+    "forensics/tools/render_biggest_movers.py",
     "forensics/tools/render_seal_census.py",
     "forensics/tools/render_status.py",
     # The Phase 8 remainder projection (docs/PHASE-8-REMAINING.md). It reads the Phase 8
@@ -568,6 +618,33 @@ COMPARED = [
     # (the freeze precedes every candidate run), which is why re-deriving it needs no compiler and no
     # candidate.
     "forensics/downstream/family-freeze.json",
+    # Phase 24.16's biggest-mover shared-blocker analysis: a pure function of the committed Phase-24
+    # planes, so a stale analysis -- or a blocker, a count, the funnel or the recipe queue typed
+    # rather than re-derived -- is a failure rather than a silent divergence. It reads no ledger.
+    "forensics/downstream/shared-blockers.json",
+    # Phase 24.17's preserved pre-remediation baseline and the before/after record derived from it:
+    # the baseline is the 24.16 partition captured once, and the record re-derives the re-measured
+    # `after` from the planes, so a stale record -- or a movement figure typed rather than subtracted
+    # -- is a failure rather than a silent divergence.
+    "forensics/downstream/blocker-remediation-baseline.json",
+    "forensics/downstream/blocker-remediation.json",
+    # Phase 24.18's preserved pre-campaign baseline and the admission record derived from it: the
+    # baseline is the 24.17-state blocker summary captured once, and the record re-derives the
+    # re-measured `after` from the planes, so a stale record -- or a movement figure typed rather than
+    # subtracted -- is a failure rather than a silent divergence.
+    "forensics/downstream/recipe-campaign-baseline.json",
+    "forensics/downstream/recipe-campaign.json",
+    # Phase 24.19's preserved pre-batch baseline and the close-candidate reclamation record derived
+    # from it: the baseline is the 24.18-state blocker summary captured once, and the record re-derives
+    # the re-measured `after` from the planes, so a stale record -- or a movement figure typed rather
+    # than subtracted -- is a failure rather than a silent divergence.
+    "forensics/downstream/close-batch-baseline.json",
+    "forensics/downstream/close-batch.json",
+    # The detailed report 24.16 renders from `shared-blockers.json`, byte-compared so its prose
+    # cannot drift from the analysis it cites. The marker-bounded `downstream-blockers` block of
+    # `README.md` is compared in the same pass.
+    "docs/PHASE-24-BIGGEST-MOVERS.md",
+    "README.md",
     # Phase 24.5's precommitted development/holdout partition: a pure function of the committed 24.4
     # frozen P1000 (and the committed 24.2 families it re-checks), so a stale split, or one
     # re-divided by something other than the recorded rule, is a failure rather than a silent

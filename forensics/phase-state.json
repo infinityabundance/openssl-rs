@@ -757,6 +757,13 @@
           "forensics/tools/phase24_guard.py",
           "forensics/tools/downstream_schemas.py",
           "docs/PHASE-24-DOWNSTREAM-1000-SEAL.md",
+          "docs/PHASE-24-BIGGEST-MOVERS.md",
+          "forensics/downstream/blocker-remediation.json",
+          "forensics/downstream/recipe-campaign.json",
+          "forensics/downstream/recipe-campaign-baseline.json",
+          "forensics/downstream/close-batch.json",
+          "forensics/downstream/close-batch-baseline.json",
+          "forensics/downstream/close-batch-attempts.json",
           "forensics/phase24-obligations.json",
           "artifacts/phase24/COURTS.json",
           "forensics/atlas/court-coverage.json",
@@ -766,7 +773,7 @@
         "name": "downstream-1000",
         "phase": 24,
         "provider_rows": null,
-        "seal_sha256": "df89a6fa16c4bc954fa3d6817a13888b1e06fe3f35259ea931245b314dbbcf5a",
+        "seal_sha256": "126f35566afc2281d81482b03e031b00c64bff708d26a3da70cc937ea9c10ae4",
         "state": "complete",
         "stratum": "Downstream-1000 replacement atlas and empirical drop-in corpus"
       }
@@ -778,7 +785,7 @@
       "not_started": 0
     }
   },
-  "body_hash": "74fc3cf5b52c2a3ec0281f2c6d1040a0c00e400662e41cec5c8cb5bd2e8defa6",
+  "body_hash": "1eb55490a425a7ddf11b8fc682f0731f38380af6ce4990b8cff7b0a92aa56d91",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
