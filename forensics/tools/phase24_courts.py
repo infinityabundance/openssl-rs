@@ -386,7 +386,20 @@ FRF_CLOSURE_COURT = "RT-FRF-CLOSURE"
 # markers from those artefacts, and checks the document carries every required marker. It stages no
 # probe.
 SEAL_DOC = REPO_ROOT / "docs" / "PHASE-24-DOWNSTREAM-1000-SEAL.md"
+# The generated seal census the seal cites. The seal court checks it carries the generated
+# downstream-1000 outcome table, so a census that silently drops the table -- or a headline count
+# that no longer matches the run -- fails the seal rather than leaving the arithmetic uncited.
+SEAL_CENSUS = REPO_ROOT / "docs" / "SEAL-CENSUS.md"
 SEAL_COURT = "DOWNSTREAM-1000-SEAL"
+
+# The generated downstream-1000 outcome markers the seal census must carry. The two structural
+# markers prove the table is present at all; the three derived markers are re-read from the final
+# run's verdict histogram, so a total or a per-verdict count that has drifted from the run is a
+# finding rather than a plausible smaller table.
+SEAL_CENSUS_REQUIRED_MARKERS = (
+    "## Downstream-1000 outcomes (generated)",
+    "| outcome | families | share of the 1,000 |",
+)
 
 # The scaffolding every seal carries plus the four non-claims, the bound and the separation the seal
 # must state. Each is a literal line the document must carry, so a seal stripped of its bound reads
@@ -2070,7 +2083,24 @@ def seal_derived_markers(ev: dict) -> list[str]:
     return [m for m in markers if m and "None" not in m]
 
 
-def downstream_1000_seal_findings(ev: dict, seal_text: str) -> list[str]:
+def seal_census_markers(ev: dict) -> list[str]:
+    """The generated downstream-1000 outcome markers the seal census must carry.
+
+    The two structural markers (`SEAL_CENSUS_REQUIRED_MARKERS`) prove the outcome table is present
+    at all, and three are re-derived from the final run's verdict histogram and family count, so a
+    census whose headline table has been dropped -- or whose counts no longer match
+    `forensics/downstream/p1000-run.json` -- is a finding rather than a plausible smaller table.
+    """
+    counts = _seal_body(ev["p1000_run"]).get("counts") or {}
+    verdicts = counts.get("verdicts") or {}
+    return list(SEAL_CENSUS_REQUIRED_MARKERS) + [
+        f"| `DROP_IN_PASS` | {verdicts.get('DROP_IN_PASS') or 0} |",
+        f"| `DROP_IN_NOT_APPLICABLE` | {verdicts.get('DROP_IN_NOT_APPLICABLE') or 0} |",
+        f"| **total** | **{counts.get('families') or 0}** |",
+    ]
+
+
+def downstream_1000_seal_findings(ev: dict, seal_text: str, census_text: str) -> list[str]:
     """Every way the committed downstream-1000 stratum fails the seal's closure conditions.
 
     The conditions are the ones `docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md` section 2's 24.15 row
@@ -2078,11 +2108,13 @@ def downstream_1000_seal_findings(ev: dict, seal_text: str) -> list[str]:
     marker and every derived claim/ladder marker; the committed reconciliation, the final P1000 run,
     the candidate freeze and the FRF closure agree; the ladder is the verdict histogram with
     UNKNOWN 0; the candidate reaches its authority-applicable baseline for every measurable family;
-    the candidate-specific patch count is 0; the measured surface is within the known universe; and
-    the FRF/Gemel chain entry is vacuous rather than declared.
+    the candidate-specific patch count is 0; the measured surface is within the known universe; the
+    generated seal census carries the downstream-1000 outcome table; and the FRF/Gemel chain entry
+    is vacuous rather than declared.
     """
     out: list[str] = []
     seal_text = seal_text or ""
+    census_text = census_text or ""
 
     # 1. the seal document carries every required marker, static and re-derived.
     for marker in SEAL_REQUIRED_MARKERS:
@@ -2092,6 +2124,14 @@ def downstream_1000_seal_findings(ev: dict, seal_text: str) -> list[str]:
         if marker not in seal_text:
             out.append(
                 f"the seal document {rel(SEAL_DOC)} does not carry the derived marker {marker!r}")
+
+    # 1b. the generated seal census carries the downstream-1000 outcome table, so the seal's
+    # headline arithmetic is cited where it regenerates rather than typed into the seal.
+    for marker in seal_census_markers(ev):
+        if marker not in census_text:
+            out.append(
+                f"the seal census {rel(SEAL_CENSUS)} does not carry the downstream-1000 outcome "
+                f"marker {marker!r}")
 
     rb = _seal_body(ev["reconciliation"])
     pb = _seal_body(ev["p1000_run"])
@@ -2191,44 +2231,51 @@ def downstream_1000_seal_findings(ev: dict, seal_text: str) -> list[str]:
     return out
 
 
-def downstream_1000_seal_sensitivity_control(ev: dict, seal_text: str) -> dict:
-    """Prove the seal court can fail: seed six mutations and require each caught.
+def downstream_1000_seal_sensitivity_control(ev: dict, seal_text: str,
+                                              census_text: str) -> dict:
+    """Prove the seal court can fail: seed seven mutations and require each caught.
 
-    The honest evidence and document must yield **zero** findings (specificity), and each seeded
-    mutation -- a stripped seal marker, a verdict histogram that no longer sums to the population, a
-    ladder inconsistent with the verdict counts, a mismatched candidate identity, a non-vacuous FRF
-    chain entry, and a coverage that exceeds the known universe -- must be caught. The detection is
-    attributed to the condition each mutation moves.
+    The honest evidence, document and census must yield **zero** findings (specificity), and each
+    seeded mutation -- a stripped seal marker, a verdict histogram that no longer sums to the
+    population, a ladder inconsistent with the verdict counts, a mismatched candidate identity, a
+    non-vacuous FRF chain entry, a coverage that exceeds the known universe, and a seal census
+    stripped of its downstream-1000 outcome table -- must be caught. The detection is attributed to
+    the condition each mutation moves.
     """
-    base = downstream_1000_seal_findings(ev, seal_text)
+    base = downstream_1000_seal_findings(ev, seal_text, census_text)
     specificity = not base
 
     stripped_text = (seal_text or "").replace(
         "a selected population is not a random sample", "omitted")
-    stripped_findings = downstream_1000_seal_findings(ev, stripped_text)
+    stripped_findings = downstream_1000_seal_findings(ev, stripped_text, census_text)
 
     inconsistent = copy.deepcopy(ev)
     inconsistent["reconciliation"]["body"]["counts"]["verdicts"]["DROP_IN_PASS"] = 999
-    inconsistent_findings = downstream_1000_seal_findings(inconsistent, seal_text)
+    inconsistent_findings = downstream_1000_seal_findings(inconsistent, seal_text, census_text)
 
     ladder = copy.deepcopy(ev)
     ladder["reconciliation"]["body"]["ladder"]["levels"]["L4-linked"] = 99
-    ladder_findings = downstream_1000_seal_findings(ladder, seal_text)
+    ladder_findings = downstream_1000_seal_findings(ladder, seal_text, census_text)
 
     identity = copy.deepcopy(ev)
     identity["p1000_run"]["body"]["candidate_identity"]["identity_hash"] = "0" * 64
-    identity_findings = downstream_1000_seal_findings(identity, seal_text)
+    identity_findings = downstream_1000_seal_findings(identity, seal_text, census_text)
 
     non_vacuous = copy.deepcopy(ev)
     non_vacuous["frf_closure"]["body"]["chain"]["vacuous"] = False
-    non_vacuous_findings = downstream_1000_seal_findings(non_vacuous, seal_text)
+    non_vacuous_findings = downstream_1000_seal_findings(non_vacuous, seal_text, census_text)
 
     coverage = copy.deepcopy(ev)
     coverage["reconciliation"]["body"]["coverage"]["measured"]["symbols"] = 10 ** 9
-    coverage_findings = downstream_1000_seal_findings(coverage, seal_text)
+    coverage_findings = downstream_1000_seal_findings(coverage, seal_text, census_text)
+
+    stripped_census_text = (census_text or "").replace(
+        "## Downstream-1000 outcomes (generated)", "omitted")
+    stripped_census_findings = downstream_1000_seal_findings(
+        ev, seal_text, stripped_census_text)
 
     caught = (stripped_findings, inconsistent_findings, ladder_findings, identity_findings,
-              non_vacuous_findings, coverage_findings)
+              non_vacuous_findings, coverage_findings, stripped_census_findings)
     return {
         "baseline_findings": len(base),
         "specificity_holds": specificity,
@@ -2238,6 +2285,7 @@ def downstream_1000_seal_sensitivity_control(ev: dict, seal_text: str) -> dict:
         "caught_mismatched_identity": len(identity_findings),
         "caught_non_vacuous_chain": len(non_vacuous_findings),
         "caught_coverage_exceeds_universe": len(coverage_findings),
+        "caught_census_outcome_missing": len(stripped_census_findings),
         "honest": bool(specificity and all(caught)),
     }
 
@@ -2278,23 +2326,25 @@ def _downstream_1000_seal_court(name: str) -> dict:
     Stages no probe. It reads the committed reconciliation `forensics/downstream/reconciliation.json`,
     the final P1000 run `forensics/downstream/p1000-run.json`, the candidate freeze
     `forensics/downstream/candidate-freeze.json` and the FRF closure
-    `forensics/atlas/phase24/frf-closure.json`, and the seal document itself, and establishes that
-    the seal document carries every required marker and every claim/ladder marker re-derived from
-    those artefacts; that the reconciliation and the final run measure the same frozen population
-    with the same ladder and verdict histogram; that the final run is against the frozen candidate
-    install; that no counted family required a candidate-specific downstream patch; that the
-    measured surface is a proper subset of the known universe; and that the FRF/Gemel chain entry is
-    vacuous rather than declared. It reads **no** derived state of this stratum
-    (`forensics/phase-state.json`, `forensics/phase24-obligations.json`, `artifacts/phase24/
+    `forensics/atlas/phase24/frf-closure.json`, the seal document itself, and the generated seal
+    census `docs/SEAL-CENSUS.md` it cites, and establishes that the seal document carries every
+    required marker and every claim/ladder marker re-derived from those artefacts; that the census
+    carries the generated downstream-1000 outcome table; that the reconciliation and the final run
+    measure the same frozen population with the same ladder and verdict histogram; that the final
+    run is against the frozen candidate install; that no counted family required a candidate-specific
+    downstream patch; that the measured surface is a proper subset of the known universe; and that the
+    FRF/Gemel chain entry is vacuous rather than declared. It reads **no** derived state of this
+    stratum (`forensics/phase-state.json`, `forensics/phase24-obligations.json`, `artifacts/phase24/
     COURTS.json`), so its finding cannot flip with its own pass. A stripped seal marker, an
-    inconsistent ladder or histogram, a mismatched candidate identity, a non-vacuous chain and a
-    coverage that exceeds the known universe are each detected with specificity holding (the
-    Phase-20 defect this seal records). A passing seal is an **instrument**: it closes the atlas as
-    the stratum's claim and is not a security proof, and the four non-claims are recorded as
-    findings so a passing seal is never "the downstream ecosystem is safe".
+    inconsistent ladder or histogram, a mismatched candidate identity, a non-vacuous chain, a
+    coverage that exceeds the known universe and a census stripped of its outcome table are each
+    detected with specificity holding (the Phase-20 defect this seal records). A passing seal is an
+    **instrument**: it closes the atlas as the stratum's claim and is not a security proof, and the
+    four non-claims are recorded as findings so a passing seal is never "the downstream ecosystem is
+    safe".
     """
     problems: list[str] = []
-    for path in (SEAL_DOC, RECONCILIATION, P1000_RUN, CANDIDATE_FREEZE, FRF_CLOSURE):
+    for path in (SEAL_DOC, SEAL_CENSUS, RECONCILIATION, P1000_RUN, CANDIDATE_FREEZE, FRF_CLOSURE):
         if not path.is_file():
             problems.append(f"{rel(path)} is absent")
     if problems:
@@ -2308,8 +2358,9 @@ def _downstream_1000_seal_court(name: str) -> dict:
         "frf_closure": json.loads(FRF_CLOSURE.read_text(encoding="utf-8")),
     }
     seal_text = SEAL_DOC.read_text(encoding="utf-8")
-    instrument_findings = downstream_1000_seal_findings(ev, seal_text)
-    control = downstream_1000_seal_sensitivity_control(ev, seal_text)
+    census_text = SEAL_CENSUS.read_text(encoding="utf-8")
+    instrument_findings = downstream_1000_seal_findings(ev, seal_text, census_text)
+    control = downstream_1000_seal_sensitivity_control(ev, seal_text, census_text)
     prop = seal_property(ev)
     roots = seal_bound_roots(ev)
     derived = seal_derived_markers(ev)
@@ -2327,30 +2378,35 @@ def _downstream_1000_seal_court(name: str) -> dict:
         "method": (
             "stages no probe: it reads forensics/downstream/reconciliation.json, "
             "forensics/downstream/p1000-run.json, forensics/downstream/candidate-freeze.json and "
-            "forensics/atlas/phase24/frf-closure.json, and the seal document "
-            "docs/PHASE-24-DOWNSTREAM-1000-SEAL.md. It establishes that the seal document carries "
-            "every required marker and every claim/ladder marker re-derived from those artefacts; "
-            "that the reconciliation and the final run measure the same frozen population with the "
-            "same ladder and verdict histogram (UNKNOWN 0); that the final run is against the "
-            "frozen candidate install; that no counted family required a candidate-specific "
-            "downstream patch; that the measured surface is a proper subset of the known universe; "
-            "and that the FRF/Gemel chain entry is vacuous rather than declared. It reads no "
-            "derived state of this stratum, so its finding cannot flip with its own pass. A "
-            "stripped seal marker, an inconsistent ladder or histogram, a mismatched candidate "
-            "identity, a non-vacuous chain and a coverage that exceeds the known universe are each "
-            "detected with specificity holding. The court is an instrument, not the property: it "
-            "records the bound and the four non-claims as findings, so a passing seal is never "
-            "read as a security proof (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 3.3, "
-            "4.6 and 4.9 and the brief's sections 51, 52, 67, 69 and 70)."
+            "forensics/atlas/phase24/frf-closure.json, the seal document "
+            "docs/PHASE-24-DOWNSTREAM-1000-SEAL.md and the generated seal census "
+            "docs/SEAL-CENSUS.md it cites. It establishes that the seal document carries every "
+            "required marker and every claim/ladder marker re-derived from those artefacts; that "
+            "the census carries the generated downstream-1000 outcome table, header and total "
+            "re-derived from the run; that the reconciliation and the final run measure the same "
+            "frozen population with the same ladder and verdict histogram (UNKNOWN 0); that the "
+            "final run is against the frozen candidate install; that no counted family required a "
+            "candidate-specific downstream patch; that the measured surface is a proper subset of "
+            "the known universe; and that the FRF/Gemel chain entry is vacuous rather than "
+            "declared. It reads no derived state of this stratum, so its finding cannot flip with "
+            "its own pass. A stripped seal marker, an inconsistent ladder or histogram, a "
+            "mismatched candidate identity, a non-vacuous chain, a coverage that exceeds the known "
+            "universe and a census stripped of its downstream-1000 outcome table are each detected "
+            "with specificity holding. The court is an instrument, not the property: it records "
+            "the bound and the four non-claims as findings, so a passing seal is never read as a "
+            "security proof (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 3.3, 4.6 and "
+            "4.9 and the brief's sections 51, 52, 67, 69 and 70)."
         ),
         "frf_declarable": False,
         "frf_exclusion": (
-            "the seal court reads committed evidence and the seal document and stages no "
-            "artifacts/phase24/probes/<probe>.{authority,candidate} pair, so it takes no transcript "
-            "to diff and carries no FRF declaration"
+            "the seal court reads committed evidence, the seal document and the generated seal "
+            "census and stages no artifacts/phase24/probes/<probe>.{authority,candidate} pair, so "
+            "it takes no transcript to diff and carries no FRF declaration"
         ),
         "seal_document": rel(SEAL_DOC),
         "seal_document_present": SEAL_DOC.is_file(),
+        "seal_census": rel(SEAL_CENSUS),
+        "seal_census_present": SEAL_CENSUS.is_file(),
         "derived_markers": len(derived),
         "bound_roots": roots,
         "findings": prop["property_findings"],
@@ -2703,16 +2759,19 @@ def main(argv: list[str]) -> int:
             "`DOWNSTREAM-1000-SEAL` is 24.15's court: the closure of the atlas as the stratum's "
             "claim and the four non-claims it never exceeds. It stages no probe and reads the "
             "committed reconciliation, the final P1000 run, the candidate freeze and the FRF "
-            "closure, and the seal document docs/PHASE-24-DOWNSTREAM-1000-SEAL.md, re-deriving "
-            "the claim/ladder markers from those artefacts and checking the document carries "
-            "every required marker. It establishes that the reconciliation and the final run "
+            "closure, the seal document docs/PHASE-24-DOWNSTREAM-1000-SEAL.md and the generated "
+            "seal census docs/SEAL-CENSUS.md it cites, re-deriving the claim/ladder markers from "
+            "those artefacts and checking the document and the census carry every required "
+            "marker -- including the census's generated downstream-1000 outcome table. It "
+            "establishes that the reconciliation and the final run "
             "measure the same frozen population with the same ladder and verdict histogram "
             "(UNKNOWN 0); that the final run is against the frozen candidate install; that no "
             "counted family required a candidate-specific downstream patch; that the measured "
             "surface is a proper subset of the known universe; and that the FRF/Gemel chain "
             "entry is vacuous rather than declared. A stripped seal marker, an inconsistent "
-            "ladder or histogram, a mismatched candidate identity, a non-vacuous chain and a "
-            "coverage that exceeds the known universe are each detected with specificity "
+            "ladder or histogram, a mismatched candidate identity, a non-vacuous chain, a "
+            "coverage that exceeds the known universe and a census stripped of its outcome table "
+            "are each detected with specificity "
             "holding. The court is an instrument, not the property: it records the 993/1,000 "
             "NOT_APPLICABLE bound and the four non-claims as findings, so a passing seal is never "
             "read as a security proof. "
@@ -2871,10 +2930,13 @@ def main(argv: list[str]) -> int:
                            ("gemel-trajectory", REPO_ROOT / "forensics" / "GEMEL_TRAJECTORY.md")):
         if path.is_file():
             inputs.append(InputRef(name=ref_name, path=path))
-    # 24.15's subject: the seal document itself, bound so the markers the court checks are
-    # content-addressed rather than restated.
+    # 24.15's subject: the seal document itself and the generated seal census it cites, bound so
+    # the markers the court checks -- including the downstream-1000 outcome table -- are content-
+    # addressed rather than restated.
     if SEAL_DOC.is_file():
         inputs.append(InputRef(name="phase-24-seal", path=SEAL_DOC))
+    if SEAL_CENSUS.is_file():
+        inputs.append(InputRef(name="seal-census", path=SEAL_CENSUS))
     doc = envelope(kind="phase24-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
