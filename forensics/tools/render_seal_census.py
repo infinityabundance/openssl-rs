@@ -48,6 +48,12 @@ from atlas_common import (  # noqa: E402
     rel,
 )
 
+# The 24.16 biggest-movers renderer, imported for the two pure helpers its funnel table and its
+# derived caveat share with the report and the seal (the `kind` labels and the `candidate_level`
+# split), so the census states no figure the report states differently. It imports no Phase-24 state
+# and writes no Phase-24 artefact.
+import render_biggest_movers as biggest_movers  # noqa: E402
+
 OUT = REPO_ROOT / "docs" / "SEAL-CENSUS.md"
 GENERATOR = "forensics/tools/render_seal_census.py"
 
@@ -156,11 +162,12 @@ def _downstream_outcome_lines(p1000: dict) -> list[str]:
     return L
 
 
-def _biggest_movers_lines(shared: dict) -> list[str]:
+def _biggest_movers_lines(shared: dict, p1000: dict) -> list[str]:
     """The generated biggest-movers section: the ranked blocker classes, the funnel and a link.
 
     Every figure is read from the committed analysis `forensics/downstream/shared-blockers.json`
-    (24.16), which `forensics/tools/downstream_blockers.py` derives from the Phase-24 planes. The
+    (24.16), which `forensics/tools/downstream_blockers.py` derives from the Phase-24 planes, and the
+    pass-level caveat from the final run `forensics/downstream/p1000-run.json`'s verdict rows. The
     section renders **nothing** when the analysis is absent, so an earlier branch produces no
     section rather than an empty one. It is the census's detailed view of the shared blockers; the
     compact view is the `downstream-blockers` block in `README.md`, and both link to the report.
@@ -168,6 +175,7 @@ def _biggest_movers_lines(shared: dict) -> list[str]:
     body = (shared or {}).get("body") or {}
     if not body:
         return []
+    p1000_body = (p1000 or {}).get("body") or {}
     counts = body.get("counts") or {}
     by = {b["blocker_class"]: b for b in body.get("blockers") or []}
     rows = [by[c] for c in body.get("ranking") or []
@@ -202,12 +210,19 @@ def _biggest_movers_lines(shared: dict) -> list[str]:
              f"(`no-admitted-recipe`, {counts.get('recipe_less_families')} families, has per-fix "
              "leverage 1).")
     L.append("")
-    L.append("The funnel, from the committed candidate rows:")
+    L.append("The funnel, from the committed candidate rows. The `kind` column separates the")
+    L.append("**execution rungs** from the **baseline-normalized verdict count**: `drop-in-pass` is")
+    L.append("not nested under the rungs above it, so the figure is visibly not a single monotone")
+    L.append("funnel.")
     L.append("")
-    L.append("| step | families | share of the counted population |")
-    L.append("|---|---|---|")
+    L.append("| kind | step | families | share of the counted population |")
+    L.append("|---|---|---|---|")
     for f in funnel:
-        L.append(f"| {f['step']} | {f['families']} | {f['share_of_counted']} |")
+        L.append(f"| {biggest_movers.funnel_kind(f['step'])} | {f['step']} | {f['families']} | "
+                 f"{f['share_of_counted']} |")
+    L.append("")
+    L.append("The material caveat: " + biggest_movers.pass_split_sentence(
+        biggest_movers.pass_level_split(p1000_body)) + ".")
     L.append("")
     L.append("The recipe-less decomposition and the (heuristic) feasible recipe queue are in the "
              "detailed report; a heuristic ranking of buildability is not a measurement of it.")
@@ -397,7 +412,7 @@ def main(argv: list[str]) -> int:
     # seal, this census and `README.md` alike.
     shared = load("forensics/downstream/shared-blockers.json")
     if shared is not None:
-        L.extend(_biggest_movers_lines(shared))
+        L.extend(_biggest_movers_lines(shared, p1000))
 
     if coverage is not None:
         L.append("## Court coverage")

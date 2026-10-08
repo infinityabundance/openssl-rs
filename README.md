@@ -60,7 +60,7 @@ Every one of the 1000 counted families, partitioned by its **deepest blocker** a
 | `no-admitted-recipe` | 965 | 965 | `recipe-admission` | 1.0 |
 | `recipe-build-system-unsupported` | 2 | 2 | `recipe-build-system` | 2.0 |
 
-**967 of the 1000 counted families are blocked; 33 are `DROP_IN_PASS`** (967 are `DROP_IN_NOT_APPLICABLE`, 33 measurable). The funnel: 1000 counted → 35 with-admitted-recipe → 33 configured → 33 linked → 8 loaded → 8 runtime → 8 functional → 33 drop-in-pass.
+**967 of the 1000 counted families are blocked; 33 are `DROP_IN_PASS`** (967 are `DROP_IN_NOT_APPLICABLE`, 33 measurable). The `drop-in-pass` figure is a baseline-normalized verdict count, not a rung: of the 33 drop-in passes, 25 are at L4-linked with no admitted runtime workload for those families and 8 reach L5 or above.
 
 * a selected population is not a random sample: the 1,000 counted families are selected from frozen ranking evidence, so their blocker shares do not generalise to all downstream software
 * 1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and the analysis makes no statement about an unmeasured consumer

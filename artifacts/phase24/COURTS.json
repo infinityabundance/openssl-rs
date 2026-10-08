@@ -5638,7 +5638,7 @@
           }
         },
         "court": "DOWNSTREAM-1000-SEAL",
-        "derived_markers": 16,
+        "derived_markers": 17,
         "findings": [
           "967 of the 1000 counted families are DROP_IN_NOT_APPLICABLE: only 35 have an admitted pristine-source recipe in this venue, so the drop-in rate is measured over 33 families and is not a population-wide rate; a NOT_APPLICABLE family is neither a pass nor a fail",
           "a selected population is not a random sample: the population is selected from frozen ranking evidence, so its rates do not generalise to all downstream software",
@@ -6185,12 +6185,12 @@
     {
       "name": "phase-24-seal",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SEAL.md",
-      "sha256": "88733267054318fc840282b1998591bcdfa0d89400e69cd9dfca9e30f8036348"
+      "sha256": "126f35566afc2281d81482b03e031b00c64bff708d26a3da70cc937ea9c10ae4"
     },
     {
       "name": "seal-census",
       "path": "docs/SEAL-CENSUS.md",
-      "sha256": "9ce94eb79b02f5190df281405526554910f8746c90abbe6a496f2c02b2a96947"
+      "sha256": "244165847620fea6bcdf4fd185284da7630b959a2753ef1317c5991260465a21"
     },
     {
       "name": "shared-blockers",
@@ -6200,12 +6200,12 @@
     {
       "name": "biggest-movers",
       "path": "docs/PHASE-24-BIGGEST-MOVERS.md",
-      "sha256": "e4afa93631dd183a5ce02a06a5f839b86dedad197573301113d5bce40600c465"
+      "sha256": "d7262bc7961a470f9c7b4bf3e0a9f9adb6d4c8c6fd4a640c482039732b0fee04"
     },
     {
       "name": "readme",
       "path": "README.md",
-      "sha256": "06191c0396235b681cad95047bb41ee2310f3d5635943629c4585b8ace41247f"
+      "sha256": "6c81d2213b9c4e1bfd163b4d277180d9d41d6c38568c10aac696c897f39e0397"
     },
     {
       "name": "downstream-blockers",
@@ -6215,7 +6215,7 @@
     {
       "name": "render-biggest-movers",
       "path": "forensics/tools/render_biggest_movers.py",
-      "sha256": "71df4e54f87d2f33a31f6222fd26f5e74ca86ef3651525b51e6e62fb14133c87"
+      "sha256": "7a4bb960a49c2d5c87fe607a2165a3838c24a3fa923bba3bc58aef4c82c3e68c"
     },
     {
       "name": "recipe-campaign",

@@ -59,18 +59,22 @@ leverage 1.
 The counted population down the execution ladder, each step derived from the
 committed candidate rows. A rung is not a behaviour: only the functional level is
 behavioural evidence, and `with-admitted-recipe` is a property of the venue, not of
-the families.
+the families. The `kind` column separates the **execution rungs** from the
+**baseline-normalized verdict count**: `drop-in-pass` is not nested under the rungs
+above it, so the figure is visibly not a single monotone funnel.
 
-| step | families | share of the counted population |
-|---|---|---|
-| counted | 1000 | 1000/1000 (100.0%) |
-| with-admitted-recipe | 35 | 35/1000 (3.5%) |
-| configured | 33 | 33/1000 (3.3%) |
-| linked | 33 | 33/1000 (3.3%) |
-| loaded | 8 | 8/1000 (0.8%) |
-| runtime | 8 | 8/1000 (0.8%) |
-| functional | 8 | 8/1000 (0.8%) |
-| drop-in-pass | 33 | 33/1000 (3.3%) |
+| kind | step | families | share of the counted population |
+|---|---|---|---|
+| rung | counted | 1000 | 1000/1000 (100.0%) |
+| rung | with-admitted-recipe | 35 | 35/1000 (3.5%) |
+| rung | configured | 33 | 33/1000 (3.3%) |
+| rung | linked | 33 | 33/1000 (3.3%) |
+| rung | loaded | 8 | 8/1000 (0.8%) |
+| rung | runtime | 8 | 8/1000 (0.8%) |
+| rung | functional | 8 | 8/1000 (0.8%) |
+| verdict | drop-in-pass | 33 | 33/1000 (3.3%) |
+
+The material caveat this makes visible: of the 33 drop-in passes, 25 are at L4-linked with no admitted runtime workload for those families and 8 reach L5 or above.
 
 ## The recipe-less decomposition
 

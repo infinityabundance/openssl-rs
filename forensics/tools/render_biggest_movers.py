@@ -16,7 +16,8 @@ and everything outside the markers is preserved byte-for-byte; a missing or dupl
 hard failure rather than a silent overwrite. The report links to `docs/SEAL-CENSUS.md`, whose
 generated "Biggest movers" section links back, so the analysis is reachable from all three places.
 
-This generator executes nothing: it reads one committed artefact and writes prose. It is therefore
+This generator executes nothing: it reads the committed analysis and the final P1000 run (for the
+baseline-normalized pass split it states), and writes prose. It is therefore
 declared `metadata_only` in `forensics/downstream/container.json` and `evidence_determinism.py`
 regenerates it host-side.
 
@@ -58,6 +59,18 @@ REPORT_PATH = "docs/PHASE-24-BIGGEST-MOVERS.md"
 CENSUS_PATH = "docs/SEAL-CENSUS.md"
 README_URL = "https://github.com/infinityabundance/openssl-rs/blob/main/docs/PHASE-24-BIGGEST-MOVERS.md"
 
+# The final full P1000 run: the pass-level split the caveat states is derived from its verdict rows'
+# `candidate_level`, never typed. This generator reads committed evidence and writes prose, so this
+# is a committed-evidence read, not an execution (see the module docstring).
+P1000_RUN = REPO_ROOT / "forensics" / "downstream" / "p1000-run.json"
+
+# The funnel's baseline-normalized verdict step, the `kind` labels that separate it from the rungs,
+# and the level at which a baseline-normalized pass has no runtime workload behind it.
+VERDICT_STEP = "drop-in-pass"
+RUNG_KIND = "rung"
+VERDICT_KIND = "verdict"
+NO_RUNTIME_LEVEL = "L4-linked"
+
 
 def load_shared() -> dict:
     """The committed analysis body, or an empty dict when the artefact is absent."""
@@ -84,11 +97,47 @@ def _blocker_rows(body: dict, *, include_resolved: bool = False) -> list[dict]:
     return out
 
 
-def readme_block(body: dict) -> str:
-    """The compact generated README block, a pure function of the analysis body."""
+def funnel_kind(step: str) -> str:
+    """The `kind` of a funnel entry: an execution `rung`, or the baseline-normalized `verdict`.
+
+    `drop-in-pass` is the baseline-normalized verdict count, not a rung: a family can pass at
+    `L4-linked` when the candidate reached exactly the level the authority did, so the verdict count
+    is not required to be non-increasing with the rungs above it and the funnel is not a nested
+    ladder. The `kind` column makes that visible in the rendered table.
+    """
+    return VERDICT_KIND if step == VERDICT_STEP else RUNG_KIND
+
+
+def pass_level_split(p1000: dict) -> dict:
+    """How the `DROP_IN_PASS` families split by the level the candidate reached.
+
+    Derived from `forensics/downstream/p1000-run.json`'s verdict rows' `candidate_level`, never
+    typed. A pass at `L4-linked` is baseline-normalized with **no admitted runtime workload** for that
+    family -- the candidate reached exactly the level the authority itself reached -- while a pass at
+    `L5` or above reached a runtime level. `p1000` is that artefact's `body`.
+    """
+    passes = [v for v in p1000.get("verdicts") or []
+              if str(v.get("verdict")) == "DROP_IN_PASS"]
+    at_linked = sum(1 for v in passes if str(v.get("candidate_level")) == NO_RUNTIME_LEVEL)
+    return {"passes": len(passes), "at_linked": at_linked, "at_l5_plus": len(passes) - at_linked}
+
+
+def pass_split_sentence(split: dict) -> str:
+    """The derived caveat clause, reused by the report, the census section and the seal marker.
+
+    A single sentence, lower-cased at the start so it reads after a colon, stating how many passes
+    sit at `L4-linked` with no admitted runtime workload versus how many reach `L5` or above.
+    """
+    return (f"of the {split['passes']} drop-in passes, {split['at_linked']} are at "
+            f"{NO_RUNTIME_LEVEL} with no admitted runtime workload for those families and "
+            f"{split['at_l5_plus']} reach L5 or above")
+
+
+def readme_block(body: dict, p1000: dict) -> str:
+    """The compact generated README block, a pure function of the analysis and the final run."""
     rows = _blocker_rows(body)
     counts = body.get("counts") or {}
-    funnel = body.get("funnel") or []
+    split = pass_level_split(p1000)
     lines: list[str] = [README_BEGIN, ""]
     lines.append("## Downstream-1000 biggest movers (generated)")
     lines.append("")
@@ -111,8 +160,8 @@ def readme_block(body: dict) -> str:
         f"**{counts.get('blocked_families')} of the {counts.get('families')} counted families are "
         f"blocked; {counts.get('resolved_families')} are `DROP_IN_PASS`** "
         f"({counts.get('not_applicable_families')} are `DROP_IN_NOT_APPLICABLE`, "
-        f"{counts.get('measurable_families')} measurable). The funnel: "
-        + " → ".join(f"{f['families']} {f['step']}" for f in funnel) + ".")
+        f"{counts.get('measurable_families')} measurable). The `{VERDICT_STEP}` figure is a "
+        f"baseline-normalized verdict count, not a rung: {pass_split_sentence(split)}.")
     lines.append("")
     for claim in body.get("non_claims") or []:
         lines.append(f"* {claim}")
@@ -121,8 +170,8 @@ def readme_block(body: dict) -> str:
     return "\n".join(lines)
 
 
-def render_report(body: dict) -> str:
-    """The detailed generated report, a pure function of the analysis body."""
+def render_report(body: dict, p1000: dict) -> str:
+    """The detailed generated report, a pure function of the analysis and the final run."""
     rule = body.get("rule") or {}
     counts = body.get("counts") or {}
     rows = _blocker_rows(body)
@@ -212,12 +261,18 @@ def render_report(body: dict) -> str:
     L.append("The counted population down the execution ladder, each step derived from the")
     L.append("committed candidate rows. A rung is not a behaviour: only the functional level is")
     L.append("behavioural evidence, and `with-admitted-recipe` is a property of the venue, not of")
-    L.append("the families.")
+    L.append("the families. The `kind` column separates the **execution rungs** from the")
+    L.append("**baseline-normalized verdict count**: `drop-in-pass` is not nested under the rungs")
+    L.append("above it, so the figure is visibly not a single monotone funnel.")
     L.append("")
-    L.append("| step | families | share of the counted population |")
-    L.append("|---|---|---|")
+    L.append("| kind | step | families | share of the counted population |")
+    L.append("|---|---|---|---|")
     for f in funnel:
-        L.append(f"| {f['step']} | {f['families']} | {f['share_of_counted']} |")
+        L.append(f"| {funnel_kind(f['step'])} | {f['step']} | {f['families']} | "
+                 f"{f['share_of_counted']} |")
+    L.append("")
+    L.append("The material caveat this makes visible: " + pass_split_sentence(pass_level_split(p1000))
+             + ".")
     L.append("")
     L.append("## The recipe-less decomposition")
     L.append("")
@@ -314,9 +369,11 @@ def main(argv: list[str]) -> int:
         print(f"[render-biggest-movers] {rel(SHARED)} is absent; run "
               f"forensics/tools/downstream_blockers.py --measure first")
         return 1
+    p1000 = (json.loads(P1000_RUN.read_text(encoding="utf-8")).get("body", {})
+             if P1000_RUN.is_file() else {})
 
-    report = render_report(body)
-    block = readme_block(body)
+    report = render_report(body, p1000)
+    block = readme_block(body, p1000)
     readme = README.read_text(encoding="utf-8")
     try:
         new_readme = apply_readme_block(readme, block)
