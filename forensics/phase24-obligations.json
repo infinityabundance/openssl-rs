@@ -165,12 +165,14 @@
       },
       {
         "closure": "the `RT-FRF-CLOSURE` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "RT-FRF-CLOSURE is pending",
+        "findings": [
+          "the stratum stages no declarable court: the registry declares no Phase-24 court and no artifacts/phase24/probes/<probe>.{authority,candidate} pair is staged, so by phase_state.py's frf_gemel_blocking_reason scoping the FRF/Gemel chain entry is vacuous and no .frf object or Gemel checkpoint is owed; the RT-FRF-CLOSURE harness challenge and the Gemel projection stand in its place, and a passing atlas is not a chain that ran"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "RT-FRF-CLOSURE is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "frf-gemel-closure",
         "what": "the FRF/Gemel chain closure where the stratum stages a declarable court, so a passing atlas is not read as a chain that never ran"
@@ -193,8 +195,8 @@
       "contract_units": 15,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 13,
-      "open_in_this_stratum": 2,
+      "implemented": 14,
+      "open_in_this_stratum": 1,
       "owned": 15,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -235,7 +237,7 @@
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "ffba9109bf65240a624b75dac602706040defe786c6073a3e7448cc5e3994067"
+      "sha256": "55dadd434cac6b459de58c5c240815fbdd59b3cf8aa2c4f71432e34a31edb143"
     },
     {
       "name": "phase24-guard",
