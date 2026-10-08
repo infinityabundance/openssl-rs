@@ -1,0 +1,1583 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "admitted_recipes": [
+      {
+        "artifact": "keepalived/keepalived",
+        "authority_level": "L4-linked",
+        "build_system": "configure",
+        "candidate_level": "L4-linked",
+        "family": "keepalived",
+        "linkage_proven": true,
+        "recipe_id": "recipe:keepalived:2.3.1",
+        "sha256": "92f4b69bfd998e2306d1995ad16fdad1b59e70be694c883385c5f55e02c62aa3",
+        "url": "https://keepalived.org/software/keepalived-2.3.1.tar.gz",
+        "version": "2.3.1"
+      },
+      {
+        "artifact": ".libs/libtls.so*",
+        "authority_level": "L4-linked",
+        "build_system": "configure",
+        "candidate_level": "L4-linked",
+        "family": "libretls",
+        "linkage_proven": true,
+        "recipe_id": "recipe:libretls:3.8.1",
+        "sha256": "3bc9fc0e61827ee2f608e5e44993a8fda6d610b80a1e01a9c75610cc292997b5",
+        "url": "https://causal.agency/libretls/libretls-3.8.1.tar.gz",
+        "version": "3.8.1"
+      },
+      {
+        "artifact": "rsync",
+        "authority_level": "L4-linked",
+        "build_system": "configure",
+        "candidate_level": "L4-linked",
+        "family": "rsync",
+        "linkage_proven": true,
+        "recipe_id": "recipe:rsync:3.3.0",
+        "sha256": "7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90",
+        "url": "https://download.samba.org/pub/rsync/src/rsync-3.3.0.tar.gz",
+        "version": "3.3.0"
+      },
+      {
+        "artifact": "src/squid",
+        "authority_level": "L4-linked",
+        "build_system": "configure",
+        "candidate_level": "L4-linked",
+        "family": "squid",
+        "linkage_proven": true,
+        "recipe_id": "recipe:squid:6.12",
+        "sha256": "20d6c79214f75b5f889952ed79e1ab8b8c3f909b079671d77bb558a6f0b28625",
+        "url": "http://www.squid-cache.org/Versions/v6/squid-6.12.tar.gz",
+        "version": "6.12"
+      },
+      {
+        "artifact": "ssmtp",
+        "authority_level": "L4-linked",
+        "build_system": "configure",
+        "candidate_level": "L4-linked",
+        "family": "ssmtp",
+        "linkage_proven": true,
+        "recipe_id": "recipe:ssmtp:2.64",
+        "sha256": "22c37dc90c871e8e052b2cab0ad219d010fa938608cd66b21c8f3c759046fa36",
+        "url": "https://ftp.debian.org/debian/pool/main/s/ssmtp/ssmtp_2.64.orig.tar.bz2",
+        "version": "2.64"
+      }
+    ],
+    "after": {
+      "class_counts": {
+        "authority-baseline-limited": 0,
+        "candidate-configure-failure": 0,
+        "candidate-functional-failure": 0,
+        "candidate-link-failure": 0,
+        "candidate-load-failure": 0,
+        "candidate-runtime-failure": 0,
+        "no-admitted-recipe": 965,
+        "no-fixture": 0,
+        "none": 33,
+        "out-of-scope": 0,
+        "recipe-build-dependency-missing": 0,
+        "recipe-build-system-unsupported": 2
+      },
+      "drop_in_pass": 33,
+      "families": 1000,
+      "linked": 33,
+      "measurable_families": 33,
+      "recipe_backed_families": 35,
+      "recipe_less_families": 965
+    },
+    "attempts": [
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "alpine",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "alpine",
+        "family_id": "family:alpine",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure: error: Terminfo/termcap not found",
+        "sha256": "01fb78bd03e469bccd799db7c2b414e2bb816dbadd2d66170ae0e8be60415aa3",
+        "tarball_url": "https://deb.debian.org/debian/pool/main/a/alpine/alpine_2.26+dfsg.orig.tar.xz",
+        "version": "2.26"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "apache2-ssl",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "apache2-ssl",
+        "family_id": "family:apache2-ssl",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure: error: APR not found",
+        "sha256": "674188e7bf44ced82da8db522da946849e22080d73d16c93f7f4df89e25729ec",
+        "tarball_url": "https://archive.apache.org/dist/httpd/httpd-2.4.62.tar.bz2",
+        "version": "2.4.62"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "axel",
+        "failure_class": "build-failure",
+        "family": "axel",
+        "family_id": "family:axel",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L3-built",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "the build produced no artifact matching 'src/axel'",
+        "sha256": "575f73f640ee836a95d27b54aeed216c45bc1e914cad92da6f00b907d1c94925",
+        "tarball_url": "https://github.com/axel-download-accelerator/axel/releases/download/v2.17.14/axel-2.17.14.tar.gz",
+        "version": "2.17.14"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "coturn",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "coturn",
+        "family_id": "family:coturn",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure: too old libevent tool; the venue does not admit libevent",
+        "sha256": "13f2a38b66cffb73d86b5ed24acba4e1371d738d758a6039e3a18f0c84c176ad",
+        "tarball_url": "https://github.com/coturn/coturn/archive/refs/tags/4.6.2.tar.gz",
+        "version": "4.6.2"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "make",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "cowpatty",
+        "failure_class": "build-failure",
+        "family": "cowpatty",
+        "family_id": "family:cowpatty",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "make: *** [<builtin>: cowpatty.o] Error 1",
+        "sha256": "8aae67f4823edb76dff036808137888d2479477ec1e52aa86d6cecd26d58aa23",
+        "tarball_url": "https://github.com/joswr1ght/cowpatty/archive/refs/tags/4.8.tar.gz",
+        "version": "4.8"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "dnsdist",
+        "failure_class": "configure-failure",
+        "family": "dnsdist",
+        "family_id": "family:dnsdist",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure still failed after --without-libedit (strerror_r probe)",
+        "sha256": "285111c2b7dff6bc8a2407106a51c365cc5bf5e6287fe459a29b396c74620332",
+        "tarball_url": "https://downloads.powerdns.com/releases/dnsdist-1.9.7.tar.bz2",
+        "version": "1.9.7"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "dsniff",
+        "failure_class": "recipe-build-system-unsupported",
+        "family": "dsniff",
+        "family_id": "family:dsniff",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "the pinned release ships no generated ./configure",
+        "sha256": "b92c3c5980034477f66bb484db175b88cb9f2f24253bc6956c21c06138559cfe",
+        "tarball_url": "https://github.com/dugsong/dsniff/archive/refs/heads/master.tar.gz",
+        "version": "2.4b1"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "unsupported",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "exim",
+        "failure_class": "recipe-build-system-unsupported",
+        "family": "exim",
+        "family_id": "family:exim",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "the build needs a hand-written Local/Makefile before make; no venue entry point",
+        "sha256": "0ebc108a779f9293ba4b423c20818f9a3db79b60286d96abc6ba6b85a15852f7",
+        "tarball_url": "https://ftp.exim.org/pub/exim/exim4/old/exim-4.98.tar.xz",
+        "version": "4.98"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "fdm",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "fdm",
+        "family_id": "family:fdm",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure: error: \"libtdb not found\"",
+        "sha256": "53aad117829834e21c1b9bf20496a1aa1c0e0fb98fe7735e1e73314266fb6c16",
+        "tarball_url": "https://github.com/nicm/fdm/releases/download/2.2/fdm-2.2.tar.gz",
+        "version": "2.2"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "gensio",
+        "failure_class": null,
+        "family": "gensio",
+        "family_id": "family:gensio",
+        "finding_class": "no-openssl-linkage",
+        "outcome": "classification-finding",
+        "probe": {
+          "authority": "L3-built",
+          "candidate": "L3-built"
+        },
+        "reason": "the built libgensio links only libc and libgensioosh; the OpenSSL transport is a separate optional module not built by the default entry point",
+        "sha256": "00bb5f0aa80d9978195f5efab5db403af22e5e7ed0f75c682da47577248bd333",
+        "tarball_url": "https://github.com/cminyard/gensio/releases/download/v2.8.9/gensio-2.8.9.tar.gz",
+        "version": "2.8.9"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "getdns",
+        "failure_class": "recipe-build-system-unsupported",
+        "family": "getdns",
+        "family_id": "family:getdns",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "the pinned release ships no generated ./configure",
+        "sha256": "f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c",
+        "tarball_url": "https://getdnsapi.net/dist/getdns-1.7.3.tar.gz",
+        "version": "1.7.3"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "make",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "git-crypt",
+        "failure_class": "build-failure",
+        "family": "git-crypt",
+        "family_id": "family:git-crypt",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "make failed building the OpenSSL 1.x crypto shim against OpenSSL 3",
+        "sha256": "2210a89588169ae9a54988c7fdd9717333f0c6053ff704d335631a387bd3bcff",
+        "tarball_url": "https://github.com/AGWA/git-crypt/archive/refs/tags/0.7.0.tar.gz",
+        "version": "0.7.0"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "make",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "grpc",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "grpc",
+        "family_id": "family:grpc",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "the build requires the absent third_party submodules",
+        "sha256": "d74f8e99a433982a12d7899f6773e285c9824e1d9a173ea1d1fb26c9bd089299",
+        "tarball_url": "https://github.com/grpc/grpc/archive/refs/tags/v1.67.1.tar.gz",
+        "version": "1.67.1"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "hitch",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "hitch",
+        "family_id": "family:hitch",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure: error: Cannot find libev",
+        "sha256": "dfc99484bc7ffea27a3169e84d6c217988eda47b208ab2e5524dc2a5dd158f4e",
+        "tarball_url": "https://hitch-tls.org/source/hitch-1.8.0.tar.gz",
+        "version": "1.8.0"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "hydra",
+        "failure_class": "build-failure",
+        "family": "hydra",
+        "family_id": "family:hydra",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L2-configured",
+          "candidate": "L2-configured"
+        },
+        "reason": "make: *** [Makefile:69: hydra] Error 1",
+        "sha256": "9dd193b011fdb3c52a17b0da61a38a4148ffcad731557696819d4721d1bee76b",
+        "tarball_url": "https://github.com/vanhauser-thc/thc-hydra/archive/refs/tags/v9.5.tar.gz",
+        "version": "9.5"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "icecast",
+        "failure_class": "configure-failure",
+        "family": "icecast",
+        "family_id": "family:icecast",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed at checking for library containing getnameinfo",
+        "sha256": "49b5979f9f614140b6a38046154203ee28218d8fc549888596a683ad604e4d44",
+        "tarball_url": "https://downloads.xiph.org/releases/icecast/icecast-2.4.4.tar.gz",
+        "version": "2.4.4"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "ima-evm-utils",
+        "failure_class": "acquire-failure",
+        "family": "ima-evm-utils",
+        "family_id": "family:ima-evm-utils",
+        "finding_class": null,
+        "outcome": "fetch-failed",
+        "probe": {
+          "authority": "L0-catalogued",
+          "candidate": "L0-catalogued"
+        },
+        "reason": "curl: (22) The requested URL returned error: 404 for every release URL tried",
+        "sha256": "unknown",
+        "tarball_url": "https://github.com/linux-integrity/ima-evm-utils/releases/download/v1.6.0/ima-evm-utils-1.6.0.tar.gz",
+        "version": "1.6.0"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "ipmitool",
+        "failure_class": "recipe-build-system-unsupported",
+        "family": "ipmitool",
+        "family_id": "family:ipmitool",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "the pinned release ships no generated ./configure",
+        "sha256": "48b010e7bcdf93e4e4b6e43c53c7f60aa6873d574cbd45a8d86fa7aaeebaff9c",
+        "tarball_url": "https://github.com/ipmitool/ipmitool/archive/refs/tags/IPMITOOL_1_8_19.tar.gz",
+        "version": "1.8.19"
+      },
+      {
+        "admitted": true,
+        "authority_level": "L4-linked",
+        "build_system": "configure",
+        "candidate_level": "L4-linked",
+        "canonical_name": "keepalived",
+        "failure_class": null,
+        "family": "keepalived",
+        "family_id": "family:keepalived",
+        "finding_class": null,
+        "outcome": "admitted",
+        "probe": {
+          "authority": "L4-linked",
+          "candidate": "L4-linked"
+        },
+        "reason": null,
+        "sha256": "92f4b69bfd998e2306d1995ad16fdad1b59e70be694c883385c5f55e02c62aa3",
+        "tarball_url": "https://keepalived.org/software/keepalived-2.3.1.tar.gz",
+        "version": "2.3.1"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "lftp",
+        "failure_class": "configure-failure",
+        "family": "lftp",
+        "family_id": "family:lftp",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed on the resolver check: checking for library containing hstrerror",
+        "sha256": "96e7199d7935be33cf6b1161e955b2aab40ab77ecdf2a19cea4fc1193f457edc",
+        "tarball_url": "https://lftp.yar.ru/ftp/lftp-4.9.3.tar.xz",
+        "version": "4.9.3"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "libesmtp",
+        "failure_class": "configure-failure",
+        "family": "libesmtp",
+        "family_id": "family:libesmtp",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed at checking for library containing getaddrinfo",
+        "sha256": "3b4143ecaeacbbff3ed0f2a16da6fc5bfb4f778ea73914009a8be0a3020dc6a9",
+        "tarball_url": "https://ftp.debian.org/debian/pool/main/libe/libesmtp/libesmtp_1.0.6.orig.tar.gz",
+        "version": "1.0.6"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "libpq",
+        "failure_class": "configure-failure",
+        "family": "libpq",
+        "family_id": "family:libpq",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed at the C++ compiler probe",
+        "sha256": "82ef27c0af3751695d7f64e2d963583005fbb6a0c3df63d0e4b42211d7021164",
+        "tarball_url": "https://ftp.postgresql.org/pub/source/v17.2/postgresql-17.2.tar.bz2",
+        "version": "17.2"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "librelp",
+        "failure_class": "recipe-build-system-unsupported",
+        "family": "librelp",
+        "family_id": "family:librelp",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "the pinned release ships no generated ./configure",
+        "sha256": "518ec97f4b6c4458a8d841ac89fbd2858123b678818b9d4740cd0e6b98ba6e00",
+        "tarball_url": "https://github.com/rsyslog/librelp/archive/refs/tags/v1.11.0.tar.gz",
+        "version": "1.11.0"
+      },
+      {
+        "admitted": true,
+        "authority_level": "L4-linked",
+        "build_system": "configure",
+        "candidate_level": "L4-linked",
+        "canonical_name": "libretls",
+        "failure_class": null,
+        "family": "libretls",
+        "family_id": "family:libretls",
+        "finding_class": null,
+        "outcome": "admitted",
+        "probe": {
+          "authority": "L4-linked",
+          "candidate": "L4-linked"
+        },
+        "reason": null,
+        "sha256": "3bc9fc0e61827ee2f608e5e44993a8fda6d610b80a1e01a9c75610cc292997b5",
+        "tarball_url": "https://causal.agency/libretls/libretls-3.8.1.tar.gz",
+        "version": "3.8.1"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "libshout",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "libshout",
+        "family_id": "family:libshout",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure: checking for libogg... not found",
+        "sha256": "39cbd4f0efdfddc9755d88217e47f8f2d7108fa767f9d58a2ba26a16d8f7c910",
+        "tarball_url": "https://downloads.xiph.org/releases/libshout/libshout-2.4.6.tar.gz",
+        "version": "2.4.6"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "libstrophe",
+        "failure_class": "configure-failure",
+        "family": "libstrophe",
+        "family_id": "family:libstrophe",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed: no XML parser is admitted (expat/libxml2 absent), so the strophe library cannot be built",
+        "sha256": "a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
+        "tarball_url": "https://github.com/strophe/libstrophe/releases/download/0.13.1/libstrophe-0.13.1.tar.gz",
+        "version": "0.13.1"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "libtpms",
+        "failure_class": "acquire-failure",
+        "family": "libtpms",
+        "family_id": "family:libtpms",
+        "finding_class": null,
+        "outcome": "fetch-failed",
+        "probe": {
+          "authority": "L0-catalogued",
+          "candidate": "L0-catalogued"
+        },
+        "reason": "curl: (22) The requested URL returned error: 404 for every release URL tried",
+        "sha256": "unknown",
+        "tarball_url": "https://github.com/stefanberger/libtpms/releases/download/v0.10.0/libtpms-0.10.0.tar.gz",
+        "version": "0.10.0"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "libu2f-server",
+        "failure_class": "acquire-failure",
+        "family": "libu2f-server",
+        "family_id": "family:libu2f-server",
+        "finding_class": null,
+        "outcome": "fetch-failed",
+        "probe": {
+          "authority": "L0-catalogued",
+          "candidate": "L0-catalogued"
+        },
+        "reason": "curl: (22) The requested URL returned error: 404 for every release URL tried",
+        "sha256": "unknown",
+        "tarball_url": "https://developers.yubico.com/libu2f-server/Releases/libu2f-server-1.1.0.tar.gz",
+        "version": "1.1.0"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "medusa",
+        "failure_class": "build-failure",
+        "family": "medusa",
+        "family_id": "family:medusa",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L2-configured",
+          "candidate": "L2-configured"
+        },
+        "reason": "make: *** [Makefile:335: all] Error 2",
+        "sha256": "b4c07f4d8d6e1e4b2c60d91e429ffe20d52afa80fea8c401ac548967d1fe194a",
+        "tarball_url": "https://github.com/jmk-foofus/medusa/archive/refs/tags/2.2.tar.gz",
+        "version": "2.2"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "memcached",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "memcached",
+        "family_id": "family:memcached",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure: needs libevent, which this venue does not admit",
+        "sha256": "4ab234219865191e8d1ba57a2f9167d8b573248fa4ff00b4d8296be13d24a82c",
+        "tarball_url": "https://memcached.org/files/memcached-1.6.32.tar.gz",
+        "version": "1.6.32"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "make",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "mupdf",
+        "failure_class": "build-failure",
+        "family": "mupdf",
+        "family_id": "family:mupdf",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "the build failed in the bundled libjpeg third-party target",
+        "sha256": "81aa1361252418cc45347b4ac075532096957a7ab772e20e046f3bb418d7263c",
+        "tarball_url": "https://mupdf.com/downloads/archive/mupdf-1.25.1-source.tar.gz",
+        "version": "1.25.1"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "ncrack",
+        "failure_class": "configure-failure",
+        "family": "ncrack",
+        "family_id": "family:ncrack",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed at checking for library containing clock_gettime",
+        "sha256": "f3f971cd677c4a0c0668cb369002c581d305050b3b0411e18dd3cb9cc270d14a",
+        "tarball_url": "https://nmap.org/ncrack/dist/ncrack-0.7.tar.gz",
+        "version": "0.7"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "nghttp2",
+        "failure_class": null,
+        "family": "nghttp2",
+        "family_id": "family:nghttp2",
+        "finding_class": "no-openssl-linkage",
+        "outcome": "classification-finding",
+        "probe": {
+          "authority": "L3-built",
+          "candidate": "L3-built"
+        },
+        "reason": "libnghttp2 links only libc: the library carries no TLS, so the counted family is not a direct OpenSSL consumer in this configuration",
+        "sha256": "20e73f3cf9db3f05988996ac8b3a99ed529f4565ca91a49eb0550498e10621e8",
+        "tarball_url": "https://github.com/nghttp2/nghttp2/releases/download/v1.64.0/nghttp2-1.64.0.tar.gz",
+        "version": "1.64.0"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "nmap",
+        "failure_class": "build-failure",
+        "family": "nmap",
+        "family_id": "family:nmap",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L2-configured",
+          "candidate": "L2-configured"
+        },
+        "reason": "the build failed; the C++/libdnet components need tools the venue lacks",
+        "sha256": "e14ab530e47b5afd88f1c8a2bac7f89cd8fe6b478e22d255c5b9bddb7a1c5778",
+        "tarball_url": "https://nmap.org/dist/nmap-7.95.tar.bz2",
+        "version": "7.95"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "nmh",
+        "failure_class": "configure-failure",
+        "family": "nmh",
+        "family_id": "family:nmh",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed on checking for library containing connect",
+        "sha256": "366ce0ce3f9447302f5567009269c8bb3882d808f33eefac85ba367e875c8615",
+        "tarball_url": "https://download.savannah.nongnu.org/releases/nmh/nmh-1.8.tar.gz",
+        "version": "1.8"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "nsd",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "nsd",
+        "family_id": "family:nsd",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure: error: Cannot find the libevent library",
+        "sha256": "6317d7f5e3f01c33912f313d66a33dd1ace1cdf7f19d5c590b2e430d8ca4605f",
+        "tarball_url": "https://www.nlnetlabs.nl/downloads/nsd/nsd-4.10.0.tar.gz",
+        "version": "4.10.0"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "opendkim",
+        "failure_class": "acquire-failure",
+        "family": "opendkim",
+        "family_id": "family:opendkim",
+        "finding_class": null,
+        "outcome": "fetch-failed",
+        "probe": {
+          "authority": "L0-catalogued",
+          "candidate": "L0-catalogued"
+        },
+        "reason": "curl: (22) The requested URL returned error: 404 for every release URL tried",
+        "sha256": "unknown",
+        "tarball_url": "https://downloads.sourceforge.net/project/opendkim/opendkim-2.11.0.tar.gz",
+        "version": "2.11.0"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "openiked",
+        "failure_class": "recipe-build-system-unsupported",
+        "family": "openiked",
+        "family_id": "family:openiked",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "the pinned release ships no generated ./configure (autoconf is not admitted)",
+        "sha256": "9a04d513a81f9d5a873a0bd9992067a55796812674c9a96791b3adc6a63e6347",
+        "tarball_url": "https://ftp.openbsd.org/pub/OpenBSD/OpenIKED/openiked-7.3.tar.gz",
+        "version": "7.3"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "pam-u2f",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "pam-u2f",
+        "family_id": "family:pam-u2f",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure: error: PAM header files not found, install libpam-dev",
+        "sha256": "72360c6875485eb4df409da8f8f52b17893f05e4d998529c238814480e115220",
+        "tarball_url": "https://developers.yubico.com/pam-u2f/Releases/pam_u2f-1.3.0.tar.gz",
+        "version": "1.3.0"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "pdns",
+        "failure_class": "configure-failure",
+        "family": "pdns",
+        "family_id": "family:pdns",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed at the strerror_r probe; needs libraries the venue lacks",
+        "sha256": "cac466d7cb056434c60632e554be50543cb0cecd9d3b33bb5785c149b5979fc1",
+        "tarball_url": "https://downloads.powerdns.com/releases/pdns-4.9.4.tar.bz2",
+        "version": "4.9.4"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "pgbouncer",
+        "failure_class": "configure-failure",
+        "family": "pgbouncer",
+        "family_id": "family:pgbouncer",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed on the resolver check; needs libevent",
+        "sha256": "1963b497231d9a560a62d266e4a2eae6881ab401853d93e5d292c3740eec5084",
+        "tarball_url": "https://www.pgbouncer.org/downloads/files/1.23.1/pgbouncer-1.23.1.tar.gz",
+        "version": "1.23.1"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "make",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "postfix",
+        "failure_class": "recipe-build-system-unsupported",
+        "family": "postfix",
+        "family_id": "family:postfix",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "the build needs `make makefiles` first; no single venue entry point",
+        "sha256": "c488944eb0362576d18f5f8cc4b9b32a35bcb35d71b947daac9764af4770f643",
+        "tarball_url": "http://ftp.porcupine.org/mirrors/postfix-release/official/postfix-3.9.1.tar.gz",
+        "version": "3.9.1"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "radsecproxy",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "radsecproxy",
+        "family_id": "family:radsecproxy",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure: error: required library nettle not found",
+        "sha256": "e65a05bc00b3d8a6d1e2d32c288689478a170a6f9ddcb531bbd52b866e7a8673",
+        "tarball_url": "https://github.com/radsecproxy/radsecproxy/releases/download/1.11.0/radsecproxy-1.11.0.tar.gz",
+        "version": "1.11.0"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "rhash",
+        "failure_class": "configure-failure",
+        "family": "rhash",
+        "family_id": "family:rhash",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed; Check \"config.log\" if you do not understand why it failed",
+        "sha256": "6db837e7bbaa7c72c5fd43ca5af04b1d370c5ce32367b9f6a1f7b49b2338c09a",
+        "tarball_url": "https://github.com/rhash/RHash/archive/refs/tags/v1.4.5.tar.gz",
+        "version": "1.4.5"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "rpki-client",
+        "failure_class": "configure-failure",
+        "family": "rpki-client",
+        "family_id": "family:rpki-client",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed: needs fts_open (libbsd), which the venue does not admit",
+        "sha256": "e8e073c271250adf4f665d1c9a98eee1ae589e8e3bbedb2c106a3bd94dee96cc",
+        "tarball_url": "https://ftp.nluug.nl/pub/OpenBSD/rpki-client/rpki-client-9.2.tar.gz",
+        "version": "9.2"
+      },
+      {
+        "admitted": true,
+        "authority_level": "L4-linked",
+        "build_system": "configure",
+        "candidate_level": "L4-linked",
+        "canonical_name": "rsync",
+        "failure_class": null,
+        "family": "rsync",
+        "family_id": "family:rsync",
+        "finding_class": null,
+        "outcome": "admitted",
+        "probe": {
+          "authority": "L4-linked",
+          "candidate": "L4-linked"
+        },
+        "reason": null,
+        "sha256": "7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90",
+        "tarball_url": "https://download.samba.org/pub/rsync/src/rsync-3.3.0.tar.gz",
+        "version": "3.3.0"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "make",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "s-nail",
+        "failure_class": "build-failure",
+        "family": "s-nail",
+        "family_id": "family:s-nail",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L3-built",
+          "candidate": "L3-built"
+        },
+        "reason": "the build produced no artifact matching 's-nail'",
+        "sha256": "20ff055be9829b69d46ebc400dfe516a40d287d7ce810c74355d6bdc1a28d8a9",
+        "tarball_url": "https://ftp.sdaoden.eu/s-nail-14.9.25.tar.xz",
+        "version": "14.9.25"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "sofia-sip",
+        "failure_class": "recipe-build-system-unsupported",
+        "family": "sofia-sip",
+        "family_id": "family:sofia-sip",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "the pinned release ships no generated ./configure",
+        "sha256": "daca3d961b6aa2974ad5d3be69ed011726c3e4d511b2a0d4cb6d878821a2de7a",
+        "tarball_url": "https://github.com/freeswitch/sofia-sip/archive/refs/tags/v1.13.17.tar.gz",
+        "version": "1.13.17"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "sqlcipher",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "sqlcipher",
+        "family_id": "family:sqlcipher",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L2-configured",
+          "candidate": "L2-configured"
+        },
+        "reason": "make: This makefile target requires tclsh 8.4 or later",
+        "sha256": "879fb030c36bc5138029af6aa3ae3f36c28c58e920af05ac7ca78a5915b2fa3c",
+        "tarball_url": "https://github.com/sqlcipher/sqlcipher/archive/refs/tags/v4.6.0.tar.gz",
+        "version": "4.6.0"
+      },
+      {
+        "admitted": true,
+        "authority_level": "L4-linked",
+        "build_system": "configure",
+        "candidate_level": "L4-linked",
+        "canonical_name": "squid",
+        "failure_class": null,
+        "family": "squid",
+        "family_id": "family:squid",
+        "finding_class": null,
+        "outcome": "admitted",
+        "probe": {
+          "authority": "L4-linked",
+          "candidate": "L4-linked"
+        },
+        "reason": null,
+        "sha256": "20d6c79214f75b5f889952ed79e1ab8b8c3f909b079671d77bb558a6f0b28625",
+        "tarball_url": "http://www.squid-cache.org/Versions/v6/squid-6.12.tar.gz",
+        "version": "6.12"
+      },
+      {
+        "admitted": true,
+        "authority_level": "L4-linked",
+        "build_system": "configure",
+        "candidate_level": "L4-linked",
+        "canonical_name": "ssmtp",
+        "failure_class": null,
+        "family": "ssmtp",
+        "family_id": "family:ssmtp",
+        "finding_class": null,
+        "outcome": "admitted",
+        "probe": {
+          "authority": "L4-linked",
+          "candidate": "L4-linked"
+        },
+        "reason": null,
+        "sha256": "22c37dc90c871e8e052b2cab0ad219d010fa938608cd66b21c8f3c759046fa36",
+        "tarball_url": "https://ftp.debian.org/debian/pool/main/s/ssmtp/ssmtp_2.64.orig.tar.bz2",
+        "version": "2.64"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "syslog-ng",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "syslog-ng",
+        "family_id": "family:syslog-ng",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure: Package 'gthread-2.0', required by 'virtual:world', not found",
+        "sha256": "e8b8b98c60a5b68b25e3462c4104c35d05b975e6778d38d8a81b8ff7c0e64c5b",
+        "tarball_url": "https://github.com/syslog-ng/syslog-ng/releases/download/syslog-ng-4.8.1/syslog-ng-4.8.1.tar.gz",
+        "version": "4.8.1"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "tcpdump",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "tcpdump",
+        "family_id": "family:tcpdump",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure: checking for local pcap library... not found",
+        "sha256": "8c75856e00addeeadf70dad67c9ff3dd368536b2b8563abf6854d7c764cd3adb",
+        "tarball_url": "https://www.tcpdump.org/release/tcpdump-4.99.5.tar.gz",
+        "version": "4.99.5"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "thrift",
+        "failure_class": "configure-failure",
+        "family": "thrift",
+        "family_id": "family:thrift",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L2-configured"
+        },
+        "reason": "configure failed; the C++ library needs Boost, which the venue does not admit",
+        "sha256": "9a24f3eba9a4ca493602226c16d8c228037db3b9291c6fc4019bfe3bd39fc67c",
+        "tarball_url": "https://archive.apache.org/dist/thrift/0.21.0/thrift-0.21.0.tar.gz",
+        "version": "0.21.0"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "tor",
+        "failure_class": "configure-failure",
+        "family": "tor",
+        "family_id": "family:tor",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed; needs libevent, which the venue does not admit",
+        "sha256": "9baf26c387a2820b3942da572146e6eb77c2bc66862af6297cd02a074e6fba28",
+        "tarball_url": "https://dist.torproject.org/tor-0.4.8.13.tar.gz",
+        "version": "0.4.8.13"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "unbound",
+        "failure_class": "configure-failure",
+        "family": "unbound",
+        "family_id": "family:unbound",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed at the pthreads special-flags probe",
+        "sha256": "c5dd1bdef5d5685b2cedb749158dd152c52d44f65529a34ac15cd88d4b1b3d43",
+        "tarball_url": "https://nlnetlabs.nl/downloads/unbound/unbound-1.22.0.tar.gz",
+        "version": "1.22.0"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "unrealircd",
+        "failure_class": "recipe-build-system-unsupported",
+        "family": "unrealircd",
+        "family_id": "family:unrealircd",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure: Please use ./Config instead of ./configure; no venue entry point",
+        "sha256": "bcfcf037d8ee427aea057d26c03993cd065d343c22be1e15b9ed023276fab6d8",
+        "tarball_url": "https://www.unrealircd.org/downloads/unrealircd-6.1.9.tar.gz",
+        "version": "6.1.9"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "make",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "uwsgi",
+        "failure_class": "recipe-build-dependency-missing",
+        "family": "uwsgi",
+        "family_id": "family:uwsgi",
+        "finding_class": null,
+        "outcome": "not-venue-buildable",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "make: fatal error: Python.h: No such file or directory",
+        "sha256": "4bb0762c5becb0414352cca664957206df4d6847e9a1c472e87708dc2cdad610",
+        "tarball_url": "https://github.com/unbit/uwsgi/archive/refs/tags/2.0.28.tar.gz",
+        "version": "2.0.28"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "make",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "vsftpd",
+        "failure_class": null,
+        "family": "vsftpd",
+        "family_id": "family:vsftpd",
+        "finding_class": "no-openssl-linkage",
+        "outcome": "classification-finding",
+        "probe": {
+          "authority": "L3-built",
+          "candidate": "L3-built"
+        },
+        "reason": "the built vsftpd declares no libssl/libcrypto DT_NEEDED even with the SSL build flag, so OpenSSL is an optional component not linked in this configuration",
+        "sha256": "26b602ae454b0ba6d99ef44a09b6b9e0dfa7f67228106736df1f278c70bc91d3",
+        "tarball_url": "https://security.appspot.com/downloads/vsftpd-3.0.5.tar.gz",
+        "version": "3.0.5"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "w3m",
+        "failure_class": "configure-failure",
+        "family": "w3m",
+        "family_id": "family:w3m",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed at checking for -ldl... not found",
+        "sha256": "fdc7d55d3c0104db26aa9759db34f37e5eee03f44c868796e3bbfb8935c96e39",
+        "tarball_url": "https://github.com/tats/w3m/archive/refs/tags/v0.5.3+git20230121.tar.gz",
+        "version": "0.5.3"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "xrdp",
+        "failure_class": "configure-failure",
+        "family": "xrdp",
+        "family_id": "family:xrdp",
+        "finding_class": null,
+        "outcome": "rejected",
+        "probe": {
+          "authority": "L1-admitted-source",
+          "candidate": "L1-admitted-source"
+        },
+        "reason": "configure failed at the -Werror compiler-acceptance probe",
+        "sha256": "a2535f4420080630e20f0639c30c244170003ab998cc82d7913c2be856622f83",
+        "tarball_url": "https://github.com/neutrinolabs/xrdp/releases/download/v0.10.1/xrdp-0.10.1.tar.gz",
+        "version": "0.10.1"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "yadifa",
+        "failure_class": "acquire-failure",
+        "family": "yadifa",
+        "family_id": "family:yadifa",
+        "finding_class": null,
+        "outcome": "fetch-failed",
+        "probe": {
+          "authority": "L0-catalogued",
+          "candidate": "L0-catalogued"
+        },
+        "reason": "curl: (22) The requested URL returned error: 404 for every release URL tried",
+        "sha256": "unknown",
+        "tarball_url": "https://www.yadifa.eu/sites/default/files/Downloads/yadifa-2.6.10-10660.tar.gz",
+        "version": "2.6.10"
+      },
+      {
+        "admitted": false,
+        "authority_level": "L0-catalogued",
+        "build_system": "configure",
+        "candidate_level": "L0-catalogued",
+        "canonical_name": "znc",
+        "failure_class": "acquire-failure",
+        "family": "znc",
+        "family_id": "family:znc",
+        "finding_class": null,
+        "outcome": "fetch-failed",
+        "probe": {
+          "authority": "L0-catalogued",
+          "candidate": "L0-catalogued"
+        },
+        "reason": "curl: (22) The requested URL returned error: 404 for every official release URL tried",
+        "sha256": "unknown",
+        "tarball_url": "https://znc.in/releases/znc-1.8.2.tar.gz",
+        "version": "1.8.2"
+      }
+    ],
+    "before": {
+      "captured_by": "forensics/tools/downstream_close_batch.py --capture-baseline",
+      "captured_note": "the 24.16 blocker summary of the 24.18 post-campaign planes, captured once before the planes were re-measured and committed as the record's `before`",
+      "class_counts": {
+        "authority-baseline-limited": 0,
+        "candidate-configure-failure": 0,
+        "candidate-functional-failure": 0,
+        "candidate-link-failure": 0,
+        "candidate-load-failure": 0,
+        "candidate-runtime-failure": 0,
+        "no-admitted-recipe": 970,
+        "no-fixture": 0,
+        "none": 28,
+        "out-of-scope": 0,
+        "recipe-build-dependency-missing": 0,
+        "recipe-build-system-unsupported": 2
+      },
+      "drop_in_pass": 28,
+      "families": 1000,
+      "linked": 28,
+      "measurable_families": 28,
+      "recipe_backed_families": 30,
+      "recipe_less_families": 970,
+      "source": "24.18 post-campaign planes"
+    },
+    "classification_findings": [
+      {
+        "build_system": "configure",
+        "family": "gensio",
+        "finding_class": "no-openssl-linkage",
+        "probe": {
+          "authority": "L3-built",
+          "candidate": "L3-built"
+        },
+        "reason": "the built libgensio links only libc and libgensioosh; the OpenSSL transport is a separate optional module not built by the default entry point",
+        "sha256": "00bb5f0aa80d9978195f5efab5db403af22e5e7ed0f75c682da47577248bd333",
+        "url": "https://github.com/cminyard/gensio/releases/download/v2.8.9/gensio-2.8.9.tar.gz",
+        "version": "2.8.9"
+      },
+      {
+        "build_system": "configure",
+        "family": "nghttp2",
+        "finding_class": "no-openssl-linkage",
+        "probe": {
+          "authority": "L3-built",
+          "candidate": "L3-built"
+        },
+        "reason": "libnghttp2 links only libc: the library carries no TLS, so the counted family is not a direct OpenSSL consumer in this configuration",
+        "sha256": "20e73f3cf9db3f05988996ac8b3a99ed529f4565ca91a49eb0550498e10621e8",
+        "url": "https://github.com/nghttp2/nghttp2/releases/download/v1.64.0/nghttp2-1.64.0.tar.gz",
+        "version": "1.64.0"
+      },
+      {
+        "build_system": "make",
+        "family": "vsftpd",
+        "finding_class": "no-openssl-linkage",
+        "probe": {
+          "authority": "L3-built",
+          "candidate": "L3-built"
+        },
+        "reason": "the built vsftpd declares no libssl/libcrypto DT_NEEDED even with the SSL build flag, so OpenSSL is an optional component not linked in this configuration",
+        "sha256": "26b602ae454b0ba6d99ef44a09b6b9e0dfa7f67228106736df1f278c70bc91d3",
+        "url": "https://security.appspot.com/downloads/vsftpd-3.0.5.tar.gz",
+        "version": "3.0.5"
+      }
+    ],
+    "counts": {
+      "admitted": 5,
+      "attempted": 63,
+      "authority_linked": 5,
+      "built": 5,
+      "by_failure_class": {
+        "acquire-failure": 6,
+        "build-failure": 8,
+        "configure-failure": 17,
+        "recipe-build-dependency-missing": 15,
+        "recipe-build-system-unsupported": 9
+      },
+      "by_outcome": {
+        "admitted": 5,
+        "classification-finding": 3,
+        "fetch-failed": 6,
+        "not-venue-buildable": 24,
+        "rejected": 25
+      },
+      "classification_findings": 3,
+      "linked": 5,
+      "per_subject": {
+        "authority": {
+          "built": 5,
+          "configured": 5,
+          "linked": 5
+        },
+        "candidate": {
+          "built": 5,
+          "configured": 5,
+          "linked": 5
+        }
+      },
+      "yield": {
+        "admission_rate": 0.0794,
+        "admitted_per_attempted": "5/63",
+        "linked_per_attempted": "5/63"
+      }
+    },
+    "movement": {
+      "drop_in_pass": {
+        "after": 33,
+        "before": 28,
+        "delta": 5
+      },
+      "linked": {
+        "after": 33,
+        "before": 28,
+        "delta": 5
+      },
+      "measurable_families": {
+        "after": 33,
+        "before": 28,
+        "delta": 5
+      },
+      "no_admitted_recipe": {
+        "after": 965,
+        "before": 970,
+        "delta": -5
+      },
+      "recipe_backed_families": {
+        "after": 35,
+        "before": 30,
+        "delta": 5
+      },
+      "resolved_none": {
+        "after": 33,
+        "before": 28,
+        "delta": 5
+      }
+    },
+    "non_claims": [
+      "a selected population is not a random sample: the 1,000 counted families are selected from frozen ranking evidence, so their blocker shares do not generalise to all downstream software",
+      "1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and the analysis makes no statement about an unmeasured consumer",
+      "a build is not a functional proof: reaching the configured/built/linked rungs is not behaving, and only the functional levels are behavioural evidence",
+      "direct and transitive consumers are different evidence: the two are never summed",
+      "the batch's yield is a property of this venue and this batch, not of the whole set: the attempted families are the 24.18 linkage misses, its dead-URL pins and a bounded heuristic-ordered fresh draw, and the venue admits only a compiler, make, pkg-config and zlib, so the admission rate does not extrapolate to the recipe-less population"
+    ],
+    "rule": {
+      "admission_criterion": "a recipe is admissible when its pinned release tarball ships a build entry point the venue can execute (a generated `configure`, or a plain `Makefile`), needs no tool the venue lacks, and its built artifact declares and resolves an OpenSSL soname under both subjects; the venue is fixed (a C compiler, make, pkg-config, zlib -- and no autoconf/automake/libtool, no cmake, no meson/ninja, no scdoc, no libnl3). A recipe is admitted only if it was actually built and linked against both subjects; a non-admitted family carries the exact reason",
+      "classification": "a family that builds in this venue but whose artifact declares no libssl/libcrypto DT_NEEDED is a **classification finding** -- the counted family is a transitive or optional consumer, not a direct one -- recorded and never forced to link a library it does not use",
+      "honesty_labels": [
+        "the priority rule is a heuristic ranking, never a measurement of buildability",
+        "the batch's yield is a property of this venue and this batch, not of the whole set",
+        "a build/link is not a functional proof",
+        "a family that does not link OpenSSL is classified, never forced to link it"
+      ],
+      "id": "downstream-close-batch/1",
+      "identical_intent": "one recipe per family; the same acquire -> configure -> make argv (and the same prefix-derived environment) is run for both subjects with the single substitution {prefix} = the subject's OpenSSL install prefix and no other difference; no candidate-specific source patch is applied, so candidate_specific_patch_count is 0",
+      "local_only": "the batch fetches each candidate's released tarball, extracts it and builds it inside the admitted court container under its cgroup caps and the build/link tool's own wall-clock bounds; scratch is under /work/court and removed afterwards. Nothing is fetched or compiled outside the venue",
+      "movement": "the per-metric difference between the re-derived `after` blocker summary and the preserved pre-batch `before`, over the frozen P1000, computed as a subtraction of two measured figures: the family count with an admitted recipe, the measurable count, the candidate-linked count and the DROP_IN_PASS count (plus the `no-admitted-recipe` and resolved class counts)",
+      "name": "the close-candidate reclamation batch",
+      "normalisation": "the record is a pure function of committed inputs: the attempt pins and classifications are authored evidence fixed at capture, the levels are re-read from the committed re-measured build/link atlas, and the movement is the subtraction of two measured blocker summaries",
+      "priority_rule": "the 24.18 linkage misses, the 24.18 fetch-failures, and the next recipe-less counted families in the frozen 24.16 recipe-queue order -- source breadth descending, then distro breadth descending, then popularity descending, then canonical name ascending, then family_id ascending -- that ship a stable upstream C release tarball. It is a **heuristic** ranking over frozen breadth signals, never a measurement of buildability"
+    }
+  },
+  "body_hash": "7158abfad154400fd5e47f907ecae958a2e40258c3035016febec5b81d500f46",
+  "generator": "forensics/tools/downstream_close_batch.py",
+  "inputs": [
+    {
+      "name": "close-batch-attempts",
+      "path": "forensics/downstream/close-batch-attempts.json",
+      "sha256": "85bea14c4445c93fe8f2785ff32047ef06fa432ffbb679bef70a5f5e23be2af5"
+    },
+    {
+      "name": "close-batch-baseline",
+      "path": "forensics/downstream/close-batch-baseline.json",
+      "sha256": "37d394c8cf600cc27f67fb7afa2df5c3fad80af76a5cf237dc1512772fce3f84"
+    },
+    {
+      "name": "shared-blockers",
+      "path": "forensics/downstream/shared-blockers.json",
+      "sha256": "6e7807aa9fb2efe5cf6edbaaf8c37a8f6977e63d6b13b675123a0ba43548c041"
+    },
+    {
+      "name": "build-link-atlas",
+      "path": "forensics/downstream/build-link-atlas.json",
+      "sha256": "edba5a53394093ec5e36cec2c88f1d34994bd418d266de5d59055daeeb70350c"
+    },
+    {
+      "name": "p1000-run",
+      "path": "forensics/downstream/p1000-run.json",
+      "sha256": "4b0c4bfd813e2bf023ae656535ae838ec6bf06199bd6f33d1be1b6cc5f688782"
+    },
+    {
+      "name": "family-freeze",
+      "path": "forensics/downstream/family-freeze.json",
+      "sha256": "cf7a8968d400dda2984fe772c8b8851aa732d922ad14e74bf3958eb6e2eae04a"
+    },
+    {
+      "name": "families",
+      "path": "forensics/downstream/families.json",
+      "sha256": "4682c5c2523be6f64ca4be9d349747d4055b2a777d0441fee801448b3a17b60a"
+    },
+    {
+      "name": "downstream-close-batch",
+      "path": "forensics/tools/downstream_close_batch.py",
+      "sha256": "28d992838b5354abd2e0288f9e949f04442a7a8e4f2507a0d83fd3514cdef425"
+    },
+    {
+      "name": "downstream-blockers",
+      "path": "forensics/tools/downstream_blockers.py",
+      "sha256": "d330aafd4b616e0f940b2012a04b9160ba531849ee870a99a224dd4d78e7ece6"
+    },
+    {
+      "name": "downstream-build-link",
+      "path": "forensics/tools/downstream_build_link.py",
+      "sha256": "bc10c361ba294d371b56983fbde06725df3f777e357c3729ac93e05d51c3fdf8"
+    },
+    {
+      "name": "downstream-schemas",
+      "path": "forensics/tools/downstream_schemas.py",
+      "sha256": "e6cf8ac709446344dfb7f7330881abe034f020c91cf75c84d7875670dfce31c6"
+    },
+    {
+      "name": "phase24-guard",
+      "path": "forensics/tools/phase24_guard.py",
+      "sha256": "94ea35a66565d01f3a82dc7113e571e7f59eb5c5f378911196c0783600b41192"
+    },
+    {
+      "name": "phase-24-plan",
+      "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
+      "sha256": "beb0417ee8a6f610f89f41dcaf17825fafa4f2a568efe8729e787ec4c275498a"
+    }
+  ],
+  "kind": "downstream-close-batch",
+  "schema": "openssl-rs/atlas/downstream-close-batch/v1"
+}

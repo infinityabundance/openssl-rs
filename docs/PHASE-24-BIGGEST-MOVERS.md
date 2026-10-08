@@ -9,8 +9,8 @@ same figure regenerates in all three, so none can drift from the derivation.
 
 ## The honest accounting
 
-Of the **1000 counted families**, only **30 have an admitted pristine-source recipe** in this
-venue, and **970 have none** (`no-admitted-recipe`); **972 of the 1000** are `DROP_IN_NOT_APPLICABLE`, so the drop-in measurement reaches a small measured surface of **28 measurable families**. The **mechanically-shared**
+Of the **1000 counted families**, only **35 have an admitted pristine-source recipe** in this
+venue, and **965 have none** (`no-admitted-recipe`); **967 of the 1000** are `DROP_IN_NOT_APPLICABLE`, so the drop-in measurement reaches a small measured surface of **33 measurable families**. The **mechanically-shared**
 blockers — the classes where one fix unlocks several families — are the recipe-backed
 failures, not the breadth of recipe admission. This is a measurement of a *selected*
 population, not a rate over all downstream software.
@@ -19,15 +19,15 @@ population, not a rate over all downstream software.
 
 Every counted family is placed in exactly one blocker class by its deepest blocker,
 derived from the committed run rows (never typed). The partition covers the counted
-families exactly once, and its content hash is `53af85fcc46fc7ce6dcce255e68e701183f9d54480dad2a54a0ec17d4fec78d9`.
+families exactly once, and its content hash is `22ba6c469496542f530095fc5ba56c575cd794ad252f3d8fd06f8b50a4f4b330`.
 
 | blocker class | families | share of the counted population |
 |---|---|---|
-| `no-admitted-recipe` | 970 | 970/1000 (97.0%) |
-| `none` | 28 | 28/1000 (2.8%) |
+| `no-admitted-recipe` | 965 | 965/1000 (96.5%) |
+| `none` | 33 | 33/1000 (3.3%) |
 | `recipe-build-system-unsupported` | 2 | 2/1000 (0.2%) |
 
-**972 of the 1000 counted families are blocked; 28 reached `DROP_IN_PASS`.**
+**967 of the 1000 counted families are blocked; 33 reached `DROP_IN_PASS`.**
 
 ## The ranked shared blockers
 
@@ -40,7 +40,7 @@ leverage 1.
 
 | rank | blocker class | blocked families | mover potential | to-pass potential | fixability | per-fix leverage | fix mechanism |
 |---|---|---|---|---|---|---|---|
-| 1 | `no-admitted-recipe` | 970 | 970 (structural-upper-bound) | 0 | `recipe-admission` | 1.0 | admit a pristine-source build recipe for the family |
+| 1 | `no-admitted-recipe` | 965 | 965 (structural-upper-bound) | 0 | `recipe-admission` | 1.0 | admit a pristine-source build recipe for the family |
 | 2 | `recipe-build-system-unsupported` | 2 | 2 (measured) | 2 | `recipe-build-system` | 2.0 | teach the recipe the project's actual build system (the source tree carries no runnable `./configure`) |
 
 **A shared blocker** is a class with two or more counted families. There are 2 of them; the rest are single-family classes.
@@ -48,7 +48,7 @@ leverage 1.
 ### The mechanism behind each shared blocker
 
 * `no-admitted-recipe` — no admitted pristine-source recipe is recorded for this family in this venue, so the run is not attempted and manufactures no source URL
-  * fixability `recipe-admission`, 970 distinct mechanism(s), per-fix leverage 1.0: admit a pristine-source build recipe for the family
+  * fixability `recipe-admission`, 965 distinct mechanism(s), per-fix leverage 1.0: admit a pristine-source build recipe for the family
 * `recipe-build-system-unsupported` — the recipe stops at configure because the build system it invokes is not the project's
   * fixability `recipe-build-system`, 1 distinct mechanism(s), per-fix leverage 2.0: teach the recipe the project's actual build system (the source tree carries no runnable `./configure`)
   * mechanisms: `teach-recipe-build-system:no-configure`
@@ -64,24 +64,24 @@ the families.
 | step | families | share of the counted population |
 |---|---|---|
 | counted | 1000 | 1000/1000 (100.0%) |
-| with-admitted-recipe | 30 | 30/1000 (3.0%) |
-| configured | 28 | 28/1000 (2.8%) |
-| linked | 28 | 28/1000 (2.8%) |
+| with-admitted-recipe | 35 | 35/1000 (3.5%) |
+| configured | 33 | 33/1000 (3.3%) |
+| linked | 33 | 33/1000 (3.3%) |
 | loaded | 8 | 8/1000 (0.8%) |
 | runtime | 8 | 8/1000 (0.8%) |
 | functional | 8 | 8/1000 (0.8%) |
-| drop-in-pass | 28 | 28/1000 (2.8%) |
+| drop-in-pass | 33 | 33/1000 (3.3%) |
 
 ## The recipe-less decomposition
 
-The **970** `no-admitted-recipe` families are the dominant class, broken
+The **965** `no-admitted-recipe` families are the dominant class, broken
 down by what the frozen universe already knows about them — never by a claim about
 their buildability:
 
-* **source ecosystem**: `crates` 6, `distro` 964
-* **direct/transitive linkage**: `direct` 970
-* **distro breadth**: 0 → 2, 1 → 556, 2 → 311, 3 → 101
-* **consensus source breadth**: 1 → 493, 2 → 327, 3 → 111, 4 → 39
+* **source ecosystem**: `crates` 6, `distro` 959
+* **direct/transitive linkage**: `direct` 965
+* **distro breadth**: 0 → 2, 1 → 556, 2 → 308, 3 → 99
+* **consensus source breadth**: 1 → 493, 2 → 325, 3 → 109, 4 → 38
 
 * criterion: the frozen universe's own signals, read from forensics/downstream/families.json and forensics/downstream/family-freeze.json: the source ecosystem and the direct/transitive linkage a family carries, its distro breadth (how many distro packages list it) and its consensus source breadth (how many frozen ranking sources selected it). No signal here is a claim about the family's buildability
 
@@ -92,7 +92,7 @@ it is **not a measurement of buildability**: no family in it has been built by t
 analysis. The criterion is recorded with the artefact and repeated here.
 
 * criterion: source breadth descending, then distro breadth descending, then popularity descending, then canonical name ascending, then family_id ascending; the list is a **heuristic** ranking of which recipe-less counted families to admit next, never a measurement that any of them builds
-* showing the first 40 of 970 recipe-less families, `heuristic: true`
+* showing the first 40 of 965 recipe-less families, `heuristic: true`
 
 | rank | family | p1000 rank | ecosystem | linkage | source breadth | distro breadth | popularity |
 |---|---|---|---|---|---|---|---|
@@ -126,16 +126,16 @@ analysis. The criterion is recorded with the artefact and repeated here.
 | 28 | s-nail | 42 | distro | direct | 4 | 3 | 0 |
 | 29 | shairport-sync | 43 | distro | direct | 4 | 3 | 0 |
 | 30 | sofia-sip | 44 | distro | direct | 4 | 3 | 0 |
-| 31 | squid | 45 | distro | direct | 4 | 3 | 0 |
-| 32 | ssldump | 46 | distro | direct | 4 | 3 | 0 |
-| 33 | syslog-ng | 47 | distro | direct | 4 | 3 | 0 |
-| 34 | thrift | 48 | distro | direct | 4 | 3 | 0 |
-| 35 | tor | 49 | distro | direct | 4 | 3 | 0 |
-| 36 | unbound | 50 | distro | direct | 4 | 3 | 0 |
-| 37 | uwsgi | 51 | distro | direct | 4 | 3 | 0 |
-| 38 | w3m | 52 | distro | direct | 4 | 3 | 0 |
-| 39 | znc | 53 | distro | direct | 4 | 3 | 0 |
-| 40 | ausweisapp2 | 54 | distro | direct | 3 | 3 | 0 |
+| 31 | ssldump | 46 | distro | direct | 4 | 3 | 0 |
+| 32 | syslog-ng | 47 | distro | direct | 4 | 3 | 0 |
+| 33 | thrift | 48 | distro | direct | 4 | 3 | 0 |
+| 34 | tor | 49 | distro | direct | 4 | 3 | 0 |
+| 35 | unbound | 50 | distro | direct | 4 | 3 | 0 |
+| 36 | uwsgi | 51 | distro | direct | 4 | 3 | 0 |
+| 37 | w3m | 52 | distro | direct | 4 | 3 | 0 |
+| 38 | znc | 53 | distro | direct | 4 | 3 | 0 |
+| 39 | ausweisapp2 | 54 | distro | direct | 3 | 3 | 0 |
+| 40 | axel | 55 | distro | direct | 3 | 3 | 0 |
 
 ## Non-claims
 

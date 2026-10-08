@@ -348,9 +348,9 @@
         "candidate-link-failure": 0,
         "candidate-load-failure": 0,
         "candidate-runtime-failure": 0,
-        "no-admitted-recipe": 970,
+        "no-admitted-recipe": 965,
         "no-fixture": 0,
-        "none": 28,
+        "none": 33,
         "out-of-scope": 0,
         "recipe-build-dependency-missing": 0,
         "recipe-build-system-unsupported": 2
@@ -363,21 +363,21 @@
           "step": "counted"
         },
         {
-          "families": 30,
+          "families": 35,
           "level": "L1-admitted-source",
-          "share_of_counted": "30/1000 (3.0%)",
+          "share_of_counted": "35/1000 (3.5%)",
           "step": "with-admitted-recipe"
         },
         {
-          "families": 28,
+          "families": 33,
           "level": "L2-configured",
-          "share_of_counted": "28/1000 (2.8%)",
+          "share_of_counted": "33/1000 (3.3%)",
           "step": "configured"
         },
         {
-          "families": 28,
+          "families": 33,
           "level": "L4-linked",
-          "share_of_counted": "28/1000 (2.8%)",
+          "share_of_counted": "33/1000 (3.3%)",
           "step": "linked"
         },
         {
@@ -399,13 +399,13 @@
           "step": "functional"
         },
         {
-          "families": 28,
+          "families": 33,
           "level": "",
-          "share_of_counted": "28/1000 (2.8%)",
+          "share_of_counted": "33/1000 (3.3%)",
           "step": "drop-in-pass"
         }
       ],
-      "measurable_families": 28,
+      "measurable_families": 33,
       "partition": {
         "family:389-ds-base": "no-admitted-recipe",
         "family:abuild": "no-admitted-recipe",
@@ -944,7 +944,7 @@
         "family:kea": "no-admitted-recipe",
         "family:kea-ctrl-agent": "no-admitted-recipe",
         "family:kea-hooks": "no-admitted-recipe",
-        "family:keepalived": "no-admitted-recipe",
+        "family:keepalived": "none",
         "family:keepalived-snmp": "no-admitted-recipe",
         "family:keylime-agent-rust": "no-admitted-recipe",
         "family:keyring-ima-signer": "no-admitted-recipe",
@@ -1096,7 +1096,7 @@
         "family:libre": "no-admitted-recipe",
         "family:librelp": "no-admitted-recipe",
         "family:librepo": "no-admitted-recipe",
-        "family:libretls": "no-admitted-recipe",
+        "family:libretls": "none",
         "family:librgw2": "no-admitted-recipe",
         "family:libshout": "no-admitted-recipe",
         "family:libssh": "recipe-build-system-unsupported",
@@ -1285,7 +1285,7 @@
         "family:rpki-client": "no-admitted-recipe",
         "family:rpm": "no-admitted-recipe",
         "family:rspamd": "no-admitted-recipe",
-        "family:rsync": "no-admitted-recipe",
+        "family:rsync": "none",
         "family:rsyslog-openssl": "no-admitted-recipe",
         "family:rtl_433": "no-admitted-recipe",
         "family:ruby": "no-admitted-recipe",
@@ -1317,7 +1317,7 @@
         "family:springlobby": "no-admitted-recipe",
         "family:sqlcipher": "no-admitted-recipe",
         "family:squeezelite": "no-admitted-recipe",
-        "family:squid": "no-admitted-recipe",
+        "family:squid": "none",
         "family:srain": "no-admitted-recipe",
         "family:srt": "no-admitted-recipe",
         "family:srtp": "no-admitted-recipe",
@@ -1325,7 +1325,7 @@
         "family:ssldump": "no-admitted-recipe",
         "family:sslscan": "none",
         "family:sslsplit": "no-admitted-recipe",
-        "family:ssmtp": "no-admitted-recipe",
+        "family:ssmtp": "none",
         "family:sssd-common": "no-admitted-recipe",
         "family:sstp-client": "no-admitted-recipe",
         "family:strongswan": "no-admitted-recipe",
@@ -1408,10 +1408,10 @@
         "family:zfs-fuse": "no-admitted-recipe",
         "family:znc": "no-admitted-recipe"
       },
-      "partition_hash": "53af85fcc46fc7ce6dcce255e68e701183f9d54480dad2a54a0ec17d4fec78d9",
-      "recipe_backed_families": 30,
-      "recipe_less_families": 970,
-      "resolved_families": 28
+      "partition_hash": "22ba6c469496542f530095fc5ba56c575cd794ad252f3d8fd06f8b50a4f4b330",
+      "recipe_backed_families": 35,
+      "recipe_less_families": 965,
+      "resolved_families": 33
     },
     "before": {
       "captured_by": "forensics/tools/downstream_remediation.py --capture-baseline",
@@ -2491,7 +2491,7 @@
     },
     "counts": {
       "actions": 8,
-      "families_moved": 22,
+      "families_moved": 27,
       "fix_actions": 5,
       "new_recipes": 8,
       "new_recipes_linked": 8,
@@ -2537,6 +2537,11 @@
       },
       {
         "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:keepalived"
+      },
+      {
+        "after": "none",
         "before": "recipe-build-dependency-missing",
         "family_id": "family:kmod"
       },
@@ -2559,6 +2564,11 @@
         "after": "none",
         "before": "no-admitted-recipe",
         "family_id": "family:librdkafka"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libretls"
       },
       {
         "after": "none",
@@ -2588,12 +2598,27 @@
       {
         "after": "none",
         "before": "no-admitted-recipe",
+        "family_id": "family:rsync"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
         "family_id": "family:socat"
       },
       {
         "after": "none",
         "before": "no-admitted-recipe",
+        "family_id": "family:squid"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
         "family_id": "family:sslscan"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ssmtp"
       },
       {
         "after": "none",
@@ -2643,9 +2668,9 @@
         "delta": 0
       },
       "no-admitted-recipe": {
-        "after": 970,
+        "after": 965,
         "before": 988,
-        "delta": -18
+        "delta": -23
       },
       "no-fixture": {
         "after": 0,
@@ -2653,9 +2678,9 @@
         "delta": -2
       },
       "none": {
-        "after": 28,
+        "after": 33,
         "before": 6,
-        "delta": 22
+        "delta": 27
       },
       "out-of-scope": {
         "after": 0,
@@ -2817,13 +2842,13 @@
       "name": "the biggest-mover remediation record"
     }
   },
-  "body_hash": "1a01321a0ef784891864297f28f2449a375709262824dad44807644ef1cbd792",
+  "body_hash": "b681608ebda4c0919c0ae169a2ad03aacc37465f09e0438d93d12db0e8308fa6",
   "generator": "forensics/tools/downstream_remediation.py",
   "inputs": [
     {
       "name": "shared-blockers",
       "path": "forensics/downstream/shared-blockers.json",
-      "sha256": "09c0fe3b5878c2dea965caecc912d52568c7ec6e2e1b21d0b73e396f910be37c"
+      "sha256": "6e7807aa9fb2efe5cf6edbaaf8c37a8f6977e63d6b13b675123a0ba43548c041"
     },
     {
       "name": "blocker-remediation-baseline",
@@ -2833,22 +2858,22 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "f0eaf8f1241cb9b7e53c90efd617a09a9f39b7cd38391341c961e5998c0ebd87"
+      "sha256": "edba5a53394093ec5e36cec2c88f1d34994bd418d266de5d59055daeeb70350c"
     },
     {
       "name": "runtime-functional-atlas",
       "path": "forensics/downstream/runtime-functional-atlas.json",
-      "sha256": "77ba907d606cd2d37e078e9607a4abf996f08d387f8183de7ad295d9e852fe8b"
+      "sha256": "5ffb3b7be6268f23ca206b14db902b1bbdb0a23c175c93fb26817952bd86c67e"
     },
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "73eec67eba712447eb7958a9a2baa2ee60da7e757c79f0694729f8e00d8362d3"
+      "sha256": "4b0c4bfd813e2bf023ae656535ae838ec6bf06199bd6f33d1be1b6cc5f688782"
     },
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "aaf393ce40475789ae824cb96cf63539cdceb9fccefc27bd9bbd738ade8dacac"
+      "sha256": "cf7a8968d400dda2984fe772c8b8851aa732d922ad14e74bf3958eb6e2eae04a"
     },
     {
       "name": "families",
@@ -2868,7 +2893,7 @@
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "ee5cbdd84a8503ae49d18f70399ed15e56866e01cec3ef144cce4adc58f42122"
+      "sha256": "bc10c361ba294d371b56983fbde06725df3f777e357c3729ac93e05d51c3fdf8"
     },
     {
       "name": "phase24-guard",
@@ -2878,7 +2903,7 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "b39d46b1f6b48d0cd55e26867c71d7081aecb9e4777261f693259ab87f37943d"
+      "sha256": "beb0417ee8a6f610f89f41dcaf17825fafa4f2a568efe8729e787ec4c275498a"
     }
   ],
   "kind": "downstream-blocker-remediation",

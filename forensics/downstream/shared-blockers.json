@@ -3,7 +3,7 @@
   "body": {
     "blockers": [
       {
-        "blocked_families": 28,
+        "blocked_families": 33,
         "blocker_class": "none",
         "blocker_id": "blocker:none",
         "description": "the family is not blocked: it reached DROP_IN_PASS",
@@ -29,11 +29,13 @@
           "family:hiredis-ssl",
           "family:iperf3",
           "family:isync",
+          "family:keepalived",
           "family:kmod",
           "family:ldns",
           "family:libarchive",
           "family:libevent",
           "family:librdkafka",
+          "family:libretls",
           "family:links",
           "family:monit",
           "family:mosquitto",
@@ -43,8 +45,11 @@
           "family:proxytunnel",
           "family:pure-ftpd",
           "family:redis",
+          "family:rsync",
           "family:socat",
+          "family:squid",
           "family:sslscan",
+          "family:ssmtp",
           "family:stunnel",
           "family:tinc",
           "family:tnftp"
@@ -52,11 +57,11 @@
         "to_pass_potential": 0
       },
       {
-        "blocked_families": 970,
+        "blocked_families": 965,
         "blocker_class": "no-admitted-recipe",
         "blocker_id": "blocker:no-admitted-recipe",
         "description": "no admitted pristine-source recipe is recorded for this family in this venue, so the run is not attempted and manufactures no source URL",
-        "distinct_fix_mechanisms": 970,
+        "distinct_fix_mechanisms": 965,
         "evidence": [
           "forensics/downstream/p1000-run.json",
           "forensics/downstream/build-link-atlas.json",
@@ -593,7 +598,6 @@
           "admit-recipe:family:kea",
           "admit-recipe:family:kea-ctrl-agent",
           "admit-recipe:family:kea-hooks",
-          "admit-recipe:family:keepalived",
           "admit-recipe:family:keepalived-snmp",
           "admit-recipe:family:keylime-agent-rust",
           "admit-recipe:family:keyring-ima-signer",
@@ -740,7 +744,6 @@
           "admit-recipe:family:libre",
           "admit-recipe:family:librelp",
           "admit-recipe:family:librepo",
-          "admit-recipe:family:libretls",
           "admit-recipe:family:librgw2",
           "admit-recipe:family:libshout",
           "admit-recipe:family:libstrophe",
@@ -918,7 +921,6 @@
           "admit-recipe:family:rpki-client",
           "admit-recipe:family:rpm",
           "admit-recipe:family:rspamd",
-          "admit-recipe:family:rsync",
           "admit-recipe:family:rsyslog-openssl",
           "admit-recipe:family:rtl_433",
           "admit-recipe:family:ruby",
@@ -949,14 +951,12 @@
           "admit-recipe:family:springlobby",
           "admit-recipe:family:sqlcipher",
           "admit-recipe:family:squeezelite",
-          "admit-recipe:family:squid",
           "admit-recipe:family:srain",
           "admit-recipe:family:srt",
           "admit-recipe:family:srtp",
           "admit-recipe:family:sscg",
           "admit-recipe:family:ssldump",
           "admit-recipe:family:sslsplit",
-          "admit-recipe:family:ssmtp",
           "admit-recipe:family:sssd-common",
           "admit-recipe:family:sstp-client",
           "admit-recipe:family:strongswan",
@@ -1036,7 +1036,7 @@
           "admit-recipe:family:zfs-fuse",
           "admit-recipe:family:znc"
         ],
-        "mover_potential": 970,
+        "mover_potential": 965,
         "mover_potential_basis": "structural-upper-bound",
         "per_fix_leverage": 1.0,
         "shared_by": [
@@ -1568,7 +1568,6 @@
           "family:kea",
           "family:kea-ctrl-agent",
           "family:kea-hooks",
-          "family:keepalived",
           "family:keepalived-snmp",
           "family:keylime-agent-rust",
           "family:keyring-ima-signer",
@@ -1715,7 +1714,6 @@
           "family:libre",
           "family:librelp",
           "family:librepo",
-          "family:libretls",
           "family:librgw2",
           "family:libshout",
           "family:libstrophe",
@@ -1893,7 +1891,6 @@
           "family:rpki-client",
           "family:rpm",
           "family:rspamd",
-          "family:rsync",
           "family:rsyslog-openssl",
           "family:rtl_433",
           "family:ruby",
@@ -1924,14 +1921,12 @@
           "family:springlobby",
           "family:sqlcipher",
           "family:squeezelite",
-          "family:squid",
           "family:srain",
           "family:srt",
           "family:srtp",
           "family:sscg",
           "family:ssldump",
           "family:sslsplit",
-          "family:ssmtp",
           "family:sssd-common",
           "family:sstp-client",
           "family:strongswan",
@@ -2220,15 +2215,15 @@
       }
     ],
     "counts": {
-      "blocked_families": 972,
+      "blocked_families": 967,
       "blocker_classes": 12,
       "blocker_classes_present": 3,
       "families": 1000,
-      "measurable_families": 28,
-      "not_applicable_families": 972,
-      "recipe_backed_families": 30,
-      "recipe_less_families": 970,
-      "resolved_families": 28,
+      "measurable_families": 33,
+      "not_applicable_families": 967,
+      "recipe_backed_families": 35,
+      "recipe_less_families": 965,
+      "resolved_families": 33,
       "shared_blocker_classes": 2
     },
     "funnel": [
@@ -2239,21 +2234,21 @@
         "step": "counted"
       },
       {
-        "families": 30,
+        "families": 35,
         "level": "L1-admitted-source",
-        "share_of_counted": "30/1000 (3.0%)",
+        "share_of_counted": "35/1000 (3.5%)",
         "step": "with-admitted-recipe"
       },
       {
-        "families": 28,
+        "families": 33,
         "level": "L2-configured",
-        "share_of_counted": "28/1000 (2.8%)",
+        "share_of_counted": "33/1000 (3.3%)",
         "step": "configured"
       },
       {
-        "families": 28,
+        "families": 33,
         "level": "L4-linked",
-        "share_of_counted": "28/1000 (2.8%)",
+        "share_of_counted": "33/1000 (3.3%)",
         "step": "linked"
       },
       {
@@ -2275,9 +2270,9 @@
         "step": "functional"
       },
       {
-        "families": 28,
+        "families": 33,
         "level": "",
-        "share_of_counted": "28/1000 (2.8%)",
+        "share_of_counted": "33/1000 (3.3%)",
         "step": "drop-in-pass"
       }
     ],
@@ -2826,7 +2821,7 @@
       "family:kea": "no-admitted-recipe",
       "family:kea-ctrl-agent": "no-admitted-recipe",
       "family:kea-hooks": "no-admitted-recipe",
-      "family:keepalived": "no-admitted-recipe",
+      "family:keepalived": "none",
       "family:keepalived-snmp": "no-admitted-recipe",
       "family:keylime-agent-rust": "no-admitted-recipe",
       "family:keyring-ima-signer": "no-admitted-recipe",
@@ -2978,7 +2973,7 @@
       "family:libre": "no-admitted-recipe",
       "family:librelp": "no-admitted-recipe",
       "family:librepo": "no-admitted-recipe",
-      "family:libretls": "no-admitted-recipe",
+      "family:libretls": "none",
       "family:librgw2": "no-admitted-recipe",
       "family:libshout": "no-admitted-recipe",
       "family:libssh": "recipe-build-system-unsupported",
@@ -3167,7 +3162,7 @@
       "family:rpki-client": "no-admitted-recipe",
       "family:rpm": "no-admitted-recipe",
       "family:rspamd": "no-admitted-recipe",
-      "family:rsync": "no-admitted-recipe",
+      "family:rsync": "none",
       "family:rsyslog-openssl": "no-admitted-recipe",
       "family:rtl_433": "no-admitted-recipe",
       "family:ruby": "no-admitted-recipe",
@@ -3199,7 +3194,7 @@
       "family:springlobby": "no-admitted-recipe",
       "family:sqlcipher": "no-admitted-recipe",
       "family:squeezelite": "no-admitted-recipe",
-      "family:squid": "no-admitted-recipe",
+      "family:squid": "none",
       "family:srain": "no-admitted-recipe",
       "family:srt": "no-admitted-recipe",
       "family:srtp": "no-admitted-recipe",
@@ -3207,7 +3202,7 @@
       "family:ssldump": "no-admitted-recipe",
       "family:sslscan": "none",
       "family:sslsplit": "no-admitted-recipe",
-      "family:ssmtp": "no-admitted-recipe",
+      "family:ssmtp": "none",
       "family:sssd-common": "no-admitted-recipe",
       "family:sstp-client": "no-admitted-recipe",
       "family:strongswan": "no-admitted-recipe",
@@ -3290,7 +3285,7 @@
       "family:zfs-fuse": "no-admitted-recipe",
       "family:znc": "no-admitted-recipe"
     },
-    "partition_hash": "53af85fcc46fc7ce6dcce255e68e701183f9d54480dad2a54a0ec17d4fec78d9",
+    "partition_hash": "22ba6c469496542f530095fc5ba56c575cd794ad252f3d8fd06f8b50a4f4b330",
     "ranked_present": [
       "no-admitted-recipe",
       "recipe-build-system-unsupported",
@@ -3314,24 +3309,24 @@
       "by_distro_breadth": {
         "0": 2,
         "1": 556,
-        "2": 311,
-        "3": 101
+        "2": 308,
+        "3": 99
       },
       "by_openssl_linkage": {
-        "direct": 970
+        "direct": 965
       },
       "by_source_breadth": {
         "1": 493,
-        "2": 327,
-        "3": 111,
-        "4": 39
+        "2": 325,
+        "3": 109,
+        "4": 38
       },
       "by_source_ecosystem": {
         "crates": 6,
-        "distro": 964
+        "distro": 959
       },
       "criterion": "the frozen universe's own signals, read from forensics/downstream/families.json and forensics/downstream/family-freeze.json: the source ecosystem and the direct/transitive linkage a family carries, its distro breadth (how many distro packages list it) and its consensus source breadth (how many frozen ranking sources selected it). No signal here is a claim about the family's buildability",
-      "families": 970
+      "families": 965
     },
     "recipe_queue": [
       {
@@ -3635,16 +3630,6 @@
         "source_ecosystem": "distro"
       },
       {
-        "canonical_name": "squid",
-        "distro_breadth": 3,
-        "family_id": "family:squid",
-        "openssl_linkage": "direct",
-        "p1000_rank": 45,
-        "popularity": 0,
-        "source_breadth": 4,
-        "source_ecosystem": "distro"
-      },
-      {
         "canonical_name": "ssldump",
         "distro_breadth": 3,
         "family_id": "family:ssldump",
@@ -3733,13 +3718,23 @@
         "popularity": 0,
         "source_breadth": 3,
         "source_ecosystem": "distro"
+      },
+      {
+        "canonical_name": "axel",
+        "distro_breadth": 3,
+        "family_id": "family:axel",
+        "openssl_linkage": "direct",
+        "p1000_rank": 55,
+        "popularity": 0,
+        "source_breadth": 3,
+        "source_ecosystem": "distro"
       }
     ],
     "recipe_queue_rule": {
       "criterion": "source breadth descending, then distro breadth descending, then popularity descending, then canonical name ascending, then family_id ascending; the list is a **heuristic** ranking of which recipe-less counted families to admit next, never a measurement that any of them builds",
       "heuristic": true,
       "limit": 40,
-      "recipe_less_total": 970
+      "recipe_less_total": 965
     },
     "rule": {
       "constants": {
@@ -3834,13 +3829,13 @@
       }
     }
   },
-  "body_hash": "d4655412644e3870ba94bab59100917c841cfabdeb83a856ce698ee767f7a99f",
+  "body_hash": "506a0b8bd58c083ed98e644ea6d75fa214c9c57b83a4fba77f5eeb7ade996f39",
   "generator": "forensics/tools/downstream_blockers.py",
   "inputs": [
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "aaf393ce40475789ae824cb96cf63539cdceb9fccefc27bd9bbd738ade8dacac"
+      "sha256": "cf7a8968d400dda2984fe772c8b8851aa732d922ad14e74bf3958eb6e2eae04a"
     },
     {
       "name": "families",
@@ -3850,27 +3845,27 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "f0eaf8f1241cb9b7e53c90efd617a09a9f39b7cd38391341c961e5998c0ebd87"
+      "sha256": "edba5a53394093ec5e36cec2c88f1d34994bd418d266de5d59055daeeb70350c"
     },
     {
       "name": "runtime-functional-atlas",
       "path": "forensics/downstream/runtime-functional-atlas.json",
-      "sha256": "77ba907d606cd2d37e078e9607a4abf996f08d387f8183de7ad295d9e852fe8b"
+      "sha256": "5ffb3b7be6268f23ca206b14db902b1bbdb0a23c175c93fb26817952bd86c67e"
     },
     {
       "name": "failures",
       "path": "forensics/downstream/failures.json",
-      "sha256": "82aee711263f5f8fb2f5ddd7c9405cfe9839e980d4f12f2c3eaa29a3268786a1"
+      "sha256": "4236e53bad43f413129dad37aea5a900e25bf9820371c84ffca4e6e1359f6872"
     },
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "73eec67eba712447eb7958a9a2baa2ee60da7e757c79f0694729f8e00d8362d3"
+      "sha256": "4b0c4bfd813e2bf023ae656535ae838ec6bf06199bd6f33d1be1b6cc5f688782"
     },
     {
       "name": "reconciliation",
       "path": "forensics/downstream/reconciliation.json",
-      "sha256": "fe940199c6800b9f08777dc9bd2ba4633bffecc5631974012886da71f06df5d8"
+      "sha256": "8af4d8fec6df9a1b33e104dbc69793943aeecb997dfb2c904e0191181bdeaf61"
     },
     {
       "name": "downstream-blockers",
@@ -3890,7 +3885,7 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "b39d46b1f6b48d0cd55e26867c71d7081aecb9e4777261f693259ab87f37943d"
+      "sha256": "beb0417ee8a6f610f89f41dcaf17825fafa4f2a568efe8729e787ec4c275498a"
     }
   ],
   "kind": "downstream-shared-blockers",

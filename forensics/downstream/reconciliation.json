@@ -161,29 +161,29 @@
       "coverage_symbols": 600,
       "distinct_stressors": 3,
       "failures_hostility": 2,
-      "failures_p1000": 3928,
-      "failures_p1000_preserved": 3928,
-      "failures_preserved": 3930,
+      "failures_p1000": 3918,
+      "failures_p1000_preserved": 3918,
+      "failures_preserved": 3920,
       "families": 1000,
       "marginal_consumers": 6,
-      "measurable_families": 28,
-      "not_applicable_families": 972,
+      "measurable_families": 33,
+      "not_applicable_families": 967,
       "phase22_reachable_entities": 35432,
-      "residuals_total": 11373,
+      "residuals_total": 11363,
       "residuals_unclassified": 0,
       "residuals_unknown": 0,
-      "residuals_unresolved": 11172,
+      "residuals_unresolved": 11137,
       "status": {
         "FAIL": 0,
-        "NOT_APPLICABLE": 972,
+        "NOT_APPLICABLE": 967,
         "PARTIAL": 0,
-        "PASS": 28,
+        "PASS": 33,
         "UNKNOWN": 0
       },
       "usage_clusters": 3,
       "verdicts": {
-        "DROP_IN_NOT_APPLICABLE": 972,
-        "DROP_IN_PASS": 28
+        "DROP_IN_NOT_APPLICABLE": 967,
+        "DROP_IN_PASS": 33
       }
     },
     "coverage": {
@@ -263,25 +263,25 @@
           "runtime-functional-atlas"
         ],
         "by_disposition": {
-          "out-of-scope": 40,
-          "venue-limited": 3888
+          "out-of-scope": 50,
+          "venue-limited": 3868
         },
         "by_failure_class": {
-          "acquire-failure": 3880,
+          "acquire-failure": 3860,
           "configure-failure": 4,
-          "harness-failure": 40,
+          "harness-failure": 50,
           "link-failure": 4
         },
         "by_residual_class": {
-          "out-of-scope": 40,
-          "unavailable": 3880,
+          "out-of-scope": 50,
+          "unavailable": 3860,
           "unbuildable": 4,
           "unlinked": 4
         },
         "candidate_specific": 0,
         "divergences": 0,
         "minimized": 0,
-        "preserved": 3928,
+        "preserved": 3918,
         "sample": [
           {
             "class": "acquire-failure",
@@ -339,7 +339,7 @@
           }
         ],
         "source": "forensics/downstream/failures.json",
-        "total": 3928
+        "total": 3918
       },
       "taxonomy": [
         "acquire-failure",
@@ -361,22 +361,22 @@
     "ladder": {
       "families": 1000,
       "levels": {
-        "L2-configured": 28,
-        "L3-built": 28,
-        "L4-linked": 28,
+        "L2-configured": 33,
+        "L3-built": 33,
+        "L4-linked": 33,
         "L5-loaded": 8,
         "L6-runtime": 8,
         "L7-functional": 8
       },
-      "measurable_families": 28,
-      "not_applicable_families": 972,
+      "measurable_families": 33,
+      "not_applicable_families": 967,
       "population": "the frozen P1000",
       "raw_family_count": 1000,
       "status": {
         "FAIL": 0,
-        "NOT_APPLICABLE": 972,
+        "NOT_APPLICABLE": 967,
         "PARTIAL": 0,
-        "PASS": 28,
+        "PASS": 33,
         "UNKNOWN": 0
       },
       "unknown": 0
@@ -437,10 +437,10 @@
       "universe": 2100
     },
     "property_findings": [
-      "972/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 28 of 1000, so the drop-in rate is measured over 28 families and is not a population-wide rate",
+      "967/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 33 of 1000, so the drop-in rate is measured over 33 families and is not a population-wide rate",
       "the measured set exercised 600/6499 exported symbols, 42/81 public headers and 39/152 API families, so the atlas speaks for a thin slice of the authority's public surface",
-      "3928 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate",
-      "11172 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty"
+      "3918 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate",
+      "11137 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty"
     ],
     "property_status": "NOT_CLAIMED",
     "rates": {
@@ -451,16 +451,16 @@
           "rate": 0.0
         },
         "NOT_APPLICABLE": {
-          "count": 972,
-          "rate": 0.972
+          "count": 967,
+          "rate": 0.967
         },
         "PARTIAL": {
           "count": 0,
           "rate": 0.0
         },
         "PASS": {
-          "count": 28,
-          "rate": 0.028
+          "count": 33,
+          "rate": 0.033
         },
         "UNKNOWN": {
           "count": 0,
@@ -479,20 +479,20 @@
           "rate": 0.0
         },
         "PASS": {
-          "count": 28,
+          "count": 33,
           "rate": 1.0
         },
         "UNKNOWN": {
           "count": 0,
           "rate": 0.0
         },
-        "denominator": 28,
+        "denominator": 33,
         "note": "the drop-in question was posed for this many of the counted families: NOT_APPLICABLE is not a pass"
       },
       "population": {
         "families": 1000,
-        "measurable_families": 28,
-        "not_applicable_families": 972,
+        "measurable_families": 33,
+        "not_applicable_families": 967,
         "selection": "a selected population, not a random sample",
         "source": "forensics/downstream/family-freeze.json"
       },
@@ -529,16 +529,16 @@
           "rate": 0.0
         },
         "NOT_APPLICABLE": {
-          "count": 972,
-          "rate": 0.972
+          "count": 967,
+          "rate": 0.967
         },
         "PARTIAL": {
           "count": 0,
           "rate": 0.0
         },
         "PASS": {
-          "count": 28,
-          "rate": 0.028
+          "count": 33,
+          "rate": 0.033
         },
         "UNKNOWN": {
           "count": 0,
@@ -552,16 +552,16 @@
           "weight": 0
         },
         "NOT_APPLICABLE": {
-          "rate": 0.949221,
-          "weight": 1645
+          "rate": 0.941143,
+          "weight": 1631
         },
         "PARTIAL": {
           "rate": 0.0,
           "weight": 0
         },
         "PASS": {
-          "rate": 0.050779,
-          "weight": 88
+          "rate": 0.058857,
+          "weight": 102
         },
         "UNKNOWN": {
           "rate": 0.0,
@@ -575,8 +575,8 @@
     "residuals": {
       "by_plane": {
         "build-link-atlas": {
-          "none": 56,
-          "unavailable": 1940,
+          "none": 66,
+          "unavailable": 1930,
           "unbuildable": 4
         },
         "candidate-freeze": {
@@ -584,8 +584,8 @@
           "unavailable": 398
         },
         "failures": {
-          "out-of-scope": 40,
-          "unavailable": 3880,
+          "out-of-scope": 50,
+          "unavailable": 3860,
           "unbuildable": 4,
           "unlinked": 4
         },
@@ -598,14 +598,14 @@
           "unlinked": 1
         },
         "p1000-run": {
-          "none": 84,
-          "unavailable": 2910,
+          "none": 99,
+          "unavailable": 2895,
           "unbuildable": 6
         },
         "runtime-functional-atlas": {
           "none": 16,
-          "out-of-scope": 40,
-          "unavailable": 1940,
+          "out-of-scope": 50,
+          "unavailable": 1930,
           "unlinked": 4
         }
       },
@@ -625,10 +625,10 @@
         "authority-unsupported": 0,
         "candidate-patch-required": 0,
         "functional-divergence": 1,
-        "none": 201,
-        "out-of-scope": 80,
+        "none": 226,
+        "out-of-scope": 100,
         "runtime-failure": 0,
-        "unavailable": 11068,
+        "unavailable": 11013,
         "unbuildable": 14,
         "unknown": 0,
         "unlinked": 9
@@ -705,11 +705,11 @@
           "run_id": "run:runtime:authority:libssh"
         }
       ],
-      "resolved": 201,
-      "total": 11373,
+      "resolved": 226,
+      "total": 11363,
       "unclassified": 0,
       "unknown": 0,
-      "unresolved": 11172
+      "unresolved": 11137
     },
     "rule": {
       "clusters": "the marginal-consumer and usage-cluster analysis over the measured set, so the counted families are not read as that many independent stressors (the brief's sections 36 and 37)",
@@ -1354,18 +1354,18 @@
         "verdict": "DROP_IN_NOT_APPLICABLE"
       },
       {
-        "authority_applicable_level": "L0-catalogued",
-        "candidate_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
+        "candidate_level": "L4-linked",
         "candidate_specific_patch_count": 0,
         "canonical_name": "squid",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "family_id": "family:squid",
-        "linkage_proven": false,
+        "linkage_proven": true,
         "openssl_linkage": "direct",
         "p1000_rank": 45,
-        "recorded_verdict": "DROP_IN_NOT_APPLICABLE",
-        "residual_class": "unavailable",
-        "verdict": "DROP_IN_NOT_APPLICABLE"
+        "recorded_verdict": "DROP_IN_PASS",
+        "residual_class": "none",
+        "verdict": "DROP_IN_PASS"
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -1746,18 +1746,18 @@
         "verdict": "DROP_IN_NOT_APPLICABLE"
       },
       {
-        "authority_applicable_level": "L0-catalogued",
-        "candidate_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
+        "candidate_level": "L4-linked",
         "candidate_specific_patch_count": 0,
         "canonical_name": "keepalived",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "family_id": "family:keepalived",
-        "linkage_proven": false,
+        "linkage_proven": true,
         "openssl_linkage": "direct",
         "p1000_rank": 73,
-        "recorded_verdict": "DROP_IN_NOT_APPLICABLE",
-        "residual_class": "unavailable",
-        "verdict": "DROP_IN_NOT_APPLICABLE"
+        "recorded_verdict": "DROP_IN_PASS",
+        "residual_class": "none",
+        "verdict": "DROP_IN_PASS"
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -2754,18 +2754,18 @@
         "verdict": "DROP_IN_NOT_APPLICABLE"
       },
       {
-        "authority_applicable_level": "L0-catalogued",
-        "candidate_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
+        "candidate_level": "L4-linked",
         "candidate_specific_patch_count": 0,
         "canonical_name": "libretls",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "family_id": "family:libretls",
-        "linkage_proven": false,
+        "linkage_proven": true,
         "openssl_linkage": "direct",
         "p1000_rank": 145,
-        "recorded_verdict": "DROP_IN_NOT_APPLICABLE",
-        "residual_class": "unavailable",
-        "verdict": "DROP_IN_NOT_APPLICABLE"
+        "recorded_verdict": "DROP_IN_PASS",
+        "residual_class": "none",
+        "verdict": "DROP_IN_PASS"
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -6058,18 +6058,18 @@
         "verdict": "DROP_IN_NOT_APPLICABLE"
       },
       {
-        "authority_applicable_level": "L0-catalogued",
-        "candidate_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
+        "candidate_level": "L4-linked",
         "candidate_specific_patch_count": 0,
         "canonical_name": "rsync",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "family_id": "family:rsync",
-        "linkage_proven": false,
+        "linkage_proven": true,
         "openssl_linkage": "direct",
         "p1000_rank": 381,
-        "recorded_verdict": "DROP_IN_NOT_APPLICABLE",
-        "residual_class": "unavailable",
-        "verdict": "DROP_IN_NOT_APPLICABLE"
+        "recorded_verdict": "DROP_IN_PASS",
+        "residual_class": "none",
+        "verdict": "DROP_IN_PASS"
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -6338,18 +6338,18 @@
         "verdict": "DROP_IN_NOT_APPLICABLE"
       },
       {
-        "authority_applicable_level": "L0-catalogued",
-        "candidate_level": "L0-catalogued",
+        "authority_applicable_level": "L4-linked",
+        "candidate_level": "L4-linked",
         "candidate_specific_patch_count": 0,
         "canonical_name": "ssmtp",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "family_id": "family:ssmtp",
-        "linkage_proven": false,
+        "linkage_proven": true,
         "openssl_linkage": "direct",
         "p1000_rank": 401,
-        "recorded_verdict": "DROP_IN_NOT_APPLICABLE",
-        "residual_class": "unavailable",
-        "verdict": "DROP_IN_NOT_APPLICABLE"
+        "recorded_verdict": "DROP_IN_PASS",
+        "residual_class": "none",
+        "verdict": "DROP_IN_PASS"
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -14739,38 +14739,38 @@
       }
     ]
   },
-  "body_hash": "41ee2f6a5332f967b654fccb73f64cd06d9daf36ba758e08955e0f7043cb5e6b",
+  "body_hash": "327ab08b20ad5cbacc95e7c668bd03eafe7c06fa0514fd3a28c03207b97adbe9",
   "generator": "forensics/tools/downstream_reconciliation.py",
   "inputs": [
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "aaf393ce40475789ae824cb96cf63539cdceb9fccefc27bd9bbd738ade8dacac"
+      "sha256": "cf7a8968d400dda2984fe772c8b8851aa732d922ad14e74bf3958eb6e2eae04a"
     },
     {
       "name": "holdout",
       "path": "forensics/downstream/holdout.json",
-      "sha256": "b3ae7a579697a7724d4aa6bd9452020c5b8143852b9a1317f679882d6dc80be5"
+      "sha256": "53edab09762af37e514453a8c0e7c3fcff1aaad9d7e993dc6f187bc48fe14601"
     },
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "f0eaf8f1241cb9b7e53c90efd617a09a9f39b7cd38391341c961e5998c0ebd87"
+      "sha256": "edba5a53394093ec5e36cec2c88f1d34994bd418d266de5d59055daeeb70350c"
     },
     {
       "name": "runtime-functional-atlas",
       "path": "forensics/downstream/runtime-functional-atlas.json",
-      "sha256": "77ba907d606cd2d37e078e9607a4abf996f08d387f8183de7ad295d9e852fe8b"
+      "sha256": "5ffb3b7be6268f23ca206b14db902b1bbdb0a23c175c93fb26817952bd86c67e"
     },
     {
       "name": "failures",
       "path": "forensics/downstream/failures.json",
-      "sha256": "82aee711263f5f8fb2f5ddd7c9405cfe9839e980d4f12f2c3eaa29a3268786a1"
+      "sha256": "4236e53bad43f413129dad37aea5a900e25bf9820371c84ffca4e6e1359f6872"
     },
     {
       "name": "high-value-tier",
       "path": "forensics/downstream/high-value-tier.json",
-      "sha256": "52b8331f292914cf6e8aa799f829c120db8d6f47ad66515be7695d10bd5d1554"
+      "sha256": "88cf859a2bc8e4647850c26adadfa8fcc102332a71509b3456727415a315591d"
     },
     {
       "name": "hostility-corpus",
@@ -14780,12 +14780,12 @@
     {
       "name": "candidate-freeze",
       "path": "forensics/downstream/candidate-freeze.json",
-      "sha256": "277d18ee72dcf2cb6ae8e211bafd1f8a2912a17b4f79328af5d9990f471dfed0"
+      "sha256": "43ca472dbb82dab134bdb241a4fc3cbfe522046e0623070a4efd238f6ac37fdf"
     },
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "73eec67eba712447eb7958a9a2baa2ee60da7e757c79f0694729f8e00d8362d3"
+      "sha256": "4b0c4bfd813e2bf023ae656535ae838ec6bf06199bd6f33d1be1b6cc5f688782"
     },
     {
       "name": "usage-fingerprints",
@@ -14865,7 +14865,7 @@
     {
       "name": "phase-24-plan",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
-      "sha256": "b39d46b1f6b48d0cd55e26867c71d7081aecb9e4777261f693259ab87f37943d"
+      "sha256": "beb0417ee8a6f610f89f41dcaf17825fafa4f2a568efe8729e787ec4c275498a"
     }
   ],
   "kind": "downstream-atlas-reconciliation",

@@ -287,6 +287,17 @@ GENERATORS_BEFORE_LEDGERS = [
     # are built by `downstream_build_link.py`, which imports its catalogue. It must run **after** the
     # analysis above it, which it reads.
     "forensics/tools/downstream_recipe_campaign.py",
+    # Phase 24.19's close-candidate reclamation batch. Like 24.18's campaign it executes nothing: it
+    # is a **pure function of the committed Phase-24 planes** (the committed analysis, the build/link
+    # and runtime/functional atlases, the final P1000 run and the frozen P1000) plus the preserved
+    # pre-batch baseline `forensics/downstream/close-batch-baseline.json` and its own authored attempt
+    # record `forensics/downstream/close-batch-attempts.json`, so a stale committed record -- or a
+    # movement figure that disagrees with the planes, an admitted recipe the atlas does not show
+    # linked, or a classification finding that was not really built -- is a failure rather than a
+    # silent divergence. It reads no ledger; the RT-CLOSE-BATCH court re-derives the whole record
+    # through the same functions. The recipes it admits are built by `downstream_build_link.py`, which
+    # imports its catalogue. It must run **after** the campaign above it, which it reads.
+    "forensics/tools/downstream_close_batch.py",
     # Phase 24.6's **build/link atlas is deliberately not here, and not in `COMPARED`.** It is
     # produced by measurement -- real builds of real downstream releases inside the court container --
     # so the level each build reaches and the ELF it links are a function of the court's toolchain and
@@ -623,6 +634,12 @@ COMPARED = [
     # subtracted -- is a failure rather than a silent divergence.
     "forensics/downstream/recipe-campaign-baseline.json",
     "forensics/downstream/recipe-campaign.json",
+    # Phase 24.19's preserved pre-batch baseline and the close-candidate reclamation record derived
+    # from it: the baseline is the 24.18-state blocker summary captured once, and the record re-derives
+    # the re-measured `after` from the planes, so a stale record -- or a movement figure typed rather
+    # than subtracted -- is a failure rather than a silent divergence.
+    "forensics/downstream/close-batch-baseline.json",
+    "forensics/downstream/close-batch.json",
     # The detailed report 24.16 renders from `shared-blockers.json`, byte-compared so its prose
     # cannot drift from the analysis it cites. The marker-bounded `downstream-blockers` block of
     # `README.md` is compared in the same pass.

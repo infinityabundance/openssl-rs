@@ -2,7 +2,7 @@
 
 **STATUS: derived.** This status is not typed; it is the state `forensics/tools/phase_state.py`
 derives from artefact existence. The stratum's obligation ledger is empty of open rows —
-`forensics/phase24-obligations.json` reads `open_in_this_stratum: 0`, all eighteen contract units
+`forensics/phase24-obligations.json` reads `open_in_this_stratum: 0`, all nineteen contract units
 `implemented` — every earlier stratum is `complete`, and this document is the last required evidence
 `PHASE24_MODULES` names, so `forensics/phase-state.json` reports phase 24 **`complete`** with an
 empty blocking reason. That derived state is the phase-exit predicate (D421, D529): a ledger's own
@@ -13,7 +13,7 @@ whenever this document changes and is not restated here.
 
 **This seal compiles the downstream-1000 claim over the finished measurement the fourteen
 instruments of 24.1 through 24.14 landed, and the claim it licenses is the bounded one §5 states —
-nothing stronger.** Its eighteen courts are instruments that read committed evidence; each passes,
+nothing stronger.** Its nineteen courts are instruments that read committed evidence; each passes,
 and a pass is a statement about the instrument plus the measurement it made, not about a universal
 property. The **four non-claims** are named in §6: **a selected population is not a random sample**,
 **1000/1000 is not a security proof**, **a build is not a functional proof**, and **direct and
@@ -35,8 +35,8 @@ the counts and the measured movement, and §13.7 records the correction that lan
   `linux-x86_64-default-shared-legacy-notests`, platform `linux-x86_64`. The frozen candidate is the
   content-addressed **install** `de196adb…` (`forensics/downstream/candidate-freeze.json`), never
   live HEAD (the plan's §4.10 correction).
-- Court results: `artifacts/phase24/COURTS.json` — eighteen courts, `all_pass` true, `summary`
-  `pass` 18 of 18, `pending_courts` empty. **No court is FRF-declarable**: each carries
+- Court results: `artifacts/phase24/COURTS.json` — nineteen courts, `all_pass` true, `summary`
+  `pass` 19 of 19, `pending_courts` empty. **No court is FRF-declarable**: each carries
   `frf_declarable` `false` with its exclusion reason, because each reads committed evidence and
   stages no `artifacts/phase24/probes/<probe>.{authority,candidate}` pair (D13, D201). The per-court
   table is §2.
@@ -66,7 +66,7 @@ Phase 24 is the stratum `docs/RELEASE_GATES.md` §1 names "Downstream-1000 repla
 empirical drop-in corpus". Like Phases 16 through 23 it owns **no exported symbol**: reading
 `forensics/atlas/symbol-ownership.json` for `owner_phase == 24` yields nothing, and
 `forensics/atlas/provider-algorithms.json` assigns it no registration row. Its unit is the
-**downstream 1000 contract** — eighteen contract units, each measured by the court that lands with
+**downstream 1000 contract** — nineteen contract units, each measured by the court that lands with
 it — and it hands nothing forward and receives nothing: it adds no library surface, takes no unit or
 symbol deferral from an earlier stratum, and activates no provider.
 
@@ -79,7 +79,7 @@ build configuration and patch set), a **ranking source** (a frozen multi-source 
 ranked candidates **before** any candidate result existed), a **run** (one execution at one level
 under one subject), the **execution level** ladder L0 through L8 with an
 **authority-applicable baseline**, a **residual** classified from the closed vocabulary, and a
-**drop-in verdict** that is never a boolean of its own. Every one of the eighteen units is in
+**drop-in verdict** that is never a boolean of its own. Every one of the nineteen units is in
 `artifacts/phase24/COURTS.json` and passes.
 
 **A passing downstream court is an instrument, not a property.** Each unit records its measurement
@@ -92,7 +92,7 @@ population actually stands.
 `openssl_linkage` (`direct` or `transitive`), and the reconciliation computes one rate per class;
 the two are never added into a single figure (the brief's §30, the plan's §3.6).
 
-## 2. The eighteen courts and their evidence
+## 2. The nineteen courts and their evidence
 
 Every figure below is read from `artifacts/phase24/COURTS.json` and the plane it names, not typed. A
 passing court is an **instrument**: it ran and its control was honest; the property it names is
@@ -118,6 +118,7 @@ carried by the row's `findings`.
 | 24.16 | `RT-BLOCKER-LEVERAGE` | the biggest-mover shared-blocker analysis over the finished measurement | `pass` |
 | 24.17 | `RT-BLOCKER-REMEDIATION` | the biggest-mover remediation: the exact repairs, the preserved before, the re-measured after and the movement | `pass` |
 | 24.18 | `RT-RECIPE-CAMPAIGN` | the recipe-admission campaign: the attempts, the admitted recipes, the counts and the measured movement | `pass` |
+| 24.19 | `RT-CLOSE-BATCH` | the close-candidate reclamation: the 24.18 linkage misses, the dead-URL pins and the fresh draw, the admitted recipes, the classification findings and the measured movement | `pass` |
 
 Each court reads the artefact that carries its subject and maintains no list of its own, so it
 cannot disagree with the evidence it summarises (the plan's §3.5). Each derives controlled mutations
@@ -141,7 +142,7 @@ counted family has exactly one re-derived `drop_in_verdict`, every residual is c
 failure is preserved and minimized, and the rates are computed over the frozen population rather
 than typed. 24.15's `DOWNSTREAM-1000-SEAL` checks that the committed reconciliation, the final
 run, the candidate freeze and the FRF closure agree with one another and with the seal document;
-that the declared contract is the plan's eighteen units; that the bound §4 states is present rather
+that the declared contract is the plan's nineteen units; that the bound §4 states is present rather
 than hidden; and that the four non-claims §6 records are carried as findings. **A passing
 `DOWNSTREAM-1000-SEAL` is an instrument, not "the downstream ecosystem is safe":** it establishes
 that the atlas closed, not that any unmeasured consumer is compatible.
@@ -159,28 +160,33 @@ and **not** `artifacts/phase24/COURTS.json`. Those are exactly what this court's
 an instrument that read its own effect would flip with that effect rather than with the evidence it
 measures. This is the Phase-20 defect (§12) anticipated rather than repeated.
 
-## 4. The bound on the measurement — the honest reading of 972/1000 NOT_APPLICABLE
+## 4. The bound on the measurement — the honest reading of 967/1000 NOT_APPLICABLE
 
 The bound is stated plainly rather than hidden, and it is the load-bearing boundary of every figure
 below:
 
-- **The venue admits an authoritative, pinned, pristine source recipe for only 30 of the 1,000 counted families.**
-  The other 970 have no such recipe, and the atlas refuses to manufacture a source URL for them
+- **The venue admits an authoritative, pinned, pristine source recipe for only 35 of the 1,000 counted families.**
+  The other 965 have no such recipe, and the atlas refuses to manufacture a source URL for them
   (the plan's §3.4). A family with no recipe is recorded `acquire-failure`/`unavailable` and is
   **venue-limited**, never a pass and never a fail of that family. 24.17 admits a bounded batch of
   eight such families and repairs the recipe-backed blockers the venue can run (the plan's §4.13);
   24.18's **recipe-admission campaign** attempts 69 recipe-less counted families and admits ten
-  further venue-buildable recipes, each really built and linked against both subjects, so the
-  recipe-backed count moves from 20 to 30 (the plan's §4.14).
-- **The ladder is `PASS 28 / PARTIAL 0 / FAIL 0 / UNKNOWN 0 / NOT_APPLICABLE 972`.** Of the thirty
-  recipe-backed families, twenty-eight reach an authority-applicable baseline at L4 or above, so the
-  drop-in question is posed for those twenty-eight: **the candidate reaches its authority-applicable baseline for all 28 measurable families**.
-  All twenty-eight are `DROP_IN_PASS`; `DROP_IN_FAIL` is 0 and `DROP_IN_UNKNOWN` is 0.
-- **A `NOT_APPLICABLE` family is neither a pass nor a fail.** The 972 `DROP_IN_NOT_APPLICABLE`
+  further venue-buildable recipes, each really built and linked against both subjects (the plan's
+  §4.14); and 24.19's **close-candidate reclamation** attempts 63 further counted families -- the
+  24.18 linkage misses, its dead-URL pins re-pinned to working official URLs, and a fresh
+  deterministic draw -- and admits five more, each really built and linked against both subjects,
+  while recording three families that build in the venue but link no OpenSSL subject as classification
+  findings rather than forcing them to link (the plan's §4.15). The recipe-backed count moves from 20
+  to 30 at 24.18 and to 35 at 24.19.
+- **The ladder is `PASS 33 / PARTIAL 0 / FAIL 0 / UNKNOWN 0 / NOT_APPLICABLE 967`.** Of the thirty-five
+  recipe-backed families, thirty-three reach an authority-applicable baseline at L4 or above, so the
+  drop-in question is posed for those thirty-three: **the candidate reaches its authority-applicable baseline for all 33 measurable families**.
+  All thirty-three are `DROP_IN_PASS`; `DROP_IN_FAIL` is 0 and `DROP_IN_UNKNOWN` is 0.
+- **A `NOT_APPLICABLE` family is neither a pass nor a fail.** The 967 `DROP_IN_NOT_APPLICABLE`
   verdicts are the honest consequence of the admitted recipe coverage, not a measurement of those
   families: this venue did not pose the drop-in question for them, so it records that it did not
   rather than counting an unposed question as a pass. The raw family count (1,000) is visible beside
-  the measurable count (28) precisely so the 972 cannot be read as agreement.
+  the measurable count (33) precisely so the 967 cannot be read as agreement.
 - **The measured surface is thin against the known universe:** 600/6499 exported symbols, 42/81
   public headers and 39/152 API families. The atlas speaks for a slice of the authority's public
   surface, and it says so.
@@ -202,15 +208,15 @@ the drop-in ladder the plan requires it to make baseline-normalized:
 > admitted candidate install `de196adb…`, bounded to the venue's admitted pristine-source recipe
 > coverage: a content-addressed, reproducible, machine-queryable measurement of how a
 > precommitted, multi-source-selected population of **1,000** real OpenSSL downstream project
-> families depends on OpenSSL, in which only the **30** recipe-backed families have a posed drop-in
-> question, the ladder is `PASS 28 / PARTIAL 0 / FAIL 0 / UNKNOWN 0 / NOT_APPLICABLE 972`, the
-> candidate reaches its authority-applicable baseline for all 28 measurable families, every verdict
+> families depends on OpenSSL, in which only the **35** recipe-backed families have a posed drop-in
+> question, the ladder is `PASS 33 / PARTIAL 0 / FAIL 0 / UNKNOWN 0 / NOT_APPLICABLE 967`, the
+> candidate reaches its authority-applicable baseline for all 33 measurable families, every verdict
 > is baseline-normalized against the admitted authority, every residual is classified from the
 > closed vocabulary with `unknown` 0, every failure is preserved and minimized, the measured surface
 > is 600/6499 exported symbols, 42/81 public headers and 39/152 API families, the candidate-specific
 > downstream patch count is 0, and every rate is computed over the frozen population rather than
 > typed — and is explicitly bounded by the four non-claims of §6, by the coverage boundary §4
-> records (the 970 recipe-less families read `NOT_APPLICABLE`, which is neither a pass nor a fail),
+> records (the 965 recipe-less families read `NOT_APPLICABLE`, which is neither a pass nor a fail),
 > and by the measured / inferred / known-divergence / not-tested / not-claimed separation of §7.**
 
 Not: "proof that any consumer is safe"; not "the ecosystem drops in"; not "1000/1000"; and not a
@@ -245,7 +251,7 @@ The stratum keeps five kinds of statement apart (the brief's §69), and this is 
 the claim honest:
 
 * **measured** — what an instrument drove and observed: the imported surface of the counted
-  consumers, 600/6499 exported symbols, 42/81 public headers and 39/152 API families, and the twenty-eight
+  consumers, 600/6499 exported symbols, 42/81 public headers and 39/152 API families, and the thirty-three
   measurable families' baselines and verdicts. This is execution and import evidence.
 * **inferred** — the Phase-22 reachability closure (35,432 reachable entities over 7 roots), which
   is inference from the committed reference graph and is **never** execution; it is reported beside
@@ -253,7 +259,7 @@ the claim honest:
 * **known-divergence** — a difference the committed evidence names rather than erases: the two
   hostility-corpus candidate failures of §9. A known divergence is a
   preserved record, not a silently closed gap and not a P1000 rate.
-* **not-tested** — the 972 `NOT_APPLICABLE` families and any behaviour no instrument drove; an
+* **not-tested** — the 967 `NOT_APPLICABLE` families and any behaviour no instrument drove; an
   unposed question is recorded unposed, never a pass (the plan's §3.5).
 * **not-claimed** — the four non-claims of §6 and the properties no instrument measures (a security
   proof, a functional proof from a build, a population-wide rate from a selected population).
@@ -261,7 +267,7 @@ the claim honest:
 ## 8. FRF and Gemel: the chain entry, and why it is vacuous
 
 **This stratum owns no FRF-declarable court, so it begins no FRF chain and needs no Gemel
-checkpoint.** All eighteen courts read committed evidence and stage no
+checkpoint.** All nineteen courts read committed evidence and stage no
 `artifacts/phase24/probes/<probe>.{authority,candidate}` pair, so each carries `frf_declarable:
 false` with its exclusion reason in `artifacts/phase24/COURTS.json`. `forensics/tools/phase_state.py`'s
 `frf_gemel_blocking_reason` derives its requirement from that inventory, never from the registry it
@@ -327,22 +333,22 @@ Every figure is machine-derived from the landing artefacts (`forensics/downstrea
 | quantity | value |
 |---|---|
 | P1000 counted families | 1000 |
-| recipe-backed families | 30 |
-| measurable families | 28 |
-| not-applicable families | 972 |
-| `L2-configured` / `L3-built` / `L4-linked` | 28 / 28 / 28 |
+| recipe-backed families | 35 |
+| measurable families | 33 |
+| not-applicable families | 967 |
+| `L2-configured` / `L3-built` / `L4-linked` | 33 / 33 / 33 |
 | `L5-loaded` / `L6-runtime` / `L7-functional` | 8 / 8 / 8 |
-| ladder | `PASS 28 / PARTIAL 0 / FAIL 0 / UNKNOWN 0 / NOT_APPLICABLE 972` |
+| ladder | `PASS 33 / PARTIAL 0 / FAIL 0 / UNKNOWN 0 / NOT_APPLICABLE 967` |
 
 **The verdict histogram (the brief's §51):**
 
 | verdict | count |
 |---|---|
-| `DROP_IN_PASS` | 28 |
+| `DROP_IN_PASS` | 33 |
 | `DROP_IN_PARTIAL` | 0 |
 | `DROP_IN_FAIL` | 0 |
 | `DROP_IN_UNKNOWN` | 0 |
-| `DROP_IN_NOT_APPLICABLE` | 972 |
+| `DROP_IN_NOT_APPLICABLE` | 967 |
 
 **The coverage against the known universe (the brief's §35):**
 
@@ -363,7 +369,7 @@ counted families are not read as that many independent stressors.
 | candidate-specific defects discovered / minimized / fixed | 0 / 0 / 0 |
 | counted leftover records preserved (0 minimized) | 3928 |
 | resident hostility failures (preserved, scoped out of every P1000 rate) | 2 |
-| permanent courts added (the eighteen contract-unit instruments) | 18 |
+| permanent courts added (the nineteen contract-unit instruments) | 19 |
 | candidate-specific downstream patches | 0 |
 
 **The first-run results and the final result:**
@@ -372,7 +378,7 @@ counted families are not read as that many independent stressors.
 |---|---|
 | development first run: 6 measurable families and 6 reaching the baseline | measurable |
 | holdout first run: 1 measurable family and 1 DROP_IN_PASS | out-of-sample |
-| final result | `PASS 28 / PARTIAL 0 / FAIL 0 / UNKNOWN 0 / NOT_APPLICABLE 972` over 1,000 counted families (28 measurable) |
+| final result | `PASS 33 / PARTIAL 0 / FAIL 0 / UNKNOWN 0 / NOT_APPLICABLE 967` over 1,000 counted families (33 measurable) |
 
 **The Phase-22 projection (the brief's §34):** 600 directly-referenced symbols (measured
 execution/import evidence) beside 35,432 graph-reachable inferred entities (inference, never
@@ -390,9 +396,9 @@ is the measured surface hash, and the candidate identity is the frozen install's
 | bound root | value |
 |---|---|
 | P1000 selection root | `f2a0454fe4dca98556da2e958b6e70cebaf76becbebba69b2abd752e63deba4e` |
-| atlas root (reconciliation body) | `41ee2f6a5332f967b654fccb73f64cd06d9daf36ba758e08955e0f7043cb5e6b` |
-| consumer-receipt root | `54cc244ed4852d5067b0dd184ed6a082baf4ebc4169db9708170406a17d17846` |
-| residual root | `6ca4295efe9cf655be476c1c3bd251c42ab6a3865aa2373f1c882fdfa71f3853` |
+| atlas root (reconciliation body) | `327ab08b20ad5cbacc95e7c668bd03eafe7c06fa0514fd3a28c03207b97adbe9` |
+| consumer-receipt root | `d690cf07668ee0293fbe2457c46cc32e8d6d6944c5f1e02a2413fc226692d875` |
+| residual root | `670b3ba9cb6b4995e15414904d53bbeab52dfb7daaa9f25ec29786fca8b48ab1` |
 | coverage root (measured surface) | `c18b7a4f90919ac4c69ff0bacf8f97e03c1f77cd3f8f050878c4c590f785d68c` |
 | candidate identity | `de196adbd84f63c4d1f931a8982cb57df2ec6e20361d6dd25ce72d23d6694e8f` |
 
@@ -405,7 +411,7 @@ It is not a security proof, and it makes no claim about an unmeasured consumer; 
 population and its rates are rates for that population, not for all downstream software. A
 `DROP_IN_PASS` is a statement that one pristine variant of one specimen reached its
 authority-applicable baseline with proven linkage and zero patches — not that the consumer is
-correct, secure, or compatible in any configuration this venue did not build. The 982
+correct, secure, or compatible in any configuration this venue did not build. The 967
 `NOT_APPLICABLE` families are recorded unposed, not passed. The measured surface is a thin slice of
 the authority's public surface no instrument drove past the levels it records. And the two
 hostility-corpus candidate failures are preserved beside the counted result precisely because the
@@ -499,5 +505,29 @@ correction merged into the prose it corrects cannot be checked against what it r
    unit while the new court is unregistered and closes again when it passes
    (`forensics/phase24-obligations.json` reads `open_in_this_stratum: 0`, `owned` 18,
    `implemented` 18).
+8. **24.19 lands the close-candidate reclamation, a nineteenth contract unit, and this seal cites it
+   and its measured movement.** The plan's §2 gains the 24.19 row and §1's count moves to nineteen;
+   the ledger's `COURT_UNITS` gains `close-batch` with the closure *the `RT-CLOSE-BATCH` court
+   passes*; and the court re-derives the whole record from the committed planes and the preserved
+   pre-batch baseline `forensics/downstream/close-batch-baseline.json` and its authored attempt record
+   `forensics/downstream/close-batch-attempts.json`. The record
+   `forensics/downstream/close-batch.json` targets the 24.18 linkage misses, its dead-URL pins and a
+   fresh deterministic draw; it fixes the argv where the flags failed to enable a project's TLS
+   support, pins a correct official release URL where the pin had died, and admits only the recipes
+   actually configured, built and **linked against both subjects** under the identical-build-intent
+   rule. A family that builds in the venue but links no OpenSSL subject is recorded as a
+   **classification finding**, never forced to link a library it does not use, and every attempt --
+   admitted or not -- is recorded with its outcome and reason. The measured batch attempts **63**
+   counted families and admits **5** (`rsync 3.3.0`, `ssmtp 2.64`, `squid 6.12`, `keepalived 2.3.1`,
+   `libretls 3.8.1`, each really built and linked against both subjects) with **3** classification
+   findings (`nghttp2`, `gensio`, `vsftpd`), moving the frozen P1000's measurable, candidate-linked
+   and `DROP_IN_PASS` counts from **28 to 33** and its `no-admitted-recipe` count from **970 to 965**.
+   It is an **instrument**, not a repair of the properties: the batch's yield is a property of this
+   venue and this batch, not of the whole set, and a build/link is not a functional proof. `REQUIRED
+   MARKER`: this seal carries `forensics/downstream/close-batch.json` so the seal court refuses a seal
+   that has lost the link to the measured batch. The stratum re-opens with a nineteenth open unit
+   while the new court is unregistered and closes again when it passes
+   (`forensics/phase24-obligations.json` reads `open_in_this_stratum: 0`, `owned` 19,
+   `implemented` 19).
 
 SPDX-License-Identifier: Apache-2.0
