@@ -114,6 +114,14 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "MS-NON-RUST-TCB": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-SAFETY-OBLIGATIONS": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "MS-SOURCE-CENSUS": {
       "observations": 0,
       "verdict": "pass"
@@ -1020,7 +1028,7 @@
     "phase22": 0,
     "phase23": 0,
     "phase24": 0,
-    "phase25": 20,
+    "phase25": 18,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

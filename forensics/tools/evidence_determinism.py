@@ -381,6 +381,18 @@ GENERATORS_BEFORE_LEDGERS = [
     # `ms_non_rust_tcb.non_rust_sensitivity_control`) over the committed artefact and the on-disk file
     # universe. If a later subphase derives a pure aggregate from this inventory, that aggregate is
     # what belongs in this list.
+    #
+    # **Phase 25.3's safety obligations (`forensics/tools/ms_obligations.py` ->
+    # `artifacts/phase25/safety-obligations.json`) are a pure function of committed inputs, so they
+    # belong here and are byte-compared.** The plane binds every compiler-derived unsafe site of the
+    # 25.1 census to a grouped contract whose per-dimension obligations follow from the operation-kind
+    # -> dimension rule recorded in the plane and the source-stated contract the census indexed; it
+    # runs no compiler and reads no source tree, so `forensics/memory-safety/container.json` lists it
+    # `metadata_only` and the Docker-only guard admits it on any host. A stale committed plane -- or a
+    # typed count, a dropped site, or a discharge no source-stated contract can establish -- is a
+    # failure rather than a silent divergence, and the `MS-SAFETY-OBLIGATIONS` court re-runs the same
+    # pure checks over the committed artefact and the census it is derived from.
+    "forensics/tools/ms_obligations.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -697,6 +709,12 @@ COMPARED = [
     # checkpoint that moved is a failure rather than a silent divergence. It executes no probe and
     # opens no store.
     "forensics/atlas/phase24/frf-closure.json",
+    # Phase 25.3's safety obligations: a pure function of the committed 25.1 census and 25.2 non-Rust
+    # TCB and the operation-kind -> dimension rule the plane records, so a stale plane -- or a typed
+    # count, a dropped site, or a `discharged` obligation no source-stated contract can establish --
+    # is a failure rather than a silent divergence. It executes nothing and reads no source tree, so
+    # re-deriving it needs no compiler and no authority.
+    "artifacts/phase25/safety-obligations.json",
 ]
 
 # ---------------------------------------------------------------------------

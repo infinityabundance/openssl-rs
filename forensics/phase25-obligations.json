@@ -48,12 +48,16 @@
       },
       {
         "closure": "the `MS-SAFETY-OBLIGATIONS` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-SAFETY-OBLIGATIONS is pending",
+        "findings": [
+          "254669 obligation dimension(s) are open: no source-stated SAFETY contract names them (1846 unsafe site(s) state no contract at all), recorded open rather than hidden -- their establishment is later evidence's measurement, not this subphase's claim",
+          "19101 unsafe site(s) carry their contract to a caller (escapes_to_caller): the 14486 named dimension(s) on them are the caller's obligation, and this stratum records the escape without establishing the caller chain (the Phase-22 reachability crosswalk is 25.5's measurement), so they are findings, never discharges",
+          "0 obligation dimension(s) are classified discharged: a `// SAFETY:` comment is a source-stated contract, so naming a dimension makes it stated, never discharged, and this stratum never upgrades a statement to a discharge"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-SAFETY-OBLIGATIONS is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "safety-obligations",
         "what": "one safety obligation per unsafe site along its dimension (nullability, lifetime, aliasing, alignment, initialization, bounds, ownership, refcount, thread affinity, ABI, unwind, type validity and the rest), each naming how it is discharged or recorded open"
@@ -280,8 +284,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 3,
-      "open_in_this_stratum": 19,
+      "implemented": 4,
+      "open_in_this_stratum": 18,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -322,7 +326,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "0ce6a844fbfa2961534bb69b81e21cdb115967956d6085847bc4a2ac9417448f"
+      "sha256": "37201b0d5c84ff3046f8bd234de9881bf5066573e53b098874e794877ee36731"
     },
     {
       "name": "phase25-guard",
