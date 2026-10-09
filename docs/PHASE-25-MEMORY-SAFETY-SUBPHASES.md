@@ -137,7 +137,7 @@ record and this section is the activation measurement.**
 | 25.5 | **The Phase-22 reachability crosswalk** | the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas (`artifacts/phase25/phase22-crosswalk.json`), so reachability is the Phase-22 authority's answer rather than a second one. | 25.3 | `MS-PHASE22-CROSSWALK` |
 | 25.6 | **The Phase-24 downstream crosswalk** | the crosswalk from each unsafe site to the Phase-24 downstream-1000 usage evidence (`artifacts/phase25/phase24-crosswalk.json`), so downstream usage is the Phase-24 measurement's answer rather than a typed one. | 25.3, 24 | `MS-PHASE24-CROSSWALK` |
 | 25.7 | **The exposure/data-flow classification** | the classification of every unsafe site into the closed exposure classes (`artifacts/phase25/exposure.json`), so a site is reachable by measurement rather than by assertion, and a site reachable only in an unclaimed profile is recorded as such. | 25.5, 25.6 | `MS-EXPOSURE-CLASSIFICATION` |
-| 25.8 | **The unsafe reduction** | the reduction worklist (`artifacts/phase25/unsafe-reduction.json`): the reachable unsafe sites reduced by a safe intrinsic or a checked wrapper where the venue can, each with its before/after compiler-derived sites, and the sites that remain named rather than dropped. It never weakens the ABI or an unsafe lint to shrink the count. | 25.7 | `MS-UNSAFE-REDUCTION` |
+| 25.8 | **The unsafe reduction** | the reduction worklist (`artifacts/phase25/unsafe-reduction.json`): the reachable unsafe sites reduced by a safe intrinsic or a checked wrapper where the venue can, each with its before/after compiler-derived sites, and the sites that remain named rather than dropped. It proves a **safe-core reconstruction** by construction: a genuinely internal unsafe mechanism is replaced with safe Rust, every removed operation classified `ELIMINATED` or `RELOCATED_TO_BOUNDARY` and never `HIDDEN`, the before/after counts re-derived from the re-run census, and the Phase-24 downstream headline required unchanged. It never weakens the ABI or an unsafe lint to shrink the count. | 25.7 | `MS-UNSAFE-REDUCTION` |
 | 25.9 | **Miri** | the Miri results over the claimed profile (`artifacts/phase25/miri.json`), each with its tool state and its unsupported reason where it could not express the question. | 25.4, 25.8 | `MS-MIRI` |
 | 25.10 | **ASan/MSan** | the ASan and MSan results over the claimed profile (`artifacts/phase25/asan-msan.json`), each with its tool state and its unsupported reason. | 25.4, 25.8 | `MS-ASAN-MSMAN` |
 | 25.11 | **TSan** | the TSan results over the concurrency-relevant surface (`artifacts/phase25/tsan.json`), each with its tool state and its unsupported reason, so a race the tool could not observe is not read as absent. | 25.4, 25.8 | `MS-TSAN` |
@@ -169,7 +169,7 @@ evidence plane**, each artefact validated against a record kind in
 | `artifacts/phase25/ownership-planes.json` | allocations, ownership edges, callbacks, Send/Sync, globals, panic boundaries | `allocation_site`, `ownership_edge`, `callback_lifetime`, `send_sync_impl`, `global_state`, `panic_boundary` |
 | `artifacts/phase25/phase22-crosswalk.json`, `phase24-crosswalk.json` | the crosswalks to Phases 22 and 24 | the crosswalk courts' own checks |
 | `artifacts/phase25/exposure.json` | the exposure/data-flow classification | the exposure court's own checks |
-| `artifacts/phase25/unsafe-reduction.json` | the reduction worklist | the reduction court's own checks |
+| `artifacts/phase25/unsafe-reduction.json` | the reduction worklist and the safe-core reconstruction record | the reduction court's own checks |
 | `artifacts/phase25/miri.json` | the Miri results | `miri_result` |
 | `artifacts/phase25/asan-msan.json` | the ASan/MSan results | `sanitizer_result` |
 | `artifacts/phase25/tsan.json` | the TSan results | `sanitizer_result` |
@@ -204,10 +204,18 @@ unreproducible evidence (`docs/REPRODUCIBILITY.md` §1). The tool-specific envir
 miri, asan, tsan, msan, kani, cve-replay) are derived from the one committed base
 `forensics/memory-safety/container.json` names, never from one mutable kitchen-sink image.
 
-**3.4 No subphase weakens the ABI or an unsafe lint to shrink the count.** A reduction is a real
-safe intrinsic or a checked wrapper, recorded with its before/after compiler-derived sites; a lint
-is never silenced to make a site disappear, and the unsafe budget gate (§3.5) is not relaxed to let
-a candidate pass.
+**3.4 No subphase weakens the ABI or an unsafe lint to shrink the count, and a reconstruction is
+never `HIDDEN`.** A reduction is a real safe intrinsic or a checked wrapper, recorded with its
+before/after compiler-derived sites; a lint is never silenced to make a site disappear, and the
+unsafe budget gate (§3.5) is not relaxed to let a candidate pass. 25.8 additionally proves a
+**safe-core reconstruction** by construction: a genuinely internal unsafe mechanism is replaced with
+safe Rust, and every removed operation is classified `ELIMINATED` (the dangerous operation is gone
+from the census) or `RELOCATED_TO_BOUNDARY` (it survives only in an unavoidable, isolated FFI
+boundary). A `HIDDEN` reduction -- a mere wrapper that leaves the operation where it was -- is
+refused. The reconstruction conserves observable behaviour: the crate's tests pass, every court
+passes, and the Phase-24 downstream headline (the `DROP_IN_PASS` verdicts, the `p1000-run.json`
+ladder and the eight functional workloads) is re-read from the committed measurement and required
+unchanged.
 
 **3.5 The unsafe budget gate.** The stratum fixes an authored **unsafe budget**: the maximum number
 of unreduced reachable unsafe sites in the claimed profile. The gate fails a candidate whose
@@ -380,6 +388,29 @@ budget as a correction: `artifacts/phase25/source-census.json` must stay under a
 The correction is checked by the subphases' courts rather than asserted: each court re-derives every
 invariant from the decoded view, and the census court additionally enforces the budget (`docs/
 PHASE-25-MEMORY-SAFETY-SUBPHASES.md` sections 3.2, 4).
+
+**25.8 records the safe-core reconstruction, and it is checked rather than asserted.** The landed
+25.8 first published only the reduction worklist and applied **zero** reductions, reasoning that the
+reachable unsafe is the ABI contract. That is true of the reachable *boundary* sites, but it is not
+the whole of the unsafe TCB: `src/runtime/sparse_array.rs` held a genuinely **internal** unsafe
+mechanism -- a sixteen-way tree of raw `*mut *mut c_void` nodes reached by pointer arithmetic,
+raw dereferences and a `transmute` trampoline -- whose internals no public OpenSSL ABI symbol
+depends on. 25.8 reconstructs it as an owned `enum Node` whose children are `Box`es and whose
+deepest slots are the caller's values, with every descent, growth and walk written as safe
+indexing/recursion; the three observable fields (`levels`, `top`, `nelem`) and every entry-point
+signature are unchanged. Every removed operation is classified `ELIMINATED` (the operation is gone
+from the census) or `RELOCATED_TO_BOUNDARY` (it survives only in a thin wrapper whose whole body is
+the opaque-handle dereference, the caller's leaf call and the header release), never `HIDDEN`. The
+committed declaration `forensics/memory-safety/unsafe-reconstruction.json` names each removed site
+and its class; `ms_reduction.py` re-derives the before count as `after + the ELIMINATED set`, checks
+each removed site is absent from the live census and every relocation has a remaining boundary
+operation of its kind, and re-reads the Phase-24 downstream headline from the committed measurement
+and requires it unchanged. The reconstruction removed 50 net operations from the crate (subsystem
+184 -> 134 sites; crate 172051 -> 172001), and the `MS-UNSAFE-REDUCTION` court refuses a `HIDDEN`
+claim, a still-present "removed" site, a typed count, a changed downstream verdict and a weakened
+lint (ten seeded mutations, each caught with specificity holding). The census and every dependent
+plane (25.3 through 25.7) and the 25.2 non-Rust TCB were re-derived from the modified tree in the
+same commit.
 
 ## 5. Process
 

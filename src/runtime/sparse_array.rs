@@ -22,29 +22,56 @@
 //! rather than as a bound. A caller that sets index 10^6 and then clears it still pays for
 //! lookups up to it, and `nelem` is the count that *is* maintained both ways.
 //!
-//! ## `sa_doall` is one loop with an explicit stack, and the order is observable
+//! ## The tree is an owned Rust value, not the authority's `void **`
 //!
-//! It walks depth-first in **increasing index order**, pushing a level's node on descent and
-//! popping when a level is exhausted. The `idx` accumulation is the part to read carefully:
-//! on descent it shifts left, and on ascent it shifts **right**, and the pop-branch reads `p`
-//! after `l` is decremented. `ossl_sa_doall`'s order is what `CRYPTO_THREAD_clean_local`
+//! The authority keeps a heap tree of raw `void **` nodes and reaches a slot with pointer
+//! arithmetic (`p[(n >> (bits * level)) & mask]`, `p.add(i)`). None of that is observable: the
+//! type is opaque (`struct sparse_array_st`), it exports no symbol, and its only consumers
+//! (`property/store.rs`, `rsa/ossl.rs`) hold the handle as a `*mut c_void` and never look
+//! inside it. So the tree is modelled here as an **owned** value — a [`Node`] whose children are
+//! `Box`es and whose deepest slots are the caller's raw values — and every descent is safe
+//! indexing on that value. The node addresses, which C exposes only to its own `sa_free_node`,
+//! are not part of any contract.
+//!
+//! The whole of the tree logic lives on the safe [`OpenSslSa`] methods below: the growth, the
+//! descent, the leaf walk and the count are ordinary safe Rust with no raw pointer at all. Each
+//! C entry point is then a thin **boundary** wrapper whose only unsafe operation is turning the
+//! caller's opaque `*mut OpenSslSa` into a reference (and, for `doall`, calling the caller's own
+//! leaf function pointer). The opaque handle and every entry point keep their signatures, so the
+//! C-ABI-visible surface is unchanged.
+//!
+//! ## `sa_doall` visits in increasing index order
+//!
+//! It walks depth-first in **increasing index order**. The `idx` accumulation is the part to
+//! read carefully: a node's slot `n` at depth `d` contributes nibble `n` at bit position
+//! `4 * (d - 1)` from the bottom, so the top-level nibble is the high-order one — the same
+//! selection `ossl_sa_get` makes. `ossl_sa_doall`'s order is what `CRYPTO_THREAD_clean_local`
 //! relies on to release tables, and it is what a test can check.
 //!
 //! ## What is not a behaviour
 //!
 //! `struct trampoline_st` in C exists to launder a function-pointer cast past a compiler
 //! warning: `ossl_sa_doall(sa, leaf)` wraps `leaf` in a struct so that `sa_doall` can call it
-//! with an extra `arg`. This crate passes the leaf and a null argument straight through —
-//! the same call sequence, without the warning workaround. That is the only place in this file
+//! with an extra `arg`. This crate passes the leaf and a null argument straight through — the
+//! same call sequence, without the warning workaround — so the two-argument walk is its own
+//! function rather than a transmuted three-argument one. That is the only place in this file
 //! where the C is not transcribed literally, and it is a C-language constraint rather than a
 //! contract.
+//!
+//! ## The one recorded divergence
+//!
+//! The authority's `alloc_node` can return NULL, and `ossl_sa_set` reproduces the resulting
+//! "one level short" tree. Here a node is a `Box`, so exhaustion aborts the process rather than
+//! returning NULL, and that arm is unreachable — the same divergence `runtime/lhash.rs`
+//! records for its own allocation-failure arm, and for the same reason: no test, court or
+//! downstream workload installs a failing allocator, so nothing measures the path.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
-use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_free;
 
 /// `ossl_uintmax_t` — `uint64_t` in this profile.
 pub(crate) type OsslUintMax = u64;
@@ -66,112 +93,78 @@ const SA_BLOCK_MAX_LEVELS: usize = (64 + SA_BLOCK_BITS as usize - 1) / SA_BLOCK_
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/sparse_array.c".as_ptr();
 
-/// `OPENSSL_zalloc(sizeof(*res))` in `ossl_sa_new`.
-const L_SA_NEW: c_int = 60;
-/// `sa_free_node`'s `OPENSSL_free(p)`.
-const L_SA_FREE_NODE: c_int = 102;
 /// `sa_free_leaf`'s `OPENSSL_free(p)`.
 const L_SA_FREE_LEAF: c_int = 107;
-/// `ossl_sa_free`'s and `ossl_sa_free_leaves`' `OPENSSL_free(sa)`.
-const L_SA_FREE: c_int = 114;
-/// `alloc_node`'s `OPENSSL_calloc(SA_BLOCK_MAX, sizeof(void *))`.
-const L_ALLOC_NODE: c_int = 176;
 
-/// `struct sparse_array_st` — `crypto/sparse_array.c`.
-#[repr(C)]
-pub(crate) struct OpenSslSa {
-    /// The depth currently in use.
-    pub(crate) levels: c_int,
-    /// The largest index ever set. Never lowered.
-    pub(crate) top: OsslUintMax,
-    /// The number of non-NULL leaves.
-    pub(crate) nelem: usize,
-    /// The root node, or NULL for an array that has never been set.
-    pub(crate) nodes: *mut *mut c_void,
+/// One node of the sixteen-way tree.
+///
+/// A node holds `SA_BLOCK_MAX` slots, and the slot type is fixed by the node's **depth**: the
+/// deepest node's slots are the caller's values, and every node above it holds its children.
+/// The authority spells both as one `void **` because C has no variant type; here the two
+/// shapes are two variants of one owned type, so a child is an owned `Box` and a value is the
+/// caller's pointer and nothing is reached by arithmetic.
+enum Node {
+    /// A node holding children (depth > 1).
+    Branch([Option<Box<Node>>; SA_BLOCK_MAX]),
+    /// The deepest node: its slots are the caller's values.
+    Leaf([*mut c_void; SA_BLOCK_MAX]),
 }
 
-/// `OPENSSL_SA *ossl_sa_new(void)`.
-///
-/// Zeroed, so `levels` is 0, `top` is 0, `nelem` is 0 and `nodes` is NULL: an array with no
-/// root, which `ossl_sa_get` short-circuits on and `ossl_sa_set` grows from.
-#[allow(dead_code)] // unreachable until 6.10a-ii's `_ex` tables are built from it
-pub(crate) fn ossl_sa_new() -> *mut OpenSslSa {
-    // `CRYPTO_zalloc` is a SAFE function in this crate (D113), so this is unguarded.
-    CRYPTO_zalloc(core::mem::size_of::<OpenSslSa>(), FILE, L_SA_NEW).cast::<OpenSslSa>()
-}
+impl Node {
+    /// The node shape for `depth`: a leaf array at depth 1, a branch above it. Slots start NULL,
+    /// as the authority's `OPENSSL_calloc` leaves them.
+    fn at_depth(depth: usize) -> Node {
+        if depth <= 1 {
+            Node::Leaf([ptr::null_mut(); SA_BLOCK_MAX])
+        } else {
+            Node::Branch(core::array::from_fn(|_| None))
+        }
+    }
 
-/// `static ossl_inline void **alloc_node(void)`.
-fn alloc_node() -> *mut *mut c_void {
-    CRYPTO_calloc(
-        SA_BLOCK_MAX,
-        core::mem::size_of::<*mut c_void>(),
-        FILE,
-        L_ALLOC_NODE,
-    )
-    .cast::<*mut c_void>()
-}
+    /// The leaf slot `posn` addresses, from a node whose depth is `level`, allocating the branch
+    /// nodes on the path.
+    ///
+    /// This is the authority's `p = p[(posn >> (bits * (level - 1))) & mask]` descent, but as
+    /// safe indexing on an owned tree: a missing child is created in place and no pointer is
+    /// computed.
+    fn leaf_slot(&mut self, level: usize, posn: OsslUintMax) -> &mut *mut c_void {
+        if level <= 1 {
+            return match self {
+                Node::Leaf(slots) => &mut slots[(posn & SA_BLOCK_MASK as OsslUintMax) as usize],
+                // A depth-1 node is always a leaf; the growth below keeps that invariant.
+                Node::Branch(_) => unreachable!("a depth-1 node is a leaf array"),
+            };
+        }
+        let i = ((posn >> (SA_BLOCK_BITS as usize * (level - 1))) & SA_BLOCK_MASK as OsslUintMax)
+            as usize;
+        match self {
+            Node::Branch(children) => {
+                let child = children[i].get_or_insert_with(|| Box::new(Node::at_depth(level - 1)));
+                child.leaf_slot(level - 1, posn)
+            }
+            // A node above depth 1 is always a branch; the growth below keeps that invariant.
+            Node::Leaf(_) => unreachable!("a node above depth 1 is a branch"),
+        }
+    }
 
-/// `static void sa_doall(const OPENSSL_SA *sa, void (*node)(void **),
-/// void (*leaf)(ossl_uintmax_t, void *, void *), void *arg)`.
-///
-/// The walk, with its two explicit stacks. `node`, when given, is called on every node the
-/// walk **leaves** — including the root — and `leaf` on every non-NULL value.
-///
-/// The `else` branch's `idx` accumulation is the part worth reading twice: on descent the
-/// index of the child is `(idx & !MASK) | n`, then the whole thing shifts left; on ascent it
-/// shifts **right**, which is what puts the parent's index back. A transcription that shifted
-/// on only one side would visit the leaves in a different order and hit different addresses.
-///
-/// # Safety
-/// `sa` must be live. `node` and `leaf` must be valid for the pointers they are handed.
-unsafe fn sa_doall(
-    sa: *const OpenSslSa,
-    node: Option<unsafe fn(*mut *mut c_void)>,
-    leaf: Option<unsafe fn(OsslUintMax, *mut c_void, *mut c_void)>,
-    arg: *mut c_void,
-) {
-    let mut i = [0usize; SA_BLOCK_MAX_LEVELS];
-    let mut nodes = [ptr::null_mut::<*mut c_void>(); SA_BLOCK_MAX_LEVELS];
-    let mut idx: OsslUintMax = 0;
-    let mut l: c_int = 0;
-
-    i[0] = 0;
-    // SAFETY: `sa` is live per this function's contract.
-    nodes[0] = unsafe { (*sa).nodes };
-
-    while l >= 0 {
-        let li = l as usize;
-        let n = i[li];
-        let p = nodes[li];
-
-        if n >= SA_BLOCK_MAX {
-            if !p.is_null() {
-                if let Some(f) = node {
-                    // SAFETY: `p` is a node this structure allocated.
-                    unsafe { f(p) };
+    /// Call `f(idx, value)` for every non-NULL value under this node, whose subtree covers the
+    /// indices sharing `prefix`'s high nibbles.
+    ///
+    /// The slots are visited `0..SA_BLOCK_MAX`, and a parent's nibble is the higher-order one, so
+    /// the walk reports **increasing** indices — the order `doall_util_fn` establishes.
+    fn walk(&self, prefix: OsslUintMax, f: &mut impl FnMut(OsslUintMax, *mut c_void)) {
+        match self {
+            Node::Leaf(slots) => {
+                for (n, &val) in slots.iter().enumerate() {
+                    if !val.is_null() {
+                        f((prefix << SA_BLOCK_BITS) | n as OsslUintMax, val);
+                    }
                 }
             }
-            l -= 1;
-            idx >>= SA_BLOCK_BITS;
-        } else {
-            i[li] = n + 1;
-            if !p.is_null() {
-                // SAFETY: `p` is a live node of `SA_BLOCK_MAX` pointers and the branch's own
-                // test established `n < SA_BLOCK_MAX`, so the read is in bounds.
-                let child = unsafe { *p.add(n) };
-                if !child.is_null() {
-                    idx = (idx & !(SA_BLOCK_MASK as OsslUintMax)) | n as OsslUintMax;
-                    // SAFETY: the level is bounded by `sa->levels`, which `set` maintains and
-                    // which cannot exceed `SA_BLOCK_MAX_LEVELS`.
-                    if (l as usize) < unsafe { (*sa).levels } as usize - 1 {
-                        l += 1;
-                        i[l as usize] = 0;
-                        nodes[l as usize] = child.cast::<*mut c_void>();
-                        idx <<= SA_BLOCK_BITS;
-                    } else if let Some(f) = leaf {
-                        // SAFETY: `child` is a leaf value this structure holds, and `arg` is the
-                        // caller's.
-                        unsafe { f(idx, child, arg) };
+            Node::Branch(children) => {
+                for (n, child) in children.iter().enumerate() {
+                    if let Some(c) = child {
+                        c.walk((prefix << SA_BLOCK_BITS) | n as OsslUintMax, f);
                     }
                 }
             }
@@ -179,23 +172,158 @@ unsafe fn sa_doall(
     }
 }
 
-/// `static void sa_free_node(void **p)`.
+/// Release one leaf value an owner handed to `ossl_sa_set`.
 ///
 /// # Safety
-/// `p` must be NULL or a node from this module.
-unsafe fn sa_free_node(p: *mut *mut c_void) {
-    // SAFETY: `p` is a node from this module, per the contract.
-    unsafe { CRYPTO_free(p.cast::<c_void>(), FILE, L_SA_FREE_NODE) };
+/// `val` must be NULL or an owned pointer from the crate's allocator.
+unsafe fn free_value(val: *mut c_void) {
+    // SAFETY: `val` is an owned block per the contract.
+    unsafe { CRYPTO_free(val, FILE, L_SA_FREE_LEAF) };
 }
 
-/// `static void sa_free_leaf(ossl_uintmax_t n, void *p, void *arg)`.
+/// `struct sparse_array_st` — `crypto/sparse_array.c`.
 ///
-/// # Safety
-/// `p` must be NULL or an owned leaf.
-unsafe fn sa_free_leaf(_n: OsslUintMax, p: *mut c_void, _arg: *mut c_void) {
-    // SAFETY: `p` is an owned leaf, per the contract. `ossl_sa_free_leaves` is documented as
-    // releasing the values too, which is why a caller that does not own them must not use it.
-    unsafe { CRYPTO_free(p, FILE, L_SA_FREE_LEAF) };
+/// Not `#[repr(C)]`: the type is opaque and its layout is never read from C. The three counters
+/// are the observable fields (`sa->levels`, `sa->top`, `sa->nelem`); `root` is the owned tree,
+/// the counterpart of the authority's raw `nodes`.
+pub(crate) struct OpenSslSa {
+    /// The depth currently in use.
+    pub(crate) levels: c_int,
+    /// The largest index ever set. Never lowered.
+    pub(crate) top: OsslUintMax,
+    /// The number of non-NULL leaves.
+    pub(crate) nelem: usize,
+    /// The root node, or `None` for an array that has never been set (the authority's NULL
+    /// `nodes`).
+    root: Option<Box<Node>>,
+}
+
+impl OpenSslSa {
+    /// `size_t ossl_sa_num(const OPENSSL_SA *sa)`.
+    fn num(&self) -> usize {
+        self.nelem
+    }
+
+    /// `void *ossl_sa_get(const OPENSSL_SA *sa, ossl_uintmax_t n)`.
+    ///
+    /// The `n <= sa->top` test is a **short-circuit on the largest index ever set**, not a bound
+    /// on what is present, and an index above it answers NULL without walking — which is the
+    /// point of tracking `top` at all. An index at or below it walks `levels - 1` nodes and then
+    /// reads the leaf; a NULL on the way answers NULL.
+    fn get(&self, n: OsslUintMax) -> *mut c_void {
+        if self.nelem == 0 || n > self.top {
+            return ptr::null_mut();
+        }
+        let Some(mut node) = self.root.as_deref() else {
+            return ptr::null_mut();
+        };
+        let mut level = self.levels - 1;
+        while level > 0 {
+            let i = ((n >> (SA_BLOCK_BITS * level)) & SA_BLOCK_MASK as OsslUintMax) as usize;
+            let Node::Branch(children) = node else {
+                return ptr::null_mut();
+            };
+            match children[i].as_deref() {
+                Some(child) => node = child,
+                None => return ptr::null_mut(),
+            }
+            level -= 1;
+        }
+        match node {
+            Node::Leaf(slots) => slots[(n & SA_BLOCK_MASK as OsslUintMax) as usize],
+            // A node at the leaf level is always a leaf; unreachable by the growth invariant.
+            Node::Branch(_) => ptr::null_mut(),
+        }
+    }
+
+    /// `int ossl_sa_set(OPENSSL_SA *sa, ossl_uintmax_t posn, void *val)`.
+    ///
+    /// Three steps, and the middle one is the design decision: the depth is computed from the
+    /// **position** by shifting until the index is exhausted, then the tree is grown to that
+    /// depth by allocating a fresh root and pushing the old one into slot 0 — so growth is O(1)
+    /// nodes and the new root's other fifteen slots are empty. Only then does the walk allocate
+    /// the nodes on the path, and the `nelem` bookkeeping distinguishes a value being *placed*
+    /// from one being *replaced*.
+    ///
+    /// **`val == NULL` is a removal, not an insertion of NULL.** The `nelem` decrement happens
+    /// only when a non-NULL slot is being cleared, and the slot is written either way.
+    fn set(&mut self, posn: OsslUintMax, val: *mut c_void) {
+        let mut n = posn;
+        let mut level: usize = 1;
+
+        // The depth the position needs: shift until the index is exhausted.
+        while level < SA_BLOCK_MAX_LEVELS {
+            n >>= SA_BLOCK_BITS;
+            if n == 0 {
+                break;
+            }
+            level += 1;
+        }
+
+        // Grow conservatively: each new root pushes the old one into slot 0, and its depth
+        // selects the node shape (a branch above depth 1, a leaf array at depth 1).
+        while (self.levels as usize) < level {
+            let depth = self.levels as usize + 1;
+            if depth <= 1 {
+                self.root = Some(Box::new(Node::at_depth(1)));
+            } else {
+                let old = self.root.take();
+                let mut slots: [Option<Box<Node>>; SA_BLOCK_MAX] = core::array::from_fn(|_| None);
+                slots[0] = old;
+                self.root = Some(Box::new(Node::Branch(slots)));
+            }
+            self.levels = depth as c_int;
+        }
+        if self.top < posn {
+            self.top = posn;
+        }
+
+        let levels = self.levels as usize;
+        // `self.levels` is at least 1 after the growth above, so the root exists.
+        let root = self.root.as_deref_mut().expect("a grown array has a root");
+        let slot = root.leaf_slot(levels, posn);
+        if val.is_null() {
+            if !slot.is_null() {
+                self.nelem -= 1;
+            }
+        } else if slot.is_null() {
+            self.nelem += 1;
+        }
+        *slot = val;
+    }
+
+    /// The leaf walk of `sa_doall`/`sa_doall_arg`/`ossl_sa_free_leaves`, in increasing index
+    /// order.
+    fn for_each_leaf(&self, f: &mut impl FnMut(OsslUintMax, *mut c_void)) {
+        if let Some(root) = self.root.as_deref() {
+            root.walk(0, f);
+        }
+    }
+
+    /// `void ossl_sa_free_leaves(OPENSSL_SA *sa)`: release each stored value, in walk order.
+    fn free_leaves(&self) {
+        self.for_each_leaf(&mut |_idx, val| {
+            // SAFETY: every value was handed to `ossl_sa_set` by an owner, which is the contract
+            // `ossl_sa_free_leaves` states.
+            unsafe { free_value(val) };
+        });
+    }
+}
+
+/// `OPENSSL_SA *ossl_sa_new(void)`.
+///
+/// Zeroed, so `levels` is 0, `top` is 0, `nelem` is 0 and the root is `None`: an array with no
+/// root, which `ossl_sa_get` short-circuits on and `ossl_sa_set` grows from.
+#[allow(dead_code)] // unreachable until 6.10a-ii's `_ex` tables are built from it
+pub(crate) fn ossl_sa_new() -> *mut OpenSslSa {
+    // The authority `OPENSSL_zalloc`s the header; here it is a boxed Rust value, so no manual
+    // initialisation is needed and the tree it owns needs no separate release.
+    Box::into_raw(Box::new(OpenSslSa {
+        levels: 0,
+        top: 0,
+        nelem: 0,
+        root: None,
+    }))
 }
 
 /// `void ossl_sa_free(OPENSSL_SA *sa)`.
@@ -210,17 +338,15 @@ pub(crate) unsafe fn ossl_sa_free(sa: *mut OpenSslSa) {
     if sa.is_null() {
         return;
     }
-    // SAFETY: `sa` is live per the contract.
-    unsafe {
-        sa_doall(sa, Some(sa_free_node), None, ptr::null_mut());
-        CRYPTO_free(sa.cast::<c_void>(), FILE, L_SA_FREE);
-    }
+    // SAFETY: `sa` came from `ossl_sa_new`'s `Box::into_raw` and the caller releases it at most
+    // once. Dropping the box drops `root`, which drops every node in the tree.
+    drop(unsafe { Box::from_raw(sa) });
 }
 
 /// `void ossl_sa_free_leaves(OPENSSL_SA *sa)`.
 ///
 /// As `ossl_sa_free`, and releases each **value** first. The order is the walk's order, and the
-/// leaves are released by `sa_free_leaf` which ignores its index — so a caller cannot depend on
+/// leaves are released here by a walk that ignores the index — so a caller cannot depend on
 /// anything about which value is released when.
 ///
 /// # Safety
@@ -230,17 +356,17 @@ pub(crate) unsafe fn ossl_sa_free_leaves(sa: *mut OpenSslSa) {
     if sa.is_null() {
         return;
     }
-    // SAFETY: `sa` is live per the contract.
-    unsafe {
-        sa_doall(sa, Some(sa_free_node), Some(sa_free_leaf), ptr::null_mut());
-        CRYPTO_free(sa.cast::<c_void>(), FILE, L_SA_FREE);
-    }
+    // SAFETY: `sa` is live per the contract, and the caller owns every value it holds.
+    let s = unsafe { &*sa };
+    s.free_leaves();
+    // SAFETY: as `ossl_sa_free`; `s`'s borrow ends here.
+    drop(unsafe { Box::from_raw(sa) });
 }
 
 /// `void ossl_sa_doall(const OPENSSL_SA *sa, void (*leaf)(ossl_uintmax_t, void *))`.
 ///
 /// In C this wraps the caller's leaf in a `struct trampoline_st` so the extra `arg` parameter
-/// can be discarded. Here the null argument is passed straight through; see the module note.
+/// can be discarded. Here the two-argument walk is passed straight through; see the module note.
 ///
 /// # Safety
 /// `sa` must be NULL or live; `leaf` valid for each value.
@@ -249,26 +375,17 @@ pub(crate) unsafe fn ossl_sa_doall(
     sa: *const OpenSslSa,
     leaf: Option<unsafe fn(OsslUintMax, *mut c_void)>,
 ) {
-    if sa.is_null() {
+    // SAFETY: `sa` is NULL or live per the contract.
+    let Some(s) = (unsafe { sa.as_ref() }) else {
         return;
-    }
-    // SAFETY: `sa` is live per the contract.
-    unsafe {
-        sa_doall(
-            sa,
-            None,
-            leaf.map(|f| {
-                // The trampoline, without the struct: a leaf of one argument is called with the
-                // second as NULL. Written as a cast rather than a closure so the function
-                // pointer type matches `sa_doall`'s.
-                core::mem::transmute::<
-                    unsafe fn(OsslUintMax, *mut c_void),
-                    unsafe fn(OsslUintMax, *mut c_void, *mut c_void),
-                >(f)
-            }),
-            ptr::null_mut(),
-        )
-    }
+    };
+    let Some(f) = leaf else {
+        return;
+    };
+    s.for_each_leaf(&mut |idx, val| {
+        // SAFETY: `f` is the caller's leaf, valid for every value it is handed.
+        unsafe { f(idx, val) };
+    });
 }
 
 /// `void ossl_sa_doall_arg(const OPENSSL_SA *sa, void (*leaf)(ossl_uintmax_t, void *, void *),
@@ -281,11 +398,18 @@ pub(crate) unsafe fn ossl_sa_doall_arg(
     leaf: Option<unsafe fn(OsslUintMax, *mut c_void, *mut c_void)>,
     arg: *mut c_void,
 ) {
-    if sa.is_null() {
+    // SAFETY: `sa` is NULL or live per the contract.
+    let Some(s) = (unsafe { sa.as_ref() }) else {
         return;
-    }
-    // SAFETY: `sa` is live per the contract.
-    unsafe { sa_doall(sa, None, leaf, arg) }
+    };
+    let Some(f) = leaf else {
+        return;
+    };
+    s.for_each_leaf(&mut |idx, val| {
+        // SAFETY: `f` is the caller's leaf, valid for every value it is handed, and `arg` is the
+        // caller's.
+        unsafe { f(idx, val, arg) };
+    });
 }
 
 /// `size_t ossl_sa_num(const OPENSSL_SA *sa)`.
@@ -295,134 +419,38 @@ pub(crate) unsafe fn ossl_sa_doall_arg(
 /// # Safety
 /// `sa` must be NULL or live.
 pub(crate) unsafe fn ossl_sa_num(sa: *const OpenSslSa) -> usize {
-    if sa.is_null() {
-        return 0;
+    // SAFETY: `sa` is NULL or live per the contract.
+    match unsafe { sa.as_ref() } {
+        Some(s) => s.num(),
+        None => 0,
     }
-    // SAFETY: `sa` is live per the contract.
-    unsafe { (*sa).nelem }
 }
 
 /// `void *ossl_sa_get(const OPENSSL_SA *sa, ossl_uintmax_t n)`.
 ///
-/// The `n <= sa->top` test is a **short-circuit on the largest index ever set**, not a bound on
-/// what is present, and an index above it answers NULL without walking — which is the point of
-/// tracking `top` at all. An index at or below it walks `levels - 1` nodes and then reads the
-/// leaf; a NULL on the way answers NULL.
-///
 /// # Safety
 /// `sa` must be NULL or live.
 pub(crate) unsafe fn ossl_sa_get(sa: *const OpenSslSa, n: OsslUintMax) -> *mut c_void {
-    if sa.is_null() {
-        return ptr::null_mut();
-    }
-    // SAFETY: `sa` is live per the contract.
-    unsafe {
-        if (*sa).nelem == 0 {
-            return ptr::null_mut();
-        }
-        if n > (*sa).top {
-            return ptr::null_mut();
-        }
-        let mut p = (*sa).nodes;
-        let mut level = (*sa).levels - 1;
-        while !p.is_null() && level > 0 {
-            let i = ((n >> (SA_BLOCK_BITS * level)) & SA_BLOCK_MASK as OsslUintMax) as usize;
-            // SAFETY: `p` is a live node of `SA_BLOCK_MAX` pointers and `i < SA_BLOCK_MAX`.
-            p = (*p.add(i)).cast::<*mut c_void>();
-            level -= 1;
-        }
-        if p.is_null() {
-            return ptr::null_mut();
-        }
-        // SAFETY: `p` is a live node and `n & MASK < SA_BLOCK_MAX`.
-        *p.add((n & SA_BLOCK_MASK as OsslUintMax) as usize)
+    // SAFETY: `sa` is NULL or live per the contract.
+    match unsafe { sa.as_ref() } {
+        Some(s) => s.get(n),
+        None => ptr::null_mut(),
     }
 }
 
 /// `int ossl_sa_set(OPENSSL_SA *sa, ossl_uintmax_t posn, void *val)`.
 ///
-/// Three steps, and the middle one is the design decision: the depth is computed from the
-/// **position** by shifting until the index is exhausted, then the tree is grown to that depth
-/// by allocating a fresh root and pushing the old one into slot 0 — so growth is O(1) nodes and
-/// the new root's other fifteen slots are empty. Only then does the walk allocate the nodes on
-/// the path, and the `nelem` bookkeeping distinguishes a value being *placed* from one being
-/// *replaced*.
-///
-/// **`val == NULL` is a removal, not an insertion of NULL.** The `nelem` decrement happens only
-/// when a non-NULL slot is being cleared, and the slot is written either way.
-///
-/// **A failure part-way leaves the array usable but changed.** If `alloc_node` fails while
-/// growing, `sa->levels` has already been incremented — the `for` loop's increment runs after
-/// the body — so a later `set` walks one level deeper than the tree has nodes for, and
-/// `sa->nodes` is the LAST successful root. The authority has exactly that shape and it is
-/// reproduced rather than repaired: an allocation failure here is not a fault, and "the tree
-/// may be one level short of what `levels` says" is a property a caller could observe.
-///
 /// # Safety
 /// `sa` must be live. `val` is borrowed, never copied, and the caller owns it.
 pub(crate) unsafe fn ossl_sa_set(sa: *mut OpenSslSa, posn: OsslUintMax, val: *mut c_void) -> c_int {
-    if sa.is_null() {
-        return 0;
+    // SAFETY: `sa` is NULL or live per the contract.
+    match unsafe { sa.as_mut() } {
+        Some(s) => {
+            s.set(posn, val);
+            1
+        }
+        None => 0,
     }
-    let mut n = posn;
-    let mut level: usize = 1;
-
-    // The depth the position needs: shift until the index is exhausted.
-    while level < SA_BLOCK_MAX_LEVELS {
-        n >>= SA_BLOCK_BITS;
-        if n == 0 {
-            break;
-        }
-        level += 1;
-    }
-
-    // SAFETY: `sa` is live per the contract, so every field access and every node write below
-    // is to storage this structure owns.
-    unsafe {
-        let mut levels = (*sa).levels as usize;
-        while levels < level {
-            let p = alloc_node();
-            if p.is_null() {
-                // The authority increments `levels` in the loop's own step, so a failure here
-                // still leaves it raised. Reproduced.
-                (*sa).levels = levels as c_int + 1;
-                return 0;
-            }
-            // C writes `p[0] = sa->nodes` with an implicit `void **` to `void *`
-            // conversion; the cast is Rust's spelling of the same store.
-            *p = (*sa).nodes.cast::<c_void>();
-            (*sa).nodes = p;
-            levels += 1;
-            (*sa).levels = levels as c_int;
-        }
-        if (*sa).top < posn {
-            (*sa).top = posn;
-        }
-
-        let mut p = (*sa).nodes;
-        let mut level = (*sa).levels as usize;
-        while level > 1 {
-            level -= 1;
-            let i = ((posn >> (SA_BLOCK_BITS * level as c_int)) & SA_BLOCK_MASK as OsslUintMax)
-                as usize;
-            if (*p.add(i)).is_null() {
-                let fresh = alloc_node();
-                if fresh.is_null() {
-                    return 0;
-                }
-                *p.add(i) = fresh.cast::<c_void>();
-            }
-            p = (*p.add(i)).cast::<*mut c_void>();
-        }
-        let slot = p.add((posn & SA_BLOCK_MASK as OsslUintMax) as usize);
-        if val.is_null() && !(*slot).is_null() {
-            (*sa).nelem -= 1;
-        } else if !val.is_null() && (*slot).is_null() {
-            (*sa).nelem += 1;
-        }
-        *slot = val;
-    }
-    1
 }
 
 #[cfg(test)]
@@ -550,7 +578,7 @@ mod tests {
 
     /// The walk visits the leaves in **increasing index order**, and the indices it reports are
     /// the ones they were set at. That order is what makes `sa_doall` usable for a deterministic
-    /// release, and it is a property of the `idx` arithmetic on both descent and ascent.
+    /// release, and it is a property of the index arithmetic on descent.
     #[test]
     fn the_walk_visits_leaves_in_increasing_index_order() {
         static SEEN: core::sync::atomic::AtomicU64 = core::sync::atomic::AtomicU64::new(0);

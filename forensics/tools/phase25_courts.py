@@ -1215,6 +1215,7 @@ def _ms_unsafe_reduction_court(name: str) -> dict:
 
     counts = body.get("counts") or {}
     findings = list(body.get("findings") or [])
+    rec = body.get("reconstruction") or {}
 
     verdict = "pass" if (not problems and control.get("honest")
                          and control.get("specificity_holds")) else "fail"
@@ -1224,16 +1225,21 @@ def _ms_unsafe_reduction_court(name: str) -> dict:
         "method": (
             "stages no probe: it reads the committed artifacts/phase25/unsafe-reduction.json and "
             "re-runs the 25.8 pure checks (ms_reduction.reduction_findings and "
-            "ms_reduction.reduction_sensitivity_control) over it, the committed 25.1 census it reduces "
-            "and the committed 25.7 exposure classification it reads for reachability, without a "
-            "compiler. The plane is a pure derivation: each reachable compiler-derived site is "
-            "assigned one candidate class by a total function of its operation kind and its committed "
-            "source span, and for each class the worklist records the proposed safe-intrinsic "
-            "replacement or the reason it is not behaviour-preserving. It establishes the applied "
-            "reductions' evidence and before/after sites, the unchanged lint policy and ABI, the "
-            "worklist's exact accounting of the reachable sites not reduced, the derived counts and "
-            "the frozen census; six seeded mutations are each caught with specificity holding "
-            "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.4)."
+            "ms_reduction.reduction_sensitivity_control) over it, the committed 25.1 census it "
+            "reduces, the committed 25.7 exposure classification it reads for reachability, the "
+            "committed reconstruction declaration and the committed Phase-24 downstream "
+            "measurement -- no compiler. Two parts. (1) The **reduction worklist**: each reachable "
+            "compiler-derived site is assigned one candidate class by a total function of its "
+            "operation kind and committed span, and the class records the proposed safe-intrinsic "
+            "replacement or the reason it is not behaviour-preserving. (2) The **safe-core "
+            "reconstruction**: it re-derives the subsystem's before/after counts (`after + the "
+            "ELIMINATED set`), classifies every removed operation ELIMINATED or "
+            "RELOCATED_TO_BOUNDARY, and refuses a HIDDEN claim (a wrapper), a 'removed' site still "
+            "present in the live census, a relocation with no boundary operation, a typed count, a "
+            "weakened lint and a **changed downstream verdict** (the Phase-24 DROP_IN_PASS count, "
+            "ladder and eight functional workloads are re-read from the committed measurement and "
+            "required to match the frozen baseline). Ten seeded mutations are each caught with "
+            "specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.4)."
         ),
         "frf_declarable": False,
         "frf_exclusion": (
@@ -1249,6 +1255,18 @@ def _ms_unsafe_reduction_court(name: str) -> dict:
             "reduced": counts.get("reduced", 0),
             "rejected": counts.get("rejected", 0),
             "residuals": len(body.get("residuals") or []),
+        },
+        "reconstruction": {
+            "subsystem": (rec.get("subsystem") or {}).get("id"),
+            "sites_before": ((rec.get("counts") or {}).get("before") or {}).get("sites"),
+            "sites_after": ((rec.get("counts") or {}).get("after") or {}).get("sites"),
+            "net_reduced": (rec.get("counts") or {}).get("net_reduced"),
+            "relocated_to_boundary": (rec.get("counts") or {}).get("relocated_to_boundary"),
+            "test_only_sites": (rec.get("boundary") or {}).get("test_only_sites"),
+            "operations": rec.get("operations"),
+            "tests": rec.get("tests"),
+            "downstream": rec.get("downstream"),
+            "hidden": (rec.get("conservation") or {}).get("hidden"),
         },
         "worklist": {e.get("pattern"): (e.get("sites") or {}).get("count", 0)
                      for e in sorted(body.get("worklist") or [],
