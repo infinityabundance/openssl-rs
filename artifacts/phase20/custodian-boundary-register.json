@@ -116,10 +116,10 @@
         "unsafe_measured_not_asserted": true,
         "unsafe_not_a_memory_safety_claim": true,
         "unsafe_footprint_present": true,
-        "unsafe_footprint_sites": 58818,
-        "unsafe_footprint_extern_c": 10866,
+        "unsafe_footprint_sites": 58842,
+        "unsafe_footprint_extern_c": 10869,
         "unsafe_core_sites": 52943,
-        "unsafe_boundary_sites": 5875,
+        "unsafe_boundary_sites": 5899,
         "unsafe_bounds_present": true,
         "unsafe_bounds_schema": "openssl-rs/unsafe-bounds/v1",
         "unsafe_bounds_core_modules": 69

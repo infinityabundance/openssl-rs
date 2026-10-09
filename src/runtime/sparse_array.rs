@@ -29,9 +29,9 @@
 //! type is opaque (`struct sparse_array_st`), it exports no symbol, and its only consumers
 //! (`property/store.rs`, `rsa/ossl.rs`) hold the handle as a `*mut c_void` and never look
 //! inside it. So the tree is modelled here as an **owned** value — a [`Node`] whose children are
-//! `Box`es and whose deepest slots are the caller's raw values — and every descent is safe
-//! indexing on that value. The node addresses, which C exposes only to its own `sa_free_node`,
-//! are not part of any contract.
+//! owned [`OwnedNode`]s and whose deepest slots are the caller's raw values — and every descent
+//! is safe indexing on that value. The node addresses, which C exposes only to its own
+//! `sa_free_node`, are not part of any contract.
 //!
 //! The whole of the tree logic lives on the safe [`OpenSslSa`] methods below: the growth, the
 //! descent, the leaf walk and the count are ordinary safe Rust with no raw pointer at all. Each
@@ -40,13 +40,47 @@
 //! leaf function pointer). The opaque handle and every entry point keep their signatures, so the
 //! C-ABI-visible surface is unchanged.
 //!
-//! ## `sa_doall` visits in increasing index order
+//! ## Every node is allocated through the crate's allocator seam
+//!
+//! The authority's `alloc_node` is `OPENSSL_calloc(SA_BLOCK_MAX, sizeof(void *))` and its header
+//! is `OPENSSL_zalloc`, both of which route through `CRYPTO_set_mem_functions`' dispatch — so a
+//! caller that installs its own allocator sees every node allocation, and on exhaustion the
+//! allocation returns NULL and `ossl_sa_set` returns 0. A bare `Box::new` would not do that: it
+//! allocates through Rust's global allocator (invisible to those hooks) and **aborts** on
+//! exhaustion instead of returning a failure. So the owned nodes are allocated with
+//! [`crate::runtime::mem::CRYPTO_zalloc`] and released with
+//! [`crate::runtime::mem::CRYPTO_free`], through the [`OwnedNode`] owner below, and `set` is
+//! fallible so a failed allocation propagates as the `0` the authority answers. The header is
+//! allocated and released the same way. `OwnedNode` is the *only* place the seam is crossed.
+//!
+//! One measured difference remains and is not hidden: the authority's node is `SA_BLOCK_MAX *
+//! sizeof(void *)` (128 bytes on this profile) because C spells both node shapes as one
+//! `void **`, while the owned [`Node`] enum carries a one-byte discriminant (136 bytes). The
+//! block is opaque and its size is not part of any contract; the *count* of node allocations
+//! and their *failure* behaviour match the authority exactly, which is what a caller's allocator
+//! hook acts on. This is recorded, with the differential that measured it, in the Phase-25
+//! reconstruction (`forensics/memory-safety/unsafe-reconstruction.json`).
+//!
+//! ## `sa_doall` visits in increasing index order, and survives a re-entrant callback
 //!
 //! It walks depth-first in **increasing index order**. The `idx` accumulation is the part to
 //! read carefully: a node's slot `n` at depth `d` contributes nibble `n` at bit position
 //! `4 * (d - 1)` from the bottom, so the top-level nibble is the high-order one — the same
 //! selection `ossl_sa_get` makes. `ossl_sa_doall`'s order is what `CRYPTO_THREAD_clean_local`
 //! relies on to release tables, and it is what a test can check.
+//!
+//! The walk **snapshots each leaf `(index, value)` pair before it calls the caller's function**,
+//! exactly as the crate's `OPENSSL_LH_doall` snapshots its item list. That is load-bearing: a
+//! callback is permitted to re-enter the array and clear the slot it was handed —
+//! `property/store.rs`'s `alg_cleanup` does exactly that through `ossl_sa_set(…, NULL)` while
+//! `ossl_method_store_free` walks the same array — and the authority's `sa_doall` reads each
+//! slot before it calls back, so the clear cannot disturb the walk. Snapshotting gives the same
+//! guarantee *and* keeps the walk sound in Rust: a callback that mutates the array through its
+//! `*mut` must not run while a `&` into that array is still borrowed by the loop. A callback
+//! that instead **inserted** or **grew** the array, or freed it, would corrupt the authority's
+//! walk too; the permitted re-entrancy is a clear of the handed slot, and that is what is
+//! supported. The Phase-25 reconstruction records this as a safety obligation with its
+//! evidence.
 //!
 //! ## What is not a behaviour
 //!
@@ -58,20 +92,15 @@
 //! where the C is not transcribed literally, and it is a C-language constraint rather than a
 //! contract.
 //!
-//! ## The one recorded divergence
-//!
-//! The authority's `alloc_node` can return NULL, and `ossl_sa_set` reproduces the resulting
-//! "one level short" tree. Here a node is a `Box`, so exhaustion aborts the process rather than
-//! returning NULL, and that arm is unreachable — the same divergence `runtime/lhash.rs`
-//! records for its own allocation-failure arm, and for the same reason: no test, court or
-//! downstream workload installs a failing allocator, so nothing measures the path.
-//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_void};
+use core::mem::size_of;
+use core::ops::{Deref, DerefMut};
 use core::ptr;
+use core::ptr::NonNull;
 
-use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 /// `ossl_uintmax_t` — `uint64_t` in this profile.
 pub(crate) type OsslUintMax = u64;
@@ -93,21 +122,84 @@ const SA_BLOCK_MAX_LEVELS: usize = (64 + SA_BLOCK_BITS as usize - 1) / SA_BLOCK_
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/sparse_array.c".as_ptr();
 
-/// `sa_free_leaf`'s `OPENSSL_free(p)`.
+/// The authority's `ossl_sa_new` line, where `OPENSSL_zalloc` allocates the header.
+const L_SA_NEW: c_int = 60;
+/// The authority's `sa_free_node` line, where `OPENSSL_free` releases a node.
+const L_SA_FREE_NODE: c_int = 102;
+/// The authority's `sa_free_leaf` line, where `OPENSSL_free` releases a value.
 const L_SA_FREE_LEAF: c_int = 107;
+/// The authority's `ossl_sa_free` line, where `OPENSSL_free` releases the header.
+const L_SA_FREE: c_int = 114;
+/// The authority's `alloc_node` line, where `OPENSSL_calloc` allocates a node.
+const L_SA_ALLOC_NODE: c_int = 176;
 
 /// One node of the sixteen-way tree.
 ///
 /// A node holds `SA_BLOCK_MAX` slots, and the slot type is fixed by the node's **depth**: the
 /// deepest node's slots are the caller's values, and every node above it holds its children.
 /// The authority spells both as one `void **` because C has no variant type; here the two
-/// shapes are two variants of one owned type, so a child is an owned `Box` and a value is the
-/// caller's pointer and nothing is reached by arithmetic.
+/// shapes are two variants of one owned type, so a child is an owned [`OwnedNode`] and a value
+/// is the caller's pointer and nothing is reached by arithmetic.
 enum Node {
     /// A node holding children (depth > 1).
-    Branch([Option<Box<Node>>; SA_BLOCK_MAX]),
+    Branch([Option<OwnedNode>; SA_BLOCK_MAX]),
     /// The deepest node: its slots are the caller's values.
     Leaf([*mut c_void; SA_BLOCK_MAX]),
+}
+
+/// An owning pointer to a [`Node`] allocated through the crate's allocator seam.
+///
+/// This is the one place the tree crosses [`crate::runtime::mem`]: `new` allocates the node
+/// block with `CRYPTO_zalloc` (so a caller-installed allocator observes it, and exhaustion is a
+/// NULL return rather than an abort) and `Drop` releases it with `CRYPTO_free`. `Deref`/`DerefMut`
+/// make the node's interior safe indexing everywhere else, exactly as `Box<Node>` would.
+struct OwnedNode(NonNull<Node>);
+
+impl OwnedNode {
+    /// Allocate `value` through the installed allocator, or `None` if it answers NULL.
+    ///
+    /// The authority's `alloc_node` is `OPENSSL_calloc`, which is this `CRYPTO_zalloc` of the
+    /// node's bytes; the size is the only measured difference (see the module note).
+    fn new(value: Node) -> Option<OwnedNode> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
+        // of `size_of::<Node>()` bytes, which is exactly `Node`'s layout. On exhaustion it
+        // reports the allocation error and answers NULL, which the `?` below forwards.
+        let raw = CRYPTO_zalloc(size_of::<Node>(), FILE, L_SA_ALLOC_NODE).cast::<Node>();
+        let owned = NonNull::new(raw)?;
+        // SAFETY: `owned` is a fresh, uniquely-owned block of `Node`'s size, so writing the
+        // value into it in place is initialisation of an uninitialised `Node`.
+        unsafe { owned.as_ptr().write(value) };
+        Some(OwnedNode(owned))
+    }
+}
+
+impl Deref for OwnedNode {
+    type Target = Node;
+
+    fn deref(&self) -> &Node {
+        // SAFETY: the pointer is a live, aligned, initialised `Node` for as long as this owner
+        // lives, and `&self` proves the owner is live and uniquely reachable by shared borrow.
+        unsafe { self.0.as_ref() }
+    }
+}
+
+impl DerefMut for OwnedNode {
+    fn deref_mut(&mut self) -> &mut Node {
+        // SAFETY: as `deref`; `&mut self` proves the unique borrow.
+        unsafe { self.0.as_mut() }
+    }
+}
+
+impl Drop for OwnedNode {
+    fn drop(&mut self) {
+        // SAFETY: `self.0` is the live node this owner uniquely owns, initialised by `new`;
+        // dropping it in place and releasing the block through the same allocator is the exact
+        // reverse of `new`. `Drop` runs once.
+        unsafe {
+            ptr::drop_in_place(self.0.as_ptr());
+            CRYPTO_free(self.0.as_ptr().cast(), FILE, L_SA_FREE_NODE);
+        }
+    }
 }
 
 impl Node {
@@ -125,12 +217,15 @@ impl Node {
     /// nodes on the path.
     ///
     /// This is the authority's `p = p[(posn >> (bits * (level - 1))) & mask]` descent, but as
-    /// safe indexing on an owned tree: a missing child is created in place and no pointer is
-    /// computed.
-    fn leaf_slot(&mut self, level: usize, posn: OsslUintMax) -> &mut *mut c_void {
+    /// safe indexing on an owned tree: a missing child is created in place, and because creation
+    /// can fail (the allocator answered NULL) the descent answers `None` up the path, which is
+    /// the authority's `return 0` from a failed `alloc_node`.
+    fn leaf_slot(&mut self, level: usize, posn: OsslUintMax) -> Option<&mut *mut c_void> {
         if level <= 1 {
             return match self {
-                Node::Leaf(slots) => &mut slots[(posn & SA_BLOCK_MASK as OsslUintMax) as usize],
+                Node::Leaf(slots) => {
+                    Some(&mut slots[(posn & SA_BLOCK_MASK as OsslUintMax) as usize])
+                }
                 // A depth-1 node is always a leaf; the growth below keeps that invariant.
                 Node::Branch(_) => unreachable!("a depth-1 node is a leaf array"),
             };
@@ -139,32 +234,40 @@ impl Node {
             as usize;
         match self {
             Node::Branch(children) => {
-                let child = children[i].get_or_insert_with(|| Box::new(Node::at_depth(level - 1)));
-                child.leaf_slot(level - 1, posn)
+                if children[i].is_none() {
+                    // `?` forwards a failed allocation as the authority's `return 0`.
+                    children[i] = Some(OwnedNode::new(Node::at_depth(level - 1))?);
+                }
+                match children[i].as_mut() {
+                    Some(child) => child.leaf_slot(level - 1, posn),
+                    // A child was just inserted above.
+                    None => unreachable!("a child was just inserted"),
+                }
             }
             // A node above depth 1 is always a branch; the growth below keeps that invariant.
             Node::Leaf(_) => unreachable!("a node above depth 1 is a branch"),
         }
     }
 
-    /// Call `f(idx, value)` for every non-NULL value under this node, whose subtree covers the
-    /// indices sharing `prefix`'s high nibbles.
+    /// Push `(idx, value)` for every non-NULL value under this node into `out`.
     ///
-    /// The slots are visited `0..SA_BLOCK_MAX`, and a parent's nibble is the higher-order one, so
-    /// the walk reports **increasing** indices — the order `doall_util_fn` establishes.
-    fn walk(&self, prefix: OsslUintMax, f: &mut impl FnMut(OsslUintMax, *mut c_void)) {
+    /// The subtree covers the indices sharing `prefix`'s high nibbles. The slots are visited
+    /// `0..SA_BLOCK_MAX`, and a parent's nibble is the higher-order one, so `out` ends up in
+    /// **increasing** index order — the order `doall_util_fn` establishes. `out` is filled
+    /// before any callback runs (see the module note on re-entrancy).
+    fn collect(&self, prefix: OsslUintMax, out: &mut Vec<(OsslUintMax, *mut c_void)>) {
         match self {
             Node::Leaf(slots) => {
                 for (n, &val) in slots.iter().enumerate() {
                     if !val.is_null() {
-                        f((prefix << SA_BLOCK_BITS) | n as OsslUintMax, val);
+                        out.push(((prefix << SA_BLOCK_BITS) | n as OsslUintMax, val));
                     }
                 }
             }
             Node::Branch(children) => {
                 for (n, child) in children.iter().enumerate() {
                     if let Some(c) = child {
-                        c.walk((prefix << SA_BLOCK_BITS) | n as OsslUintMax, f);
+                        c.collect((prefix << SA_BLOCK_BITS) | n as OsslUintMax, out);
                     }
                 }
             }
@@ -195,7 +298,7 @@ pub(crate) struct OpenSslSa {
     pub(crate) nelem: usize,
     /// The root node, or `None` for an array that has never been set (the authority's NULL
     /// `nodes`).
-    root: Option<Box<Node>>,
+    root: Option<OwnedNode>,
 }
 
 impl OpenSslSa {
@@ -247,7 +350,14 @@ impl OpenSslSa {
     ///
     /// **`val == NULL` is a removal, not an insertion of NULL.** The `nelem` decrement happens
     /// only when a non-NULL slot is being cleared, and the slot is written either way.
-    fn set(&mut self, posn: OsslUintMax, val: *mut c_void) {
+    ///
+    /// Answers `false` where the authority's `ossl_sa_set` answers 0: a node allocation the
+    /// allocator refused. On such a failure the tree is left exactly as the authority leaves it —
+    /// the successful growth levels and path nodes are kept, `top` is raised once the growth has
+    /// succeeded and the walk has begun, and the slot is not written. Growth allocates the fresh
+    /// root *before* moving the old one, so a failed growth leaves the old tree intact rather than
+    /// dropping it.
+    fn set(&mut self, posn: OsslUintMax, val: *mut c_void) -> bool {
         let mut n = posn;
         let mut level: usize = 1;
 
@@ -261,16 +371,25 @@ impl OpenSslSa {
         }
 
         // Grow conservatively: each new root pushes the old one into slot 0, and its depth
-        // selects the node shape (a branch above depth 1, a leaf array at depth 1).
+        // selects the node shape (a branch above depth 1, a leaf array at depth 1). The new root
+        // is allocated first, so a failed allocation leaves the old tree in place and unreached.
         while (self.levels as usize) < level {
             let depth = self.levels as usize + 1;
             if depth <= 1 {
-                self.root = Some(Box::new(Node::at_depth(1)));
+                let Some(fresh) = OwnedNode::new(Node::at_depth(1)) else {
+                    return false;
+                };
+                self.root = Some(fresh);
             } else {
-                let old = self.root.take();
-                let mut slots: [Option<Box<Node>>; SA_BLOCK_MAX] = core::array::from_fn(|_| None);
-                slots[0] = old;
-                self.root = Some(Box::new(Node::Branch(slots)));
+                let Some(mut fresh) = OwnedNode::new(Node::Branch(core::array::from_fn(|_| None)))
+                else {
+                    return false;
+                };
+                let Node::Branch(children) = &mut *fresh else {
+                    unreachable!("a fresh root above depth 1 is a branch")
+                };
+                children[0] = self.root.take();
+                self.root = Some(fresh);
             }
             self.levels = depth as c_int;
         }
@@ -281,7 +400,9 @@ impl OpenSslSa {
         let levels = self.levels as usize;
         // `self.levels` is at least 1 after the growth above, so the root exists.
         let root = self.root.as_deref_mut().expect("a grown array has a root");
-        let slot = root.leaf_slot(levels, posn);
+        let Some(slot) = root.leaf_slot(levels, posn) else {
+            return false;
+        };
         if val.is_null() {
             if !slot.is_null() {
                 self.nelem -= 1;
@@ -290,40 +411,61 @@ impl OpenSslSa {
             self.nelem += 1;
         }
         *slot = val;
+        true
     }
 
-    /// The leaf walk of `sa_doall`/`sa_doall_arg`/`ossl_sa_free_leaves`, in increasing index
-    /// order.
-    fn for_each_leaf(&self, f: &mut impl FnMut(OsslUintMax, *mut c_void)) {
+    /// Every non-NULL `(index, value)` pair under the tree, in increasing index order,
+    /// snapshotted into an owned vector.
+    ///
+    /// Building the whole snapshot inside this `&self`-borrowing method is what makes a
+    /// re-entrant callback sound: an entry point calls this, the `&self` borrow ends when it
+    /// returns, and only then is the caller's function invoked — so a callback that takes
+    /// `&mut` to the array through its own `*mut` does not run while a reference into the array
+    /// is still borrowed (or still protected as a call argument; see the module note).
+    fn leaf_snapshot(&self) -> Vec<(OsslUintMax, *mut c_void)> {
+        let mut order: Vec<(OsslUintMax, *mut c_void)> = Vec::with_capacity(self.nelem);
         if let Some(root) = self.root.as_deref() {
-            root.walk(0, f);
+            root.collect(0, &mut order);
         }
+        order
     }
 
     /// `void ossl_sa_free_leaves(OPENSSL_SA *sa)`: release each stored value, in walk order.
+    ///
+    /// A value release never re-enters the array, so it is sound to free directly from a
+    /// `&self`-borrowing method; the snapshot is taken only so the order is the authority's.
     fn free_leaves(&self) {
-        self.for_each_leaf(&mut |_idx, val| {
+        for (_idx, val) in self.leaf_snapshot() {
             // SAFETY: every value was handed to `ossl_sa_set` by an owner, which is the contract
             // `ossl_sa_free_leaves` states.
             unsafe { free_value(val) };
-        });
+        }
     }
 }
 
 /// `OPENSSL_SA *ossl_sa_new(void)`.
 ///
 /// Zeroed, so `levels` is 0, `top` is 0, `nelem` is 0 and the root is `None`: an array with no
-/// root, which `ossl_sa_get` short-circuits on and `ossl_sa_set` grows from.
+/// root, which `ossl_sa_get` short-circuits on and `ossl_sa_set` grows from. The header is
+/// allocated through the crate's allocator seam, so a caller's installed allocator observes it
+/// and exhaustion answers NULL (the authority's `OPENSSL_zalloc` answer) rather than aborting.
 #[allow(dead_code)] // unreachable until 6.10a-ii's `_ex` tables are built from it
 pub(crate) fn ossl_sa_new() -> *mut OpenSslSa {
-    // The authority `OPENSSL_zalloc`s the header; here it is a boxed Rust value, so no manual
-    // initialisation is needed and the tree it owns needs no separate release.
-    Box::into_raw(Box::new(OpenSslSa {
-        levels: 0,
-        top: 0,
-        nelem: 0,
-        root: None,
-    }))
+    let raw = CRYPTO_zalloc(size_of::<OpenSslSa>(), FILE, L_SA_NEW).cast::<OpenSslSa>();
+    if raw.is_null() {
+        return raw;
+    }
+    // SAFETY: `raw` is a fresh, uniquely-owned, `OpenSslSa`-sized block; writing the zeroed value
+    // into it in place is its initialisation. `root: None` is the authority's NULL `nodes`.
+    unsafe {
+        raw.write(OpenSslSa {
+            levels: 0,
+            top: 0,
+            nelem: 0,
+            root: None,
+        })
+    };
+    raw
 }
 
 /// `void ossl_sa_free(OPENSSL_SA *sa)`.
@@ -338,9 +480,13 @@ pub(crate) unsafe fn ossl_sa_free(sa: *mut OpenSslSa) {
     if sa.is_null() {
         return;
     }
-    // SAFETY: `sa` came from `ossl_sa_new`'s `Box::into_raw` and the caller releases it at most
-    // once. Dropping the box drops `root`, which drops every node in the tree.
-    drop(unsafe { Box::from_raw(sa) });
+    // SAFETY: `sa` came from `ossl_sa_new`'s allocation and the caller releases it at most once.
+    // Dropping the value in place drops `root`, which drops every owned node and releases each
+    // through the allocator seam; the header block is then released the same way.
+    unsafe {
+        ptr::drop_in_place(sa);
+        CRYPTO_free(sa.cast(), FILE, L_SA_FREE);
+    }
 }
 
 /// `void ossl_sa_free_leaves(OPENSSL_SA *sa)`.
@@ -360,7 +506,10 @@ pub(crate) unsafe fn ossl_sa_free_leaves(sa: *mut OpenSslSa) {
     let s = unsafe { &*sa };
     s.free_leaves();
     // SAFETY: as `ossl_sa_free`; `s`'s borrow ends here.
-    drop(unsafe { Box::from_raw(sa) });
+    unsafe {
+        ptr::drop_in_place(sa);
+        CRYPTO_free(sa.cast(), FILE, L_SA_FREE);
+    }
 }
 
 /// `void ossl_sa_doall(const OPENSSL_SA *sa, void (*leaf)(ossl_uintmax_t, void *))`.
@@ -382,10 +531,14 @@ pub(crate) unsafe fn ossl_sa_doall(
     let Some(f) = leaf else {
         return;
     };
-    s.for_each_leaf(&mut |idx, val| {
+    // Snapshot while `s` is borrowed, then call the caller's function with no reference into
+    // the array outstanding, so a callback that re-enters the array through its own `*mut` —
+    // `property/store.rs`'s `alg_cleanup` clearing the slot it was handed — is sound.
+    let order = s.leaf_snapshot();
+    for (idx, val) in order {
         // SAFETY: `f` is the caller's leaf, valid for every value it is handed.
         unsafe { f(idx, val) };
-    });
+    }
 }
 
 /// `void ossl_sa_doall_arg(const OPENSSL_SA *sa, void (*leaf)(ossl_uintmax_t, void *, void *),
@@ -405,11 +558,13 @@ pub(crate) unsafe fn ossl_sa_doall_arg(
     let Some(f) = leaf else {
         return;
     };
-    s.for_each_leaf(&mut |idx, val| {
+    // As `ossl_sa_doall`: snapshot before calling back, so a re-entrant callback is sound.
+    let order = s.leaf_snapshot();
+    for (idx, val) in order {
         // SAFETY: `f` is the caller's leaf, valid for every value it is handed, and `arg` is the
         // caller's.
         unsafe { f(idx, val, arg) };
-    });
+    }
 }
 
 /// `size_t ossl_sa_num(const OPENSSL_SA *sa)`.
@@ -440,15 +595,15 @@ pub(crate) unsafe fn ossl_sa_get(sa: *const OpenSslSa, n: OsslUintMax) -> *mut c
 
 /// `int ossl_sa_set(OPENSSL_SA *sa, ossl_uintmax_t posn, void *val)`.
 ///
+/// Answers 0 where the authority does: a NULL `sa`, or a node allocation the installed allocator
+/// refused. Every other call answers 1, including a NULL-`val` removal.
+///
 /// # Safety
 /// `sa` must be live. `val` is borrowed, never copied, and the caller owns it.
 pub(crate) unsafe fn ossl_sa_set(sa: *mut OpenSslSa, posn: OsslUintMax, val: *mut c_void) -> c_int {
     // SAFETY: `sa` is NULL or live per the contract.
     match unsafe { sa.as_mut() } {
-        Some(s) => {
-            s.set(posn, val);
-            1
-        }
+        Some(s) => c_int::from(s.set(posn, val)),
         None => 0,
     }
 }
@@ -645,6 +800,55 @@ mod tests {
             ossl_sa_doall_arg(sa, Some(f), ptr::addr_of!(SUM).cast_mut().cast::<c_void>());
             assert_eq!(SUM.load(core::sync::atomic::Ordering::SeqCst), 15);
             ossl_sa_free_leaves(sa);
+        }
+    }
+
+    /// A callback may **re-enter the array to clear the slot it was handed** while the walk is
+    /// running — `property/store.rs`'s `alg_cleanup` does exactly this from
+    /// `ossl_method_store_free`. The snapshot the walk takes before any callback runs keeps that
+    /// sound and keeps the visit order: this pins that every value is still reported once and
+    /// that the clears take effect.
+    #[test]
+    fn a_callback_may_clear_the_slot_it_was_handed() {
+        static VISITS: core::sync::atomic::AtomicU64 = core::sync::atomic::AtomicU64::new(0);
+        static SUM: core::sync::atomic::AtomicU64 = core::sync::atomic::AtomicU64::new(0);
+
+        /// Clear the slot the walk handed over, through the array's own `ossl_sa_set`. `arg` is
+        /// the `*mut OpenSslSa` being walked. A Rust-ABI `unsafe fn` so it is passed to
+        /// `ossl_sa_doall_arg` directly, with no ABI launder.
+        unsafe fn clear_and_sum(idx: OsslUintMax, val: *mut c_void, arg: *mut c_void) {
+            let sa = arg.cast::<OpenSslSa>();
+            // SAFETY: `arg` is the live array being walked; clearing the handed slot is the
+            // permitted re-entrant mutation.
+            unsafe {
+                assert_eq!(ossl_sa_set(sa, idx, ptr::null_mut()), 1);
+                SUM.fetch_add(val as u64, core::sync::atomic::Ordering::SeqCst);
+            }
+            VISITS.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
+        }
+
+        VISITS.store(0, core::sync::atomic::Ordering::SeqCst);
+        SUM.store(0, core::sync::atomic::Ordering::SeqCst);
+        let sa = ossl_sa_new();
+        assert!(!sa.is_null());
+        // SAFETY: `sa` is live; the callback is this test's own.
+        unsafe {
+            let mut want = 0u64;
+            for n in [4u64, 40, 400, 0x4000] {
+                assert_eq!(ossl_sa_set(sa, n, leaf(n)), 1);
+                want += n;
+            }
+            assert_eq!(ossl_sa_num(sa), 4);
+            ossl_sa_doall_arg(sa, Some(clear_and_sum), sa.cast::<c_void>());
+            assert_eq!(
+                VISITS.load(core::sync::atomic::Ordering::SeqCst),
+                4,
+                "every value is reported once, even as the callback clears it"
+            );
+            assert_eq!(SUM.load(core::sync::atomic::Ordering::SeqCst), want);
+            assert_eq!(ossl_sa_num(sa), 0, "the clear took effect");
+            assert_eq!(ossl_sa_get(sa, 400), ptr::null_mut());
+            ossl_sa_free(sa);
         }
     }
 }
