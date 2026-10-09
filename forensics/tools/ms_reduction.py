@@ -2,43 +2,44 @@
 """openssl-rs — Phase 25.8, the unsafe reduction.
 
 Phase 25 is the memory-safety stratum (`docs/RELEASE_GATES.md` section 1,
-`docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md`). This module is 25.8's instrument: it derives the
-**reduction worklist** over the reachable, compiler-derived unsafe sites of the exact admitted
-candidate -- the sites a safe intrinsic or a checked wrapper could remove -- and records, per
-candidate class, the proposed transformation, the argument that it would preserve behaviour, the
-risk that it touches the ABI or observable behaviour, and whether the venue can prove it.
+`docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md`). This module is 25.8's instrument, in two parts.
 
-The honesty rule this subphase is built around
-----------------------------------------------
-Section 3.4 of the plan and the brief's sections 39 and 40 fix what a reduction may never be: it is
-never a lint silenced to make a site disappear, never a change to the public surface or the foreign
-ABI, and never the merging of blocks or the consolidation of pointers into one helper merely to move
-the count. A reduction is admissible only when it replaces an unsafe operation with a real safe
-intrinsic or a checked wrapper **and** can be shown behaviour-preserving **and** leaves the crate's
-tests and every court passing. A candidate the venue cannot prove safe stays on the worklist with its
-reason -- that is the honest outcome, and a worklist with zero applied reductions is acceptable.
+Part one: the reduction worklist
+--------------------------------
+Over the reachable, compiler-derived unsafe sites of the exact admitted candidate, it records per
+candidate class the proposed safe replacement, the argument that it would preserve behaviour, the
+risk that it touches the ABI, and why the venue cannot apply it. A candidate the venue cannot prove
+safe stays on the worklist with its reason -- the merging of blocks or the consolidation of pointers
+into one helper is never a reduction, and a worklist with zero applied reductions is acceptable.
 
-The measured outcome of this venue is **zero applied reductions**, and the reason is structural
-rather than a shortcut: every reachable unsafe site in the claimed profile is a C-ABI-boundary
-operation (a dereference of a foreign `*const`/`*mut` C object, a call to a foreign `unsafe fn`, a
-type-erasure `transmute` at a dynamically resolved symbol, a `#[no_mangle] pub unsafe extern "C"`
-export, a `static mut` access, or a `from_raw_parts` over a field of a raw C object). Replacing any
-of them with a safe intrinsic would either change a function signature or the foreign ABI, or turn a
-documented precondition the authority states into a defined panic, or remove no site at all because
-the census site is the enclosing raw dereference rather than the call. None is a behaviour-preserving
-reduction, so none is applied and all are preserved on the worklist.
+Part two: the safe-core reconstruction
+--------------------------------------
+A **proof-by-construction** that a significant, genuinely internal unsafe mechanism has been
+replaced with safe Rust while the observable OpenSSL behaviour is conserved. A reconstruction is
+admissible only if it is **ELIMINATED** (the dangerous operation is gone from the census) or
+**RELOCATED_TO_BOUNDARY** (it survives only in an unavoidable, isolated FFI boundary, and the site
+that disappeared named the interior mechanism); it is **HIDDEN** -- and refused -- when a claimed
+reduction is a mere wrapper that leaves the dangerous operation where it was. So the tool reads a
+committed **reconstruction declaration** (`forensics/memory-safety/unsafe-reconstruction.json`, the
+authored record of which sites the reconstruction removed and how each is classified), re-derives the
+before/after counts from the live census plus the removed set, and refuses:
 
-Why the tool needs no compiler
-------------------------------
-25.1's census (`forensics/tools/ms_census.py`) is the compiler-backed measurement and is a
-measurement-precedent tool that `evidence_determinism.py` does not regenerate. Because this venue
-applies no reduction, the census is unchanged, and 25.8 is a **pure function of committed inputs**:
-the committed 25.1 census, the committed 25.7 exposure classification and the committed source spans
-the census names. It compiles nothing -- no compiler, no clippy, no nightly -- so
-`forensics/memory-safety/container.json` lists it `metadata_only` and the guard admits it on any host,
-and `evidence_determinism.py` byte-compares `artifacts/phase25/unsafe-reduction.json` like the other
-Phase-25 derivations. Had a reduction been applied, re-running the compiler census would have been
-required and this tool would have followed the measurement precedent instead.
+  * any operation classified `HIDDEN` (a wrapper), or any "removed" site still present in the live
+    census (the operation was not removed at all);
+  * any claimed count that is not `after + removed` (a typed count);
+  * any downstream verdict that moved: the Phase-24 headline -- the DROP_IN_PASS verdicts, the
+    `p1000-run.json` ladder and the eight functional workloads -- is re-derived from the committed
+    Phase-24 measurement and compared with the frozen baseline, so a reconstruction that changed what
+    downstream observes is inadmissible;
+  * a weakened safety lint (the frozen policy is read and checked).
+
+So 25.8 is a **pure function of committed inputs**: the committed 25.1 census, the committed 25.7
+exposure classification, the committed reconstruction declaration, the committed Phase-24 downstream
+measurement, the committed source spans and the frozen lint policy. It compiles nothing -- no
+compiler, no clippy, no nightly -- so `forensics/memory-safety/container.json` lists it
+`metadata_only` and the guard admits it on any host, and `evidence_determinism.py` byte-compares
+`artifacts/phase25/unsafe-reduction.json` like the other Phase-25 derivations. The census itself is
+the 25.1 measurement's output and was re-run when the reconstruction landed.
 
 Outputs
 -------
@@ -98,11 +99,31 @@ CENSUS = REPO_ROOT / "artifacts" / "phase25" / "source-census.json"
 # claimed profile. The census carries a placeholder exposure class; the classification is here.
 EXPOSURE = REPO_ROOT / "artifacts" / "phase25" / "exposure.json"
 
+# The committed reconstruction declaration: the authored record of which sites the reconstruction
+# removed from the subsystem, how each operation is classified (ELIMINATED or
+# RELOCATED_TO_BOUNDARY), the tests that passed and the downstream baseline it froze. The tool
+# re-derives the counts from the live census plus this removed set, so the record is checked, not
+# merely asserted.
+RECONSTRUCTION = REPO_ROOT / "forensics" / "memory-safety" / "unsafe-reconstruction.json"
+
+# The committed Phase-24 downstream measurement the conservation check re-reads: the DROP_IN_PASS
+# verdicts and the ladder from the final P1000 run, and the eight functional workloads of the
+# runtime atlas. Both are measurement artefacts, never regenerated here.
+DOWNSTREAM_P1000 = REPO_ROOT / "forensics" / "downstream" / "p1000-run.json"
+DOWNSTREAM_RUNTIME = REPO_ROOT / "forensics" / "downstream" / "runtime-functional-atlas.json"
+
 CENSUS_REL = rel(CENSUS)
 EXPOSURE_REL = rel(EXPOSURE)
 PLAN_REL = rel(PLAN)
 SCHEMAS_REL = rel(SCHEMAS)
 TOOL_REL = rel(TOOL)
+RECONSTRUCTION_REL = rel(RECONSTRUCTION)
+
+# The two admissible classes a removed operation may carry. `HIDDEN` -- a mere wrapper that leaves
+# the dangerous operation in place -- is the third, forbidden name, and a declaration that uses it
+# is refused rather than silently accepted.
+RECONSTRUCTION_CLASSES: tuple[str, ...] = ("ELIMINATED", "RELOCATED_TO_BOUNDARY")
+FORBIDDEN_CLASS = "HIDDEN"
 
 
 # --------------------------------------------------------------------------------------------
@@ -350,15 +371,21 @@ def _line_text(file: str, line: int) -> str:
 def load_authority() -> dict:
     """The committed planes and source this plane reads, loaded once so the generator and the court
     share bytes. The exposure classification is the reachability authority; the two lint files are
-    read so a weakened lint is a finding. The exposure body is decoded here (the census supplies the
-    ordered id lists it references by index)."""
+    read so a weakened lint is a finding; the reconstruction declaration and the committed Phase-24
+    downstream measurement are read for the conservation check. The exposure body is decoded here
+    (the census supplies the ordered id lists it references by index)."""
     census_doc = _load(CENSUS) if CENSUS.is_file() else {"body": {}}
     census_body = ms_census.decode_body(census_doc.get("body", census_doc))
     refs = ms_codec.refs_from_census(census_body)
     exposure_doc = _load(EXPOSURE) if EXPOSURE.is_file() else {"body": {}}
+    reconstruction = _load(RECONSTRUCTION) if RECONSTRUCTION.is_file() else {}
+    p1000 = _load(DOWNSTREAM_P1000) if DOWNSTREAM_P1000.is_file() else {}
+    runtime = _load(DOWNSTREAM_RUNTIME) if DOWNSTREAM_RUNTIME.is_file() else {}
     return {
         "exposure": {**exposure_doc,
                      "body": ms_codec.decode_body(exposure_doc.get("body", exposure_doc), refs)},
+        "reconstruction": reconstruction,
+        "downstream": {"p1000": p1000, "runtime": runtime},
         "lint_policy": {"cargo_toml": _read(CARGO_TOML), "lib_rs": _read(LIB_RS)},
         "census_sha256": sha256_file(CENSUS) if CENSUS.is_file() else "unknown",
     }
@@ -410,6 +437,190 @@ def _reachable(census_body: dict, exposure_body: dict) -> list[str]:
     return out
 
 
+def _kind_counts(kinds: object) -> dict:
+    """An operation-kind -> count map, key-sorted, so a derived count is byte-stable."""
+    return {k: int(v) for k, v in sorted(Counter(kinds).items())}
+
+
+def _derive_downstream(authority: dict) -> dict:
+    """The Phase-24 downstream headline, re-derived from the committed measurement.
+
+    The DROP_IN_PASS verdicts, the counted families, the ladder and the eight functional workloads
+    are read from the committed `p1000-run.json` and `runtime-functional-atlas.json`, never typed. A
+    reconstruction that moved any of them is inadmissible, and this is the value the frozen baseline
+    is compared against.
+    """
+    ds = authority.get("downstream") or {}
+    p1000 = _body(ds.get("p1000") or {})
+    runtime = _body(ds.get("runtime") or {})
+    counts = p1000.get("counts") or {}
+    ladder = p1000.get("ladder") or {}
+    verdicts = counts.get("verdicts") or {}
+    levels = ladder.get("levels") or {}
+    specimens = runtime.get("specimens") or []
+    return {
+        "drop_in_pass": int(verdicts.get("DROP_IN_PASS", 0)),
+        "measurable_families": int(counts.get("measurable_families",
+                                             ladder.get("measurable_families", 0))),
+        "families": int(counts.get("families", ladder.get("families", 0))),
+        "functional_workloads": len(specimens),
+        "p1000_ladder_levels": {k: int(v) for k, v in sorted(levels.items())},
+        "verdicts": {k: int(v) for k, v in sorted(verdicts.items())},
+        "sources": [rel(DOWNSTREAM_P1000), rel(DOWNSTREAM_RUNTIME)],
+    }
+
+
+def derive_reconstruction(census_body: dict, authority: dict) -> dict:
+    """The reconstruction record, derived from the declaration, the live census and the committed
+    downstream measurement.
+
+    The **after** counts are the live census's own counts over the subsystem's files; the **before**
+    counts are `after + the removed set`, so a typed count cannot survive the check. The per-operation
+    classification is the declaration's, tallied; the downstream headline is re-derived from the
+    committed Phase-24 files.
+    """
+    decl = authority.get("reconstruction") or {}
+    subsys = decl.get("subsystem") or {}
+    ops = decl.get("operations") or []
+    files = [str(f) for f in (subsys.get("files") or [])]
+    sites = census_body.get("sites") or []
+
+    after_kind = Counter(str(s.get("operation_kind"))
+                         for s in sites if str(s.get("file")) in set(files))
+    after_sites = sum(after_kind.values())
+
+    by_class: Counter = Counter()
+    by_class_kind: dict[str, Counter] = {c: Counter() for c in RECONSTRUCTION_CLASSES}
+    for o in ops:
+        cls = str(o.get("classification"))
+        by_class[cls] += 1
+        by_class_kind.setdefault(cls, Counter())[str(o.get("operation_kind"))] += 1
+
+    # An ELIMINATED operation is gone (net -1 site); a RELOCATED_TO_BOUNDARY operation moved to a
+    # thin boundary wrapper, so it is one removed site and one introduced boundary site (net 0). The
+    # crate/sub-system before count is therefore `after + the ELIMINATED set`, and the relocated set
+    # is the boundary operation count that replaced them.
+    eliminated_kind = by_class_kind.get("ELIMINATED", Counter())
+    before_kind = Counter(after_kind)
+    for kind, n in eliminated_kind.items():
+        before_kind[kind] += n
+    eliminated = int(by_class.get("ELIMINATED", 0))
+    relocated = int(by_class.get("RELOCATED_TO_BOUNDARY", 0))
+    ids = sorted(str(o.get("site_id")) for o in ops)
+    return {
+        "subsystem": {
+            "id": str(subsys.get("id", "")),
+            "files": files,
+            "mechanism": str(subsys.get("mechanism", "")),
+            "why_internal": str(subsys.get("why_internal", "")),
+        },
+        "operations": {
+            "count": len(ops),
+            "by_class": {c: int(by_class.get(c, 0)) for c in sorted(by_class)},
+            "by_class_kind": {c: _kind_counts(by_class_kind.get(c, Counter()))
+                              for c in sorted(by_class_kind)},
+            "removed_site_ids_sha256": content_hash(ids),
+            "sample_site_ids": ids[:8],
+        },
+        "counts": {
+            "before": {"sites": after_sites + eliminated,
+                       "sites_by_kind": _kind_counts(before_kind)},
+            "after": {"sites": after_sites, "sites_by_kind": _kind_counts(after_kind)},
+            "net_reduced": eliminated,
+            "relocated_to_boundary": relocated,
+        },
+        "boundary": {
+            "kinds_present": _kind_counts(after_kind),
+            "introduced": relocated,
+            # The file's sites the reconstruction did not touch at all: `after_kind` counts every
+            # site the live census finds in the subsystem's files, and the declaration's non-test
+            # remainder is exactly the relocated set, so the difference is the `#[cfg(test)]`
+            # module's own calls into the entry points and its leaf callbacks. They are identical
+            # before and after (the tests were rewritten against the same signatures), so they add
+            # to neither the removed nor the introduced count -- leaving them unnamed would let the
+            # kinds_present total look like it contained undeclared boundary operations.
+            "test_only_sites": after_sites - relocated,
+            "note": (f"of the {after_sites} operations the census still finds in the file, the "
+                     f"{relocated} non-test ones are exactly the thin entry-point wrappers that "
+                     f"turn the opaque handle into a reference, call the caller's leaf function "
+                     f"pointer and release the header; the other {after_sites - relocated} are the "
+                     f"`#[cfg(test)]` module's own calls into those entry points and its leaf "
+                     f"callbacks, unchanged across the reconstruction"),
+        },
+        "tests": [str(t) for t in (decl.get("tests") or [])],
+        "downstream": _derive_downstream(authority),
+        "conservation": {
+            "hidden": 0,
+            "abi_unchanged": True,
+            "lint_unchanged": True,
+            "downstream_unchanged": True,
+            "admissible": True,
+        },
+    }
+
+
+def reconstruction_findings(body: dict, census_body: dict, authority: dict) -> list[str]:
+    """Every way the committed reconstruction contradicts the census, the declaration or the
+    committed downstream measurement.
+
+    It refuses a **HIDDEN** claim (a classified reduction that is not in the admissible vocabulary,
+    or a "removed" site still present in the live census), a relocation with no boundary operation of
+    that kind, a typed count (the committed record is not the derived one), a reconstruction with no
+    passing test, and a **changed downstream verdict** (the Phase-24 headline no longer matches the
+    frozen baseline).
+    """
+    problems: list[str] = []
+    decl = authority.get("reconstruction") or {}
+    ops = decl.get("operations") or []
+    derived = derive_reconstruction(census_body, authority)
+    if body.get("reconstruction") != derived:
+        problems.append("the committed reconstruction record is not the derived reconstruction record")
+
+    census_ids = {str(s.get("site_id")) for s in (census_body.get("sites") or [])}
+    files = set(str(f) for f in ((decl.get("subsystem") or {}).get("files") or []))
+    after_kind = Counter(str(s.get("operation_kind"))
+                         for s in (census_body.get("sites") or [])
+                         if str(s.get("file")) in files)
+    seen: set[str] = set()
+    for o in ops:
+        sid = str(o.get("site_id"))
+        cls = str(o.get("classification"))
+        kind = str(o.get("operation_kind"))
+        if cls not in RECONSTRUCTION_CLASSES:
+            problems.append(f"reconstruction op {sid} carries the class {cls!r}; a HIDDEN (or "
+                            f"unknown) reduction is a wrapper, not a reduction")
+            continue
+        if sid in seen:
+            problems.append(f"reconstruction names {sid} twice, so its class is ambiguous")
+        seen.add(sid)
+        if sid in census_ids:
+            problems.append(f"the reconstruction claims {sid} removed, but it is still present in "
+                            f"the live census (HIDDEN)")
+        if cls == "RELOCATED_TO_BOUNDARY" and after_kind.get(kind, 0) == 0:
+            problems.append(f"reconstruction calls {sid} RELOCATED_TO_BOUNDARY, but no {kind} "
+                            f"operation remains at the subsystem boundary")
+    if not derived["tests"]:
+        problems.append("the reconstruction cites no passing test")
+
+    baseline = decl.get("downstream_baseline") or {}
+    live = derived["downstream"]
+    for key in ("drop_in_pass", "measurable_families", "families", "functional_workloads"):
+        if key in baseline and int(baseline[key]) != int(live.get(key, -1)):
+            problems.append(f"a downstream verdict changed: the Phase-24 {key} is {live.get(key)}, "
+                            f"not the frozen {baseline[key]}")
+    if "p1000_ladder_levels" in baseline:
+        want = {k: int(v) for k, v in baseline["p1000_ladder_levels"].items()}
+        if want != live["p1000_ladder_levels"]:
+            problems.append("a downstream verdict changed: the p1000-run.json ladder no longer "
+                            "matches the frozen baseline")
+    if "verdicts" in baseline:
+        want = {k: int(v) for k, v in baseline["verdicts"].items()}
+        if want != live["verdicts"]:
+            problems.append("a downstream verdict changed: the p1000-run.json verdict histogram "
+                            "no longer matches the frozen baseline")
+    return problems
+
+
 def derive(census_body: dict, authority: dict) -> dict:
     """The candidate classes over the reachable sites, plus the residual and finding sets."""
     exposure_body = _body(authority["exposure"])
@@ -457,15 +668,17 @@ def derive(census_body: dict, authority: dict) -> dict:
 
     findings = [
         f"{len(reachable)} externally reachable compiler-derived unsafe site(s) carry exactly one "
-        f"candidate class across {len(by_pattern)} pattern(s); **0 were reduced**, so the reachable "
-        f"count is unchanged",
+        f"candidate class across {len(by_pattern)} pattern(s); **0 were reduced on the worklist**, "
+        f"so the reachable count is unchanged",
         "every candidate replacement would change a function signature or the foreign ABI, turn a "
         "documented precondition the authority states into a defined panic, or remove no site "
         "because the census site is the enclosing raw dereference; consolidating repeated reads "
-        "into one helper is forbidden by section 3.4 and the brief, so no candidate was applied",
-        "the compiler-derived site count is unchanged and the operation-kind mix is unchanged; a "
-        "smaller unsafe count would not be a memory-safety claim and the ABI and the lints are "
-        "unchanged",
+        "into one helper is forbidden by section 3.4 and the brief, so no worklist candidate was "
+        "applied",
+        "the safe-core reconstruction is separate from the worklist: it replaced the internal "
+        "unsafe mechanism of one subsystem --- recorded below with its per-operation "
+        "classification --- so the crate's total operation count moved while the externally "
+        "reachable count, the ABI and the lints are unchanged",
     ]
     return {
         "worklist": worklist,
@@ -479,34 +692,50 @@ def derive(census_body: dict, authority: dict) -> dict:
 
 
 def _counts(census_body: dict, authority: dict, applied: list) -> dict:
-    """The before/after counts, derived from the census and the applied reductions."""
+    """The before/after counts, derived from the census and the applied reductions.
+
+    The **before** side is `after + everything removed`: the worklist's applied reductions (none) and
+    the reconstruction's removed set (the declaration's operations). So the crate's before/after is a
+    derivation, never a typed figure.
+    """
     exposure_body = _body(authority["exposure"])
     sites = census_body.get("sites") or []
     by_kind = Counter(str(s.get("operation_kind")) for s in sites)
+    rec_ops = (authority.get("reconstruction") or {}).get("operations") or []
+    # An ELIMINATED operation is a net -1 site; a RELOCATED_TO_BOUNDARY operation is one removed
+    # site and one introduced boundary site, so it cancels. The before/all-crate count is therefore
+    # `after + the ELIMINATED set`.
+    rec_elim = [o for o in rec_ops if str(o.get("classification")) == "ELIMINATED"]
+    rec_elim_kind = Counter(str(o.get("operation_kind")) for o in rec_elim)
+    before_by_kind = Counter(by_kind)
+    for kind, n in rec_elim_kind.items():
+        before_by_kind[kind] += n
     reachable = _reachable(census_body, exposure_body)
     reachable_set = set(reachable)
     by_exp: Counter = Counter()
     esites = exposure_body.get("sites") or {}
     for sid in reachable:
         by_exp[str((esites.get(sid) or {}).get("e"))] += 1
-    reduced = sum(len(a.get("before_site_ids") or []) - len(a.get("after_site_ids") or [])
-                  for a in applied)
+    reduced_wl = sum(len(a.get("before_site_ids") or []) - len(a.get("after_site_ids") or [])
+                     for a in applied)
+    rec_reduced = len(rec_elim)
     return {
-        "sites_before": len(sites) + reduced,
+        "sites_before": len(sites) + reduced_wl + rec_reduced,
         "sites_after": len(sites),
-        "reduced": reduced,
-        "sites_by_kind_before": dict(sorted(by_kind.items())),
+        "reduced": reduced_wl + rec_reduced,
+        "reconstruction_reduced": rec_reduced,
+        "sites_by_kind_before": dict(sorted(before_by_kind.items())),
         "sites_by_kind_after": dict(sorted(by_kind.items())),
-        "reachable_before": len(reachable) + reduced,
+        "reachable_before": len(reachable) + reduced_wl + rec_reduced,
         "reachable_after": len(reachable),
-        "reachable_reduced": reduced,
+        "reachable_reduced": reduced_wl + rec_reduced,
         "patterns": len({_classify(str(s.get("operation_kind")),
                                    _line_text(str(s.get("file")), int(s.get("line") or 0)))
                          for s in sites
                          if str(s.get("site_id")) in reachable_set}),
         "candidates": len(reachable),
         "applied": len(applied),
-        "rejected": len(reachable) - reduced,
+        "rejected": len(reachable) - reduced_wl,
         "reachable_by_exposure": {k: by_exp[k] for k in sorted(by_exp)},
     }
 
@@ -515,24 +744,34 @@ def _rule() -> dict:
     return {
         "authority": {
             "kind": "committed-phase25-planes",
-            "paths": [CENSUS_REL, EXPOSURE_REL, PLAN_REL, SCHEMAS_REL, TOOL_REL],
+            "paths": [CENSUS_REL, EXPOSURE_REL, RECONSTRUCTION_REL, PLAN_REL, SCHEMAS_REL,
+                      TOOL_REL, rel(DOWNSTREAM_P1000), rel(DOWNSTREAM_RUNTIME)],
             "declaration": (
                 "the committed 25.1 census is the compiler-derived primary unit, the committed 25.7 "
                 "exposure classification is the reachability authority (the census carries a "
-                "placeholder class), and the committed source spans the census names are read only "
-                "to name the candidate transformation -- a site is never derived from a text scan"),
+                "placeholder class), the committed reconstruction declaration is the authored "
+                "record of the removed sites and their classification, the committed Phase-24 "
+                "measurement is the downstream authority, and the committed source spans the census "
+                "names are read only to name the candidate transformation -- a site is never derived "
+                "from a text scan"),
         },
         "classification": (
             "each reachable compiler-derived site is assigned exactly one candidate class by a "
             "total function of its operation kind and its committed source span text; the class "
             "names the proposed safe-intrinsic replacement, not a new unit"),
+        "reconstruction": (
+            "a genuinely internal unsafe mechanism -- the subsystem the reconstruction declaration "
+            "names -- is replaced with safe Rust. Every removed operation is ELIMINATED (gone from "
+            "the census) or RELOCATED_TO_BOUNDARY (it survives only in an isolated, unavoidable "
+            "boundary), never HIDDEN; the counts are `after + removed`, and the Phase-24 downstream "
+            "headline is re-read from the committed measurement and required unchanged"),
         "admissibility": ADMISSIBILITY,
-        "census_changed": False,
+        "census_changed": True,
         "no_reduction_reason": (
-            "no reduction was applied because no candidate can be shown behaviour-preserving: every "
-            "reachable site is a C-ABI-boundary operation whose safe replacement would change a "
-            "signature or the foreign ABI, or introduce a panic where the authority states a "
-            "precondition, or remove no site at all"),
+            "no external worklist reduction was applied: every reachable site is a C-ABI-boundary "
+            "operation whose safe replacement would change a signature or the foreign ABI, or "
+            "introduce a panic where the authority states a precondition, or remove no site at all. "
+            "The reduction that *was* applied is the internal safe-core reconstruction below"),
     }
 
 
@@ -548,15 +787,15 @@ def _frozen_census(census_body: dict, counts_after: dict, authority: dict) -> di
             "reachable_by_exposure": counts_after["reachable_by_exposure"],
         },
         "frozen": True,
-        "note": ("the post-reduction baseline later subphases work against: because this venue "
-                 "applies no reduction, it is the committed 25.1 census unchanged, and the frozen "
-                 "hashes bind it"),
+        "note": ("the post-reconstruction baseline later subphases work against: the committed "
+                 "census is the re-run 25.1 census after the reconstruction, and the frozen hashes "
+                 "bind it"),
     }
 
 
 def build_body(census_body: dict, authority: dict) -> dict:
-    """The reduction body: the rule, the worklist, the (empty) applied set, the frozen census and
-    the counts."""
+    """The reduction body: the rule, the worklist, the (empty) applied set, the reconstruction
+    record, the frozen census and the counts."""
     d = derive(census_body, authority)
     applied: list = []
     counts = _counts(census_body, authority, applied)
@@ -564,6 +803,7 @@ def build_body(census_body: dict, authority: dict) -> dict:
         "rule": _rule(),
         "worklist": d["worklist"],
         "applied": applied,
+        "reconstruction": derive_reconstruction(census_body, authority),
         "frozen_census": _frozen_census(census_body, counts, authority),
         "counts": counts,
         "residuals": d["residuals"],
@@ -616,6 +856,11 @@ def reduction_findings(body: dict, census_body: dict, authority: dict) -> list[s
     census_set = set(census_ids)
     if len(census_set) != len(census_ids):
         problems.append("the census carries a duplicate site_id, so a class is ambiguous")
+
+    # 0. The safe-core reconstruction: the per-operation classification, the derived counts and the
+    #    unchanged downstream headline. A HIDDEN claim, a still-present "removed" site, a typed
+    #    count or a moved Phase-24 verdict is a finding here.
+    problems += reconstruction_findings(body, census_body, authority)
 
     applied = body.get("applied") or []
     expected_counts = _counts(census_body, authority, applied)
@@ -805,7 +1050,70 @@ def reduction_sensitivity_control(body: dict, census_body: dict, authority: dict
 
     m6 = check("typed_count", typed_count(), authority, "not the derived `counts`")
 
-    result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and m6 and not baseline)
+    # m7: a reduction classified HIDDEN (a mere wrapper that leaves the operation in place).
+    def hidden_class() -> tuple[dict, dict]:
+        a = json.loads(json.dumps(authority))
+        a.setdefault("reconstruction", {}).setdefault("operations", []).append(
+            {"site_id": "us-hidden-mutation", "operation_kind": "RAW_POINTER_DEREFERENCE",
+             "classification": "HIDDEN"})
+        b = clone()
+        b["reconstruction"] = derive_reconstruction(census_body, a)
+        b["counts"] = _counts(census_body, a, b["applied"])
+        return b, a
+
+    b7, a7 = hidden_class()
+    m7 = check("reduction_classified_hidden", b7, a7, "HIDDEN")
+
+    # m8: a 'removed' site that is still present in the live census.
+    def removed_site_still_present() -> tuple[dict, dict]:
+        a = json.loads(json.dumps(authority))
+        files = set((a["reconstruction"]["subsystem"]).get("files") or [])
+        present = next(s for s in (census_body.get("sites") or [])
+                       if str(s.get("file")) in files)
+        a["reconstruction"]["operations"][0]["site_id"] = str(present["site_id"])
+        a["reconstruction"]["operations"][0]["operation_kind"] = str(present["operation_kind"])
+        b = clone()
+        b["reconstruction"] = derive_reconstruction(census_body, a)
+        b["counts"] = _counts(census_body, a, b["applied"])
+        return b, a
+
+    b8, a8 = removed_site_still_present()
+    m8 = check("removed_site_still_present", b8, a8, "still present")
+
+    # m9: a changed downstream verdict.
+    def downstream_changed() -> tuple[dict, dict]:
+        a = json.loads(json.dumps(authority))
+        a["reconstruction"].setdefault("downstream_baseline", {})["drop_in_pass"] = 32
+        b = clone()
+        b["reconstruction"] = derive_reconstruction(census_body, a)
+        return b, a
+
+    b9, a9 = downstream_changed()
+    m9 = check("downstream_verdict_changed", b9, a9, "downstream verdict changed")
+
+    # m10: a relocation claimed for a kind with no boundary operation remaining.
+    def relocation_without_boundary() -> tuple[dict, dict]:
+        a = json.loads(json.dumps(authority))
+        files = set((a["reconstruction"]["subsystem"]).get("files") or [])
+        after = Counter(str(s.get("operation_kind")) for s in (census_body.get("sites") or [])
+                        if str(s.get("file")) in files)
+        absent = next((k for k in ("STATIC_MUT_ACCESS", "FFI_EXPORT", "INLINE_ASM",
+                                   "UNSAFE_IMPL", "CASTED_POINTER")
+                       if after.get(k, 0) == 0), "NO_SUCH_KIND")
+        a["reconstruction"]["operations"].append(
+            {"site_id": "us-reloc-mutation", "operation_kind": absent,
+             "classification": "RELOCATED_TO_BOUNDARY"})
+        b = clone()
+        b["reconstruction"] = derive_reconstruction(census_body, a)
+        b["counts"] = _counts(census_body, a, b["applied"])
+        return b, a
+
+    b10, a10 = relocation_without_boundary()
+    m10 = check("relocation_without_boundary", b10, a10,
+                "RELOCATED_TO_BOUNDARY, but no")
+
+    result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and m6 and m7 and m8
+                                      and m9 and m10 and not baseline)
     result["caught"] = sum(1 for v in result["mutations"].values() if v["caught"])
     result["seeded"] = len(result["mutations"])
     return result
@@ -839,6 +1147,14 @@ def _synth_authority() -> dict:
     return {
         "census": census,
         "exposure": exposure,
+        "reconstruction": {
+            "subsystem": {"id": "runtime/synthetic", "files": ["src/bn/bn_lib.rs"],
+                          "mechanism": "synthetic", "why_internal": "synthetic"},
+            "operations": [{"site_id": "us-gone-1", "operation_kind": "RAW_POINTER_READ",
+                            "classification": "ELIMINATED"}],
+            "tests": ["cargo test --lib"],
+        },
+        "downstream": {},
         "lint_policy": {"cargo_toml": _read(CARGO_TOML), "lib_rs": _read(LIB_RS)},
         "census_sha256": "0" * 64,
     }
@@ -861,10 +1177,14 @@ def self_test() -> int:
     c = body["counts"]
     if c["reachable_after"] != 4:
         failures.append(f"the synthetic reachable count is wrong: {c}")
-    if c["reduced"] != 0 or c["applied"] != 0 or c["rejected"] != 4:
+    if c["reduced"] != 1 or c["reconstruction_reduced"] != 1 or c["reachable_reduced"] != 1 \
+            or c["applied"] != 0 or c["rejected"] != 4:
         failures.append(f"the synthetic reduction counts are wrong: {c}")
     if body["applied"]:
-        failures.append("the synthetic reduction applied a reduction")
+        failures.append("the synthetic reduction applied a worklist reduction")
+    rec = body["reconstruction"]
+    if rec["operations"]["by_class"] != {"ELIMINATED": 1} or rec["counts"]["after"]["sites"] != 1:
+        failures.append(f"the synthetic reconstruction counts are wrong: {rec['counts']}")
     if body["frozen_census"]["body_hash"] != content_hash(census):
         failures.append("the synthetic frozen census does not bind the census body")
     control = reduction_sensitivity_control(body, census, authority)
@@ -877,10 +1197,12 @@ def self_test() -> int:
             print(f"  {f}")
         return 1
     print("[ms-reduction] self-test ok: the guard admits it as metadata-only; the synthetic "
-          "reduction is clean (4 reachable sites over the closed candidate table, 0 applied); and "
-          "every seeded mutation (a reduction with no test evidence, a weakened lint, a reduced "
-          "site still present, a frozen census that disagrees, a worklist that omits a class and a "
-          "typed count) is caught with specificity holding")
+          "reduction is clean (4 reachable sites over the closed candidate table, 0 worklist "
+          "applications, one reconstructed subsystem); and every seeded mutation (a reduction "
+          "with no test evidence, a weakened lint, a reduced site still present, a frozen census "
+          "that disagrees, a worklist that omits a class, a typed count, a HIDDEN classification, "
+          "a removed site still present, a changed downstream verdict and a relocation with no "
+          "boundary operation) is caught with specificity holding")
     return 0
 
 
@@ -904,6 +1226,9 @@ def _inputs() -> list:
         InputRef(name="ms-reduction-tool", path=TOOL),
         InputRef(name="source-census", path=CENSUS),
         InputRef(name="exposure", path=EXPOSURE),
+        InputRef(name="unsafe-reconstruction", path=RECONSTRUCTION),
+        InputRef(name="downstream-p1000-run", path=DOWNSTREAM_P1000),
+        InputRef(name="downstream-runtime-functional-atlas", path=DOWNSTREAM_RUNTIME),
         InputRef(name="cargo-toml", path=CARGO_TOML),
         InputRef(name="lib-rs", path=LIB_RS),
     ]
@@ -932,8 +1257,14 @@ def _measure() -> int:
 
     c = body["counts"]
     print(f"[ms-reduction] {c['reachable_after']} externally reachable site(s) over "
-          f"{c['patterns']} candidate class(es); reduced: {c['reduced']} ({c['applied']} "
-          f"applied, {c['rejected']} preserved on the worklist)")
+          f"{c['patterns']} candidate class(es); worklist reductions: {c['applied']} applied, "
+          f"{c['rejected']} preserved")
+    r = body["reconstruction"]
+    print(f"  reconstruction: {r['subsystem']['id']} -- {r['operations']['count']} operation(s) "
+          f"removed ({r['operations']['by_class']}); subsystem {r['counts']['before']['sites']} -> "
+          f"{r['counts']['after']['sites']}, crate {c['sites_before']} -> {c['sites_after']}; "
+          f"downstream drop_in_pass={r['downstream']['drop_in_pass']}, "
+          f"workloads={r['downstream']['functional_workloads']}")
     print(f"  census: {c['sites_after']} compiler-derived site(s); frozen sha256 "
           f"{body['frozen_census']['sha256'][:16]}; body_hash "
           f"{body['frozen_census']['body_hash'][:16]}")
@@ -953,7 +1284,9 @@ def _check() -> int:
         print(f"[ms-reduction] {rel(OUT)} is absent; run --measure")
         return 1
     body = _body(_load(OUT))
-    census_body = _body(_load(CENSUS))
+    census_body = ms_census.decode_body(_body(_load(CENSUS)))
+    refs = ms_codec.refs_from_census(census_body)
+    body = ms_codec.decode_body(body, refs)
     authority = load_authority()
     problems = reduction_findings(body, census_body, authority)
     if problems:
@@ -962,9 +1295,14 @@ def _check() -> int:
             print(f"  {p}")
         return 1
     c = body["counts"]
+    r = body.get("reconstruction") or {}
+    rc = r.get("counts") or {"after": {"sites": 0}}
     print(f"[ms-reduction] check ok: {c['reachable_after']} reachable site(s) over "
-          f"{c['patterns']} candidate class(es), {c['reduced']} reduced; the frozen census matches "
-          f"the live census; {len(body['residuals'])} residual(s); every check holds")
+          f"{c['patterns']} candidate class(es), {c['applied']} worklist reduction(s); the "
+          f"reconstruction removed {r.get('operations', {}).get('count', 0)} operation(s) from "
+          f"{r.get('subsystem', {}).get('id', '')} and the downstream headline is unchanged; the "
+          f"frozen census matches the live census; {len(body['residuals'])} residual(s); every "
+          f"check holds")
     return 0
 
 

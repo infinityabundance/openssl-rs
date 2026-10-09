@@ -291,7 +291,7 @@
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "cb2e7f02a6bbaf8e6cd360906a9883069f64bbec043400b915005c37e660a8df"
+      "sha256": "d0bf489c5c6be1618230eb985bd38034842f86f91ca51e38fc1ac00d9376cb98"
     },
     {
       "name": "phase24-guard",
