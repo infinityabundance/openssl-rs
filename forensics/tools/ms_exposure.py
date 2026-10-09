@@ -98,6 +98,11 @@ from atlas_common import (  # noqa: E402
     resolve_authority,
 )
 
+# The census (for the site universe and its ordered id lists) and the lossless columnar codec every
+# Phase-25 artefact is stored in. Imported after `atlas_common` so `sys.path` is set.
+import ms_census  # noqa: E402
+import ms_codec  # noqa: E402
+
 # The Docker-only execution guard, called first. This tool executes nothing -- it derives a plane
 # from committed planes -- so the manifest lists it `metadata_only` and the guard admits it on any
 # host exactly as `ms_phase24_crosswalk.py` is.
@@ -455,12 +460,24 @@ def _load(path: Path) -> dict:
 
 
 def load_authority() -> dict:
-    """The committed planes this plane reads, loaded once so the generator and the court share bytes."""
+    """The committed planes this plane reads, loaded once so the generator and the court share bytes.
+
+    Each artefact's columnar body is decoded here (the census supplies the ordered id lists the
+    others reference by index), so every reader sees the same record view.
+    """
+    census_doc = _load(CENSUS)
+    census_body = ms_census.decode_body(census_doc.get("body", census_doc))
+    refs = ms_codec.refs_from_census(census_body)
+
+    def decoded(path: Path) -> dict:
+        doc = _load(path)
+        return {**doc, "body": ms_codec.decode_body(doc.get("body", doc), refs)}
+
     return {
-        "census": _load(CENSUS),
-        "phase22_crosswalk": _load(PHASE22_CROSSWALK),
-        "phase24_crosswalk": _load(PHASE24_CROSSWALK),
-        "ownership_planes": _load(OWNERSHIP_PLANES),
+        "census": {**census_doc, "body": census_body},
+        "phase22_crosswalk": decoded(PHASE22_CROSSWALK),
+        "phase24_crosswalk": decoded(PHASE24_CROSSWALK),
+        "ownership_planes": decoded(OWNERSHIP_PLANES),
     }
 
 
@@ -984,6 +1001,11 @@ def exposure_findings(body: dict, census_body: dict, authority: dict) -> list:
     derivation.
     """
     problems: list = []
+    # The committed classification is columnar on disk; re-derive the views the checks read (a fresh
+    # measurement passes the views, for which decoding is a no-op).
+    census_body = ms_census.decode_body(census_body)
+    refs = ms_codec.refs_from_census(census_body)
+    body = ms_codec.decode_body(body, refs)
     d = derive_cached(census_body, authority)
     census_ids = [str(s["site_id"]) for s in (census_body.get("sites") or [])]
 
@@ -1098,6 +1120,11 @@ def exposure_sensitivity_control(body: dict, census_body: dict, authority: dict)
     disagreeing with the forward map; a length-boundary plan marked executed; a dropped site; and a
     typed count.
     """
+    # The committed classification is columnar on disk; the mutations below index its records, so
+    # decode once (a fresh measurement passes the views, for which decoding is a no-op).
+    census_body = ms_census.decode_body(census_body)
+    refs = ms_codec.refs_from_census(census_body)
+    body = ms_codec.decode_body(body, refs)
     baseline = exposure_findings(body, census_body, authority)
     result: dict = {"baseline_findings": len(baseline), "honest": not baseline,
                     "specificity_holds": False, "mutations": {}}
@@ -1307,15 +1334,17 @@ def _inputs() -> list:
 
 def _measure() -> int:
     """Derive the classification from the committed planes and write it."""
-    census_body = _body(_load(CENSUS))
+    census_body = ms_census.decode_body(_body(_load(CENSUS)))
+    refs = ms_codec.refs_from_census(census_body)
     authority = load_authority()
     body = build_body(census_body, authority)
     problems = exposure_findings(body, census_body, authority)
 
     auth = resolve_authority(PRODUCTION_AUTHORITY)
+    encoded = ms_codec.encode_body(body, refs)
     doc = envelope(kind="phase25-exposure", authority=auth.id, inputs=_inputs(),
-                   body=body, generator=GENERATOR)
-    doc["body_hash"] = content_hash(body)
+                   body=encoded, generator=GENERATOR)
+    doc["body_hash"] = content_hash(encoded)
     _write_plane(OUT, doc)
 
     c = body["counts"]

@@ -130,7 +130,7 @@ record and this section is the activation measurement.**
 | # | Subphase | Owns | Depends on | Courts |
 |---|---|---|---|---|
 | 25.0 | **The constitution, the schemas, the guard, the ledger and the runner** | `docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md`, `forensics/tools/memory_safety_schemas.py`, the Docker-only execution guard `forensics/tools/phase25_guard.py`, the committed venue manifest `forensics/memory-safety/container.json` and the measurement in §1. The ledger (`forensics/phase25-obligations.json`) and its generator land with it, together with the runner `forensics/tools/phase25_courts.py` and the registry it writes. **The runner cannot be deferred**: `run_courts.py` refuses a stratum in `in-progress` with no runner, and this stratum's obligations are not exports, so its first runnable court is a later subphase's. | 24 | `MS-CONSTITUTION` |
-| 25.1 | **The compiler-backed source census** | the shipped first-party source/build census (`artifacts/phase25/source-census.json`), one row per file with its kind, origin and the **compiler-derived** unsafe operations it contains, and the per-unit compiler provenance. | 25.0 | `MS-SOURCE-CENSUS` |
+| 25.1 | **The compiler-backed source census** | the shipped first-party source/build census (`artifacts/phase25/source-census.json`), one row per file with its kind, origin and the **compiler-derived unsafe operations** it contains, one site per operation (each with its own source span and stable id) anchored in its compiler-identified unsafe context, and the per-unit compiler provenance. | 25.0 | `MS-SOURCE-CENSUS` |
 | 25.2 | **The non-Rust trusted computing base** | the first-party C sources and headers, the inline assembly, the exported FFI boundaries, the C adapters and the variadic boundaries (`artifacts/phase25/non-rust-tcb.json`), so the unsafe TCB is not read as Rust-only. | 25.1 | `MS-NON-RUST-TCB` |
 | 25.3 | **The safety obligations** | one obligation per compiler-derived unsafe site along its dimension, with how it is discharged or why it is open (`artifacts/phase25/safety-obligations.json`), so no reachable unsafe site is left unexplained. | 25.1, 25.2 | `MS-SAFETY-OBLIGATIONS` |
 | 25.4 | **The ownership, allocation and callback planes** | the allocation/deallocation associations, the ownership edges across the Rust/C boundary, the callback lifetimes, the unsafe `Send`/`Sync` impls, the global/static state and the panic/unwind boundaries (`artifacts/phase25/ownership-planes.json`). | 25.3 | `MS-OWNERSHIP-PLANES` |
@@ -319,6 +319,52 @@ fixes the unit at the compiler-derived unsafe operation. A later subphase that p
 LOC ratio publishes it as a projection of the census, with the census beside it, so the projection
 can never be read as the security claim. The `MS-SOURCE-CENSUS` court checks this rather than this
 paragraph asserting it.
+
+**25.1 recorded one such correction, and it is checked rather than asserted.** §3.2 fixes the
+primary unit at a **compiler-derived unsafe operation**, but the 25.1 census first enumerated a
+compiler-identified *context* and recorded **one site per context**, so a context holding several
+operations -- `unsafe { *first = 1; *second = 2; }` -- became one site rather than two. 25.1
+corrected the extractor to enumerate every operation inside the compiler-established context span,
+so a context with N operations yields N sites, each with its own source span and a stable `site_id`
+derived from `(file, span, operation kind)`, while the enclosing `context_id` still names the
+compiler context the operation sits in and `classification_method` records the method on every row.
+A HIR/MIR-backed enumerator was investigated first, with the pinned nightly, and is recorded as the
+measured reason the operation-level extractor is the compiler-anchored span scan:
+`-Zunpretty=hir-tree` and `-Zunpretty=thir-tree` are not reproducible at this crate's scale (the lib
+aborts with `memory allocation of 2147483648 bytes failed` and `memory allocation of 1207468032
+bytes failed`), and `-Zunpretty=mir -Zmir-include-spans` -- producible at 4,922,910 lines / 364 MB,
+with spans that align with the compiler's context spans -- is post-desugaring, so a method call and
+a free-function call print identically, a union access is unlabelled and the
+`ptr::read`/`read_unaligned`/`assert_unchecked` family is indistinguishable from any other call. The
+**unchanged context-level kind classifier is kept as the independent cross-check**, reconciled with
+the operation-level sites, and each of the 428 contexts where they disagree (a token that is both a
+raw read/write and a method call) is a recorded residual. The `MS-SOURCE-CENSUS` court re-derives
+each context's operations from the shipped source and **fails a census that fuses two operations
+into one site**, and its sensitivity control seeds exactly that fusion -- with the context's
+`site_ids` edited to match -- among its six mutations. The correction changed the site ids, so every
+dependent plane (25.3 through 25.8) and the 25.2 non-Rust TCB that cross-references the FFI site ids
+were re-derived.
+
+**25.1 recorded a second such correction, and it is checked rather than asserted.** The census and
+its seven derived measurement artefacts were written one JSON object per record, so a file path, a
+module, a kind, a method and a compiler clause were repeated on every record: `source-census.json`
+was 120 MB, the seven Phase-25 artefacts were 267 MB together, and GitHub's pre-receive hook -- which
+refuses any file over 100 MB -- refused the commit. The encoding was the whole cost and the
+evidence was not: every artefact is now stored in a **lossless, deterministic, self-describing
+columnar form** (`forensics/tools/ms_codec.py`, named by `body.encoding = "ms-columnar-v1"`), where
+each repeated string is stored once in a `tables` block and each record is a short array of indices
+and integers; the census strips the fields that re-derive from the committed source (`site_id`,
+`context_id`, `module`, `line`, `column` and `span` are functions of `(file, byte_start, byte_end,
+kind)` and the committed bytes) and rebuilds them on decode, and every derived plane references the
+census's ordered site/context ids by index rather than repeating them. `decode(encode(view)) ==
+view` for every artefact, so no count, id, ordering or finding is lost -- only its spelling on disk
+changes -- and each writer and its court decode through the one codec. **The plan records the size
+budget as a correction: `artifacts/phase25/source-census.json` must stay under a committed budget of
+20 MiB** (comfortably under the 100 MB hook; the columnar census is ~10.5 MiB), and the
+`MS-SOURCE-CENSUS` court **fails** when the committed file exceeds it, so this cannot recur silently.
+The correction is checked by the subphases' courts rather than asserted: each court re-derives every
+invariant from the decoded view, and the census court additionally enforces the budget (`docs/
+PHASE-25-MEMORY-SAFETY-SUBPHASES.md` sections 3.2, 4).
 
 ## 5. Process
 

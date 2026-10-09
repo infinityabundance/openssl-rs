@@ -194,6 +194,12 @@ import ms_exposure  # noqa: E402
 # artefact, the census and the exposure classification.
 import ms_reduction  # noqa: E402
 
+# The lossless columnar codec the Phase-25 artefacts are stored in. Every court decodes the
+# committed artefact through `decode_body` before reading its records, so one implementation of the
+# scheme serves the generator, the court and every cross-reader; the scheme is named by
+# `body.encoding`.
+import ms_codec  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase25" / "COURTS.json"
 GENERATOR = "forensics/tools/phase25_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-25-MEMORY-SAFETY-SUBPHASES.md"
@@ -204,6 +210,27 @@ MANIFEST = REPO_ROOT / "forensics" / "memory-safety" / "container.json"
 SOURCE_CENSUS = REPO_ROOT / "artifacts" / "phase25" / "source-census.json"
 MS_CENSUS_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_census.py"
 SOURCE_CENSUS_COURT = "MS-SOURCE-CENSUS"
+
+# The census artefact's size budget, in bytes. The measurement artefacts repeat a file path, a
+# module, a kind, a method and a commit per record; written one object per record the census is
+# 120 MB, over GitHub's 100 MB pre-receive limit, so it is stored as a lossless columnar body
+# (see `ms_codec`) and this court fails if it exceeds the budget recorded in the plan's section 4.
+# The budget is comfortably under the 100 MB hook (20 MiB) and well above the ~14 MiB the columnar
+# form actually needs, so a real regression is caught and a legitimate growth has headroom.
+SOURCE_CENSUS_BUDGET_BYTES = 20 * 1024 * 1024
+
+
+def _census_view() -> tuple[dict, "ms_codec.Refs"]:
+    """The committed census as a decoded record view and the ordered id lists it references."""
+    doc = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8"))
+    view = ms_census.decode_body(doc.get("body", doc))
+    return view, ms_codec.refs_from_census(view)
+
+
+def _decoded_body(path: Path, refs: "ms_codec.Refs") -> dict:
+    """A committed Phase-25 artefact's body, decoded through the columnar codec."""
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    return ms_codec.decode_body(doc.get("body", doc), refs)
 
 # 25.2's non-Rust trusted computing base and the tool that measures it.
 NON_RUST_TCB = REPO_ROOT / "artifacts" / "phase25" / "non-rust-tcb.json"
@@ -508,8 +535,17 @@ def _ms_source_census_court(name: str) -> dict:
                 "findings": [], "control": {}}
 
     doc = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8"))
-    body = doc.get("body", doc)
+    body = ms_census.decode_body(doc.get("body", doc))
+    # The size budget: the artefact is stored in a lossless columnar form precisely because the
+    # record-per-object form exceeded GitHub's 100 MB pre-receive limit (the plan's section 4 records
+    # the correction). The court fails if the columnar artefact grows past the committed budget, so
+    # a regression here is a failed court rather than a rejected push.
+    size_bytes = SOURCE_CENSUS.stat().st_size
     problems = ms_census.census_findings(body)
+    if size_bytes > SOURCE_CENSUS_BUDGET_BYTES:
+        problems = [f"the source census {rel(SOURCE_CENSUS)} is {size_bytes} bytes, over the "
+                    f"committed {SOURCE_CENSUS_BUDGET_BYTES}-byte budget (the columnar form is "
+                    f"lossless and must stay well under GitHub's 100 MB pre-receive limit)"] + problems
     control = ms_census.census_sensitivity_control(body)
 
     counts = body.get("counts") or {}
@@ -564,6 +600,9 @@ def _ms_source_census_court(name: str) -> dict:
         "sites_by_kind": counts.get("sites_by_kind") or {},
         "contexts_by_kind": counts.get("contexts_by_kind") or {},
         "loc": loc,
+        "encoding": ms_codec.ENCODING,
+        "size_bytes": size_bytes,
+        "size_budget_bytes": SOURCE_CENSUS_BUDGET_BYTES,
         "crosschecks": {
             "geiger": (cross.get("geiger") or {}).get("status"),
             "lexical_unsafe_keywords": (cross.get("lexical") or {}).get(
@@ -603,8 +642,8 @@ def _ms_non_rust_tcb_court(name: str) -> dict:
                 "findings": [], "control": {}}
 
     doc = json.loads(NON_RUST_TCB.read_text(encoding="utf-8"))
-    body = doc.get("body", doc)
     ctx = ms_non_rust_tcb.build_context()
+    body = ms_codec.decode_body(doc.get("body", doc), ctx["refs"])
     problems = ms_non_rust_tcb.non_rust_findings(body, ctx)
     control = ms_non_rust_tcb.non_rust_sensitivity_control(body, ctx)
 
@@ -693,10 +732,9 @@ def _ms_safety_obligations_court(name: str) -> dict:
                 "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
                 "findings": [], "control": {}}
 
-    body = json.loads(SAFETY_OBLIGATIONS.read_text(encoding="utf-8")).get("body", {})
-    census_body = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8")).get("body", {})
-    tcb_body = (json.loads(NON_RUST_TCB.read_text(encoding="utf-8")).get("body", {})
-                if NON_RUST_TCB.is_file() else {})
+    census_body, refs = _census_view()
+    body = _decoded_body(SAFETY_OBLIGATIONS, refs)
+    tcb_body = (_decoded_body(NON_RUST_TCB, refs) if NON_RUST_TCB.is_file() else {})
     problems = ms_obligations.obligation_findings(body, census_body, tcb_body)
     control = ms_obligations.obligation_sensitivity_control(body, census_body, tcb_body)
 
@@ -781,10 +819,9 @@ def _ms_ownership_planes_court(name: str) -> dict:
                 "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
                 "findings": [], "control": {}}
 
-    body = json.loads(OWNERSHIP_PLANES.read_text(encoding="utf-8")).get("body", {})
-    census_body = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8")).get("body", {})
-    tcb_body = (json.loads(NON_RUST_TCB.read_text(encoding="utf-8")).get("body", {})
-                if NON_RUST_TCB.is_file() else {})
+    census_body, refs = _census_view()
+    body = _decoded_body(OWNERSHIP_PLANES, refs)
+    tcb_body = (_decoded_body(NON_RUST_TCB, refs) if NON_RUST_TCB.is_file() else {})
     ctx = ms_ownership_planes.build_context()
     problems = ms_ownership_planes.ownership_findings(body, census_body, tcb_body, ctx)
     control = ms_ownership_planes.ownership_sensitivity_control(body, census_body, tcb_body, ctx)
@@ -882,8 +919,8 @@ def _ms_phase22_crosswalk_court(name: str) -> dict:
                 "problems": [f"the Phase-22 reachability atlas {rel(PHASE22_CLOSURE)} is absent"],
                 "findings": [], "control": {}}
 
-    body = json.loads(PHASE22_CROSSWALK.read_text(encoding="utf-8")).get("body", {})
-    census_body = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8")).get("body", {})
+    census_body, refs = _census_view()
+    body = _decoded_body(PHASE22_CROSSWALK, refs)
     authority = ms_phase22_crosswalk.load_authority()
     problems = ms_phase22_crosswalk.crosswalk_findings(body, census_body, authority)
     control = ms_phase22_crosswalk.crosswalk_sensitivity_control(body, census_body, authority)
@@ -975,8 +1012,8 @@ def _ms_phase24_crosswalk_court(name: str) -> dict:
                              f"{rel(DOWNSTREAM_USAGE_FINGERPRINTS)} are absent"],
                 "findings": [], "control": {}}
 
-    body = json.loads(PHASE24_CROSSWALK.read_text(encoding="utf-8")).get("body", {})
-    census_body = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8")).get("body", {})
+    census_body, refs = _census_view()
+    body = _decoded_body(PHASE24_CROSSWALK, refs)
     authority = ms_phase24_crosswalk.load_authority()
     problems = ms_phase24_crosswalk.crosswalk_findings(body, census_body, authority)
     control = ms_phase24_crosswalk.crosswalk_sensitivity_control(body, census_body, authority)
@@ -1067,8 +1104,8 @@ def _ms_exposure_classification_court(name: str) -> dict:
                 "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
                 "findings": [], "control": {}}
 
-    body = json.loads(EXPOSURE.read_text(encoding="utf-8")).get("body", {})
-    census_body = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8")).get("body", {})
+    census_body, refs = _census_view()
+    body = _decoded_body(EXPOSURE, refs)
     authority = ms_exposure.load_authority()
     problems = ms_exposure.exposure_findings(body, census_body, authority)
     control = ms_exposure.exposure_sensitivity_control(body, census_body, authority)
@@ -1158,8 +1195,8 @@ def _ms_unsafe_reduction_court(name: str) -> dict:
                 "problems": [f"the exposure classification {rel(EXPOSURE)} is absent"],
                 "findings": [], "control": {}}
 
-    body = json.loads(UNSAFE_REDUCTION.read_text(encoding="utf-8")).get("body", {})
-    census_body = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8")).get("body", {})
+    census_body, refs = _census_view()
+    body = _decoded_body(UNSAFE_REDUCTION, refs)
     authority = ms_reduction.load_authority()
     problems = ms_reduction.reduction_findings(body, census_body, authority)
     control = ms_reduction.reduction_sensitivity_control(body, census_body, authority)

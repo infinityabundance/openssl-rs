@@ -100,6 +100,10 @@ import phase25_guard  # noqa: E402
 # The residual schema and its closed vocabularies. Imported, never restated.
 import memory_safety_schemas as schemas  # noqa: E402
 
+# The census (for the site universe and its ordered id lists) and the lossless columnar codec.
+import ms_census  # noqa: E402
+import ms_codec  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase25" / "phase24-crosswalk.json"
 GENERATOR = "forensics/tools/ms_phase24_crosswalk.py"
 TOOL = REPO_ROOT / "forensics" / "tools" / "ms_phase24_crosswalk.py"
@@ -187,10 +191,20 @@ def _load(path: Path) -> dict:
 
 
 def load_authority() -> dict:
-    """The committed planes this plane reads, loaded once so the generator and the court share bytes."""
+    """The committed planes this plane reads, loaded once so the generator and the court share bytes.
+
+    The census and the 25.5 crosswalk are columnar artefacts from this stratum, so their bodies are
+    decoded here (the census supplies the ordered id lists the crosswalk references by index); the
+    Phase-22/24 atlases are not this stratum's encoding and are used as loaded.
+    """
+    census_doc = _load(CENSUS)
+    census_body = ms_census.decode_body(census_doc.get("body", census_doc))
+    refs = ms_codec.refs_from_census(census_body)
+    xw_doc = _load(PHASE22_CROSSWALK)
     return {
-        "census": _load(CENSUS),
-        "phase22_crosswalk": _load(PHASE22_CROSSWALK),
+        "census": {**census_doc, "body": census_body},
+        "phase22_crosswalk": {**xw_doc,
+                              "body": ms_codec.decode_body(xw_doc.get("body", xw_doc), refs)},
         "phase22_reconciliation": _load(PHASE22_RECONCILIATION),
         "usage_fingerprints": _load(USAGE_FINGERPRINTS),
         "reconciliation": _load(RECONCILIATION),
@@ -646,6 +660,11 @@ def crosswalk_findings(body: dict, census_body: dict, authority: dict) -> list:
     the committed Phase-24 measurement rather than a typed one.
     """
     problems: list = []
+    # The committed crosswalk is columnar on disk; re-derive the views the checks read (a fresh
+    # measurement passes the views, for which decoding is a no-op).
+    census_body = ms_census.decode_body(census_body)
+    refs = ms_codec.refs_from_census(census_body)
+    body = ms_codec.decode_body(body, refs)
     d = derive_cached(census_body, authority)
 
     sites = body.get("sites") or {}
@@ -743,6 +762,11 @@ def crosswalk_sensitivity_control(body: dict, census_body: dict, authority: dict
     runtime-observed with no runtime row; the inverse consumer view disagreeing with the forward
     map; a typed consumer count; and a partial join left without its residual.
     """
+    # The committed crosswalk is columnar on disk; the mutations below index its records, so decode
+    # once (a fresh measurement passes the views, for which decoding is a no-op).
+    census_body = ms_census.decode_body(census_body)
+    refs = ms_codec.refs_from_census(census_body)
+    body = ms_codec.decode_body(body, refs)
     baseline = crosswalk_findings(body, census_body, authority)
     result: dict = {"baseline_findings": len(baseline), "honest": not baseline,
                     "specificity_holds": False, "mutations": {}}
@@ -978,15 +1002,17 @@ def _inputs() -> list:
 
 def _measure() -> int:
     """Derive the crosswalk from the committed census and the Phase-24 measurement, and write it."""
-    census_body = _load(CENSUS).get("body", {})
+    census_body = ms_census.decode_body(_load(CENSUS).get("body", {}))
+    refs = ms_codec.refs_from_census(census_body)
     authority = load_authority()
     body = build_body(census_body, authority)
     problems = crosswalk_findings(body, census_body, authority)
 
     auth = resolve_authority(PRODUCTION_AUTHORITY)
+    encoded = ms_codec.encode_body(body, refs)
     doc = envelope(kind="phase25-phase24-crosswalk", authority=auth.id, inputs=_inputs(),
-                   body=body, generator=GENERATOR)
-    doc["body_hash"] = content_hash(body)
+                   body=encoded, generator=GENERATOR)
+    doc["body_hash"] = content_hash(encoded)
     _write_planes(OUT, doc)
 
     c = body["counts"]

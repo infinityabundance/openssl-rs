@@ -93,6 +93,11 @@ import phase25_guard  # noqa: E402
 # drift from the schema the court validates them against.
 import memory_safety_schemas as schemas  # noqa: E402
 
+# The census (for the site universe and its ordered id lists) and the lossless columnar codec both
+# the census and this plane are stored in. One implementation of the scheme serves every reader.
+import ms_census  # noqa: E402
+import ms_codec  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase25" / "safety-obligations.json"
 GENERATOR = "forensics/tools/ms_obligations.py"
 TOOL = REPO_ROOT / "forensics/tools" / "ms_obligations.py"
@@ -570,6 +575,14 @@ def obligation_findings(body: dict, census_body: dict, tcb_body: dict) -> list[s
     reproduces; and that every count is derived, not typed.
     """
     problems: list[str] = []
+
+    # The committed planes are columnar on disk; re-derive the views the checks read (a fresh
+    # measurement passes the views, for which decoding is a no-op). The census supplies the ordered
+    # site/context id lists the plane references by index.
+    census_body = ms_census.decode_body(census_body)
+    refs = ms_codec.refs_from_census(census_body)
+    tcb_body = ms_codec.decode_body(tcb_body, refs)
+    body = ms_codec.decode_body(body, refs)
     d = derive(census_body)
     expected_by_site = d["by_site"]
     expected_contracts = d["by_contract"]
@@ -752,6 +765,12 @@ def obligation_sensitivity_control(body: dict, census_body: dict, tcb_body: dict
     each mutation must produce its own finding, so a control that "caught" everything
     indiscriminately would not pass.
     """
+    # The committed planes are columnar on disk; the mutations below index their records, so decode
+    # once (a fresh measurement passes the views, for which decoding is a no-op).
+    census_body = ms_census.decode_body(census_body)
+    refs = ms_codec.refs_from_census(census_body)
+    tcb_body = ms_codec.decode_body(tcb_body, refs)
+    body = ms_codec.decode_body(body, refs)
     baseline = obligation_findings(body, census_body, tcb_body)
     result: dict = {"baseline_findings": len(baseline), "honest": not baseline,
                     "specificity_holds": False, "mutations": {}}
@@ -941,15 +960,17 @@ def _inputs() -> list[InputRef]:
 
 def _measure() -> int:
     """Derive the obligations plane from the committed census and TCB, and write it."""
-    census_body = _load(CENSUS).get("body", {})
-    tcb_body = _load(TCB).get("body", {})
+    census_body = ms_census.decode_body(_load(CENSUS).get("body", {}))
+    tcb_body = ms_codec.decode_body(_load(TCB).get("body", {}),
+                                    ms_codec.refs_from_census(census_body))
     body = build_body(census_body, tcb_body)
     problems = obligation_findings(body, census_body, tcb_body)
 
     auth = resolve_authority(PRODUCTION_AUTHORITY)
+    encoded = ms_codec.encode_body(body, ms_codec.refs_from_census(census_body))
     doc = envelope(kind="phase25-safety-obligations", authority=auth.id, inputs=_inputs(),
-                   body=body, generator=GENERATOR)
-    doc["body_hash"] = content_hash(body)
+                   body=encoded, generator=GENERATOR)
+    doc["body_hash"] = content_hash(encoded)
     _write_obligations(OUT, doc)
 
     c = body["counts"]
