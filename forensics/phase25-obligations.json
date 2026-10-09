@@ -355,12 +355,12 @@
     {
       "name": "phase-25-plan",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "54c2e2dfeca985b5ab7ab25da81a5321af6022b7cf784ad9e7eb81756ca29196"
+      "sha256": "d7e7874ff4bc79cd7c5ed53af2a62c2d23babb66646c3f2b61ff6a6bb7987373"
     },
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "a0174a202a218f510ee61a7b86c4a7652aa0ce1236fb979e84b14070352961ae"
+      "sha256": "c2a86241e4d113afb10ee720613bb5b69dbbac1ed887192e3da5eddf1d197eb9"
     },
     {
       "name": "phase25-guard",

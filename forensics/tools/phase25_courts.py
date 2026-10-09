@@ -1201,12 +1201,32 @@ def _ms_unsafe_reduction_court(name: str) -> dict:
     untouched. It also reads the 25.8 **differential artefact**
     (`forensics/memory-safety/sparse-array-differential.json`) and refuses an allocator divergence
     that is not adjudicated, a differential harness that did not run, a missing callback
-    re-entrancy obligation and a missing residual unsafe boundary. Thirteen seeded mutations -- a
+    re-entrancy obligation and a missing residual unsafe boundary. Fifteen seeded mutations -- a
     reduction with no test evidence, a weakened lint, a reduced site still present, a frozen census
     that disagrees, a worklist that omits a class, a typed count, a HIDDEN classification, a removed
     site still present, a changed downstream verdict, a relocation with no boundary operation, a
-    differential harness that did not run, an unadjudicated allocator divergence and a missing
-    re-entrancy obligation -- are each caught with specificity holding. The worklist is a
+    differential harness that did not run, an unadjudicated allocator divergence, a missing
+    re-entrancy obligation, a count increase labelled a reduction and a dropped negative result --
+    are each caught with specificity holding. It also records the
+    reconstruction campaign's **negative result** and its **axis**: a conversion of the EVP operation
+    cache was implemented, differentially tested against `openssl-3.6.4` with every behavioural field
+    matching, and reverted because the census showed it is **not a reduction** (the subsystem rose 287
+    -> 313 and the crate 172072 -> 172139), since the owned representation's allocator seam, Deref/Drop,
+    slice construction and re-entrancy test cost more than a linear cache's interior unsafe is worth --
+    an `attempted_conversions` entry with the verdict `REVERTED_NOT_A_REDUCTION`. The axis is what a
+    conversion is judged on besides the net: dangerous operations ELIMINATED, a smaller auditable
+    residual boundary, and HIDDEN=0, and a net site-count increase is never labelled a reduction. The
+    worklist is a
+    re-entrancy obligation -- are each caught with specificity holding. It also records the
+    reconstruction campaign's **negative result** and its **axis**: a conversion of the EVP operation
+    cache was implemented, differentially tested against `openssl-3.6.4` with every behavioural field
+    matching, and reverted because the census showed it is **not a reduction** (the subsystem rose 287
+    -> 313 and the crate 172072 -> 172139), since the owned representation's allocator seam, Deref/Drop,
+    slice construction and re-entrancy test cost more than a linear cache's interior unsafe is worth --
+    an `attempted_conversions` entry with the verdict `REVERTED_NOT_A_REDUCTION`. The axis is what a
+    conversion is judged on besides the net: dangerous operations ELIMINATED, a smaller auditable
+    residual boundary, and HIDDEN=0, and a net site-count increase is never labelled a reduction. The
+    worklist is a
     **local-replacement feasibility census**, not an impossibility result: it records that none of the
     operations screened against the ten local-substitution patterns was locally replaceable without
     changing the public surface or behaviour, which is not a claim that the rest of the core is
@@ -1275,7 +1295,7 @@ def _ms_unsafe_reduction_court(name: str) -> dict:
             "ladder and eight functional workloads are re-read from the committed measurement and "
             "required to match the frozen baseline). It also reads the committed differential "
             "artefact and refuses an unadjudicated allocator divergence, a harness that did not run, "
-            "a missing re-entrancy obligation and a missing residual unsafe boundary. Thirteen "
+            "a missing re-entrancy obligation and a missing residual unsafe boundary. Fifteen "
             "seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-"
             "SUBPHASES.md sections 2, 3.4)."
         ),
@@ -1305,6 +1325,19 @@ def _ms_unsafe_reduction_court(name: str) -> dict:
             "tests": rec.get("tests"),
             "downstream": rec.get("downstream"),
             "hidden": (rec.get("conservation") or {}).get("hidden"),
+            "axis": rec.get("axis"),
+            "attempted_conversions": [
+                {"id": c.get("id"), "verdict": c.get("verdict"),
+                 "subsystem_before": (c.get("counts") or {}).get("subsystem_before"),
+                 "subsystem_after": (c.get("counts") or {}).get("subsystem_after"),
+                 "crate_before": (c.get("counts") or {}).get("crate_before"),
+                 "crate_after": (c.get("counts") or {}).get("crate_after"),
+                 "hidden": (c.get("classification") or {}).get("HIDDEN")}
+                for c in (rec.get("attempted_conversions") or [])],
+            "next_targets": [
+                {"id": t.get("id"), "subsystem": t.get("subsystem"),
+                 "interior_operations": t.get("interior_operations")}
+                for t in (rec.get("next_targets") or [])],
         },
         "worklist": {e.get("pattern"): (e.get("sites") or {}).get("count", 0)
                      for e in sorted(body.get("worklist") or [],
