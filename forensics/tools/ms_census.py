@@ -26,9 +26,14 @@ with all four lints as warnings and `--message-format=json`, and:
     construct); the three named lints are the authority for whether each context is
     **documented** -- they producing nothing is itself the recorded fact that the crate is
     documentation-clean, and a context that regressed would appear here as a diagnostic;
-  * a purpose-built tokenizer over the compiler's own span text classifies each context's
-    operation against `memory_safety_schemas.UNSAFE_OPERATION_KINDS`, and records the method and
-    provenance on every site (never a bare regex over the raw file).
+  * a purpose-built tokenizer over the compiler's own span text **enumerates each unsafe
+    operation inside the context** -- one site per raw dereference, unsafe/extern call, method
+    call, static access, pointer read/write, transmute, inline asm and so on -- against
+    `memory_safety_schemas.UNSAFE_OPERATION_KINDS`. The compiler establishes the context and its
+    span; the enumerator gives each operation in it its own span and its own stable `site_id`,
+    while the enclosing `context_id` still names the compiler-identified context it sits in
+    (never a bare regex over the raw file). The older context-level kind-set classifier is kept
+    **unchanged** as an independent cross-check.
 
 The macro-expanded source
 -------------------------
@@ -45,6 +50,34 @@ An honest limitation, recorded not hidden: the operation *kind* is a classificat
 compiler fact. The compiler establishes that the context exists; the tokenizer assigns the kind and
 records `classification_method` on the site. The kind is therefore a secondary label on a
 compiler-established unit, and `sites[].classification_method` says so on every row.
+
+Why the operation extractor is the compiler-anchored span scan, not a raw HIR/MIR dump
+-------------------------------------------------------------------------------------
+The primary unit is a *compiler-derived* operation, so a HIR/MIR-backed enumerator was
+investigated first, with the pinned nightly, before this extractor was chosen. The choice is a
+measured one and is recorded rather than hidden:
+
+  * `-Zunpretty=hir-tree` and `-Zunpretty=thir-tree` are **not reproducible at this crate's
+    scale**. Emitting either for the lib aborts inside the compiler with
+    `memory allocation of 2147483648 bytes failed` (hir-tree) / `memory allocation of 1207468032
+    bytes failed` (thir-tree): the trees carry a fully-typed, span-annotated copy of every
+    expression, which the 32 MB crate projects beyond the venue's per-process budget. The 450-byte
+    probe used to prototype the formats expands ~194x for thir-tree, so the projection is gigabytes.
+  * `-Zunpretty=mir -Zmir-include-spans` *is* producible (measured: 4,922,910 lines / 364 MB) and
+    its per-operation spans align with the compiler's own `unsafe_code` context spans, including
+    macro-expanded spans (both point at the macro definition body). But MIR is post-desugaring: a
+    method call and a free-function call print identically, a union field access is not labelled
+    as one, `ptr::read`/`read_unaligned`/`assert_unchecked` are indistinguishable from any other
+    call, and the debug null-check instrumentation duplicates each raw dereference as a chain of
+    `PtrToPtr`/`Transmute`/assert statements that share the dereference's span. Reconstructing the
+    census's operation vocabulary from MIR would be a heuristic layer, not a compiler fact.
+
+So the operation-level extractor is the compiler-anchored span scan: the compiler (the built-in
+`unsafe_code` lint) establishes each unsafe context and its exact span, and the scan enumerates
+the **distinct operations inside that compiler-established span**, each with its own span and
+stable id. Every site records `classification_method` (the method that produced it), the compiler
+context it belongs to, and the operation's own span; the `rule` records this decision and the
+`crosschecks` reconcile it against the unchanged context-level classifier.
 
 LOC is a secondary projection
 -----------------------------
@@ -100,6 +133,11 @@ import memory_safety_schemas as schemas  # noqa: E402
 # The lexical scanner whose `code_only` defines "code" for the secondary LOC projection and the
 # source-lexical cross-check. Reused rather than re-implemented so the two cannot disagree.
 import unsafe_footprint as lexical  # noqa: E402
+
+# The lossless columnar encoding the Phase-25 artefacts are stored in. Every reader
+# (this tool, the derived planes and the courts) decodes through it, so the scheme has
+# exactly one implementation.
+import ms_codec  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase25" / "source-census.json"
 GENERATOR = "forensics/tools/ms_census.py"
@@ -289,15 +327,17 @@ _ASM_MACROS = frozenset({"asm", "global_asm", "naked_asm", "llvm_asm"})
 _UNCHECKED = frozenset({"assert_unchecked", "unreachable_unchecked"})
 
 
-def tokenize(text: str) -> list[tuple[str, str]]:
-    """A minimal Rust lexer: `(kind, value)` for every significant token.
+def tokenize(text: str) -> list[tuple[str, str, int, int]]:
+    """A minimal Rust lexer: `(kind, value, start, end)` for every significant token.
 
     Comments and whitespace are dropped; string/char literals collapse to one `lit` token (their
     content is never a construct); lifetimes are their own token so the char-literal branch does
-    not eat them. This is a scanner, not a parser, and is documented as such -- it is scoped to a
-    single compiler-identified context span, never run over a whole file.
+    not eat them. `start`/`end` are **character** offsets into `text` (the caller maps them to
+    file bytes); the operation enumerator needs them so every operation can carry its own span.
+    This is a scanner, not a parser, and is documented as such -- it is scoped to a single
+    compiler-identified context span, never run over a whole file.
     """
-    out: list[tuple[str, str]] = []
+    out: list[tuple[str, str, int, int]] = []
     i, n = 0, len(text)
     while i < n:
         c = text[i]
@@ -328,7 +368,7 @@ def tokenize(text: str) -> list[tuple[str, str]]:
             term = '"' + m.group(1)
             e = text.find(term, m.end())
             i = n if e < 0 else e + len(term)
-            out.append(("lit", ""))
+            out.append(("lit", "", m.start(), i))
             continue
         if c == '"':
             j = i + 1
@@ -340,37 +380,38 @@ def tokenize(text: str) -> list[tuple[str, str]]:
                     j += 1
                     break
                 j += 1
+            out.append(("lit", "", i, j))
             i = j
-            out.append(("lit", ""))
             continue
         if c == "'":
             if i + 2 < n and (text[i + 2] == "'" or text[i + 1] == "\\"):
                 j = i + 1
                 while j < n and text[j] != "'":
                     j += 2 if (text[j] == "\\" and j + 1 < n) else 1
-                i = min(j + 1, n)
-                out.append(("lit", ""))
+                end = min(j + 1, n)
+                out.append(("lit", "", i, end))
+                i = end
                 continue
             m = _LIFETIME.match(text, i)
             if m is not None:
-                out.append(("lifetime", m.group(0)))
+                out.append(("lifetime", m.group(0), m.start(), m.end()))
                 i = m.end()
                 continue
             i += 1
             continue
         m = _IDENT.match(text, i)
         if m is not None:
-            out.append(("id", m.group(0)))
+            out.append(("id", m.group(0), m.start(), m.end()))
             i = m.end()
             continue
         m = _NUM.match(text, i)
         if m is not None:
-            out.append(("num", m.group(0)))
+            out.append(("num", m.group(0), m.start(), m.end()))
             i = m.end()
             continue
         for op in _OPS:
             if text.startswith(op, i):
-                out.append(("op", op))
+                out.append(("op", op, i, i + len(op)))
                 i += len(op)
                 break
         else:
@@ -378,17 +419,22 @@ def tokenize(text: str) -> list[tuple[str, str]]:
     return out
 
 
-def classify_operations(toks: list[tuple[str, str]]) -> list[str]:
+def classify_operations(toks: list[tuple[str, str, int, int]]) -> list[str]:
     """The unsafe-operation kinds present in a token stream, from `UNSAFE_OPERATION_KINDS`.
+
+    This is the **context-level** classifier: it answers *which* kinds appear in a context, and it
+    is kept unchanged as the independent cross-check the operation-level enumerator is reconciled
+    against. It returns a sorted, de-duplicated kind set, so it cannot see that a context holds
+    two operations of the same kind -- that granularity is `enumerate_operations`'s.
 
     A small state machine, not a regex over raw text: it looks at token *sequences* so a `*` that
     is a pointer type (`*const`/`*mut`) is not read as a dereference, and an identifier that is a
-    keyword (`if x(`) is not read as a function call. The returned list is sorted and de-duplicated.
+    keyword (`if x(`) is not read as a function call.
     """
     found: set[str] = set()
-    vals = [v for _k, v in toks]
-    kinds = [k for k, _v in toks]
-    for idx, (kind, value) in enumerate(toks):
+    vals = [v for _k, v, _s, _e in toks]
+    kinds = [k for k, _v, _s, _e in toks]
+    for idx, (kind, value, _s, _e) in enumerate(toks):
         nxt = toks[idx + 1] if idx + 1 < len(toks) else None
         prev = toks[idx - 1] if idx > 0 else None
         if kind == "id":
@@ -425,6 +471,77 @@ def classify_operations(toks: list[tuple[str, str]]) -> list[str]:
             found.add("UNSAFE_FUNCTION_CALL")
     del kinds
     return sorted(found, key=lambda k: (KIND_PRIORITY.index(k) if k in KIND_PRIORITY else 99, k))
+
+
+def _kind_rank(kind: str) -> int:
+    """The load-bearing order of `KIND_PRIORITY`; an unknown kind sorts last."""
+    return KIND_PRIORITY.index(kind) if kind in KIND_PRIORITY else len(KIND_PRIORITY)
+
+
+def _record_op(by_span: dict[tuple[int, int], str], kind: str, s: int, e: int) -> None:
+    """Keep the highest-priority kind for one token span -- a token is one operation."""
+    old = by_span.get((s, e))
+    if old is None or _kind_rank(kind) < _kind_rank(old):
+        by_span[(s, e)] = kind
+
+
+def enumerate_operations(toks: list[tuple[str, str, int, int]]) -> list[tuple[str, int, int]]:
+    """Every unsafe-operation occurrence in a token stream, as `(kind, start, end)`.
+
+    This is the **operation-level** extractor and the census's primary unit. Where
+    `classify_operations` answers *which kinds* a context contains, this answers *how many
+    operations and where*: each raw dereference `*p`, each `.method(`, each `call(`, each
+    `transmute`, each `asm!`, each `static mut`, each raw read/write/copy is its own
+    `(kind, start, end)` with the token's own span, so a context holding two dereferences yields
+    two entries rather than one. `start`/`end` are character offsets into the tokenized text.
+
+    One token is one operation: where a token matches more than one rule (a `p.write(x)` is both a
+    raw write and a method call), the more specific kind in `KIND_PRIORITY` wins, so a token is
+    never counted twice. The result is sorted by span so it is deterministic regardless of the
+    rule order that produced it.
+    """
+    by_span: dict[tuple[int, int], str] = {}
+    vals = [v for _k, v, _s, _e in toks]
+    n = len(toks)
+    for idx, (kind, value, s, e) in enumerate(toks):
+        nxt = toks[idx + 1] if idx + 1 < n else None
+        prev = toks[idx - 1] if idx > 0 else None
+        cand: str | None = None
+        if kind == "id":
+            if value in _ASM_MACROS and nxt is not None and nxt[1] == "!":
+                cand = "INLINE_ASM"
+            if value in ("transmute", "transmute_copy"):
+                cand = "TRANSMUTE"
+            if value in _UNCHECKED:
+                cand = "ASSERT_UNCHECKED"
+            if value in _WRITE_METHODS and prev is not None and prev[1] == ".":
+                cand = "RAW_POINTER_WRITE"
+            if value in _READ_METHODS and prev is not None and prev[1] == ".":
+                cand = "RAW_POINTER_READ"
+            if value in ("write", "read", "copy", "copy_nonoverlapping") and idx >= 3 and \
+                    vals[idx - 1] == "::" and vals[idx - 2] in ("ptr", "intrinsics"):
+                cand = "RAW_POINTER_WRITE" if value != "read" else "RAW_POINTER_READ"
+            if value == "static" and nxt is not None and nxt[1] == "mut":
+                cand = "STATIC_MUT_ACCESS"
+        elif kind == "op" and value == "*":
+            if nxt is not None and nxt[1] not in ("const", "mut") and \
+                    (prev is None or prev[1] in _PREFIX_OK):
+                cand = "RAW_POINTER_DEREFERENCE"
+        if cand is not None:
+            _record_op(by_span, cand, s, e)
+    # A method call: `.ident(` where ident is not a keyword.
+    for idx in range(n - 2):
+        if toks[idx][1] == "." and toks[idx + 1][0] == "id" and toks[idx + 2][1] == "(" \
+                and toks[idx + 1][1] not in _CALL_KEYWORDS:
+            _record_op(by_span, "UNSAFE_METHOD_CALL", toks[idx + 1][2], toks[idx + 1][3])
+    # A free function call: `ident(` (not a keyword) or `path::ident(`.
+    for idx in range(1, n - 1):
+        if toks[idx][0] == "id" and toks[idx][1] not in _CALL_KEYWORDS \
+                and toks[idx + 1][1] == "(" and toks[idx - 1][1] != "." \
+                and toks[idx - 1][1] not in ("fn", "struct", "enum", "union", "trait"):
+            _record_op(by_span, "UNSAFE_FUNCTION_CALL", toks[idx][2], toks[idx][3])
+    return sorted(((k, s, e) for (s, e), k in by_span.items()),
+                  key=lambda o: (o[1], o[2], o[0]))
 
 
 # --------------------------------------------------------------------------------------------
@@ -626,6 +743,11 @@ def _context_id(file: str, bs: int, be: int, kind: str) -> str:
 
 
 def _site_id(file: str, bs: int, be: int, kind: str) -> str:
+    """A site's stable id: `sha16(file, byte_start, byte_end, operation_kind)`.
+
+    The span is the operation's own span (not its context's), so a context holding two
+    operations yields two distinct ids, and an unrelated edit elsewhere leaves the id unchanged.
+    """
     return "us-" + sha256_bytes(f"{file}\0{bs}\0{be}\0{kind}".encode("utf-8"))[:16]
 
 
@@ -652,6 +774,82 @@ def _macro_provenance(span: dict) -> str | None:
     dfn = exp.get("def_site_span") or {}
     return (f"{exp.get('macro_decl_name')}@{inv.get('file_name')}:{inv.get('line_start')}"
             f"<-{dfn.get('file_name')}:{dfn.get('line_start')}")
+
+
+def _char_byte_offsets(text: str) -> list[int]:
+    """`offsets[i]` = the byte offset of character `i` in `text`, for `i` up to `len(text)`.
+
+    The tokenizer works in character offsets and a site's span is a *byte* range, so the map is
+    built once per context and indexed by the token's character offset. Rust source is valid
+    UTF-8, so re-encoding the decoded text reproduces the file's bytes.
+    """
+    offs = [0] * (len(text) + 1)
+    for i, ch in enumerate(text):
+        offs[i + 1] = offs[i] + len(ch.encode("utf-8"))
+    return offs
+
+
+def _byte_line_starts(raw: bytes) -> list[int]:
+    """The byte offset of the start of every line in `raw` (line 1 starts at 0)."""
+    starts = [0]
+    for i, b in enumerate(raw):
+        if b == 0x0A:
+            starts.append(i + 1)
+    return starts
+
+
+def _line_col(starts: list[int], off: int) -> tuple[int, int]:
+    """One-based `(line, column)` of a byte offset, from a precomputed line-start table."""
+    lo, hi = 0, len(starts)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if starts[mid] <= off:
+            lo = mid + 1
+        else:
+            hi = mid
+    line = max(lo, 1)
+    return line, off - starts[line - 1] + 1
+
+
+def _own_text(raw: bytes, bs: int, be: int, children: list[dict]) -> tuple[str, int]:
+    """A context's own text: its byte span minus every nested context's span.
+
+    Returns `(text, base)` where `base` is the absolute byte offset `text` starts at. Nested
+    contexts are blanked to spaces in place, so byte offsets in `text` map to `base + offset`.
+    """
+    bs_c, be_c = min(bs, len(raw)), min(be, len(raw))
+    buf = bytearray(raw[bs_c:be_c])
+    for c in children:
+        lo = max(c["bs"], bs_c) - bs_c
+        hi = min(c["be"], be_c) - bs_c
+        for k in range(lo, max(lo, hi)):
+            buf[k] = 0x20
+    return bytes(buf).decode("utf-8", "replace"), bs_c
+
+
+def _context_operations(file: str, raw: bytes, bs: int, be: int, children: list[dict],
+                        kind: str, line_starts: list[int]) -> list[tuple[str, int, int, int, int]]:
+    """`(operation_kind, byte_start, byte_end, line, column)` for every operation in a context.
+
+    A `FIXED_OPERATION_KIND` context (an `unsafe impl`, an exported symbol, an `extern` block) is
+    its construct's single operation, at the context's own span. Any other context is enumerated
+    operation by operation over its own text; each operation carries its own byte span and the
+    line/column of its start.
+    """
+    if kind in FIXED_OPERATION_KIND:
+        ln, col = _line_col(line_starts, bs)
+        return [(FIXED_OPERATION_KIND[kind], bs, be, ln, col)]
+    own, base = _own_text(raw, bs, be, children)
+    offs = _char_byte_offsets(own)
+    out: list[tuple[str, int, int, int, int]] = []
+    for op_kind, cs, ce in enumerate_operations(tokenize(own)):
+        s = base + offs[cs]
+        e = base + offs[ce]
+        if e <= s:
+            e = min(s + 1, len(raw))
+        ln, col = _line_col(line_starts, s)
+        out.append((op_kind, s, e, ln, col))
+    return out
 
 
 def build_body(tc: dict, expansion: dict, diagnostics: list[dict]) -> dict:
@@ -714,60 +912,60 @@ def build_body(tc: dict, expansion: dict, diagnostics: list[dict]) -> dict:
     contexts_without_site = 0
     per_file_sites: dict[str, int] = {}
     lines = {p: file_text[p].split("\n") for p in file_text}
+    line_starts = {p: _byte_line_starts(file_bytes[p]) for p in file_bytes}
     # The union of context line ranges per file, for the secondary LOC projection.
     unsafe_lines: dict[str, set[int]] = {}
+    # The context-level classifier's answer per context and the operation-level sites' kinds, so
+    # the two can be reconciled (the independent cross-check).
+    ctx_kind_sets: dict[str, list[str]] = {}
+    site_kind_sets: dict[str, set[str]] = {}
+    site_id_seen: set[str] = set()
+    site_id_collisions: list[str] = []
 
     for ctx in raw_ctx:
         file = ctx["file"]
         bs, be = ctx["bs"], ctx["be"]
         children = [c for c in by_file[file]
                     if c is not ctx and bs <= c["bs"] and c["be"] <= be]
-        # The context's own text: its span minus every nested context's span. The span is a
-        # *byte* range, so the file is sliced as bytes and only then decoded.
         raw = file_bytes[file]
-        bs_c, be_c = min(bs, len(raw)), min(be, len(raw))
-        buf = bytearray(raw[bs_c:be_c])
-        for c in children:
-            lo = max(c["bs"], bs_c) - bs_c
-            hi = min(c["be"], be_c) - bs_c
-            for k in range(lo, max(lo, hi)):
-                buf[k] = 0x20
-        own = bytes(buf).decode("utf-8", "replace")
 
         state, contract = extract_contract(lines[file], ctx["line"])
         if state == "UNSTATED":
             contract = UNCONTRACTED
 
         kind = ctx["kind"]
-        toks = tokenize(own)
+        # The context-level classifier's answer is the independent cross-check: it is the
+        # unchanged pre-correction census path, and it can disagree with the operation-level
+        # enumerator (a `p.write(x)` is one raw write operation, but two kinds).
         if kind in FIXED_OPERATION_KIND:
-            op_kinds = [FIXED_OPERATION_KIND[kind]]
             method = f"construct:{kind}"
+            ctx_kinds = [FIXED_OPERATION_KIND[kind]]
         else:
-            op_kinds = classify_operations(toks)
-            method = "span-token-scan:v1"
-        fixed = kind in FIXED_OPERATION_KIND
-        operation_kind = None
-        if op_kinds:
-            operation_kind = op_kinds[0] if fixed else next(
-                (k for k in KIND_PRIORITY if k in op_kinds), op_kinds[0])
-        elif kind in ("UNSAFE_BLOCK", "UNSAFE_FN"):
-            # An unsafe block/fn whose own body carries no recognisable unsafe operation is a
-            # context with no classified operation; it is counted, not invented.
-            operation_kind = None
+            method = "context-span-op-scan:v2"
+            own, _base = _own_text(raw, bs, be, children)
+            ctx_kinds = classify_operations(tokenize(own))
 
+        ops = _context_operations(file, raw, bs, be, children, kind, line_starts[file])
         cid = _context_id(file, bs, be, kind)
         site_ids: list[str] = []
-        if operation_kind is not None:
-            sid = _site_id(file, bs, be, kind)
+        site_kinds: set[str] = set()
+        for op_kind, s, e, ln, col in ops:
+            sid = _site_id(file, s, e, op_kind)
+            if sid in site_id_seen:
+                site_id_collisions.append(sid)
+            site_id_seen.add(sid)
             site_ids.append(sid)
-            site = {
+            site_kinds.add(op_kind)
+            sites.append({
                 "site_id": sid,
                 "file": file,
-                "line": ctx["line"],
-                "column": ctx["column"],
-                "operation_kind": operation_kind,
+                "line": ln,
+                "column": col,
+                "operation_kind": op_kind,
                 "context_id": cid,
+                # `span` is `[byte_start, byte_end, line_end, column_start]`: the operation's own
+                # compiler-anchored span, kept so a site id re-derives from the site alone.
+                "span": [s, e, ln, col],
                 "compiler": COMPILER_CLAUSE,
                 "compiler_derived": True,
                 "exposure_class": "INTERNAL_REACHABLE",
@@ -775,30 +973,29 @@ def build_body(tc: dict, expansion: dict, diagnostics: list[dict]) -> dict:
                 "safety_obligation_ids": [],
                 "evidence": ["unsafe_code"],
                 "module": _module_of(file),
-                "function": _nearest_fn(lines[file], ctx["line"]),
+                "function": _nearest_fn(lines[file], ln),
                 "macro_provenance": ctx["macro_provenance"],
                 "classification_method": method,
                 "candidate_commit": _commit_placeholder(),
-            }
-            if len(op_kinds) > 1:
-                site["operation_kinds"] = op_kinds
-            sites.append(site)
-            sites_by_kind[operation_kind] = sites_by_kind.get(operation_kind, 0) + 1
+            })
+            sites_by_kind[op_kind] = sites_by_kind.get(op_kind, 0) + 1
             per_file_sites[file] = per_file_sites.get(file, 0) + 1
-        else:
+        if not ops:
             contexts_without_site += 1
 
         if state == "UNSTATED":
             uncontracted += 1
         contexts_by_kind[kind] = contexts_by_kind.get(kind, 0) + 1
         unsafe_lines.setdefault(file, set()).update(range(ctx["line"], ctx["line_end"] + 1))
+        ctx_kind_sets[cid] = ctx_kinds
+        site_kind_sets[cid] = site_kinds
         contexts.append({
             "context_id": cid,
             "kind": kind,
             "file": file,
             "line": ctx["line"],
             # `span` is `[byte_start, byte_end, line_end, column_start]`: a compact, documented
-            # form of the compiler's span, kept so a site id re-derives from the context alone.
+            # form of the compiler's span, kept so a context id re-derives from the context.
             "span": [bs, be, ctx["line_end"], ctx["column"]],
             "safety_contract": contract,
             "contract_state": state,
@@ -806,6 +1003,25 @@ def build_body(tc: dict, expansion: dict, diagnostics: list[dict]) -> dict:
             "reported_by": ctx["lint"],
             "macro_provenance": ctx["macro_provenance"],
             "evidence": ["unsafe_code"],
+        })
+
+    # The independent cross-check: the context-level kind classifier against the operation-level
+    # sites. They disagree exactly where a context holds an operation kind the classifier also
+    # sees as another kind (a raw pointer write is also a method call to the classifier), and
+    # every disagreement is recorded as one aggregated residual, never tuned away.
+    ctx_diffs = [(cid, sorted(set(ctx_kind_sets[cid])), sorted(site_kind_sets.get(cid, set())))
+                 for cid in sorted(ctx_kind_sets) if set(ctx_kind_sets[cid]) != site_kind_sets.get(cid, set())]
+    reconcile_residuals: list[dict] = []
+    if ctx_diffs:
+        sample = "; ".join(f"{cid} {ck}->{sk}" for cid, ck, sk in ctx_diffs[:5])
+        reconcile_residuals.append({
+            "source": "context-tokenizer",
+            "class": "out_of_scope",
+            "detail": (f"the context-level kind classifier and the operation-level scan disagree on "
+                       f"{len(ctx_diffs)} context(s): the classifier counts a raw read/write method "
+                       f"as both the read/write kind and `UNSAFE_METHOD_CALL`, while the "
+                       f"operation-level scan records one operation per token (the more specific "
+                       f"kind wins), so the kind sets differ by construction. Examples: {sample}"),
         })
 
     # The `sites` list and every site's `candidate_commit` are stamped with the toolchain call's
@@ -833,10 +1049,10 @@ def build_body(tc: dict, expansion: dict, diagnostics: list[dict]) -> dict:
                     unsafe_code += 1
     safe_code = code - unsafe_code
 
-    # The cross-checks: cargo-geiger and a source-lexical scan, each reconciled against the census
-    # with every disagreement recorded as a residual rather than tuned away.
+    # The cross-checks: cargo-geiger, a source-lexical scan and the context-level tokenizer, each
+    # reconciled against the census with every disagreement recorded as a residual, never tuned.
     crosschecks, residuals = _crosschecks(files, file_text, diagnostics, len(contexts), len(sites),
-                                          contexts_by_kind)
+                                          contexts_by_kind, ctx_diffs, reconcile_residuals)
 
     counts = {
         "files": len(files),
@@ -845,6 +1061,12 @@ def build_body(tc: dict, expansion: dict, diagnostics: list[dict]) -> dict:
         "generated_files": sum(1 for f in files if f["origin"] == "GENERATED"),
         "unsafe_contexts": len(contexts),
         "sites": len(sites),
+        "operations": len(sites),
+        "contexts_with_operations": sum(1 for c in contexts if c["site_ids"]),
+        "max_operations_in_context": max((len(c["site_ids"]) for c in contexts), default=0),
+        "site_id_collisions": len(site_id_collisions),
+        "contexts_reconciled": len(ctx_kind_sets) - len(ctx_diffs),
+        "contexts_reconciliation_differences": len(ctx_diffs),
         "contexts_by_kind": dict(sorted(contexts_by_kind.items())),
         "sites_by_kind": dict(sorted(sites_by_kind.items())),
         "uncontracted_contexts": uncontracted,
@@ -870,17 +1092,44 @@ def build_body(tc: dict, expansion: dict, diagnostics: list[dict]) -> dict:
                 "which is why `unsafe_code` is the enumerating authority"
             ),
             "operations": (
-                "each compiler-identified context's own span (minus nested contexts) is tokenized "
-                "and its operation classified against memory_safety_schemas."
-                "UNSAFE_OPERATION_KINDS; the classification is a secondary label on a "
-                "compiler-established unit, and `classification_method` is recorded on every site"
+                "the primary unit is a compiler-derived unsafe *operation*: the compiler "
+                "establishes each unsafe context and its exact span (the built-in `unsafe_code` "
+                "lint), and the operation-level enumerator scans that compiler-established span "
+                "for each distinct operation -- one site per raw dereference, unsafe/extern call, "
+                "method call, static access, pointer read/write, transmute, inline asm -- so a "
+                "context holding two operations yields two sites, each with its own span and its "
+                "own stable `site_id` derived from (file, span, operation kind), while "
+                "`context_id` still names the compiler context the operation sits in. The "
+                "operation *kind* is a classification against "
+                "memory_safety_schemas.UNSAFE_OPERATION_KINDS, a secondary label on a "
+                "compiler-established unit, and `classification_method` records the method on "
+                "every site"
+            ),
+            "operation_extraction": (
+                "`context-span-op-scan:v2`: the operation-level extractor. A HIR/MIR-backed "
+                "enumerator was investigated first and is recorded here as the measured reason "
+                "this extractor is the compiler-anchored span scan rather than a raw dump. "
+                "`-Zunpretty=hir-tree` and `-Zunpretty=thir-tree` are not reproducible at this "
+                "crate's scale (the lib aborts with `memory allocation of 2147483648 bytes "
+                "failed` and `memory allocation of 1207468032 bytes failed` respectively); "
+                "`-Zunpretty=mir -Zmir-include-spans` is producible (4,922,910 lines / 364 MB) "
+                "and its spans align with the compiler contexts, but MIR is post-desugaring "
+                "(method calls, union accesses and the ptr::read/read_unaligned/assert_unchecked "
+                "family are not distinguishable, and debug instrumentation duplicates each raw "
+                "dereference), so reconstructing the census's operation vocabulary from it would "
+                "be a heuristic layer rather than a compiler fact. The extractor therefore "
+                "enumerates the operations inside the compiler-established context span; the "
+                "enclosing context and the operation's own span are the compiler-anchored facts, "
+                "and every site records this method"
             ),
             "expansion": expansion["note"],
             "crosscheck_policy": (
-                "cargo-geiger and a source-lexical scan are reconciled against the census; every "
-                "disagreement is recorded as a residual and classified, never tuned to zero. A "
-                "cross-check that uses a different unit (geiger counts unsafe expressions; the "
-                "lexical scan counts keywords) disagrees by construction, and the disagreement is "
+                "cargo-geiger, a source-lexical scan and the context-level kind classifier are "
+                "reconciled against the census; every disagreement is recorded as a residual and "
+                "classified, never tuned to zero. A cross-check that uses a different unit "
+                "(geiger counts unsafe expressions; the lexical scan counts keywords; the "
+                "context-level classifier counts kind *sets* per context while the primary unit "
+                "is an operation *instance*) disagrees by construction, and the disagreement is "
                 "the residual"
             ),
             "loc_definition": (
@@ -934,9 +1183,11 @@ def _nearest_fn(lines: list[str], line: int) -> str:
 
 
 def _crosschecks(files: list[dict], file_text: dict[str, str], diagnostics: list[dict],
-                 n_contexts: int, n_sites: int, contexts_by_kind: dict) -> tuple[dict, list]:
-    """cargo-geiger + a source-lexical scan, reconciled with every disagreement a residual."""
-    residuals: list[dict] = []
+                 n_contexts: int, n_sites: int, contexts_by_kind: dict,
+                 ctx_diffs: list | None = None,
+                 reconcile_residuals: list | None = None) -> tuple[dict, list]:
+    """cargo-geiger + a source-lexical scan + the context-level classifier, each reconciled."""
+    residuals: list[dict] = list(reconcile_residuals or [])
 
     # The source-lexical scan, over the shipped Rust files, through the same scanner the LOC
     # projection uses (unsafe_footprint.code_only).
@@ -1022,6 +1273,15 @@ def _crosschecks(files: list[dict], file_text: dict[str, str], diagnostics: list
     crosschecks = {
         "lexical": lex,
         "geiger": geiger,
+        "context_tokenizer": {
+            "contexts": n_contexts,
+            "contexts_reconciled": n_contexts - len(ctx_diffs or []),
+            "contexts_differing": len(ctx_diffs or []),
+            "note": ("the unchanged context-level kind classifier is the independent cross-check "
+                     "of the operation-level extractor: it counts kind *sets* per context while "
+                     "the primary unit is an operation instance, so it differs wherever a token "
+                     "is both a raw read/write and a method call"),
+        },
         "canonical": {"contexts": n_contexts, "sites": n_sites, "by_kind": dict(contexts_by_kind)},
         "residual_count": len(residuals),
     }
@@ -1045,6 +1305,122 @@ def _commit_placeholder() -> str:
     return _CANDIDATE_COMMIT
 
 
+# --------------------------------------------------------------------------------------------
+# the on-disk encoding: a lossless, deterministic columnar form
+# --------------------------------------------------------------------------------------------
+#
+# The census repeats a file path, a module, a kind, a method, a compiler clause and a commit on
+# every one of ~172,000 sites and ~64,000 contexts. Written one object per record the artefact is
+# 120 MB -- over GitHub's 100 MB pre-receive limit -- so the writer strips every field that
+# re-derives from the committed source and codec-packs the rest. `strip_view`/`restore_view` are
+# exact inverses over the evidence the court reads: `site_id`, `context_id`, `module`, `line`,
+# `column` and `span` are all functions of `(file, byte_start, byte_end, kind)` and the committed
+# bytes, so nothing that the court re-derives is stored twice, and nothing is lost.
+
+_SITE_STORED = (
+    "file", "bs", "be", "operation_kind", "ctx", "function", "macro_provenance",
+    "classification_method", "candidate_commit", "compiler", "compiler_derived",
+    "exposure_class", "risk_tier", "safety_obligation_ids", "evidence",
+)
+_CONTEXT_STORED = (
+    "kind", "file", "bs", "be", "safety_contract", "contract_state", "reported_by",
+    "macro_provenance", "evidence",
+)
+
+
+def strip_view(view: dict) -> dict:
+    """The census view with every re-derivable field removed, as stored on disk."""
+    contexts = view.get("unsafe_contexts") or []
+    ctx_index = {c["context_id"]: i for i, c in enumerate(contexts)}
+    stripped_ctx = []
+    for c in contexts:
+        span = c.get("span") or [None, None]
+        stripped_ctx.append({
+            "kind": c["kind"], "file": c["file"], "bs": span[0], "be": span[1],
+            "safety_contract": c["safety_contract"], "contract_state": c["contract_state"],
+            "reported_by": c["reported_by"], "macro_provenance": c["macro_provenance"],
+            "evidence": c["evidence"],
+        })
+    stripped_sites = []
+    for s in view.get("sites") or []:
+        span = s.get("span") or [None, None]
+        stripped_sites.append({
+            "file": s["file"], "bs": span[0], "be": span[1],
+            "operation_kind": s["operation_kind"], "ctx": ctx_index[s["context_id"]],
+            "function": s["function"], "macro_provenance": s["macro_provenance"],
+            "classification_method": s["classification_method"],
+            "candidate_commit": s["candidate_commit"], "compiler": s["compiler"],
+            "compiler_derived": s["compiler_derived"], "exposure_class": s["exposure_class"],
+            "risk_tier": s["risk_tier"],
+            "safety_obligation_ids": s["safety_obligation_ids"], "evidence": s["evidence"],
+        })
+    out = dict(view)
+    out["unsafe_contexts"] = stripped_ctx
+    out["sites"] = stripped_sites
+    return out
+
+
+def restore_view(stripped: dict) -> dict:
+    """Rebuild the census view -- ids, spans, modules, lines -- from the stored form."""
+    starts_cache: dict[str, list[int]] = {}
+
+    def starts(file: str) -> list[int]:
+        table = starts_cache.get(file)
+        if table is None:
+            path = REPO_ROOT / file
+            raw = path.read_bytes() if path.is_file() else b""
+            table = _byte_line_starts(raw)
+            starts_cache[file] = table
+        return table
+
+    contexts: list[dict] = []
+    for c in stripped.get("unsafe_contexts") or []:
+        file, bs, be, kind = c["file"], c["bs"], c["be"], c["kind"]
+        table = starts(file)
+        contexts.append({
+            "context_id": _context_id(file, bs, be, kind), "kind": kind, "file": file,
+            "line": _line_col(table, bs)[0],
+            "span": [bs, be, _line_col(table, be)[0], _line_col(table, bs)[1]],
+            "safety_contract": c["safety_contract"], "contract_state": c["contract_state"],
+            "site_ids": [], "reported_by": c["reported_by"],
+            "macro_provenance": c["macro_provenance"], "evidence": c["evidence"],
+        })
+    sites: list[dict] = []
+    for s in stripped.get("sites") or []:
+        file, bs, be, kind = s["file"], s["bs"], s["be"], s["operation_kind"]
+        table = starts(file)
+        line, column = _line_col(table, bs)
+        site_id = _site_id(file, bs, be, kind)
+        sites.append({
+            "site_id": site_id, "file": file, "line": line, "column": column,
+            "operation_kind": kind, "context_id": contexts[s["ctx"]]["context_id"],
+            "span": [bs, be, line, column], "compiler": s["compiler"],
+            "compiler_derived": s["compiler_derived"], "exposure_class": s["exposure_class"],
+            "risk_tier": s["risk_tier"], "safety_obligation_ids": s["safety_obligation_ids"],
+            "evidence": s["evidence"], "module": _module_of(file), "function": s["function"],
+            "macro_provenance": s["macro_provenance"],
+            "classification_method": s["classification_method"],
+            "candidate_commit": s["candidate_commit"],
+        })
+        contexts[s["ctx"]]["site_ids"].append(site_id)
+    out = dict(stripped)
+    out["unsafe_contexts"] = contexts
+    out["sites"] = sites
+    return out
+
+
+def encode_body(view: dict) -> dict:
+    """The on-disk body: the derived fields stripped, the rest columnar-packed."""
+    return ms_codec.encode_body(strip_view(view))
+
+
+def decode_body(body: dict) -> dict:
+    """Invert `encode_body`; an already-decoded view is returned unchanged."""
+    if not isinstance(body, dict) or body.get("encoding") != ms_codec.ENCODING:
+        return body
+    return restore_view(ms_codec.decode_body(body))
+
+
 def _resolve_commit() -> str:
     res = _run(["git", "rev-parse", "HEAD"])
     return res.stdout.strip() if res.returncode == 0 else "unknown"
@@ -1054,20 +1430,76 @@ def _resolve_commit() -> str:
 # the pure checks (the court re-runs these over the committed artefact)
 # --------------------------------------------------------------------------------------------
 
+# The derived-operation cache: `_derived_operation_sets` re-scans the shipped source for every
+# context's operations, and the sensitivity control calls the check many times over bodies that
+# share their contexts. The cache is keyed by the contexts' `(id, file, span, kind)` identity, so
+# a mutation that changes only `sites`/`site_ids` reuses the derivation.
+_DERIVED_OPS_CACHE: dict = {}
+
+
+def _derived_operation_sets(body: dict) -> dict[str, set[tuple]]:
+    """Re-derive every context's operations from the shipped source, keyed by context id.
+
+    Pure over the body and the on-disk source: for each compiler-identified context the source is
+    re-scanned for the operations in its own span (minus nested contexts), returning
+    `{(operation_kind, byte_start, byte_end)}` per context. This is the *operation count* the
+    census's sites must match, so a context holding two operations that the census recorded as one
+    site is a finding even if its `site_ids` list was edited to agree.
+    """
+    contexts = body.get("unsafe_contexts") or []
+    key = tuple((c.get("context_id"), c.get("file"), (c.get("span") or [None, None])[0],
+                 (c.get("span") or [None, None])[1], c.get("kind")) for c in contexts)
+    cached = _DERIVED_OPS_CACHE.get(key)
+    if cached is not None:
+        return cached
+    by_file: dict[str, list[dict]] = {}
+    for c in contexts:
+        by_file.setdefault(c.get("file"), []).append(c)
+    raw_cache: dict[str, bytes] = {}
+    out: dict[str, set[tuple]] = {}
+    for c in contexts:
+        cid = c.get("context_id")
+        file = c.get("file")
+        span = c.get("span") or [None, None]
+        bs, be = span[0], span[1]
+        if file is None or bs is None or be is None:
+            out[cid] = set()
+            continue
+        raw = raw_cache.get(file)
+        if raw is None:
+            path = REPO_ROOT / file
+            raw = path.read_bytes() if path.is_file() else b""
+            raw_cache[file] = raw
+        children = [{"bs": (o.get("span") or [0, 0])[0], "be": (o.get("span") or [0, 0])[1]}
+                    for o in by_file.get(file, []) if o is not c
+                    and bs <= (o.get("span") or [0, 0])[0] and (o.get("span") or [0, 0])[1] <= be]
+        starts = _byte_line_starts(raw)
+        ops = _context_operations(file, raw, bs, be, children, c.get("kind"), starts)
+        out[cid] = {(k, s, e) for k, s, e, _ln, _col in ops}
+    _DERIVED_OPS_CACHE[key] = out
+    return out
+
+
 def census_findings(body: dict, surface: list[dict] | None = None) -> list[str]:
     """Every way the committed census contradicts itself, derived from the artefact alone.
 
     Pure over `body` and the shipped surface (no compiler): it is what the
     `MS-SOURCE-CENSUS` court runs. Checks: every shipped first-party file is accounted for and its
     digest matches; every site is compiler-derived and resolves to a compiler-identified context;
-    site and context ids are stable and unique; the context/site back-references are consistent;
-    per-file operation counts, the counts block and the LOC arithmetic are derived, not typed; and
-    every cross-check disagreement is a classified residual.
+    site and context ids are stable and unique; each site's id re-derives from its own span; the
+    context/site back-references are consistent; a context with N compiler-anchored operations
+    yields N sites (re-derived from the source, so a fusion is caught); per-file operation counts,
+    the counts block and the LOC arithmetic are derived, not typed; and every cross-check
+    disagreement is a classified residual.
 
     `surface` defaults to the shipped surface on disk; the self-test passes the surface its
     synthetic body is scoped to.
     """
     problems: list[str] = []
+
+    # The committed census is columnar on disk; re-derive the view the checks read. On a fresh
+    # measurement the body is already the view, so this is a no-op.
+    body = decode_body(body)
 
     files = body.get("files") or []
     contexts = body.get("unsafe_contexts") or []
@@ -1117,13 +1549,10 @@ def census_findings(body: dict, surface: list[dict] | None = None) -> list[str]:
     if len(site_ids) != len(set(site_ids)):
         problems.append("site ids are not unique")
     for site in sites:
-        owner = ctx_by_id.get(site.get("context_id"))
-        if owner is None:
-            continue  # the dangling-context check below is the finding for this site
-        span = owner.get("span") or [None, None]
-        want = _site_id(site.get("file"), span[0], span[1], owner.get("kind"))
+        span = site.get("span") or [None, None]
+        want = _site_id(site.get("file"), span[0], span[1], site.get("operation_kind"))
         if site.get("site_id") != want:
-            problems.append(f"site {site.get('site_id')} is not the stable id of its span")
+            problems.append(f"site {site.get('site_id')} is not the stable id of its own span")
 
     # 4. Every site is compiler-derived and resolves to a compiler-identified context.
     for site in sites:
@@ -1145,6 +1574,32 @@ def census_findings(body: dict, surface: list[dict] | None = None) -> list[str]:
         if site.get("context_id") in ctx_by_id and site.get("site_id") not in listed_ids:
             problems.append(f"site {site.get('site_id')} is not listed by its context")
 
+    # 5b. The primary-unit invariant: a context with N compiler-anchored operations must yield N
+    # sites, and each site must be one of the operations the source enumerates there. This is the
+    # check that a fusion (two operations collapsed to one site) fails even when the context's
+    # `site_ids` list is edited to match; it re-derives the operations from the shipped source, so
+    # it is independent of the census's own counts.
+    derived_ops = _derived_operation_sets(body)
+    sites_by_ctx: dict[str, list[dict]] = {}
+    for site in sites:
+        sites_by_ctx.setdefault(site.get("context_id"), []).append(site)
+    for ctx in contexts:
+        cid = ctx.get("context_id")
+        want_ops = derived_ops.get(cid, set())
+        got_ops = set()
+        for site in sites_by_ctx.get(cid, []):
+            span = site.get("span") or [None, None]
+            got_ops.add((site.get("operation_kind"), span[0], span[1]))
+        if want_ops != got_ops:
+            problems.append(
+                f"context {cid}: the census records {len(got_ops)} operation(s) but the source "
+                f"enumerates {len(want_ops)}; a context with N operations must yield N sites "
+                f"(missing {sorted(want_ops - got_ops)[:3]}, extra {sorted(got_ops - want_ops)[:3]})")
+        if len(ctx.get("site_ids") or []) != len(got_ops):
+            problems.append(
+                f"context {cid}: site_ids lists {len(ctx.get('site_ids') or [])} id(s) but "
+                f"{len(got_ops)} site(s) name it")
+
     # 6. Per-file operation counts and the counts block are derived, not typed.
     derived_per_file: dict[str, int] = {}
     for site in sites:
@@ -1157,11 +1612,18 @@ def census_findings(body: dict, surface: list[dict] | None = None) -> list[str]:
         "files": len(files),
         "unsafe_contexts": len(contexts),
         "sites": len(sites),
+        "operations": len(sites),
         "generated_files": sum(1 for f in files if f.get("origin") == "GENERATED"),
     }
     for key, val in expected.items():
         if counts.get(key) != val:
             problems.append(f"counts.{key}={counts.get(key)!r} is not the derived {val}")
+    with_ops = sum(1 for c in contexts if c.get("site_ids"))
+    if counts.get("contexts_with_operations") != with_ops:
+        problems.append("counts.contexts_with_operations is not the derived count")
+    max_ops = max((len(c.get("site_ids") or []) for c in contexts), default=0)
+    if counts.get("max_operations_in_context") != max_ops:
+        problems.append("counts.max_operations_in_context is not the derived maximum")
     by_kind: dict[str, int] = {}
     for site in sites:
         by_kind[site.get("operation_kind")] = by_kind.get(site.get("operation_kind"), 0) + 1
@@ -1204,14 +1666,20 @@ def _kind_for_context(contexts: list[dict], context_id: str) -> str:
 
 
 def census_sensitivity_control(body: dict, surface: list[dict] | None = None) -> dict:
-    """Seed five mutations and require each caught, with specificity holding.
+    """Seed six mutations and require each caught, with specificity holding.
 
     Each mutation is a distinct way a census could lie: an unsafe operation that no compiler
     reported, an unsafe operation hidden by dropping the macro-generated context that holds it, a
-    context whose safety contract was removed, a site forged as safe, and a shipped file dropped
-    from the census. The baseline must be clean and each mutation must produce its own finding,
-    so a control that "caught" everything indiscriminately would not pass.
+    context whose safety contract was removed, a site forged as safe, a shipped file dropped from
+    the census, and -- the operation-level defect this subphase corrects -- **two operations in
+    one context fused into a single site** (its `site_ids` edited to match, so only the source
+    re-derivation can catch it). The baseline must be clean and each mutation must produce its own
+    finding, so a control that "caught" everything indiscriminately would not pass.
     """
+    # The committed artefact is columnar on disk; the mutations below index `sites`,
+    # `unsafe_contexts` and `files` as records, so decode once here (a fresh measurement's
+    # body is already the view).
+    body = decode_body(body)
     baseline = census_findings(body, surface)
     result: dict = {"baseline_findings": len(baseline), "honest": not baseline, "specificity_holds":
                     False, "mutations": {}}
@@ -1278,7 +1746,30 @@ def census_sensitivity_control(body: dict, surface: list[dict] | None = None) ->
 
     m5 = check("drop_file", drop_file(), "is not accounted for")
 
-    result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and not baseline)
+    # m6: fuse two operations in one context into a single site -- the defect this correction
+    # fixes. The dropped site is removed from both `sites` and the context's `site_ids`, so the
+    # back-reference stays consistent and only the source re-derivation (N operations -> N sites)
+    # catches it.
+    def fuse_two_operations() -> dict:
+        sites = list(body.get("sites") or [])
+        by_ctx: dict[str, list[dict]] = {}
+        for s in sites:
+            by_ctx.setdefault(s.get("context_id"), []).append(s)
+        victim = next((cid for cid, rows in by_ctx.items() if len(rows) >= 2), None)
+        if victim is None:
+            return body
+        dropped = by_ctx[victim][-1].get("site_id")
+        new_sites = [s for s in sites if s.get("site_id") != dropped]
+        new_ctxs = []
+        for c in body.get("unsafe_contexts") or []:
+            if c.get("context_id") == victim:
+                c = {**c, "site_ids": [i for i in c.get("site_ids") or [] if i != dropped]}
+            new_ctxs.append(c)
+        return {**body, "sites": new_sites, "unsafe_contexts": new_ctxs}
+
+    m6 = check("fuse_two_operations", fuse_two_operations(), "must yield N sites")
+
+    result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and m6 and not baseline)
     result["caught"] = sum(1 for v in result["mutations"].values() if v["caught"])
     result["seeded"] = len(result["mutations"])
     return result
@@ -1289,36 +1780,62 @@ def census_sensitivity_control(body: dict, surface: list[dict] | None = None) ->
 # --------------------------------------------------------------------------------------------
 
 def _synthetic_body() -> dict:
-    """A tiny well-formed census body, built without a compiler, for the self-test."""
+    """A tiny well-formed census body, built without a compiler, for the self-test.
+
+    The context is a **real** multi-operation region of `src/aes.rs` -- `get_u32`'s
+    `unsafe { u32::from_be_bytes([*p, *p.add(1), *p.add(2), *p.add(3)]) }` -- so the body's sites
+    are the actual operations the source enumerates there and `census_findings`'s source
+    re-derivation agrees with it. It holds eight operations (four dereferences, three method
+    calls and one function call), which is the point: one context, eight sites.
+    """
     file = "src/aes.rs"
-    span = {"byte_start": 3075, "byte_end": 3228}
+    raw = (REPO_ROOT / file).read_bytes()
+    bs, be = 3158, 3226
     kind = "UNSAFE_BLOCK"
-    cid = _context_id(file, span["byte_start"], span["byte_end"], kind)
-    sid = _site_id(file, span["byte_start"], span["byte_end"], kind)
+    starts = _byte_line_starts(raw)
+    cid = _context_id(file, bs, be, kind)
+    sites: list[dict] = []
+    site_ids: list[str] = []
+    sites_by_kind: dict[str, int] = {}
+    for op_kind, s, e, ln, col in _context_operations(file, raw, bs, be, [], kind, starts):
+        sid = _site_id(file, s, e, op_kind)
+        site_ids.append(sid)
+        sites_by_kind[op_kind] = sites_by_kind.get(op_kind, 0) + 1
+        sites.append({"site_id": sid, "file": file, "line": ln, "column": col,
+                      "operation_kind": op_kind, "context_id": cid, "span": [s, e, ln, col],
+                      "compiler": COMPILER_CLAUSE, "compiler_derived": True,
+                      "exposure_class": "INTERNAL_REACHABLE", "risk_tier": "S4",
+                      "safety_obligation_ids": [], "evidence": [],
+                      "macro_provenance": "synthetic!@src/aes.rs:69<-src/aes.rs:1",
+                      "classification_method": "context-span-op-scan:v2"})
+    own, _base = _own_text(raw, bs, be, [])
+    ctx_kinds = sorted(set(classify_operations(tokenize(own))))
+    site_kind_set = sorted({s["operation_kind"] for s in sites})
     return {
         "rule": {}, "toolchain": {"rustc": "synthetic"},
         "files": [{"census_id": f"sc:{file}", "path": file, "kind": "RUST_SOURCE",
                    "language": "rust", "origin": "FIRST_PARTY", "shipped": True,
-                   "file_sha256": sha256_file(REPO_ROOT / file), "unsafe_operations": 1,
-                   "evidence": []}],
+                   "file_sha256": sha256_file(REPO_ROOT / file),
+                   "unsafe_operations": len(sites), "evidence": []}],
         "unsafe_contexts": [{"context_id": cid, "kind": kind, "file": file, "line": 70,
-                             "span": [span["byte_start"], span["byte_end"], 70, 5],
-                             "safety_contract": "// SAFETY: synthetic", "site_ids": [sid],
+                             "span": [bs, be, 70, 5],
+                             "safety_contract": "// SAFETY: synthetic", "site_ids": site_ids,
+                             "contract_state": "STATED",
                              "macro_provenance": "synthetic!@src/aes.rs:69<-src/aes.rs:1",
                              "evidence": []}],
-        "sites": [{"site_id": sid, "file": file, "line": 70, "column": 5,
-                   "operation_kind": "RAW_POINTER_DEREFERENCE", "context_id": cid,
-                   "compiler": COMPILER_CLAUSE, "compiler_derived": True,
-                   "exposure_class": "INTERNAL_REACHABLE", "risk_tier": "S4",
-                   "safety_obligation_ids": [], "evidence": [],
-                   "macro_provenance": "synthetic!@src/aes.rs:69<-src/aes.rs:1",
-                   "classification_method": "span-token-scan:v1"}],
+        "sites": sites,
         "crosschecks": {"geiger": {"status": "unavailable", "note": "synthetic"},
-                        "lexical": {"unsafe_keyword_occurrences": 1}},
+                        "lexical": {"unsafe_keyword_occurrences": 1},
+                        "context_tokenizer": {
+                            "contexts": 1,
+                            "contexts_reconciled": 1 if ctx_kinds == site_kind_set else 0,
+                            "contexts_differing": 0 if ctx_kinds == site_kind_set else 1}},
         "loc": {"rust_physical_loc": 10, "rust_code_loc": 8, "safe_rust_code_loc": 6,
                 "unsafe_context_code_loc": 2},
-        "counts": {"files": 1, "unsafe_contexts": 1, "sites": 1, "generated_files": 0,
-                   "sites_by_kind": {"RAW_POINTER_DEREFERENCE": 1}},
+        "counts": {"files": 1, "unsafe_contexts": 1, "sites": len(sites),
+                   "operations": len(sites), "contexts_with_operations": 1,
+                   "max_operations_in_context": len(sites), "generated_files": 0,
+                   "sites_by_kind": dict(sorted(sites_by_kind.items()))},
         "residuals": [{"source": "geiger", "class": "evidence_missing", "detail": "synthetic"}],
         "non_claims": [],
     }
@@ -1342,8 +1859,22 @@ def self_test() -> int:
     if "INLINE_ASM" not in classify_operations(tokenize("asm!(\"nop\")")):
         failures.append("tokenizer did not see `asm!` as inline assembly")
 
+    # The operation-level extractor must see *two* dereferences where the context-level classifier
+    # sees one kind -- the distinction this correction is about.
+    two = enumerate_operations(tokenize("unsafe { *a = 1; *b = 2; }"))
+    derefs = [o for o in two if o[0] == "RAW_POINTER_DEREFERENCE"]
+    if len(derefs) != 2:
+        failures.append(f"the operation enumerator saw {len(derefs)} dereference(s) in a two-op "
+                        f"context, not 2")
+    if len(derefs) == 2 and derefs[0][1:] == derefs[1][1:]:
+        failures.append("the two operations share a span, so they would share a site id")
+    if classify_operations(tokenize("unsafe { *a = 1; *b = 2; }")) != ["RAW_POINTER_DEREFERENCE"]:
+        failures.append("the context-level classifier no longer returns one kind for two derefs")
+
     body = _synthetic_body()
     surface = [e for e in shipped_surface() if e["path"] == "src/aes.rs"]
+    if len(body["sites"]) < 2:
+        failures.append("the synthetic body's context does not hold several operations")
     control = census_sensitivity_control(body, surface=surface)
     if not control["specificity_holds"] or control["caught"] != control["seeded"]:
         failures.append(f"the sensitivity control is not honest: {control}")
@@ -1354,8 +1885,9 @@ def self_test() -> int:
             print(f"  {f}")
         return 1
     print("[ms-census] self-test ok: the guard refuses the host; the tokenizer distinguishes a "
-          "dereference from a pointer type; and all five seeded census mutations are caught with "
-          "specificity holding")
+          "dereference from a pointer type; the operation enumerator sees two operations where "
+          "the context classifier sees one kind; and all six seeded census mutations are caught "
+          "with specificity holding")
     return 0
 
 
@@ -1413,15 +1945,20 @@ def _measure() -> int:
                                note=expansion["note"]))
 
     auth = resolve_authority(PRODUCTION_AUTHORITY)
-    doc = envelope(kind="phase25-source-census", authority=auth.id, inputs=inputs, body=body,
+    # The on-disk body is the compact columnar form; `body` stays the view for the checks
+    # and the printed counts below.
+    encoded = encode_body(body)
+    doc = envelope(kind="phase25-source-census", authority=auth.id, inputs=inputs, body=encoded,
                    generator=GENERATOR)
-    doc["body_hash"] = content_hash(body)
+    doc["body_hash"] = content_hash(encoded)
     _write_census(OUT, doc)
 
     c = body["counts"]
     print(f"[ms-census] {c['files']} shipped file(s) ({c['rust_files']} rust, {c['c_files']} c, "
           f"{c['generated_files']} generated); {c['unsafe_contexts']} unsafe context(s); "
-          f"{c['sites']} compiler-derived site(s)")
+          f"{c['sites']} compiler-derived operation site(s) "
+          f"({c['sites']}/{c['unsafe_contexts']} operations per context, max "
+          f"{c['max_operations_in_context']} in one context)")
     print(f"  expansion: {expansion['status']} "
           f"(nightly {tc['nightly_rustc']}, sha256 {expansion['sha256'][:16]})")
     print(f"  contexts by kind: {c['contexts_by_kind']}")
@@ -1443,7 +1980,7 @@ def _check() -> int:
         print(f"[ms-census] {rel(OUT)} is absent; run --measure")
         return 1
     doc = json.loads(OUT.read_text(encoding="utf-8"))
-    body = doc.get("body", doc)
+    body = decode_body(doc.get("body", doc))
     problems = census_findings(body)
     if problems:
         print(f"[ms-census] check FAILED: {len(problems)} problem(s)")

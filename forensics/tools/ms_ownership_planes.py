@@ -92,6 +92,11 @@ import memory_safety_schemas as schemas  # noqa: E402
 # cannot disagree.
 import unsafe_footprint as lexical  # noqa: E402
 
+# The census (for the site/context universe and its ordered id lists) and the lossless columnar
+# codec every Phase-25 artefact is stored in.
+import ms_census  # noqa: E402
+import ms_codec  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase25" / "ownership-planes.json"
 GENERATOR = "forensics/tools/ms_ownership_planes.py"
 TOOL = REPO_ROOT / "forensics" / "tools" / "ms_ownership_planes.py"
@@ -1206,6 +1211,12 @@ def ownership_findings(body: dict, census_body: dict, tcb_body: dict, ctx: dict)
     every count is derived, not typed.
     """
     problems: list[str] = []
+    # The committed planes are columnar on disk; re-derive the views the checks read (a fresh
+    # measurement passes the views, for which decoding is a no-op).
+    census_body = ms_census.decode_body(census_body)
+    refs = ms_codec.refs_from_census(census_body)
+    tcb_body = ms_codec.decode_body(tcb_body, refs)
+    body = ms_codec.decode_body(body, refs)
     d = derive_cached(census_body, tcb_body, ctx)
     counts = _counts(d)
 
@@ -1299,6 +1310,12 @@ def ownership_sensitivity_control(body: dict, census_body: dict, tcb_body: dict,
     with no justification, an UNKNOWN panic class hidden, and a refcount decrement with no
     increment. The baseline must be clean and each mutation must produce its own finding.
     """
+    # The committed planes are columnar on disk; the mutations below index their records, so decode
+    # once (a fresh measurement passes the views, for which decoding is a no-op).
+    census_body = ms_census.decode_body(census_body)
+    refs = ms_codec.refs_from_census(census_body)
+    tcb_body = ms_codec.decode_body(tcb_body, refs)
+    body = ms_codec.decode_body(body, refs)
     baseline = ownership_findings(body, census_body, tcb_body, ctx)
     result: dict = {"baseline_findings": len(baseline), "honest": not baseline,
                     "specificity_holds": False, "mutations": {}}
@@ -1531,16 +1548,18 @@ def _inputs(ctx: dict) -> list[InputRef]:
 
 def _measure() -> int:
     """Derive the ownership planes from the committed census, TCB and source, and write them."""
-    census_body = _load(CENSUS).get("body", {})
-    tcb_body = _load(TCB).get("body", {})
+    census_body = ms_census.decode_body(_load(CENSUS).get("body", {}))
+    refs = ms_codec.refs_from_census(census_body)
+    tcb_body = ms_codec.decode_body(_load(TCB).get("body", {}), refs)
     ctx = build_context()
     body = build_body(census_body, tcb_body, ctx)
     problems = ownership_findings(body, census_body, tcb_body, ctx)
 
     auth = resolve_authority(PRODUCTION_AUTHORITY)
+    encoded = ms_codec.encode_body(body, refs)
     doc = envelope(kind="phase25-ownership-planes", authority=auth.id, inputs=_inputs(ctx),
-                   body=body, generator=GENERATOR)
-    doc["body_hash"] = content_hash(body)
+                   body=encoded, generator=GENERATOR)
+    doc["body_hash"] = content_hash(encoded)
     _write_planes(OUT, doc)
 
     c = body["counts"]

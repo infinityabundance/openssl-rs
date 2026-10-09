@@ -77,6 +77,10 @@ import phase25_guard  # noqa: E402
 # The schema and its closed vocabularies. Imported, never restated.
 import memory_safety_schemas as schemas  # noqa: E402
 
+# The census (for the site universe and its ordered id lists) and the lossless columnar codec.
+import ms_census  # noqa: E402
+import ms_codec  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase25" / "unsafe-reduction.json"
 GENERATOR = "forensics/tools/ms_reduction.py"
 TOOL = REPO_ROOT / "forensics" / "tools" / "ms_reduction.py"
@@ -346,9 +350,15 @@ def _line_text(file: str, line: int) -> str:
 def load_authority() -> dict:
     """The committed planes and source this plane reads, loaded once so the generator and the court
     share bytes. The exposure classification is the reachability authority; the two lint files are
-    read so a weakened lint is a finding."""
+    read so a weakened lint is a finding. The exposure body is decoded here (the census supplies the
+    ordered id lists it references by index)."""
+    census_doc = _load(CENSUS) if CENSUS.is_file() else {"body": {}}
+    census_body = ms_census.decode_body(census_doc.get("body", census_doc))
+    refs = ms_codec.refs_from_census(census_body)
+    exposure_doc = _load(EXPOSURE) if EXPOSURE.is_file() else {"body": {}}
     return {
-        "exposure": _load(EXPOSURE),
+        "exposure": {**exposure_doc,
+                     "body": ms_codec.decode_body(exposure_doc.get("body", exposure_doc), refs)},
         "lint_policy": {"cargo_toml": _read(CARGO_TOML), "lib_rs": _read(LIB_RS)},
         "census_sha256": sha256_file(CENSUS) if CENSUS.is_file() else "unknown",
     }
@@ -474,6 +484,7 @@ def _counts(census_body: dict, authority: dict, applied: list) -> dict:
     sites = census_body.get("sites") or []
     by_kind = Counter(str(s.get("operation_kind")) for s in sites)
     reachable = _reachable(census_body, exposure_body)
+    reachable_set = set(reachable)
     by_exp: Counter = Counter()
     esites = exposure_body.get("sites") or {}
     for sid in reachable:
@@ -492,7 +503,7 @@ def _counts(census_body: dict, authority: dict, applied: list) -> dict:
         "patterns": len({_classify(str(s.get("operation_kind")),
                                    _line_text(str(s.get("file")), int(s.get("line") or 0)))
                          for s in sites
-                         if str(s.get("site_id")) in set(reachable)}),
+                         if str(s.get("site_id")) in reachable_set}),
         "candidates": len(reachable),
         "applied": len(applied),
         "rejected": len(reachable) - reduced,
@@ -594,6 +605,11 @@ def reduction_findings(body: dict, census_body: dict, authority: dict) -> list[s
     that the rule names its committed authority.
     """
     problems: list[str] = []
+    # The committed reduction is columnar on disk; re-derive the views the checks read (a fresh
+    # measurement passes the views, for which decoding is a no-op).
+    census_body = ms_census.decode_body(census_body)
+    refs = ms_codec.refs_from_census(census_body)
+    body = ms_codec.decode_body(body, refs)
     d = derive(census_body, authority)
     sites = census_body.get("sites") or []
     census_ids = [str(s.get("site_id")) for s in sites]
@@ -699,6 +715,11 @@ def reduction_sensitivity_control(body: dict, census_body: dict, authority: dict
     census disagreeing with the live census; a worklist that omits a candidate class; and a typed
     count.
     """
+    # The committed reduction is columnar on disk; the mutations below index its records, so decode
+    # once (a fresh measurement passes the views, for which decoding is a no-op).
+    census_body = ms_census.decode_body(census_body)
+    refs = ms_codec.refs_from_census(census_body)
+    body = ms_codec.decode_body(body, refs)
     baseline = reduction_findings(body, census_body, authority)
     result: dict = {"baseline_findings": len(baseline), "honest": not baseline,
                     "specificity_holds": False, "mutations": {}}
@@ -896,15 +917,17 @@ def live_census_sha256() -> str:
 
 def _measure() -> int:
     """Derive the reduction worklist from the committed planes and write it."""
-    census_body = _body(_load(CENSUS))
+    census_body = ms_census.decode_body(_body(_load(CENSUS)))
+    refs = ms_codec.refs_from_census(census_body)
     authority = load_authority()
     body = build_body(census_body, authority)
     problems = reduction_findings(body, census_body, authority)
 
     auth = resolve_authority(PRODUCTION_AUTHORITY)
+    encoded = ms_codec.encode_body(body, refs)
     doc = envelope(kind="phase25-unsafe-reduction", authority=auth.id, inputs=_inputs(),
-                   body=body, generator=GENERATOR)
-    doc["body_hash"] = content_hash(body)
+                   body=encoded, generator=GENERATOR)
+    doc["body_hash"] = content_hash(encoded)
     _write_plane(OUT, doc)
 
     c = body["counts"]

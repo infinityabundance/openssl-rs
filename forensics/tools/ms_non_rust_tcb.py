@@ -87,6 +87,10 @@ import memory_safety_schemas as schemas  # noqa: E402
 # exactly the non-claims the rest of the stratum does (plus the C one below).
 import ms_census  # noqa: E402
 
+# The lossless columnar encoding the Phase-25 artefacts are stored in; this inventory decodes
+# through it and re-encodes through it, so the scheme has exactly one implementation.
+import ms_codec  # noqa: E402
+
 OUT = REPO_ROOT / "artifacts" / "phase25" / "non-rust-tcb.json"
 GENERATOR = "forensics/tools/ms_non_rust_tcb.py"
 TOOL = REPO_ROOT / "forensics" / "tools" / "ms_non_rust_tcb.py"
@@ -256,15 +260,14 @@ def build_rs_adapters() -> list[tuple[str, str]]:
     return seen
 
 
-def _census_index(path: Path) -> dict:
+def _census_index(body: dict) -> dict:
     """The 25.1 census facts the FFI boundaries cross-reference, without re-deriving them.
 
-    Reads the committed census and returns the compiler-reported `FFI_EXPORT` sites (with the source
-    span and macro provenance, so the exported symbol can be named) and the `EXTERN_FUNCTION_CALL`
-    sites (file/line, so a scanned block can be recognised as census-enumerated).
+    Takes the *decoded* census view and returns the compiler-reported `FFI_EXPORT` sites (with the
+    source span and macro provenance, so the exported symbol can be named) and the
+    `EXTERN_FUNCTION_CALL` sites (file/line, so a scanned block can be recognised as
+    census-enumerated).
     """
-    doc = json.loads(path.read_text(encoding="utf-8"))
-    body = doc.get("body", doc)
     sites = body.get("sites") or []
     contexts = body.get("unsafe_contexts") or []
     site_by_ctx: dict[str, str] = {}
@@ -339,11 +342,14 @@ def build_context() -> dict:
     Everything here is read from disk (or the committed census); nothing is typed. The self-test
     builds a synthetic context with the same shape.
     """
+    census_doc = json.loads(CENSUS.read_text(encoding="utf-8"))
+    census_body = ms_census.decode_body(census_doc.get("body", census_doc))
     return {
         "shipped": shipped_non_rust(),
         "generated": generated_scaffolds(),
         "build_adapters": build_rs_adapters(),
-        "census": _census_index(CENSUS),
+        "census": _census_index(census_body),
+        "refs": ms_codec.refs_from_census(census_body),
         "extern_blocks": _scan_extern_blocks(),
         "asm_sites": [
             site for path in sorted(SRC.rglob("*.rs"))
@@ -865,6 +871,10 @@ def non_rust_findings(body: dict, ctx: dict) -> list[str]:
     """
     problems: list[str] = []
 
+    # The inventory is columnar on disk; re-derive the view the checks read. On a fresh measurement
+    # the body is already the view, so this is a no-op.
+    body = ms_codec.decode_body(body, ctx.get("refs"))
+
     adapters = body.get("c_adapters") or []
     generated = body.get("generated_c") or []
     boundaries = body.get("ffi_boundaries") or []
@@ -977,6 +987,8 @@ def non_rust_sensitivity_control(body: dict, ctx: dict) -> dict:
     mutation must produce its own finding, so a control that "caught" everything indiscriminately
     would not pass.
     """
+    # The inventory is columnar on disk; the mutations below index its records, so decode once.
+    body = ms_codec.decode_body(body, ctx.get("refs"))
     baseline = non_rust_findings(body, ctx)
     result: dict = {"baseline_findings": len(baseline), "honest": not baseline,
                     "specificity_holds": False, "mutations": {}}
@@ -1061,6 +1073,7 @@ def _synthetic_context() -> dict:
         "generated": [{"path": generated, "sha256": _sha(REPO_ROOT / generated)}],
         "build_adapters": [(adapter, "openssl_rs_err_variadic")],
         "census": {"exports": [], "imports": []},
+        "refs": ms_codec.Refs(),
         "extern_blocks": [],
         "asm_sites": [],
     }
@@ -1159,6 +1172,19 @@ def self_test() -> int:
 # entry points
 # --------------------------------------------------------------------------------------------
 
+def _write_tcb(path: Path, doc: dict) -> None:
+    """Write the inventory compactly, key-sorted and deterministic.
+
+    A deliberate deviation from `atlas_common.write_json`'s `indent=2`, matching the census and the
+    other Phase-25 planes: the columnar body is ~6,800 boundary records and pretty-printing
+    multiplies it without adding evidence. Determinism is preserved (sorted keys, fixed separators)
+    and `body_hash` covers the body.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(doc, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n"
+    path.write_text(text, encoding="utf-8")
+
+
 def _measure() -> int:
     """Compile the C, scan the source, and write the non-Rust TCB inventory.
 
@@ -1188,10 +1214,11 @@ def _measure() -> int:
     ]
 
     auth = resolve_authority(PRODUCTION_AUTHORITY)
-    doc = envelope(kind="phase25-non-rust-tcb", authority=auth.id, inputs=inputs, body=body,
+    encoded = ms_codec.encode_body(body, ctx["refs"])
+    doc = envelope(kind="phase25-non-rust-tcb", authority=auth.id, inputs=inputs, body=encoded,
                    generator=GENERATOR)
-    doc["body_hash"] = content_hash(body)
-    write_json(OUT, doc)
+    doc["body_hash"] = content_hash(encoded)
+    _write_tcb(OUT, doc)
 
     problems = non_rust_findings(body, ctx)
     c = body["counts"]
@@ -1217,8 +1244,8 @@ def _check() -> int:
         print(f"[ms-non-rust-tcb] {rel(OUT)} is absent; run --measure")
         return 1
     doc = json.loads(OUT.read_text(encoding="utf-8"))
-    body = doc.get("body", doc)
     ctx = build_context()
+    body = ms_codec.decode_body(doc.get("body", doc), ctx["refs"])
     problems = non_rust_findings(body, ctx)
     if problems:
         print(f"[ms-non-rust-tcb] check FAILED: {len(problems)} problem(s)")
