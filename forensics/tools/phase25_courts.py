@@ -1100,10 +1100,13 @@ def _ms_exposure_classification_court(name: str) -> dict:
     justification is caught); that every attacker route's sites are named and equal the derivation;
     that the inverse exposure view and the buffer-operation census reproduce; that the
     length-boundary plan is marked unexecuted; and that the sites, justifications, counts and
-    residuals equal their derivation. Eight seeded mutations -- a remote class with no
+    residuals equal their derivation. It also establishes the risk-tier disposition: a site classed
+    `UNKNOWN_REACHABILITY` is tier `SU` (unknown exposure), not `S0`, so an unknown is never read as a
+    non-exposed site or the lowest priority. Nine seeded mutations -- a remote class with no
     justification, an attacker route with no path, an inverse view that disagrees, a boundary plan
     marked executed, a dropped site, a typed count, an unresolved site promoted to `UNREACHABLE_PROFILE`
-    with no witness and an unresolved site promoted to an external class -- are each caught with
+    with no witness, an unresolved site promoted to an external class and an unknown-reachability site
+    assigned tier S0 -- are each caught with
     specificity holding. It is an
     **instrument**: it can pass while the classification records real property findings (the sites no
     authority unit reaches, the routes that carry no attributable operation, the buffer-operation
@@ -1145,9 +1148,10 @@ def _ms_exposure_classification_court(name: str) -> dict:
             "the 25.6 downstream state, the api roots, the callbacks root, or `UNKNOWN_REACHABILITY` "
             "when the 25.5 mapping is missing); a network class needs a "
             "justified entry semantics, never a static edge, and `UNREACHABLE_PROFILE` needs a "
-            "justified exclusion witness. It establishes site-class completeness, "
+            "justified exclusion witness. An unknown-reachability site is risk tier SU (unknown "
+            "exposure), never S0. It establishes site-class completeness, "
             "the justification of every externally reachable site, the attacker-route and "
-            "buffer-operation reproduction, the unexecuted boundary plan and the inverse view; eight "
+            "buffer-operation reproduction, the unexecuted boundary plan and the inverse view; nine "
             "seeded mutations are each caught with specificity holding "
             "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.8, 4.5)."
         ),
@@ -1202,7 +1206,12 @@ def _ms_unsafe_reduction_court(name: str) -> dict:
     that disagrees, a worklist that omits a class, a typed count, a HIDDEN classification, a removed
     site still present, a changed downstream verdict, a relocation with no boundary operation, a
     differential harness that did not run, an unadjudicated allocator divergence and a missing
-    re-entrancy obligation -- are each caught with specificity holding. It is an **instrument**: it
+    re-entrancy obligation -- are each caught with specificity holding. The worklist is a
+    **local-replacement feasibility census**, not an impossibility result: it records that none of the
+    operations screened against the ten local-substitution patterns was locally replaceable without
+    changing the public surface or behaviour, which is not a claim that the rest of the core is
+    irreducible; a structural (representation-level) reconstruction is a separate campaign, recorded
+    in `forensics/memory-safety/unsafe-reconstruction.json`. It is an **instrument**: it
     can pass while the reduction records property findings (the reachable sites no admissible safe
     intrinsic removes), which are recorded as the row's `findings` so a passing reduction court is
     never read as a memory-safety claim, and a smaller unsafe count is never read as memory safety.
@@ -1251,7 +1260,13 @@ def _ms_unsafe_reduction_court(name: str) -> dict:
             "measurement -- no compiler. Two parts. (1) The **reduction worklist**: each reachable "
             "compiler-derived site is assigned one candidate class by a total function of its "
             "operation kind and committed span, and the class records the proposed safe-intrinsic "
-            "replacement or the reason it is not behaviour-preserving. (2) The **safe-core "
+            "replacement or the reason it is not behaviour-preserving. The worklist is a "
+            "local-replacement feasibility census, not an impossibility result: none of the "
+            "operations screened against the ten local-substitution patterns was locally replaceable "
+            "without changing the public surface or behaviour, which is not a claim that the rest of "
+            "the core is irreducible, and a structural (representation-level) reconstruction is a "
+            "separate campaign recorded in forensics/memory-safety/unsafe-reconstruction.json. "
+            "(2) The **safe-core "
             "reconstruction**: it re-derives the subsystem's before/after counts (`after + the "
             "ELIMINATED set`), classifies every removed operation ELIMINATED or "
             "RELOCATED_TO_BOUNDARY, and refuses a HIDDEN claim (a wrapper), a 'removed' site still "
@@ -1461,7 +1476,8 @@ def main(argv: list[str]) -> int:
             "routes and the buffer-operation census, and "
             "**25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable "
             "compiler-derived sites that records each candidate safe-intrinsic replacement, the sites "
-            "that remain named rather than dropped, and the frozen post-reduction census, and "
+            "that remain named rather than dropped, and the frozen post-reduction census, and is a "
+            "local-replacement feasibility census rather than an impossibility result, and "
             "**25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its "
             "tool state and its unsupported reason where Miri could not express the question, so an "
             "unsupported site is never read as a pass. "

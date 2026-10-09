@@ -36,6 +36,13 @@ specific externally reachable class first — and it is **not** a probability. T
 brief names that the 25.0 schema did not carry (`TOOLING_ONLY` and `LOCAL_FILE_INPUT_REACHABLE`) are
 added to the schema by this subphase and recorded as a correction in the plan (§4.5).
 
+The risk tier records the consequence of the class, and an unknown is not a non-exposed site. The
+risk tiers are S0 (a genuinely non-exposed site), `SU` (unknown exposure — a site whose exposure the
+committed evidence does not establish) and S1-S4 (the externally reachable ranking). A site classed
+`UNKNOWN_REACHABILITY` is tier **`SU`**, never S0: an unknown is not the lowest priority, and it
+stays eligible for high-priority investigation until evidence narrows it. `SU` was added to
+`memory_safety_schemas.RISK_TIERS` in the third 25.7 correction recorded in the plan (§4).
+
 Network reachability needs an entry semantics, not a static edge
 ----------------------------------------------------------------
 The Phase-22 compatibility closure leaves its `protocol` family **unpopulated** — "no plane in
@@ -461,8 +468,9 @@ NON_CLAIMS: tuple[str, ...] = (
     "it makes no claim about a specific value that flowed at run time",
     "the exposure precedence is a review ordering, not a probability: the classes are ordered by how "
     "specific and how externally reachable they are, and a class is not a likelihood",
-    "the risk tier S0-S4 is a review priority, not a probability and not a vulnerability count: a "
-    "tier orders the sites a reviewer reads first, and an unsafe site is not a defect",
+    "the risk tiers (S0, SU, S1-S4) are a review priority, not a probability and not a "
+    "vulnerability count: a tier orders the sites a reviewer reads first, and an unsafe site is not "
+    "a defect; an unknown exposure is SU and is not read as the lowest priority",
     "the buffer-operation census records only the fields the committed evidence measures; the length "
     "origin, the integer-conversion path and the copy primitive are `NOT_MEASURED` here, because the "
     "census does not observe a data flow, and they are the dynamic subphases' subject",
@@ -705,8 +713,13 @@ def derive(census_body: dict, authority: dict) -> dict:
         writes = _writes(kind, sid, alloc)
         net = cls in ("NETWORK_SERVER_REACHABLE", "NETWORK_CLIENT_REACHABLE")
 
-        # The risk tier, recorded as a review priority. S0 is not externally reachable.
-        if not external:
+        # The risk tier, recorded as a review priority. A site whose exposure the committed
+        # evidence does not establish is SU (unknown exposure), never S0: an unknown is not a
+        # non-exposed site, and it stays eligible for high-priority investigation until evidence
+        # narrows it. S0 is a genuinely non-exposed site; S1-S4 rank the externally reachable sites.
+        if cls == "UNKNOWN_REACHABILITY":
+            tier = "SU"
+        elif not external:
             tier = "S0"
         elif net and buf and writes:
             tier = "S4"
@@ -1006,9 +1019,12 @@ def _rule(authority: dict) -> dict:
                                       "integer_conversion_path", "copy_primitive")],
         },
         "risk_tier_rule": (
-            "S0 not externally reachable; S1 externally reachable, not a buffer operation; S2 "
-            "externally reachable buffer operation; S3 network-reachable buffer operation; S4 "
-            "network-reachable buffer operation that writes. A review priority, never a probability"
+            "S0 a genuinely non-exposed site; SU (unknown exposure) a site whose exposure the "
+            "committed evidence does not establish, ordered above S0 so it stays eligible for "
+            "high-priority investigation until evidence narrows it -- an unknown is not the lowest "
+            "priority; S1 externally reachable, not a buffer operation; S2 externally reachable "
+            "buffer operation; S3 network-reachable buffer operation; S4 network-reachable buffer "
+            "operation that writes. A review priority, never a probability"
         ),
         "length_boundary_plan_rule": (
             "per applicable buffer operation, the generic cases len = 0, 1, capacity-1, capacity, "
@@ -1050,7 +1066,9 @@ def _property_findings(d: dict) -> list:
         f"and the copy primitive are `NOT_MEASURED` and are the dynamic subphases' subject",
         f"the risk tiers are a review priority: "
         + ", ".join(f"{t}={c['sites_by_risk_tier'].get(t, 0)}" for t in schemas.RISK_TIERS)
-        + f"; {len(network_top)} network site(s) are named as the review head",
+        + f"; an unknown exposure is SU, not S0, so {c['sites_unknown_reachability']} unknown "
+          f"site(s) stay eligible for high-priority investigation; {len(network_top)} network "
+          f"site(s) are named as the review head",
         f"the Phase-22 closure's `protocol` family is unpopulated, so a network class is grounded in "
         f"the parser's committed role (the module or authority unit the peer drives) and is recorded "
         f"as an `evidence_missing` residual, never read as a wire observation",
@@ -1118,7 +1136,15 @@ def exposure_findings(body: dict, census_body: dict, authority: dict) -> list:
             problems.append(f"{sid}: the exposure class {cls!r} is not in the closed vocabulary")
             continue
         if rec.get("r") not in schemas.RISK_TIERS:
-            problems.append(f"{sid}: the risk tier {rec.get('r')!r} is not in S0-S4")
+            problems.append(f"{sid}: the risk tier {rec.get('r')!r} is not in the risk-tier "
+                            f"vocabulary (S0, SU, S1-S4)")
+        if cls == "UNKNOWN_REACHABILITY" and rec.get("r") != "SU":
+            problems.append(f"{sid}: is UNKNOWN_REACHABILITY but its risk tier is "
+                            f"{rec.get('r')!r}, not SU -- an unknown is not a non-exposed site and "
+                            f"must not be read as the lowest priority")
+        if cls != "UNKNOWN_REACHABILITY" and rec.get("r") == "SU":
+            problems.append(f"{sid}: is {cls}, not UNKNOWN_REACHABILITY, but carries the "
+                            f"unknown-exposure tier SU")
         external = cls in schemas.EXTERNALLY_REACHABLE_EXPOSURE
         jid = rec.get("j")
         if external and not jid:
@@ -1215,8 +1241,9 @@ def exposure_sensitivity_control(body: dict, census_body: dict, authority: dict)
     Each is a distinct way the classification could lie: a remote class with no justification; an
     attacker route that names a site the derivation does not reach; the inverse exposure view
     disagreeing with the forward map; a length-boundary plan marked executed; a dropped site; a typed
-    count; an unresolved site promoted to `UNREACHABLE_PROFILE` with no witness; and an unresolved
-    site promoted to an external class.
+    count; an unresolved site promoted to `UNREACHABLE_PROFILE` with no witness; an unresolved site
+    promoted to an external class; and an unknown-reachability site assigned the non-exposed tier
+    S0.
     """
     # The committed classification is columnar on disk; the mutations below index its records, so
     # decode once (a fresh measurement passes the views, for which decoding is a no-op).
@@ -1331,7 +1358,17 @@ def exposure_sensitivity_control(body: dict, census_body: dict, authority: dict)
     m8 = check("unresolved_to_external_class", unresolved_to_external_class(),
                "has no justification")
 
-    result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and m6 and m7 and m8
+    # m9: an unknown-reachability site assigned the non-exposed tier S0. An unknown is not a
+    #     non-exposed site, so this must be caught rather than read as the lowest priority.
+    def unknown_to_s0() -> dict:
+        b = clone()
+        sid = unknown[0] if unknown else any_site
+        b["sites"][sid]["r"] = "S0"
+        return b
+
+    m9 = check("unknown_exposure_assigned_s0", unknown_to_s0(), "not SU")
+
+    result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and m6 and m7 and m8 and m9
                                        and not baseline)
     result["caught"] = sum(1 for v in result["mutations"].values() if v["caught"])
     result["seeded"] = len(result["mutations"])
@@ -1416,6 +1453,12 @@ def self_test() -> int:
         failures.append(f"the synthetic unreachable count is wrong: {c['sites_by_exposure']}")
     if c["sites_unknown_reachability"] != 1:
         failures.append(f"the synthetic unknown-reachability count is wrong: {c['sites_by_exposure']}")
+    if body["sites"]["us-un-1"].get("r") != "SU":
+        failures.append(f"the synthetic unknown-reachability site is not tier SU: "
+                        f"{body['sites']['us-un-1'].get('r')!r}")
+    if body["sites"]["us-ex-1"].get("r") != "S0":
+        failures.append(f"the synthetic witnessed-unreachable site is not tier S0: "
+                        f"{body['sites']['us-ex-1'].get('r')!r}")
     witness = body["sites"]["us-ex-1"].get("w")
     if not isinstance(witness, dict) or witness.get("kind") != "committed_exclusion_residual":
         failures.append(f"the synthetic committed-exclusion witness is not recorded: {witness}")
@@ -1440,11 +1483,12 @@ def self_test() -> int:
         return 1
     print("[ms-exposure] self-test ok: the guard admits it as metadata-only; the synthetic "
           "classification is clean (2 network-server, 1 local-file, 1 local-api, 1 witnessed "
-          "unreachable, 1 unknown-reachability; 3 routed sites, 4 buffer operations, an unexecuted "
-          "boundary plan); and every seeded mutation (a remote class with no justification, an "
-          "attacker route with no path, an inverse view that disagrees, an executed boundary plan, a "
-          "dropped site, a typed count, an unresolved site promoted to unreachable with no witness, "
-          "and an unresolved site promoted to an external class) is caught with specificity holding")
+          "unreachable at tier S0, 1 unknown-reachability at tier SU; 3 routed sites, 4 buffer "
+          "operations, an unexecuted boundary plan); and every seeded mutation (a remote class with "
+          "no justification, an attacker route with no path, an inverse view that disagrees, an "
+          "executed boundary plan, a dropped site, a typed count, an unresolved site promoted to "
+          "unreachable with no witness, an unresolved site promoted to an external class, and an "
+          "unknown-reachability site assigned tier S0) is caught with specificity holding")
     return 0
 
 

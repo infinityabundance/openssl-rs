@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census, and **25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable compiler-derived sites that records each candidate safe-intrinsic replacement, the sites that remain named rather than dropped, and the frozen post-reduction census, and **25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its tool state and its unsupported reason where Miri could not express the question, so an unsupported site is never read as a pass. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining twelve of its twenty-two courts -- MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.10 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census, and **25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable compiler-derived sites that records each candidate safe-intrinsic replacement, the sites that remain named rather than dropped, and the frozen post-reduction census, and is a local-replacement feasibility census rather than an impossibility result, and **25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its tool state and its unsupported reason where Miri could not express the question, so an unsupported site is never read as a pass. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining twelve of its twenty-two courts -- MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.10 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -549,7 +549,7 @@
       {
         "control": {
           "baseline_findings": 0,
-          "caught": 8,
+          "caught": 9,
           "honest": true,
           "mutations": {
             "attacker_route_with_no_path": {
@@ -588,20 +588,26 @@
               "findings": 1,
               "marker": "not the derived `counts`"
             },
-            "unresolved_to_external_class": {
+            "unknown_exposure_assigned_s0": {
               "caught": true,
               "delta": 2,
               "findings": 2,
+              "marker": "not SU"
+            },
+            "unresolved_to_external_class": {
+              "caught": true,
+              "delta": 3,
+              "findings": 3,
               "marker": "has no justification"
             },
             "unresolved_to_unreachable_without_witness": {
               "caught": true,
-              "delta": 2,
-              "findings": 2,
+              "delta": 3,
+              "findings": 3,
               "marker": "no justified exclusion witness"
             }
           },
-          "seeded": 8,
+          "seeded": 9,
           "specificity_holds": true
         },
         "counts": {
@@ -623,12 +629,12 @@
           "172072 census site(s) carry exactly one exposure class: 5881 are network-reachable (3543 server, 2338 client), 154327 are externally reachable, 0 are `UNREACHABLE_PROFILE` and 17745 carry `UNKNOWN_REACHABILITY`. Every unreachable site carries a justified exclusion witness; an unknown is the site whose 25.5 mapping is missing, and an unknown is not a zero and not an unreachability claim",
           "16755 site(s) are attacker-input reachable across 17 of 18 route(s); the largest are PROVIDER_PARAMETERS=4815, X509_CERTIFICATE=4289, DER=1340. The routes are a rule over committed parser identities, not a dynamic taint result",
           "37964 externally reachable buffer operation(s) are censused by buffer origin, pointer origin and capacity origin; the length origin, the integer-conversion path and the copy primitive are `NOT_MEASURED` and are the dynamic subphases' subject",
-          "the risk tiers are a review priority: S0=17745, S1=116363, S2=36227, S3=0, S4=1737; 3 network site(s) are named as the review head",
+          "the risk tiers are a review priority: S0=0, SU=17745, S1=116363, S2=36227, S3=0, S4=1737; an unknown exposure is SU, not S0, so 17745 unknown site(s) stay eligible for high-priority investigation; 3 network site(s) are named as the review head",
           "the Phase-22 closure's `protocol` family is unpopulated, so a network class is grounded in the parser's committed role (the module or authority unit the peer drives) and is recorded as an `evidence_missing` residual, never read as a wire observation"
         ],
         "frf_declarable": false,
         "frf_exclusion": "the exposure court reads the committed classification and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
-        "method": "stages no probe: it reads the committed artifacts/phase25/exposure.json and re-runs the 25.7 pure checks (ms_exposure.exposure_findings and ms_exposure.exposure_sensitivity_control) over it, the committed 25.1 census, the committed 25.5 Phase-22 crosswalk, the committed 25.6 Phase-24 crosswalk and the committed 25.4 ownership planes, without a compiler. The plane is a pure derivation: each census site gets one class from the closed vocabulary by the recorded precedence (a wire-parser route, a config/local-file parser, the cli root, the 25.6 downstream the 25.6 downstream state, the api roots, the callbacks root, or `UNKNOWN_REACHABILITY` when the 25.5 mapping is missing); a network class needs a justified entry semantics, never a static edge, and `UNREACHABLE_PROFILE` needs a justified exclusion witness. It establishes site-class completeness, the justification of every externally reachable site, the attacker-route and buffer-operation reproduction, the unexecuted boundary plan and the inverse view; eight seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.8, 4.5).",
+        "method": "stages no probe: it reads the committed artifacts/phase25/exposure.json and re-runs the 25.7 pure checks (ms_exposure.exposure_findings and ms_exposure.exposure_sensitivity_control) over it, the committed 25.1 census, the committed 25.5 Phase-22 crosswalk, the committed 25.6 Phase-24 crosswalk and the committed 25.4 ownership planes, without a compiler. The plane is a pure derivation: each census site gets one class from the closed vocabulary by the recorded precedence (a wire-parser route, a config/local-file parser, the cli root, the 25.6 downstream the 25.6 downstream state, the api roots, the callbacks root, or `UNKNOWN_REACHABILITY` when the 25.5 mapping is missing); a network class needs a justified entry semantics, never a static edge, and `UNREACHABLE_PROFILE` needs a justified exclusion witness. An unknown-reachability site is risk tier SU (unknown exposure), never S0. It establishes site-class completeness, the justification of every externally reachable site, the attacker-route and buffer-operation reproduction, the unexecuted boundary plan and the inverse view; nine seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.8, 4.5).",
         "probe": "",
         "problems": [],
         "routes_by_count": {
@@ -666,11 +672,12 @@
           "UNREACHABLE_PROFILE": 0
         },
         "sites_by_risk_tier": {
-          "S0": 17745,
+          "S0": 0,
           "S1": 116363,
           "S2": 36227,
           "S3": 0,
-          "S4": 1737
+          "S4": 1737,
+          "SU": 17745
         },
         "verdict": "pass"
       },
@@ -775,12 +782,12 @@
         "court": "MS-UNSAFE-REDUCTION",
         "findings": [
           "154327 externally reachable compiler-derived unsafe site(s) carry exactly one candidate class across 10 pattern(s); **0 were reduced on the worklist**, so the reachable count is unchanged",
-          "every candidate replacement would change a function signature or the foreign ABI, turn a documented precondition the authority states into a defined panic, or remove no site because the census site is the enclosing raw dereference; consolidating repeated reads into one helper is forbidden by section 3.4 and the brief, so no worklist candidate was applied",
+          "every candidate replacement would change a function signature or the foreign ABI, turn a documented precondition the authority states into a defined panic, or remove no site because the census site is the enclosing raw dereference; consolidating repeated reads into one helper is forbidden by section 3.4 and the brief. This is a local-replacement feasibility census, not an impossibility result: of the reachable operations screened against the ten local-substitution patterns none was locally replaceable without changing the public surface or behaviour, which is not a claim that the rest of the core is irreducible -- a structural (representation-level) reconstruction is a separate campaign, recorded in forensics/memory-safety/unsafe-reconstruction.json",
           "the safe-core reconstruction is separate from the worklist: it replaced the internal unsafe mechanism of one subsystem --- recorded below with its per-operation classification --- so the crate's total operation count moved while the externally reachable count, the ABI and the lints are unchanged"
         ],
         "frf_declarable": false,
         "frf_exclusion": "the unsafe-reduction court reads the committed worklist and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
-        "method": "stages no probe: it reads the committed artifacts/phase25/unsafe-reduction.json and re-runs the 25.8 pure checks (ms_reduction.reduction_findings and ms_reduction.reduction_sensitivity_control) over it, the committed 25.1 census it reduces, the committed 25.7 exposure classification it reads for reachability, the committed reconstruction declaration and the committed Phase-24 downstream measurement -- no compiler. Two parts. (1) The **reduction worklist**: each reachable compiler-derived site is assigned one candidate class by a total function of its operation kind and committed span, and the class records the proposed safe-intrinsic replacement or the reason it is not behaviour-preserving. (2) The **safe-core reconstruction**: it re-derives the subsystem's before/after counts (`after + the ELIMINATED set`), classifies every removed operation ELIMINATED or RELOCATED_TO_BOUNDARY, and refuses a HIDDEN claim (a wrapper), a 'removed' site still present in the live census, a relocation with no boundary operation, a typed count, a weakened lint and a **changed downstream verdict** (the Phase-24 DROP_IN_PASS count, ladder and eight functional workloads are re-read from the committed measurement and required to match the frozen baseline). It also reads the committed differential artefact and refuses an unadjudicated allocator divergence, a harness that did not run, a missing re-entrancy obligation and a missing residual unsafe boundary. Thirteen seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.4).",
+        "method": "stages no probe: it reads the committed artifacts/phase25/unsafe-reduction.json and re-runs the 25.8 pure checks (ms_reduction.reduction_findings and ms_reduction.reduction_sensitivity_control) over it, the committed 25.1 census it reduces, the committed 25.7 exposure classification it reads for reachability, the committed reconstruction declaration and the committed Phase-24 downstream measurement -- no compiler. Two parts. (1) The **reduction worklist**: each reachable compiler-derived site is assigned one candidate class by a total function of its operation kind and committed span, and the class records the proposed safe-intrinsic replacement or the reason it is not behaviour-preserving. The worklist is a local-replacement feasibility census, not an impossibility result: none of the operations screened against the ten local-substitution patterns was locally replaceable without changing the public surface or behaviour, which is not a claim that the rest of the core is irreducible, and a structural (representation-level) reconstruction is a separate campaign recorded in forensics/memory-safety/unsafe-reconstruction.json. (2) The **safe-core reconstruction**: it re-derives the subsystem's before/after counts (`after + the ELIMINATED set`), classifies every removed operation ELIMINATED or RELOCATED_TO_BOUNDARY, and refuses a HIDDEN claim (a wrapper), a 'removed' site still present in the live census, a relocation with no boundary operation, a typed count, a weakened lint and a **changed downstream verdict** (the Phase-24 DROP_IN_PASS count, ladder and eight functional workloads are re-read from the committed measurement and required to match the frozen baseline). It also reads the committed differential artefact and refuses an unadjudicated allocator divergence, a harness that did not run, a missing re-entrancy obligation and a missing residual unsafe boundary. Thirteen seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.4).",
         "probe": "",
         "problems": [],
         "reconstruction": {
@@ -1110,6 +1117,7 @@
     },
     "risk_tiers": [
       "S0",
+      "SU",
       "S1",
       "S2",
       "S3",
@@ -1412,12 +1420,12 @@
     {
       "name": "phase-25-plan",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "fd7452a34e9854a335a7883ce387e88d13ec7a0f0b1ef2a293f65d684f64951c"
+      "sha256": "54c2e2dfeca985b5ab7ab25da81a5321af6022b7cf784ad9e7eb81756ca29196"
     },
     {
       "name": "memory-safety-schemas",
       "path": "forensics/tools/memory_safety_schemas.py",
-      "sha256": "88bbc95ea0292984713c477fd6da62c5ac00eefd5fed0ad5e430101b651e76c7"
+      "sha256": "58d0759dcbc3ab418d878a8e09755fdce76777790814ce3eee777b313db9b1c0"
     },
     {
       "name": "phase25-guard",
@@ -1462,7 +1470,7 @@
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "53d39d1dbe94e08273f2e51f40bdb0e5f13d53421df8fdd12e4ea8ff32be6a32"
+      "sha256": "7ad613ccd5b40fd969820a3ad1ed1037b155cb7dfce74a6c326f28134f536723"
     },
     {
       "name": "ms-obligations-tool",
@@ -1472,7 +1480,7 @@
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "14e1e49e62c13f82af2aceb0c91f957565df7314a118fe84e6949510a58a5bce"
+      "sha256": "3eebf90e7531c779af9c374c88afd2a67def8c8250c4cc8c2b4a47dcd1f0c519"
     },
     {
       "name": "ms-ownership-planes-tool",
@@ -1482,7 +1490,7 @@
     {
       "name": "phase22-crosswalk",
       "path": "artifacts/phase25/phase22-crosswalk.json",
-      "sha256": "06fed92de352b63f2354e3d7588bab9f2aa0bd414ba84533bf5dc185a583adcf"
+      "sha256": "e46bbc07d679aeca71db3faf333c3e4830f60310136f632a307de125c9914d14"
     },
     {
       "name": "ms-phase22-crosswalk-tool",
@@ -1517,7 +1525,7 @@
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "906dda69dcf1b5ac7df4a787a4130a3b14477a3537e53d5b7ddb637bf8e0ccb0"
+      "sha256": "5ee5025802d0d256b3afa30e29051b1c5c8b23f1fbc603978c680486a465d44c"
     },
     {
       "name": "ms-phase24-crosswalk-tool",
@@ -1557,22 +1565,22 @@
     {
       "name": "exposure",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "0623e098376e2779babb9ebb16e3229f18c71b9cb6f21f4725f405085b5ded01"
+      "sha256": "4c8d5867580de8f89e5c1a8d896027bc46917805dbf2d18ff63fbf2b8e4596c8"
     },
     {
       "name": "ms-exposure-tool",
       "path": "forensics/tools/ms_exposure.py",
-      "sha256": "69bb46b6f40e5909452e9ea6e67801d54098c005d1b304f40cc63a5296c19a2c"
+      "sha256": "b13fc4ee9688efbbd0dbee6898f201aca82b996424e63e695a1e31e40ed2551d"
     },
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "86d2d9825fa9fd009ecfe21d02aaa3cbcc5cd873dd2a1202e95ce6a7f7e1b592"
+      "sha256": "3d26af467f9517c0cd9e3108543e6319d6bca09588e62923b018db43a7de597a"
     },
     {
       "name": "ms-reduction-tool",
       "path": "forensics/tools/ms_reduction.py",
-      "sha256": "d4f1662595131514d6ae4001c2abb575f6d217028cf06ecb74d079bfe51eb1b8"
+      "sha256": "5d2609b537d30ecb44b9e4f921334244a63be70ccfe6184e8ade20dc2e4d9cc7"
     },
     {
       "name": "miri",

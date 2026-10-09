@@ -231,8 +231,13 @@ PANIC_UNWIND_CLASSES: tuple[str, ...] = (
     "UNKNOWN",
 )
 
-# The risk tiers S0-S4: an ordering aid for the exposure ranking, never a vulnerability count.
-RISK_TIERS: tuple[str, ...] = ("S0", "S1", "S2", "S3", "S4")
+# The risk tiers: an ordering aid for the exposure ranking, never a vulnerability count. S0 is a
+# genuinely non-exposed site; SU is a site whose exposure the committed evidence does not establish
+# (an unknown is not a non-exposed site, and SU is ordered above S0 so it stays eligible for
+# high-priority investigation rather than being read as the lowest priority); S1-S4 rank the
+# externally reachable sites. 25.7 added SU in the correction recorded in
+# docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4.
+RISK_TIERS: tuple[str, ...] = ("S0", "SU", "S1", "S2", "S3", "S4")
 
 # The CVE taxonomy (brief section 15): a closed vocabulary, so a historical CVE is classified rather
 # than described. `OTHER` is the recorded last resort, never a substitute for classification.
@@ -1174,8 +1179,8 @@ def self_test() -> int:
             failures.append(f"the {label} vocabulary is empty")
         if len(set(values)) != len(values):
             failures.append(f"the {label} vocabulary has a duplicate member")
-    if list(RISK_TIERS) != ["S0", "S1", "S2", "S3", "S4"]:
-        failures.append("the risk tiers are not the ordered S0-S4")
+    if list(RISK_TIERS) != ["S0", "SU", "S1", "S2", "S3", "S4"]:
+        failures.append("the risk tiers are not S0, SU (unknown exposure) and the ordered S1-S4")
     if "UNSUPPORTED" not in TOOL_STATES:
         failures.append("the tool states do not carry UNSUPPORTED")
     if not EXTERNALLY_REACHABLE_EXPOSURE <= set(EXPOSURE_CLASSES):
