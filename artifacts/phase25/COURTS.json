@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census, and **25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable compiler-derived sites that records each candidate safe-intrinsic replacement, the sites that remain named rather than dropped, and the frozen post-reduction census. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining thirteen of its twenty-two courts -- MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.9 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census, and **25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable compiler-derived sites that records each candidate safe-intrinsic replacement, the sites that remain named rather than dropped, and the frozen post-reduction census, and **25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its tool state and its unsupported reason where Miri could not express the question, so an unsupported site is never read as a pass. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining twelve of its twenty-two courts -- MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.10 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -847,6 +847,150 @@
           "UNSAFE_CALL": 104604,
           "UNSAFE_IMPL": 116
         }
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught": 5,
+          "honest": true,
+          "mutations": {
+            "coverage_claim_without_harness": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "coverage claim with no harness"
+            },
+            "finding_dropped": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "no finding records it"
+            },
+            "pass_without_run": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "cites no run"
+            },
+            "typed_count": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "not the derived `counts`"
+            },
+            "unsupported_marked_pass": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "UNSUPPORTED is not PASS"
+            }
+          },
+          "seeded": 5,
+          "specificity_holds": true
+        },
+        "counts": {
+          "fail": 6,
+          "findings": 3,
+          "not_reachable": 163157,
+          "pass": 1824,
+          "residuals": 4,
+          "runs": 6,
+          "sites": 172001,
+          "unsupported": 7014
+        },
+        "court": "MS-MIRI",
+        "findings": [
+          {
+            "category": "MIRI_UNDEFINED_BEHAVIOUR",
+            "column": 9,
+            "context": [
+              {
+                "column": 23,
+                "file": "src/modes/wrap.rs",
+                "line": 69
+              },
+              {
+                "column": 35,
+                "file": "src/modes/wrap.rs",
+                "line": 69
+              }
+            ],
+            "detail": "run crate-unit-stacked (STACKED_BORROWS) reported undefined behaviour at this location; the cause/context locations are recorded in `context` and the run transcript is preserved",
+            "file": "src/aes.rs",
+            "finding_id": "mf-crate-unit-stacked",
+            "line": 376,
+            "run_id": "crate-unit-stacked"
+          },
+          {
+            "category": "MIRI_UNDEFINED_BEHAVIOUR",
+            "column": 21,
+            "context": [
+              {
+                "column": 17,
+                "file": "src/aes.rs",
+                "line": 1052
+              }
+            ],
+            "detail": "run crate-unit-tree (TREE_BORROWS) reported undefined behaviour at this location; the cause/context locations are recorded in `context` and the run transcript is preserved",
+            "file": "src/modes/wrap.rs",
+            "finding_id": "mf-crate-unit-tree",
+            "line": 129,
+            "run_id": "crate-unit-tree"
+          },
+          {
+            "category": "MIRI_MODEL_DISAGREEMENT",
+            "column": 0,
+            "detail": "the Stacked Borrows run crate-unit-stacked and the Tree Borrows run crate-unit-tree disagree on harness crate-unit: ('FAIL', (('src/aes.rs', 376), ('src/modes/wrap.rs', 69), ('src/modes/wrap.rs', 69))) vs ('FAIL', (('src/modes/wrap.rs', 129), ('src/aes.rs', 1052))); a review item, not a resolved verdict",
+            "file": "",
+            "finding_id": "mf-model-disagreement-crate-unit",
+            "line": 0,
+            "run_id": "crate-unit-stacked"
+          }
+        ],
+        "frf_declarable": false,
+        "frf_exclusion": "the Miri court re-derives only the plane's pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
+        "method": "stages no probe: it reads the committed artifacts/phase25/miri.json and re-runs the 25.9 pure checks (ms_miri.miri_findings and ms_miri.miri_sensitivity_control) over it and the committed 25.1 census it classifies -- no Miri, no nightly, no compiler. The plane records a per-census-site Miri state (MIRI_PASS / MIRI_FAIL / MIRI_NOT_REACHABLE / MIRI_UNSUPPORTED), the runs (command hash, aliasing model, outcome), the findings and the residuals. Miri is an interpreter: it executes Rust's MIR and refuses a foreign function it cannot interpret, so the crate's first-party C adapters and raw FFI are UNSUPPORTED, recorded with the precise reason; an unsupported site is never read as a pass. The crate-wide harness aborts at its first undefined-behaviour finding, so most sites are NOT_REACHABLE rather than clean, and the two aliasing models (Stacked Borrows and Tree Borrows) are run wherever practical -- a disagreement is a preserved review item, never averaged away. Five seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6).",
+        "probe": "",
+        "problems": [],
+        "runs": [
+          {
+            "aliasing_model": "STACKED_BORROWS",
+            "command_sha256": "1ce0dff86fc9f49a",
+            "outcome": "PASS",
+            "run_id": "miri-tcb-stacked"
+          },
+          {
+            "aliasing_model": "TREE_BORROWS",
+            "command_sha256": "aa03af6729e316b1",
+            "outcome": "PASS",
+            "run_id": "miri-tcb-tree"
+          },
+          {
+            "aliasing_model": "STACKED_BORROWS",
+            "command_sha256": "1144e941d1e459c4",
+            "outcome": "FAIL",
+            "run_id": "crate-unit-stacked"
+          },
+          {
+            "aliasing_model": "TREE_BORROWS",
+            "command_sha256": "5868ac04e6a9b7c5",
+            "outcome": "FAIL",
+            "run_id": "crate-unit-tree"
+          },
+          {
+            "aliasing_model": "STACKED_BORROWS",
+            "command_sha256": "7524a76ccb46ae06",
+            "outcome": "FAIL",
+            "run_id": "mem-unit-stacked"
+          },
+          {
+            "aliasing_model": "STACKED_BORROWS",
+            "command_sha256": "50d86e1bcb646687",
+            "outcome": "UNSUPPORTED",
+            "run_id": "ffi-adapter-stacked"
+          }
+        ],
+        "verdict": "pass"
       }
     ],
     "cve_replay_states": [
@@ -938,7 +1082,6 @@
       "MS-HISTORICAL-CVE": "25.15 -- the historical CVE census",
       "MS-KANI": "25.12 -- Kani",
       "MS-MECHANISM-RECONCILIATION": "25.17 -- the vulnerability-mechanism reconciliation",
-      "MS-MIRI": "25.9 -- Miri",
       "MS-PHASE18-FUZZ-CROSSWALK": "25.13 -- the Phase-18 fuzz crosswalk",
       "MS-PHASE24-SAFETY-COVERAGE": "25.14 -- the Phase-24 downstream safety coverage",
       "MS-RED-TEAM": "25.18 -- the red team",
@@ -1215,8 +1358,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 9,
-      "total": 9
+      "pass": 10,
+      "total": 10
     },
     "tool_states": [
       "PASS",
@@ -1410,6 +1553,26 @@
       "name": "ms-reduction-tool",
       "path": "forensics/tools/ms_reduction.py",
       "sha256": "fbd47184c675018314c3a15fb6bb3b5b5697d7dc47a0e3b8eef7a5135a13f1ff"
+    },
+    {
+      "name": "miri",
+      "path": "artifacts/phase25/miri.json",
+      "sha256": "43bc7e3122bebf3f403eaefdc0342a0eb6e4e55acb5f6197802177310ee38298"
+    },
+    {
+      "name": "ms-miri-tool",
+      "path": "forensics/tools/ms_miri.py",
+      "sha256": "f9d818be6fb4e83744834f513a93ed590f3ddf44d0b7a9777028ec08f521d485"
+    },
+    {
+      "name": "miri-tcb-suite-manifest",
+      "path": "forensics/miri-tcb-suite.json",
+      "sha256": "f7c0109aeb52c2a49d56000a9bc90b0116f4e667b64cb4a6393ef42c385157ce"
+    },
+    {
+      "name": "miri-harness-source",
+      "path": "src/runtime/miri_tcb.rs",
+      "sha256": "5152ccf4222f82dfb26d1d2f3a79d12cb333ab8ddc0474dfd7377bf403569ae7"
     }
   ],
   "kind": "phase25-courts",

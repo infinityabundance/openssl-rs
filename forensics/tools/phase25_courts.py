@@ -194,6 +194,10 @@ import ms_exposure  # noqa: E402
 # artefact, the census and the exposure classification.
 import ms_reduction  # noqa: E402
 
+# 25.9's Miri results and the tool that records them. The court re-runs the tool's pure
+# `miri_findings` / `miri_sensitivity_control` over the committed plane and the committed census.
+import ms_miri  # noqa: E402
+
 # The lossless columnar codec the Phase-25 artefacts are stored in. Every court decodes the
 # committed artefact through `decode_body` before reading its records, so one implementation of the
 # scheme serves the generator, the court and every cross-reader; the scheme is named by
@@ -286,6 +290,15 @@ UNSAFE_REDUCTION = REPO_ROOT / "artifacts" / "phase25" / "unsafe-reduction.json"
 MS_REDUCTION_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_reduction.py"
 UNSAFE_REDUCTION_COURT = "MS-UNSAFE-REDUCTION"
 
+# 25.9's Miri plane and the tool that records it. The plane is a measurement (it runs Miri), so the
+# tool is not a metadata-only generator; the court re-runs only the pure checks over the committed
+# artefact and the committed census.
+MIRI = REPO_ROOT / "artifacts" / "phase25" / "miri.json"
+MS_MIRI_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_miri.py"
+MIRI_COURT = "MS-MIRI"
+PHASE18_MIRI_SUITE = REPO_ROOT / "forensics" / "miri-tcb-suite.json"
+MIRI_HARNESS_SOURCE = REPO_ROOT / "src" / "runtime" / "miri_tcb.rs"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -314,15 +327,16 @@ COURTS: list[tuple[str, str]] = [
     (PHASE24_CROSSWALK_COURT, "_ms_phase24_crosswalk_court"),
     (EXPOSURE_COURT, "_ms_exposure_classification_court"),
     (UNSAFE_REDUCTION_COURT, "_ms_unsafe_reduction_court"),
+    (MIRI_COURT, "_ms_miri_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
 # `MS-SOURCE-CENSUS`, 25.2 removed `MS-NON-RUST-TCB`, 25.3 removed `MS-SAFETY-OBLIGATIONS`, 25.4
 # removed `MS-OWNERSHIP-PLANES`, 25.5 removed `MS-PHASE22-CROSSWALK`, 25.6 removed
-# `MS-PHASE24-CROSSWALK`, 25.7 removed `MS-EXPOSURE-CLASSIFICATION` and 25.8 removed
-# `MS-UNSAFE-REDUCTION`, so thirteen remain. Ordered as the plan orders them.
+# `MS-PHASE24-CROSSWALK`, 25.7 removed `MS-EXPOSURE-CLASSIFICATION`, 25.8 removed
+# `MS-UNSAFE-REDUCTION` and 25.9 removed `MS-MIRI`, so twelve remain. Ordered as the plan orders
+# them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-MIRI": "25.9 -- Miri",
     "MS-ASAN-MSMAN": "25.10 -- ASan/MSan",
     "MS-TSAN": "25.11 -- TSan",
     "MS-KANI": "25.12 -- Kani",
@@ -1278,6 +1292,86 @@ def _ms_unsafe_reduction_court(name: str) -> dict:
     }
 
 
+def _ms_miri_court(name: str) -> dict:
+    """`MS-MIRI`: 25.9's court, the Miri results over the claimed profile.
+
+    Stages no probe. It reads the committed `artifacts/phase25/miri.json` and re-runs the 25.9 pure
+    checks `ms_miri.miri_findings` and `ms_miri.miri_sensitivity_control` over it together with the
+    committed 25.1 census it classifies -- no Miri, no nightly, no compiler; the measurement that
+    produced the plane is `ms_miri.py --measure` (it runs Miri), and this court only re-derives from
+    what it wrote. It establishes that every census site has exactly one Miri state from the closed
+    vocabulary; that an `UNSUPPORTED` site carries its reason; that a `PASS`/`FAIL` cites a real run
+    with a matching outcome and command hash; that no `UNSUPPORTED` site is recorded `PASS` (they are
+    refused by their specific message); that a `FAIL` run's finding is preserved; that the counts are
+    derived, not typed; and that the crate-level unsupported case is recorded. Five seeded mutations
+    -- an `UNSUPPORTED` marked `PASS`, a `PASS` with no run, a dropped finding, a coverage claim with
+    no harness and a typed count -- are each caught with specificity holding. It is an **instrument**:
+    it can pass while the plane records property findings (the Miri undefined-behaviour findings and
+    the aliasing-model disagreement), which are recorded as the row's `findings` so a passing Miri
+    court is never read as 'the candidate is memory safe'.
+    """
+    if not MIRI.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "miri-missing",
+                "problems": [f"the Miri plane {rel(MIRI)} is absent"], "findings": [],
+                "control": {}}
+    if not SOURCE_CENSUS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "census-missing",
+                "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
+                "findings": [], "control": {}}
+
+    census_body, refs = _census_view()
+    body = _decoded_body(MIRI, refs)
+    problems = ms_miri.miri_findings(body, census_body)
+    control = ms_miri.miri_sensitivity_control(body, census_body)
+
+    counts = body.get("counts") or {}
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/miri.json and re-runs the 25.9 "
+            "pure checks (ms_miri.miri_findings and ms_miri.miri_sensitivity_control) over it and the "
+            "committed 25.1 census it classifies -- no Miri, no nightly, no compiler. The plane records "
+            "a per-census-site Miri state (MIRI_PASS / MIRI_FAIL / MIRI_NOT_REACHABLE / "
+            "MIRI_UNSUPPORTED), the runs (command hash, aliasing model, outcome), the findings and the "
+            "residuals. Miri is an interpreter: it executes Rust's MIR and refuses a foreign function "
+            "it cannot interpret, so the crate's first-party C adapters and raw FFI are UNSUPPORTED, "
+            "recorded with the precise reason; an unsupported site is never read as a pass. The "
+            "crate-wide harness aborts at its first undefined-behaviour finding, so most sites are "
+            "NOT_REACHABLE rather than clean, and the two aliasing models (Stacked Borrows and Tree "
+            "Borrows) are run wherever practical -- a disagreement is a preserved review item, never "
+            "averaged away. Five seeded mutations are each caught with specificity holding "
+            "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the Miri court re-derives only the plane's pure checks, so it stages no "
+            "artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "sites": counts.get("sites", 0),
+            "pass": counts.get("pass", 0),
+            "fail": counts.get("fail", 0),
+            "not_reachable": counts.get("not_reachable", 0),
+            "unsupported": counts.get("unsupported", 0),
+            "runs": len(body.get("runs") or []),
+            "findings": len(body.get("findings") or []),
+            "residuals": len(body.get("residuals") or []),
+        },
+        "runs": [
+            {"run_id": r.get("run_id"), "aliasing_model": r.get("aliasing_model"),
+             "outcome": r.get("outcome"), "command_sha256": str(r.get("command_sha256"))[:16]}
+            for r in body.get("runs") or []
+        ],
+        "findings": list(body.get("findings") or []),
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1358,14 +1452,17 @@ def main(argv: list[str]) -> int:
             "routes and the buffer-operation census, and "
             "**25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable "
             "compiler-derived sites that records each candidate safe-intrinsic replacement, the sites "
-            "that remain named rather than dropped, and the frozen post-reduction census. "
+            "that remain named rather than dropped, and the frozen post-reduction census, and "
+            "**25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its "
+            "tool state and its unsupported reason where Miri could not express the question, so an "
+            "unsupported site is never read as a pass. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining thirteen of its twenty-two courts -- "
-            "MS-MIRI, MS-ASAN-MSMAN, MS-TSAN, "
+            "remaining twelve of its twenty-two courts -- "
+            "MS-ASAN-MSMAN, MS-TSAN, "
             "MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.9 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.10 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -1428,6 +1525,10 @@ def main(argv: list[str]) -> int:
         InputRef(name="ms-exposure-tool", path=MS_EXPOSURE_TOOL),
         InputRef(name="unsafe-reduction", path=UNSAFE_REDUCTION),
         InputRef(name="ms-reduction-tool", path=MS_REDUCTION_TOOL),
+        InputRef(name="miri", path=MIRI),
+        InputRef(name="ms-miri-tool", path=MS_MIRI_TOOL),
+        InputRef(name="miri-tcb-suite-manifest", path=PHASE18_MIRI_SUITE),
+        InputRef(name="miri-harness-source", path=MIRI_HARNESS_SOURCE),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
