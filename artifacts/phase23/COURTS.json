@@ -4714,7 +4714,7 @@
           {
             "name": "security_lineage",
             "record_count": 52,
-            "sha256": "fc71bf1f2ae31fa9dc6b5199df25038eb8dfe9283c7b8d77a9768f9d2dbf9de5"
+            "sha256": "11ea6aad969ab43ec165721f1630bc58e899245149435dbcb86d099e8080f2c4"
           },
           {
             "name": "support_status",
@@ -6829,7 +6829,7 @@
     {
       "name": "security-lineage",
       "path": "forensics/multitrack/security-lineage.json",
-      "sha256": "fc71bf1f2ae31fa9dc6b5199df25038eb8dfe9283c7b8d77a9768f9d2dbf9de5"
+      "sha256": "11ea6aad969ab43ec165721f1630bc58e899245149435dbcb86d099e8080f2c4"
     },
     {
       "name": "security-source",
@@ -6839,7 +6839,7 @@
     {
       "name": "security-divergence-register",
       "path": "forensics/divergence-obligations.json",
-      "sha256": "f613590a8f54537df7b885f81b2109394279f3be60e915c36ae7ed3c7bbbcb2c"
+      "sha256": "c00782e903dda6678a708fb01abc522f080f91cb610cd06ecdbc25ae98081a01"
     },
     {
       "name": "security-divergence-policy",
@@ -6859,7 +6859,7 @@
     {
       "name": "compatibility-matrix",
       "path": "forensics/multitrack/compatibility-matrix.json",
-      "sha256": "c60fabe0c4ee003f2393fa8cdb6a38017249642a847eaa42369e89e088988dc9"
+      "sha256": "d8188ac6e87db19a91fa80fd857fe8c11bab624415ab80c8c8798270c1604543"
     },
     {
       "name": "downstream-multitrack",

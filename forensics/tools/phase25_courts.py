@@ -1194,12 +1194,18 @@ def _ms_unsafe_reduction_court(name: str) -> dict:
     ABI and every named before site is gone from the live census; that the worklist accounts for
     exactly the reachable sites not reduced; that the counts are derived, not typed; that the frozen
     census matches the live census (its body hash and its bytes); and that the frozen lint policy is
-    untouched. Six seeded mutations -- a reduction with no test evidence, a weakened lint, a
-    reduced site still present, a frozen census that disagrees, a worklist that omits a class and a
-    typed count -- are each caught with specificity holding. It is an **instrument**: it can pass
-    while the reduction records property findings (the reachable sites no admissible safe intrinsic
-    removes), which are recorded as the row's `findings` so a passing reduction court is never read
-    as a memory-safety claim, and a smaller unsafe count is never read as memory safety.
+    untouched. It also reads the 25.8 **differential artefact**
+    (`forensics/memory-safety/sparse-array-differential.json`) and refuses an allocator divergence
+    that is not adjudicated, a differential harness that did not run, a missing callback
+    re-entrancy obligation and a missing residual unsafe boundary. Thirteen seeded mutations -- a
+    reduction with no test evidence, a weakened lint, a reduced site still present, a frozen census
+    that disagrees, a worklist that omits a class, a typed count, a HIDDEN classification, a removed
+    site still present, a changed downstream verdict, a relocation with no boundary operation, a
+    differential harness that did not run, an unadjudicated allocator divergence and a missing
+    re-entrancy obligation -- are each caught with specificity holding. It is an **instrument**: it
+    can pass while the reduction records property findings (the reachable sites no admissible safe
+    intrinsic removes), which are recorded as the row's `findings` so a passing reduction court is
+    never read as a memory-safety claim, and a smaller unsafe count is never read as memory safety.
     """
     if not UNSAFE_REDUCTION.is_file():
         return {"court": name, "probe": "", "verdict": "fail", "stage": "reduction-missing",
@@ -1252,8 +1258,11 @@ def _ms_unsafe_reduction_court(name: str) -> dict:
             "present in the live census, a relocation with no boundary operation, a typed count, a "
             "weakened lint and a **changed downstream verdict** (the Phase-24 DROP_IN_PASS count, "
             "ladder and eight functional workloads are re-read from the committed measurement and "
-            "required to match the frozen baseline). Ten seeded mutations are each caught with "
-            "specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.4)."
+            "required to match the frozen baseline). It also reads the committed differential "
+            "artefact and refuses an unadjudicated allocator divergence, a harness that did not run, "
+            "a missing re-entrancy obligation and a missing residual unsafe boundary. Thirteen "
+            "seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-"
+            "SUBPHASES.md sections 2, 3.4)."
         ),
         "frf_declarable": False,
         "frf_exclusion": (

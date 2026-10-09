@@ -115,11 +115,55 @@
       "src/runtime/sparse_array.rs"
     ],
     "id": "runtime/sparse-array",
-    "mechanism": "the sixteen-way tree is a raw tree of *mut *mut c_void nodes reached by pointer arithmetic (p.add(i), (*p.add(i)).cast::<..>()), raw dereferences and a transmute trampoline. The reconstruction models it as an owned enum Node whose children are Boxes and whose deepest slots are the caller's values, and every descent, growth and walk is safe indexing/recursion on that value.",
+    "mechanism": "the sixteen-way tree is a raw tree of *mut *mut c_void nodes reached by pointer arithmetic (p.add(i), (*p.add(i)).cast::<..>()), raw dereferences and a transmute trampoline. The reconstruction models it as an owned enum Node whose children are owned OwnedNodes and whose deepest slots are the caller's values, and every descent, growth and walk is safe indexing/recursion on that value. Two hardening fixes make it airtight: (A) every node and the header are allocated through the crate's allocator seam (CRYPTO_zalloc) and released with CRYPTO_free by an OwnedNode that derefs to safe indexing, so a caller's installed allocator observes every allocation and exhaustion returns the 0 ossl_sa_set propagates rather than aborting; and (B) the doall walk snapshots its leaves before calling back, so a callback that re-enters the array to clear the slot it was handed (property/store.rs's alg_cleanup) is sound.",
     "why_internal": "OpenSslSa is pub(crate), #[no_mangle] nowhere, and exports no symbol: no public OpenSSL ABI symbol depends on its internals being raw. Its handle crosses into property/store.rs and rsa/ossl.rs only as an opaque *mut c_void, and no C reads its layout. The three observable fields (levels, top, nelem) and every entry-point signature are unchanged."
+  },
+  "differential": {
+    "artifact": "forensics/memory-safety/sparse-array-differential.json",
+    "tool": "forensics/tools/ms_sparse_array_court.py",
+    "harness": {
+      "ran": true,
+      "authority": "courts/phase25/rt_sparse_array_probe.c against openssl-3.6.4-production",
+      "candidate": "src/runtime/sparse_array_probe.rs under CRYPTO_set_mem_functions"
+    },
+    "allocator": {
+      "adjudicated": true,
+      "verdict": "accepted",
+      "divergences": [
+        {
+          "class": "NODE_BLOCK_SIZE",
+          "authority": "128 bytes (SA_BLOCK_MAX * sizeof(void *))",
+          "candidate": "136 bytes (the owned enum's discriminant)",
+          "reason": "the node block is opaque and its size is not part of the OpenSSL contract; the count of node allocations and their failure behaviour match exactly"
+        }
+      ],
+      "unadjudicated": 0
+    },
+    "reentrancy": {
+      "caller": "src/property/store.rs: alg_cleanup",
+      "sites": [
+        "src/runtime/sparse_array.rs:ossl_sa_doall",
+        "src/runtime/sparse_array.rs:ossl_sa_doall_arg"
+      ],
+      "evidence": [
+        "src/property/store.rs:495 ossl_sa_doall_arg((*store).algs, Some(alg_cleanup), store)",
+        "src/property/store.rs:431 ossl_sa_set((*store).algs, _idx, ptr::null_mut())",
+        "test runtime::sparse_array::tests::a_callback_may_clear_the_slot_it_was_handed",
+        "Miri (Stacked Borrows) over that test reports no undefined behaviour"
+      ]
+    }
+  },
+  "residual_unsafe_boundary": {
+    "seam": [
+      {"boundary": "src/runtime/sparse_array.rs: OwnedNode::new / OwnedNode::drop", "operation": "CRYPTO_zalloc / CRYPTO_free through the allocator seam"},
+      {"boundary": "src/runtime/sparse_array.rs: entry-point wrappers", "operation": "turning the opaque *mut OpenSslSa into a reference; calling the caller's leaf function pointer"}
+    ],
+    "note": "the residual unsafe surface is exactly the allocator seam and the C-ABI entry-point wrappers; the live census counts every remaining operation in the subsystem, so the surface is auditable rather than a prose list"
   },
   "tests": [
     "cargo test --lib",
-    "cargo test --lib runtime::sparse_array"
+    "cargo test --lib runtime::sparse_array",
+    "python3 forensics/tools/ms_sparse_array_court.py --measure",
+    "python3 forensics/tools/ms_reduction.py --measure"
   ]
 }

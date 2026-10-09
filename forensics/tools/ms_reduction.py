@@ -106,6 +106,13 @@ EXPOSURE = REPO_ROOT / "artifacts" / "phase25" / "exposure.json"
 # merely asserted.
 RECONSTRUCTION = REPO_ROOT / "forensics" / "memory-safety" / "unsafe-reconstruction.json"
 
+# 25.8's differential court artefact: the machine-readable comparison of the authority and the
+# crate under a caller-installed allocator, the adjudicated allocator divergence, the re-entrancy
+# obligation and its evidence, and the residual unsafe boundary. It is produced by
+# `forensics/tools/ms_sparse_array_court.py --measure`, which compiles and runs, so it is a
+# measurement artefact (like `miri.json`) and is read here rather than regenerated.
+SPARSE_ARRAY_DIFFERENTIAL = REPO_ROOT / "forensics" / "memory-safety" / "sparse-array-differential.json"
+
 # The committed Phase-24 downstream measurement the conservation check re-reads: the DROP_IN_PASS
 # verdicts and the ladder from the final P1000 run, and the eight functional workloads of the
 # runtime atlas. Both are measurement artefacts, never regenerated here.
@@ -118,6 +125,7 @@ PLAN_REL = rel(PLAN)
 SCHEMAS_REL = rel(SCHEMAS)
 TOOL_REL = rel(TOOL)
 RECONSTRUCTION_REL = rel(RECONSTRUCTION)
+DIFFERENTIAL_REL = rel(SPARSE_ARRAY_DIFFERENTIAL)
 
 # The two admissible classes a removed operation may carry. `HIDDEN` -- a mere wrapper that leaves
 # the dangerous operation in place -- is the third, forbidden name, and a declaration that uses it
@@ -379,12 +387,14 @@ def load_authority() -> dict:
     refs = ms_codec.refs_from_census(census_body)
     exposure_doc = _load(EXPOSURE) if EXPOSURE.is_file() else {"body": {}}
     reconstruction = _load(RECONSTRUCTION) if RECONSTRUCTION.is_file() else {}
+    differential = _load(SPARSE_ARRAY_DIFFERENTIAL) if SPARSE_ARRAY_DIFFERENTIAL.is_file() else {}
     p1000 = _load(DOWNSTREAM_P1000) if DOWNSTREAM_P1000.is_file() else {}
     runtime = _load(DOWNSTREAM_RUNTIME) if DOWNSTREAM_RUNTIME.is_file() else {}
     return {
         "exposure": {**exposure_doc,
                      "body": ms_codec.decode_body(exposure_doc.get("body", exposure_doc), refs)},
         "reconstruction": reconstruction,
+        "differential": differential,
         "downstream": {"p1000": p1000, "runtime": runtime},
         "lint_policy": {"cargo_toml": _read(CARGO_TOML), "lib_rs": _read(LIB_RS)},
         "census_sha256": sha256_file(CENSUS) if CENSUS.is_file() else "unknown",
@@ -470,6 +480,82 @@ def _derive_downstream(authority: dict) -> dict:
     }
 
 
+def _differential(authority: dict) -> dict:
+    """The 25.8 differential, read from the committed court artefact.
+
+    The artefact is the machine-readable comparison of the authority and the crate under a
+    caller-installed allocator -- the harness result, the adjudicated allocator divergence, the
+    re-entrancy obligation with its evidence and the residual unsafe boundary. It is a
+    *measurement* (the tool compiles and runs both sides), so it is read here, and its hash is
+    frozen into the record so a swapped artefact is visible.
+    """
+    d = _body(authority.get("differential") or {})
+    cmp_ = d.get("comparison") or {}
+    divs = cmp_.get("divergences") or []
+    ob = d.get("reentrancy_obligation") or {}
+    boundary = d.get("residual_unsafe_boundary") or []
+    return {
+        "artifact": DIFFERENTIAL_REL,
+        "artifact_sha256": (sha256_file(SPARSE_ARRAY_DIFFERENTIAL)
+                            if SPARSE_ARRAY_DIFFERENTIAL.is_file() else "unknown"),
+        "ran": bool((d.get("authority") or {}).get("transcript"))
+               and bool((d.get("candidate") or {}).get("transcript")),
+        "authority_impl": (d.get("authority") or {}).get("impl"),
+        "candidate_impl": (d.get("candidate") or {}).get("impl"),
+        "all_match": bool(cmp_.get("all_match")),
+        "divergences": [{"class": str(x.get("class")), "adjudication": str(x.get("adjudication")),
+                         "field": str(x.get("field"))}
+                        for x in divs],
+        "unadjudicated": len(cmp_.get("unadjudicated") or []),
+        "reentrancy_obligation": {
+            "caller": str(ob.get("caller", "")),
+            "sites": [str(s) for s in (ob.get("wrapper_sites") or [])],
+            "evidence": [str(e) for e in (ob.get("evidence") or [])],
+            "disposition": bool(str(ob.get("disposition", "")).strip()),
+        },
+        "residual_unsafe_boundary": [
+            {"boundary": str(b.get("boundary", "")), "operation": str(b.get("operation", ""))}
+            for b in boundary
+        ],
+    }
+
+
+def differential_findings(body: dict, authority: dict) -> list[str]:
+    """Every way the committed differential is inadmissible.
+
+    It refuses an allocator divergence that is not adjudicated, a harness that did not run (no
+    authority or candidate transcript), a re-entrancy obligation with no evidence or disposition,
+    and a missing residual unsafe boundary. These are the three gaps 25.8's `Fix A` had to close.
+    """
+    problems: list[str] = []
+    d = _body(authority.get("differential") or {})
+    if not d:
+        problems.append(f"the differential artefact {DIFFERENTIAL_REL} is absent or empty, so the "
+                        "differential harness did not run")
+        return problems
+    if not (d.get("authority") or {}).get("transcript") \
+            or not (d.get("candidate") or {}).get("transcript"):
+        problems.append("the differential harness did not run: an authority or candidate "
+                        "transcript is missing")
+    cmp_ = d.get("comparison") or {}
+    unadj = cmp_.get("unadjudicated") or []
+    divs = cmp_.get("divergences") or []
+    for x in divs:
+        if x.get("adjudication") not in ("closed", "accepted") or not x.get("reason"):
+            problems.append(f"the differential carries an unadjudicated allocator divergence: "
+                            f"{x.get('field')} ({x.get('class')})")
+    if unadj:
+        problems.append(f"the differential carries {len(unadj)} unadjudicated divergence(s)")
+    ob = d.get("reentrancy_obligation") or {}
+    if not ob.get("evidence"):
+        problems.append("the callback re-entrancy obligation is missing its evidence")
+    if not str(ob.get("disposition", "")).strip():
+        problems.append("the callback re-entrancy obligation states no disposition")
+    if not d.get("residual_unsafe_boundary"):
+        problems.append("the residual unsafe boundary is not recorded")
+    return problems
+
+
 def derive_reconstruction(census_body: dict, authority: dict) -> dict:
     """The reconstruction record, derived from the declaration, the live census and the committed
     downstream measurement.
@@ -548,6 +634,22 @@ def derive_reconstruction(census_body: dict, authority: dict) -> dict:
                      f"callbacks, unchanged across the reconstruction"),
         },
         "tests": [str(t) for t in (decl.get("tests") or [])],
+        "differential": _differential(authority),
+        "residual_unsafe_boundary": {
+            "subsystem": str(subsys.get("id", "")),
+            "sites": after_sites,
+            "sites_by_kind": _kind_counts(after_kind),
+            # The explicit, auditable boundary: the artefact names the seam the reconstruction
+            # crosses by construction, and the live census above counts every operation that
+            # remains in the subsystem, so a reader can recompute the surface rather than trust a
+            # prose list.
+            "declared_boundaries": [
+                {"boundary": str(b.get("boundary", "")),
+                 "operation": str(b.get("operation", ""))}
+                for b in (_body(authority.get("differential") or {})
+                          .get("residual_unsafe_boundary") or [])
+            ],
+        },
         "downstream": _derive_downstream(authority),
         "conservation": {
             "hidden": 0,
@@ -744,8 +846,8 @@ def _rule() -> dict:
     return {
         "authority": {
             "kind": "committed-phase25-planes",
-            "paths": [CENSUS_REL, EXPOSURE_REL, RECONSTRUCTION_REL, PLAN_REL, SCHEMAS_REL,
-                      TOOL_REL, rel(DOWNSTREAM_P1000), rel(DOWNSTREAM_RUNTIME)],
+            "paths": [CENSUS_REL, EXPOSURE_REL, RECONSTRUCTION_REL, DIFFERENTIAL_REL, PLAN_REL,
+                      SCHEMAS_REL, TOOL_REL, rel(DOWNSTREAM_P1000), rel(DOWNSTREAM_RUNTIME)],
             "declaration": (
                 "the committed 25.1 census is the compiler-derived primary unit, the committed 25.7 "
                 "exposure classification is the reachability authority (the census carries a "
@@ -861,6 +963,10 @@ def reduction_findings(body: dict, census_body: dict, authority: dict) -> list[s
     #    unchanged downstream headline. A HIDDEN claim, a still-present "removed" site, a typed
     #    count or a moved Phase-24 verdict is a finding here.
     problems += reconstruction_findings(body, census_body, authority)
+
+    # 0b. The differential: an allocator divergence that is not adjudicated, a harness that did not
+    #     run, a missing re-entrancy obligation or a missing residual boundary is a finding.
+    problems += differential_findings(body, authority)
 
     applied = body.get("applied") or []
     expected_counts = _counts(census_body, authority, applied)
@@ -1112,8 +1218,41 @@ def reduction_sensitivity_control(body: dict, census_body: dict, authority: dict
     m10 = check("relocation_without_boundary", b10, a10,
                 "RELOCATED_TO_BOUNDARY, but no")
 
+    # m11: a differential harness that did not run (no candidate transcript).
+    def harness_did_not_run() -> tuple[dict, dict]:
+        a = json.loads(json.dumps(authority))
+        a.setdefault("differential", {}).setdefault("body", {})["candidate"] = {}
+        return clone(), a
+
+    b11, a11 = harness_did_not_run()
+    m11 = check("differential_harness_did_not_run", b11, a11, "did not run")
+
+    # m12: an unadjudicated allocator divergence.
+    def unadjudicated_divergence() -> tuple[dict, dict]:
+        a = json.loads(json.dumps(authority))
+        cmp_ = a.setdefault("differential", {}).setdefault("body", {})
+        cmp_.setdefault("comparison", {})["divergences"] = [
+            {"field": "alloc.sizes", "class": "NODE_BLOCK_SIZE", "adjudication": "unadjudicated",
+             "reason": ""}]
+        cmp_["comparison"]["unadjudicated"] = [{"field": "alloc.sizes"}]
+        return clone(), a
+
+    b12, a12 = unadjudicated_divergence()
+    m12 = check("unadjudicated_allocator_divergence", b12, a12, "unadjudicated")
+
+    # m13: a missing re-entrancy obligation (no evidence).
+    def missing_reentrancy() -> tuple[dict, dict]:
+        a = json.loads(json.dumps(authority))
+        ob = a.setdefault("differential", {}).setdefault("body", {}).setdefault(
+            "reentrancy_obligation", {})
+        ob["evidence"] = []
+        return clone(), a
+
+    b13, a13 = missing_reentrancy()
+    m13 = check("missing_reentrancy_obligation", b13, a13, "re-entrancy obligation")
+
     result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and m6 and m7 and m8
-                                      and m9 and m10 and not baseline)
+                                      and m9 and m10 and m11 and m12 and m13 and not baseline)
     result["caught"] = sum(1 for v in result["mutations"].values() if v["caught"])
     result["seeded"] = len(result["mutations"])
     return result
@@ -1155,6 +1294,14 @@ def _synth_authority() -> dict:
             "tests": ["cargo test --lib"],
         },
         "downstream": {},
+        "differential": {"body": {
+            "authority": {"impl": "openssl-3.6.4", "transcript": {"num": 1}},
+            "candidate": {"impl": "openssl-rs", "transcript": {"num": 1}},
+            "comparison": {"all_match": True, "divergences": [], "unadjudicated": []},
+            "reentrancy_obligation": {"caller": "synthetic", "wrapper_sites": ["synthetic"],
+                                     "evidence": ["synthetic"], "disposition": "synthetic"},
+            "residual_unsafe_boundary": [{"boundary": "synthetic", "operation": "synthetic"}],
+        }},
         "lint_policy": {"cargo_toml": _read(CARGO_TOML), "lib_rs": _read(LIB_RS)},
         "census_sha256": "0" * 64,
     }
@@ -1201,8 +1348,10 @@ def self_test() -> int:
           "applications, one reconstructed subsystem); and every seeded mutation (a reduction "
           "with no test evidence, a weakened lint, a reduced site still present, a frozen census "
           "that disagrees, a worklist that omits a class, a typed count, a HIDDEN classification, "
-          "a removed site still present, a changed downstream verdict and a relocation with no "
-          "boundary operation) is caught with specificity holding")
+          "a removed site still present, a changed downstream verdict, a relocation with no "
+          "boundary operation, a differential harness that did not run, an unadjudicated "
+          "allocator divergence and a missing re-entrancy obligation) is caught with "
+          "specificity holding")
     return 0
 
 
@@ -1227,6 +1376,7 @@ def _inputs() -> list:
         InputRef(name="source-census", path=CENSUS),
         InputRef(name="exposure", path=EXPOSURE),
         InputRef(name="unsafe-reconstruction", path=RECONSTRUCTION),
+        InputRef(name="sparse-array-differential", path=SPARSE_ARRAY_DIFFERENTIAL),
         InputRef(name="downstream-p1000-run", path=DOWNSTREAM_P1000),
         InputRef(name="downstream-runtime-functional-atlas", path=DOWNSTREAM_RUNTIME),
         InputRef(name="cargo-toml", path=CARGO_TOML),
