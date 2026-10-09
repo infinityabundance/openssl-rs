@@ -308,6 +308,21 @@ rather than folded into the prose it corrects. It also records that the Phase-22
 closure leaves its `protocol` family unpopulated, so a network exposure class is grounded in the
 site's committed parser role and the entry semantics it names rather than in a Phase-22 root.
 
+**A second 25.7 correction records `UNKNOWN_REACHABILITY` and requires a witness for
+`UNREACHABLE_PROFILE`, and it is checked rather than asserted.** The classification first treated an
+unresolved Phase-22 mapping as `UNREACHABLE_PROFILE`, but a missing mapping is missing evidence: it
+does not establish that the claimed profile cannot reach the site, and reading it as unreachability
+understates risk exactly where the mapping is weakest. 25.7 therefore added
+`UNKNOWN_REACHABILITY` to `memory_safety_schemas.EXPOSURE_CLASSES`, deliberately **not** in
+`EXTERNALLY_REACHABLE_EXPOSURE` (an unknown is not a reachability claim in either direction), and
+made the derivation award `UNREACHABLE_PROFILE` only to a site that carries a justified exclusion
+witness recorded on it (a committed exclusion residual, or a resolved authority unit no root
+reaches); every other unresolved site is `UNKNOWN_REACHABILITY`, and no site is dropped. The counts
+record `sites_unknown_reachability` beside `unreachable_profile`, so an unknown is never read as a
+zero, and the `MS-EXPOSURE-CLASSIFICATION` court's sensitivity control catches a mutation that maps
+an unresolved site to `UNREACHABLE_PROFILE` with no witness and one that maps it to an external
+class.
+
 **4.6 The bounded claim is bounded, and the non-claims are its boundary.** The plan's claim is about
 the **inventory** of a fixed candidate's first-party surface, not about the absence of bugs. Every
 subphase records the non-claims where it can be read as more than it is, and the seal records them

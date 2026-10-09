@@ -144,11 +144,21 @@ OBLIGATION_STATES: tuple[str, ...] = ("DISCHARGED", "OPEN", "UNKNOWN")
 
 # The exposure classes (brief section 7): whether a person, a configuration, a CLI input, a local
 # file, a network peer or a downstream program can reach the site. `UNREACHABLE_PROFILE`, `TEST_ONLY`
-# and `TOOLING_ONLY` are the classes that are not reachable in the claimed profile. 25.7 added
+# and `TOOLING_ONLY` are the classes that are not reachable in the claimed profile; 25.7 added
 # `TOOLING_ONLY` and `LOCAL_FILE_INPUT_REACHABLE`, the two members the brief names that 25.0 did not
 # carry, and recorded the correction in docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4.5.
+#
+# `UNKNOWN_REACHABILITY` is the class for a site whose exposure the committed evidence does not
+# establish -- a missing Phase-22 mapping is missing evidence, and it is not evidence that the
+# profile cannot reach the site. It is deliberately **not** an externally reachable class: an
+# unknown is not a reachability claim in either direction, it is recorded rather than read as a
+# zero. `UNREACHABLE_PROFILE` is awarded only with a justified exclusion witness on the site (a
+# committed exclusion residual, or a resolved authority unit no root reaches); a site the evidence
+# leaves unresolved is `UNKNOWN_REACHABILITY`. A second 25.7 correction records the member and the
+# witness rule in docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4.5.
 EXPOSURE_CLASSES: tuple[str, ...] = (
     "UNREACHABLE_PROFILE",
+    "UNKNOWN_REACHABILITY",
     "TEST_ONLY",
     "TOOLING_ONLY",
     "INTERNAL_REACHABLE",
