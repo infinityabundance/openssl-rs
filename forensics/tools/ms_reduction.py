@@ -12,6 +12,14 @@ risk that it touches the ABI, and why the venue cannot apply it. A candidate the
 safe stays on the worklist with its reason -- the merging of blocks or the consolidation of pointers
 into one helper is never a reduction, and a worklist with zero applied reductions is acceptable.
 
+The worklist is a **local-replacement feasibility census**, not an impossibility result: it records,
+for each of the ten local-substitution patterns, that **none of the operations screened against it
+was locally replaceable without changing the public surface or behaviour**. That is **not** a claim
+that the rest of the core is irreducible -- the sparse-array reconstruction (part two below) showed a
+subsystem the local patterns could not touch was reducible by a representation-level reconstruction.
+A structural (representation-level) reconstruction is a **separate campaign**, recorded in
+`forensics/memory-safety/unsafe-reconstruction.json`.
+
 Part two: the safe-core reconstruction
 --------------------------------------
 A **proof-by-construction** that a significant, genuinely internal unsafe mechanism has been
@@ -333,7 +341,9 @@ NON_CLAIMS: tuple[str, ...] = (
     "unsafe LOC is not a vulnerability count: a line count is a secondary projection of the "
     "compiler-derived census",
     "an unreduced reachable unsafe site is inventoried, not proven: the worklist's rejection is a "
-    "statement about the availability of a safe intrinsic, not about the site's soundness",
+    "statement about the availability of a local safe substitution, not about the site's soundness, "
+    "and the worklist is a local-replacement feasibility census, not an impossibility result about "
+    "the rest of the core",
     "behaviour preservation is stated for the inputs the authority's contract admits; the "
     "authority's undefined-behaviour cases are not transferred to a defined panic",
 )
@@ -775,8 +785,12 @@ def derive(census_body: dict, authority: dict) -> dict:
         "every candidate replacement would change a function signature or the foreign ABI, turn a "
         "documented precondition the authority states into a defined panic, or remove no site "
         "because the census site is the enclosing raw dereference; consolidating repeated reads "
-        "into one helper is forbidden by section 3.4 and the brief, so no worklist candidate was "
-        "applied",
+        "into one helper is forbidden by section 3.4 and the brief. This is a local-replacement "
+        "feasibility census, not an impossibility result: of the reachable operations screened "
+        "against the ten local-substitution patterns none was locally replaceable without changing "
+        "the public surface or behaviour, which is not a claim that the rest of the core is "
+        "irreducible -- a structural (representation-level) reconstruction is a separate campaign, "
+        "recorded in forensics/memory-safety/unsafe-reconstruction.json",
         "the safe-core reconstruction is separate from the worklist: it replaced the internal "
         "unsafe mechanism of one subsystem --- recorded below with its per-operation "
         "classification --- so the crate's total operation count moved while the externally "
@@ -860,7 +874,9 @@ def _rule() -> dict:
         "classification": (
             "each reachable compiler-derived site is assigned exactly one candidate class by a "
             "total function of its operation kind and its committed source span text; the class "
-            "names the proposed safe-intrinsic replacement, not a new unit"),
+            "names the proposed safe-intrinsic (local-substitution) replacement, not a new unit, and "
+            "the worklist is a local-replacement feasibility census, not an impossibility result"
+        ),
         "reconstruction": (
             "a genuinely internal unsafe mechanism -- the subsystem the reconstruction declaration "
             "names -- is replaced with safe Rust. Every removed operation is ELIMINATED (gone from "
@@ -870,10 +886,16 @@ def _rule() -> dict:
         "admissibility": ADMISSIBILITY,
         "census_changed": True,
         "no_reduction_reason": (
-            "no external worklist reduction was applied: every reachable site is a C-ABI-boundary "
-            "operation whose safe replacement would change a signature or the foreign ABI, or "
-            "introduce a panic where the authority states a precondition, or remove no site at all. "
-            "The reduction that *was* applied is the internal safe-core reconstruction below"),
+            "the worklist is a local-replacement feasibility census, not an impossibility result: of "
+            "the reachable operations screened against the ten local-substitution patterns, none was "
+            "locally replaceable without changing the public surface or behaviour -- each candidate "
+            "replacement would change a signature or the foreign ABI, turn a documented precondition "
+            "the authority states into a defined panic, or remove no site at all, and consolidating "
+            "repeated reads into one helper is forbidden by section 3.4. This is not a claim that the "
+            "rest of the core is irreducible: a structural (representation-level) reconstruction is a "
+            "separate campaign, recorded in forensics/memory-safety/unsafe-reconstruction.json and "
+            "applied in the reconstruction below"
+        ),
     }
 
 

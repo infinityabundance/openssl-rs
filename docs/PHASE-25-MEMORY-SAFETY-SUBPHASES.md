@@ -331,6 +331,18 @@ zero, and the `MS-EXPOSURE-CLASSIFICATION` court's sensitivity control catches a
 an unresolved site to `UNREACHABLE_PROFILE` with no witness and one that maps it to an external
 class.
 
+**25.7 recorded a third correction: unknown exposure is tier `SU`, not `S0`, and it is checked
+rather than asserted.** The second 25.7 correction made an unresolved site `UNKNOWN_REACHABILITY`
+rather than `UNREACHABLE_PROFILE`, but the risk tier left every non-externally-reachable class -- the
+unknown included -- in `S0`, so an unknown shipped in the same bucket as a genuinely non-exposed
+site: uncertainty was read as the lowest review priority, the wrong consequence of uncertainty. 25.7
+therefore added `SU` (unknown exposure) to `memory_safety_schemas.RISK_TIERS` and assigns it to every
+`UNKNOWN_REACHABILITY` site, while a genuinely non-exposed site stays `S0`; a site with unknown
+exposure stays eligible for high-priority investigation until evidence narrows it, because an unknown
+is not the lowest priority. The `MS-EXPOSURE-CLASSIFICATION` court's sensitivity control catches a
+mutation that assigns an unknown-reachability site `S0` with specificity holding, and the risk-tier
+rule and the plane's `counts.sites_by_risk_tier` record `SU` beside `S0`.
+
 **4.6 The bounded claim is bounded, and the non-claims are its boundary.** The plan's claim is about
 the **inventory** of a fixed candidate's first-party surface, not about the absence of bugs. Every
 subphase records the non-claims where it can be read as more than it is, and the seal records them
