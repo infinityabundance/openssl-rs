@@ -418,11 +418,37 @@ and its class; `ms_reduction.py` re-derives the before count as `after + the ELI
 each removed site is absent from the live census and every relocation has a remaining boundary
 operation of its kind, and re-reads the Phase-24 downstream headline from the committed measurement
 and requires it unchanged. The reconstruction removed 50 net operations from the crate (subsystem
-184 -> 134 sites; crate 172051 -> 172001), and the `MS-UNSAFE-REDUCTION` court refuses a `HIDDEN`
+212 -> 162 sites; crate 172122 -> 172072, the re-derived counts of the operation-granular census),
+and the `MS-UNSAFE-REDUCTION` court refuses a `HIDDEN`
 claim, a still-present "removed" site, a typed count, a changed downstream verdict and a weakened
-lint (ten seeded mutations, each caught with specificity holding). The census and every dependent
+lint (fifteen seeded mutations, each caught with specificity holding, including a count increase
+labelled a reduction and a dropped negative result). The census and every dependent
 plane (25.3 through 25.7) and the 25.2 non-Rust TCB were re-derived from the modified tree in the
 same commit.
+
+**25.8 also records a measured negative result and the metric axis it taught, and the court checks
+both.** A conversion of the **EVP operation cache** -- `EVP_PKEY::operation_cache`, the per-key
+`STACK_OF(OP_CACHE_ELEM)` -- was implemented, built and differentially tested against OpenSSL
+3.6.4: every behavioural field matched (install, push_ret, the find vector, clear_ret and the
+failure-injection block), and only the internal container allocation representation diverged. But
+the compiler census showed it is **not a reduction**: the subsystem rose 287 -> 313 operation sites
+(+26) and the crate 172072 -> 172139 (+67), because the owned representation adds the allocator
+seam, `Deref`/`Drop`, slice construction and a required re-entrancy test, while a linear cache has
+almost no interior unsafe to eliminate. It was reverted, and is recorded in an
+`attempted_conversions` list with the verdict `REVERTED_NOT_A_REDUCTION`, its measured before/after
+counts, the differential outcome, the classification in the closed vocabulary (ELIMINATED /
+RELOCATED_TO_BOUNDARY / HIDDEN=0) and a precise obstruction -- rather than omitted or labelled a
+reduction. The record also states the campaign's **axis** explicitly: a conversion is judged on (a)
+dangerous operations ELIMINATED, (b) a smaller, auditable residual boundary, and (c) HIDDEN=0, so a
+conversion that replaces a large unsafe interior with a small explicit boundary can be
+architecturally safer even when its raw site count rises -- **and** a net site-count increase is
+still never labelled a reduction, the two facts stated side by side and never conflated. The
+`MS-UNSAFE-REDUCTION` court refuses a record that conflates the two or that drops the negative
+result. The next target is sized, not claimed: the **X.509 policy tree**
+(`src/x509/pcy_{tree,cache,node,lib,data}.rs`), whose measured interior is 649 census operations (246
+raw node dereferences and 124 unsafe method calls over a self-contained policy graph, with only
+eleven exported accessors), is recorded as a campaign worklist entry -- a plan whose attempt must
+itself net-reduce or be recorded `REVERTED_NOT_A_REDUCTION`, not a claim that it will.
 
 ## 5. Process
 

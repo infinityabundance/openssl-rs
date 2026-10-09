@@ -684,9 +684,15 @@
       {
         "control": {
           "baseline_findings": 0,
-          "caught": 13,
+          "caught": 15,
           "honest": true,
           "mutations": {
+            "count_increase_labelled_reduction": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "conflates"
+            },
             "differential_harness_did_not_run": {
               "caught": true,
               "delta": 2,
@@ -716,6 +722,12 @@
               "delta": 2,
               "findings": 2,
               "marker": "re-entrancy obligation"
+            },
+            "negative_result_dropped": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "negative result"
             },
             "reduced_site_still_present": {
               "caught": true,
@@ -766,7 +778,7 @@
               "marker": "does not account for exactly the reachable sites"
             }
           },
-          "seeded": 13,
+          "seeded": 15,
           "specificity_holds": true
         },
         "counts": {
@@ -787,10 +799,32 @@
         ],
         "frf_declarable": false,
         "frf_exclusion": "the unsafe-reduction court reads the committed worklist and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
-        "method": "stages no probe: it reads the committed artifacts/phase25/unsafe-reduction.json and re-runs the 25.8 pure checks (ms_reduction.reduction_findings and ms_reduction.reduction_sensitivity_control) over it, the committed 25.1 census it reduces, the committed 25.7 exposure classification it reads for reachability, the committed reconstruction declaration and the committed Phase-24 downstream measurement -- no compiler. Two parts. (1) The **reduction worklist**: each reachable compiler-derived site is assigned one candidate class by a total function of its operation kind and committed span, and the class records the proposed safe-intrinsic replacement or the reason it is not behaviour-preserving. The worklist is a local-replacement feasibility census, not an impossibility result: none of the operations screened against the ten local-substitution patterns was locally replaceable without changing the public surface or behaviour, which is not a claim that the rest of the core is irreducible, and a structural (representation-level) reconstruction is a separate campaign recorded in forensics/memory-safety/unsafe-reconstruction.json. (2) The **safe-core reconstruction**: it re-derives the subsystem's before/after counts (`after + the ELIMINATED set`), classifies every removed operation ELIMINATED or RELOCATED_TO_BOUNDARY, and refuses a HIDDEN claim (a wrapper), a 'removed' site still present in the live census, a relocation with no boundary operation, a typed count, a weakened lint and a **changed downstream verdict** (the Phase-24 DROP_IN_PASS count, ladder and eight functional workloads are re-read from the committed measurement and required to match the frozen baseline). It also reads the committed differential artefact and refuses an unadjudicated allocator divergence, a harness that did not run, a missing re-entrancy obligation and a missing residual unsafe boundary. Thirteen seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.4).",
+        "method": "stages no probe: it reads the committed artifacts/phase25/unsafe-reduction.json and re-runs the 25.8 pure checks (ms_reduction.reduction_findings and ms_reduction.reduction_sensitivity_control) over it, the committed 25.1 census it reduces, the committed 25.7 exposure classification it reads for reachability, the committed reconstruction declaration and the committed Phase-24 downstream measurement -- no compiler. Two parts. (1) The **reduction worklist**: each reachable compiler-derived site is assigned one candidate class by a total function of its operation kind and committed span, and the class records the proposed safe-intrinsic replacement or the reason it is not behaviour-preserving. The worklist is a local-replacement feasibility census, not an impossibility result: none of the operations screened against the ten local-substitution patterns was locally replaceable without changing the public surface or behaviour, which is not a claim that the rest of the core is irreducible, and a structural (representation-level) reconstruction is a separate campaign recorded in forensics/memory-safety/unsafe-reconstruction.json. (2) The **safe-core reconstruction**: it re-derives the subsystem's before/after counts (`after + the ELIMINATED set`), classifies every removed operation ELIMINATED or RELOCATED_TO_BOUNDARY, and refuses a HIDDEN claim (a wrapper), a 'removed' site still present in the live census, a relocation with no boundary operation, a typed count, a weakened lint and a **changed downstream verdict** (the Phase-24 DROP_IN_PASS count, ladder and eight functional workloads are re-read from the committed measurement and required to match the frozen baseline). It also reads the committed differential artefact and refuses an unadjudicated allocator divergence, a harness that did not run, a missing re-entrancy obligation and a missing residual unsafe boundary. Fifteen seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.4).",
         "probe": "",
         "problems": [],
         "reconstruction": {
+          "attempted_conversions": [
+            {
+              "crate_after": 172139,
+              "crate_before": 172072,
+              "hidden": 0,
+              "id": "evp-operation-cache",
+              "subsystem_after": 313,
+              "subsystem_before": 287,
+              "verdict": "REVERTED_NOT_A_REDUCTION"
+            }
+          ],
+          "axis": {
+            "never_conflated": "a net site-count increase is never labelled a reduction. The axis facts and the net before/after counts are recorded side by side and each conversion states both; a conversion whose measured count rose is recorded with the verdict REVERTED_NOT_A_REDUCTION, never as a reduction, however it scores on the axis.",
+            "per_conversion_fields": [
+              "ELIMINATED",
+              "RELOCATED_TO_BOUNDARY",
+              "HIDDEN",
+              "residual_boundary.set",
+              "residual_boundary.size"
+            ],
+            "statement": "the campaign's success axis is not the total operation count alone. A conversion is judged on (a) dangerous operations ELIMINATED, (b) a smaller, auditable residual boundary, and (c) HIDDEN=0: a conversion that replaces a large unsafe interior with a small explicit boundary can be architecturally safer even when its raw site count rises."
+          },
           "downstream": {
             "drop_in_pass": 33,
             "families": 1000,
@@ -818,6 +852,13 @@
           },
           "hidden": 0,
           "net_reduced": 50,
+          "next_targets": [
+            {
+              "id": "x509-policy-tree",
+              "interior_operations": 649,
+              "subsystem": "x509/policy-tree"
+            }
+          ],
           "operations": {
             "by_class": {
               "ELIMINATED": 50,
@@ -1420,7 +1461,7 @@
     {
       "name": "phase-25-plan",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "54c2e2dfeca985b5ab7ab25da81a5321af6022b7cf784ad9e7eb81756ca29196"
+      "sha256": "d7e7874ff4bc79cd7c5ed53af2a62c2d23babb66646c3f2b61ff6a6bb7987373"
     },
     {
       "name": "memory-safety-schemas",
@@ -1470,7 +1511,7 @@
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "7ad613ccd5b40fd969820a3ad1ed1037b155cb7dfce74a6c326f28134f536723"
+      "sha256": "2f27966d87b0b04d3c16e79f8c86e0e05cfae4e61d5b7b52a769b77f5f19fb42"
     },
     {
       "name": "ms-obligations-tool",
@@ -1480,7 +1521,7 @@
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "3eebf90e7531c779af9c374c88afd2a67def8c8250c4cc8c2b4a47dcd1f0c519"
+      "sha256": "cc112e711b8975420f07a20c03376cd786d05e14c8d62d855f0bc3461e5e8fac"
     },
     {
       "name": "ms-ownership-planes-tool",
@@ -1490,7 +1531,7 @@
     {
       "name": "phase22-crosswalk",
       "path": "artifacts/phase25/phase22-crosswalk.json",
-      "sha256": "e46bbc07d679aeca71db3faf333c3e4830f60310136f632a307de125c9914d14"
+      "sha256": "2bc17d7954c682ad24da61f584d09a0d9d1a19c5c7f946462d79cd31363cf623"
     },
     {
       "name": "ms-phase22-crosswalk-tool",
@@ -1525,7 +1566,7 @@
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "5ee5025802d0d256b3afa30e29051b1c5c8b23f1fbc603978c680486a465d44c"
+      "sha256": "18d65f2f14a289012f6b6735825012e3732c74afd1185f798706d0ab7bd0628b"
     },
     {
       "name": "ms-phase24-crosswalk-tool",
@@ -1565,7 +1606,7 @@
     {
       "name": "exposure",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "4c8d5867580de8f89e5c1a8d896027bc46917805dbf2d18ff63fbf2b8e4596c8"
+      "sha256": "a9a8bbefe31aba09539577a26447bcd1d58bb883e26e02e5ec3392c7a6b031db"
     },
     {
       "name": "ms-exposure-tool",
@@ -1575,12 +1616,12 @@
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "3d26af467f9517c0cd9e3108543e6319d6bca09588e62923b018db43a7de597a"
+      "sha256": "386e40428d93f9b0d4b03bdf57b73451edb417b6f44db06cb3071bacdc199a62"
     },
     {
       "name": "ms-reduction-tool",
       "path": "forensics/tools/ms_reduction.py",
-      "sha256": "5d2609b537d30ecb44b9e4f921334244a63be70ccfe6184e8ade20dc2e4d9cc7"
+      "sha256": "0a8c81c5203adf944eca066664a28045a546f17679a903e7b952a0d6d86ee084"
     },
     {
       "name": "miri",

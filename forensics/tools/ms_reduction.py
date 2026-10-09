@@ -39,7 +39,13 @@ before/after counts from the live census plus the removed set, and refuses:
     `p1000-run.json` ladder and the eight functional workloads -- is re-derived from the committed
     Phase-24 measurement and compared with the frozen baseline, so a reconstruction that changed what
     downstream observes is inadmissible;
-  * a weakened safety lint (the frozen policy is read and checked).
+  * a weakened safety lint (the frozen policy is read and checked);
+  * a record that **conflates a count increase with a reduction**, or that **drops the negative
+    result**: an attempted conversion whose measured operation count rose must be recorded (with its
+    before/after counts and the verdict `REVERTED_NOT_A_REDUCTION`), never omitted and never labelled
+    a reduction. The campaign's success **axis** -- dangerous operations ELIMINATED, a smaller
+    auditable residual boundary, and HIDDEN=0 -- is not the total operation count, and the two are
+    stated side by side and never conflated.
 
 So 25.8 is a **pure function of committed inputs**: the committed 25.1 census, the committed 25.7
 exposure classification, the committed reconstruction declaration, the committed Phase-24 downstream
@@ -140,6 +146,13 @@ DIFFERENTIAL_REL = rel(SPARSE_ARRAY_DIFFERENTIAL)
 # is refused rather than silently accepted.
 RECONSTRUCTION_CLASSES: tuple[str, ...] = ("ELIMINATED", "RELOCATED_TO_BOUNDARY")
 FORBIDDEN_CLASS = "HIDDEN"
+
+# The one verdict an attempted conversion whose measured operation count ROSE may carry. Any other
+# verdict on such a conversion is the conflation -- a net count increase labelled a reduction -- that
+# `attempted_conversion_findings` refuses. The success axis (dangerous operations ELIMINATED, a
+# smaller auditable residual boundary, HIDDEN=0) is recorded per conversion and is never conflated
+# with the net count: a conversion can score well on the axis and still not be a reduction.
+NOT_A_REDUCTION = "REVERTED_NOT_A_REDUCTION"
 
 
 # --------------------------------------------------------------------------------------------
@@ -346,6 +359,12 @@ NON_CLAIMS: tuple[str, ...] = (
     "the rest of the core",
     "behaviour preservation is stated for the inputs the authority's contract admits; the "
     "authority's undefined-behaviour cases are not transferred to a defined panic",
+    "the campaign's success axis is not the total operation count alone: a conversion is judged on "
+    "(a) dangerous operations ELIMINATED, (b) a smaller, auditable residual boundary, and (c) "
+    "HIDDEN=0, so a conversion that replaces a large unsafe interior with a small explicit boundary "
+    "can be architecturally safer even when its raw site count rises -- and a net site-count "
+    "increase is still never labelled a reduction; the axis and the net are separate facts, stated "
+    "side by side",
 )
 
 
@@ -566,6 +585,98 @@ def differential_findings(body: dict, authority: dict) -> list[str]:
     return problems
 
 
+def _axis(decl: dict) -> dict:
+    """The campaign's success axis, carried from the declaration.
+
+    The axis is what a conversion is judged on **besides** the net count: the operations it
+    ELIMINATED, the operations it RELOCATED_TO_BOUNDARY, the HIDDEN count (which must be 0) and the
+    residual boundary set and its size. It is stated per conversion in `attempted_conversions`, and
+    the `never_conflated` sentence is the rule that a net site-count increase is never labelled a
+    reduction.
+    """
+    a = decl.get("axis") or {}
+    return {
+        "statement": str(a.get("statement", "")),
+        "per_conversion_fields": [str(x) for x in (a.get("per_conversion_fields") or [])],
+        "never_conflated": str(a.get("never_conflated", "")),
+    }
+
+
+def _attempted_conversions(decl: dict) -> list[dict]:
+    """The attempted conversions, normalized from the declaration.
+
+    A conversion that was tried and reverted is a measured negative result, not a reduction: it
+    carries its subsystem, its measured before/after counts (subsystem and crate), the differential
+    outcome (whether the harness ran and which fields matched), the classification in the closed
+    vocabulary (ELIMINATED / RELOCATED_TO_BOUNDARY / HIDDEN, with HIDDEN recorded as 0), the residual
+    boundary set and its size, and the verdict. The per-class counts are normalized as they are
+    declared -- a reverted conversion may record them as not separately measured rather than invent a
+    split -- so the record can express the axis without a fabricated figure.
+    """
+    out: list[dict] = []
+    for a in (decl.get("attempted_conversions") or []):
+        counts = a.get("counts") or {}
+        cls = a.get("classification") or {}
+        diff = a.get("differential") or {}
+        rb = a.get("residual_boundary") or {}
+        out.append({
+            "id": str(a.get("id", "")),
+            "subsystem": str(a.get("subsystem", "")),
+            "files": [str(f) for f in (a.get("files") or [])],
+            "mechanism": str(a.get("mechanism", "")),
+            "counts": {
+                "subsystem_before": int(counts.get("subsystem_before", 0)),
+                "subsystem_after": int(counts.get("subsystem_after", 0)),
+                "crate_before": int(counts.get("crate_before", 0)),
+                "crate_after": int(counts.get("crate_after", 0)),
+            },
+            "differential": {
+                "ran": bool(diff.get("ran")),
+                "authority": str(diff.get("authority", "")),
+                "candidate": str(diff.get("candidate", "")),
+                "fields_matched": [str(m) for m in (diff.get("fields_matched") or [])],
+                "divergence": str(diff.get("divergence", "")),
+            },
+            "classification": {
+                "ELIMINATED": cls.get("ELIMINATED"),
+                "RELOCATED_TO_BOUNDARY": cls.get("RELOCATED_TO_BOUNDARY"),
+                "HIDDEN": int(cls.get("HIDDEN", 0)),
+            },
+            "residual_boundary": {
+                "set": [str(x) for x in (rb.get("set") or [])],
+                "size": rb.get("size"),
+            },
+            "verdict": str(a.get("verdict", "")),
+            "obstruction": str(a.get("obstruction", "")),
+        })
+    return out
+
+
+def _next_targets(decl: dict) -> list[dict]:
+    """The campaign worklist: the next conversions to attempt, and why.
+
+    A plan, not a claim: each names a subsystem, its measured interior operation count (and its
+    breakdown), why it is the next target and why it is tractable, the risk to be proven, and --
+    where relevant -- the larger mechanism that was considered and rejected because its interior is
+    algorithmic rather than structural and so would not net-reduce.
+    """
+    out: list[dict] = []
+    for t in (decl.get("next_targets") or []):
+        out.append({
+            "id": str(t.get("id", "")),
+            "subsystem": str(t.get("subsystem", "")),
+            "files": [str(f) for f in (t.get("files") or [])],
+            "interior_operations": int(t.get("interior_operations", 0)),
+            "interior_by_kind": {str(k): int(v)
+                                 for k, v in (t.get("interior_by_kind") or {}).items()},
+            "why_next": str(t.get("why_next", "")),
+            "why_tractable": str(t.get("why_tractable", "")),
+            "risk": str(t.get("risk", "")),
+            "not_chosen": str(t.get("not_chosen", "")),
+        })
+    return out
+
+
 def derive_reconstruction(census_body: dict, authority: dict) -> dict:
     """The reconstruction record, derived from the declaration, the live census and the committed
     downstream measurement.
@@ -618,6 +729,9 @@ def derive_reconstruction(census_body: dict, authority: dict) -> dict:
             "removed_site_ids_sha256": content_hash(ids),
             "sample_site_ids": ids[:8],
         },
+        "axis": _axis(decl),
+        "attempted_conversions": _attempted_conversions(decl),
+        "next_targets": _next_targets(decl),
         "counts": {
             "before": {"sites": after_sites + eliminated,
                        "sites_by_kind": _kind_counts(before_kind)},
@@ -671,6 +785,53 @@ def derive_reconstruction(census_body: dict, authority: dict) -> dict:
     }
 
 
+def attempted_conversion_findings(rec: dict) -> list[str]:
+    """Every way the attempted-conversion record is inadmissible.
+
+    Two invariants, and only two, both about the **honesty** of the negative result:
+
+      * the negative result must not be **dropped** -- at least one attempted conversion must be
+        recorded, and at least one must carry the non-reduction verdict `REVERTED_NOT_A_REDUCTION`,
+        so a record that quietly forgets a conversion which raised the count is refused; and
+      * a conversion whose measured count **rose** must not be labelled a reduction -- `after >
+        before` with any verdict but `REVERTED_NOT_A_REDUCTION` is exactly the conflation of a count
+        increase with a reduction that this refuses.
+
+    It also refuses a conversion that hides an operation (`HIDDEN != 0`) and one that states no
+    obstruction, because a negative result is only useful when it says *why* the conversion was not a
+    reduction. It does **not** compare the attempted conversion's counts to the live census: a
+    reverted conversion's counts are the measurement of a candidate that no longer exists, so they
+    are recorded from the attempt and checked for internal consistency rather than re-derived.
+    """
+    problems: list[str] = []
+    convs = rec.get("attempted_conversions") or []
+    if not convs:
+        problems.append("the reconstruction records no attempted conversion, so the negative result "
+                        "is dropped: a conversion whose count rose must be recorded, not omitted")
+        return problems
+    if not any(c.get("verdict") == NOT_A_REDUCTION for c in convs):
+        problems.append(f"the reconstruction records no attempted conversion with verdict "
+                        f"{NOT_A_REDUCTION!r}, so the negative result is dropped")
+    for c in convs:
+        cid = str(c.get("id", ""))
+        counts = c.get("counts") or {}
+        before = int(counts.get("subsystem_before", 0))
+        after = int(counts.get("subsystem_after", 0))
+        verdict = str(c.get("verdict", ""))
+        cls = c.get("classification") or {}
+        if int(cls.get("HIDDEN", 0)) != 0:
+            problems.append(f"attempted conversion {cid} hides {cls.get('HIDDEN')} operation(s): a "
+                            f"HIDDEN classification is a wrapper, not a conversion")
+        if after > before and verdict != NOT_A_REDUCTION:
+            problems.append(f"attempted conversion {cid} conflates a count increase with a "
+                            f"reduction: it rose {before} -> {after} (+{after - before}) but carries "
+                            f"verdict {verdict!r}, not {NOT_A_REDUCTION!r}")
+        if not str(c.get("obstruction", "")).strip():
+            problems.append(f"attempted conversion {cid} states no obstruction, so its negative "
+                            f"result says nothing about why the conversion was not a reduction")
+    return problems
+
+
 def reconstruction_findings(body: dict, census_body: dict, authority: dict) -> list[str]:
     """Every way the committed reconstruction contradicts the census, the declaration or the
     committed downstream measurement.
@@ -687,6 +848,7 @@ def reconstruction_findings(body: dict, census_body: dict, authority: dict) -> l
     derived = derive_reconstruction(census_body, authority)
     if body.get("reconstruction") != derived:
         problems.append("the committed reconstruction record is not the derived reconstruction record")
+    problems += attempted_conversion_findings(derived)
 
     census_ids = {str(s.get("site_id")) for s in (census_body.get("sites") or [])}
     files = set(str(f) for f in ((decl.get("subsystem") or {}).get("files") or []))
@@ -884,6 +1046,16 @@ def _rule() -> dict:
             "boundary), never HIDDEN; the counts are `after + removed`, and the Phase-24 downstream "
             "headline is re-read from the committed measurement and required unchanged"),
         "admissibility": ADMISSIBILITY,
+        "axis": (
+            "the campaign's success axis is not the total operation count alone. A conversion is "
+            "judged on (a) dangerous operations ELIMINATED, (b) a smaller, auditable residual "
+            "boundary, and (c) HIDDEN=0 -- the axis can improve even when a conversion's raw site "
+            "count rises, when it replaces a large unsafe interior with a small explicit boundary. "
+            "The record states that axis per conversion (the ELIMINATED count, the relocated count, "
+            "the HIDDEN count, and the residual boundary set and its size) beside the net "
+            "before/after counts, and the two are never conflated: a conversion whose count rose is "
+            "recorded with the verdict REVERTED_NOT_A_REDUCTION, never as a reduction"
+        ),
         "census_changed": True,
         "no_reduction_reason": (
             "the worklist is a local-replacement feasibility census, not an impossibility result: of "
@@ -1085,8 +1257,12 @@ def reduction_sensitivity_control(body: dict, census_body: dict, authority: dict
 
     Each is a distinct way the reduction could lie: a reduction claiming no test evidence; a
     weakened safety lint; a 'reduced' site that is still present in the live census; the frozen
-    census disagreeing with the live census; a worklist that omits a candidate class; and a typed
-    count.
+    census disagreeing with the live census; a worklist that omits a candidate class; a typed
+    count; a HIDDEN classification; a removed site still present; a changed downstream verdict; a
+    relocation with no boundary operation; a differential harness that did not run; an unadjudicated
+    allocator divergence; a missing re-entrancy obligation; an attempted conversion whose count rose
+    but is labelled a reduction (the axis conflated with the net); and a dropped negative result
+    (the attempted-conversion record emptied).
     """
     # The committed reduction is columnar on disk; the mutations below index its records, so decode
     # once (a fresh measurement passes the views, for which decoding is a no-op).
@@ -1273,8 +1449,36 @@ def reduction_sensitivity_control(body: dict, census_body: dict, authority: dict
     b13, a13 = missing_reentrancy()
     m13 = check("missing_reentrancy_obligation", b13, a13, "re-entrancy obligation")
 
+    # m14: a conversion whose measured count rose, labelled a reduction -- the axis conflated with
+    # the net. The verdict is flipped from REVERTED_NOT_A_REDUCTION to a reduction word while the
+    # recorded before/after counts still show the rise.
+    def count_increase_labelled_reduction() -> tuple[dict, dict]:
+        a = json.loads(json.dumps(authority))
+        convs = a.setdefault("reconstruction", {}).get("attempted_conversions") or []
+        if convs:
+            convs[0]["verdict"] = "REDUCED"
+        b = clone()
+        b["reconstruction"] = derive_reconstruction(census_body, a)
+        return b, a
+
+    b14, a14 = count_increase_labelled_reduction()
+    m14 = check("count_increase_labelled_reduction", b14, a14, "conflates")
+
+    # m15: the negative result dropped -- the attempted-conversion record emptied, so the conversion
+    # that raised the count is silently forgotten.
+    def negative_result_dropped() -> tuple[dict, dict]:
+        a = json.loads(json.dumps(authority))
+        a.setdefault("reconstruction", {})["attempted_conversions"] = []
+        b = clone()
+        b["reconstruction"] = derive_reconstruction(census_body, a)
+        return b, a
+
+    b15, a15 = negative_result_dropped()
+    m15 = check("negative_result_dropped", b15, a15, "negative result")
+
     result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and m6 and m7 and m8
-                                      and m9 and m10 and m11 and m12 and m13 and not baseline)
+                                      and m9 and m10 and m11 and m12 and m13 and m14 and m15
+                                      and not baseline)
     result["caught"] = sum(1 for v in result["mutations"].values() if v["caught"])
     result["seeded"] = len(result["mutations"])
     return result
@@ -1313,6 +1517,34 @@ def _synth_authority() -> dict:
                           "mechanism": "synthetic", "why_internal": "synthetic"},
             "operations": [{"site_id": "us-gone-1", "operation_kind": "RAW_POINTER_READ",
                             "classification": "ELIMINATED"}],
+            "axis": {
+                "statement": "synthetic axis",
+                "per_conversion_fields": ["ELIMINATED", "RELOCATED_TO_BOUNDARY", "HIDDEN"],
+                "never_conflated": "synthetic",
+            },
+            "attempted_conversions": [{
+                "id": "synthetic-attempt",
+                "subsystem": "synthetic",
+                "files": ["src/bn/bn_lib.rs"],
+                "mechanism": "synthetic",
+                "counts": {"subsystem_before": 10, "subsystem_after": 12,
+                           "crate_before": 100, "crate_after": 102},
+                "differential": {"ran": True, "authority": "synthetic",
+                                 "candidate": "synthetic", "fields_matched": ["synthetic"],
+                                 "divergence": "synthetic"},
+                "classification": {"ELIMINATED": None, "RELOCATED_TO_BOUNDARY": None,
+                                   "HIDDEN": 0},
+                "residual_boundary": {"set": ["synthetic"], "size": None},
+                "verdict": "REVERTED_NOT_A_REDUCTION",
+                "obstruction": "synthetic",
+            }],
+            "next_targets": [{
+                "id": "synthetic-target", "subsystem": "synthetic",
+                "files": ["src/bn/bn_lib.rs"], "interior_operations": 1,
+                "interior_by_kind": {"RAW_POINTER_READ": 1},
+                "why_next": "synthetic", "why_tractable": "synthetic",
+                "risk": "synthetic", "not_chosen": "synthetic",
+            }],
             "tests": ["cargo test --lib"],
         },
         "downstream": {},
@@ -1372,8 +1604,8 @@ def self_test() -> int:
           "that disagrees, a worklist that omits a class, a typed count, a HIDDEN classification, "
           "a removed site still present, a changed downstream verdict, a relocation with no "
           "boundary operation, a differential harness that did not run, an unadjudicated "
-          "allocator divergence and a missing re-entrancy obligation) is caught with "
-          "specificity holding")
+          "allocator divergence, a missing re-entrancy obligation, a count increase labelled a "
+          "reduction and a dropped negative result) is caught with specificity holding")
     return 0
 
 

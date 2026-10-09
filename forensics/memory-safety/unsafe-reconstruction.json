@@ -3,6 +3,88 @@
     "ELIMINATED": "the raw internal representation: each is a raw dereference of a tree node, a raw-pointer method call (dot-add / dot-cast) on the tree, a call to an internal tree-walk helper (sa_doall / sa_free_node / sa_free_leaf), or the trampoline transmute. The owned tree names the same node and slot by safe indexing, so the operation has no counterpart: its site id is gone from the census and no operation of its shape remains inside the subsystem.",
     "RELOCATED_TO_BOUNDARY": "an operation at the unavoidable boundary: it touches the opaque *mut OpenSslSa handle, the caller's leaf function pointer, or the crate allocator (CRYPTO_free, Box::from_raw). It survives, but only in a thin wrapper whose whole body is the boundary; the interior mechanism it used to interleave with is gone."
   },
+  "axis": {
+    "statement": "the campaign's success axis is not the total operation count alone. A conversion is judged on (a) dangerous operations ELIMINATED, (b) a smaller, auditable residual boundary, and (c) HIDDEN=0: a conversion that replaces a large unsafe interior with a small explicit boundary can be architecturally safer even when its raw site count rises.",
+    "per_conversion_fields": [
+      "ELIMINATED",
+      "RELOCATED_TO_BOUNDARY",
+      "HIDDEN",
+      "residual_boundary.set",
+      "residual_boundary.size"
+    ],
+    "never_conflated": "a net site-count increase is never labelled a reduction. The axis facts and the net before/after counts are recorded side by side and each conversion states both; a conversion whose measured count rose is recorded with the verdict REVERTED_NOT_A_REDUCTION, never as a reduction, however it scores on the axis."
+  },
+  "attempted_conversions": [
+    {
+      "id": "evp-operation-cache",
+      "subsystem": "evp/keymgmt-lib/operation-cache",
+      "files": [
+        "src/evp/keymgmt_lib.rs"
+      ],
+      "mechanism": "the per-EVP_PKEY operation cache at EVP_PKEY::operation_cache: a STACK_OF(OP_CACHE_ELEM) that caches, per provider keymgmt, the exported keydata so a repeated export to the same provider is skipped. Its interior is the find loop over OPENSSL_sk_num/OPENSSL_sk_value, the install/push, the clear/pop_free and the op_cache_free element destructor -- a linear container with almost no interior unsafe to eliminate.",
+      "counts": {
+        "subsystem_before": 287,
+        "subsystem_after": 313,
+        "subsystem_delta": 26,
+        "crate_before": 172072,
+        "crate_after": 172139,
+        "crate_delta": 67
+      },
+      "differential": {
+        "ran": true,
+        "authority": "openssl-3.6.4-production",
+        "candidate": "the converted crate (since reverted)",
+        "fields_matched": [
+          "install",
+          "push_ret",
+          "the find vector",
+          "clear_ret",
+          "the failure-injection block"
+        ],
+        "divergence": "the internal container allocation representation only"
+      },
+      "classification": {
+        "ELIMINATED": null,
+        "RELOCATED_TO_BOUNDARY": null,
+        "HIDDEN": 0,
+        "per_class_measured": false,
+        "note": "the conversion removed some interior operations (ELIMINATED) and left others at the allocator/entry-point seam (RELOCATED_TO_BOUNDARY), with none HIDDEN, but the per-class split was not retained. The conversion was reverted on the measured net, so the net is the deciding measurement and this record does not invent a split it did not measure."
+      },
+      "residual_boundary": {
+        "set": [
+          "the allocator seam (CRYPTO_malloc/CRYPTO_free) of the owned cache",
+          "the EVP_PKEY entry points that hand the cache to a caller"
+        ],
+        "size": null
+      },
+      "verdict": "REVERTED_NOT_A_REDUCTION",
+      "obstruction": "the mechanism's interior is too small to offset the owned representation's cost. A linear cache has almost no interior unsafe to eliminate: the owned representation adds the allocator seam, Deref/Drop, slice construction and a required re-entrancy test, so the subsystem rose 287 -> 313 (+26) and the crate 172072 -> 172139 (+67) instead of falling. The conversion is behaviourally conserved but is not a reduction, and is reverted rather than recorded as one."
+    }
+  ],
+  "next_targets": [
+    {
+      "id": "x509-policy-tree",
+      "subsystem": "x509/policy-tree",
+      "files": [
+        "src/x509/pcy_tree.rs",
+        "src/x509/pcy_cache.rs",
+        "src/x509/pcy_node.rs",
+        "src/x509/pcy_lib.rs",
+        "src/x509/pcy_data.rs"
+      ],
+      "interior_operations": 649,
+      "interior_by_kind": {
+        "FFI_EXPORT": 11,
+        "RAW_POINTER_DEREFERENCE": 246,
+        "UNSAFE_FUNCTION_CALL": 268,
+        "UNSAFE_METHOD_CALL": 124
+      },
+      "why_next": "the largest tractable internal ownership mechanism in X.509 handling: a self-contained policy graph (X509_POLICY_TREE owns its X509_POLICY_LEVEL array, its X509_POLICY_NODE graph and its X509_POLICY_DATA, all built and freed inside pcy_*), walked as raw node pointers and OPENSSL_sk_* calls, so an owned representation (Box/Vec, as the sparse-array reconstruction did) replaces the raw interior with safe indexing.",
+      "why_tractable": "the graph is self-contained (X509_policy_tree_free is its single destructor) and the ABI entanglement is limited to eleven FFI_EXPORT accessors over the opaque handles, whose signatures are unchanged; the interior is structural (246 raw node dereferences and 124 unsafe method calls) rather than algorithmic, so eliminating it can net-reduce where the EVP operation cache could not.",
+      "risk": "the node/level/data layouts carry #[repr(C)] offset asserts and the eleven accessors return pointers into the graph, so an owned representation must keep stable addresses for the accessors; proving that tractable is the attempt's work, and a net site-count increase would again be recorded as REVERTED_NOT_A_REDUCTION, not as a reduction.",
+      "not_chosen": "src/provider/rand.rs has the larger raw interior (1864 census operations; 783 raw dereferences, 53 pointer-arithmetic sites) and zero FFI_EXPORT sites, but its interior is dominated by calls into the AES/SHA/MAC primitives, which are the immovable algorithmic boundary and would remain, so it would not plausibly net-reduce."
+    }
+  ],
   "downstream_baseline": {
     "drop_in_pass": 33,
     "families": 1000,
