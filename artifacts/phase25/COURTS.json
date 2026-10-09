@@ -549,7 +549,7 @@
       {
         "control": {
           "baseline_findings": 0,
-          "caught": 6,
+          "caught": 8,
           "honest": true,
           "mutations": {
             "attacker_route_with_no_path": {
@@ -587,9 +587,21 @@
               "delta": 1,
               "findings": 1,
               "marker": "not the derived `counts`"
+            },
+            "unresolved_to_external_class": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "has no justification"
+            },
+            "unresolved_to_unreachable_without_witness": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "no justified exclusion witness"
             }
           },
-          "seeded": 6,
+          "seeded": 8,
           "specificity_holds": true
         },
         "counts": {
@@ -603,11 +615,12 @@
           "residuals": 2,
           "routed_sites": 16755,
           "sites_classified": 172051,
-          "unreachable_profile": 17702
+          "sites_unknown_reachability": 17702,
+          "unreachable_profile": 0
         },
         "court": "MS-EXPOSURE-CLASSIFICATION",
         "findings": [
-          "172051 census site(s) carry exactly one exposure class: 5881 are network-reachable (3543 server, 2338 client), 154349 are externally reachable and 17702 are `UNREACHABLE_PROFILE` (the 25.5 residual)",
+          "172051 census site(s) carry exactly one exposure class: 5881 are network-reachable (3543 server, 2338 client), 154349 are externally reachable, 0 are `UNREACHABLE_PROFILE` and 17702 carry `UNKNOWN_REACHABILITY`. Every unreachable site carries a justified exclusion witness; an unknown is the site whose 25.5 mapping is missing, and an unknown is not a zero and not an unreachability claim",
           "16755 site(s) are attacker-input reachable across 17 of 18 route(s); the largest are PROVIDER_PARAMETERS=4815, X509_CERTIFICATE=4289, DER=1340. The routes are a rule over committed parser identities, not a dynamic taint result",
           "37989 externally reachable buffer operation(s) are censused by buffer origin, pointer origin and capacity origin; the length origin, the integer-conversion path and the copy primitive are `NOT_MEASURED` and are the dynamic subphases' subject",
           "the risk tiers are a review priority: S0=17702, S1=116360, S2=36252, S3=0, S4=1737; 3 network site(s) are named as the review head",
@@ -615,7 +628,7 @@
         ],
         "frf_declarable": false,
         "frf_exclusion": "the exposure court reads the committed classification and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
-        "method": "stages no probe: it reads the committed artifacts/phase25/exposure.json and re-runs the 25.7 pure checks (ms_exposure.exposure_findings and ms_exposure.exposure_sensitivity_control) over it, the committed 25.1 census, the committed 25.5 Phase-22 crosswalk, the committed 25.6 Phase-24 crosswalk and the committed 25.4 ownership planes, without a compiler. The plane is a pure derivation: each census site gets one class from the closed vocabulary by the recorded precedence (a wire-parser route, a config/local-file parser, the cli root, the 25.6 downstream state, the api roots, the callbacks root, or the 25.5 residual); a network class needs a justified entry semantics, never a static edge. It establishes site-class completeness, the justification of every externally reachable site, the attacker-route and buffer-operation reproduction, the unexecuted boundary plan and the inverse view; six seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.8).",
+        "method": "stages no probe: it reads the committed artifacts/phase25/exposure.json and re-runs the 25.7 pure checks (ms_exposure.exposure_findings and ms_exposure.exposure_sensitivity_control) over it, the committed 25.1 census, the committed 25.5 Phase-22 crosswalk, the committed 25.6 Phase-24 crosswalk and the committed 25.4 ownership planes, without a compiler. The plane is a pure derivation: each census site gets one class from the closed vocabulary by the recorded precedence (a wire-parser route, a config/local-file parser, the cli root, the 25.6 downstream the 25.6 downstream state, the api roots, the callbacks root, or `UNKNOWN_REACHABILITY` when the 25.5 mapping is missing); a network class needs a justified entry semantics, never a static edge, and `UNREACHABLE_PROFILE` needs a justified exclusion witness. It establishes site-class completeness, the justification of every externally reachable site, the attacker-route and buffer-operation reproduction, the unexecuted boundary plan and the inverse view; eight seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.8, 4.5).",
         "probe": "",
         "problems": [],
         "routes_by_count": {
@@ -649,7 +662,8 @@
           "NETWORK_SERVER_REACHABLE": 3543,
           "TEST_ONLY": 0,
           "TOOLING_ONLY": 0,
-          "UNREACHABLE_PROFILE": 17702
+          "UNKNOWN_REACHABILITY": 17702,
+          "UNREACHABLE_PROFILE": 0
         },
         "sites_by_risk_tier": {
           "S0": 17702,
@@ -777,6 +791,7 @@
     ],
     "exposure_classes": [
       "UNREACHABLE_PROFILE",
+      "UNKNOWN_REACHABILITY",
       "TEST_ONLY",
       "TOOLING_ONLY",
       "INTERNAL_REACHABLE",
@@ -1141,12 +1156,12 @@
     {
       "name": "phase-25-plan",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "0549352996c9baf603dc18a42e50866a56b5a99bf064068eb56b7aefaca1780b"
+      "sha256": "8b270477ad2313571eccaaa035dd9406acae63dbe6d83e31ec09a40e8ce57e67"
     },
     {
       "name": "memory-safety-schemas",
       "path": "forensics/tools/memory_safety_schemas.py",
-      "sha256": "424f8fb23b56029f1ae9fc8897f61d96a760cc872cecdad0d69646447b85cfcd"
+      "sha256": "88bbc95ea0292984713c477fd6da62c5ac00eefd5fed0ad5e430101b651e76c7"
     },
     {
       "name": "phase25-guard",
@@ -1191,7 +1206,7 @@
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "12c2bb0de6a27ef3147c9aaac413a80061b034ec91f444d06a9dc18e55ae56d1"
+      "sha256": "d06fa312883c6709e3c302a976610fcc6c9c35531958ca749d1b640eeda85f99"
     },
     {
       "name": "ms-obligations-tool",
@@ -1201,7 +1216,7 @@
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "063592dc879aa027727afd02776874e30fba29b68fa479fe7481b9e610b65d93"
+      "sha256": "6cfe2431d36c849980d095614ab28e8a89b085917d8a50067a588e843bfa4146"
     },
     {
       "name": "ms-ownership-planes-tool",
@@ -1211,7 +1226,7 @@
     {
       "name": "phase22-crosswalk",
       "path": "artifacts/phase25/phase22-crosswalk.json",
-      "sha256": "1ed993b2a3c17dcbb1b1365eac36551e0cff16c1b364efa5a388f3e62c4a63d4"
+      "sha256": "04ee44c293e5dc58059db3aa5fc1fb1c95ffacde906834c5e4f3f94154dc0179"
     },
     {
       "name": "ms-phase22-crosswalk-tool",
@@ -1246,7 +1261,7 @@
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "9f1b7a2a5169a804afe6e30e3517a5ae6eec5d096d5096a4c893a45364ec2f4f"
+      "sha256": "5381d5774ac4a706411f9b5ad26e004b54ba3fa2d59ee486601b479774e2623c"
     },
     {
       "name": "ms-phase24-crosswalk-tool",
@@ -1286,17 +1301,17 @@
     {
       "name": "exposure",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "a3e94f85ba102d29ee622a3e4ce2f69af55cf71b1292215973565dc5c2752e33"
+      "sha256": "7f744b3ccbc91fc941a995eb49e2aa32a9bb9dad60b16fda501f4c2f43827b3e"
     },
     {
       "name": "ms-exposure-tool",
       "path": "forensics/tools/ms_exposure.py",
-      "sha256": "105fa3670271e3512524cf83f4ca6e416608cb9da5ce312930f4938922b4b1c6"
+      "sha256": "69bb46b6f40e5909452e9ea6e67801d54098c005d1b304f40cc63a5296c19a2c"
     },
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "227c9acada3c3dba445909f273c8596f9ef9d6f24e37f13d7292d384862e6a1f"
+      "sha256": "0bdff10fded4bec1e08c3cc01cabda1d6b10c6634bbbd30d095d31b278faaa8b"
     },
     {
       "name": "ms-reduction-tool",

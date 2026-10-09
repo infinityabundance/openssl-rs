@@ -1086,9 +1086,11 @@ def _ms_exposure_classification_court(name: str) -> dict:
     justification is caught); that every attacker route's sites are named and equal the derivation;
     that the inverse exposure view and the buffer-operation census reproduce; that the
     length-boundary plan is marked unexecuted; and that the sites, justifications, counts and
-    residuals equal their derivation. Six seeded mutations -- a remote class with no justification, an
-    attacker route with no path, an inverse view that disagrees, a boundary plan marked executed, a
-    dropped site and a typed count -- are each caught with specificity holding. It is an
+    residuals equal their derivation. Eight seeded mutations -- a remote class with no
+    justification, an attacker route with no path, an inverse view that disagrees, a boundary plan
+    marked executed, a dropped site, a typed count, an unresolved site promoted to `UNREACHABLE_PROFILE`
+    with no witness and an unresolved site promoted to an external class -- are each caught with
+    specificity holding. It is an
     **instrument**: it can pass while the classification records real property findings (the sites no
     authority unit reaches, the routes that carry no attributable operation, the buffer-operation
     fields the census does not measure and the network classes grounded in a parser role rather than
@@ -1126,12 +1128,14 @@ def _ms_exposure_classification_court(name: str) -> dict:
             "committed 25.4 ownership planes, without a compiler. The plane is a pure derivation: "
             "each census site gets one class from the closed vocabulary by the recorded precedence "
             "(a wire-parser route, a config/local-file parser, the cli root, the 25.6 downstream "
-            "state, the api roots, the callbacks root, or the 25.5 residual); a network class needs a "
-            "justified entry semantics, never a static edge. It establishes site-class completeness, "
+            "the 25.6 downstream state, the api roots, the callbacks root, or `UNKNOWN_REACHABILITY` "
+            "when the 25.5 mapping is missing); a network class needs a "
+            "justified entry semantics, never a static edge, and `UNREACHABLE_PROFILE` needs a "
+            "justified exclusion witness. It establishes site-class completeness, "
             "the justification of every externally reachable site, the attacker-route and "
-            "buffer-operation reproduction, the unexecuted boundary plan and the inverse view; six "
+            "buffer-operation reproduction, the unexecuted boundary plan and the inverse view; eight "
             "seeded mutations are each caught with specificity holding "
-            "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.8)."
+            "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.8, 4.5)."
         ),
         "frf_declarable": False,
         "frf_exclusion": (
@@ -1144,6 +1148,7 @@ def _ms_exposure_classification_court(name: str) -> dict:
             "externally_reachable": counts.get("externally_reachable", 0),
             "network_reachable": counts.get("network_reachable", 0),
             "unreachable_profile": counts.get("unreachable_profile", 0),
+            "sites_unknown_reachability": counts.get("sites_unknown_reachability", 0),
             "routed_sites": counts.get("routed_sites", 0),
             "attacker_routes": counts.get("attacker_routes", 0),
             "attacker_routes_with_sites": counts.get("attacker_routes_with_sites", 0),

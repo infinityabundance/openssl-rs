@@ -121,7 +121,7 @@
       {
         "closure": "the `MS-EXPOSURE-CLASSIFICATION` court passes",
         "findings": [
-          "172051 census site(s) carry exactly one exposure class: 5881 are network-reachable (3543 server, 2338 client), 154349 are externally reachable and 17702 are `UNREACHABLE_PROFILE` (the 25.5 residual)",
+          "172051 census site(s) carry exactly one exposure class: 5881 are network-reachable (3543 server, 2338 client), 154349 are externally reachable, 0 are `UNREACHABLE_PROFILE` and 17702 carry `UNKNOWN_REACHABILITY`. Every unreachable site carries a justified exclusion witness; an unknown is the site whose 25.5 mapping is missing, and an unknown is not a zero and not an unreachability claim",
           "16755 site(s) are attacker-input reachable across 17 of 18 route(s); the largest are PROVIDER_PARAMETERS=4815, X509_CERTIFICATE=4289, DER=1340. The routes are a rule over committed parser identities, not a dynamic taint result",
           "37989 externally reachable buffer operation(s) are censused by buffer origin, pointer origin and capacity origin; the length origin, the integer-conversion path and the copy primitive are `NOT_MEASURED` and are the dynamic subphases' subject",
           "the risk tiers are a review priority: S0=17702, S1=116360, S2=36252, S3=0, S4=1737; 3 network site(s) are named as the review head",
@@ -351,12 +351,12 @@
     {
       "name": "phase-25-plan",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "0549352996c9baf603dc18a42e50866a56b5a99bf064068eb56b7aefaca1780b"
+      "sha256": "8b270477ad2313571eccaaa035dd9406acae63dbe6d83e31ec09a40e8ce57e67"
     },
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "71e0c77af529415989f534c921ecb671275cd90f004dc7e73b2a9333c43fc394"
+      "sha256": "df2f49e4f7e152e74bb3011e34650955c539e61ae9ef3ec463faa809f3fc5b8e"
     },
     {
       "name": "phase25-guard",
@@ -366,7 +366,7 @@
     {
       "name": "memory-safety-schemas",
       "path": "forensics/tools/memory_safety_schemas.py",
-      "sha256": "424f8fb23b56029f1ae9fc8897f61d96a760cc872cecdad0d69646447b85cfcd"
+      "sha256": "88bbc95ea0292984713c477fd6da62c5ac00eefd5fed0ad5e430101b651e76c7"
     }
   ],
   "kind": "phase25-obligations",

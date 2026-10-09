@@ -181,7 +181,9 @@ TOOLING_PREFIXES: tuple[str, ...] = (
 # The exposure precedence, most specific externally reachable class first. `TEST_ONLY`/`TOOLING_ONLY`
 # are decided first (a site only in a test or a tool is not in the claimed profile), then the
 # route-established classes, then the root-established ones, then the unresolved residual. The order
-# is a review ordering, never a probability.
+# is a review ordering, never a probability. `UNKNOWN_REACHABILITY` sits last, before the witnessed
+# `UNREACHABLE_PROFILE`: a site whose mapping the committed evidence does not resolve is reviewed, but
+# it is neither promoted to an external class nor read as an unreachability claim.
 EXPOSURE_PRECEDENCE: tuple[str, ...] = (
     "TEST_ONLY",
     "TOOLING_ONLY",
@@ -193,8 +195,26 @@ EXPOSURE_PRECEDENCE: tuple[str, ...] = (
     "DOWNSTREAM_RUNTIME_OBSERVED",
     "LOCAL_API_REACHABLE",
     "INTERNAL_REACHABLE",
+    "UNKNOWN_REACHABILITY",
     "UNREACHABLE_PROFILE",
 )
+
+# The exclusion-witness kinds. `UNREACHABLE_PROFILE` is awarded only to a site that carries one of
+# these, recorded on the site as `w`, so an unreachability claim is never silently produced by a
+# missing mapping. `committed_exclusion_residual` is a Phase-22 crosswalk residual that names an
+# explicit exclusion rather than missing evidence; `no_reachable_root` is a resolved authority unit
+# no root family in the committed closure reaches.
+WITNESS_KINDS: tuple[str, ...] = (
+    "committed_exclusion_residual",
+    "no_reachable_root",
+)
+
+# The Phase-22 crosswalk residual classes that name an explicit exclusion (the site is off the
+# atlas's scope) rather than missing evidence. Drawn from `memory_safety_schemas.RESIDUAL_CLASSES`,
+# never restated: the self-test asserts membership. A residual here is a justified exclusion witness;
+# every other residual (`evidence_missing`, `unclassified_unsafe_site`) is missing evidence, which
+# establishes nothing about reachability.
+EXCLUSION_RESIDUALS: frozenset[str] = frozenset({"out_of_scope"})
 
 # The attacker-input routes. Each names the externally controlled input, the transport that carries
 # it, the exposure its entry semantics establishes (or `None` when it establishes only a data-flow
@@ -537,6 +557,55 @@ def _primitive(kind: str, sid: str, alloc: dict) -> str:
     return "other"
 
 
+def _exclusion_witness(entry: dict | None, roots: set) -> dict | None:
+    """A justified exclusion witness, or `None` when the evidence only shows a missing mapping.
+
+    A missing Phase-22 mapping (`evidence_missing`, `unclassified_unsafe_site`) establishes nothing
+    about reachability, so it is **never** a witness: the site is `UNKNOWN_REACHABILITY`, not
+    `UNREACHABLE_PROFILE`. `UNREACHABLE_PROFILE` is awarded only for a witness derived from committed
+    evidence: a crosswalk residual that names an explicit exclusion (`out_of_scope`), or a resolved
+    authority unit whose roots the committed closure leaves empty (provably off every reachable
+    path). The witness is recorded on the site so the claim is auditable, never inferred.
+    """
+    if entry and entry.get("residual") in EXCLUSION_RESIDUALS:
+        return {
+            "kind": "committed_exclusion_residual",
+            "residual": str(entry.get("residual")),
+            "reason": ("the Phase-22 crosswalk records the site's module out of the atlas's scope, "
+                       "an explicit exclusion rather than a missing mapping"),
+            "evidence": [PHASE22_CROSSWALK_REL],
+        }
+    if entry is None or entry.get("residual"):
+        # An unresolved site, or one with no crosswalk entry at all: the mapping is missing, which
+        # is missing evidence, not an exclusion. Never a witness.
+        return None
+    if not set(roots or []):
+        return {
+            "kind": "no_reachable_root",
+            "reason": ("the Phase-22 closure resolves the site's authority unit and no root family "
+                       "reaches it, so it is provably off every reachable path"),
+            "evidence": [PHASE22_CROSSWALK_REL],
+        }
+    return None
+
+
+def _witness_problems(w) -> list[str]:
+    """Every way an exclusion witness fails to justify `UNREACHABLE_PROFILE`."""
+    if w is None:
+        return ["carries no justified exclusion witness"]
+    if not isinstance(w, dict):
+        return [f"carries a malformed exclusion witness {w!r}"]
+    problems: list = []
+    if w.get("kind") not in WITNESS_KINDS:
+        problems.append(f"its exclusion witness kind {w.get('kind')!r} is not in the closed "
+                        f"vocabulary")
+    if not w.get("reason"):
+        problems.append("its exclusion witness records no reason")
+    if not w.get("evidence"):
+        problems.append("its exclusion witness cites no evidence")
+    return problems
+
+
 # --------------------------------------------------------------------------------------------
 # the derivation
 # --------------------------------------------------------------------------------------------
@@ -596,11 +665,14 @@ def derive(census_body: dict, authority: dict) -> dict:
         unit = None if unresolved else entry.get("unit")
         roots = set() if unresolved else set(entry.get("roots") or [])
         state = (ds_sites.get(sid) or {}).get("state")
+        witness = None
 
         matched = _matched_routes(file, unit)
 
         # The class, by the recorded precedence. `TEST_ONLY`/`TOOLING_ONLY` are decided first, then
-        # the route-established classes, then the root-established ones, then the residual.
+        # the route-established classes, then the root-established ones, then the residual. A site
+        # the committed evidence does not resolve is `UNKNOWN_REACHABILITY`; `UNREACHABLE_PROFILE` is
+        # awarded only with a justified exclusion witness, never for a missing mapping.
         if _is_test(file):
             cls = "TEST_ONLY"
         elif _is_tooling(file):
@@ -614,7 +686,8 @@ def derive(census_body: dict, authority: dict) -> dict:
         elif any(ROUTE_BY_NAME[r]["exposure"] == "LOCAL_FILE_INPUT_REACHABLE" for r in matched):
             cls = "LOCAL_FILE_INPUT_REACHABLE"
         elif unresolved:
-            cls = "UNREACHABLE_PROFILE"
+            witness = _exclusion_witness(entry, roots)
+            cls = "UNREACHABLE_PROFILE" if witness is not None else "UNKNOWN_REACHABILITY"
         elif "cli" in roots:
             cls = "CLI_INPUT_REACHABLE"
         elif state == "DOWNSTREAM_RUNTIME_OBSERVED":
@@ -624,7 +697,8 @@ def derive(census_body: dict, authority: dict) -> dict:
         elif "callbacks" in roots:
             cls = "INTERNAL_REACHABLE"
         else:
-            cls = "UNREACHABLE_PROFILE"
+            witness = _exclusion_witness(entry, roots)
+            cls = "UNREACHABLE_PROFILE" if witness is not None else "UNKNOWN_REACHABILITY"
 
         external = cls in schemas.EXTERNALLY_REACHABLE_EXPOSURE
         buf = _is_buffer_op(kind, sid, alloc)
@@ -644,6 +718,10 @@ def derive(census_body: dict, authority: dict) -> dict:
             tier = "S1"
 
         rec: dict = {"e": cls, "r": tier}
+        if cls == "UNREACHABLE_PROFILE":
+            # The exclusion witness is recorded on the site, so an unreachability claim is auditable
+            # and a witness-less one is a finding rather than a silent assertion.
+            rec["w"] = witness
 
         # The attacker-input routes are recorded for a site that is externally reachable and is a
         # buffer operation -- the security-relevant half. The routes are the matched routes whose
@@ -789,8 +867,10 @@ def derive(census_body: dict, authority: dict) -> dict:
             "class": "evidence_missing",
             "disposition": "open",
             "detail": ("the site's containing module transcribes no authority translation unit, so "
-                       "the Phase-22 roots cannot reach it and it is `UNREACHABLE_PROFILE` in the "
-                       "claimed profile; recorded, never dropped and never defaulted to a root"),
+                       "the site's exposure is `UNKNOWN_REACHABILITY` in the claimed profile: a "
+                       "missing mapping is evidence the atlas cannot resolve the site, not evidence "
+                       "the profile cannot reach it, so it is recorded and never dropped, never "
+                       "defaulted to a root and never read as `UNREACHABLE_PROFILE`"),
             "evidence": [PHASE22_CROSSWALK_REL, CENSUS_REL],
             "site_count": no_unit,
         })
@@ -807,6 +887,7 @@ def derive(census_body: dict, authority: dict) -> dict:
         "network_reachable": sum(classes.get(c, 0) for c in
                                  ("NETWORK_SERVER_REACHABLE", "NETWORK_CLIENT_REACHABLE")),
         "unreachable_profile": classes.get("UNREACHABLE_PROFILE", 0),
+        "sites_unknown_reachability": classes.get("UNKNOWN_REACHABILITY", 0),
         "test_only": classes.get("TEST_ONLY", 0),
         "tooling_only": classes.get("TOOLING_ONLY", 0),
         "routed_sites": sum(1 for rec in sites.values() if rec.get("a")),
@@ -872,6 +953,8 @@ def _rule(authority: dict) -> dict:
         "exposure_classes": list(schemas.EXPOSURE_CLASSES),
         "externally_reachable_exposure": sorted(schemas.EXTERNALLY_REACHABLE_EXPOSURE),
         "exposure_precedence": list(EXPOSURE_PRECEDENCE),
+        "exclusion_witness_kinds": list(WITNESS_KINDS),
+        "exclusion_residuals": sorted(EXCLUSION_RESIDUALS),
         "exposure_rule": (
             "every census site gets exactly one class: TEST_ONLY/TOOLING_ONLY when its file is a "
             "test/tooling module; else NETWORK_SERVER_REACHABLE/NETWORK_CLIENT_REACHABLE when its "
@@ -880,8 +963,11 @@ def _rule(authority: dict) -> dict:
             "LOCAL_FILE_INPUT_REACHABLE for a local-file/format parser; else CLI_INPUT_REACHABLE when "
             "the cli root reaches the unit; else DOWNSTREAM_RUNTIME_OBSERVED when 25.6 observed it at "
             "a functional level; else LOCAL_API_REACHABLE for the binary-abi/source-api/modules "
-            "roots; else INTERNAL_REACHABLE for the callbacks root alone; else UNREACHABLE_PROFILE "
-            "for the 25.5 residual"
+            "roots; else INTERNAL_REACHABLE for the callbacks root alone; else UNKNOWN_REACHABILITY "
+            "when the 25.5 mapping leaves the site unresolved, never UNREACHABLE_PROFILE -- a missing "
+            "mapping is not evidence of unreachability; UNREACHABLE_PROFILE is awarded only to a site "
+            "that carries a justified exclusion witness (`w`), a committed exclusion residual or a "
+            "resolved authority unit no root reaches"
         ),
         "network_entry_semantics": (
             "a network class needs a justified entry semantics, never a static edge: the Phase-22 "
@@ -950,8 +1036,11 @@ def _property_findings(d: dict) -> list:
         f"{c['sites_classified']} census site(s) carry exactly one exposure class: "
         f"{c['network_reachable']} are network-reachable ({c['sites_by_exposure'].get('NETWORK_SERVER_REACHABLE', 0)} server, "
         f"{c['sites_by_exposure'].get('NETWORK_CLIENT_REACHABLE', 0)} client), "
-        f"{c['externally_reachable']} are externally reachable and {c['unreachable_profile']} are "
-        f"`UNREACHABLE_PROFILE` (the 25.5 residual)",
+        f"{c['externally_reachable']} are externally reachable, {c['unreachable_profile']} are "
+        f"`UNREACHABLE_PROFILE` and {c['sites_unknown_reachability']} carry "
+        f"`UNKNOWN_REACHABILITY`. Every unreachable site carries a justified exclusion witness; an "
+        f"unknown is the site whose 25.5 mapping is missing, and an unknown is not a zero and not an "
+        f"unreachability claim",
         f"{c['routed_sites']} site(s) are attacker-input reachable across "
         f"{c['attacker_routes_with_sites']} of {c['attacker_routes']} route(s); the largest are "
         f"{top_routes or 'none'}. The routes are a rule over committed parser identities, not a "
@@ -1049,6 +1138,14 @@ def exposure_findings(body: dict, census_body: dict, authority: dict) -> list:
                         and not jrec.get("network"):
                     problems.append(f"{sid}: is {cls} but its justification {jid!r} names no "
                                     f"network route")
+        # An unreachability claim is carried only by a justified exclusion witness recorded on the
+        # site; a witness-less `UNREACHABLE_PROFILE` (a missing mapping dressed as unreachability) is
+        # caught here, and a witness on any other class is caught too.
+        if cls == "UNREACHABLE_PROFILE":
+            problems += [f"{sid}: is UNREACHABLE_PROFILE but {p}" for p in _witness_problems(rec.get("w"))]
+        elif "w" in rec:
+            problems.append(f"{sid}: is {cls}, not UNREACHABLE_PROFILE, but carries an exclusion "
+                            f"witness")
 
     # 3. Every attacker route's sites are named and equal the derivation, and every routed site
     #    names its routes.
@@ -1117,8 +1214,9 @@ def exposure_sensitivity_control(body: dict, census_body: dict, authority: dict)
 
     Each is a distinct way the classification could lie: a remote class with no justification; an
     attacker route that names a site the derivation does not reach; the inverse exposure view
-    disagreeing with the forward map; a length-boundary plan marked executed; a dropped site; and a
-    typed count.
+    disagreeing with the forward map; a length-boundary plan marked executed; a dropped site; a typed
+    count; an unresolved site promoted to `UNREACHABLE_PROFILE` with no witness; and an unresolved
+    site promoted to an external class.
     """
     # The committed classification is columnar on disk; the mutations below index its records, so
     # decode once (a fresh measurement passes the views, for which decoding is a no-op).
@@ -1142,6 +1240,8 @@ def exposure_sensitivity_control(body: dict, census_body: dict, authority: dict)
     network = sorted(sid for sid, rec in body["sites"].items()
                      if rec.get("e") == "NETWORK_SERVER_REACHABLE")
     routed = sorted(sid for sid, rec in body["sites"].items() if rec.get("a"))
+    unknown = sorted(sid for sid, rec in body["sites"].items()
+                     if rec.get("e") == "UNKNOWN_REACHABILITY")
     any_site = sorted(body["sites"])[0]
     classes = sorted(body["by_exposure"])
 
@@ -1206,7 +1306,33 @@ def exposure_sensitivity_control(body: dict, census_body: dict, authority: dict)
 
     m6 = check("typed_count", typed_count(), "not the derived `counts`")
 
-    result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and m6 and not baseline)
+    # m7: an unresolved site promoted to `UNREACHABLE_PROFILE` with no witness. A missing mapping is
+    #     not an unreachability claim, so this must be caught by the witness requirement.
+    def unresolved_to_unreachable_without_witness() -> dict:
+        b = clone()
+        sid = unknown[0] if unknown else any_site
+        b["sites"][sid]["e"] = "UNREACHABLE_PROFILE"
+        b["sites"][sid].pop("w", None)
+        return b
+
+    m7 = check("unresolved_to_unreachable_without_witness",
+               unresolved_to_unreachable_without_witness(), "no justified exclusion witness")
+
+    # m8: an unresolved site promoted to an external class, with no route justification. An unknown
+    #     is not an external reachability claim, so this must be caught.
+    def unresolved_to_external_class() -> dict:
+        b = clone()
+        sid = unknown[0] if unknown else any_site
+        b["sites"][sid]["e"] = "NETWORK_SERVER_REACHABLE"
+        b["sites"][sid].pop("j", None)
+        b["sites"][sid].pop("w", None)
+        return b
+
+    m8 = check("unresolved_to_external_class", unresolved_to_external_class(),
+               "has no justification")
+
+    result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and m6 and m7 and m8
+                                       and not baseline)
     result["caught"] = sum(1 for v in result["mutations"].values() if v["caught"])
     result["seeded"] = len(result["mutations"])
     return result
@@ -1217,7 +1343,8 @@ def exposure_sensitivity_control(body: dict, census_body: dict, authority: dict)
 # --------------------------------------------------------------------------------------------
 
 def _synth_authority() -> dict:
-    """A tiny, self-consistent set of planes: a wire parser, a format parser and an unresolved file."""
+    """A tiny, self-consistent set of planes: a wire parser, a format parser, an unresolved file and
+    a committed exclusion (a witnessed `UNREACHABLE_PROFILE`)."""
     census = {"sites": [
         {"site_id": "us-tls-1", "file": "src/ssl/record/rec.rs", "line": 10, "function": "read_rec",
          "operation_kind": "RAW_POINTER_READ"},
@@ -1228,6 +1355,8 @@ def _synth_authority() -> dict:
         {"site_id": "us-api-1", "file": "src/bn/bn_lib.rs", "line": 40, "function": "bn_alloc",
          "operation_kind": "UNSAFE_FUNCTION_CALL"},
         {"site_id": "us-un-1", "file": "src/apps/x.rs", "line": 50, "function": "main_like",
+         "operation_kind": "RAW_POINTER_READ"},
+        {"site_id": "us-ex-1", "file": "src/generated/tables.rs", "line": 60, "function": "gen",
          "operation_kind": "RAW_POINTER_READ"},
     ]}
     phase22 = {"body": {"sites": {
@@ -1240,6 +1369,7 @@ def _synth_authority() -> dict:
         "us-pem-1": {"unit": "crypto/pem/pem_lib.c", "roots": ["binary-abi", "source-api", "cli"]},
         "us-api-1": {"unit": "crypto/bn/bn_lib.c", "roots": ["source-api"]},
         "us-un-1": {"module": "src/apps/x.rs", "residual": "evidence_missing"},
+        "us-ex-1": {"module": "src/generated/tables.rs", "residual": "out_of_scope"},
     }}}
     phase24 = {"body": {"sites": {
         "us-tls-1": {"state": "NOT_OBSERVED"},
@@ -1247,6 +1377,7 @@ def _synth_authority() -> dict:
         "us-pem-1": {"state": "DOWNSTREAM_RUNTIME_OBSERVED"},
         "us-api-1": {"state": "NOT_OBSERVED"},
         "us-un-1": {"state": "NOT_OBSERVED"},
+        "us-ex-1": {"state": "NOT_OBSERVED"},
     }}}
     ownership = {"body": {"allocation_sites": [
         {"site_id": "us-api-1", "role": "ALLOC", "allocator": "CRYPTO_malloc",
@@ -1283,6 +1414,15 @@ def self_test() -> int:
         failures.append(f"the synthetic local-api count is wrong: {c['sites_by_exposure']}")
     if c["sites_by_exposure"]["UNREACHABLE_PROFILE"] != 1:
         failures.append(f"the synthetic unreachable count is wrong: {c['sites_by_exposure']}")
+    if c["sites_unknown_reachability"] != 1:
+        failures.append(f"the synthetic unknown-reachability count is wrong: {c['sites_by_exposure']}")
+    witness = body["sites"]["us-ex-1"].get("w")
+    if not isinstance(witness, dict) or witness.get("kind") != "committed_exclusion_residual":
+        failures.append(f"the synthetic committed-exclusion witness is not recorded: {witness}")
+    if "w" in body["sites"]["us-un-1"]:
+        failures.append("an unresolved site carries an exclusion witness")
+    if not EXCLUSION_RESIDUALS <= set(schemas.RESIDUAL_CLASSES):
+        failures.append("an exclusion residual is not in the schema residual vocabulary")
     if c["routed_sites"] != 3 or c["attacker_routes_with_sites"] < 2:
         failures.append(f"the synthetic route counts are wrong: {c}")
     if c["buffer_operations"] != 4:
@@ -1299,11 +1439,12 @@ def self_test() -> int:
             print(f"  {f}")
         return 1
     print("[ms-exposure] self-test ok: the guard admits it as metadata-only; the synthetic "
-          "classification is clean (2 network-server, 1 local-file, 1 local-api, 1 unreachable; "
-          "3 routed sites, 4 buffer operations, an unexecuted boundary plan); and every seeded "
-          "mutation (a remote class with no justification, an attacker route with no path, an "
-          "inverse view that disagrees, an executed boundary plan, a dropped site and a typed count) "
-          "is caught with specificity holding")
+          "classification is clean (2 network-server, 1 local-file, 1 local-api, 1 witnessed "
+          "unreachable, 1 unknown-reachability; 3 routed sites, 4 buffer operations, an unexecuted "
+          "boundary plan); and every seeded mutation (a remote class with no justification, an "
+          "attacker route with no path, an inverse view that disagrees, an executed boundary plan, a "
+          "dropped site, a typed count, an unresolved site promoted to unreachable with no witness, "
+          "and an unresolved site promoted to an external class) is caught with specificity holding")
     return 0
 
 
