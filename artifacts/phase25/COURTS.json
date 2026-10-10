@@ -1155,7 +1155,7 @@
       {
         "control": {
           "baseline_findings": 0,
-          "caught": 6,
+          "caught": 7,
           "honest": true,
           "mutations": {
             "dropped_site": {
@@ -1163,6 +1163,12 @@
               "delta": 1,
               "findings": 1,
               "marker": "has no ASan state"
+            },
+            "msan_result_marked_pass": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "cannot be read as clean"
             },
             "pass_with_finding": {
               "caught": true,
@@ -1195,7 +1201,7 @@
               "marker": "UNSUPPORTED with an empty reason"
             }
           },
-          "seeded": 6,
+          "seeded": 7,
           "specificity_holds": true
         },
         "counts": {
@@ -1214,7 +1220,7 @@
         "findings": [],
         "frf_declarable": false,
         "frf_exclusion": "the ASan/MSan court re-derives only the plane's pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
-        "method": "stages no probe: it reads the committed artifacts/phase25/asan-msan.json and re-runs the 25.10 pure checks (ms_asan.asan_findings and ms_asan.asan_sensitivity_control) over it and the committed 25.1 census it classifies -- no ASan, no nightly, no compiler. The plane records a per-census-site ASan state (ASAN_PASS / ASAN_FAIL / ASAN_NOT_REACHABLE / ASAN_UNSUPPORTED), the runs (command hash, outcome, executed tests), the findings, the sanitizer_result records and the residuals. ASan instruments the Rust crate, `std` (rebuilt with -Zbuild-std), the first-party C adapters and the interceptable libc; it cannot instrument a module loaded at run time (src/dso/dlfcn.rs) or see through an opaque operation, and a site the instrument cannot reach or instrument is NOT_REACHABLE/UNSUPPORTED, never silently clean. A zero-findings result is trusted only because the deliberate use-after-free canary is known to fire. The ASan environment is the admitted court image with the venue's documented OPENSSL_RS_COURT_DATA override (ASan's shadow is MAP_NORESERVE virtual address space); the crate-level state records ASAN_RAN or ASAN_UNSUPPORTED, and MSan's result is recorded with its tool state and its libc-interception caveat. Six seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6).",
+        "method": "stages no probe: it reads the committed artifacts/phase25/asan-msan.json and re-runs the 25.10 pure checks (ms_asan.asan_findings and ms_asan.asan_sensitivity_control) over it and the committed 25.1 census it classifies -- no ASan, no nightly, no compiler. The plane records a per-census-site ASan state (ASAN_PASS / ASAN_FAIL / ASAN_NOT_REACHABLE / ASAN_UNSUPPORTED), the runs (command hash, outcome, executed tests), the findings, the sanitizer_result records and the residuals. ASan instruments the Rust crate, `std` (rebuilt with -Zbuild-std), the first-party C adapters and the interceptable libc; it cannot instrument a module loaded at run time (src/dso/dlfcn.rs) or see through an opaque operation, and a site the instrument cannot reach or instrument is NOT_REACHABLE/UNSUPPORTED, never silently clean. A zero-findings result is trusted only because the deliberate use-after-free canary is known to fire. The ASan environment is the admitted court image with the venue's documented OPENSSL_RS_COURT_DATA override (ASan's shadow is MAP_NORESERVE virtual address space); the crate-level state records ASAN_RAN or ASAN_UNSUPPORTED. Every ASAN_PASS is a file-granular claim -- the site's source FILE was instrumented and a passing run covered it, not a per-operation proof that the specific operation executed (the plane's top-level `pass_semantics` and each ASan result's `coverage_granularity: file` state this). MSan's result is recorded UNSUPPORTED, never PASS: the venue links the uninstrumented system glibc/libc++ and the plane carries no MSan positive control, so its libc-interception boundary is recorded as the reason. Seven seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6).",
         "probe": "",
         "problems": [],
         "runs": [
@@ -1820,12 +1826,12 @@
     {
       "name": "asan-msan",
       "path": "artifacts/phase25/asan-msan.json",
-      "sha256": "6508c1f575afd71d92c2edf4675adb294f2f5c3605f809843d67897212abfae8"
+      "sha256": "c95d335e116739a714f49c35f31940b1c073c7458e051a736d7a13dfe119d46e"
     },
     {
       "name": "ms-asan-tool",
       "path": "forensics/tools/ms_asan.py",
-      "sha256": "8381703c534c12f23e6f8bbccb22da01bc662f5a4054ebf42e799c235eda9ef3"
+      "sha256": "2a4673af4b6bc2376d5bfd3dcfa727ffac630d4b96f86c5e88974ff978d9d32d"
     },
     {
       "name": "asan-canary-source",

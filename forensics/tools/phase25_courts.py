@@ -1460,10 +1460,13 @@ def _ms_asan_msan_court(name: str) -> dict:
     `PASS`/`FAIL` cites a real run with a matching outcome and command hash and that a `PASS` covers
     the site's file; that no `UNSUPPORTED` site and no site with a finding at it is recorded `PASS`;
     that a `FAIL` run's finding is preserved; that the sanitizer_result records validate and both
-    sanitizers are represented; that the counts are derived, not typed; and that the venue, the
-    canary and the crate-level case are recorded. Seeded mutations -- a `PASS` with no run, a `PASS`
-    with a finding at it, a dropped site, an `UNSUPPORTED` marked `PASS`, a typed count and an
-    `UNSUPPORTED` run with no reason -- are each caught with specificity holding. It is an
+    sanitizers are represented; that the counts are derived, not typed; that every ASan result states
+    its file coverage granularity and the plane carries its `pass_semantics`; that the MSan result is
+    never recorded `PASS` (the venue links uninstrumented libc and carries no MSan positive control);
+    and that the venue, the canary and the crate-level case are recorded. Seeded mutations -- a `PASS`
+    with no run, a `PASS` with a finding at it, a dropped site, an `UNSUPPORTED` marked `PASS`, a typed
+    count, an `UNSUPPORTED` run with no reason and the MSan result marked `PASS` -- are each caught
+    with specificity holding. It is an
     **instrument**: it can pass while the plane records property findings (the ASan findings), which
     are recorded as the row's `findings` so a passing sanitizer court is never read as 'the candidate
     is memory safe'.
@@ -1503,8 +1506,13 @@ def _ms_asan_msan_court(name: str) -> dict:
             "because the deliberate use-after-free canary is known to fire. The ASan environment is "
             "the admitted court image with the venue's documented OPENSSL_RS_COURT_DATA override "
             "(ASan's shadow is MAP_NORESERVE virtual address space); the crate-level state records "
-            "ASAN_RAN or ASAN_UNSUPPORTED, and MSan's result is recorded with its tool state and its "
-            "libc-interception caveat. Six "
+            "ASAN_RAN or ASAN_UNSUPPORTED. Every ASAN_PASS is a file-granular claim -- the site's "
+            "source FILE was instrumented and a passing run covered it, not a per-operation proof "
+            "that the specific operation executed (the plane's top-level `pass_semantics` and each "
+            "ASan result's `coverage_granularity: file` state this). MSan's result is recorded "
+            "UNSUPPORTED, never PASS: the venue links the uninstrumented system glibc/libc++ and the "
+            "plane carries no MSan positive control, so its libc-interception boundary is recorded as "
+            "the reason. Seven "
             "seeded mutations are each caught with specificity holding "
             "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6)."
         ),
