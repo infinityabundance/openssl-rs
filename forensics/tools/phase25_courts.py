@@ -198,6 +198,10 @@ import ms_reduction  # noqa: E402
 # `miri_findings` / `miri_sensitivity_control` over the committed plane and the committed census.
 import ms_miri  # noqa: E402
 
+# 25.10's ASan/MSan results and the tool that records them. The court re-runs the tool's pure
+# `asan_findings` / `asan_sensitivity_control` over the committed plane and the committed census.
+import ms_asan  # noqa: E402
+
 # The lossless columnar codec the Phase-25 artefacts are stored in. Every court decodes the
 # committed artefact through `decode_body` before reading its records, so one implementation of the
 # scheme serves the generator, the court and every cross-reader; the scheme is named by
@@ -299,6 +303,15 @@ MIRI_COURT = "MS-MIRI"
 PHASE18_MIRI_SUITE = REPO_ROOT / "forensics" / "miri-tcb-suite.json"
 MIRI_HARNESS_SOURCE = REPO_ROOT / "src" / "runtime" / "miri_tcb.rs"
 
+# 25.10's ASan/MSan plane and the tool that records it. The plane is a measurement (it builds and runs
+# the ASan-instrumented candidate), so the tool is not a metadata-only generator; the court re-runs
+# only the pure checks over the committed artefact and the committed census.
+ASAN_MSAN = REPO_ROOT / "artifacts" / "phase25" / "asan-msan.json"
+MS_ASAN_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_asan.py"
+ASAN_MSAN_COURT = "MS-ASAN-MSMAN"
+ASAN_CANARY_SOURCE = REPO_ROOT / "forensics" / "tools" / "asan_canary.c"
+ASAN_HARNESS_SOURCE = REPO_ROOT / "src" / "aes.rs"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -328,16 +341,16 @@ COURTS: list[tuple[str, str]] = [
     (EXPOSURE_COURT, "_ms_exposure_classification_court"),
     (UNSAFE_REDUCTION_COURT, "_ms_unsafe_reduction_court"),
     (MIRI_COURT, "_ms_miri_court"),
+    (ASAN_MSAN_COURT, "_ms_asan_msan_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
 # `MS-SOURCE-CENSUS`, 25.2 removed `MS-NON-RUST-TCB`, 25.3 removed `MS-SAFETY-OBLIGATIONS`, 25.4
 # removed `MS-OWNERSHIP-PLANES`, 25.5 removed `MS-PHASE22-CROSSWALK`, 25.6 removed
 # `MS-PHASE24-CROSSWALK`, 25.7 removed `MS-EXPOSURE-CLASSIFICATION`, 25.8 removed
-# `MS-UNSAFE-REDUCTION` and 25.9 removed `MS-MIRI`, so twelve remain. Ordered as the plan orders
-# them.
+# `MS-UNSAFE-REDUCTION`, 25.9 removed `MS-MIRI` and 25.10 removed `MS-ASAN-MSMAN`, so eleven remain.
+# Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-ASAN-MSMAN": "25.10 -- ASan/MSan",
     "MS-TSAN": "25.11 -- TSan",
     "MS-KANI": "25.12 -- Kani",
     "MS-PHASE18-FUZZ-CROSSWALK": "25.13 -- the Phase-18 fuzz crosswalk",
@@ -1435,6 +1448,96 @@ def _ms_miri_court(name: str) -> dict:
     }
 
 
+def _ms_asan_msan_court(name: str) -> dict:
+    """`MS-ASAN-MSMAN`: 25.10's court, the ASan/MSan results over the claimed profile.
+
+    Stages no probe. It reads the committed `artifacts/phase25/asan-msan.json` and re-runs the 25.10
+    pure checks `ms_asan.asan_findings` and `ms_asan.asan_sensitivity_control` over it together with
+    the committed 25.1 census it classifies -- no ASan, no nightly, no compiler; the measurement that
+    produced the plane is `ms_asan.py --measure` (it builds and runs the instrumented candidate), and
+    this court only re-derives from what it wrote. It establishes that every census site has exactly
+    one ASan state from the closed vocabulary; that an `UNSUPPORTED` site carries its reason; that a
+    `PASS`/`FAIL` cites a real run with a matching outcome and command hash and that a `PASS` covers
+    the site's file; that no `UNSUPPORTED` site and no site with a finding at it is recorded `PASS`;
+    that a `FAIL` run's finding is preserved; that the sanitizer_result records validate and both
+    sanitizers are represented; that the counts are derived, not typed; and that the venue, the
+    canary and the crate-level case are recorded. Seeded mutations -- a `PASS` with no run, a `PASS`
+    with a finding at it, a dropped site, an `UNSUPPORTED` marked `PASS`, a typed count and an
+    `UNSUPPORTED` run with no reason -- are each caught with specificity holding. It is an
+    **instrument**: it can pass while the plane records property findings (the ASan findings), which
+    are recorded as the row's `findings` so a passing sanitizer court is never read as 'the candidate
+    is memory safe'.
+    """
+    if not ASAN_MSAN.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "asan-missing",
+                "problems": [f"the ASan/MSan plane {rel(ASAN_MSAN)} is absent"], "findings": [],
+                "control": {}}
+    if not SOURCE_CENSUS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "census-missing",
+                "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
+                "findings": [], "control": {}}
+
+    census_body, refs = _census_view()
+    body = _decoded_body(ASAN_MSAN, refs)
+    problems = ms_asan.asan_findings(body, census_body)
+    control = ms_asan.asan_sensitivity_control(body, census_body)
+
+    counts = body.get("counts") or {}
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    cl = (body.get("rule") or {}).get("crate_level") or {}
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/asan-msan.json and re-runs the "
+            "25.10 pure checks (ms_asan.asan_findings and ms_asan.asan_sensitivity_control) over it "
+            "and the committed 25.1 census it classifies -- no ASan, no nightly, no compiler. The "
+            "plane records a per-census-site ASan state (ASAN_PASS / ASAN_FAIL / ASAN_NOT_REACHABLE "
+            "/ ASAN_UNSUPPORTED), the runs (command hash, outcome, executed tests), the findings, the "
+            "sanitizer_result records and the residuals. ASan instruments the Rust crate, `std` "
+            "(rebuilt with -Zbuild-std), the first-party C adapters and the interceptable libc; it "
+            "cannot instrument a module loaded at run time (src/dso/dlfcn.rs) or see through an "
+            "opaque operation, and a site the instrument cannot reach or instrument is "
+            "NOT_REACHABLE/UNSUPPORTED, never silently clean. A zero-findings result is trusted only "
+            "because the deliberate use-after-free canary is known to fire. The ASan environment is "
+            "the admitted court image with the venue's documented OPENSSL_RS_COURT_DATA override "
+            "(ASan's shadow is MAP_NORESERVE virtual address space); the crate-level state records "
+            "ASAN_RAN or ASAN_UNSUPPORTED, and MSan's result is recorded with its tool state and its "
+            "libc-interception caveat. Six "
+            "seeded mutations are each caught with specificity holding "
+            "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the ASan/MSan court re-derives only the plane's pure checks, so it stages no "
+            "artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "sites": counts.get("sites", 0),
+            "pass": counts.get("pass", 0),
+            "fail": counts.get("fail", 0),
+            "not_reachable": counts.get("not_reachable", 0),
+            "unsupported": counts.get("unsupported", 0),
+            "runs": len(body.get("runs") or []),
+            "findings": len(body.get("findings") or []),
+            "results": len(body.get("results") or []),
+            "residuals": len(body.get("residuals") or []),
+            "crate_ran": 1 if cl.get("state") == "ASAN_RAN" else 0,
+        },
+        "runs": [
+            {"run_id": r.get("run_id"), "outcome": r.get("outcome"),
+             "tests_passed": r.get("tests_passed"), "tests_run": r.get("tests_run"),
+             "command_sha256": str(r.get("command_sha256"))[:16]}
+            for r in body.get("runs") or []
+        ],
+        "findings": list(body.get("findings") or []),
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1519,14 +1622,18 @@ def main(argv: list[str]) -> int:
             "local-replacement feasibility census rather than an impossibility result, and "
             "**25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its "
             "tool state and its unsupported reason where Miri could not express the question, so an "
-            "unsupported site is never read as a pass. "
+            "unsupported site is never read as a pass, and "
+            "**25.10 registers `MS-ASAN-MSMAN`**, the ASan/MSan results over the claimed profile, "
+            "each with its tool state and its unsupported reason where a sanitizer could not "
+            "instrument or reach a target, so a site the instrument cannot reach or instrument is "
+            "recorded rather than counted clean. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining twelve of its twenty-two courts -- "
-            "MS-ASAN-MSMAN, MS-TSAN, "
+            "remaining eleven of its twenty-two courts -- "
+            "MS-TSAN, "
             "MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.10 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.11 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -1593,6 +1700,10 @@ def main(argv: list[str]) -> int:
         InputRef(name="ms-miri-tool", path=MS_MIRI_TOOL),
         InputRef(name="miri-tcb-suite-manifest", path=PHASE18_MIRI_SUITE),
         InputRef(name="miri-harness-source", path=MIRI_HARNESS_SOURCE),
+        InputRef(name="asan-msan", path=ASAN_MSAN),
+        InputRef(name="ms-asan-tool", path=MS_ASAN_TOOL),
+        InputRef(name="asan-canary-source", path=ASAN_CANARY_SOURCE),
+        InputRef(name="asan-harness-source", path=ASAN_HARNESS_SOURCE),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

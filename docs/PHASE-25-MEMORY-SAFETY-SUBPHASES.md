@@ -450,6 +450,23 @@ raw node dereferences and 124 unsafe method calls over a self-contained policy g
 eleven exported accessors), is recorded as a campaign worklist entry -- a plan whose attempt must
 itself net-reduce or be recorded `REVERTED_NOT_A_REDUCTION`, not a claim that it will.
 
+**25.10 records the ASan environment's one deviation from the court's `exec`, and it is checked
+rather than asserted.** The court's OOM guard applies a hard per-process `RLIMIT_DATA` (default
+4 GiB) to every `exec`, and AddressSanitizer reserves a ~15.4 TB sparse shadow before it instruments
+anything, so an ASan binary cannot *start* under that cap. The court's cap is kept for the hostile
+courts (`docs/DECISIONS.md` D105); rather than weaken it, 25.10 records the ASan environment as a
+**derivation of the admitted court venue** -- the same admitted image (`openssl-rs-court:1`) executed
+with the venue's own documented `OPENSSL_RS_COURT_DATA` override, which removes *only* that
+per-process virtual-space cap. Every bound that bounds resident resources -- the container cgroup
+memory cap, PIDs, CPUs, the wall clock and `no-new-privileges` -- is unchanged, because ASan's shadow
+is `PROT_NONE` + `MAP_NORESERVE` virtual address space the cgroup does not count as resident. This is
+the same derivation the Phase-18 ASan venue records for the same reason. The venue, the canary and
+the crate-level state (`ASAN_RAN` or `ASAN_UNSUPPORTED`) are recorded in
+`artifacts/phase25/asan-msan.json` and in the venue manifest's `environment_derivations`, and the
+`MS-ASAN-MSMAN` court re-runs the plane's pure checks over the committed evidence; the recorded
+per-site states are ASAN_PASS / ASAN_FAIL / ASAN_NOT_REACHABLE / ASAN_UNSUPPORTED, and an
+`UNSUPPORTED` site is never a pass.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 24's process unchanged: a subphase lands its code, its court
