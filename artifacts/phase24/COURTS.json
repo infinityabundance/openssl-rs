@@ -2843,23 +2843,23 @@
             "present": true,
             "sha256": "0153fdd3eeb6bf3c3dd0832727f611e01e51b762386c1ce09b0ab42d56ed0cad"
           },
-          "identity_hash": "769873ef8dc08e102be57ae74056bd6380402bd0f45b35bb8fa8af5006780bc4",
+          "identity_hash": "154b51806b83f5ee341db09877997087301be116719feb7319c581a67e09b69a",
           "install_prefix": "artifacts/phase2/install",
-          "libcrypto_sha256": "5f37a2f41caa44d315b7d4857a1392c55f0742acfbc0398c83365485d56ac334",
+          "libcrypto_sha256": "da46bf8540134ce6b8df3dbd1977f30bc901ae684930fd4a43ac27edd1cd063f",
           "libcrypto_soname": "libcrypto.so.3",
-          "libssl_sha256": "b25ec1256d118dafc8c746ffb472a32795bc1149956abc8f7d68f0b01fdaa533",
+          "libssl_sha256": "1127d1b7d0d4956ebfd8c66482b9811cfcf29d22580b75b71b21cfa1742b9c74",
           "libssl_soname": "libssl.so.3",
           "ossl_modules": {
             "count": 1,
             "present": true,
-            "sha256": "c51f74b792803d123787f025405e135eeb51ee7f01c933ec656fba49837a214a"
+            "sha256": "51a5e145b949c30614fefca44fe32e626131597125b4a2f6966fd669d6e4d481"
           },
           "pkgconfig": {
             "count": 2,
             "present": true,
             "sha256": "9d746f0900a36f97a1ef19bc12b34759717ebf8f77895f375b442369e402ce33"
           },
-          "source_commit": "75e015c6b5a67be77f29c148ee6c602e9979102e"
+          "source_commit": "d773511aff92635f106ec3b689e494ebf08eeda7"
         },
         "control": {
           "baseline_findings": 0,
@@ -2891,7 +2891,7 @@
           "holdout_families": 200,
           "measurable_families": 1,
           "recipe_backed_families": 1,
-          "reruns": 6,
+          "reruns": 7,
           "rows": 400,
           "venue_limited_families": 199,
           "verdicts": {
@@ -3004,23 +3004,23 @@
               "present": true,
               "sha256": "0153fdd3eeb6bf3c3dd0832727f611e01e51b762386c1ce09b0ab42d56ed0cad"
             },
-            "identity_hash": "769873ef8dc08e102be57ae74056bd6380402bd0f45b35bb8fa8af5006780bc4",
+            "identity_hash": "154b51806b83f5ee341db09877997087301be116719feb7319c581a67e09b69a",
             "install_prefix": "artifacts/phase2/install",
-            "libcrypto_sha256": "5f37a2f41caa44d315b7d4857a1392c55f0742acfbc0398c83365485d56ac334",
+            "libcrypto_sha256": "da46bf8540134ce6b8df3dbd1977f30bc901ae684930fd4a43ac27edd1cd063f",
             "libcrypto_soname": "libcrypto.so.3",
-            "libssl_sha256": "b25ec1256d118dafc8c746ffb472a32795bc1149956abc8f7d68f0b01fdaa533",
+            "libssl_sha256": "1127d1b7d0d4956ebfd8c66482b9811cfcf29d22580b75b71b21cfa1742b9c74",
             "libssl_soname": "libssl.so.3",
             "ossl_modules": {
               "count": 1,
               "present": true,
-              "sha256": "c51f74b792803d123787f025405e135eeb51ee7f01c933ec656fba49837a214a"
+              "sha256": "51a5e145b949c30614fefca44fe32e626131597125b4a2f6966fd669d6e4d481"
             },
             "pkgconfig": {
               "count": 2,
               "present": true,
               "sha256": "9d746f0900a36f97a1ef19bc12b34759717ebf8f77895f375b442369e402ce33"
             },
-            "source_commit": "75e015c6b5a67be77f29c148ee6c602e9979102e"
+            "source_commit": "d773511aff92635f106ec3b689e494ebf08eeda7"
           },
           "candidate_specific_patch_count": 0,
           "first_run": {
@@ -3191,6 +3191,11 @@
               "candidate_identity_hash": "769873ef8dc08e102be57ae74056bd6380402bd0f45b35bb8fa8af5006780bc4",
               "first_run_hash": "93f2c518f214e72aca2ae3e462aa596324552d5ead9a1d9468bcf381196934f7",
               "rerun_index": 6
+            },
+            {
+              "candidate_identity_hash": "154b51806b83f5ee341db09877997087301be116719feb7319c581a67e09b69a",
+              "first_run_hash": "93f2c518f214e72aca2ae3e462aa596324552d5ead9a1d9468bcf381196934f7",
+              "rerun_index": 7
             }
           ],
           "rule": {
@@ -3270,23 +3275,23 @@
             "present": true,
             "sha256": "0153fdd3eeb6bf3c3dd0832727f611e01e51b762386c1ce09b0ab42d56ed0cad"
           },
-          "identity_hash": "769873ef8dc08e102be57ae74056bd6380402bd0f45b35bb8fa8af5006780bc4",
+          "identity_hash": "154b51806b83f5ee341db09877997087301be116719feb7319c581a67e09b69a",
           "install_prefix": "artifacts/phase2/install",
-          "libcrypto_sha256": "5f37a2f41caa44d315b7d4857a1392c55f0742acfbc0398c83365485d56ac334",
+          "libcrypto_sha256": "da46bf8540134ce6b8df3dbd1977f30bc901ae684930fd4a43ac27edd1cd063f",
           "libcrypto_soname": "libcrypto.so.3",
-          "libssl_sha256": "b25ec1256d118dafc8c746ffb472a32795bc1149956abc8f7d68f0b01fdaa533",
+          "libssl_sha256": "1127d1b7d0d4956ebfd8c66482b9811cfcf29d22580b75b71b21cfa1742b9c74",
           "libssl_soname": "libssl.so.3",
           "ossl_modules": {
             "count": 1,
             "present": true,
-            "sha256": "c51f74b792803d123787f025405e135eeb51ee7f01c933ec656fba49837a214a"
+            "sha256": "51a5e145b949c30614fefca44fe32e626131597125b4a2f6966fd669d6e4d481"
           },
           "pkgconfig": {
             "count": 2,
             "present": true,
             "sha256": "9d746f0900a36f97a1ef19bc12b34759717ebf8f77895f375b442369e402ce33"
           },
-          "source_commit": "75e015c6b5a67be77f29c148ee6c602e9979102e"
+          "source_commit": "d773511aff92635f106ec3b689e494ebf08eeda7"
         },
         "control": {
           "baseline_findings": 0,
@@ -3334,23 +3339,23 @@
               "present": true,
               "sha256": "0153fdd3eeb6bf3c3dd0832727f611e01e51b762386c1ce09b0ab42d56ed0cad"
             },
-            "identity_hash": "769873ef8dc08e102be57ae74056bd6380402bd0f45b35bb8fa8af5006780bc4",
+            "identity_hash": "154b51806b83f5ee341db09877997087301be116719feb7319c581a67e09b69a",
             "install_prefix": "artifacts/phase2/install",
-            "libcrypto_sha256": "5f37a2f41caa44d315b7d4857a1392c55f0742acfbc0398c83365485d56ac334",
+            "libcrypto_sha256": "da46bf8540134ce6b8df3dbd1977f30bc901ae684930fd4a43ac27edd1cd063f",
             "libcrypto_soname": "libcrypto.so.3",
-            "libssl_sha256": "b25ec1256d118dafc8c746ffb472a32795bc1149956abc8f7d68f0b01fdaa533",
+            "libssl_sha256": "1127d1b7d0d4956ebfd8c66482b9811cfcf29d22580b75b71b21cfa1742b9c74",
             "libssl_soname": "libssl.so.3",
             "ossl_modules": {
               "count": 1,
               "present": true,
-              "sha256": "c51f74b792803d123787f025405e135eeb51ee7f01c933ec656fba49837a214a"
+              "sha256": "51a5e145b949c30614fefca44fe32e626131597125b4a2f6966fd669d6e4d481"
             },
             "pkgconfig": {
               "count": 2,
               "present": true,
               "sha256": "9d746f0900a36f97a1ef19bc12b34759717ebf8f77895f375b442369e402ce33"
             },
-            "source_commit": "75e015c6b5a67be77f29c148ee6c602e9979102e"
+            "source_commit": "d773511aff92635f106ec3b689e494ebf08eeda7"
           },
           "counts": {
             "candidate_specific_patch_count": 0,
@@ -3415,7 +3420,7 @@
               "what_ran": {
                 "level": "L7-functional",
                 "outcome": "reached",
-                "transcript_sha256": "55a65d010be5cb7b3f8acad1d4989029b0fe07907ef503fdb1bf3a5e6841bd45"
+                "transcript_sha256": "af63576b4466b38bbf98a9b7c78986e52b8bee7f747d84bdbf62d4823502718d"
               },
               "which_source": {
                 "recipe_id": "recipe:curl:8.10.1",
@@ -3653,7 +3658,7 @@
               "what_ran": {
                 "level": "L7-functional",
                 "outcome": "reached",
-                "transcript_sha256": "a7adb774635abaf9ecf6b3ec59a6e761178bfb347973a9120ca6474455e8e142"
+                "transcript_sha256": "a1d24420b879c1480f825567b5a94a18f5cc1f33d3e4a8c1444c74e748d380b7"
               },
               "which_source": {
                 "recipe_id": "recipe:monit:5.34.3",
@@ -5604,8 +5609,8 @@
       {
         "bound_roots": {
           "atlas": "327ab08b20ad5cbacc95e7c668bd03eafe7c06fa0514fd3a28c03207b97adbe9",
-          "candidate_identity": "769873ef8dc08e102be57ae74056bd6380402bd0f45b35bb8fa8af5006780bc4",
-          "consumer_receipts": "8088210323d432647ef0dc8734818583f2cc9716e37d2afaa6beb75c665820d9",
+          "candidate_identity": "154b51806b83f5ee341db09877997087301be116719feb7319c581a67e09b69a",
+          "consumer_receipts": "11f963f7aaf6065638331bc2d711a09a6852afabdcaebe177b5f8c94b514f8d2",
           "coverage": "c18b7a4f90919ac4c69ff0bacf8f97e03c1f77cd3f8f050878c4c590f785d68c",
           "frf_checkpoint": "checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d",
           "p1000_selection": "f2a0454fe4dca98556da2e958b6e70cebaf76becbebba69b2abd752e63deba4e",
@@ -6075,7 +6080,7 @@
     {
       "name": "phase22-implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "7b1b92057542d2d669eb3a8c770b34f376ecec0658efb2a3dbd8c583cce6f8c2"
+      "sha256": "d0e2f245fc6d8198b3f2ef5b07a9a67b1058271993c1f1dff2fb11d6ec549a20"
     },
     {
       "name": "hostility-probe/cms.c",
@@ -6150,7 +6155,7 @@
     {
       "name": "candidate-freeze",
       "path": "forensics/downstream/candidate-freeze.json",
-      "sha256": "9fa192085e0d9aedfdd8d3bfacb172227cd916a4d1f9c9e336199f4f0c93c3c1"
+      "sha256": "3493b6dd04139c3a3019a2031fa5eb5c88baad110b5bc6ed07b4b0508e4e3eb6"
     },
     {
       "name": "downstream-candidate-freeze",
@@ -6160,7 +6165,7 @@
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "cf7e3844e3bd525c9a8918f1f99d1d6fb467f7d7e01d595d6e93235d775d0d6e"
+      "sha256": "d9d47d3b2f5587900ef837280ae3fd90f0500696c7db642048eb721aaa2ba16a"
     },
     {
       "name": "downstream-p1000-run",
@@ -6170,7 +6175,7 @@
     {
       "name": "reconciliation",
       "path": "forensics/downstream/reconciliation.json",
-      "sha256": "9341efdf3be959059fa0ea43dd342a16240902e95d2bb1735c54bf4dfd7b50d8"
+      "sha256": "1152f67402666e08fd0bf3a55dd745bad7fe64db8af3415e083b49d9fdcc1f92"
     },
     {
       "name": "downstream-reconciliation",
@@ -6180,7 +6185,7 @@
     {
       "name": "frf-closure",
       "path": "forensics/atlas/phase24/frf-closure.json",
-      "sha256": "042986c7a58659a18dcee864384f51b379374f06a3b591c0acdc0f171cd82a96"
+      "sha256": "090d75d235edd64f94e74c0650030fe022bdf9639db4fb504e36359791e7acb7"
     },
     {
       "name": "phase24-frf",
@@ -6195,17 +6200,17 @@
     {
       "name": "phase-24-seal",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SEAL.md",
-      "sha256": "b6f82b7f6c343cc84f68efef98eaa0355bb2f0e1559b6fcd358aaee05b83d696"
+      "sha256": "3289e91f3b6b82cc9f5c0a76e8effbed60832d6495b253928475865b89dfde54"
     },
     {
       "name": "seal-census",
       "path": "docs/SEAL-CENSUS.md",
-      "sha256": "7de2b3dfb87a4b5fac03badef7988e715a8c965295521cb3316a22ec70beae7d"
+      "sha256": "3c23511132d37733e140b7764630fa2d394778142e01f52f309cd4b71acf5055"
     },
     {
       "name": "shared-blockers",
       "path": "forensics/downstream/shared-blockers.json",
-      "sha256": "5f85e48a8fdb645b346db5a2279ccb3230f8324f6b9a17c46267507bc7bec546"
+      "sha256": "edd3f010bd29c782df647dfd8ce86a2534720b2d73e743ac4264e8253d0db482"
     },
     {
       "name": "biggest-movers",
@@ -6230,7 +6235,7 @@
     {
       "name": "recipe-campaign",
       "path": "forensics/downstream/recipe-campaign.json",
-      "sha256": "251a0af5e6e001950d2b036f15d47d762f921e429b9112753bb099431d701c25"
+      "sha256": "feff472005994c19cda3b3ebcbb9ea72afcff05f1b3a2f33190b3aa64d65bf6f"
     },
     {
       "name": "recipe-campaign-baseline",
@@ -6245,7 +6250,7 @@
     {
       "name": "blocker-remediation",
       "path": "forensics/downstream/blocker-remediation.json",
-      "sha256": "a9d0bf11a1cae2708ace8a7f5eb3aa328cb866d040f315a8230138aaec6bf793"
+      "sha256": "c509a636ec2c65bb854687c678e4314cd5ba59e455dc85c7b17e8e12c2439eb0"
     },
     {
       "name": "blocker-remediation-baseline",
@@ -6260,7 +6265,7 @@
     {
       "name": "close-batch",
       "path": "forensics/downstream/close-batch.json",
-      "sha256": "ac005d5ea3bc62ed00bc1328496b0bf8aca7f709c3e4bd393d814cfc8ff27e6f"
+      "sha256": "7da640c2e385f91254a8f44df1fbda31e7b4490b19271ffb21a5fea619ac9735"
     },
     {
       "name": "close-batch-baseline",

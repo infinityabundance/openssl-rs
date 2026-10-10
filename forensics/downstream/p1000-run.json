@@ -16,23 +16,23 @@
         "present": true,
         "sha256": "0153fdd3eeb6bf3c3dd0832727f611e01e51b762386c1ce09b0ab42d56ed0cad"
       },
-      "identity_hash": "769873ef8dc08e102be57ae74056bd6380402bd0f45b35bb8fa8af5006780bc4",
+      "identity_hash": "154b51806b83f5ee341db09877997087301be116719feb7319c581a67e09b69a",
       "install_prefix": "artifacts/phase2/install",
-      "libcrypto_sha256": "5f37a2f41caa44d315b7d4857a1392c55f0742acfbc0398c83365485d56ac334",
+      "libcrypto_sha256": "da46bf8540134ce6b8df3dbd1977f30bc901ae684930fd4a43ac27edd1cd063f",
       "libcrypto_soname": "libcrypto.so.3",
-      "libssl_sha256": "b25ec1256d118dafc8c746ffb472a32795bc1149956abc8f7d68f0b01fdaa533",
+      "libssl_sha256": "1127d1b7d0d4956ebfd8c66482b9811cfcf29d22580b75b71b21cfa1742b9c74",
       "libssl_soname": "libssl.so.3",
       "ossl_modules": {
         "count": 1,
         "present": true,
-        "sha256": "c51f74b792803d123787f025405e135eeb51ee7f01c933ec656fba49837a214a"
+        "sha256": "51a5e145b949c30614fefca44fe32e626131597125b4a2f6966fd669d6e4d481"
       },
       "pkgconfig": {
         "count": 2,
         "present": true,
         "sha256": "9d746f0900a36f97a1ef19bc12b34759717ebf8f77895f375b442369e402ce33"
       },
-      "source_commit": "75e015c6b5a67be77f29c148ee6c602e9979102e"
+      "source_commit": "d773511aff92635f106ec3b689e494ebf08eeda7"
     },
     "counts": {
       "candidate_specific_patch_count": 0,
@@ -50,7 +50,7 @@
         "DROP_IN_UNKNOWN": 0
       }
     },
-    "elapsed_seconds": 754.674,
+    "elapsed_seconds": 758.211,
     "ladder": {
       "families": 1000,
       "levels": {
@@ -361,7 +361,7 @@
         "what_ran": {
           "level": "L7-functional",
           "outcome": "reached",
-          "transcript_sha256": "55a65d010be5cb7b3f8acad1d4989029b0fe07907ef503fdb1bf3a5e6841bd45"
+          "transcript_sha256": "af63576b4466b38bbf98a9b7c78986e52b8bee7f747d84bdbf62d4823502718d"
         },
         "which_source": {
           "recipe_id": "recipe:curl:8.10.1",
@@ -983,7 +983,7 @@
         "what_ran": {
           "level": "L7-functional",
           "outcome": "reached",
-          "transcript_sha256": "a7adb774635abaf9ecf6b3ec59a6e761178bfb347973a9120ca6474455e8e142"
+          "transcript_sha256": "a1d24420b879c1480f825567b5a94a18f5cc1f33d3e4a8c1444c74e748d380b7"
         },
         "which_source": {
           "recipe_id": "recipe:monit:5.34.3",
@@ -1221,7 +1221,7 @@
         "what_ran": {
           "level": "L7-functional",
           "outcome": "reached",
-          "transcript_sha256": "5451c92c217bde5b55f108ca218e85c9ca0ce5d58f88c945372e07d842808b12"
+          "transcript_sha256": "2323dbb0e87fcf009ec59fbb3023553e7c209f10e7fe916aac91253cd90592a7"
         },
         "which_source": {
           "recipe_id": "recipe:openssh:9.9p1",
@@ -1399,7 +1399,7 @@
         "what_ran": {
           "level": "L7-functional",
           "outcome": "reached",
-          "transcript_sha256": "8e8ef021751659de3c50772c869963311069f670b9e206e8f07fd7c7b4a58972"
+          "transcript_sha256": "aaee3495dd6e4355ea3950cc1bc7d4735dbc79a8831019ff2a3a68efc5bb2dcc"
         },
         "which_source": {
           "recipe_id": "recipe:pure-ftpd:1.0.52",
@@ -1440,7 +1440,7 @@
         "what_ran": {
           "level": "L7-functional",
           "outcome": "reached",
-          "transcript_sha256": "5f3924085c872c43c39cb4284743deda72ad41ba9ab6003ccb6d8b877cbb4067"
+          "transcript_sha256": "845f85eb81681417a8a5b3666108596373e4bdad7737eda0a82d6390ca071cd8"
         },
         "which_source": {
           "recipe_id": "recipe:redis:7.4.1",
@@ -3030,7 +3030,7 @@
         "what_ran": {
           "level": "L7-functional",
           "outcome": "reached",
-          "transcript_sha256": "1272049e8b7cdea79d20b45462cf4816915ac845b1e5ad14fcf2592b19e82e0e"
+          "transcript_sha256": "9140bd0ec40d537aa4ec952433a3d44f68fa1bcceff44a209667879162184f09"
         },
         "which_source": {
           "recipe_id": "recipe:nginx:1.26.3",
@@ -57887,12 +57887,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "94978:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "94978:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "94978:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "94978:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "94978:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "94978:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "747478:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "747478:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "747478:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "747478:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "747478:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "747478:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -57983,10 +57983,10 @@
           "how to fix it, please visit the webpage mentioned above.",
           "== s_server ==",
           "exit=0",
-          "800B5983107F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
-          "800B5983107F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
+          "80FB4831C47F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
+          "80FB4831C47F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
         ],
-        "transcript_sha256": "3049e126d9637b87ae97cedd199ecdf69ff7a5d18523f5e3a4cf15373f38e2c8",
+        "transcript_sha256": "b0e44e633042babc2a335e8eb566687792432d9c8699478efbf8a75d11e5f678",
         "variant_id": "variant:curl:8.10.1:pristine",
         "workload": "curl: verified TLS1.3 fetch + unrelated-CA reject",
         "workload_result": {
@@ -58039,12 +58039,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "94994:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "94994:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "94994:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "94994:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "94994:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "94994:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "747494:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "747494:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "747494:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "747494:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "747494:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "747494:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -58135,10 +58135,10 @@
           "how to fix it, please visit the webpage mentioned above.",
           "== s_server ==",
           "exit=0",
-          "80BBB976967F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
-          "80BBB976967F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
+          "80DB961AB37F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
+          "80DB961AB37F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
         ],
-        "transcript_sha256": "55a65d010be5cb7b3f8acad1d4989029b0fe07907ef503fdb1bf3a5e6841bd45",
+        "transcript_sha256": "af63576b4466b38bbf98a9b7c78986e52b8bee7f747d84bdbf62d4823502718d",
         "variant_id": "variant:curl:8.10.1:pristine",
         "workload": "curl: verified TLS1.3 fetch + unrelated-CA reject",
         "workload_result": {
@@ -59427,7 +59427,7 @@
               "--without-pam",
               "--disable-sql"
             ],
-            "elapsed_seconds": 2.036,
+            "elapsed_seconds": 2.076,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -59437,7 +59437,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 1.455,
+            "elapsed_seconds": 1.46,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -59525,7 +59525,7 @@
               "-C",
               "{scratch}/cyrus-sasl/candidate/src"
             ],
-            "elapsed_seconds": 0.054,
+            "elapsed_seconds": 0.055,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -59541,7 +59541,7 @@
               "--without-pam",
               "--disable-sql"
             ],
-            "elapsed_seconds": 2.016,
+            "elapsed_seconds": 2.065,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -59551,7 +59551,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 1.451,
+            "elapsed_seconds": 1.467,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -67356,7 +67356,7 @@
               "--without-bzlib",
               "--disable-static"
             ],
-            "elapsed_seconds": 5.972,
+            "elapsed_seconds": 6.155,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -67366,7 +67366,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 30.504,
+            "elapsed_seconds": 32.005,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -67455,7 +67455,7 @@
               "-C",
               "{scratch}/dovecot/candidate/src"
             ],
-            "elapsed_seconds": 0.115,
+            "elapsed_seconds": 0.118,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -67475,7 +67475,7 @@
               "--without-bzlib",
               "--disable-static"
             ],
-            "elapsed_seconds": 6.623,
+            "elapsed_seconds": 6.29,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -67485,7 +67485,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 32.216,
+            "elapsed_seconds": 30.238,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -77348,7 +77348,7 @@
               "-C",
               "{scratch}/fetchmail/authority/src"
             ],
-            "elapsed_seconds": 0.04,
+            "elapsed_seconds": 0.041,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -77361,7 +77361,7 @@
               "--disable-nls",
               "--without-kerberos"
             ],
-            "elapsed_seconds": 1.134,
+            "elapsed_seconds": 1.135,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -77371,7 +77371,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.471,
+            "elapsed_seconds": 0.461,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -77489,7 +77489,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.474,
+            "elapsed_seconds": 0.453,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -78712,7 +78712,7 @@
         "linkage": {
           "all_under_prefix": true,
           "artifact_rel": "fossil",
-          "artifact_sha256": "680bbb660e78b701882f31d5737df0f86842d83ef7f73a7371a27640692bf600",
+          "artifact_sha256": "c5f39c13eb4bac7bc65b3f916aa0486268d87391495faa0ff5d13950f493fa08",
           "default_resolution": {
             "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
             "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
@@ -78771,7 +78771,7 @@
               "-C",
               "{scratch}/fossil/authority/src"
             ],
-            "elapsed_seconds": 0.093,
+            "elapsed_seconds": 0.104,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -78782,7 +78782,7 @@
               "--with-openssl={prefix}",
               "--disable-fusefs"
             ],
-            "elapsed_seconds": 1.356,
+            "elapsed_seconds": 0.921,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -78792,7 +78792,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 26.502,
+            "elapsed_seconds": 26.606,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -78831,7 +78831,7 @@
         "linkage": {
           "all_under_prefix": true,
           "artifact_rel": "fossil",
-          "artifact_sha256": "ff1987b79227d717b2815fafa57d30988c25d2b22341577fe6ea51c97293b431",
+          "artifact_sha256": "88ea8982a9de453d2171c3a12c3b43ccf26d3f43a0bdd470087bdfeb96b8b5c1",
           "default_resolution": {
             "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
             "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
@@ -78890,7 +78890,7 @@
               "-C",
               "{scratch}/fossil/candidate/src"
             ],
-            "elapsed_seconds": 0.096,
+            "elapsed_seconds": 0.094,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -78901,7 +78901,7 @@
               "--with-openssl={prefix}",
               "--disable-fusefs"
             ],
-            "elapsed_seconds": 1.543,
+            "elapsed_seconds": 1.586,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -78911,7 +78911,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 26.65,
+            "elapsed_seconds": 26.728,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -99091,12 +99091,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "220685:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "220685:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "220685:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "220685:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "220685:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "220685:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "873177:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "873177:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "873177:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "873177:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "873177:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "873177:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -99252,12 +99252,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "220721:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "220721:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "220721:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "220721:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "220721:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "220721:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "873213:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "873213:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "873213:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "873213:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "873213:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "873213:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -101084,7 +101084,7 @@
               "-C",
               "{scratch}/hiredis-ssl/authority/src"
             ],
-            "elapsed_seconds": 0.004,
+            "elapsed_seconds": 0.005,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -101095,7 +101095,7 @@
               "-j8",
               "USE_SSL=1"
             ],
-            "elapsed_seconds": 0.34,
+            "elapsed_seconds": 0.348,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -101190,7 +101190,7 @@
               "-C",
               "{scratch}/hiredis-ssl/candidate/src"
             ],
-            "elapsed_seconds": 0.004,
+            "elapsed_seconds": 0.005,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -101201,7 +101201,7 @@
               "-j8",
               "USE_SSL=1"
             ],
-            "elapsed_seconds": 0.342,
+            "elapsed_seconds": 0.344,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -107664,7 +107664,7 @@
               "configure",
               "--with-openssl={prefix}"
             ],
-            "elapsed_seconds": 1.222,
+            "elapsed_seconds": 1.228,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -107674,7 +107674,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 1.314,
+            "elapsed_seconds": 1.274,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -107773,7 +107773,7 @@
               "configure",
               "--with-openssl={prefix}"
             ],
-            "elapsed_seconds": 1.221,
+            "elapsed_seconds": 1.228,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -107783,7 +107783,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 1.268,
+            "elapsed_seconds": 1.318,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -109315,14 +109315,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "222865:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
-            "222865:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
-            "222865:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
-            "222865:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libssl.so.3",
-            "222865:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
-            "222865:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
-            "222865:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libssl.so.3",
-            "222865:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libssl.so.3"
+            "875357:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "875357:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "875357:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "875357:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libssl.so.3",
+            "875357:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "875357:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "875357:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libssl.so.3",
+            "875357:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libssl.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -109456,14 +109456,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "222881:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
-            "222881:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
-            "222881:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
-            "222881:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libssl.so.3",
-            "222881:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
-            "222881:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
-            "222881:\t  trying file=/work/artifacts/phase2/install/lib/tls/libssl.so.3",
-            "222881:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libssl.so.3"
+            "875373:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "875373:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "875373:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "875373:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libssl.so.3",
+            "875373:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "875373:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "875373:\t  trying file=/work/artifacts/phase2/install/lib/tls/libssl.so.3",
+            "875373:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libssl.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -112896,7 +112896,7 @@
               "-C",
               "{scratch}/keepalived/authority/src"
             ],
-            "elapsed_seconds": 0.02,
+            "elapsed_seconds": 0.019,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -112911,7 +112911,7 @@
               "--disable-dbus",
               "--disable-nftables"
             ],
-            "elapsed_seconds": 4.05,
+            "elapsed_seconds": 3.103,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -112921,7 +112921,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 2.141,
+            "elapsed_seconds": 2.136,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -113031,7 +113031,7 @@
               "--disable-dbus",
               "--disable-nftables"
             ],
-            "elapsed_seconds": 3.062,
+            "elapsed_seconds": 3.14,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -113041,7 +113041,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 2.218,
+            "elapsed_seconds": 2.151,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -114609,7 +114609,7 @@
               "-C",
               "{scratch}/kmod/authority/src"
             ],
-            "elapsed_seconds": 0.023,
+            "elapsed_seconds": 0.024,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -114621,7 +114621,7 @@
               "--disable-manpages",
               "--silent"
             ],
-            "elapsed_seconds": 1.745,
+            "elapsed_seconds": 1.681,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -114631,7 +114631,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.6,
+            "elapsed_seconds": 0.539,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -114719,7 +114719,7 @@
               "-C",
               "{scratch}/kmod/candidate/src"
             ],
-            "elapsed_seconds": 0.023,
+            "elapsed_seconds": 0.024,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -114731,7 +114731,7 @@
               "--disable-manpages",
               "--silent"
             ],
-            "elapsed_seconds": 1.635,
+            "elapsed_seconds": 1.65,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -114741,7 +114741,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.543,
+            "elapsed_seconds": 0.599,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -118529,7 +118529,7 @@
               "-C",
               "{scratch}/ldns/authority/src"
             ],
-            "elapsed_seconds": 0.021,
+            "elapsed_seconds": 0.022,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -118540,7 +118540,7 @@
               "--with-ssl={prefix}",
               "--disable-dane-verify"
             ],
-            "elapsed_seconds": 2.883,
+            "elapsed_seconds": 2.931,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -118550,7 +118550,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 1.787,
+            "elapsed_seconds": 1.811,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -118649,7 +118649,7 @@
               "--with-ssl={prefix}",
               "--disable-dane-verify"
             ],
-            "elapsed_seconds": 2.864,
+            "elapsed_seconds": 2.892,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -118659,7 +118659,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 1.901,
+            "elapsed_seconds": 2.127,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -120968,7 +120968,7 @@
               "-C",
               "{scratch}/libarchive/authority/src"
             ],
-            "elapsed_seconds": 0.08,
+            "elapsed_seconds": 0.081,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -120988,7 +120988,7 @@
               "--disable-acl",
               "--without-nettle"
             ],
-            "elapsed_seconds": 5.996,
+            "elapsed_seconds": 5.038,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -120998,7 +120998,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 4.842,
+            "elapsed_seconds": 4.955,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -121087,7 +121087,7 @@
               "-C",
               "{scratch}/libarchive/candidate/src"
             ],
-            "elapsed_seconds": 0.152,
+            "elapsed_seconds": 0.08,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -121107,7 +121107,7 @@
               "--disable-acl",
               "--without-nettle"
             ],
-            "elapsed_seconds": 4.93,
+            "elapsed_seconds": 5.677,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -121117,7 +121117,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 4.726,
+            "elapsed_seconds": 4.684,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -128623,7 +128623,7 @@
               "--disable-samples",
               "--disable-libevent-regress"
             ],
-            "elapsed_seconds": 2.7,
+            "elapsed_seconds": 2.713,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -128633,7 +128633,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 1.615,
+            "elapsed_seconds": 1.543,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -128728,7 +128728,7 @@
               "-C",
               "{scratch}/libevent/candidate/src"
             ],
-            "elapsed_seconds": 0.017,
+            "elapsed_seconds": 0.018,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -128739,7 +128739,7 @@
               "--disable-samples",
               "--disable-libevent-regress"
             ],
-            "elapsed_seconds": 2.742,
+            "elapsed_seconds": 2.777,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -128749,7 +128749,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 1.631,
+            "elapsed_seconds": 1.552,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -135211,7 +135211,7 @@
               "-C",
               "{scratch}/librdkafka/authority/src"
             ],
-            "elapsed_seconds": 0.042,
+            "elapsed_seconds": 0.043,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -135221,7 +135221,7 @@
               "configure",
               "--enable-ssl"
             ],
-            "elapsed_seconds": 0.781,
+            "elapsed_seconds": 0.792,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -135231,7 +135231,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 6.565,
+            "elapsed_seconds": 6.578,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -135329,7 +135329,7 @@
               "-C",
               "{scratch}/librdkafka/candidate/src"
             ],
-            "elapsed_seconds": 0.043,
+            "elapsed_seconds": 0.042,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -135339,7 +135339,7 @@
               "configure",
               "--enable-ssl"
             ],
-            "elapsed_seconds": 0.79,
+            "elapsed_seconds": 0.781,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -135349,7 +135349,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 8.332,
+            "elapsed_seconds": 6.353,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -135898,7 +135898,7 @@
               "configure",
               "--with-openssl={prefix}"
             ],
-            "elapsed_seconds": 1.454,
+            "elapsed_seconds": 1.478,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -135908,7 +135908,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.564,
+            "elapsed_seconds": 0.585,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -136013,7 +136013,7 @@
               "configure",
               "--with-openssl={prefix}"
             ],
-            "elapsed_seconds": 1.455,
+            "elapsed_seconds": 1.476,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -136023,7 +136023,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.586,
+            "elapsed_seconds": 0.662,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -136385,7 +136385,7 @@
               "-C",
               "{scratch}/libssh/authority/src"
             ],
-            "elapsed_seconds": 0.022,
+            "elapsed_seconds": 0.023,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -136466,7 +136466,7 @@
               "-C",
               "{scratch}/libssh/candidate/src"
             ],
-            "elapsed_seconds": 0.022,
+            "elapsed_seconds": 0.023,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -138211,7 +138211,7 @@
               "-C",
               "{scratch}/links/authority/src"
             ],
-            "elapsed_seconds": 0.343,
+            "elapsed_seconds": 0.366,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -138227,7 +138227,7 @@
               "--without-zstd",
               "--without-libevent"
             ],
-            "elapsed_seconds": 4.245,
+            "elapsed_seconds": 4.063,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -138237,7 +138237,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 2.319,
+            "elapsed_seconds": 2.281,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -138333,7 +138333,7 @@
               "-C",
               "{scratch}/links/candidate/src"
             ],
-            "elapsed_seconds": 0.341,
+            "elapsed_seconds": 0.351,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -138349,7 +138349,7 @@
               "--without-zstd",
               "--without-libevent"
             ],
-            "elapsed_seconds": 4.255,
+            "elapsed_seconds": 4.078,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -138359,7 +138359,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 2.29,
+            "elapsed_seconds": 2.312,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -142111,12 +142111,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "249802:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "249802:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "249802:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "249802:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "249802:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "249802:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "902286:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "902286:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "902286:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "902286:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "902286:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "902286:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -142183,11 +142183,11 @@
         "steps": [],
         "subject": "authority",
         "transcript_excerpt": [
+          "Copyright (C) 2001-2024 Tildeslash Ltd. All Rights Reserved.",
+          "== workload ==",
           "exit=0",
           "== monit -t ==",
           "exit=0",
-          " New Monit id: 7e16e0b8fad3af3c9718ac2f469b4e48",
-          " Stored in '/root/.monit.id'",
           "Control file syntax OK",
           "== authority s_client -brief ==",
           "exit=0",
@@ -142204,7 +142204,7 @@
           "== authority s_client GET ==",
           "exit=0",
           "HTTP/1.0 401 Unauthorized",
-          "Date: Fri, 09 Oct 2026 {clock} GMT",
+          "Date: Sat, 10 Oct 2026 {clock} GMT",
           "Server: monit 5.34.3",
           "Content-Length: 361",
           "Connection: close",
@@ -142224,7 +142224,7 @@
           "depth=0 CN={addr}",
           "verify return:1"
         ],
-        "transcript_sha256": "fc7c642a44ff1c0ba9b4201efeb5e27a77c5d3f24a0f4cef27db056da7165dc9",
+        "transcript_sha256": "f3ab99a832a99a52b12670891689256ea887c8a12f46d6fd41018ae0e3121850",
         "variant_id": "variant:monit:5.34.3:pristine",
         "workload": "monit: TLS httpd handshake + HTTP response",
         "workload_result": {
@@ -142277,12 +142277,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "249820:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "249820:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "249820:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "249820:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "249820:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "249820:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "902304:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "902304:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "902304:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "902304:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "902304:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "902304:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -142370,7 +142370,7 @@
           "== authority s_client GET ==",
           "exit=0",
           "HTTP/1.0 401 Unauthorized",
-          "Date: Fri, 09 Oct 2026 {clock} GMT",
+          "Date: Sat, 10 Oct 2026 {clock} GMT",
           "Server: monit 5.34.3",
           "Content-Length: 361",
           "Connection: close",
@@ -142390,7 +142390,7 @@
           "depth=0 CN={addr}",
           "verify return:1"
         ],
-        "transcript_sha256": "a7adb774635abaf9ecf6b3ec59a6e761178bfb347973a9120ca6474455e8e142",
+        "transcript_sha256": "a1d24420b879c1480f825567b5a94a18f5cc1f33d3e4a8c1444c74e748d380b7",
         "variant_id": "variant:monit:5.34.3:pristine",
         "workload": "monit: TLS httpd handshake + HTTP response",
         "workload_result": {
@@ -142782,7 +142782,7 @@
               "-C",
               "{scratch}/mosquitto/authority/src"
             ],
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.028,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -142796,7 +142796,7 @@
               "WITH_TLS=yes",
               "WITH_BUNDLED_DEPS=yes"
             ],
-            "elapsed_seconds": 0.39,
+            "elapsed_seconds": 0.389,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -142891,7 +142891,7 @@
               "-C",
               "{scratch}/mosquitto/candidate/src"
             ],
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.024,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -142905,7 +142905,7 @@
               "WITH_TLS=yes",
               "WITH_BUNDLED_DEPS=yes"
             ],
-            "elapsed_seconds": 0.39,
+            "elapsed_seconds": 0.387,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -146657,12 +146657,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "439448:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "439448:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "439448:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "439448:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "439448:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "439448:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "1091931:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1091931:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1091931:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1091931:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1091931:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "1091931:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -146754,12 +146754,12 @@
           "exit=0",
           "HTTP/1.1 200 OK",
           "Server: nginx/1.26.3",
-          "Date: Fri, 09 Oct 2026 {clock} GMT",
+          "Date: Sat, 10 Oct 2026 {clock} GMT",
           "Content-Type: text/html",
           "Content-Length: 25",
-          "Last-Modified: Fri, 09 Oct 2026 {clock} GMT",
+          "Last-Modified: Sat, 10 Oct 2026 {clock} GMT",
           "Connection: close",
-          "ETag: \"6ac91259-19\"",
+          "ETag: \"6aca0e09-19\"",
           "Accept-Ranges: bytes",
           "",
           "phase24-runtime-nginx-ok",
@@ -146769,7 +146769,7 @@
           "depth=0 CN={addr}",
           "verify return:1"
         ],
-        "transcript_sha256": "f5c1f1cedf6e55e3d97105312c8022a9e6029b627835dffb10d89855d0f6d04a",
+        "transcript_sha256": "cc6295092a861b417614755e3a85e63e9b7bae9d59369b259c39692e523958f6",
         "variant_id": "variant:nginx:1.26.3:pristine",
         "workload": "nginx: verified TLS1.3 server response",
         "workload_result": {
@@ -146822,12 +146822,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "439466:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "439466:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "439466:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "439466:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "439466:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "439466:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "1091949:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "1091949:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1091949:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1091949:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "1091949:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "1091949:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -146919,12 +146919,12 @@
           "exit=0",
           "HTTP/1.1 200 OK",
           "Server: nginx/1.26.3",
-          "Date: Fri, 09 Oct 2026 {clock} GMT",
+          "Date: Sat, 10 Oct 2026 {clock} GMT",
           "Content-Type: text/html",
           "Content-Length: 25",
-          "Last-Modified: Fri, 09 Oct 2026 {clock} GMT",
+          "Last-Modified: Sat, 10 Oct 2026 {clock} GMT",
           "Connection: close",
-          "ETag: \"6ac91259-19\"",
+          "ETag: \"6aca0e09-19\"",
           "Accept-Ranges: bytes",
           "",
           "phase24-runtime-nginx-ok",
@@ -146934,7 +146934,7 @@
           "depth=0 CN={addr}",
           "verify return:1"
         ],
-        "transcript_sha256": "1272049e8b7cdea79d20b45462cf4816915ac845b1e5ad14fcf2592b19e82e0e",
+        "transcript_sha256": "9140bd0ec40d537aa4ec952433a3d44f68fa1bcceff44a209667879162184f09",
         "variant_id": "variant:nginx:1.26.3:pristine",
         "workload": "nginx: verified TLS1.3 server response",
         "workload_result": {
@@ -152162,14 +152162,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "265460:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
-            "265460:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
-            "265460:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
-            "265460:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
-            "265460:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
-            "265460:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
-            "265460:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
-            "265460:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
+            "917944:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "917944:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "917944:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "917944:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "917944:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "917944:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "917944:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
+            "917944:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -152270,9 +152270,9 @@
           "Write signature to msg.sig",
           "== ssh-keygen -Y verify ==",
           "exit=0",
-          "Good \"file\" signature for runtime with ED25519 key SHA256:wvjGCcjKhvBiFWMTYSh0R1/gxUxZDd+WFPhRxHcRViU"
+          "Good \"file\" signature for runtime with ED25519 key SHA256:6pJOwjy9zT9CLU328+55fPR75KtRmfMv0l1ZwAVGH8k"
         ],
-        "transcript_sha256": "275c969362aa31667c4ea25675938dae863ccc816b7aaf43c07cf44593456f46",
+        "transcript_sha256": "8e91a80a89e285711d1609d490850e7b883436d7b1d0888abb0fb92b7036afd8",
         "variant_id": "variant:openssh:9.9p1:pristine",
         "workload": "openssh: ssh-keygen Ed25519 sign/verify (libcrypto)",
         "workload_result": {
@@ -152320,14 +152320,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "265484:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
-            "265484:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
-            "265484:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
-            "265484:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
-            "265484:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
-            "265484:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
-            "265484:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
-            "265484:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
+            "917968:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "917968:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "917968:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "917968:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "917968:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "917968:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "917968:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
+            "917968:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -152428,9 +152428,9 @@
           "Write signature to msg.sig",
           "== ssh-keygen -Y verify ==",
           "exit=0",
-          "Good \"file\" signature for runtime with ED25519 key SHA256:ZOnEHtOthBBX2DOhl2BQfkgwqp5fGWmIexQ0XiW2oao"
+          "Good \"file\" signature for runtime with ED25519 key SHA256:icg2DPphZYHcqIHRwdhJg+lSW8xRgmYlG230umaMH1E"
         ],
-        "transcript_sha256": "5451c92c217bde5b55f108ca218e85c9ca0ce5d58f88c945372e07d842808b12",
+        "transcript_sha256": "2323dbb0e87fcf009ec59fbb3023553e7c209f10e7fe916aac91253cd90592a7",
         "variant_id": "variant:openssh:9.9p1:pristine",
         "workload": "openssh: ssh-keygen Ed25519 sign/verify (libcrypto)",
         "workload_result": {
@@ -152763,7 +152763,7 @@
         "linkage": {
           "all_under_prefix": true,
           "artifact_rel": "src/openvpn/openvpn",
-          "artifact_sha256": "5c2bda7b709211f5c58fd7a4b231e278d8b5a8f690506e28fd8dbe49a0a3c8dd",
+          "artifact_sha256": "1961222a8a9b035b0b0b7c79b139bc4651a2366b683b55e6ff3d51decdb4d65a",
           "default_resolution": {
             "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
             "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
@@ -152823,7 +152823,7 @@
               "-C",
               "{scratch}/openvpn/authority/src"
             ],
-            "elapsed_seconds": 0.029,
+            "elapsed_seconds": 0.028,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -152837,7 +152837,7 @@
               "--disable-plugin-auth-pam",
               "--silent"
             ],
-            "elapsed_seconds": 3.984,
+            "elapsed_seconds": 4.094,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -152847,7 +152847,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 1.996,
+            "elapsed_seconds": 1.986,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -152883,7 +152883,7 @@
         "linkage": {
           "all_under_prefix": true,
           "artifact_rel": "src/openvpn/openvpn",
-          "artifact_sha256": "822eaa89031d33b8a8d1df7e3ab80c151d1bb49dc7dc4f151b6c6a33f9ba67fe",
+          "artifact_sha256": "9a882bea05eb13feefff5d7571aad0069d3ec98f0e44c1e9c6067c99cc221825",
           "default_resolution": {
             "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
             "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
@@ -152957,7 +152957,7 @@
               "--disable-plugin-auth-pam",
               "--silent"
             ],
-            "elapsed_seconds": 4.007,
+            "elapsed_seconds": 4.028,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -152967,7 +152967,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 2.079,
+            "elapsed_seconds": 2.104,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -160314,7 +160314,7 @@
               "-C",
               "{scratch}/proxytunnel/authority/src"
             ],
-            "elapsed_seconds": 0.003,
+            "elapsed_seconds": 0.014,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -160325,7 +160325,7 @@
               "-j8",
               "SSL_LIBS=-L{prefix}/lib -lssl -lcrypto"
             ],
-            "elapsed_seconds": 0.161,
+            "elapsed_seconds": 0.166,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -160431,7 +160431,7 @@
               "-j8",
               "SSL_LIBS=-L{prefix}/lib -lssl -lcrypto"
             ],
-            "elapsed_seconds": 0.156,
+            "elapsed_seconds": 0.16,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -160779,14 +160779,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "285724:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
-            "285724:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
-            "285724:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
-            "285724:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libssl.so.3",
-            "285724:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
-            "285724:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
-            "285724:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libssl.so.3",
-            "285724:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libssl.so.3"
+            "938207:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "938207:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "938207:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "938207:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libssl.so.3",
+            "938207:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "938207:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "938207:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libssl.so.3",
+            "938207:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libssl.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -160889,12 +160889,12 @@
           "Verification: OK",
           "Negotiated TLS1.3 group: X25519MLKEM768",
           "220 You will be disconnected after 15 minutes of inactivity.",
-          "801B4CD80B7F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
-          "801B4CD80B7F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
+          "80FBC2992C7F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
+          "80FBC2992C7F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
           "== pure-ftpd ==",
           "exit=0"
         ],
-        "transcript_sha256": "6b485af726d21d6e8fe44186d9c23f149774c8a5d395404bfaff1ae7c90636a5",
+        "transcript_sha256": "106d3692259caee4b169f75bd250329484edcc4156145dcedaabda0fd8de6a5c",
         "variant_id": "variant:pure-ftpd:1.0.52:pristine",
         "workload": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS",
         "workload_result": {
@@ -160947,14 +160947,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "285754:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
-            "285754:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
-            "285754:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
-            "285754:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libssl.so.3",
-            "285754:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
-            "285754:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
-            "285754:\t  trying file=/work/artifacts/phase2/install/lib/tls/libssl.so.3",
-            "285754:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libssl.so.3"
+            "938227:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "938227:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "938227:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "938227:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libssl.so.3",
+            "938227:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "938227:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "938227:\t  trying file=/work/artifacts/phase2/install/lib/tls/libssl.so.3",
+            "938227:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libssl.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -161057,12 +161057,12 @@
           "Verification: OK",
           "Peer Temp Key: X25519, 253 bits",
           "220 You will be disconnected after 15 minutes of inactivity.",
-          "80DB3796E17F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
-          "80DB3796E17F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
+          "80EB1599117F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
+          "80EB1599117F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
           "== pure-ftpd ==",
           "exit=0"
         ],
-        "transcript_sha256": "8e8ef021751659de3c50772c869963311069f670b9e206e8f07fd7c7b4a58972",
+        "transcript_sha256": "aaee3495dd6e4355ea3950cc1bc7d4735dbc79a8831019ff2a3a68efc5bb2dcc",
         "variant_id": "variant:pure-ftpd:1.0.52:pristine",
         "workload": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS",
         "workload_result": {
@@ -163927,12 +163927,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "296200:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "296200:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "296200:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "296200:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "296200:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "296200:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "948673:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "948673:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "948673:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "948673:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "948673:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "948673:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -164001,7 +164001,7 @@
         "transcript_excerpt": [
           "== launch ==",
           "exit=0",
-          "Redis server v=7.4.1 sha=75e015c6:0 malloc=jemalloc-5.3.0 bits=64 build=129b4482fea18e2b",
+          "Redis server v=7.4.1 sha=d773511a:0 malloc=jemalloc-5.3.0 bits=64 build=79e699c1b6699eff",
           "== workload ==",
           "exit=0",
           "== authority s_client -brief ==",
@@ -164029,7 +164029,7 @@
           "== redis-server ==",
           "exit=0"
         ],
-        "transcript_sha256": "2716a8c56329999f677026339fcdef9425b3b574a8f19aa0a03dc23ced674126",
+        "transcript_sha256": "cf773776d33aa6290d433e89897c6af5fc54fe81a02ff0f847c7a0dcc9c38e78",
         "variant_id": "variant:redis:7.4.1:pristine",
         "workload": "redis: TLS handshake + encrypted PING/+PONG",
         "workload_result": {
@@ -164082,12 +164082,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "296221:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "296221:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "296221:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "296221:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "296221:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "296221:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "948694:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "948694:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "948694:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "948694:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "948694:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "948694:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -164156,7 +164156,7 @@
         "transcript_excerpt": [
           "== launch ==",
           "exit=0",
-          "Redis server v=7.4.1 sha=75e015c6:0 malloc=jemalloc-5.3.0 bits=64 build=8e5bc7d4455230c0",
+          "Redis server v=7.4.1 sha=d773511a:0 malloc=jemalloc-5.3.0 bits=64 build=564bc29e5c194c4d",
           "== workload ==",
           "exit=0",
           "== authority s_client -brief ==",
@@ -164184,7 +164184,7 @@
           "== redis-server ==",
           "exit=0"
         ],
-        "transcript_sha256": "5f3924085c872c43c39cb4284743deda72ad41ba9ab6003ccb6d8b877cbb4067",
+        "transcript_sha256": "845f85eb81681417a8a5b3666108596373e4bdad7737eda0a82d6390ca071cd8",
         "variant_id": "variant:redis:7.4.1:pristine",
         "workload": "redis: TLS handshake + encrypted PING/+PONG",
         "workload_result": {
@@ -165175,7 +165175,7 @@
               "--disable-zstd",
               "--disable-lz4"
             ],
-            "elapsed_seconds": 3.523,
+            "elapsed_seconds": 3.599,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -165185,7 +165185,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 1.38,
+            "elapsed_seconds": 1.385,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -165287,7 +165287,7 @@
               "--disable-zstd",
               "--disable-lz4"
             ],
-            "elapsed_seconds": 3.533,
+            "elapsed_seconds": 3.588,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -165297,7 +165297,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 1.382,
+            "elapsed_seconds": 1.367,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -168885,7 +168885,7 @@
         "linkage": {
           "all_under_prefix": true,
           "artifact_rel": "socat",
-          "artifact_sha256": "768f83dc253f3f533a71fa65674e88efbce8808fff1cb4372df05814502494c5",
+          "artifact_sha256": "44cf7cb1d884aea553eb3215d25615bcdb6c25dc5616e9dc7e25f1fec15df96d",
           "default_resolution": {
             "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
             "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
@@ -168954,7 +168954,7 @@
               "configure",
               "--disable-readline"
             ],
-            "elapsed_seconds": 5.253,
+            "elapsed_seconds": 5.338,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -168964,7 +168964,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.766,
+            "elapsed_seconds": 0.764,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -169000,7 +169000,7 @@
         "linkage": {
           "all_under_prefix": true,
           "artifact_rel": "socat",
-          "artifact_sha256": "8b0c01d7fbb7c4c62fe8a3c4763eb39d39d3cd6ff80fbb16995ed64a23ca640e",
+          "artifact_sha256": "f6bc1dd487d3d54a680c87d6a591505612221fbd5f6f70847d6e537417e6621d",
           "default_resolution": {
             "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
             "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
@@ -169069,7 +169069,7 @@
               "configure",
               "--disable-readline"
             ],
-            "elapsed_seconds": 5.262,
+            "elapsed_seconds": 5.322,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -169079,7 +169079,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.773,
+            "elapsed_seconds": 0.775,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -170065,7 +170065,7 @@
               "-C",
               "{scratch}/squid/authority/src"
             ],
-            "elapsed_seconds": 0.085,
+            "elapsed_seconds": 0.086,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -170081,7 +170081,7 @@
               "--enable-removal-policies=heap",
               "--without-expat"
             ],
-            "elapsed_seconds": 11.822,
+            "elapsed_seconds": 11.441,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -170091,7 +170091,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 108.476,
+            "elapsed_seconds": 109.086,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -170189,7 +170189,7 @@
               "-C",
               "{scratch}/squid/candidate/src"
             ],
-            "elapsed_seconds": 0.085,
+            "elapsed_seconds": 0.086,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -170205,7 +170205,7 @@
               "--enable-removal-policies=heap",
               "--without-expat"
             ],
-            "elapsed_seconds": 12.127,
+            "elapsed_seconds": 11.331,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -170215,7 +170215,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 108.369,
+            "elapsed_seconds": 108.062,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -170991,7 +170991,7 @@
         "linkage": {
           "all_under_prefix": true,
           "artifact_rel": "sslscan",
-          "artifact_sha256": "feb330d3964beed34c63d764ca8c2e6d32bcc11d49cb729695b3bd1fb4b0f1f8",
+          "artifact_sha256": "48050b45c9169b074e9f6e30471d5877ac3b8a0931bf47da988b4d2ed2af1399",
           "default_resolution": {
             "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
             "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
@@ -171060,7 +171060,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.215,
+            "elapsed_seconds": 0.209,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -171096,7 +171096,7 @@
         "linkage": {
           "all_under_prefix": true,
           "artifact_rel": "sslscan",
-          "artifact_sha256": "feb330d3964beed34c63d764ca8c2e6d32bcc11d49cb729695b3bd1fb4b0f1f8",
+          "artifact_sha256": "48050b45c9169b074e9f6e30471d5877ac3b8a0931bf47da988b4d2ed2af1399",
           "default_resolution": {
             "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
             "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
@@ -171165,7 +171165,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.214,
+            "elapsed_seconds": 0.211,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -171418,7 +171418,7 @@
               "configure",
               "--enable-ssl"
             ],
-            "elapsed_seconds": 0.223,
+            "elapsed_seconds": 0.225,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -171428,7 +171428,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.217,
+            "elapsed_seconds": 0.219,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -171533,7 +171533,7 @@
               "configure",
               "--enable-ssl"
             ],
-            "elapsed_seconds": 0.222,
+            "elapsed_seconds": 0.223,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -172244,7 +172244,7 @@
               "--disable-libwrap",
               "--disable-fips"
             ],
-            "elapsed_seconds": 1.899,
+            "elapsed_seconds": 1.939,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -172254,7 +172254,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.506,
+            "elapsed_seconds": 0.512,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -172363,7 +172363,7 @@
               "--disable-libwrap",
               "--disable-fips"
             ],
-            "elapsed_seconds": 1.883,
+            "elapsed_seconds": 1.91,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -172373,7 +172373,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.509,
+            "elapsed_seconds": 0.52,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -175285,7 +175285,7 @@
               "--disable-lzo",
               "--disable-zlib"
             ],
-            "elapsed_seconds": 2.306,
+            "elapsed_seconds": 2.327,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -175295,7 +175295,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.428,
+            "elapsed_seconds": 0.419,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -175395,7 +175395,7 @@
               "--disable-lzo",
               "--disable-zlib"
             ],
-            "elapsed_seconds": 2.295,
+            "elapsed_seconds": 2.342,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -175405,7 +175405,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.426,
+            "elapsed_seconds": 0.416,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -175658,7 +175658,7 @@
               "configure",
               "--disable-editcomplete"
             ],
-            "elapsed_seconds": 2.811,
+            "elapsed_seconds": 2.868,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -175668,7 +175668,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.698,
+            "elapsed_seconds": 0.693,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -175773,7 +175773,7 @@
               "configure",
               "--disable-editcomplete"
             ],
-            "elapsed_seconds": 2.812,
+            "elapsed_seconds": 2.846,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -175783,7 +175783,7 @@
               "make",
               "-j8"
             ],
-            "elapsed_seconds": 0.695,
+            "elapsed_seconds": 0.69,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -207702,7 +207702,7 @@
       }
     ]
   },
-  "body_hash": "1f7d0e22318c8b7dd808c4b4a87cd52df49612ca2a14f65da4a01bca271bf9d1",
+  "body_hash": "6399fda5c2819ba4e790e5bf0581fa14acbdf71ba99884e49fc52b2cd81b127d",
   "generator": "forensics/tools/downstream_p1000_run.py",
   "inputs": [
     {
@@ -207713,7 +207713,7 @@
     {
       "name": "candidate-freeze",
       "path": "forensics/downstream/candidate-freeze.json",
-      "sha256": "9fa192085e0d9aedfdd8d3bfacb172227cd916a4d1f9c9e336199f4f0c93c3c1"
+      "sha256": "3493b6dd04139c3a3019a2031fa5eb5c88baad110b5bc6ed07b4b0508e4e3eb6"
     },
     {
       "name": "holdout",

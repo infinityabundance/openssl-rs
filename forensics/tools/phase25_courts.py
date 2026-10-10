@@ -1392,14 +1392,18 @@ def _ms_miri_court(name: str) -> dict:
             "pure checks (ms_miri.miri_findings and ms_miri.miri_sensitivity_control) over it and the "
             "committed 25.1 census it classifies -- no Miri, no nightly, no compiler. The plane records "
             "a per-census-site Miri state (MIRI_PASS / MIRI_FAIL / MIRI_NOT_REACHABLE / "
-            "MIRI_UNSUPPORTED), the runs (command hash, aliasing model, outcome), the findings and the "
-            "residuals. Miri is an interpreter: it executes Rust's MIR and refuses a foreign function "
+            "MIRI_UNSUPPORTED), the runs (command hash, aliasing model, outcome), the findings, each "
+            "finding's disposition (FIXED / ADJUDICATED / OPEN) and the residuals. Every MIRI_FAIL "
+            "site carries a disposition; a FIXED disposition cites the targeted harness(es) now green "
+            "and the source files the fix is bound to, and the court recomputes those digests and "
+            "refuses a FIXED whose targeted run is absent or not PASS or whose bound source has "
+            "drifted. Miri is an interpreter: it executes Rust's MIR and refuses a foreign function "
             "it cannot interpret, so the crate's first-party C adapters and raw FFI are UNSUPPORTED, "
             "recorded with the precise reason; an unsupported site is never read as a pass. The "
             "crate-wide harness aborts at its first undefined-behaviour finding, so most sites are "
             "NOT_REACHABLE rather than clean, and the two aliasing models (Stacked Borrows and Tree "
             "Borrows) are run wherever practical -- a disagreement is a preserved review item, never "
-            "averaged away. Five seeded mutations are each caught with specificity holding "
+            "averaged away. Seven seeded mutations are each caught with specificity holding "
             "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6)."
         ),
         "frf_declarable": False,
@@ -1415,6 +1419,7 @@ def _ms_miri_court(name: str) -> dict:
             "unsupported": counts.get("unsupported", 0),
             "runs": len(body.get("runs") or []),
             "findings": len(body.get("findings") or []),
+            "dispositions": len(body.get("dispositions") or []),
             "residuals": len(body.get("residuals") or []),
         },
         "runs": [
@@ -1423,6 +1428,7 @@ def _ms_miri_court(name: str) -> dict:
             for r in body.get("runs") or []
         ],
         "findings": list(body.get("findings") or []),
+        "dispositions": list(body.get("dispositions") or []),
         "control": control,
         "problems": problems,
         "verdict": verdict,
