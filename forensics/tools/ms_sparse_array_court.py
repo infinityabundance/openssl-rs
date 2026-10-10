@@ -17,10 +17,14 @@ answers all three by **measurement**, not prose:
      handed — `property/store.rs`'s `alg_cleanup` does exactly that from
      `ossl_method_store_free`. The obligation and its evidence travel in the transcript.
 
-  3. **Differential conservation.** One deterministic sequence — insert, replace, remove, depth
+  3. **Differential conservation.** One deterministic sequence -- insert, replace, remove, depth
      growth, the `u64::MAX` / `1<<60` boundaries, traversal order, cleanup, allocator callbacks
-     and the failure answer — is driven against both implementations and compared field by
-     field, so the comparison is a machine-readable artefact rather than a paragraph.
+     and the failure answer -- is driven against both implementations and compared field by
+     field, so the comparison is a machine-readable artefact rather than a paragraph. The
+     allocator counters are read **after** each sequence's cleanup, so the comparison covers the
+     release path and not construction alone: the success sequence's counters are the array's own
+     construction and release, and the injected-failure sequence's cleanup is a measured fact
+     too.
 
 Outputs
 -------
@@ -70,12 +74,80 @@ HARNESS_TEST = "runtime::sparse_array_probe::sparse_array_under_installed_alloca
 
 # The fields compared exactly: the observable return values, the state, the walk order and the
 # allocation counts. `alloc.sizes` is compared separately because the owned node's block size
-# differs (see the recorded adjudication).
+# differs (see the recorded adjudication). The malloc/free counts are read **after** the release
+# path has run on both sides, so the comparison covers cleanup, not construction alone.
 _EXACT_SCALARS = ("installed", "new", "num")
 _EXACT_LISTS = ("set_ret", "get", "order")
 _FAILScalars = ("set_ret", "num", "get_null", "levels", "retry_ret", "retry_num")
+# The allocator counters that live under `alloc.`, the construction-and-release observation of the
+# success sequence. A mismatch is an ALLOCATION_COUNT divergence rather than a behavioural one.
+_ALLOC_COUNT_FIELDS = ("alloc.malloc", "alloc.free")
 
 _JSON_LINE = re.compile(r"^\s*SPARSE_JSON (\{.*\})\s*$", re.MULTILINE)
+
+# The attribution control. The injected-failure sequence's allocator counters diverge because the
+# authority's first refused allocation reaches `ossl_report_alloc_err` (`crypto/mem.c:218`, raised
+# as `ERR_R_MALLOC_FAILURE`), and the authority's **first** error raise lazily initialises the
+# error-reporting subsystem -- per-thread `ERR_STATE` and the error strings -- through the very
+# allocator hook the probe installed, while the crate's error state is a static structure and its
+# string tables are compiled in. This control proves that attribution by measurement rather than
+# prose: it drives the same failure with the error subsystem **cold** and **pre-warmed**, and the
+# extra allocations must collapse in the pre-warmed run. If they did not, the divergence would be
+# the array's own and the adjudication would be wrong.
+_CONTROL_C = r'''
+#include <openssl/crypto.h>
+#include <openssl/err.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct sparse_array_st OPENSSL_SA;
+extern OPENSSL_SA *ossl_sa_new(void);
+extern int ossl_sa_set(OPENSSL_SA *sa, uint64_t n, void *val);
+
+static long g_mallocs;
+static int g_fail_next;
+
+static void *hook_malloc(size_t n, const char *file, int line)
+{
+    (void)file; (void)line;
+    if (g_fail_next) { g_fail_next = 0; return NULL; }
+    g_mallocs++;
+    return malloc(n);
+}
+static void *hook_realloc(void *p, size_t n, const char *file, int line)
+{
+    (void)file; (void)line;
+    return realloc(p, n);
+}
+static void hook_free(void *p, const char *file, int line)
+{
+    (void)file; (void)line;
+    free(p);
+}
+
+int main(int argc, char **argv)
+{
+    CRYPTO_set_mem_functions(hook_malloc, hook_realloc, hook_free);
+    if (argc > 1 && argv[1][0] == 'p') {
+        /* Force the error-reporting subsystem to initialise before measuring. */
+        ERR_new();
+        ERR_set_debug("control", 1, "warm");
+        ERR_set_error(1, 1, "warm");
+        (void)ERR_get_error();
+    }
+    g_mallocs = 0;
+    OPENSSL_SA *f = ossl_sa_new();
+    long after_new = g_mallocs;
+    g_fail_next = 1;
+    int r = ossl_sa_set(f, 0x100, (void *)0x1);
+    long after_fail = g_mallocs;
+    printf("CONTROL prewarm=%d after_new=%ld after_failed_set=%ld ret=%d err=%s\n",
+           argc > 1 ? 1 : 0, after_new, after_fail, r,
+           ERR_peek_error() ? "raised" : "none");
+    return 0;
+}
+'''
 
 
 def _run(argv: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
@@ -166,6 +238,102 @@ def _node_size_divergence(a: dict, c: dict) -> list[dict]:
     }]
 
 
+def _failure_allocator_divergence(fa: dict, fc: dict) -> list[dict]:
+    """The injected-failure sequence's allocator counters, recorded and adjudicated.
+
+    The **success** sequence's counters are the array's own construction **and** release, and they
+    match exactly (see `compare`): the release path fires the hooks on both sides. The
+    **injected-failure** sequence's raw counters are not comparable at that granularity, because the
+    refused node allocation reaches the authority's `ossl_report_alloc_err`, whose first call creates
+    the per-thread `ERR_STATE` and loads the whole crypto error-string table **through the
+    caller-installed hook** -- a one-time global initialisation of roughly fifteen hundred
+    allocations -- while the crate's per-thread error state is a static structure and its string
+    tables are compiled in. The divergence is the error-reporting subsystem, not the sparse array's
+    release path, so it is recorded and adjudicated rather than read as an array divergence.
+    """
+    out: list[dict] = []
+    for key in ("malloc", "free"):
+        if fa.get(key) != fc.get(key):
+            out.append({
+                "field": f"fail.{key}",
+                "class": "ALLOCATION_COUNT",
+                "authority": fa.get(key),
+                "candidate": fc.get(key),
+                "adjudication": "accepted",
+                "reason": (
+                    "the injected-failure sequence's raw counters are dominated by the authority's "
+                    "one-time lazy error-reporting initialisation: the refused node allocation "
+                    "reaches `ossl_report_alloc_err` (`crypto/mem.c`), which raises "
+                    "`ERR_R_MALLOC_FAILURE` and, on the authority's first raise, lazily initialises "
+                    "the per-thread `ERR_STATE` and the error strings through the installed hook, "
+                    "whereas the crate's per-thread error state is a static structure and its "
+                    "string tables are compiled in. The sparse array's own allocations and releases "
+                    "are the header and the retry's nodes on both sides, so the divergence is the "
+                    "error subsystem, not the array. Proven by the cold/pre-warmed control recorded "
+                    "in `allocator_conservation.injected_failure_sequence.mechanism_control`"
+                ),
+            })
+    return out
+
+
+def _failure_mechanism_control() -> dict:
+    """Prove -- by a cold/pre-warmed control -- that the injected-failure divergence is the
+    authority's one-time error-reporting initialisation and not the sparse array's own work.
+
+    The control drives one refused `ossl_sa_set` under the installed hook twice: once with the
+    error subsystem cold, once after a warm-up raise. If the extra cold-run allocations really are
+    the error subsystem's lazily-loaded state and strings, they collapse in the pre-warmed run; if
+    they were the array's own allocations, they would not move. The measured pair is recorded, so
+    the `fail.malloc`/`fail.free` adjudication cites an experiment rather than a belief.
+    """
+    src = Path("/tmp/ms_sa_alloc_control.c")
+    binpath = Path("/tmp/ms_sa_alloc_control")
+    src.write_text(_CONTROL_C, encoding="utf-8")
+    cmd = [
+        "clang", "-std=c11", "-O1",
+        f"-I{AUTHORITY_PREFIX}/include",
+        "-o", str(binpath), str(src),
+        f"{AUTHORITY_PREFIX}/lib/libcrypto.a",
+        "-lpthread", "-ldl", "-lm",
+    ]
+    res = _run(cmd)
+    if res.returncode != 0:
+        return {"status": "UNAVAILABLE", "reason": res.stderr[-400:]}
+    cold = _run([str(binpath)])
+    warm = _run([str(binpath), "p"])
+
+    def parse(text: str) -> dict:
+        m = re.search(r"prewarm=(\d) after_new=(\d+) after_failed_set=(\d+) ret=(-?\d+) err=(\w+)",
+                      text)
+        if not m:
+            return {}
+        return {"prewarm": bool(int(m.group(1))), "after_new": int(m.group(2)),
+                "after_failed_set": int(m.group(3)), "ret": int(m.group(4)), "err": m.group(5)}
+
+    cp, wp = parse(cold.stdout), parse(warm.stdout)
+    cold_extra = cp.get("after_failed_set", 0) - cp.get("after_new", 0)
+    warm_extra = wp.get("after_failed_set", 0) - wp.get("after_new", 0)
+    attributed = (cold_extra > 100 and warm_extra < 10 and cp.get("err") == "raised"
+                  and cp.get("ret") == 0 and wp.get("ret") == 0)
+    return {
+        "status": "ATTRIBUTED" if attributed else "UNATTRIBUTED",
+        "cold": cp,
+        "prewarmed": wp,
+        "cold_extra_allocations": cold_extra,
+        "prewarmed_extra_allocations": warm_extra,
+        "conclusion": (
+            "the refused allocation raises `ERR_R_MALLOC_FAILURE` through `ossl_report_alloc_err` "
+            "(`crypto/mem.c`); with the error subsystem cold that first raise lazily initialises "
+            "it through the installed hook ("f"{cold_extra} allocations""), and with it pre-warmed "
+            f"the same refusal costs {warm_extra}. The divergence is the error subsystem, not the "
+            "array's own allocations, which are the header and the retry's nodes on both sides"
+        ) if attributed else (
+            "the control did not reproduce the attribution; the `fail.malloc`/`fail.free` "
+            "divergence must be treated as unadjudicated until it is explained"
+        ),
+    }
+
+
 def compare(a: dict, c: dict) -> dict:
     """Field-by-field comparison of the authority's and the crate's transcripts."""
     matches: dict[str, bool] = {}
@@ -182,23 +350,31 @@ def compare(a: dict, c: dict) -> dict:
     fa, fc = ta.get("fail") or {}, tc.get("fail") or {}
     for k in _FAILScalars:
         matches[f"fail.{k}"] = fa.get(k) == fc.get(k)
+    # The injected-failure sequence's own allocator counters, read after its cleanup. They are
+    # recorded in `matches` (so `all_match` reflects them) but adjudicated by
+    # `_failure_allocator_divergence` rather than as a bare behavioural mismatch.
+    matches["fail.malloc"] = fa.get("malloc") == fc.get("malloc")
+    matches["fail.free"] = fa.get("free") == fc.get("free")
 
     for k, ok in matches.items():
-        if not ok:
-            tkey = k.split(".", 1)
-            if k.startswith("fail."):
-                divergences.append({"field": k, "class": "BEHAVIOUR",
-                                    "authority": fa.get(tkey[1]), "candidate": fc.get(tkey[1]),
-                                    "adjudication": "unadjudicated", "reason": ""})
-            elif k.startswith("alloc."):
-                divergences.append({"field": k, "class": "ALLOCATION_COUNT",
-                                    "authority": k, "candidate": k,
-                                    "adjudication": "unadjudicated", "reason": ""})
-            else:
-                divergences.append({"field": k, "class": "BEHAVIOUR",
-                                    "authority": ta.get(k), "candidate": tc.get(k),
-                                    "adjudication": "unadjudicated", "reason": ""})
+        if ok or k in ("fail.malloc", "fail.free"):
+            continue
+        tkey = k.split(".", 1)
+        if k in _ALLOC_COUNT_FIELDS:
+            divergences.append({"field": k, "class": "ALLOCATION_COUNT",
+                                "authority": ta.get("alloc", {}).get(tkey[1]),
+                                "candidate": tc.get("alloc", {}).get(tkey[1]),
+                                "adjudication": "unadjudicated", "reason": ""})
+        elif k.startswith("fail."):
+            divergences.append({"field": k, "class": "BEHAVIOUR",
+                                "authority": fa.get(tkey[1]), "candidate": fc.get(tkey[1]),
+                                "adjudication": "unadjudicated", "reason": ""})
+        else:
+            divergences.append({"field": k, "class": "BEHAVIOUR",
+                                "authority": ta.get(k), "candidate": tc.get(k),
+                                "adjudication": "unadjudicated", "reason": ""})
 
+    divergences += _failure_allocator_divergence(fa, fc)
     divergences += _node_size_divergence(ta, tc)
     return {
         "matches": {k: matches[k] for k in sorted(matches)},
@@ -242,6 +418,62 @@ def _load(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _allocator_conservation(authority: dict, candidate: dict) -> dict:
+    """The allocator conservation evidence, read from the post-cleanup counters on both sides.
+
+    Both transcripts read their counters **after** their release call, so the free count is the
+    release path's own observation. The success sequence releases the live values, the nodes and the
+    header; the injected-failure sequence releases the retry's nodes and the header. The
+    array-attributable counts match on both sides; the only array-observable residual is the node's
+    block size, recorded here and adjudicated in `comparison.divergences`.
+    """
+    ta, tc = authority["transcript"], candidate["transcript"]
+    aa, ca = ta.get("alloc", {}), tc.get("alloc", {})
+    fa, fc = ta.get("fail") or {}, tc.get("fail") or {}
+    return {
+        "measured_after_cleanup": True,
+        "success_sequence": {
+            "release_call": "ossl_sa_free_leaves",
+            "authority": {"malloc": aa.get("malloc"), "free": aa.get("free")},
+            "candidate": {"malloc": ca.get("malloc"), "free": ca.get("free")},
+            "release_observed": bool(aa.get("free")) and bool(ca.get("free")),
+            "match": (aa.get("malloc") == ca.get("malloc")
+                      and aa.get("free") == ca.get("free")),
+            "note": (
+                "the counters are read after `ossl_sa_free_leaves`, so the free count covers the "
+                "release path: the five live values, the nodes and the header. `malloc` exceeds "
+                "`free` by the two caller-owned values the replace and the remove orphaned, which "
+                "the array does not own and `free_leaves` does not release, so both sides read the "
+                "same 57/55"),
+        },
+        "injected_failure_sequence": {
+            "release_call": "ossl_sa_free",
+            "authority": {"malloc": fa.get("malloc"), "free": fa.get("free")},
+            "candidate": {"malloc": fc.get("malloc"), "free": fc.get("free")},
+            "release_observed": bool(fa.get("free")) and bool(fc.get("free")),
+            "match": (fa.get("malloc") == fc.get("malloc")
+                      and fa.get("free") == fc.get("free")),
+            "mechanism_control": _failure_mechanism_control(),
+            "note": (
+                "read after `ossl_sa_free`; the free count covers the retry's nodes and the header "
+                "and so fires the hooks on both sides. The raw counts diverge because the refusal "
+                "reaches the authority's one-time lazy error-reporting initialisation, recorded as "
+                "the adjudicated `fail.malloc`/`fail.free` divergence and proven by the cold/pre- "
+                "warmed control in `mechanism_control`"),
+        },
+        "residual": [
+            {
+                "field": "alloc.sizes[node blocks]",
+                "class": "NODE_BLOCK_SIZE",
+                "authority": "128 bytes (SA_BLOCK_MAX * sizeof(void *))",
+                "candidate": "136 bytes (the owned enum's one-byte discriminant)",
+                "status": "admitted allocator-observable divergence under the bounded claim, not "
+                          "papered over",
+            },
+        ],
+    }
+
+
 def build_body() -> dict:
     authority = run_authority()
     candidate = run_candidate()
@@ -260,13 +492,15 @@ def build_body() -> dict:
             "comparison": (
                 "every observable field is compared exactly -- the install result, the fresh/new "
                 "result, the `set` return vector, the count, the `get` tag vector, the walk order, "
-                "the malloc/free counts and the whole failure-injection block -- and the allocation "
-                "sizes are compared with the owned node's block size adjudicated"),
+                "the malloc/free counts read **after** each sequence's cleanup, and the whole "
+                "failure-injection block -- and the allocation sizes are compared with the owned "
+                "node's block size adjudicated"),
         },
         "allocator_hook": {
             "installed": True,
             "failure_injection": "one-shot: the first node allocation of a fresh array answers NULL",
         },
+        "allocator_conservation": _allocator_conservation(authority, candidate),
         "authority": authority,
         "candidate": candidate,
         "comparison": cmp_,
@@ -291,7 +525,12 @@ def build_body() -> dict:
             "a matching transcript is not a memory-safety proof: it compares the modelled behaviour "
             "on one deterministic sequence, not every input the authority admits",
             "the accepted node-size divergence is a recorded difference, not an equivalence: an "
-            "allocator hook that keys on the exact block size can observe it",
+            "allocator hook that keys on the exact block size can observe it, and it remains an "
+            "admitted allocator-observable divergence under the bounded claim",
+            "the injected-failure sequence's raw malloc/free counters are not compared as an "
+            "exact match: its refusal reaches the authority's one-time lazy error-reporting "
+            "initialisation, so that divergence is adjudicated (see comparison.divergences) rather "
+            "than read as an array divergence",
         ],
     }
 
@@ -313,6 +552,14 @@ def differential_findings(body: dict) -> list[str]:
         problems.append("the differential carries an unadjudicated divergence")
     if not cmp_.get("all_match") and not _adjudicated(body):
         problems.append("a behavioural field differs and no adjudication covers it")
+    # The injected-failure allocator divergence is adjudicated only if the cold/pre-warmed control
+    # actually attributes it to the authority's one-time error-subsystem initialisation. An
+    # UNAVAILABLE/UNATTRIBUTED control must not let the divergence pass as explained.
+    ctl = (((body.get("allocator_conservation") or {}).get("injected_failure_sequence") or {})
+           .get("mechanism_control") or {})
+    if not cmp_.get("all_match") and ctl.get("status") != "ATTRIBUTED":
+        problems.append("the injected-failure allocator divergence is not attributed by the "
+                        f"cold/pre-warmed control (status={ctl.get('status')!r})")
     ob = body.get("reentrancy_obligation") or {}
     if not ob.get("evidence"):
         problems.append("the re-entrancy obligation carries no evidence")
@@ -378,12 +625,12 @@ def _check() -> int:
 
 
 def self_test() -> int:
-    """Prove the comparator catches a behavioural divergence and tollerates an adjudicated one."""
+    """Prove the comparator catches a behavioural divergence and adjudicates the recorded ones."""
     failures: list[str] = []
     base = {"installed": 1, "new": True, "num": 5, "set_ret": [1, 1], "get": [5, 2],
-            "order": [2, 3], "alloc": {"malloc": 9, "free": 0, "sizes": [8, 8, 32, 128, 128]},
+            "order": [2, 3], "alloc": {"malloc": 9, "free": 9, "sizes": [8, 8, 32, 128, 128]},
             "fail": {"set_ret": 0, "num": 0, "get_null": True, "levels": 0, "retry_ret": 1,
-                     "retry_num": 1}}
+                     "retry_num": 1, "malloc": 1566, "free": 10}}
     cand = json.loads(json.dumps(base))
     cand["alloc"]["sizes"] = [8, 8, 32, 136, 136]
     a = {"transcript": base, "impl": "openssl-3.6.4"}
@@ -393,6 +640,15 @@ def self_test() -> int:
         failures.append(f"the comparator mis-handles the node-size divergence: {ok}")
     if not _adjudicated({"comparison": ok}):
         failures.append("the comparator does not adjudicate the node-size divergence")
+    # The injected-failure allocator divergence is adjudicated, not left unadjudicated.
+    cand3 = json.loads(json.dumps(base))
+    cand3["fail"]["malloc"] = 7
+    cand3["fail"]["free"] = 6
+    alloc_div = compare(a, {"transcript": cand3, "impl": "openssl-rs"})
+    if alloc_div["all_match"] or alloc_div["unadjudicated"] \
+            or not _adjudicated({"comparison": alloc_div}):
+        failures.append("the comparator does not adjudicate the injected-failure allocator "
+                        f"divergence: {alloc_div}")
     # A behavioural difference must be unadjudicated.
     cand2 = json.loads(json.dumps(base))
     cand2["get"] = [5, 9]
@@ -404,8 +660,8 @@ def self_test() -> int:
         for f in failures:
             print(f"  {f}")
         return 1
-    print("[ms-sa-court] self-test ok: a node-size difference is adjudicated and tolerated, a "
-          "behavioural difference is refused as unadjudicated")
+    print("[ms-sa-court] self-test ok: the node-size and injected-failure allocator differences are "
+          "adjudicated and tolerated, a behavioural difference is refused as unadjudicated")
     return 0
 
 

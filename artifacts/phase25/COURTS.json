@@ -1,7 +1,7 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "all_pass": true,
+    "all_pass": false,
     "authority": "openssl-3.6.4-production",
     "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census, and **25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable compiler-derived sites that records each candidate safe-intrinsic replacement, the sites that remain named rather than dropped, and the frozen post-reduction census, and is a local-replacement feasibility census rather than an impossibility result, and **25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its tool state and its unsupported reason where Miri could not express the question, so an unsupported site is never read as a pass. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining twelve of its twenty-two courts -- MS-ASAN-MSMAN, MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.10 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
@@ -45,49 +45,49 @@
           "UNSAFE_IMPL": 135
         },
         "control": {
-          "baseline_findings": 0,
+          "baseline_findings": 3,
           "caught": 6,
-          "honest": true,
+          "honest": false,
           "mutations": {
             "add_raw_deref": {
               "caught": true,
               "delta": 6,
-              "findings": 6,
+              "findings": 9,
               "marker": "which the compiler did not report"
             },
             "drop_file": {
               "caught": true,
               "delta": 2,
-              "findings": 2,
+              "findings": 5,
               "marker": "is not accounted for"
             },
             "forge_site_safe": {
               "caught": true,
               "delta": 2,
-              "findings": 2,
+              "findings": 5,
               "marker": "is not compiler-derived"
             },
             "fuse_two_operations": {
               "caught": true,
               "delta": 5,
-              "findings": 5,
+              "findings": 8,
               "marker": "must yield N sites"
             },
             "hide_unsafe_in_macro": {
               "caught": true,
               "delta": 3,
-              "findings": 3,
+              "findings": 6,
               "marker": "which the compiler did not report"
             },
             "remove_safety_contract": {
               "caught": true,
               "delta": 1,
-              "findings": 1,
+              "findings": 4,
               "marker": "must state its safety contract"
             }
           },
           "seeded": 6,
-          "specificity_holds": true
+          "specificity_holds": false
         },
         "counts": {
           "contexts_without_site": 6664,
@@ -121,7 +121,11 @@
         },
         "method": "stages no probe: it reads the committed artifacts/phase25/source-census.json and re-runs the 25.1 pure checks (ms_census.census_findings and ms_census.census_sensitivity_control) over it, without a compiler. The census was derived by one clippy run with the built-in `unsafe_code` lint (the enumerating authority) plus the three named documentation lints, --message-format=json, and the macro-expanded source from a pinned nightly. It establishes file coverage, compiler-derivedness of every site, stable/unique ids, consistent back-references, derived counts and the LOC split, and that every cross-check disagreement is a classified residual; five seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.2).",
         "probe": "",
-        "problems": [],
+        "problems": [
+          "src/runtime/sparse_array_probe.rs: recorded file_sha256 does not match the file on disk",
+          "context uc-8755dce7623d4b6a: the census records 1 operation(s) but the source enumerates 1; a context with N operations must yield N sites (missing [('UNSAFE_METHOD_CALL', 7714, 7718)], extra [('UNSAFE_FUNCTION_CALL', 7708, 7727)])",
+          "context uc-3711457f7ff9ac90: the census records 14 operation(s) but the source enumerates 11; a context with N operations must yield N sites (missing [('RAW_POINTER_DEREFERENCE', 8573, 8574), ('UNSAFE_FUNCTION_CALL', 8331, 8342), ('UNSAFE_FUNCTION_CALL', 8411, 8422)], extra [('RAW_POINTER_DEREFERENCE', 8269, 8270), ('UNSAFE_FUNCTION_CALL', 8027, 8038), ('UNSAFE_FUNCTION_CALL', 8107, 8118)])"
+        ],
         "sites_by_kind": {
           "EXTERN_FUNCTION_CALL": 10,
           "FFI_EXPORT": 6565,
@@ -153,7 +157,7 @@
           "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
           "rustc_commit": "48a229ceaefd4985c50990b14116b6d856af0985"
         },
-        "verdict": "pass"
+        "verdict": "fail"
       },
       {
         "control": {
@@ -300,37 +304,37 @@
       },
       {
         "control": {
-          "baseline_findings": 0,
+          "baseline_findings": 3,
           "caught": 4,
-          "honest": true,
+          "honest": false,
           "mutations": {
             "frees_without_allocation": {
               "caught": true,
               "delta": 2,
-              "findings": 2,
+              "findings": 5,
               "marker": "FREES"
             },
             "refcount_decrement_without_increment": {
               "caught": true,
               "delta": 1,
-              "findings": 1,
+              "findings": 4,
               "marker": "ownership_edges"
             },
             "send_sync_without_justification": {
               "caught": true,
               "delta": 3,
-              "findings": 3,
+              "findings": 6,
               "marker": "justification"
             },
             "unknown_panic_hidden": {
               "caught": true,
               "delta": 1,
-              "findings": 1,
+              "findings": 4,
               "marker": "panic_boundaries"
             }
           },
           "seeded": 4,
-          "specificity_holds": true
+          "specificity_holds": false
         },
         "counts": {
           "allocation_sites": 2418,
@@ -377,8 +381,12 @@
         "frf_exclusion": "the ownership-planes court reads the committed plane and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
         "method": "stages no probe: it reads the committed artifacts/phase25/ownership-planes.json and re-runs the 25.4 pure checks (ms_ownership_planes.ownership_findings and ms_ownership_planes.ownership_sensitivity_control) over it, the committed 25.1 census, the committed 25.2 non-Rust TCB and the committed source tree, without a compiler. The plane is a pure derivation: each compiler-derived site is classified from its own comment-stripped context text against the recorded allocation/convention tables, and the panic boundary is classified from the exported body. It establishes that every plane equals the derivation, that every record validates, that every FREES edge is matched or found, that every callback has a lifetime, that every unsafe Send/Sync has a justification, that no UNKNOWN panic class is hidden, and that every count is derived; four seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.8).",
         "probe": "",
-        "problems": [],
-        "verdict": "pass"
+        "problems": [
+          "ownership_edges: the plane records oe:85d3132f0a57d415, which is not derived",
+          "counts.ownership_edges=8976 is not the derived 8975",
+          "counts.ownership_edges_by_kind={'ALLOCATES': 926, 'BORROWS': 101, 'DECREMENTS_REFCOUNT': 6020, 'FREES': 1468, 'INCREMENTS_REFCOUNT': 326, 'RETURNS_OWNERSHIP': 5, 'TRANSFERS_OWNERSHIP': 130} is not the derived {'ALLOCATES': 926, 'BORROWS': 101, 'DECREMENTS_REFCOUNT': 6019, 'FREES': 1468, 'INCREMENTS_REFCOUNT': 326, 'RETURNS_OWNERSHIP': 5, 'TRANSFERS_OWNERSHIP': 130}"
+        ],
+        "verdict": "fail"
       },
       {
         "control": {
@@ -1518,8 +1526,8 @@
       }
     },
     "summary": {
-      "fail": 0,
-      "pass": 10,
+      "fail": 2,
+      "pass": 8,
       "total": 10
     },
     "tool_states": [
@@ -1708,7 +1716,7 @@
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "3a3a14b426213630ac6ddecb4e9eb414b09cc40ff26d9d7536ad60dbd0328ce5"
+      "sha256": "58504b19e6b4e32e37e080225e4f370bdbb2973da7bd0cb6700316ee7d757f9e"
     },
     {
       "name": "ms-reduction-tool",

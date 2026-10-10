@@ -204,6 +204,13 @@ fn sparse_array_under_installed_allocator() {
     }
     out += "],";
 
+    // Release values, nodes and header **before** reading the counters, so the recorded
+    // comparison covers the release path too -- the value, node and header frees -- not just
+    // construction. This closes the measurement gap where `free` read 0 on both sides simply
+    // because neither side had been asked to release anything yet.
+    // SAFETY: `sa` is live and this harness owns every value.
+    unsafe { ossl_sa_free_leaves(sa) };
+
     {
         let malloc_count = MALLOCS.load(Ordering::SeqCst);
         let free_count = FREES.load(Ordering::SeqCst);
@@ -214,10 +221,6 @@ fn sparse_array_under_installed_allocator() {
         }
         out += "]},";
     }
-
-    // Release values, nodes and header.
-    // SAFETY: `sa` is live and this harness owns every value.
-    unsafe { ossl_sa_free_leaves(sa) };
 
     MALLOCS.store(0, Ordering::SeqCst);
     FREES.store(0, Ordering::SeqCst);
@@ -233,10 +236,16 @@ fn sparse_array_under_installed_allocator() {
         FAIL_NEXT.store(false, Ordering::SeqCst);
         let r2 = ossl_sa_set(f, 0x100, values.block(1));
         let retry_num = ossl_sa_num(f);
+        // Release the injected-failure array's nodes and header **before** reading the counters,
+        // so the failure sequence's cleanup is a measured fact too. The value block is the
+        // caller's and `ossl_sa_free` does not release it.
         ossl_sa_free(f);
+        let malloc_count = MALLOCS.load(Ordering::SeqCst);
+        let free_count = FREES.load(Ordering::SeqCst);
         format!(
             "\"fail\":{{\"set_ret\":{r},\"num\":{n},\"get_null\":{},\"levels\":{levels},\
-             \"retry_ret\":{r2},\"retry_num\":{retry_num}}},",
+             \"retry_ret\":{r2},\"retry_num\":{retry_num},\
+             \"malloc\":{malloc_count},\"free\":{free_count}}},",
             g.is_null()
         )
     };
