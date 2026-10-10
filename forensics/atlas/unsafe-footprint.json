@@ -640,7 +640,7 @@
         "classification": "core",
         "extern_c_fns": 62,
         "files": 7,
-        "lines": 5248,
+        "lines": 5258,
         "module": "modes",
         "safety_comments": 125,
         "unsafe_blocks": 119,
@@ -1101,9 +1101,9 @@
     ],
     "scan": {
       "files": 862,
-      "lines": 803211,
+      "lines": 803221,
       "root": "src",
-      "sources_sha256": "ad117cd6de6624897c6b6671642be3e331786930b533e9ec9465cbf02ab6f6e6"
+      "sources_sha256": "88a001984bfa133e5caba3451cd21247861047d1041901efe667180df21327a7"
     },
     "totals": {
       "by_class": {
@@ -1120,7 +1120,7 @@
       },
       "extern_c_fns": 10869,
       "files": 862,
-      "lines": 803211,
+      "lines": 803221,
       "safety_comments": 46385,
       "unsafe_blocks": 44572,
       "unsafe_externs": 9998,
@@ -1135,7 +1135,7 @@
     {
       "name": "crate-sources",
       "note": "sha256 over the sorted (repo-relative path, file sha256) pairs of every src/**/*.rs file; the crate source tree has no single path to hash, and this pins exactly the bytes the scan read",
-      "sha256": "ad117cd6de6624897c6b6671642be3e331786930b533e9ec9465cbf02ab6f6e6"
+      "sha256": "88a001984bfa133e5caba3451cd21247861047d1041901efe667180df21327a7"
     }
   ],
   "kind": "unsafe-footprint",

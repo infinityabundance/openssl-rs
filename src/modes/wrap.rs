@@ -65,8 +65,13 @@ pub(crate) unsafe fn wrap128(
             while i < inlen {
                 let mut b = [0u8; 16];
                 b[..8].copy_from_slice(&a);
-                ptr::copy_nonoverlapping(r, b.as_mut_ptr().add(8), 8);
-                block(b.as_ptr(), b.as_mut_ptr(), key);
+                // The block callback is in-place capable: the authority calls `block(B, B, key)`
+                // (`wrap128.c`), so one raw pointer serves both operands. `b.as_ptr()` and
+                // `b.as_mut_ptr()` would instead form the overlapping `&`/`&mut` pair that Rust's
+                // aliasing models reject.
+                let bp = b.as_mut_ptr();
+                ptr::copy_nonoverlapping(r, bp.add(8), 8);
+                block(bp, bp, key);
                 a.copy_from_slice(&b[..8]);
                 a[7] ^= (t & 0xff) as u8;
                 if t > 0xff {
@@ -120,13 +125,18 @@ unsafe fn unwrap_raw(
                 }
                 let mut b = [0u8; 16];
                 b[..8].copy_from_slice(&a);
-                ptr::copy_nonoverlapping(r, b.as_mut_ptr().add(8), 8);
-                block(b.as_ptr(), b.as_mut_ptr(), key);
+                // In-place callback, as in `wrap128`: one raw pointer for both operands.
+                let bp = b.as_mut_ptr();
+                ptr::copy_nonoverlapping(r, bp.add(8), 8);
+                block(bp, bp, key);
                 a.copy_from_slice(&b[..8]);
                 ptr::copy_nonoverlapping(b.as_ptr().add(8), r, 8);
                 i += 8;
                 t -= 1;
-                r = r.sub(8);
+                // `R` walks down from `out + inlen - 8` by 8 each step (`wrap128.c`'s `R -= 8`).
+                // The authority's final decrement forms `out - 8`, which is out of bounds; skip it
+                // on the last step, where `R` is never read again.
+                r = if i < inlen { r.sub(8) } else { r };
             }
         }
         ptr::copy_nonoverlapping(a.as_ptr(), iv, 8);

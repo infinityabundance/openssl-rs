@@ -49,8 +49,8 @@
       {
         "closure": "the `MS-SAFETY-OBLIGATIONS` court passes",
         "findings": [
-          "761617 obligation dimension(s) are open: no source-stated SAFETY contract names them (4104 unsafe site(s) state no contract at all), recorded open rather than hidden -- their establishment is later evidence's measurement, not this subphase's claim",
-          "61954 unsafe site(s) carry their contract to a caller (escapes_to_caller): the 46330 named dimension(s) on them are the caller's obligation, and this stratum records the escape without establishing the caller chain (the Phase-22 reachability crosswalk is 25.5's measurement), so they are findings, never discharges",
+          "761597 obligation dimension(s) are open: no source-stated SAFETY contract names them (4104 unsafe site(s) state no contract at all), recorded open rather than hidden -- their establishment is later evidence's measurement, not this subphase's claim",
+          "61950 unsafe site(s) carry their contract to a caller (escapes_to_caller): the 46330 named dimension(s) on them are the caller's obligation, and this stratum records the escape without establishing the caller chain (the Phase-22 reachability crosswalk is 25.5's measurement), so they are findings, never discharges",
           "0 obligation dimension(s) are classified discharged: a `// SAFETY:` comment is a source-stated contract, so naming a dimension makes it stated, never discharged, and this stratum never upgrades a statement to a discharge"
         ],
         "findings_present": true,
@@ -87,8 +87,8 @@
         "closure": "the `MS-PHASE22-CROSSWALK` court passes",
         "findings": [
           "18754 census site(s) have no authority translation unit in the Phase-22 transcription atlas and are recorded as explicit unresolved residuals (class evidence_missing); none is dropped and none is defaulted to a root",
-          "the `distribution` compatibility root family reaches 0 of the 153318 mapped census site(s) over the atlas's typed edges: its members are installed-file entries, so it is a declared root that no unsafe site's authority entity is reached from",
-          "reachability is the Phase-22 graph's answer, not execution: the 153318 mapped site(s) are reachable from a public root through the typed edges, not exercised",
+          "the `distribution` compatibility root family reaches 0 of the 153314 mapped census site(s) over the atlas's typed edges: its members are installed-file entries, so it is a declared root that no unsafe site's authority entity is reached from",
+          "reachability is the Phase-22 graph's answer, not execution: the 153314 mapped site(s) are reachable from a public root through the typed edges, not exercised",
           "8490 authority implementation entit(ies) across 638 translation unit(s) anchor the map to the OpenSSL authority"
         ],
         "findings_present": true,
@@ -103,7 +103,7 @@
       {
         "closure": "the `MS-PHASE24-CROSSWALK` court passes",
         "findings": [
-          "127200 census site(s) are `NOT_OBSERVED`: 18754 have no Phase-22 authority unit (the 25.5 residual) and 108446 are mapped to a unit no measured consumer imports; recorded, never dropped",
+          "127196 census site(s) are `NOT_OBSERVED`: 18754 have no Phase-22 authority unit (the 25.5 residual) and 108442 are mapped to a unit no measured consumer imports; recorded, never dropped",
           "the join speaks for 6 measured consumer(s) of 1000 fingerprinted famil(ies): only the families the 24.3 usage census fingerprinted carry symbol-level import evidence, so a counted family without a fingerprint is not counted as reaching any site",
           "the top consumers by reachable-site count are haproxy=34751, curl=22181, openssh=19051; 44872 site(s) are DOWNSTREAM_RUNTIME_OBSERVED and 0 DOWNSTREAM_IMPORT_OBSERVED",
           "2 imported symbol(s) (HMAC, SHA256) have no clean Phase-22 entity mapping and are recorded as join_evidence_missing residuals; 2 runtime-observed family/-ies without a fingerprint cannot be attributed to a site and are recorded too",
@@ -121,10 +121,10 @@
       {
         "closure": "the `MS-EXPOSURE-CLASSIFICATION` court passes",
         "findings": [
-          "172072 census site(s) carry exactly one exposure class: 5881 are network-reachable (3543 server, 2338 client), 154327 are externally reachable, 0 are `UNREACHABLE_PROFILE` and 17745 carry `UNKNOWN_REACHABILITY`. Every unreachable site carries a justified exclusion witness; an unknown is the site whose 25.5 mapping is missing, and an unknown is not a zero and not an unreachability claim",
+          "172068 census site(s) carry exactly one exposure class: 5881 are network-reachable (3543 server, 2338 client), 154323 are externally reachable, 0 are `UNREACHABLE_PROFILE` and 17745 carry `UNKNOWN_REACHABILITY`. Every unreachable site carries a justified exclusion witness; an unknown is the site whose 25.5 mapping is missing, and an unknown is not a zero and not an unreachability claim",
           "16755 site(s) are attacker-input reachable across 17 of 18 route(s); the largest are PROVIDER_PARAMETERS=4815, X509_CERTIFICATE=4289, DER=1340. The routes are a rule over committed parser identities, not a dynamic taint result",
           "37964 externally reachable buffer operation(s) are censused by buffer origin, pointer origin and capacity origin; the length origin, the integer-conversion path and the copy primitive are `NOT_MEASURED` and are the dynamic subphases' subject",
-          "the risk tiers are a review priority: S0=0, SU=17745, S1=116363, S2=36227, S3=0, S4=1737; an unknown exposure is SU, not S0, so 17745 unknown site(s) stay eligible for high-priority investigation; 3 network site(s) are named as the review head",
+          "the risk tiers are a review priority: S0=0, SU=17745, S1=116359, S2=36227, S3=0, S4=1737; an unknown exposure is SU, not S0, so 17745 unknown site(s) stay eligible for high-priority investigation; 3 network site(s) are named as the review head",
           "the Phase-22 closure's `protocol` family is unpopulated, so a network class is grounded in the parser's committed role (the module or authority unit the peer drives) and is recorded as an `evidence_missing` residual, never read as a wire observation"
         ],
         "findings_present": true,
@@ -139,7 +139,7 @@
       {
         "closure": "the `MS-UNSAFE-REDUCTION` court passes",
         "findings": [
-          "154327 externally reachable compiler-derived unsafe site(s) carry exactly one candidate class across 10 pattern(s); **0 were reduced on the worklist**, so the reachable count is unchanged",
+          "154323 externally reachable compiler-derived unsafe site(s) carry exactly one candidate class across 10 pattern(s); **0 were reduced on the worklist**, so the reachable count is unchanged",
           "every candidate replacement would change a function signature or the foreign ABI, turn a documented precondition the authority states into a defined panic, or remove no site because the census site is the enclosing raw dereference; consolidating repeated reads into one helper is forbidden by section 3.4 and the brief. This is a local-replacement feasibility census, not an impossibility result: of the reachable operations screened against the ten local-substitution patterns none was locally replaceable without changing the public surface or behaviour, which is not a claim that the rest of the core is irreducible -- a structural (representation-level) reconstruction is a separate campaign, recorded in forensics/memory-safety/unsafe-reconstruction.json",
           "the safe-core reconstruction is separate from the worklist: it replaced the internal unsafe mechanism of one subsystem --- recorded below with its per-operation classification --- so the crate's total operation count moved while the externally reachable count, the ABI and the lints are unchanged"
         ],
@@ -155,9 +155,10 @@
       {
         "closure": "the `MS-MIRI` court passes",
         "findings": [
-          "{'category': 'MIRI_UNDEFINED_BEHAVIOUR', 'column': 9, 'context': [{'column': 23, 'file': 'src/modes/wrap.rs', 'line': 69}, {'column': 35, 'file': 'src/modes/wrap.rs', 'line': 69}], 'detail': 'run crate-unit-stacked (STACKED_BORROWS) reported undefined behaviour at this location; the cause/context locations are recorded in `context` and the run transcript is preserved', 'file': 'src/aes.rs', 'finding_id': 'mf-crate-unit-stacked', 'line': 376, 'run_id': 'crate-unit-stacked'}",
-          "{'category': 'MIRI_UNDEFINED_BEHAVIOUR', 'column': 21, 'context': [{'column': 17, 'file': 'src/aes.rs', 'line': 1052}], 'detail': 'run crate-unit-tree (TREE_BORROWS) reported undefined behaviour at this location; the cause/context locations are recorded in `context` and the run transcript is preserved', 'file': 'src/modes/wrap.rs', 'finding_id': 'mf-crate-unit-tree', 'line': 129, 'run_id': 'crate-unit-tree'}",
-          "{'category': 'MIRI_MODEL_DISAGREEMENT', 'column': 0, 'detail': \"the Stacked Borrows run crate-unit-stacked and the Tree Borrows run crate-unit-tree disagree on harness crate-unit: ('FAIL', (('src/aes.rs', 376), ('src/modes/wrap.rs', 69), ('src/modes/wrap.rs', 69))) vs ('FAIL', (('src/modes/wrap.rs', 129), ('src/aes.rs', 1052))); a review item, not a resolved verdict\", 'file': '', 'finding_id': 'mf-model-disagreement-crate-unit', 'line': 0, 'run_id': 'crate-unit-stacked'}"
+          "{'category': 'MIRI_UNDEFINED_BEHAVIOUR', 'column': 9, 'context': [{'column': 23, 'file': 'src/modes/wrap.rs', 'line': 69}, {'column': 35, 'file': 'src/modes/wrap.rs', 'line': 69}], 'detail': 'run crate-unit-stacked (STACKED_BORROWS) reported undefined behaviour at this location; the cause/context locations are recorded in `context` and the run transcript is preserved', 'disposition': 'FIXED', 'file': 'src/aes.rs', 'finding_id': 'mf-crate-unit-stacked', 'line': 376, 'run_id': 'crate-unit-stacked'}",
+          "{'category': 'MIRI_UNDEFINED_BEHAVIOUR', 'column': 21, 'context': [{'column': 17, 'file': 'src/aes.rs', 'line': 1052}], 'detail': 'run crate-unit-tree (TREE_BORROWS) reported undefined behaviour at this location; the cause/context locations are recorded in `context` and the run transcript is preserved', 'disposition': 'FIXED', 'file': 'src/modes/wrap.rs', 'finding_id': 'mf-crate-unit-tree', 'line': 129, 'run_id': 'crate-unit-tree'}",
+          "{'category': 'MIRI_HARNESS_FAILURE', 'column': 0, 'detail': 'run mem-unit-stacked (STACKED_BORROWS) failed without reporting undefined behaviour (1 of 8 test(s) failed, no error site); it is not a memory-safety finding and its disposition records why', 'disposition': 'ADJUDICATED', 'file': '', 'finding_id': 'mf-mem-unit-stacked', 'line': 0, 'run_id': 'mem-unit-stacked'}",
+          "{'category': 'MIRI_MODEL_DISAGREEMENT', 'column': 0, 'detail': \"the Stacked Borrows run crate-unit-stacked and the Tree Borrows run crate-unit-tree disagree on harness crate-unit: ('FAIL', (('src/aes.rs', 376), ('src/modes/wrap.rs', 69), ('src/modes/wrap.rs', 69))) vs ('FAIL', (('src/modes/wrap.rs', 129), ('src/aes.rs', 1052))); a review item, not a resolved verdict\", 'disposition': 'FIXED', 'file': '', 'finding_id': 'mf-model-disagreement-crate-unit', 'line': 0, 'run_id': 'crate-unit-stacked'}"
         ],
         "findings_present": true,
         "measurement_state": "complete",
@@ -360,7 +361,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "c2a86241e4d113afb10ee720613bb5b69dbbac1ed887192e3da5eddf1d197eb9"
+      "sha256": "59ce038cf62b7765e0ac1f66d2f560cc5f3b89b56fbd45b47cdbd926245b80fe"
     },
     {
       "name": "phase25-guard",

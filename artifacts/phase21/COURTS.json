@@ -1033,7 +1033,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "73b6aeb4dec381076bfbaae7587ffb61a5c945db587efbb84a5a2f599527779b"
+      "sha256": "7434b1a0c11d0d481ab3a52695fbc65d4d1990f6937e5a2eef5d8e67105fc920"
     },
     {
       "name": "symbol-ownership",

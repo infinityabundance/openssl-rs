@@ -46,7 +46,20 @@ Mapping the runs to the census
                      first undefined-behaviour finding, so most sites were never reached).
 
 A `PASS` is never awarded because a site merely exists: it must be in a module a passing run
-exercised and cite that run's id and command hash. `UNSUPPORTED` is never `PASS`.
+    exercised and cite that run's id and command hash. `UNSUPPORTED` is never `PASS`.
+
+Dispositions
+------------
+Every `MIRI_FAIL` finding carries a **disposition** from the closed set `FIXED` / `ADJUDICATED` /
+`OPEN`, and the site records it. A `FIXED` disposition cites the targeted harness(es) that are now
+green and the source file(s) the fix is bound to; the court recomputes those digests and refuses a
+`FIXED` whose targeted run is absent or not `PASS`, or whose bound source has drifted -- so a fix
+that stops reproducing at the current commit is a failure, not a stale pass. `ADJUDICATED` cites the
+contract and why Miri's model is stricter than the code's documented precondition; `OPEN` cites the
+obstruction. The two undefined-behaviour findings of the 25.9 measurement are preserved as committed
+*finding runs* (see `FINDING_RUNS`): the crate-wide harness that reported them can no longer reach
+the AES path before Miri's foreign-function boundary, so the finding is replayed and the fix is
+verified by the targeted `aes-wrap-targeted-*` harnesses.
 
 Outputs
 -------
@@ -165,22 +178,11 @@ HARNESSES: tuple[dict, ...] = (
         "aliasing_model": "TREE_BORROWS",
         "flags": ("-Zmiri-strict-provenance", "-Zmiri-tree-borrows"),
     },
-    {
-        "harness_id": "crate-unit-stacked",
-        "description": "the crate-wide unit-test harness under Stacked Borrows",
-        "source": None,
-        "filter": None,
-        "aliasing_model": "STACKED_BORROWS",
-        "flags": ("-Zmiri-disable-isolation",),
-    },
-    {
-        "harness_id": "crate-unit-tree",
-        "description": "the crate-wide unit-test harness under Tree Borrows",
-        "source": None,
-        "filter": None,
-        "aliasing_model": "TREE_BORROWS",
-        "flags": ("-Zmiri-disable-isolation", "-Zmiri-tree-borrows"),
-    },
+    # The crate-wide unit-test harness is **not** re-measured here. Once the AES/wrap defect was
+    # fixed it stopped reaching the AES path: Miri refuses `isspace` (`src/runtime/conf/modparse.rs`)
+    # before the wrap tests run, so a re-run is `UNSUPPORTED` and cannot verify the fix. Its 25.9
+    # measurement is preserved as a finding run (see `FINDING_RUNS`) and the fix is verified by the
+    # targeted `aes-wrap-targeted-*` harnesses below.
     {
         "harness_id": "mem-unit-stacked",
         "description": "the allocator unit harness under Stacked Borrows",
@@ -197,6 +199,26 @@ HARNESSES: tuple[dict, ...] = (
         "aliasing_model": "STACKED_BORROWS",
         "flags": ("-Zmiri-disable-isolation",),
     },
+    {
+        "harness_id": "aes-wrap-targeted-stacked",
+        "description": ("the RFC 3394/5649 key-wrap unit tests -- the smallest harness that reaches the "
+                        "reported AES/wrap sites -- under Stacked Borrows"),
+        "source": None,
+        "filter": "aes::tests::rfc5649_wrap_pad_vectors",
+        "aliasing_model": "STACKED_BORROWS",
+        "flags": ("-Zmiri-disable-isolation",),
+        "bound_files": ("src/modes/wrap.rs", "src/aes.rs"),
+    },
+    {
+        "harness_id": "aes-wrap-targeted-tree",
+        "description": ("the RFC 3394/5649 key-wrap unit tests -- the smallest harness that reaches the "
+                        "reported AES/wrap sites -- under Tree Borrows"),
+        "source": None,
+        "filter": "aes::tests::rfc5649_wrap_pad_vectors",
+        "aliasing_model": "TREE_BORROWS",
+        "flags": ("-Zmiri-disable-isolation", "-Zmiri-tree-borrows"),
+        "bound_files": ("src/modes/wrap.rs", "src/aes.rs"),
+    },
 )
 
 NON_CLAIMS: tuple[str, ...] = (
@@ -211,7 +233,152 @@ NON_CLAIMS: tuple[str, ...] = (
     "at its first undefined-behaviour finding); it is not a clean result",
     "a Miri disagreement between the Stacked Borrows and Tree Borrows models is a review item, not a "
     "resolved verdict",
+    "every MIRI_FAIL finding carries a disposition from the closed FIXED/ADJUDICATED/OPEN set; a "
+    "FIXED cites the targeted harness(es) now green and the source files the fix is bound to, so a "
+    "fix that stops reproducing at the current commit is a failure, and an undispositioned finding is "
+    "an unfinished review rather than a pass",
 )
+
+# The committed finding runs: the 25.9 measurement's undefined-behaviour findings, preserved verbatim
+# so the plane keeps carrying them after the fix. They are the *finding*, not a current measurement;
+# the defect they report is fixed and the `aes-wrap-targeted-*` harnesses verify the fix against the
+# current source. They are not replayed: the crate-wide harness can no longer reach the AES path
+# before Miri's foreign-function boundary (`isspace`, `src/runtime/conf/modparse.rs`), which is
+# recorded as a residual. A run whose transcript was measured at the finding commit keeps its own
+# `command_sha256`/`transcript_sha256` -- the plane never re-states a measurement it did not take.
+FINDING_RUNS: tuple[dict, ...] = (
+    {
+        "run_id": "crate-unit-stacked",
+        "harness_id": "crate-unit-stacked",
+        "description": "the crate-wide unit-test harness under Stacked Borrows (the 25.9 finding)",
+        "filter": None,
+        "aliasing_model": "STACKED_BORROWS",
+        "miri_flags": ["-Zmiri-disable-isolation"],
+        "command": "MIRIFLAGS=-Zmiri-disable-isolation cargo miri test --lib",
+        "command_sha256": "1144e941d1e459c4192176c0792295f5d708c42ced2f268fd53cb8b038f0e365",
+        "outcome": "FAIL",
+        "unsupported_reason": "",
+        "transcript_sha256": "1ce8eacd5b32c8babc23756bdd2114d89ebe2dfee18939a9f92f8a22d264decd",
+        "tests_run": 1,
+        "tests_passed": 1,
+        "tests_failed": 0,
+        "error_sites": [
+            {"file": "src/aes.rs", "line": 376, "column": 9},
+            {"file": "src/modes/wrap.rs", "line": 69, "column": 23},
+            {"file": "src/modes/wrap.rs", "line": 69, "column": 35},
+        ],
+        "ub_primary": {"file": "src/aes.rs", "line": 376, "column": 9},
+        "unsupported_files": [],
+    },
+    {
+        "run_id": "crate-unit-tree",
+        "harness_id": "crate-unit-tree",
+        "description": "the crate-wide unit-test harness under Tree Borrows (the 25.9 finding)",
+        "filter": None,
+        "aliasing_model": "TREE_BORROWS",
+        "miri_flags": ["-Zmiri-disable-isolation", "-Zmiri-tree-borrows"],
+        "command": "MIRIFLAGS=-Zmiri-disable-isolation -Zmiri-tree-borrows cargo miri test --lib",
+        "command_sha256": "5868ac04e6a9b7c5a50ab3434b6abd9dcfccf50d16f82a006193c7a121e05ae1",
+        "outcome": "FAIL",
+        "unsupported_reason": "",
+        "transcript_sha256": "cd8f4cb50ef90e9e46c4e12a0abf474af7a2de07e0acd86080cc8859aafbd29f",
+        "tests_run": 1,
+        "tests_passed": 1,
+        "tests_failed": 0,
+        "error_sites": [
+            {"file": "src/modes/wrap.rs", "line": 129, "column": 21},
+            {"file": "src/aes.rs", "line": 1052, "column": 17},
+        ],
+        "ub_primary": {"file": "src/modes/wrap.rs", "line": 129, "column": 21},
+        "unsupported_files": [],
+    },
+)
+
+# The closed disposition vocabulary, and the disposition each committed finding carries. A `FIXED`
+# disposition cites the targeted harness(es) that are now green and the source file(s) the fix is
+# `bound_to`; the court recomputes those file digests and refuses a `FIXED` whose targeted run is
+# absent, whose outcome is not PASS, or whose bound source no longer matches the tree -- so a stale
+# `FIXED` (a fix that has drifted) is a failure. `ADJUDICATED` carries the contract and why Miri's
+# model is stricter than the code's documented precondition; `OPEN` carries the obstruction.
+DISPOSITIONS: tuple[str, ...] = ("FIXED", "ADJUDICATED", "OPEN")
+
+# The finding run -> disposition map. Keyed by the run that reported the finding; the per-site
+# disposition is read from here, so a site and its finding never disagree.
+FINDING_DISPOSITIONS: tuple[dict, ...] = (
+    {
+        "run_id": "crate-unit-stacked",
+        "finding_id": "mf-crate-unit-stacked",
+        "disposition": "FIXED",
+        "contract": (
+            "`block128_f` (`Block128F`) is called in place: the authority's `wrap128.c` calls "
+            "`block(B, B, key)` and documents that 'input and output buffers can overlap if the "
+            "block function supports that'. The callback must read all sixteen bytes before "
+            "writing any, which `AES_encrypt` does (it copies into a local `state`). The Rust call "
+            "site violated this by forming both a `&b` (via `b.as_ptr()`) and a `&mut b` (via "
+            "`b.as_mut_ptr()`) -- two overlapping references -- which Stacked Borrows rejects when "
+            "the shared tag is used after the unique retag invalidates it."),
+        "fix": (
+            "`src/modes/wrap.rs` `wrap128`/`unwrap_raw` derive one raw pointer for both operands "
+            "(`let bp = b.as_mut_ptr(); block(bp, bp, key)`) instead of the overlapping "
+            "`&`/`&mut` pair. Byte-for-byte behaviour and the ABI are unchanged."),
+        "targeted_runs": ["aes-wrap-targeted-stacked"],
+        "bound_to": ["src/modes/wrap.rs", "src/aes.rs"],
+    },
+    {
+        "run_id": "crate-unit-tree",
+        "finding_id": "mf-crate-unit-tree",
+        "disposition": "FIXED",
+        "contract": (
+            "`unwrap_raw` walks `R` down from `out + inlen - 8` to `out`, one block per step. The "
+            "authority's `for` increment `R -= 8` runs once more after the last block, forming "
+            "`out - 8` -- a pointer before the allocation. OpenSSL never dereferences it, but "
+            "forming an out-of-bounds pointer is undefined behaviour, which Tree Borrows reports "
+            "(the general in-bounds pointer-arithmetic rule, not a model-specific strictness)."),
+        "fix": (
+            "`src/modes/wrap.rs` `unwrap_raw` skips the final decrement (`r = if i < inlen { "
+            "r.sub(8) } else { r }`): `R` reaches exactly the same addresses at every step that "
+            "reads it, and is never read after the loop. Byte-for-byte behaviour is unchanged."),
+        "targeted_runs": ["aes-wrap-targeted-tree"],
+        "bound_to": ["src/modes/wrap.rs", "src/aes.rs"],
+    },
+    {
+        "run_id": "mem-unit-stacked",
+        "finding_id": "mf-mem-unit-stacked",
+        "disposition": "ADJUDICATED",
+        "contract": (
+            "`runtime::mem::tests::custom_allocator_is_used_and_reported` asserts that the "
+            "crate's allocator seam is exercised, by comparing reported allocator addresses and "
+            "ranges. It is an environment assertion about a real process's address space, not a "
+            "memory-safety property."),
+        "contract_stricter": (
+            "Miri is an interpreter that does not reproduce the host allocator's address layout, "
+            "so the assertion fails with a plain `assertion failed` -- the run fails *without* "
+            "reporting undefined behaviour, so no `MIRI_FAIL` site and no UB finding exists for "
+            "it. This is Miri's environment being stricter than (not equal to) the code's "
+            "documented precondition; the memory-safety property is unaffected."),
+        "targeted_runs": [],
+        "bound_to": [],
+    },
+)
+
+_DISPOSITION_BY_RUN: dict[str, dict] = {str(d["run_id"]): d for d in FINDING_DISPOSITIONS}
+
+# The two-model disagreement was a review item of the pre-fix code. The fix makes both models agree
+# on the same targeted harness, so its disposition is `FIXED`, proved by running *both* models.
+MODEL_DISAGREEMENT_DISPOSITION: dict = {
+    "disposition": "FIXED",
+    "contract": (
+        "Stacked Borrows and Tree Borrows reported different primary locations for the pre-fix "
+        "defect (a shared-then-unique overlap at the `block` call under Stacked Borrows; an "
+        "out-of-bounds pointer at `unwrap_raw`'s final decrement under Tree Borrows). Both are "
+        "real: the Stacked Borrows harness aborts at its first undefined behaviour, so it never "
+        "reached the second."),
+    "fix": (
+        "Both defects are fixed (`src/modes/wrap.rs`), so both models now pass the same targeted "
+        "harness; the disagreement was an artefact of which finding each model reached first."),
+    "targeted_runs": ["aes-wrap-targeted-stacked", "aes-wrap-targeted-tree"],
+    "bound_to": ["src/modes/wrap.rs", "src/aes.rs"],
+}
 
 # A libtest result line: `test <path> ... ok` / `... FAILED` / `... ignored`.
 _RESULT = re.compile(r"^test\s+(?P<name>\S+)\s+\.\.\.\s+(?P<status>ok|FAILED|ignored)\s*$")
@@ -312,6 +479,7 @@ def run_harness(harness: dict, tc: dict) -> dict:
             "error_sites": [],
             "ub_primary": None,
             "unsupported_files": [],
+            "bound_to": {},
         }
 
     res = _run(cmd, env=env)
@@ -373,6 +541,9 @@ def run_harness(harness: dict, tc: dict) -> dict:
         "error_sites": error_sites,
         "ub_primary": ub_primary,
         "unsupported_files": sorted(set(unsupported_files)),
+        # A verification run records the digest of every source file the fix it proves is bound to,
+        # so the court can refuse a stale `FIXED` (a targeted run whose bound source has since moved).
+        "bound_to": {f: sha256_file(REPO_ROOT / f) for f in (harness.get("bound_files") or ())},
     }
 
 
@@ -400,22 +571,45 @@ def coverage_files(source_rel: str | None) -> list[str]:
     return sorted(files)
 
 
+def _attribute(sites: list[dict], file: str, line: int) -> list[str]:
+    """The census site ids a Miri error location is attributed to.
+
+    Miri names a line; the compiler-derived census classifies *operations*. Where the line carries
+    operation sites they are the attribution. Where it carries none -- a raw-pointer decrement the
+    census's operation scan does not classify -- the location is attributed to the sites on the
+    nearest line at or before it in the same file, which is the operation the diagnostic belongs to.
+    Pure over the census, so the court re-derives the same attribution.
+    """
+    same = [s for s in sites if str(s.get("file")) == file]
+    on_line = [s for s in same if int(s.get("line") or 0) == line]
+    if on_line:
+        return [str(s.get("site_id")) for s in on_line]
+    before = [s for s in same if int(s.get("line") or 0) <= line]
+    if not before:
+        return []
+    near = max(int(s.get("line") or 0) for s in before)
+    return [str(s.get("site_id")) for s in before if int(s.get("line") or 0) == near]
+
+
 def _derived_states(census_body: dict, runs: list[dict]) -> dict[str, dict]:
     """The state of every census site, derived from the runs, the census and the committed surface.
 
     Pure over its inputs: the court re-derives exactly this from the committed artefact's runs, the
     committed census and the committed harness sources, and refuses a committed `.sites` that differs.
+    Every site carries a `disposition`, empty unless the site is a `MIRI_FAIL` whose run has a
+    committed disposition.
     """
     sites = census_body.get("sites") or []
-    runs_by_id = {str(r.get("run_id")): r for r in runs}
 
-    # A site is FAIL only at a location a FAIL run reported.
-    fail_sites: dict[tuple[str, int], str] = {}
+    # A site is FAIL only at a location a FAIL run reported, attributed to the compiler-derived
+    # operation sites that location names (see `_attribute`).
+    fail_sites: dict[str, str] = {}
     for r in runs:
         if r.get("outcome") != "FAIL":
             continue
         for es in r.get("error_sites") or []:
-            fail_sites[(str(es.get("file")), int(es.get("line") or 0))] = str(r.get("run_id"))
+            for sid in _attribute(sites, str(es.get("file")), int(es.get("line") or 0)):
+                fail_sites[sid] = str(r.get("run_id"))
 
     # A site is PASS only if its file is covered by a passing run.
     pass_files: dict[str, str] = {}
@@ -435,20 +629,24 @@ def _derived_states(census_body: dict, runs: list[dict]) -> dict[str, dict]:
     for s in sites:
         sid = str(s.get("site_id"))
         f = str(s.get("file"))
-        line = int(s.get("line") or 0)
         kind = str(s.get("operation_kind"))
-        if (f, line) in fail_sites:
-            out[sid] = {"state": "MIRI_FAIL", "run": fail_sites[(f, line)], "reason": ""}
+        if sid in fail_sites:
+            run_id = fail_sites[sid]
+            out[sid] = {"state": "MIRI_FAIL", "run": run_id, "reason": "",
+                        "disposition": str((_DISPOSITION_BY_RUN.get(run_id) or {}).get(
+                            "disposition", ""))}
         elif kind in MIRI_INEXECUTABLE_KINDS:
             out[sid] = {"state": "MIRI_UNSUPPORTED", "run": "",
-                        "reason": REASON_FOREIGN_BOUNDARY}
+                        "reason": REASON_FOREIGN_BOUNDARY, "disposition": ""}
         elif f in unsupported_files:
             out[sid] = {"state": "MIRI_UNSUPPORTED", "run": "",
-                        "reason": REASON_OBSERVED_REFUSAL}
+                        "reason": REASON_OBSERVED_REFUSAL, "disposition": ""}
         elif f in pass_files:
-            out[sid] = {"state": "MIRI_PASS", "run": pass_files[f], "reason": ""}
+            out[sid] = {"state": "MIRI_PASS", "run": pass_files[f], "reason": "",
+                        "disposition": ""}
         else:
-            out[sid] = {"state": "MIRI_NOT_REACHABLE", "run": "", "reason": REASON_NOT_EXECUTED}
+            out[sid] = {"state": "MIRI_NOT_REACHABLE", "run": "",
+                        "reason": REASON_NOT_EXECUTED, "disposition": ""}
     return out
 
 
@@ -495,6 +693,7 @@ def _findings(runs: list[dict]) -> list[dict]:
         context = [e for e in (r.get("error_sites") or [])
                    if (e.get("file"), e.get("line"), e.get("column"))
                    != (prim.get("file"), prim.get("line"), prim.get("column"))]
+        disp = _DISPOSITION_BY_RUN.get(str(r["run_id"])) or {}
         findings.append({
             "finding_id": f"mf-{r['run_id']}",
             "run_id": r["run_id"],
@@ -503,9 +702,31 @@ def _findings(runs: list[dict]) -> list[dict]:
             "line": prim.get("line"),
             "column": prim.get("column"),
             "context": context,
+            "disposition": str(disp.get("disposition", "")),
             "detail": (f"run {r['run_id']} ({r['aliasing_model']}) reported undefined behaviour at "
                        f"this location; the cause/context locations are recorded in `context` and "
                        f"the run transcript is preserved"),
+        })
+    # A failing run that reported no undefined behaviour (a plain assertion failure) is still carried:
+    # it is a Miri *result*, and its disposition explains why it is not a memory-safety finding.
+    for r in runs:
+        if r.get("outcome") != "FAIL":
+            continue
+        if (r.get("error_sites") or []) or r.get("ub_primary"):
+            continue
+        disp = _DISPOSITION_BY_RUN.get(str(r["run_id"])) or {}
+        findings.append({
+            "finding_id": f"mf-{r['run_id']}",
+            "run_id": r["run_id"],
+            "category": "MIRI_HARNESS_FAILURE",
+            "file": "",
+            "line": 0,
+            "column": 0,
+            "disposition": str(disp.get("disposition", "")),
+            "detail": (f"run {r['run_id']} ({r['aliasing_model']}) failed without reporting "
+                       f"undefined behaviour ({r.get('tests_failed', 0)} of {r.get('tests_run', 0)} "
+                       f"test(s) failed, no error site); it is not a memory-safety finding and its "
+                       f"disposition records why"),
         })
     # A disagreement between the two aliasing models on the same harness is a review item.
     by_harness: dict[str, dict[str, dict]] = {}
@@ -525,6 +746,7 @@ def _findings(runs: list[dict]) -> list[dict]:
                     "file": "",
                     "line": 0,
                     "column": 0,
+                    "disposition": str(MODEL_DISAGREEMENT_DISPOSITION.get("disposition", "")),
                     "detail": (f"the Stacked Borrows run {a['run_id']} and the Tree Borrows run "
                                f"{b['run_id']} disagree on harness {base}: "
                                f"{sa} vs {sb}; a review item, not a resolved verdict"),
@@ -608,6 +830,14 @@ def _rule(tc: dict) -> dict:
                              "foreign-function refusal on; the reason is recorded"),
         "not_reachable_rule": ("MIRI_NOT_REACHABLE iff no committed harness executed the site; it is "
                                "not a clean result"),
+        "dispositions": list(DISPOSITIONS),
+        "disposition_rule": (
+            "every MIRI_FAIL site's run carries a disposition from the closed set: FIXED adduces the "
+            "targeted harness(es) now green and the source file(s) the fix is bound to (the court "
+            "recomputes the bound digests and refuses a FIXED whose targeted run is absent or not "
+            "PASS, or whose bound source has drifted); ADJUDICATED adduces the contract and why "
+            "Miri's model is stricter than the code's documented precondition; OPEN adduces the "
+            "obstruction"),
         "crate_level": {
             "state": "MIRI_RAN" if tc.get("miri_installed") else "MIRI_UNSUPPORTED",
             "reason": ("" if tc.get("miri_installed")
@@ -620,6 +850,28 @@ def _rule(tc: dict) -> dict:
 # building the body
 # --------------------------------------------------------------------------------------------
 
+def _dispositions(runs: list[dict]) -> list[dict]:
+    """The disposition of every finding, with its evidence.
+
+    A `FIXED` disposition carries the targeted harness(es) now green and the source file(s) the fix
+    is bound to; `ADJUDICATED` carries the contract and why Miri's model is stricter than the code's
+    documented precondition; `OPEN` carries the obstruction. Pure over the runs and the committed
+    tables, so the court re-derives exactly this.
+    """
+    findings = _findings(runs)
+    finding_ids = {str(f.get("finding_id")) for f in findings}
+    out: list[dict] = []
+    for d in FINDING_DISPOSITIONS:
+        if str(d.get("finding_id")) in finding_ids:
+            out.append({k: v for k, v in d.items()})
+    for f in findings:
+        if str(f.get("category")) == "MIRI_MODEL_DISAGREEMENT":
+            rec = {"run_id": f.get("run_id"), "finding_id": f.get("finding_id")}
+            rec.update(MODEL_DISAGREEMENT_DISPOSITION)
+            out.append(rec)
+    return out
+
+
 def build_body(census_body: dict, runs: list[dict], tc: dict) -> dict:
     states = _derived_states(census_body, runs)
     counts = _counts(states)
@@ -630,6 +882,7 @@ def build_body(census_body: dict, runs: list[dict], tc: dict) -> dict:
         "sites": states,
         "counts": counts,
         "findings": _findings(runs),
+        "dispositions": _dispositions(runs),
         "residuals": _residuals(runs, states, counts),
         "non_claims": list(NON_CLAIMS),
     }
@@ -747,6 +1000,71 @@ def miri_findings(body: dict, census_body: dict) -> list[str]:
             problems.append(f"finding {f.get('finding_id')} cites run {f.get('run_id')!r}, which is "
                             f"not a committed run")
 
+    # 4b. Every MIRI_FAIL site carries a disposition from the closed set. A memory-safety finding
+    #     states how it was resolved; an undispositioned one is an unfinished review, not a pass.
+    for sid, rec in committed.items():
+        if rec.get("state") == "MIRI_FAIL" and str(rec.get("disposition") or "") not in \
+                DISPOSITIONS:
+            problems.append(f"MIRI_FAIL site {sid} carries no disposition from {list(DISPOSITIONS)} "
+                            f"(got {rec.get('disposition')!r}); a MIRI_FAIL states how it was resolved")
+
+    # 4c. Every finding carries a disposition, and every disposition adduces its evidence. A FIXED
+    #     must cite a committed, passing targeted run whose bound source still matches the tree, so
+    #     a stale fix (source drifted) is refused; ADJUDICATED must record the contract and why the
+    #     model is stricter; OPEN must record the obstruction.
+    dispositions = body.get("dispositions") or []
+    disp_by_finding = {str(d.get("finding_id")): d for d in dispositions}
+    finding_ids = {str(f.get("finding_id")) for f in findings}
+    for f in findings:
+        fid = str(f.get("finding_id"))
+        d = disp_by_finding.get(fid)
+        if d is None:
+            problems.append(f"finding {fid} carries no disposition")
+            continue
+        if str(d.get("disposition")) != str(f.get("disposition")):
+            problems.append(f"finding {fid} and its disposition disagree "
+                            f"({f.get('disposition')!r} vs {d.get('disposition')!r})")
+    for d in dispositions:
+        fid = str(d.get("finding_id"))
+        disp = str(d.get("disposition"))
+        if fid not in finding_ids:
+            problems.append(f"disposition {fid} names no committed finding")
+        if disp not in DISPOSITIONS:
+            problems.append(f"disposition for {fid} is not from {list(DISPOSITIONS)} (got {disp!r})")
+            continue
+        if disp == "FIXED":
+            targeted = [str(x) for x in (d.get("targeted_runs") or [])]
+            bound = [str(x) for x in (d.get("bound_to") or [])]
+            if not targeted:
+                problems.append(f"FIXED disposition {fid} cites no targeted run")
+            if not bound:
+                problems.append(f"FIXED disposition {fid} binds no source file")
+            for rid in targeted:
+                run = runs_by_id.get(rid)
+                if run is None:
+                    problems.append(f"FIXED disposition {fid} cites targeted run {rid!r}, which is "
+                                    f"not a committed run")
+                    continue
+                if run.get("outcome") != "PASS":
+                    problems.append(f"FIXED disposition {fid} cites targeted run {rid}, whose "
+                                    f"outcome is {run.get('outcome')}")
+                recorded = run.get("bound_to") or {}
+                for f in bound:
+                    want = sha256_file(REPO_ROOT / f)
+                    got = str(recorded.get(f, ""))
+                    if got != want:
+                        problems.append(f"FIXED disposition {fid}: run {rid} is not bound to the "
+                                        f"current {f} (recorded {got[:12] or 'none'}, now "
+                                        f"{want[:12]}); a fix whose source has drifted is not a "
+                                        f"green targeted run at this commit")
+        elif disp == "ADJUDICATED":
+            if not (d.get("contract") and (d.get("contract_stricter") or d.get("reason"))):
+                problems.append(f"ADJUDICATED disposition {fid} does not record the contract and why "
+                                f"the model is stricter")
+        elif disp == "OPEN":
+            if not (d.get("obstruction") or d.get("reason")):
+                problems.append(f"OPEN disposition {fid} records no obstruction")
+
     # 5. The counts are derived, not typed.
     if body.get("counts") != _counts(derived):
         problems.append("the committed `counts` is not the derived `counts`")
@@ -848,7 +1166,32 @@ def miri_sensitivity_control(body: dict, census_body: dict) -> dict:
 
     m5 = check("typed_count", typed_count(), "not the derived `counts`")
 
-    result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and not baseline)
+    fail_sid = next((s for s, r in committed.items() if r.get("state") == "MIRI_FAIL"), None)
+
+    # m6: a MIRI_FAIL site with no disposition.
+    def fail_without_disposition() -> dict:
+        b = clone()
+        rec = dict(b["sites"][fail_sid])
+        rec["disposition"] = ""
+        b["sites"][fail_sid] = rec
+        return b
+
+    m6 = check("fail_without_disposition", fail_without_disposition(), "carries no disposition")
+
+    # m7: a FIXED disposition whose targeted run is not green.
+    def fixed_without_green_run() -> dict:
+        b = clone()
+        for d in b.get("dispositions") or []:
+            if d.get("disposition") == "FIXED":
+                targeted = list(d.get("targeted_runs") or [])
+                for r in b["runs"]:
+                    if str(r.get("run_id")) in targeted:
+                        r["outcome"] = "FAIL"
+        return b
+
+    m7 = check("fixed_without_green_run", fixed_without_green_run(), "whose outcome is")
+
+    result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and m6 and m7 and not baseline)
     result["caught"] = sum(1 for v in result["mutations"].values() if v["caught"])
     result["seeded"] = len(result["mutations"])
     return result
@@ -877,14 +1220,23 @@ def _synth_census() -> tuple[dict, list[dict]]:
         {"run_id": "miri-tcb-stacked", "harness_id": "miri-tcb-stacked",
          "aliasing_model": "STACKED_BORROWS", "outcome": "PASS", "command_sha256": "0" * 64,
          "command": "MIRIFLAGS=-Zmiri-strict-provenance cargo miri test --lib runtime::miri_tcb",
-         "unsupported_reason": "", "error_sites": [], "unsupported_files": []},
+         "unsupported_reason": "", "error_sites": [], "unsupported_files": [], "bound_to": {}},
         {"run_id": "crate-unit-stacked", "harness_id": "crate-unit-stacked",
          "aliasing_model": "STACKED_BORROWS", "outcome": "FAIL", "command_sha256": "1" * 64,
          "command": "MIRIFLAGS=-Zmiri-disable-isolation cargo miri test --lib",
          "unsupported_reason": "",
          "error_sites": [{"file": "src/aes.rs", "line": 376, "column": 9}],
          "ub_primary": {"file": "src/aes.rs", "line": 376, "column": 9},
-         "unsupported_files": []},
+         "unsupported_files": [], "bound_to": {}},
+        # The targeted verification run the FIXED disposition cites. Its `bound_to` records the real
+        # digests, so the synthetic body proves a green verification at the current tree.
+        {"run_id": "aes-wrap-targeted-stacked", "harness_id": "aes-wrap-targeted-stacked",
+         "aliasing_model": "STACKED_BORROWS", "outcome": "PASS", "command_sha256": "2" * 64,
+         "command": "MIRIFLAGS=-Zmiri-disable-isolation cargo miri test --lib "
+                    "aes::tests::rfc5649_wrap_pad_vectors",
+         "unsupported_reason": "", "error_sites": [], "unsupported_files": [],
+         "bound_to": {f: sha256_file(REPO_ROOT / f)
+                      for f in ("src/modes/wrap.rs", "src/aes.rs")}},
     ]
     return census, runs
 
@@ -941,9 +1293,10 @@ def self_test() -> int:
             print(f"  {f}")
         return 1
     print("[ms-miri] self-test ok: the guard refuses the host; the synthetic derivation exercises "
-          "PASS/FAIL/UNSUPPORTED/NOT_REACHABLE; and every seeded mutation (an UNSUPPORTED marked "
-          "PASS, a PASS with no run, a dropped finding, a coverage claim with no harness and a typed "
-          "count) is caught with specificity holding")
+          "PASS/FAIL/UNSUPPORTED/NOT_REACHABLE and every finding carries a disposition; and every "
+          "seeded mutation (an UNSUPPORTED marked PASS, a PASS with no run, a dropped finding, a "
+          "coverage claim with no harness, a typed count, a MIRI_FAIL with no disposition and a FIXED "
+          "whose targeted run is not green) is caught with specificity holding")
     return 0
 
 
@@ -982,7 +1335,10 @@ def _measure() -> int:
         print(f"[ms-miri] the pinned nightly + miri component ({NIGHTLY}) are not installed under "
               f"{NIGHTLY_HOME}; recording the crate-level MIRI_UNSUPPORTED case")
     census_body = ms_census.decode_body(_body(json.loads(_read(CENSUS)) if CENSUS.is_file() else {}))
-    runs = [run_harness(h, tc) for h in HARNESSES]
+    # The committed finding runs (the 25.9 measurement's undefined behaviour) are preserved verbatim,
+    # then the current harnesses are re-measured. The finding runs are not replayed: the crate-wide
+    # harness can no longer reach the AES path before Miri's foreign-function boundary.
+    runs = [dict(r) for r in FINDING_RUNS] + [run_harness(h, tc) for h in HARNESSES]
     body = build_body(census_body, runs, tc)
     problems = miri_findings(body, census_body)
 
@@ -1002,8 +1358,8 @@ def _measure() -> int:
               + (f" -- {r['unsupported_reason'][:80]}" if r.get("unsupported_reason") else ""))
     print(f"  sites: {c['sites']} -- pass={c['pass']} fail={c['fail']} "
           f"unsupported={c['unsupported']} not_reachable={c['not_reachable']}")
-    print(f"  findings={len(body['findings'])} residuals={len(body['residuals'])}; "
-          f"crate-level={body['rule']['crate_level']['state']}")
+    print(f"  findings={len(body['findings'])} dispositions={len(body.get('dispositions') or [])} "
+          f"residuals={len(body['residuals'])}; crate-level={body['rule']['crate_level']['state']}")
     print(f"  -> {rel(OUT)} all_pass={not problems}")
     if problems:
         for p in problems[:24]:
