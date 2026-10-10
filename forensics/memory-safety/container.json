@@ -19,6 +19,18 @@
     "cve-replay"
   ],
   "derivation_policy": "Phase 25 runs one tool-specific environment per instrument -- the compiler-backed census, Miri, ASan, MSan, TSan, Kani and the CVE replays -- and every one of them is derived from the single minimal base this manifest names, in later subphases. The stratum deliberately does not maintain one mutable kitchen-sink image that accumulates every tool: a kitchen-sink image makes the environment a function of whoever last rebuilt it, so a result depends on state nothing binds, whereas deriving each environment from one pinned base makes the toolchain a fact the manifest records. The running court image `openssl-rs-court:1` is the admitted venue the guard binds; a later subphase that needs an extra tool adds a derived environment and records it here rather than widening the court image.",
+  "environment_derivations": {
+    "asan": {
+      "subphase": "25.10",
+      "tool": "forensics/tools/ms_asan.py",
+      "plane": "artifacts/phase25/asan-msan.json",
+      "from": "openssl-rs-court:1 (the admitted image, built from canonical_base)",
+      "differs_from": "the court's `exec`, and only here",
+      "dimension": "the venue's documented per-process RLIMIT_DATA override (OPENSSL_RS_COURT_DATA=unlimited)",
+      "reason": "AddressSanitizer reserves a ~15.4 TB sparse shadow (PROT_NONE + MAP_NORESERVE) before it instruments anything, which the court's 4 GiB RLIMIT_DATA refuses, so the instrument cannot start under the default `exec`. The override removes only that virtual-space cap; the container cgroup memory cap, PIDs, CPUs, the wall clock and no-new-privileges are unchanged, so no bound on resident resources is weakened. This is the same derivation the Phase-18 ASan venue records for the same reason.",
+      "measured": "the ASan run is a measurement (it builds and runs the instrumented candidate), so ms_asan.py is not metadata-only and is refused on the host; the MS-ASAN-MSMAN court re-runs only its pure checks over the committed plane"
+    }
+  },
   "metadata_only": [
     "phase25_obligations.py",
     "ms_obligations.py",
@@ -34,6 +46,7 @@
     "the admitted venue is a container identity, not a security boundary: it records where Phase 25 runs, not what it may claim",
     "the manifest is authored evidence, not proof the container is unmodified: it binds the venue a receipt names, and the base digest is the stronger binding a later subphase may carry into each derived environment",
     "admitting a metadata-only generator on the host is not admitting host execution: that generator runs no command and produces no runtime evidence",
-    "naming one canonical base is not claiming the base is byte-identical to every derived environment: each derived environment is recorded as its own derivation when a later subphase lands it"
+    "naming one canonical base is not claiming the base is byte-identical to every derived environment: each derived environment is recorded as its own derivation when a later subphase lands it",
+    "the ASan environment's removal of only the venue's per-process RLIMIT_DATA is not weakening the court: ASan's shadow is PROT_NONE + MAP_NORESERVE virtual address space the cgroup does not count as resident, and every bound that bounds real resources is unchanged (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4, the 25.10 correction)"
   ]
 }

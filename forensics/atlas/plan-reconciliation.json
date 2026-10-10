@@ -8137,7 +8137,7 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "9039cee1dfaf44ebdecbd25ab9607ac208314cb75475a6b720c26601307cdd28"
+      "sha256": "776cc4a45a138c4b35ea78d3bf0f31a9c79159f6c572829bc5aca53f9a84b688"
     },
     {
       "name": "prerequisites",
@@ -8227,7 +8227,7 @@
     {
       "name": "plan-PHASE-25-MEMORY-SAFETY-SUBPHASES",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "d7e7874ff4bc79cd7c5ed53af2a62c2d23babb66646c3f2b61ff6a6bb7987373"
+      "sha256": "e94eb6322e8b45b68830ccaaf8cbbd76a13966711e0d2d2fee23f0d90a7b632f"
     },
     {
       "name": "plan-PHASE-5-SUBPHASES",

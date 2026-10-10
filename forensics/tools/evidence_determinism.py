@@ -475,6 +475,19 @@ GENERATORS_BEFORE_LEDGERS = [
     # `MS-UNSAFE-REDUCTION` court re-runs the same pure checks over the committed artefact, the census
     # and the exposure classification.
     "forensics/tools/ms_reduction.py",
+    # **Phase 25.10's ASan measurement (`forensics/tools/ms_asan.py` ->
+    # `artifacts/phase25/asan-msan.json`) follows the `ms_census.py`/`ms_miri.py` measurement
+    # precedent, so it is deliberately NOT listed here and NOT in `COMPARED`.** It builds the exact
+    # admitted candidate under AddressSanitizer (`-Zsanitizer=address -Zbuild-std` with the pinned
+    # nightly, the first-party C adapters through a `-fsanitize=address` CC wrapper), runs the
+    # instrumented test binary and records a per-census-site state -- so its states, its executed-test
+    # coverage and its findings are a function of the court's toolchain and its run, not of committed
+    # inputs. A CI runner has no compiler, no pinned nightly and no ASan runtime, and the Docker-only
+    # guard refuses a host invocation of `ms_asan.py` before it builds anything. The `MS-ASAN-MSMAN`
+    # court re-runs only its pure checks (`ms_asan.asan_findings` and
+    # `ms_asan.asan_sensitivity_control`) over the committed artefact and the committed census. If a
+    # later subphase derives a pure aggregate from this plane, that aggregate is what belongs in this
+    # list.
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
