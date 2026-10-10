@@ -31,11 +31,12 @@ MSan
 ----
 MemorySanitizer is attempted over the same crate and its result is recorded with its tool state. It
 requires *every* transitively linked object -- including the C runtime -- to be MSan-instrumented, and
-the venue links the system glibc (Debian, uninstrumented); the run and any diagnostics are carried
-verbatim, so the libc-interception boundary is evidence rather than an assertion. A clean MSan run is a
-bounded observation (recorded as a non-claim), not a proof of initialisation soundness, and a run that
-reports use-of-uninitialised-value diagnostics from uninstrumented libc is recorded `UNSUPPORTED`
-rather than as a candidate defect.
+the venue links the system glibc (Debian, uninstrumented); it also carries no MSan positive control
+(the committed canary proves only that the *ASan* instrument fires). A green MSan run therefore cannot
+be read as a proof of initialisation soundness: the libc-interception boundary is evidence rather than
+an assertion, and the result is recorded `UNSUPPORTED` -- with that boundary as its reason -- whether
+the run is clean or reports use-of-uninitialised-value diagnostics from uninstrumented libc, never
+`PASS`.
 
 The instrument
 --------------
@@ -168,6 +169,15 @@ REASON_FOREIGN_MODULE = "ASAN_CANNOT_INSTRUMENT_FOREIGN_DYNAMIC_MODULE"
 REASON_NOT_EXECUTED = "NO_COMMITTED_HARNESS_EXECUTED"
 REASON_VENUE = "ASAN_VENUE_CANNOT_RUN_THE_INSTRUMENT"
 
+# The top-level semantics of an ASAN_PASS, stated once for the whole plane. ASan exposes no
+# per-operation execution trace, so a PASS is a file-granular instrument/coverage claim, never a
+# per-operation guarantee.
+PASS_SEMANTICS = (
+    "ASAN_PASS means the site's source FILE was instrumented, had a covering run, and produced no "
+    "AddressSanitizer report -- it is not a claim that the specific unsafe operation itself executed "
+    "cleanly; every ASan result records `coverage_granularity: file`, so a PASS is a file-granular "
+    "instrument/coverage claim, never a per-operation one")
+
 NON_CLAIMS: tuple[str, ...] = (
     "ASan is not exhaustive: it instruments a run and reports what it observed, so "
     "NOT_REACHABLE and UNSUPPORTED are not clean results and a zero-findings run is not a proof "
@@ -185,10 +195,11 @@ NON_CLAIMS: tuple[str, ...] = (
     "the wall clock are unchanged, so no bound on resident resources is weakened",
     "an ASAN_UNSUPPORTED site is not a passing site: the sanitizer could not express the question "
     "there, and it is recorded with its reason",
-    "MSan ran the crate but its libc-interception limit bounds what the run establishes: the venue "
-    "links the system glibc, which is not MSan-instrumented, so an uninitialised read whose origin is "
-    "uninstrumented C is outside MSan's view; a clean MSan run is a bounded observation, not a proof "
-    "of initialisation soundness",
+    "MSan's result is UNSUPPORTED in this venue, not a pass: its libc-interception limit and the "
+    "absence of an MSan positive control (the committed canary proves only that the ASan instrument "
+    "fires) mean a green run cannot be read as a proof of initialisation soundness; the "
+    "uninstrumented system glibc it links leaves an uninitialised read whose origin is uninstrumented "
+    "C outside MSan's view",
 )
 
 # The committed run set. Each entry is a real command; `source` names the harness file whose `crate::`
@@ -217,6 +228,36 @@ _FRAME = re.compile(r"(?:/work/)?(src/[A-Za-z0-9_/.+-]+\.rs):(?P<line>\d+):(?P<c
 # The ASan error class, e.g. `ERROR: AddressSanitizer: heap-use-after-free`.
 _ASAN_ERROR = re.compile(r"ERROR: AddressSanitizer: (?P<kind>[a-z0-9-]+)")
 _MODREF = re.compile(r"crate::([a-z_0-9]+(?:::[a-z_0-9]+)*)")
+# Volatile bytes that must never enter the plane: every sanitizer log carries the run's own process id
+# (`==1409165==`), heap/stack addresses (`0x7bf0af1e0010`) and, in the wall-clock summary, a duration
+# (`finished in 2.34s`). None of it is evidence, and libtest executes a suite's tests in a
+# nondeterministic order. `--measure` is byte-for-byte reproducible only if these are normalised before
+# they are hashed or stored.
+_VOLATILE_PID = re.compile(r"==\d+==")
+_VOLATILE_ADDR = re.compile(r"0x[0-9a-fA-F]+")
+_VOLATILE_SECONDS = re.compile(r"\bin \d+(?:\.\d+)?s\b")
+# libtest emits a progress notice for a test that runs long (`test <name> has been running for over
+# 60 seconds`); whether it fires is a wall-clock accident, not an observation about the candidate.
+_VOLATILE_PROGRESS = re.compile(r"has been running for over \d+(?:\.\d+)? seconds")
+
+
+def _scrub_volatile(text: str) -> str:
+    """Blank the per-run process id, addresses and durations in one line of tool output."""
+    text = _VOLATILE_PID.sub("==PID==", text)
+    text = _VOLATILE_ADDR.sub("0xADDR", text)
+    return _VOLATILE_SECONDS.sub("in Ns", text)
+
+
+def _normalise_log(text: str) -> str:
+    """Canonicalise a tool log so its digest is reproducible run to run.
+
+    The digest is taken over the log with PIDs, addresses, durations and libtest's long-running
+    progress notices blanked or dropped, and the lines sorted, because libtest executes tests in a
+    nondeterministic order. Every substantive byte -- every test name, every status and every
+    diagnostic -- is preserved; only the run's incidental bytes are lost.
+    """
+    lines = [ln for ln in _scrub_volatile(text).splitlines() if not _VOLATILE_PROGRESS.search(ln)]
+    return "\n".join(sorted(lines))
 
 
 def _read(path: Path) -> str:
@@ -352,7 +393,8 @@ def _canary_run(label: str, build_cmd: list[str], run_env: dict) -> dict:
     if b.returncode != 0:
         return {"built": False, "detected": False, "shadow_mapped": False,
                 "command": " ".join(build_cmd),
-                "reason": f"the canary failed to build (rc={b.returncode}): {blog.strip()[-300:]}"}
+                "reason": (f"the canary failed to build (rc={b.returncode}): "
+                           f"{_scrub_volatile(blog.strip()[-300:])}")}
     out = WORK / "bin" / label
     try:
         r = _run([str(out)], env=run_env, timeout=CANARY_TIMEOUT)
@@ -362,13 +404,14 @@ def _canary_run(label: str, build_cmd: list[str], run_env: dict) -> dict:
     log = r.stdout + r.stderr
     detected = r.returncode != 0 and "AddressSanitizer" in log and "use-after-free" in log
     shadow_mapped = "ReserveShadowMemoryRange failed" not in log
-    diag = [ln.strip() for ln in log.splitlines()
+    diag = [_scrub_volatile(ln.strip()) for ln in log.splitlines()
             if "AddressSanitizer" in ln or "SUMMARY" in ln or "use-after-free" in ln
             or "ReserveShadowMemoryRange" in ln][:6]
     return {
         "built": True, "detected": detected, "shadow_mapped": shadow_mapped,
         "build_command": " ".join(build_cmd), "command": str(out), "exit_code": r.returncode,
-        "diagnostic": diag, "log_sha256": sha256_bytes(log.encode("utf-8")), "reason": "",
+        "diagnostic": diag, "log_sha256": sha256_bytes(_normalise_log(log).encode("utf-8")),
+        "reason": "",
     }
 
 
@@ -464,13 +507,13 @@ def build_instrumented(tc: dict) -> dict:
         p = Path(m.group(1).strip())
         binary = str(p if p.is_absolute() else (REPO_ROOT / p))
     if res.returncode != 0 or not binary or not Path(binary).is_file():
-        tail = "\n".join(log.splitlines()[-24:])
+        tail = "\n".join(_scrub_volatile(ln) for ln in log.splitlines()[-24:])
         return {"state": "UNSUPPORTED",
                 "reason": (f"the ASan-instrumented test binary did not build (rc={res.returncode}); "
                            f"{'no executable was named by cargo' if not binary else 'the named path is absent'}"),
                 "command": display, "command_sha256": sha256_bytes(display.encode()),
                 "test_binary": binary, "test_binary_sha256": "unknown", "asan_refs": 0,
-                "log_sha256": sha256_bytes(log.encode()),
+                "log_sha256": sha256_bytes(_normalise_log(log).encode()),
                 "tail": tail}
     bp = Path(binary)
     nm = _run(["nm", str(bp)], env=_asan_env(), timeout=300)
@@ -484,7 +527,7 @@ def build_instrumented(tc: dict) -> dict:
         "test_binary_sha256": sha256_file(bp),
         "test_binary_bytes": bp.stat().st_size,
         "asan_refs": asan_refs,
-        "log_sha256": sha256_bytes(log.encode()),
+        "log_sha256": sha256_bytes(_normalise_log(log).encode()),
         "closure": ("the Rust crate and `std` are rebuilt with -Zbuild-std under -Zsanitizer=address; "
                     "the first-party C adapters the crate's build.rs compiles go through a CC wrapper "
                     "that appends -fsanitize=address; libc is runtime-intercepted, which is the "
@@ -534,6 +577,9 @@ def run_harness(harness: dict, tc: dict, asan_runnable: bool) -> dict:
         m = _RESULT.match(line.strip())
         if m:
             tests.append({"name": m.group("name"), "status": m.group("status")})
+    # libtest schedules tests in a nondeterministic order; the executed set is the evidence, so the
+    # list is sorted by name rather than recorded in the order this run happened to execute.
+    tests.sort(key=lambda t: t["name"])
 
     error_sites: list[dict] = []
     unsupported_files: list[str] = []
@@ -558,7 +604,7 @@ def run_harness(harness: dict, tc: dict, asan_runnable: bool) -> dict:
                 outcome=outcome,
                 unsupported_reason=unsupported_reason,
                 unsupported_files=sorted(set(unsupported_files)),
-                transcript_sha256=sha256_bytes(log.encode("utf-8")),
+                transcript_sha256=sha256_bytes(_normalise_log(log).encode("utf-8")),
                 tests_run=len(tests),
                 tests_passed=sum(1 for t in tests if t["status"] == "ok"),
                 tests_failed=sum(1 for t in tests if t["status"] == "FAILED"),
@@ -572,8 +618,10 @@ def run_msan(tc: dict) -> dict:
 
     MSan requires every transitively linked object -- including libc -- to be MSan-instrumented. The
     venue links the system glibc, so if MSan reports use-of-uninitialised-value diagnostics they
-    originate in uninstrumented C and the state is UNSUPPORTED; if it runs clean the state is PASS, but
-    the libc boundary bounds what the run establishes (recorded as a non-claim).
+    originate in uninstrumented C; and the plane carries no MSan positive control (the committed
+    canary proves only the ASan instrument fires), so a green run proves nothing about
+    initialisation. Either way the libc-interception boundary bounds what the run establishes and the
+    state is `UNSUPPORTED` with that boundary as its reason, never `PASS`.
     """
     rec = {
         "result_id": "msan-openssl-rs-lib",
@@ -607,8 +655,8 @@ def run_msan(tc: dict) -> dict:
     log = res.stdout + res.stderr
     (WORK / "msan.log").write_text(log, encoding="utf-8")
     rec["exit_code"] = res.returncode
-    rec["log_sha256"] = sha256_bytes(log.encode())
-    reports = [ln.strip() for ln in log.splitlines()
+    rec["log_sha256"] = sha256_bytes(_normalise_log(log).encode())
+    reports = [_scrub_volatile(ln.strip()) for ln in log.splitlines()
                if "MemorySanitizer" in ln or "WARNING: MemorySanitizer" in ln]
     if reports:
         # Any MSan report is a use-of-uninitialised-value whose origin is uninstrumented libc: the tool
@@ -621,14 +669,20 @@ def run_msan(tc: dict) -> dict:
             "UNSUPPORTED, not a finding about the candidate")
         rec["diagnostics"] = reports[:8]
     elif res.returncode == 0 and "test result: ok" in log:
-        rec["tool_state"] = "PASS"
-        rec["unsupported_reason"] = ""
+        # A clean run is not readable as a pass: the venue links the uninstrumented system
+        # glibc/libc++ and the plane carries no MSan positive control (the canary is ASan-only), so
+        # nothing here establishes initialisation soundness. The state stays UNSUPPORTED.
+        rec["tool_state"] = "UNSUPPORTED"
+        rec["unsupported_reason"] = (
+            "the full lib harness ran under MSan without a diagnostic, but the venue links the "
+            "uninstrumented system glibc/libc++ and the plane carries no MSan positive control (the "
+            "committed canary proves only that the ASan instrument fires), so a green run cannot be "
+            "read as a proof of initialisation soundness; MSan cannot express the crate's "
+            "initialisation question across the uninstrumented C runtime, so the result is UNSUPPORTED")
         rec["tests_passed"] = sum(1 for ln in log.splitlines() if _RESULT.match(ln.strip())
                                   and _RESULT.match(ln.strip()).group("status") == "ok")
-        rec["note"] = ("the full lib harness ran clean under MSan in this venue; the venue's system "
-                       "glibc is not MSan-instrumented, so an uninitialised read whose origin is "
-                       "uninstrumented C is outside MSan's view and the run is a bounded observation "
-                       "(recorded as a non-claim), not a proof of initialisation soundness")
+        rec["note"] = ("a clean MSan run is a bounded observation (recorded as a non-claim), not a "
+                       "proof of initialisation soundness")
     else:
         err = [ln.strip() for ln in log.splitlines()
                if ln.startswith("error") or "undefined reference" in ln or "cannot find" in ln]
@@ -818,6 +872,10 @@ def _results(runs: list[dict], findings: list[dict], msan: dict, crate_ran: bool
             "sanitizer": "ASAN",
             "target": str(r.get("description")),
             "tool_state": st,
+            # ASan exposes no per-operation execution trace, so a PASS is a file-granular claim: the
+            # site's source file was instrumented and a passing run covered it. Stated explicitly
+            # rather than left to the reader of `pass_semantics`.
+            "coverage_granularity": "file",
             "findings": by_run.get(str(r.get("run_id")), []),
             "unsupported_reason": str(r.get("unsupported_reason") or ""),
             "evidence": [rel(OUT), rel(TOOL), rel(CENSUS)],
@@ -875,13 +933,13 @@ def _residuals(states: dict[str, dict], counts: dict, msan: dict, runs: list[dic
     residuals.append({
         "residual_id": "res-msan-libc-boundary",
         "subject": "MSan over the crate: the libc-interception boundary",
-        "class": "tool_unsupported" if msan.get("tool_state") == "UNSUPPORTED" else "evidence_missing",
+        "class": "tool_unsupported",
         "disposition": "preserved",
-        "detail": (f"MSan is recorded {msan.get('tool_state')}: "
-                   + (str(msan.get("unsupported_reason")) if msan.get("tool_state") == "UNSUPPORTED"
-                      else "it ran the crate clean, but the venue links the system glibc (not "
-                           "MSan-instrumented), so the run is a bounded observation rather than a "
-                           "proof of initialisation soundness")),
+        "detail": (f"MSan is recorded {msan.get('tool_state')}: the venue links the uninstrumented "
+                   f"system glibc/libc++ and the plane carries no MSan positive control (the committed "
+                   f"canary proves only that the ASan instrument fires), so a green run cannot be read "
+                   f"as a proof of initialisation soundness. "
+                   + (str(msan.get("unsupported_reason")) if msan.get("unsupported_reason") else "")),
         "evidence": [rel(OUT), rel(TOOL)],
     })
     if any(r.get("outcome") == "PASS" for r in runs):
@@ -948,6 +1006,7 @@ def build_body(census_body: dict, runs: list[dict], tc: dict, ven: dict, can: di
     findings = _findings(runs)
     return {
         "rule": _rule(tc, ven, crate_ran),
+        "pass_semantics": PASS_SEMANTICS,
         "toolchain": tc,
         "venue": ven,
         "instrumentation": build,
@@ -1112,6 +1171,21 @@ def asan_findings(body: dict, census_body: dict, root: Path | None = None) -> li
         if want not in sanitizers:
             problems.append(f"the plane carries no {want} sanitizer_result record")
 
+    # 7b. An MSan result is never a clean PASS in this venue: the venue links the uninstrumented
+    #     system glibc/libc++ and the plane carries no MSan positive control, so a green run cannot be
+    #     read as clean. Each ASan result states its coverage granularity explicitly, and the plane
+    #     carries its top-level `pass_semantics` statement.
+    for r in results:
+        if str(r.get("sanitizer")) == "MSAN" and r.get("tool_state") == "PASS":
+            problems.append("the MSan result is recorded PASS, but the venue links the uninstrumented "
+                            "system glibc and carries no MSan positive control, so a green MSan run "
+                            "cannot be read as clean")
+        if str(r.get("sanitizer")) == "ASAN" and r.get("coverage_granularity") != "file":
+            problems.append(f"ASan result {r.get('result_id')} does not record its coverage "
+                            f"granularity (`file`)")
+    if not str(body.get("pass_semantics") or "").strip():
+        problems.append("the plane does not carry its top-level `pass_semantics` statement")
+
     # 8. The rule names its committed authority and the required non-claim is present.
     rule = body.get("rule") or {}
     paths = (rule.get("authority") or {}).get("paths") or []
@@ -1226,7 +1300,19 @@ def asan_sensitivity_control(body: dict, census_body: dict, root: Path | None = 
     m6 = check("unsupported_without_reason", unsupported_without_reason(), "UNSUPPORTED with an empty "
                                                                           "reason")
 
-    result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and m6 and not baseline)
+    # m7: the MSan result marked a clean PASS -- refused because the venue links uninstrumented libc
+    #     and the plane carries no MSan positive control.
+    def msan_result_marked_pass() -> dict:
+        b = clone()
+        for r in b.get("results") or []:
+            if str(r.get("sanitizer")) == "MSAN":
+                r["tool_state"] = "PASS"
+                r["unsupported_reason"] = ""
+        return b
+
+    m7 = check("msan_result_marked_pass", msan_result_marked_pass(), "cannot be read as clean")
+
+    result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and m6 and m7 and not baseline)
     result["caught"] = sum(1 for v in result["mutations"].values() if v["caught"])
     result["seeded"] = len(result["mutations"])
     return result
@@ -1342,8 +1428,8 @@ def self_test() -> int:
         return 1
     print("[ms-asan] self-test ok: the guard refuses the host; the synthetic derivation exercises "
           "PASS/UNSUPPORTED/NOT_REACHABLE and every seeded mutation (a PASS with no run, a PASS with a "
-          "finding at it, a dropped site, an UNSUPPORTED marked PASS, a typed count and an UNSUPPORTED "
-          "run with no reason) is caught with specificity holding")
+          "finding at it, a dropped site, an UNSUPPORTED marked PASS, a typed count, an UNSUPPORTED "
+          "run with no reason and the MSan result marked PASS) is caught with specificity holding")
     return 0
 
 
