@@ -212,13 +212,16 @@ int main(void)
         printf("%s%llu", i ? "," : "", (unsigned long long)g_order[i]);
     printf("],");
 
-    /* Allocation observations over the whole sequence so far. */
+    /* Release values, nodes and header **before** reading the allocator's counters, so the
+     * recorded comparison covers the release path too -- the value, node and header frees --
+     * not just construction. This closes the measurement gap where `free` read 0 on both
+     * sides simply because neither side had been asked to release anything yet. */
+    ossl_sa_free_leaves(sa);
+
+    /* Allocation observations over the whole sequence, after cleanup. */
     printf("\"alloc\":{\"malloc\":%ld,\"free\":%ld,", g_mallocs, g_frees);
     emit_sizes();
     printf("},");
-
-    /* Release values, nodes and header. */
-    ossl_sa_free_leaves(sa);
 
     /* Allocation-failure injection: a fresh array whose first growth node is refused. A fresh
      * header is allocation #1 and the refused node is #2, so `set` must answer 0 and leave the
@@ -233,6 +236,7 @@ int main(void)
         void *g;
         int levels_after_fail;
         int r2;
+        size_t retry_num;
         g_fail_next = 1;
         r = ossl_sa_set(f, 0x100ULL, g_values[0]);
         n = ossl_sa_num(f);
@@ -240,11 +244,15 @@ int main(void)
         levels_after_fail = f ? ((int *)f)[0] : -1; /* levels is the first field */
         g_fail_next = 0;
         r2 = ossl_sa_set(f, 0x100ULL, g_values[0]);
-        printf("\"fail\":{\"set_ret\":%d,\"num\":%zu,\"get_null\":%s,\"levels\":%d,"
-               "\"retry_ret\":%d,\"retry_num\":%zu},",
-               r, n, g == NULL ? "true" : "false", levels_after_fail,
-               r2, ossl_sa_num(f));
+        retry_num = ossl_sa_num(f);
+        /* Release the injected-failure array's nodes and header **before** reading the counters,
+         * so the failure sequence's cleanup is a measured fact too. The value block is the
+         * caller's and `ossl_sa_free` does not release it. */
         ossl_sa_free(f);
+        printf("\"fail\":{\"set_ret\":%d,\"num\":%zu,\"get_null\":%s,\"levels\":%d,"
+               "\"retry_ret\":%d,\"retry_num\":%zu,\"malloc\":%ld,\"free\":%ld},",
+               r, n, g == NULL ? "true" : "false", levels_after_fail,
+               r2, retry_num, g_mallocs, g_frees);
     }
 
     printf("\"num\":%zu", num0);

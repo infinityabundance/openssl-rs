@@ -211,12 +211,25 @@
     "allocator": {
       "adjudicated": true,
       "verdict": "accepted",
+      "measured_after_cleanup": true,
+      "conservation": {
+        "success": {"authority": "malloc 57 / free 55", "candidate": "malloc 57 / free 55", "match": true},
+        "injected_failure": {"authority": "malloc 1566 / free 10", "candidate": "malloc 7 / free 6", "match": false},
+        "note": "the counters are read after each sequence's release call, so the free count covers the release path: the success sequence releases the live values, the nodes and the header (both sides 57/55, and the two extra mallocs are the caller-owned values the replace and the remove orphaned); the injected-failure sequence releases the retry's nodes and the header, which fires the hooks on both sides too"
+      },
       "divergences": [
         {
           "class": "NODE_BLOCK_SIZE",
           "authority": "128 bytes (SA_BLOCK_MAX * sizeof(void *))",
           "candidate": "136 bytes (the owned enum's discriminant)",
-          "reason": "the node block is opaque and its size is not part of the OpenSSL contract; the count of node allocations and their failure behaviour match exactly"
+          "reason": "the node block is opaque and its size is not part of the OpenSSL contract; the count of node allocations and their failure behaviour match exactly. Retained as an explicit allocator-observable residual under the bounded claim, not papered over"
+        },
+        {
+          "class": "ALLOCATION_COUNT",
+          "field": "fail.malloc / fail.free",
+          "authority": "1566 / 10",
+          "candidate": "7 / 6",
+          "reason": "the injected-failure sequence's counters are dominated by the authority's one-time lazy error-reporting initialisation: the refused node allocation reaches ossl_report_alloc_err, which allocates the per-thread ERR_STATE and loads the crypto error strings through the installed hook, whereas the crate's per-thread error state is a static structure and its string tables are compiled in. The sparse array's own allocations and releases are the header and the retry's nodes on both sides, so the divergence is the error subsystem, not the array"
         }
       ],
       "unadjudicated": 0
