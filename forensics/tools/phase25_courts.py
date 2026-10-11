@@ -1577,10 +1577,13 @@ def _ms_tsan_court(name: str) -> dict:
     no site with a finding at it is recorded `PASS`; that a `FAIL` run's finding is preserved; that
     the sanitizer_result records validate and every result states its file coverage granularity; that
     the counts are derived, not typed; that no `PASS` is recorded while the data-race positive control
-    did not fire; that the schedule is recorded; and that the venue, the canary and the crate-level
+    did not fire; that both schedules `docs/CONCURRENCY_MODEL.md` section 7 requires -- the serial
+    authoritative run and the default-thread parallel-safety gate -- are recorded and that no site
+    the gate observed racing is `PASS`; and that the venue, the canary and the crate-level
     case are recorded. Seeded mutations -- a `PASS` with no run, a `PASS` with a finding at it, a
-    dropped site, an `UNSUPPORTED` marked `PASS`, a typed count, an `UNSUPPORTED` run with no reason
-    and a `PASS` with no positive control -- are each caught with specificity holding. It is an
+    dropped site, an `UNSUPPORTED` marked `PASS`, a typed count, an `UNSUPPORTED` run with no reason,
+    a `PASS` with no positive control and a plane that omits the mandated parallel-safety gate -- are
+    each caught with specificity holding. It is an
     **instrument**: it can pass while the plane records property findings (the TSan findings), which
     are recorded as the row's `findings` so a passing sanitizer court is never read as 'the candidate
     is race-free'.
@@ -1615,9 +1618,13 @@ def _ms_tsan_court(name: str) -> dict:
             "TSAN_UNSUPPORTED) over the census sites whose operation kind requires a concurrency "
             "obligation (thread-affinity, Send/Sync or init-once), the runs (schedule, command hash, "
             "outcome, executed tests), the findings, the sanitizer_result records and the residuals. "
-            "The runs pin the libtest schedule to one thread (--test-threads=1, the deterministic "
-            "schedule docs/CONCURRENCY_MODEL.md section 6 fixes for reproducibility), so a race the "
-            "crate's own thread tests did not exercise under that schedule is not read as absent. "
+            "Both schedules docs/CONCURRENCY_MODEL.md section 7 requires are run and recorded: the "
+            "serial authoritative run (--test-threads=1, the deterministic schedule section 6 fixes "
+            "for reproducibility) and the default-thread parallel-safety gate. A site the gate "
+            "observed racing is TSAN_FAIL, never TSAN_PASS; the gate's races are real but which tests "
+            "meet is a function of timing, so each race is recorded by its reproducible core (class, "
+            "summary and the first first-party frame of each racing access), never by its "
+            "schedule-dependent outer stacks, and the gate is otherwise a gate. "
             "TSan instruments the Rust crate, `std` (rebuilt with -Zbuild-std), the first-party C "
             "adapters and the interceptable libc; it cannot instrument a module loaded at run time "
             "(src/dso/dlfcn.rs) or see through an opaque operation, and a site the instrument cannot "
@@ -1629,7 +1636,7 @@ def _ms_tsan_court(name: str) -> dict:
             "TSAN_PASS is a file-granular claim under the recorded schedule -- the site's source "
             "FILE was instrumented and a passing run covered it, not a per-operation proof that the "
             "specific operation executed race-free (the plane's top-level `pass_semantics` and each "
-            "result's `coverage_granularity: file` state this). Seven seeded mutations are each "
+            "result's `coverage_granularity: file` state this). Eight seeded mutations are each "
             "caught with specificity holding "
             "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6)."
         ),

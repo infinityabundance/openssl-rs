@@ -183,8 +183,10 @@
       },
       {
         "closure": "the `MS-TSAN` court passes",
-        "findings": [],
-        "findings_present": false,
+        "findings": [
+          "{'category': 'TSAN_DATA_RACE', 'column': 0, 'detail': \"run tsan-parallel-gate-parallel (parallel-safety-gate, schedule []) reported a ThreadSanitizer data race; the first-party access site of each racing access is recorded in `races` (the dependency frames and TSan's SUMMARY framing of the same race are a function of the default schedule's timing and are not part of the reproducible record)\", 'file': 'src/context/namemap.rs', 'finding_id': 'tf-tsan-parallel-gate-parallel', 'line': 488, 'races': [{'class': 'data race', 'sites': [{'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::ossl_namemap_empty', 'kind': 'Previous read', 'line': 488}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::name2num_inner', 'kind': 'Previous read', 'line': 633}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::namemap_add_name', 'kind': 'Previous write', 'line': 768}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::ossl_namemap_empty', 'kind': 'Read', 'line': 488}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::namemap_add_name', 'kind': 'Write', 'line': 768}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::namemap_add_name', 'kind': 'Write', 'line': 773}]}], 'run_id': 'tsan-parallel-gate-parallel', 'schedule': [], 'schedule_role': 'parallel-safety-gate'}"
+        ],
+        "findings_present": true,
         "measurement_state": "complete",
         "observation": "MS-TSAN is pass",
         "property_status": "not_claimed",
@@ -356,12 +358,12 @@
     {
       "name": "phase-25-plan",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "a2d5cde1a0939bc4f8699d35199675c6674aaf51af98c6a9496f5e406e09f532"
+      "sha256": "1b80484986e7a4cc3646ac88ced5ebecc7040a1ceaba1550a4cd628f4e5bfb02"
     },
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "0a1742117a5ec397c46f0a9934c5fc88e88ddb807b8a78dbffea018da4c21fe5"
+      "sha256": "ec0086e8e25f71a8d17ece09c13ee02fb0f982e942d3d615a9f4e6376717347f"
     },
     {
       "name": "phase25-guard",

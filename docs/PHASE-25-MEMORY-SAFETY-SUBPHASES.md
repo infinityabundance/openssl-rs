@@ -478,10 +478,26 @@ admitted image (`openssl-rs-court:1`) executed with the venue's own documented
 `OPENSSL_RS_COURT_DATA` override, which removes *only* that per-process virtual-space cap; every
 bound that bounds resident resources is unchanged, because TSan's shadow is `PROT_NONE` +
 `MAP_NORESERVE` virtual address space the cgroup does not count as resident. TSan observes the
-schedule a run happens to take, so a race it did not observe is not absent: 25.11 pins the libtest
-schedule to one thread (`--test-threads=1`, the deterministic scheduling `docs/CONCURRENCY_MODEL.md`
-section 6 sanctions for reproducibility) and records the schedule on every run, so a clean result is
-a claim about that **recorded schedule**, never that the candidate is globally race-free. The
+schedule a run happens to take, so a race it did not observe is not absent: 25.11 records **both**
+runs `docs/CONCURRENCY_MODEL.md` section 7 requires -- the serial **authoritative** run
+(`--test-threads=1`, the deterministic scheduling section 6 sanctions for reproducibility, whose
+result the project trusts) and the default-thread **parallel-safety gate**. The committed plane
+recorded only the serial run, which masked the race the gate reports; the gate is now run on every
+`--measure`. Because the gate runs the default schedule, which tests meet is a function of timing,
+so the plane records each observed race by its **reproducible core** -- its class, its `SUMMARY`
+location and the first first-party frame of each racing access -- and never by its schedule-dependent
+outer stacks; the serial runs keep their full deterministic transcripts. The gate's first observation
+on the admitted candidate is a genuine product finding: a data race on the default `OSSL_LIB_CTX`'s
+namemap, a write in `context::namemap::namemap_add_name` (under `add_names_locked`) against a read in
+`context::namemap::name2num_inner`. The crate models the authority's non-`TSAN_REQUIRES_LOCKING` arm,
+which reads the namemap counter without a lock; two threads fetching on the same library context is
+supported concurrent use, so this is recorded honestly as an **open product residual** (not masked by
+a test-side global lock), whose required fix is to synchronise the stored namemap's counter (take the
+namemap lock in `ossl_namemap_empty`/`ossl_namemap_stored`, the authority's `TSAN_REQUIRES_LOCKING`
+arm). A raced location the derivation can attribute to a surface site is `TSAN_FAIL`, never
+`TSAN_PASS`; the namemap itself is not on the concurrency-relevant surface, so the race is carried by
+the finding and the residual rather than by a site state, and the gate's seeded omission is refused
+by the sensitivity control. The
 measured surface is the **concurrency-relevant surface** of the 25.1 census: the sites whose
 operation kind requires a `THREAD_AFFINITY`, `SEND_SYNC` or `INIT_ONCE` obligation in the committed
 25.3 `KIND_DIMENSIONS` rule -- the unsafe `Send`/`Sync` impls (`UNSAFE_IMPL`) and the mutable statics
