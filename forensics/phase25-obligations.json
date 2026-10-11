@@ -227,12 +227,18 @@
       },
       {
         "closure": "the `MS-PHASE24-SAFETY-COVERAGE` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-PHASE24-SAFETY-COVERAGE is pending",
+        "findings": [
+          "44872 of 154323 externally reachable compiler-derived unsafe site(s) are observed by a Phase-24 downstream run across 6 runtime-observed measured consumer(s) (curl=22181, haproxy=34751, monit=11122, openssh=19051, pure-ftpd=6268, redis=9828); 109451 are externally reachable but observed by no downstream run and are recorded as `evidence_missing` residuals (CLI_INPUT_REACHABLE=65229, CONFIG_REACHABLE=1636, LOCAL_API_REACHABLE=2107, LOCAL_FILE_INPUT_REACHABLE=34907, NETWORK_CLIENT_REACHABLE=2338, NETWORK_SERVER_REACHABLE=3234), never zeroed",
+          "the unreduced universe is the live census's 172070 site(s), tied to 25.8's post-reduction `sites_after`=172070 and its 50 ELIMINATED operation(s); 17747 site(s) are outside the externally reachable set and are `out_of_scope`, never read as observed",
+          "the runtime-functional atlas records 8 functional candidate run(s) and the p1000 ladder 33 `DROP_IN_PASS` family(ies); 6 of the 1000 frozen families carry a committed usage fingerprint, so a run family without one is a `join_evidence_missing` residual rather than a site attribution",
+          "the coverage is a post-freeze measurement over the frozen population (holdout status `opened`: 800 development + 200 holdout) and selects nothing by a holdout label",
+          "a downstream observation is a bounded result over the workload it drove, not a coverage or memory-safety claim: a site observed by a passing run is exercised by that run's surface classes, never proven safe"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-PHASE24-SAFETY-COVERAGE is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "phase24-safety-coverage",
         "what": "the safety coverage of the Phase-24 downstream corpus: which unreduced unsafe sites the downstream runs actually exercise, and which reachable sites no downstream measurement observes, so a reachable site is never assumed exercised"
@@ -327,8 +333,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 14,
-      "open_in_this_stratum": 8,
+      "implemented": 15,
+      "open_in_this_stratum": 7,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -369,7 +375,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "07207a650af962cdcfcea73ea6b340833485f3baf20d551ca7c50f4cc328bb8c"
+      "sha256": "79fcaceefe1f167f3a622062c8fd382c3e393669371db7cc45a88e07bc347058"
     },
     {
       "name": "phase25-guard",

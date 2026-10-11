@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census, and **25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable compiler-derived sites that records each candidate safe-intrinsic replacement, the sites that remain named rather than dropped, and the frozen post-reduction census, and is a local-replacement feasibility census rather than an impossibility result, and **25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its tool state and its unsupported reason where Miri could not express the question, so an unsupported site is never read as a pass, and **25.10 registers `MS-ASAN-MSMAN`**, the ASan/MSan results over the claimed profile, each with its tool state and its unsupported reason where a sanitizer could not instrument or reach a target, so a site the instrument cannot reach or instrument is recorded rather than counted clean, and **25.11 registers `MS-TSAN`**, the TSan results over the concurrency-relevant surface, each with its tool state and its unsupported reason, so a race the tool could not observe under the recorded schedule is not read as absent, and **25.12 registers `MS-KANI`**, the Kani harness results over the stated harnesses and their targets, each with its tool state and its unsupported reason, so a target the tool cannot express or compile is recorded rather than counted clean, and **25.13 registers `MS-PHASE18-FUZZ-CROSSWALK`**, the crosswalk from the memory-safety census to the Phase-18 hostile-fuzz courts, so a discovered memory-safety failure is a preserved Phase-18 record rather than a discarded run. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining eight of its twenty-two courts -- MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.14 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census, and **25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable compiler-derived sites that records each candidate safe-intrinsic replacement, the sites that remain named rather than dropped, and the frozen post-reduction census, and is a local-replacement feasibility census rather than an impossibility result, and **25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its tool state and its unsupported reason where Miri could not express the question, so an unsupported site is never read as a pass, and **25.10 registers `MS-ASAN-MSMAN`**, the ASan/MSan results over the claimed profile, each with its tool state and its unsupported reason where a sanitizer could not instrument or reach a target, so a site the instrument cannot reach or instrument is recorded rather than counted clean, and **25.11 registers `MS-TSAN`**, the TSan results over the concurrency-relevant surface, each with its tool state and its unsupported reason, so a race the tool could not observe under the recorded schedule is not read as absent, and **25.12 registers `MS-KANI`**, the Kani harness results over the stated harnesses and their targets, each with its tool state and its unsupported reason, so a target the tool cannot express or compile is recorded rather than counted clean, and **25.13 registers `MS-PHASE18-FUZZ-CROSSWALK`**, the crosswalk from the memory-safety census to the Phase-18 hostile-fuzz courts, so a discovered memory-safety failure is a preserved Phase-18 record rather than a discarded run, and **25.14 registers `MS-PHASE24-SAFETY-COVERAGE`**, the coverage of the unreduced unsafe sites by the Phase-24 downstream runs, naming the reachable sites no downstream measurement observes so a reachable site is never assumed exercised. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining seven of its twenty-two courts -- MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.15 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -1596,6 +1596,99 @@
           "RT-HOSTILE-X509": 5946
         },
         "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught": 6,
+          "honest": true,
+          "mutations": {
+            "coverage_without_runtime_evidence": {
+              "caught": true,
+              "delta": 6,
+              "findings": 6,
+              "marker": "carries no runtime-observed consumer"
+            },
+            "inverse_view_disagrees": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": ": the forward site list disagrees with the site view"
+            },
+            "residual_omitted": {
+              "caught": true,
+              "delta": 7,
+              "findings": 7,
+              "marker": "reachable unobserved exposure class"
+            },
+            "site_dropped": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "its covered sites are not the derived covered set"
+            },
+            "typed_count": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "not the derived `counts`"
+            },
+            "typed_tool_state": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "is not the derived"
+            }
+          },
+          "seeded": 6,
+          "specificity_holds": true
+        },
+        "counts": {
+          "census_sites": 172070,
+          "consumers_runtime_observed": 6,
+          "counted_families": 1000,
+          "drop_in_pass_families": 33,
+          "fingerprinted_families": 6,
+          "functional_candidate_runs": 8,
+          "measured_consumers": 6,
+          "reduction_sites_after": 172070,
+          "residuals": 9,
+          "sites_not_reachable": 17747,
+          "sites_observed": 44872,
+          "sites_reachable": 154323,
+          "sites_reachable_unobserved": 109451,
+          "unreduced_sites": 172070
+        },
+        "court": "MS-PHASE24-SAFETY-COVERAGE",
+        "findings": [
+          "44872 of 154323 externally reachable compiler-derived unsafe site(s) are observed by a Phase-24 downstream run across 6 runtime-observed measured consumer(s) (curl=22181, haproxy=34751, monit=11122, openssh=19051, pure-ftpd=6268, redis=9828); 109451 are externally reachable but observed by no downstream run and are recorded as `evidence_missing` residuals (CLI_INPUT_REACHABLE=65229, CONFIG_REACHABLE=1636, LOCAL_API_REACHABLE=2107, LOCAL_FILE_INPUT_REACHABLE=34907, NETWORK_CLIENT_REACHABLE=2338, NETWORK_SERVER_REACHABLE=3234), never zeroed",
+          "the unreduced universe is the live census's 172070 site(s), tied to 25.8's post-reduction `sites_after`=172070 and its 50 ELIMINATED operation(s); 17747 site(s) are outside the externally reachable set and are `out_of_scope`, never read as observed",
+          "the runtime-functional atlas records 8 functional candidate run(s) and the p1000 ladder 33 `DROP_IN_PASS` family(ies); 6 of the 1000 frozen families carry a committed usage fingerprint, so a run family without one is a `join_evidence_missing` residual rather than a site attribution",
+          "the coverage is a post-freeze measurement over the frozen population (holdout status `opened`: 800 development + 200 holdout) and selects nothing by a holdout label",
+          "a downstream observation is a bounded result over the workload it drove, not a coverage or memory-safety claim: a site observed by a passing run is exercised by that run's surface classes, never proven safe"
+        ],
+        "frf_declarable": false,
+        "frf_exclusion": "the Phase-24 safety coverage court reads the committed coverage and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
+        "method": "stages no probe: it reads the committed artifacts/phase25/phase24-safety-coverage.json and re-runs the 25.14 pure checks (ms_phase24_safety_coverage.crosswalk_findings and ms_phase24_safety_coverage.crosswalk_sensitivity_control) over it, the committed 25.1 census, the committed 25.6 crosswalk, the committed 25.7 exposure, the committed 25.8 reduction count and the committed Phase-24 downstream measurement, without a compiler. The plane is a pure derivation: each unreduced census site's 25.7 exposure decides whether it is externally reachable, the 25.6 crosswalk names the measured consumers that reach it, and the Phase-24 downstream runs (the runtime-functional atlas and the p1000 drop-in ladder) decide which run family observed it; a reachable site no run observes is an `evidence_missing` residual. It establishes the unreduced-universe tie, the instrument coverage and its runtime-evidence rule, the inverse/forward agreement, the coverage-gap residuals and the holdout discipline; six seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1).",
+        "observed_by_consumer": {
+          "curl": 22181,
+          "haproxy": 34751,
+          "monit": 11122,
+          "openssh": 19051,
+          "pure-ftpd": 6268,
+          "redis": 9828
+        },
+        "probe": "",
+        "problems": [],
+        "reachable_unobserved_by_exposure": {
+          "CLI_INPUT_REACHABLE": 65229,
+          "CONFIG_REACHABLE": 1636,
+          "LOCAL_API_REACHABLE": 2107,
+          "LOCAL_FILE_INPUT_REACHABLE": 34907,
+          "NETWORK_CLIENT_REACHABLE": 2338,
+          "NETWORK_SERVER_REACHABLE": 3234
+        },
+        "verdict": "pass"
       }
     ],
     "cve_replay_states": [
@@ -1685,7 +1778,6 @@
       "MS-FRF-CLOSURE": "25.20 -- the FRF/Gemel closure",
       "MS-HISTORICAL-CVE": "25.15 -- the historical CVE census",
       "MS-MECHANISM-RECONCILIATION": "25.17 -- the vulnerability-mechanism reconciliation",
-      "MS-PHASE24-SAFETY-COVERAGE": "25.14 -- the Phase-24 downstream safety coverage",
       "MS-RED-TEAM": "25.18 -- the red team",
       "MS-SEAL": "25.21 -- the memory-safety seal"
     },
@@ -1960,8 +2052,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 14,
-      "total": 14
+      "pass": 15,
+      "total": 15
     },
     "tool_states": [
       "PASS",
@@ -2009,7 +2101,7 @@
     {
       "name": "phase25-container-manifest",
       "path": "forensics/memory-safety/container.json",
-      "sha256": "f14e8b73fe3f7501b3da914c8c5e4eab79dd21e8f4a4c5dee94ef32a1f290ae0"
+      "sha256": "db81f9ba6f533733d96648ee22de0591e16c7d24c92c7f0000e517c1a3da05a2"
     },
     {
       "name": "cargo-toml",
@@ -2044,7 +2136,7 @@
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "199485991ca05a172bb129f1b07edb04960d795aada8cc387cc2667d6688b919"
+      "sha256": "3f1962c05044d6e0979e50858c1e022d4c7dc0a7dde437e34fbfca01571f78e8"
     },
     {
       "name": "ms-obligations-tool",
@@ -2054,7 +2146,7 @@
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "f047abf0d9404caf98808e620c2d6778cb8e8f4a9d334692c510d3936b472857"
+      "sha256": "dabf37bada03c077953a17cc5ce733e07ee6774bb6bc984fee52d2bfd15c9bfc"
     },
     {
       "name": "ms-ownership-planes-tool",
@@ -2064,7 +2156,7 @@
     {
       "name": "phase22-crosswalk",
       "path": "artifacts/phase25/phase22-crosswalk.json",
-      "sha256": "ec95a5ed20e192aa83b52c4213c1b34e4412bfccebe0fe95466f0eb0b785e5d6"
+      "sha256": "f25b9d1979b0848ec2d1508ff482409556332be3cde186856cb89179fd775807"
     },
     {
       "name": "ms-phase22-crosswalk-tool",
@@ -2099,7 +2191,7 @@
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "6314532eb1c638c80fd7b6592cf29742a79794c2309349aab89f2c442711192b"
+      "sha256": "5ea1036edc1b01758e3a4f72b37a2664a710d7355dfe18291f4e9cdd18380ee0"
     },
     {
       "name": "ms-phase24-crosswalk-tool",
@@ -2139,7 +2231,7 @@
     {
       "name": "exposure",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "4d68e4c7b0ca8be2b5ae7493033dec4d150ddc9d8f9b0d7e02a8351345836962"
+      "sha256": "56e2789c2eb069a40539f25487b78933f0e6ae6ed750085df7116c5308d62601"
     },
     {
       "name": "ms-exposure-tool",
@@ -2149,7 +2241,7 @@
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "9aab19eb53a6dd579278a9ff09541524ce6dbb8f839cd36b91d67247c636de68"
+      "sha256": "9b95304cef2307b5d6dea691814643cbb678bb1fd277ec09c960bd9c6a0aa011"
     },
     {
       "name": "ms-reduction-tool",
@@ -2239,7 +2331,7 @@
     {
       "name": "phase18-fuzz-crosswalk",
       "path": "artifacts/phase25/phase18-fuzz-crosswalk.json",
-      "sha256": "edc2cca1d3e6282ab4de0565bfbbbb2522b500a25a48394842b09ccae9a10578"
+      "sha256": "d2150e307dee4fb0405f814608737763495947e57c51d8a7c6a8f7120bddd485"
     },
     {
       "name": "ms-phase18-fuzz-crosswalk-tool",
@@ -2260,6 +2352,21 @@
       "name": "phase18-fuzz-hostile-corpus",
       "path": "artifacts/phase18/fuzz-hostile-corpus.json",
       "sha256": "b341e40ffa886a3d26156472e0bddd74ac288ee2e2a83b172ad21a2fc8fe6db1"
+    },
+    {
+      "name": "phase24-safety-coverage",
+      "path": "artifacts/phase25/phase24-safety-coverage.json",
+      "sha256": "1a2b439844910124aa9490ebf4e7e49e1c3ffaa1008bf189effe78bbbdd1d56d"
+    },
+    {
+      "name": "ms-phase24-safety-coverage-tool",
+      "path": "forensics/tools/ms_phase24_safety_coverage.py",
+      "sha256": "7c2f0a0bdad1a0c6c58f766983dd66cf92d8145bb9fd1beaa718efaac2bfee9b"
+    },
+    {
+      "name": "downstream-holdout",
+      "path": "forensics/downstream/holdout.json",
+      "sha256": "53edab09762af37e514453a8c0e7c3fcff1aaad9d7e993dc6f187bc48fe14601"
     }
   ],
   "kind": "phase25-courts",

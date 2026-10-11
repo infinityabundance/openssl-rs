@@ -492,6 +492,24 @@ GENERATORS_BEFORE_LEDGERS = [
     # the committed artefact, the census, the committed 25.7 routes and the committed Phase-18
     # evidence.
     "forensics/tools/ms_phase18_fuzz_crosswalk.py",
+    # **Phase 25.14's Phase-24 downstream safety coverage
+    # (`forensics/tools/ms_phase24_safety_coverage.py` ->
+    # `artifacts/phase25/phase24-safety-coverage.json`) is a pure function of committed inputs too,
+    # so it belongs here and is byte-compared.** It measures the coverage of the unreduced unsafe
+    # sites by the Phase-24 downstream runs, reading the committed 25.1 census for the site
+    # universe, the committed 25.6 crosswalk for the measured consumers that reach each site, the
+    # committed 25.7 exposure classification for reachability, the committed 25.8 reduction counts
+    # the unreduced universe is tied to, and the committed Phase-24 downstream measurement (the
+    # usage fingerprints, the runtime-functional atlas, the p1000 drop-in receipts, the family
+    # freeze and the holdout partition). It compiles nothing -- no compiler, no run driver, no probe
+    # -- so `forensics/memory-safety/container.json` lists it `metadata_only` and the Docker-only
+    # guard admits it on any host, exactly as `ms_phase18_fuzz_crosswalk` is. A stale committed
+    # coverage -- or a dropped site, a coverage claim with no runtime evidence, a typed count, an
+    # inverse view that disagrees with the forward map, a coverage gap with no residual or a run
+    # family with no fingerprint read as attributed -- is a failure rather than a silent divergence,
+    # and the `MS-PHASE24-SAFETY-COVERAGE` court re-runs the same pure checks over the committed
+    # artefact, the census and the committed 25.6/25.7/25.8 and Phase-24 planes.
+    "forensics/tools/ms_phase24_safety_coverage.py",
     # **Phase 25.10's ASan measurement (`forensics/tools/ms_asan.py` ->
     # `artifacts/phase25/asan-msan.json`) follows the `ms_census.py`/`ms_miri.py` measurement
     # precedent, so it is deliberately NOT listed here and NOT in `COMPARED`.** It builds the exact
@@ -904,6 +922,14 @@ COMPARED = [
     # divergence. It executes nothing and reads no compiler output, so re-deriving it needs no
     # compiler, no fuzzer and no candidate.
     "artifacts/phase25/phase18-fuzz-crosswalk.json",
+    # Phase 25.14's Phase-24 downstream safety coverage: a pure function of the committed 25.1
+    # census, the committed 25.6 crosswalk, the committed 25.7 exposure classification, the
+    # committed 25.8 reduction counts and the committed Phase-24 downstream measurement. A dropped
+    # site, a coverage claim with no runtime evidence, a typed count, an inverse view that disagrees
+    # with the forward map, a coverage gap with no residual or a run family with no fingerprint read
+    # as attributed is a failure rather than a silent divergence. It executes nothing and reads no
+    # compiler output, so re-deriving it needs no compiler, no run driver and no candidate.
+    "artifacts/phase25/phase24-safety-coverage.json",
 ]
 
 # ---------------------------------------------------------------------------
