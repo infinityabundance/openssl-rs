@@ -201,6 +201,13 @@ import ms_reduction  # noqa: E402
 # artefact and those committed planes.
 import ms_phase18_fuzz_crosswalk  # noqa: E402
 
+# 25.14's Phase-24 downstream safety coverage and the tool that derives it from the committed
+# census, the committed 25.6 crosswalk, the committed 25.7 exposure, the committed 25.8 reduction
+# counts and the committed Phase-24 downstream measurement. The court re-runs the tool's pure
+# `crosswalk_findings` / `crosswalk_sensitivity_control` over the committed artefact and those
+# committed planes.
+import ms_phase24_safety_coverage  # noqa: E402
+
 # 25.9's Miri results and the tool that records them. The court re-runs the tool's pure
 # `miri_findings` / `miri_sensitivity_control` over the committed plane and the committed census.
 import ms_miri  # noqa: E402
@@ -363,6 +370,16 @@ PHASE18_COURTS = REPO_ROOT / "artifacts" / "phase18" / "COURTS.json"
 PHASE18_FUZZ_HOSTILE_CORPUS = (REPO_ROOT / "artifacts" / "phase18"
                                / "fuzz-hostile-corpus.json")
 
+# 25.14's Phase-24 downstream safety coverage and the pure tool that derives it from the committed
+# census, the committed 25.6 crosswalk, the committed 25.7 exposure, the committed 25.8 reduction
+# counts and the committed Phase-24 downstream measurement (the usage fingerprints, the
+# runtime-functional atlas, the p1000 drop-in receipts, the family freeze and the holdout).
+PHASE24_SAFETY_COVERAGE = REPO_ROOT / "artifacts" / "phase25" / "phase24-safety-coverage.json"
+MS_PHASE24_SAFETY_COVERAGE_TOOL = (REPO_ROOT / "forensics" / "tools"
+                                   / "ms_phase24_safety_coverage.py")
+PHASE24_SAFETY_COVERAGE_COURT = "MS-PHASE24-SAFETY-COVERAGE"
+DOWNSTREAM_HOLDOUT = REPO_ROOT / "forensics" / "downstream" / "holdout.json"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -396,6 +413,7 @@ COURTS: list[tuple[str, str]] = [
     (TSAN_COURT, "_ms_tsan_court"),
     (KANI_COURT, "_ms_kani_court"),
     (PHASE18_FUZZ_CROSSWALK_COURT, "_ms_phase18_fuzz_crosswalk_court"),
+    (PHASE24_SAFETY_COVERAGE_COURT, "_ms_phase24_safety_coverage_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
@@ -403,10 +421,9 @@ COURTS: list[tuple[str, str]] = [
 # removed `MS-OWNERSHIP-PLANES`, 25.5 removed `MS-PHASE22-CROSSWALK`, 25.6 removed
 # `MS-PHASE24-CROSSWALK`, 25.7 removed `MS-EXPOSURE-CLASSIFICATION`, 25.8 removed
 # `MS-UNSAFE-REDUCTION`, 25.9 removed `MS-MIRI`, 25.10 removed `MS-ASAN-MSMAN`, 25.11 removed
-# `MS-TSAN`, 25.12 removed `MS-KANI` and 25.13 removed `MS-PHASE18-FUZZ-CROSSWALK`, so eight
-# remain. Ordered as the plan orders them.
+# `MS-TSAN`, 25.12 removed `MS-KANI`, 25.13 removed `MS-PHASE18-FUZZ-CROSSWALK` and 25.14 removed
+# `MS-PHASE24-SAFETY-COVERAGE`, so seven remain. Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-PHASE24-SAFETY-COVERAGE": "25.14 -- the Phase-24 downstream safety coverage",
     "MS-HISTORICAL-CVE": "25.15 -- the historical CVE census",
     "MS-CVE-REPLAY": "25.16 -- the historical CVE replay",
     "MS-MECHANISM-RECONCILIATION": "25.17 -- the vulnerability-mechanism reconciliation",
@@ -1903,6 +1920,110 @@ def _ms_phase18_fuzz_crosswalk_court(name: str) -> dict:
     }
 
 
+def _ms_phase24_safety_coverage_court(name: str) -> dict:
+    """`MS-PHASE24-SAFETY-COVERAGE`: 25.14's court, the Phase-24 downstream safety coverage.
+
+    Stages no probe. It reads the committed `artifacts/phase25/phase24-safety-coverage.json` and
+    re-runs the 25.14 pure checks `ms_phase24_safety_coverage.crosswalk_findings` and
+    `ms_phase24_safety_coverage.crosswalk_sensitivity_control` over it together with the committed
+    25.1 census, the committed 25.6 crosswalk it reads the consumers from, the committed 25.7
+    exposure it reads the reachability from, the committed 25.8 reduction count it ties the
+    unreduced universe to, and the committed Phase-24 downstream measurement -- no compiler, no run
+    driver, no probe; the derivation that produced the plane is `ms_phase24_safety_coverage.py
+    --measure`, and this court only re-derives from what it wrote.
+
+    It establishes that the unreduced universe is the live census tied to 25.8's post-reduction
+    `sites_after` and `reachable_after`; that every Phase-24 downstream run instrument is present
+    with the sites its fingerprinted run families observe; that a covered site is externally
+    reachable and carries a runtime-observed consumer (a coverage claim with no runtime evidence is
+    refused); that the uncovered sites are exactly the reachable sites no run observes; that the
+    inverse site view and the forward consumer view agree and reproduce from the 25.6 measurement;
+    that the counts, the residuals and every plane equal their derivation; that every coverage gap
+    (each reachable-unobserved exposure class, the sites outside the reachable set and each run
+    family with no fingerprint) is a residual; and that the rule names the committed authorities
+    and the frozen P1000 holdout discipline. Six seeded mutations -- a site silently dropped from
+    an instrument, a site claimed covered with no runtime evidence, an inverse consumer view that
+    disagrees, a typed count, a coverage gap with no residual and a typed tool state -- are each
+    caught with specificity holding. It is an **instrument**: it can pass while the coverage
+    records real property findings (the reachable sites no downstream run observes, the sites
+    outside the reachable set and the run families with no fingerprint), which are recorded as the
+    row's `findings` so a passing coverage court is never read as a memory-safety claim.
+    """
+    if not PHASE24_SAFETY_COVERAGE.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "coverage-missing",
+                "problems": [f"the Phase-24 safety coverage {rel(PHASE24_SAFETY_COVERAGE)} is "
+                             f"absent"], "findings": [], "control": {}}
+    if not SOURCE_CENSUS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "census-missing",
+                "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
+                "findings": [], "control": {}}
+    if not PHASE24_CROSSWALK.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "crosswalk-missing",
+                "problems": [f"the Phase-24 crosswalk {rel(PHASE24_CROSSWALK)} is absent"],
+                "findings": [], "control": {}}
+
+    census_body, refs = _census_view()
+    body = _decoded_body(PHASE24_SAFETY_COVERAGE, refs)
+    authority = ms_phase24_safety_coverage.load_authority()
+    problems = ms_phase24_safety_coverage.crosswalk_findings(body, census_body, authority)
+    control = ms_phase24_safety_coverage.crosswalk_sensitivity_control(body, census_body, authority)
+
+    counts = body.get("counts") or {}
+    findings = list(body.get("findings") or [])
+
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/phase24-safety-coverage.json "
+            "and re-runs the 25.14 pure checks (ms_phase24_safety_coverage.crosswalk_findings and "
+            "ms_phase24_safety_coverage.crosswalk_sensitivity_control) over it, the committed 25.1 "
+            "census, the committed 25.6 crosswalk, the committed 25.7 exposure, the committed 25.8 "
+            "reduction count and the committed Phase-24 downstream measurement, without a compiler. "
+            "The plane is a pure derivation: each unreduced census site's 25.7 exposure decides "
+            "whether it is externally reachable, the 25.6 crosswalk names the measured consumers "
+            "that reach it, and the Phase-24 downstream runs (the runtime-functional atlas and the "
+            "p1000 drop-in ladder) decide which run family observed it; a reachable site no run "
+            "observes is an `evidence_missing` residual. It establishes the unreduced-universe tie, "
+            "the instrument coverage and its runtime-evidence rule, the inverse/forward agreement, "
+            "the coverage-gap residuals and the holdout discipline; six seeded mutations are each "
+            "caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, "
+            "3.1)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the Phase-24 safety coverage court reads the committed coverage and re-derives only "
+            "its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF "
+            "declaration"
+        ),
+        "counts": {
+            "census_sites": counts.get("census_sites", 0),
+            "unreduced_sites": counts.get("unreduced_sites", 0),
+            "reduction_sites_after": counts.get("reduction_sites_after", 0),
+            "sites_reachable": counts.get("sites_reachable", 0),
+            "sites_observed": counts.get("sites_observed", 0),
+            "sites_reachable_unobserved": counts.get("sites_reachable_unobserved", 0),
+            "sites_not_reachable": counts.get("sites_not_reachable", 0),
+            "measured_consumers": counts.get("measured_consumers", 0),
+            "consumers_runtime_observed": counts.get("consumers_runtime_observed", 0),
+            "functional_candidate_runs": counts.get("functional_candidate_runs", 0),
+            "drop_in_pass_families": counts.get("drop_in_pass_families", 0),
+            "fingerprinted_families": counts.get("fingerprinted_families", 0),
+            "counted_families": counts.get("counted_families", 0),
+            "residuals": len(body.get("residuals") or []),
+        },
+        "observed_by_consumer": dict(counts.get("observed_by_consumer") or {}),
+        "reachable_unobserved_by_exposure":
+            dict(counts.get("reachable_unobserved_by_exposure") or {}),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -2000,13 +2121,16 @@ def main(argv: list[str]) -> int:
             "tool cannot express or compile is recorded rather than counted clean, and "
             "**25.13 registers `MS-PHASE18-FUZZ-CROSSWALK`**, the crosswalk from the memory-safety "
             "census to the Phase-18 hostile-fuzz courts, so a discovered memory-safety failure is "
-            "a preserved Phase-18 record rather than a discarded run. "
+            "a preserved Phase-18 record rather than a discarded run, and "
+            "**25.14 registers `MS-PHASE24-SAFETY-COVERAGE`**, the coverage of the unreduced unsafe "
+            "sites by the Phase-24 downstream runs, naming the reachable sites no downstream "
+            "measurement observes so a reachable site is never assumed exercised. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining eight of its twenty-two courts -- "
-            "MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
+            "remaining seven of its twenty-two courts -- "
+            "MS-HISTORICAL-CVE, "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.14 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.15 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -2090,6 +2214,9 @@ def main(argv: list[str]) -> int:
         InputRef(name="phase18-hostile-boundary-register", path=PHASE18_HOSTILE_REGISTER),
         InputRef(name="phase18-courts", path=PHASE18_COURTS),
         InputRef(name="phase18-fuzz-hostile-corpus", path=PHASE18_FUZZ_HOSTILE_CORPUS),
+        InputRef(name="phase24-safety-coverage", path=PHASE24_SAFETY_COVERAGE),
+        InputRef(name="ms-phase24-safety-coverage-tool", path=MS_PHASE24_SAFETY_COVERAGE_TOOL),
+        InputRef(name="downstream-holdout", path=DOWNSTREAM_HOLDOUT),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

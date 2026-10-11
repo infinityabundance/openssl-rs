@@ -6205,7 +6205,7 @@
     {
       "name": "seal-census",
       "path": "docs/SEAL-CENSUS.md",
-      "sha256": "ebd741fed7b7e3d0ca6cc8afb4ed80bf00847593e4bb128201102d41e24caeba"
+      "sha256": "fcfc3551b7431a012d1e81f8b398d807d26e91991b5f763de51b0bcff287d75c"
     },
     {
       "name": "shared-blockers",
