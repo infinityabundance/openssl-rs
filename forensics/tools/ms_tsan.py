@@ -151,13 +151,34 @@ CC_WRAPPER = WORK / "bin" / "tsan-cc"
 RUSTFLAGS = "-Zsanitizer=thread -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=16"
 PROFILE = "dev"
 TSAN_OPTIONS = "halt_on_error=1:exit_code=66"
-# The deterministic schedule `docs/CONCURRENCY_MODEL.md` section 6 fixes: the libtest harness runs one
-# test at a time, so the executed set and the observation are a function of the committed candidate
-# rather than of the machine's load. The crate's own thread tests still spawn and join threads.
+# docs/CONCURRENCY_MODEL.md section 7 fixes TWO libtest runs and requires both. The *authoritative*
+# run pins one thread (`--test-threads=1`), the deterministic schedule section 6 sanctions: the
+# executed set and the observation are a function of the committed candidate rather than of the
+# machine's load, so its result is the ones the project trusts. The *parallel-safety gate* runs the
+# default thread count (`--test-threads` unset): a data race or an accidental cross-module coupling
+# the serial run hides must surface there. The committed plane recorded only the serial run; 25.11
+# now records both, and a site the gate observes racing is `TSAN_FAIL`, never `TSAN_PASS`.
 SCHEDULE: tuple[str, ...] = ("--test-threads=1",)
+PARALLEL_SCHEDULE: tuple[str, ...] = ()
+SCHEDULES: tuple[dict, ...] = (
+    {"id": "serial", "role": "authoritative", "schedule": list(SCHEDULE),
+     "note": ("the deterministic one-thread libtest schedule docs/CONCURRENCY_MODEL.md section 6 "
+              "sanctions; its result is the one the project trusts")},
+    {"id": "parallel", "role": "parallel-safety-gate", "schedule": list(PARALLEL_SCHEDULE),
+     "note": ("the default-thread libtest schedule docs/CONCURRENCY_MODEL.md section 7 mandates as "
+              "the parallel-safety gate; a data race or an accidental cross-module coupling the "
+              "serial schedule hides must surface here")},
+)
+SCHEDULE_BY_ID: dict[str, dict] = {s["id"]: s for s in SCHEDULES}
 BUILD_TIMEOUT = 2400
 RUN_TIMEOUT = 1800
 CANARY_TIMEOUT = 180
+# The parallel-safety gate runs the whole suite under the default-thread schedule, where which tests
+# meet is a function of timing, so a single run may observe zero, one or several races and its first
+# report varies. The plane records the *union* of the first race each of `GATE_REPEATS` repetitions
+# observes, sorted and deduplicated: that union is a stable function of the candidate (two
+# independent batches of six gave the identical three-core union) even though a single run is not.
+GATE_REPEATS = 6
 # TSan changes Rust's ABI (it instruments memory accesses), so a standalone canary built without
 # `-Zbuild-std` links a pre-built `std` whose ABI differs. The canary is not product code; the
 # mismatch-allow flag is the documented way to build a standalone TSan probe, and it is recorded.
@@ -197,20 +218,23 @@ REASON_POSITIVE_CONTROL = "TSAN_POSITIVE_CONTROL_DID_NOT_FIRE"
 # file-granular instrument/coverage claim under that schedule, never a per-operation race-freedom
 # guarantee and never a claim about a schedule the run did not take.
 PASS_SEMANTICS = (
-    "TSAN_PASS means the site's source FILE was instrumented, had a covering run under the recorded "
-    "one-thread libtest schedule, and produced no ThreadSanitizer data-race report -- it is not a "
-    "claim that the specific unsafe operation executed race-free, and it is not a claim about a "
-    "schedule the run did not take; every TSan result records `coverage_granularity: file` and every "
-    "run records its schedule, so a PASS is a file-granular instrument/coverage claim under that "
-    "schedule, never a per-operation race-freedom guarantee")
+    "TSAN_PASS means the site's source FILE was instrumented, had a covering run under BOTH recorded "
+    "libtest schedules (the serial authoritative run and the default-thread parallel-safety gate), "
+    "and produced no ThreadSanitizer data-race report under either -- a race the parallel gate "
+    "observed marks the site TSAN_FAIL, never TSAN_PASS; it is not a per-operation race-freedom "
+    "guarantee, and every TSan result records `coverage_granularity: file` and every run records its "
+    "schedule, so a PASS is a file-granular instrument/coverage claim under both recorded schedules, "
+    "never a claim about a schedule the runs did not take")
 
 NON_CLAIMS: tuple[str, ...] = (
     "TSan is not exhaustive: it instruments a run and reports the races it observed in the schedule "
     "that run took, so NOT_REACHABLE and UNSUPPORTED are not clean results, and a run that observed "
     "no race is not a proof that no schedule races",
-    "the TSan runs use a recorded deterministic one-thread libtest schedule (`--test-threads=1`), so "
-    "a race the crate's own thread tests did not exercise under that schedule is not read as absent; "
-    "the schedule is recorded on every run and is the bound on what a clean result claims",
+    "the TSan runs take two committed libtest schedules -- the serial authoritative run "
+    "(`--test-threads=1`, the deterministic schedule section 6 sanctions) and the default-thread "
+    "parallel-safety gate section 7 mandates; the gate is run with the committed halt-on-error, so it "
+    "stops at the first race it observes, and both runs record their schedule, so a race neither "
+    "schedule exercised is not read as absent",
     "a zero-findings TSan result is trusted only because the canary is known to fire; the canary "
     "proves the instrument can detect a deliberate data race in this venue, not that the candidate "
     "is race-free",
@@ -227,6 +251,10 @@ NON_CLAIMS: tuple[str, ...] = (
     "the surface is the compiler-derived census sites whose operation kind requires a concurrency "
     "obligation (thread-affinity, Send/Sync or init-once); every other census site is not restated "
     "here and is the 25.10 plane's subject, not a TSan pass",
+    "the parallel-safety gate runs the default-thread schedule, so which tests meet is a function of "
+    "timing; the plane records the race's reproducible core (its class, summary and the first "
+    "first-party frame of each racing access) and not the schedule-dependent outer stacks, so a gate "
+    "finding names the race and its two access sites without claiming the exact interleaving",
 )
 
 # The committed run set. Each entry is a real command; `source` names the harness file whose `crate::`
@@ -241,6 +269,7 @@ HARNESSES: tuple[dict, ...] = (
                         "init)"),
         "source": None,
         "filter": "runtime::",
+        "schedules": ("serial",),
     },
     {
         "harness_id": "tsan-context",
@@ -248,6 +277,7 @@ HARNESSES: tuple[dict, ...] = (
                         "recorded one-thread schedule"),
         "source": None,
         "filter": "context::",
+        "schedules": ("serial",),
     },
     {
         "harness_id": "tsan-digest",
@@ -255,6 +285,7 @@ HARNESSES: tuple[dict, ...] = (
                         "one-thread schedule (the digest tables carry unsafe Send/Sync impls)"),
         "source": None,
         "filter": "digest::",
+        "schedules": ("serial",),
     },
     {
         "harness_id": "tsan-evp",
@@ -262,14 +293,30 @@ HARNESSES: tuple[dict, ...] = (
                         "one-thread schedule (the EVP tables carry unsafe Send/Sync impls)"),
         "source": None,
         "filter": "evp::",
+        "schedules": ("serial",),
+    },
+    {
+        "harness_id": "tsan-parallel-gate",
+        "description": ("the whole lib unit suite under the DEFAULT-thread libtest schedule -- the "
+                        "parallel-safety gate docs/CONCURRENCY_MODEL.md section 7 mandates, run "
+                        "with the committed halt-on-error so it stops at the first observed race"),
+        "source": None,
+        "filter": None,
+        "schedules": ("parallel",),
+        "gate": True,
     },
 )
 
 # A libtest result line: `test <path> ... ok` / `... FAILED` / `... ignored`.
 _RESULT = re.compile(r"^test\s+(?P<name>\S+)\s+\.\.\.\s+(?P<status>ok|FAILED|ignored)\s*$")
-# The primary crate frame a TSan report names: `/work/src/<file>.rs:<line>` (a TSan frame carries no
-# column). The column is optional so an ASan-style frame would also resolve.
-_FRAME = re.compile(r"(?:/work/)?(src/[A-Za-z0-9_/.+-]+\.rs):(?P<line>\d+)(?::(?P<col>\d+))?")
+# A TSan report opens on its kind (`ThreadSanitizer: data race`), then the two racing accesses
+# (`Write of size N ... by thread Tn:`) each followed by a stack, then a `Location is ...` block.
+_TSAN_REPORT = re.compile(r"WARNING: ThreadSanitizer:\s*(?P<kind>[a-z][a-z0-9-]*(?: [a-z][a-z0-9-]*)*)")
+_TSAN_ACCESS = re.compile(r"^\s*(?P<kind>Write|Read|Previous write|Previous read) of size (?P<size>\d+)\b")
+_TSAN_SUMMARY = re.compile(r"^SUMMARY: ThreadSanitizer:\s*(?P<text>.+)$")
+# One TSan stack frame carrying a source location: `    #3 fn /path/file.rs:123 (mangled)`. Frames
+# with no location (`#0 malloc ??:?`, `#0 __tsan_memcpy ??:?`) carry no file:line and are skipped.
+_TSAN_FRAME = re.compile(r"^\s*#(?P<index>\d+)\s+(?P<function>.+?)\s+(?P<file>\S+\.rs):(?P<line>\d+)")
 # The TSan race class, e.g. `ThreadSanitizer: data race`. A TSan startup warning
 # (`unexpected memory mapping`) also matches a naive pattern, so it is filtered by name below.
 _TSAN_ERROR = re.compile(r"ThreadSanitizer:\s*(?P<kind>[a-z][a-z0-9-]*(?: [a-z][a-z0-9-]*)*)")
@@ -413,6 +460,8 @@ def toolchain() -> dict:
         "cc_wrapper": "clang -fsanitize=thread -fno-omit-frame-pointer -g",
         "tsan_options": TSAN_OPTIONS,
         "schedule": list(SCHEDULE),
+        "schedules": [{"id": s["id"], "role": s["role"], "schedule": list(s["schedule"])}
+                      for s in SCHEDULES],
         "nightly_installed": installed,
         "toolchain_home": NIGHTLY_HOME,
         "note": ("the pinned nightly the 25.1 census and the 25.9 Miri runs share "
@@ -628,23 +677,127 @@ def build_instrumented(tc: dict) -> dict:
     }
 
 
-def run_harness(harness: dict, tc: dict, tsan_runnable: bool) -> dict:
-    """Run one harness and parse its transcript into a run record with an honest outcome."""
+def _frame_site(frame: re.Match) -> dict:
+    """One TSan stack frame as a site, with a first-party path normalised to `src/...`."""
+    raw = frame.group("file")
+    if raw.startswith("/work/src/"):
+        raw = raw[len("/work/"):]
+    return {"function": frame.group("function").strip(), "file": raw,
+            "line": int(frame.group("line"))}
+
+
+def _is_crate_site(site: dict | None) -> bool:
+    return bool(site) and str(site.get("file") or "").startswith("src/")
+
+
+def _race_descriptor(race: dict) -> dict:
+    """The first-party core of one report: the access site, on the crate's own source, of each
+    racing access. The dependency frames (hashbrown/std) and TSan's SUMMARY framing of the same race
+    vary run to run, so they are not recorded; the first-party access sites do not."""
+    sites = []
+    for a in race.get("accesses") or []:
+        c = a.get("crate")
+        if c:
+            sites.append({"kind": str(a.get("kind") or ""),
+                          "function": str(c.get("function") or ""),
+                          "file": str(c.get("file") or ""), "line": int(c.get("line") or 0)})
+    sites.sort(key=lambda s: (s["kind"], s["file"], s["line"], s["function"]))
+    return {"class": str(race.get("class") or ""), "sites": sites}
+
+
+def parse_races(log: str) -> list[dict]:
+    """The schedule-independent core of every TSan data-race report in one transcript.
+
+    The gate runs the default-thread schedule, so *which* tests meet is a function of timing and the
+    outer frames of a report differ run to run. What the candidate fixes is the race itself: its
+    class, its `SUMMARY` location, and the innermost frame of each of the two racing accesses (the
+    access site) together with the first first-party frame beneath it. Only that core is recorded --
+    the full per-thread stacks are schedule-dependent and would make two `--measure` runs differ.
+    """
+    races: list[dict] = []
+    cur: dict | None = None
+    mode = ""  # "", "access" or "location"
+    for line in log.splitlines():
+        mk = _TSAN_REPORT.search(line)
+        if mk:
+            cur = {"class": mk.group("kind"), "summary": "", "accesses": [], "allocation": None}
+            races.append(cur)
+            mode = ""
+            continue
+        if cur is None:
+            continue
+        ms = _TSAN_SUMMARY.match(line.strip())
+        if ms:
+            cur["summary"] = ms.group("text").strip()
+            mode = ""
+            continue
+        if line.lstrip().startswith("Location is"):
+            mode = "location"
+            continue
+        ma = _TSAN_ACCESS.match(line)
+        if ma:
+            cur["accesses"].append({"kind": ma.group("kind"), "size": int(ma.group("size")),
+                                     "head": None, "crate": None})
+            mode = "access"
+            continue
+        mf = _TSAN_FRAME.match(line)
+        if not mf:
+            continue
+        site = _frame_site(mf)
+        if mode == "access" and cur["accesses"]:
+            acc = cur["accesses"][-1]
+            if acc["head"] is None:
+                acc["head"] = site
+            if acc["crate"] is None and _is_crate_site(site):
+                acc["crate"] = site
+        elif mode == "location" and cur["allocation"] is None and _is_crate_site(site):
+            cur["allocation"] = site
+    return races
+
+
+def _race_error_sites(races: list[dict]) -> list[dict]:
+    """The first-party sites a race descriptor implicates, deterministically (never the whole stack)."""
+    sites: list[dict] = []
+    seen: set[tuple] = set()
+    for race in races:
+        for s in race.get("sites") or []:
+            k = (str(s.get("file")), int(s.get("line") or 0))
+            if k not in seen:
+                seen.add(k)
+                sites.append({"file": k[0], "line": k[1], "column": 0,
+                              "class": str(race.get("class") or "")})
+    return sites
+
+
+def run_harness(harness: dict, sched: dict, tc: dict, tsan_runnable: bool) -> dict:
+    """Run one harness under one schedule and parse its transcript into a run record.
+
+    The record's `schedule` is the schedule this run took; `run_id` names the harness *and* the
+    schedule, so both the authoritative run and the parallel-safety gate are recorded for the
+    harnesses that carry each. A gate run stops at the first observed race
+    (`TSAN_OPTIONS=halt_on_error=1`), so its executed-test list and transcript are a function of
+    timing and are not recorded; its race core is (see `parse_races`).
+    """
+    gate = bool(harness.get("gate"))
+    run_id = f"{harness['harness_id']}-{sched['id']}"
     cmd = ["cargo", "test", "-Zbuild-std", "--lib", "--target", TARGET_TRIPLE, "--"]
-    cmd.extend(SCHEDULE)
+    cmd.extend(sched.get("schedule") or [])
     if harness.get("filter"):
         cmd.append(str(harness["filter"]))
     display = f"TSAN_OPTIONS={TSAN_OPTIONS} RUSTFLAGS='{RUSTFLAGS}' " + " ".join(cmd)
     base = {
-        "run_id": harness["harness_id"],
+        "run_id": run_id,
         "harness_id": harness["harness_id"],
         "description": harness["description"],
         "filter": harness.get("filter"),
-        "schedule": list(SCHEDULE),
+        "schedule": list(sched.get("schedule") or []),
+        "schedule_id": sched["id"],
+        "schedule_role": sched["role"],
         "command": display,
         "command_sha256": sha256_bytes(display.encode("utf-8")),
         "unsupported_files": [],
         "error_sites": [],
+        "races": [],
         "tests": [],
     }
     if not tc.get("nightly_installed"):
@@ -657,53 +810,73 @@ def run_harness(harness: dict, tc: dict, tsan_runnable: bool) -> dict:
                     unsupported_reason=REASON_VENUE, transcript_sha256="unknown",
                     tests_run=0, tests_passed=0, tests_failed=0, bound_to={})
     WORK.mkdir(parents=True, exist_ok=True)
-    try:
-        res = _run(cmd, env=_tsan_env(), timeout=RUN_TIMEOUT)
-    except subprocess.TimeoutExpired:
-        return dict(base, outcome="UNSUPPORTED",
-                    unsupported_reason=f"the harness exceeded {RUN_TIMEOUT}s",
-                    transcript_sha256="unknown", tests_run=0, tests_passed=0, tests_failed=0,
-                    bound_to={})
-    log = res.stdout + res.stderr
-    (WORK / f"{harness['harness_id']}.log").write_text(log, encoding="utf-8")
+    reps = GATE_REPEATS if gate else 1
+    logs: list[str] = []
+    gate_sites: dict[tuple, dict] = {}
+    race_map: dict[str, dict] = {}
+    happened = False
+    all_zero = True
+    for _ in range(reps):
+        try:
+            res = _run(cmd, env=_tsan_env(), timeout=RUN_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            return dict(base, outcome="UNSUPPORTED",
+                        unsupported_reason=f"the harness exceeded {RUN_TIMEOUT}s",
+                        transcript_sha256="unknown", tests_run=0, tests_passed=0, tests_failed=0,
+                        bound_to={})
+        one = res.stdout + res.stderr
+        logs.append(one)
+        all_zero = all_zero and res.returncode == 0
+        tsan_err = _TSAN_ERROR.search(one)
+        if tsan_err is not None and _UNEXPECTED_MAPPING not in (tsan_err.group("kind") or ""):
+            happened = True
+        reports = parse_races(one)
+        if gate:
+            # The gate unions the first race of each repetition, first-party sites only: that set is a
+            # stable function of the candidate where a single report is not (see `GATE_REPEATS`).
+            for race in reports[:1]:
+                for s in _race_descriptor(race)["sites"]:
+                    gate_sites[(s["kind"], s["file"], s["line"], s["function"])] = s
+        else:
+            for race in reports:
+                d = _race_descriptor(race)
+                race_map[json.dumps(d, sort_keys=True)] = d
+    log = "\n".join(logs)
+    (WORK / f"{run_id}.log").write_text(log, encoding="utf-8")
+    if gate:
+        ss = sorted(gate_sites.values(),
+                    key=lambda s: (s["kind"], s["file"], s["line"], s["function"]))
+        races = [{"class": "data race", "sites": ss}] if ss else []
+    else:
+        races = [race_map[k] for k in sorted(race_map)]
 
     tests: list[dict] = []
-    for line in log.splitlines():
-        m = _RESULT.match(line.strip())
-        if m:
-            tests.append({"name": m.group("name"), "status": m.group("status")})
-    # libtest schedules tests in a nondeterministic order; the executed set is the evidence, so the
-    # list is sorted by name rather than recorded in the order this run happened to execute.
-    tests.sort(key=lambda t: t["name"])
+    if not gate:
+        for line in log.splitlines():
+            m = _RESULT.match(line.strip())
+            if m:
+                tests.append({"name": m.group("name"), "status": m.group("status")})
+        # libtest schedules tests in a nondeterministic order; the executed set is the evidence, so
+        # the list is sorted by name rather than recorded in the order this run happened to execute.
+        tests.sort(key=lambda t: t["name"])
 
-    error_sites: list[dict] = []
-    unsupported_reason = ""
-    tsan_err = _TSAN_ERROR.search(log)
-    if tsan_err is not None and _UNEXPECTED_MAPPING not in (tsan_err.group("kind") or ""):
+    if happened:
         outcome = "FAIL"
-        # Every crate frame the report names is implicated; the first is the primary location.
-        seen: set[tuple] = set()
-        for m in _FRAME.finditer(log):
-            f = m.group(1)
-            if f.startswith("src/"):
-                key = (f, int(m.group("line")), int(m.group("col") or 0))
-                if key not in seen:
-                    seen.add(key)
-                    error_sites.append({"file": f, "line": key[1], "column": key[2],
-                                        "class": tsan_err.group("kind")})
-    elif res.returncode == 0:
+    elif all_zero:
         outcome = "PASS"
     else:
         outcome = "FAIL"
+    error_sites = _race_error_sites(races) if happened else []
     return dict(base,
                 outcome=outcome,
-                unsupported_reason=unsupported_reason,
+                unsupported_reason="",
                 unsupported_files=[],
-                transcript_sha256=sha256_bytes(_normalise_log(log).encode("utf-8")),
-                tests_run=len(tests),
-                tests_passed=sum(1 for t in tests if t["status"] == "ok"),
-                tests_failed=sum(1 for t in tests if t["status"] == "FAILED"),
-                tests=tests,
+                transcript_sha256=("" if gate else sha256_bytes(_normalise_log(log).encode("utf-8"))),
+                tests_run=0 if gate else len(tests),
+                tests_passed=0 if gate else sum(1 for t in tests if t["status"] == "ok"),
+                tests_failed=0 if gate else sum(1 for t in tests if t["status"] == "FAILED"),
+                tests=[] if gate else tests,
+                races=races,
                 error_sites=error_sites,
                 bound_to={f: sha256_file(REPO_ROOT / f) for f in (harness.get("bound_files") or ())})
 
@@ -856,7 +1029,30 @@ def _findings(runs: list[dict]) -> list[dict]:
     for r in runs:
         if r.get("outcome") != "FAIL":
             continue
+        races = r.get("races") or []
         sites = r.get("error_sites") or []
+        if races:
+            race = races[0]
+            sites = race.get("sites") or []
+            prim = sites[0] if sites else {}
+            findings.append({
+                "finding_id": f"tf-{r['run_id']}",
+                "run_id": r["run_id"],
+                "category": "TSAN_DATA_RACE",
+                "schedule": list(r.get("schedule") or []),
+                "schedule_role": str(r.get("schedule_role") or ""),
+                "file": prim.get("file") or "",
+                "line": int(prim.get("line") or 0),
+                "column": 0,
+                "races": races,
+                "detail": (f"run {r['run_id']} ({r.get('schedule_role')}, schedule "
+                           f"{r.get('schedule')}) reported a ThreadSanitizer "
+                           f"{race.get('class')}; the first-party access site of each racing access "
+                           f"is recorded in `races` (the dependency frames and TSan's SUMMARY "
+                           f"framing of the same race are a function of the default schedule's "
+                           f"timing and are not part of the reproducible record)"),
+            })
+            continue
         if not sites:
             findings.append({
                 "finding_id": f"tf-{r['run_id']}",
@@ -912,16 +1108,50 @@ def _residuals(states: dict[str, dict], counts: dict, runs: list[dict]) -> list[
     residuals: list[dict] = []
     residuals.append({
         "residual_id": "res-tsan-schedule-bound",
-        "subject": "the TSan runs use a recorded deterministic one-thread schedule",
+        "subject": "the TSan runs take two committed libtest schedules",
         "class": "evidence_missing",
         "disposition": "preserved",
-        "detail": ("the runs pin the libtest schedule to one thread (`--test-threads=1`), which "
-                   "docs/CONCURRENCY_MODEL.md section 6 sanctions for reproducibility and which makes "
-                   "the executed set and the observation a function of the committed candidate; the "
-                   "bound is that a race the crate's own thread tests did not exercise under that "
-                   "schedule is not read as absent, and every run records its schedule"),
+        "detail": ("the runs take both schedules docs/CONCURRENCY_MODEL.md section 7 requires: the "
+                   "serial authoritative run (`--test-threads=1`, which section 6 sanctions for "
+                   "reproducibility and which makes the executed set and the observation a function "
+                   "of the committed candidate) and the default-thread parallel-safety gate. The "
+                   "bound is that a race neither schedule exercised is not read as absent, and every "
+                   "run records its schedule"),
         "evidence": [rel(TOOL), rel(PLAN)],
     })
+    residuals.append({
+        "residual_id": "res-tsan-parallel-gate-core",
+        "subject": "the parallel-safety gate's race core outside its first-party frames",
+        "class": "evidence_missing",
+        "disposition": "preserved",
+        "detail": ("the default-thread run's races are real but which tests meet is a function of "
+                   "timing, so the plane records each race's reproducible core (class, summary and "
+                   "the first first-party frame of each racing access) and not the schedule-dependent "
+                   "outer stacks. The gate is still a gate: a race it observes marks the plane's "
+                   "race-freedom claim failed rather than absent"),
+        "evidence": [rel(TOOL), rel(PLAN)],
+    })
+    if any(str(r.get("schedule_role")) == "parallel-safety-gate" and r.get("outcome") == "FAIL"
+           for r in runs):
+        residuals.append({
+            "residual_id": "res-tsan-default-libctx-race",
+            "subject": "the default libctx's namemap races under the parallel-safety gate",
+            "class": "evidence_missing",
+            "disposition": "open",
+            "detail": ("the default-thread gate observed a ThreadSanitizer data race on the default "
+                       "OSSL_LIB_CTX's namemap: a write in context::namemap::namemap_add_name (under "
+                       "add_names_locked) racing a read in context::namemap::ossl_namemap_empty via "
+                       "ossl_namemap_stored from the EVP fetch path. The crate models the authority's "
+                       "non-TSAN_REQUIRES_LOCKING arm, which reads the namemap counter without a "
+                       "lock; two threads fetching on the same library context is supported "
+                       "concurrent use, so this is a product finding, not test isolation. Required "
+                       "product fix: synchronise the stored namemap's counter read/write -- take the "
+                       "namemap lock in ossl_namemap_empty/ossl_namemap_stored (the authority's "
+                       "TSAN_REQUIRES_LOCKING arm) -- so concurrent default-context fetch is "
+                       "race-free; until it lands the raced location is recorded here and in the "
+                       "finding above, never averaged into a pass"),
+            "evidence": [rel(TOOL), rel(CENSUS)],
+        })
     residuals.append({
         "residual_id": "res-tsan-coverage-granularity",
         "subject": "TSAN_PASS coverage granularity",
@@ -994,6 +1224,8 @@ def _rule(tc: dict, ven: dict, crate_ran: bool, reason: str) -> dict:
         },
         "harnesses": [str(h["harness_id"]) for h in HARNESSES],
         "schedule": list(SCHEDULE),
+        "schedules": [{"id": s["id"], "role": s["role"], "schedule": list(s["schedule"]),
+                       "note": s["note"]} for s in SCHEDULES],
         "site_states": list(SITE_STATES),
         "concurrency_dimensions": list(CONCURRENCY_DIMENSIONS),
         "inexecutable_kinds": list(TSAN_INEXECUTABLE_KINDS),
@@ -1003,11 +1235,13 @@ def _rule(tc: dict, ven: dict, crate_ran: bool, reason: str) -> dict:
                          "the committed ms_obligations.KIND_DIMENSIONS rule; the plane carries one "
                          "state per surface site and restates no other census site"),
         "pass_rule": ("TSAN_PASS iff the site's file is covered by a passing TSan run (a file an "
-                      "executed test lives in, or a module the harness source calls into) and its "
-                      "operation is not an opaque/foreign boundary; the site cites the run id and the "
-                      "run's command hash"),
-        "fail_rule": ("TSAN_FAIL iff a run reported a ThreadSanitizer data race at the site's "
-                      "(file, line); the site cites the run id"),
+                      "executed test lives in, or a module the harness source calls into), its "
+                      "operation is not an opaque/foreign boundary, and NO recorded run -- under "
+                      "either committed schedule -- observed a race at it; the site cites the run "
+                      "id and the run's command hash"),
+        "fail_rule": ("TSAN_FAIL iff a run under either committed schedule reported a "
+                      "ThreadSanitizer data race attributed to the site's (file, line); the site "
+                      "cites the run id, and a raced site is never recorded TSAN_PASS"),
         "unsupported_rule": ("TSAN_UNSUPPORTED iff the site is on the committed foreign/uninstrumented "
                              "surface or is an opaque operation TSan cannot see through, or the venue "
                              "could not run the instrument, or the positive control did not fire; the "
@@ -1093,8 +1327,20 @@ def tsan_findings(body: dict, census_body: dict, root: Path | None = None) -> li
             problems.append(f"run {rid} does not carry a sha256 command hash")
         if r.get("outcome") == "UNSUPPORTED" and not r.get("unsupported_reason"):
             problems.append(f"run {rid} is UNSUPPORTED with an empty reason")
-        if list(r.get("schedule") or []) != list(SCHEDULE):
-            problems.append(f"run {rid} does not record the committed schedule {list(SCHEDULE)}")
+        if list(r.get("schedule")) not in [s["schedule"] for s in SCHEDULES]:
+            problems.append(f"run {rid} does not record one of the committed schedules "
+                            f"(serial {list(SCHEDULE)} or parallel {list(PARALLEL_SCHEDULE)})")
+
+    # 0b. Both schedules docs/CONCURRENCY_MODEL.md section 7 requires are present. A plane that
+    #     records only the serial run has masked the parallel-safety gate, and a plane that records
+    #     only the gate has no authoritative run; each harness's every mandated schedule must exist.
+    for h in HARNESSES:
+        for sid in h.get("schedules") or ("serial",):
+            want = f"{h['harness_id']}-{sid}"
+            if want not in runs_by_id:
+                problems.append(f"the plane omits the mandated {SCHEDULE_BY_ID[sid]['role']} run "
+                                f"{want}; docs/CONCURRENCY_MODEL.md section 7 requires both the "
+                                f"serial (authoritative) and the parallel-safety-gate runs")
 
     # 1. The derived states are the committed states, with a specific message per disagreement.
     reason = _crate_reason_code(body.get("toolchain") or {}, body.get("canary") or {})
@@ -1228,6 +1474,9 @@ def tsan_findings(body: dict, census_body: dict, root: Path | None = None) -> li
             problems.append(f"the TSan rule does not name its committed authority {want}")
     if list(rule.get("concurrency_dimensions") or []) != list(CONCURRENCY_DIMENSIONS):
         problems.append("the TSan rule does not record the concurrency dimensions")
+    if len(rule.get("schedules") or []) != len(SCHEDULES):
+        problems.append("the TSan rule does not record both committed schedules (the serial "
+                        "authoritative run and the parallel-safety gate)")
     if not str(rule.get("surface_rule") or "").strip():
         problems.append("the TSan rule does not record how the surface is derived")
     ncs = body.get("non_claims") or []
@@ -1248,9 +1497,10 @@ def tsan_sensitivity_control(body: dict, census_body: dict, root: Path | None = 
     """Seed the mutations and require each caught, with specificity holding.
 
     Each is a distinct way the plane could lie: a site marked PASS without the covering run executed;
-    a site marked PASS with a finding at it; a dropped site; an UNSUPPORTED site marked PASS; a typed
-    count; a run that is UNSUPPORTED with no reason; and a PASS recorded while the positive control
-    did not fire.
+    a site marked PASS with a finding at it (a raced site recorded PASS); a dropped site; an
+    UNSUPPORTED site marked PASS; a typed count; a run that is UNSUPPORTED with no reason; a PASS
+    recorded while the positive control did not fire; and a plane that omits the mandated
+    parallel-safety gate and so records only the serial run.
     """
     root = root or REPO_ROOT
     census_body = ms_census.decode_body(census_body)
@@ -1352,7 +1602,20 @@ def tsan_sensitivity_control(body: dict, census_body: dict, root: Path | None = 
     m7 = check("pass_without_positive_control", pass_without_positive_control(),
                "positive control did not fire")
 
-    result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and m6 and m7 and not baseline)
+    # m8: the mandated parallel-safety gate is omitted -- a plane that records only the serial run
+    #     has masked the gate docs/CONCURRENCY_MODEL.md section 7 requires, so it is refused.
+    gate_rid = next((str(r.get("run_id")) for r in (body.get("runs") or [])
+                     if str(r.get("schedule_role")) == "parallel-safety-gate"), None)
+
+    def omitted_parallel_run() -> dict:
+        b = clone()
+        b["runs"] = [r for r in b.get("runs") or [] if str(r.get("run_id")) != gate_rid]
+        return b
+
+    m8 = check("omitted_parallel_run", omitted_parallel_run(), "omits the mandated")
+
+    result["specificity_holds"] = bool(m1 and m2 and m3 and m4 and m5 and m6 and m7 and m8
+                                        and gate_rid is not None and not baseline)
     result["caught"] = sum(1 for v in result["mutations"].values() if v["caught"])
     result["seeded"] = len(result["mutations"])
     return result
@@ -1377,17 +1640,33 @@ def _synth_census() -> tuple[dict, list[dict]]:
         {"site_id": "us-nonsurf-1", "file": "src/aes.rs", "line": 376, "column": 9,
          "operation_kind": "RAW_POINTER_WRITE"},
     ]}
-    runs = [
-        {"run_id": "tsan-runtime", "harness_id": "tsan-runtime", "description": "runtime",
-         "filter": "runtime::", "schedule": list(SCHEDULE), "outcome": "PASS",
-         "command_sha256": "0" * 64, "command": "cargo test", "unsupported_reason": "",
-         "transcript_sha256": "1" * 64,
-         "tests": [{"name": "runtime::thread::tests::atomic_add64_is_visible_across_threads",
-                    "status": "ok"},
-                   {"name": "aes::tests::rfc5649_wrap_pad_vectors", "status": "ok"}],
-         "tests_run": 2, "tests_passed": 2, "tests_failed": 0,
-         "error_sites": [], "unsupported_files": [], "bound_to": {}},
-    ]
+    runs = []
+    for h in HARNESSES:
+        for sid in h.get("schedules") or ("serial",):
+            sched = SCHEDULE_BY_ID[sid]
+            covered = (h["harness_id"] == "tsan-runtime" and sid == "serial")
+            runs.append({
+                "run_id": f"{h['harness_id']}-{sid}",
+                "harness_id": h["harness_id"],
+                "description": h["description"],
+                "filter": h.get("filter"),
+                "schedule": list(sched["schedule"]),
+                "schedule_id": sid,
+                "schedule_role": sched["role"],
+                "outcome": "PASS",
+                "command_sha256": "0" * 64,
+                "command": "cargo test",
+                "unsupported_reason": "",
+                "transcript_sha256": "1" * 64,
+                "tests": ([{"name": "runtime::thread::tests::atomic_add64_is_visible_across_threads",
+                            "status": "ok"},
+                           {"name": "aes::tests::rfc5649_wrap_pad_vectors", "status": "ok"}]
+                          if covered else []),
+                "tests_run": 2 if covered else 0,
+                "tests_passed": 2 if covered else 0,
+                "tests_failed": 0,
+                "races": [], "error_sites": [], "unsupported_files": [], "bound_to": {},
+            })
     return census, runs
 
 
@@ -1460,8 +1739,9 @@ def self_test() -> int:
     print("[ms-tsan] self-test ok: the guard refuses the host; the synthetic derivation exercises "
           "PASS/UNSUPPORTED/NOT_REACHABLE over the concurrency-relevant surface and every seeded "
           "mutation (a PASS with no run, a PASS with a finding at it, a dropped site, an UNSUPPORTED "
-          "marked PASS, a typed count, an UNSUPPORTED run with no reason and a PASS with no positive "
-          "control) is caught with specificity holding")
+          "marked PASS, a typed count, an UNSUPPORTED run with no reason, a PASS with no positive "
+          "control and a plane that omits the mandated parallel-safety gate) is caught with "
+          "specificity holding")
     return 0
 
 
@@ -1527,7 +1807,10 @@ def _measure() -> int:
         build = {"state": "UNSUPPORTED", "reason": can.get("reason", ""),
                  "command": " ".join(_build_command()), "tsan_refs": 0}
 
-    runs = [run_harness(h, tc, crate_ran) for h in HARNESSES]
+    runs = []
+    for h in HARNESSES:
+        for sid in h.get("schedules") or ("serial",):
+            runs.append(run_harness(h, SCHEDULE_BY_ID[sid], tc, crate_ran))
 
     census_body = ms_census.decode_body(_body(json.loads(_read(CENSUS)) if CENSUS.is_file() else {}))
     body = build_body(census_body, runs, tc, ven, can, build, crate_ran, reason, REPO_ROOT)

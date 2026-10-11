@@ -1244,7 +1244,7 @@
       {
         "control": {
           "baseline_findings": 0,
-          "caught": 7,
+          "caught": 8,
           "honest": true,
           "mutations": {
             "dropped_site": {
@@ -1252,6 +1252,12 @@
               "delta": 1,
               "findings": 1,
               "marker": "has no TSan state"
+            },
+            "omitted_parallel_run": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "omits the mandated"
             },
             "pass_with_finding": {
               "caught": true,
@@ -1290,56 +1296,118 @@
               "marker": "UNSUPPORTED with an empty reason"
             }
           },
-          "seeded": 7,
+          "seeded": 8,
           "specificity_holds": true
         },
         "counts": {
           "crate_ran": 1,
           "fail": 0,
-          "findings": 0,
+          "findings": 1,
           "not_reachable": 96,
           "pass": 56,
-          "residuals": 6,
-          "results": 4,
-          "runs": 4,
+          "residuals": 8,
+          "results": 5,
+          "runs": 5,
           "sites": 153,
           "unsupported": 1
         },
         "court": "MS-TSAN",
-        "findings": [],
+        "findings": [
+          {
+            "category": "TSAN_DATA_RACE",
+            "column": 0,
+            "detail": "run tsan-parallel-gate-parallel (parallel-safety-gate, schedule []) reported a ThreadSanitizer data race; the first-party access site of each racing access is recorded in `races` (the dependency frames and TSan's SUMMARY framing of the same race are a function of the default schedule's timing and are not part of the reproducible record)",
+            "file": "src/context/namemap.rs",
+            "finding_id": "tf-tsan-parallel-gate-parallel",
+            "line": 488,
+            "races": [
+              {
+                "class": "data race",
+                "sites": [
+                  {
+                    "file": "src/context/namemap.rs",
+                    "function": "openssl_rs::context::namemap::ossl_namemap_empty",
+                    "kind": "Previous read",
+                    "line": 488
+                  },
+                  {
+                    "file": "src/context/namemap.rs",
+                    "function": "openssl_rs::context::namemap::name2num_inner",
+                    "kind": "Previous read",
+                    "line": 633
+                  },
+                  {
+                    "file": "src/context/namemap.rs",
+                    "function": "openssl_rs::context::namemap::namemap_add_name",
+                    "kind": "Previous write",
+                    "line": 768
+                  },
+                  {
+                    "file": "src/context/namemap.rs",
+                    "function": "openssl_rs::context::namemap::ossl_namemap_empty",
+                    "kind": "Read",
+                    "line": 488
+                  },
+                  {
+                    "file": "src/context/namemap.rs",
+                    "function": "openssl_rs::context::namemap::namemap_add_name",
+                    "kind": "Write",
+                    "line": 768
+                  },
+                  {
+                    "file": "src/context/namemap.rs",
+                    "function": "openssl_rs::context::namemap::namemap_add_name",
+                    "kind": "Write",
+                    "line": 773
+                  }
+                ]
+              }
+            ],
+            "run_id": "tsan-parallel-gate-parallel",
+            "schedule": [],
+            "schedule_role": "parallel-safety-gate"
+          }
+        ],
         "frf_declarable": false,
         "frf_exclusion": "the TSan court re-derives only the plane's pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
-        "method": "stages no probe: it reads the committed artifacts/phase25/tsan.json and re-runs the 25.11 pure checks (ms_tsan.tsan_findings and ms_tsan.tsan_sensitivity_control) over it, the committed 25.1 census and the committed 25.3 obligation rule that defines the concurrency-relevant surface -- no TSan, no nightly, no compiler. The plane records a per-surface-site TSan state (TSAN_PASS / TSAN_FAIL / TSAN_NOT_REACHABLE / TSAN_UNSUPPORTED) over the census sites whose operation kind requires a concurrency obligation (thread-affinity, Send/Sync or init-once), the runs (schedule, command hash, outcome, executed tests), the findings, the sanitizer_result records and the residuals. The runs pin the libtest schedule to one thread (--test-threads=1, the deterministic schedule docs/CONCURRENCY_MODEL.md section 6 fixes for reproducibility), so a race the crate's own thread tests did not exercise under that schedule is not read as absent. TSan instruments the Rust crate, `std` (rebuilt with -Zbuild-std), the first-party C adapters and the interceptable libc; it cannot instrument a module loaded at run time (src/dso/dlfcn.rs) or see through an opaque operation, and a site the instrument cannot reach or instrument is NOT_REACHABLE/UNSUPPORTED, never silently clean. A no-race result is trusted only because the deliberate data-race canary is known to fire. The TSan environment is the admitted court image with the venue's documented OPENSSL_RS_COURT_DATA override (TSan's ~35.1 TB shadow is MAP_NORESERVE virtual address space); the crate-level state records TSAN_RAN or TSAN_UNSUPPORTED. Every TSAN_PASS is a file-granular claim under the recorded schedule -- the site's source FILE was instrumented and a passing run covered it, not a per-operation proof that the specific operation executed race-free (the plane's top-level `pass_semantics` and each result's `coverage_granularity: file` state this). Seven seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6).",
+        "method": "stages no probe: it reads the committed artifacts/phase25/tsan.json and re-runs the 25.11 pure checks (ms_tsan.tsan_findings and ms_tsan.tsan_sensitivity_control) over it, the committed 25.1 census and the committed 25.3 obligation rule that defines the concurrency-relevant surface -- no TSan, no nightly, no compiler. The plane records a per-surface-site TSan state (TSAN_PASS / TSAN_FAIL / TSAN_NOT_REACHABLE / TSAN_UNSUPPORTED) over the census sites whose operation kind requires a concurrency obligation (thread-affinity, Send/Sync or init-once), the runs (schedule, command hash, outcome, executed tests), the findings, the sanitizer_result records and the residuals. Both schedules docs/CONCURRENCY_MODEL.md section 7 requires are run and recorded: the serial authoritative run (--test-threads=1, the deterministic schedule section 6 fixes for reproducibility) and the default-thread parallel-safety gate. A site the gate observed racing is TSAN_FAIL, never TSAN_PASS; the gate's races are real but which tests meet is a function of timing, so each race is recorded by its reproducible core (class, summary and the first first-party frame of each racing access), never by its schedule-dependent outer stacks, and the gate is otherwise a gate. TSan instruments the Rust crate, `std` (rebuilt with -Zbuild-std), the first-party C adapters and the interceptable libc; it cannot instrument a module loaded at run time (src/dso/dlfcn.rs) or see through an opaque operation, and a site the instrument cannot reach or instrument is NOT_REACHABLE/UNSUPPORTED, never silently clean. A no-race result is trusted only because the deliberate data-race canary is known to fire. The TSan environment is the admitted court image with the venue's documented OPENSSL_RS_COURT_DATA override (TSan's ~35.1 TB shadow is MAP_NORESERVE virtual address space); the crate-level state records TSAN_RAN or TSAN_UNSUPPORTED. Every TSAN_PASS is a file-granular claim under the recorded schedule -- the site's source FILE was instrumented and a passing run covered it, not a per-operation proof that the specific operation executed race-free (the plane's top-level `pass_semantics` and each result's `coverage_granularity: file` state this). Eight seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6).",
         "probe": "",
         "problems": [],
         "runs": [
           {
             "command_sha256": "d62f5265390a0ec6",
             "outcome": "PASS",
-            "run_id": "tsan-runtime",
+            "run_id": "tsan-runtime-serial",
             "tests_passed": 218,
             "tests_run": 218
           },
           {
             "command_sha256": "28e873ec4cd41dba",
             "outcome": "PASS",
-            "run_id": "tsan-context",
+            "run_id": "tsan-context-serial",
             "tests_passed": 18,
             "tests_run": 18
           },
           {
             "command_sha256": "1dc5ae1565a5857f",
             "outcome": "PASS",
-            "run_id": "tsan-digest",
+            "run_id": "tsan-digest-serial",
             "tests_passed": 53,
             "tests_run": 53
           },
           {
             "command_sha256": "45e2f5c437ef2e2c",
             "outcome": "PASS",
-            "run_id": "tsan-evp",
+            "run_id": "tsan-evp-serial",
             "tests_passed": 189,
             "tests_run": 189
+          },
+          {
+            "command_sha256": "6e61453cd5b087a0",
+            "outcome": "FAIL",
+            "run_id": "tsan-parallel-gate-parallel",
+            "tests_passed": 0,
+            "tests_run": 0
           }
         ],
         "verdict": "pass"
@@ -1743,7 +1811,7 @@
     {
       "name": "phase-25-plan",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "a2d5cde1a0939bc4f8699d35199675c6674aaf51af98c6a9496f5e406e09f532"
+      "sha256": "1b80484986e7a4cc3646ac88ced5ebecc7040a1ceaba1550a4cd628f4e5bfb02"
     },
     {
       "name": "memory-safety-schemas",
@@ -1793,7 +1861,7 @@
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "833afab05623c31bf77a1aa68f170a5548c292863ca3f20d1243bf2fd5dd4c79"
+      "sha256": "7aa10ce0b14e282d56dbae79ebb723ebd01b57c75ccc0794cdf0a96921721804"
     },
     {
       "name": "ms-obligations-tool",
@@ -1803,7 +1871,7 @@
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "41bf9793fdfb7e02be275ba4aa26df64523086e682284fa1d5763bcf1bb8ef44"
+      "sha256": "9d27ac580fb9e69ef34c9b680da8bf9a13f3bf06153f6658bd2da36c38451580"
     },
     {
       "name": "ms-ownership-planes-tool",
@@ -1813,7 +1881,7 @@
     {
       "name": "phase22-crosswalk",
       "path": "artifacts/phase25/phase22-crosswalk.json",
-      "sha256": "22beb63e8b4cf83c468cf42c3868cd03fe5fa59e23a6130db9c3421658aeac17"
+      "sha256": "ce46e8a3e3b5ad054d93fa12dee4938e9ad05e6042d66be7006b4f84e8137879"
     },
     {
       "name": "ms-phase22-crosswalk-tool",
@@ -1848,7 +1916,7 @@
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "5849da3921bab5a7fc0c5fe93cb823e8b8ddd06957b6be3bd50d003650cb960f"
+      "sha256": "430e770aba9de3c2a9e96225b3daaafca1ab4a857fa9ca8a3ba0574a72392913"
     },
     {
       "name": "ms-phase24-crosswalk-tool",
@@ -1888,7 +1956,7 @@
     {
       "name": "exposure",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "669ceac1c0e82a9e2612eadbc324479d1df59638ce95080070ca2515f9bed7f5"
+      "sha256": "bc7708e7b7b3118139c8b67a576522aaddcd8b16da6ce4dbafca0ba813539f50"
     },
     {
       "name": "ms-exposure-tool",
@@ -1898,7 +1966,7 @@
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "81f58317374c82e11af342d5572f61aa15d4d20e41923753247c0cefe153e47e"
+      "sha256": "c7a40852c41559b9a5cc22ef537916acb1e7b82def5df1f5b47b1181d9bf0668"
     },
     {
       "name": "ms-reduction-tool",
@@ -1948,12 +2016,12 @@
     {
       "name": "tsan",
       "path": "artifacts/phase25/tsan.json",
-      "sha256": "596714cdbbf4b74cba76a80d73d0bde691e44d34cbdb072472cd2fb63d562dda"
+      "sha256": "5884b2427281737086e09d4e3e92f0a6a25f5044f9cffdafec501277061bb0f4"
     },
     {
       "name": "ms-tsan-tool",
       "path": "forensics/tools/ms_tsan.py",
-      "sha256": "9425e68984a2d48f2eb7ec70929b10210a2648ca5b1172854128645cd6bf5bc5"
+      "sha256": "8672be8690a2b67b4c58b86eef4d0417b5bf8f9e648d0869eb40c7866acf0ba5"
     },
     {
       "name": "tsan-canary-source",

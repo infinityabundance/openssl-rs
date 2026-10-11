@@ -11,7 +11,7 @@
         "bounds": {
           "cgroup_memory_max_bytes": 8589934592,
           "entry_timeout_ms": 4000,
-          "rlimit_data_kib": 4294967296
+          "rlimit_data_kib": null
         },
         "candidate_exit_code": 0,
         "candidate_observations": 1046,
@@ -388,7 +388,7 @@
         "bounds": {
           "cgroup_memory_max_bytes": 8589934592,
           "entry_timeout_ms": 4000,
-          "rlimit_data_kib": 4294967296
+          "rlimit_data_kib": null
         },
         "candidate_exit_code": 0,
         "candidate_observations": 1066,
@@ -610,7 +610,7 @@
         "bounds": {
           "case_timeout_ms": 20000,
           "cgroup_memory_max_bytes": 8589934592,
-          "rlimit_data_kib": 4294967296
+          "rlimit_data_kib": null
         },
         "candidate_exit_code": 0,
         "candidate_observations": 282,
