@@ -207,6 +207,11 @@ import ms_asan  # noqa: E402
 # the committed 25.3 obligation rule that defines the concurrency-relevant surface.
 import ms_tsan  # noqa: E402
 
+# 25.12's Kani results and the tool that records them. The court re-runs the tool's pure
+# `kani_findings` / `kani_sensitivity_control` over the committed plane and the committed harness
+# source (tests/kani_proofs.rs) the stated harnesses live in.
+import ms_kani  # noqa: E402
+
 # The lossless columnar codec the Phase-25 artefacts are stored in. Every court decodes the
 # committed artefact through `decode_body` before reading its records, so one implementation of the
 # scheme serves the generator, the court and every cross-reader; the scheme is named by
@@ -328,6 +333,15 @@ TSAN_CANARY_SOURCE = REPO_ROOT / "forensics" / "tools" / "tsan_canary.c"
 TSAN_CANARY_RUST_SOURCE = REPO_ROOT / "forensics" / "tools" / "tsan_canary.rs"
 TSAN_HARNESS_SOURCE = REPO_ROOT / "src" / "runtime" / "thread.rs"
 
+# 25.12's Kani plane and the tool that records it. The plane is a measurement (it runs the committed
+# Kani proof harnesses with the pinned Kani release), so the tool is not a metadata-only generator;
+# the court re-runs only the pure checks over the committed artefact and the committed harness
+# source the stated harnesses live in.
+KANI = REPO_ROOT / "artifacts" / "phase25" / "kani.json"
+MS_KANI_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_kani.py"
+KANI_COURT = "MS-KANI"
+KANI_HARNESS_SOURCE = REPO_ROOT / "tests" / "kani_proofs.rs"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -359,16 +373,16 @@ COURTS: list[tuple[str, str]] = [
     (MIRI_COURT, "_ms_miri_court"),
     (ASAN_MSAN_COURT, "_ms_asan_msan_court"),
     (TSAN_COURT, "_ms_tsan_court"),
+    (KANI_COURT, "_ms_kani_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
 # `MS-SOURCE-CENSUS`, 25.2 removed `MS-NON-RUST-TCB`, 25.3 removed `MS-SAFETY-OBLIGATIONS`, 25.4
 # removed `MS-OWNERSHIP-PLANES`, 25.5 removed `MS-PHASE22-CROSSWALK`, 25.6 removed
 # `MS-PHASE24-CROSSWALK`, 25.7 removed `MS-EXPOSURE-CLASSIFICATION`, 25.8 removed
-# `MS-UNSAFE-REDUCTION`, 25.9 removed `MS-MIRI`, 25.10 removed `MS-ASAN-MSMAN` and 25.11 removed
-# `MS-TSAN`, so ten remain. Ordered as the plan orders them.
+# `MS-UNSAFE-REDUCTION`, 25.9 removed `MS-MIRI`, 25.10 removed `MS-ASAN-MSMAN`, 25.11 removed
+# `MS-TSAN` and 25.12 removed `MS-KANI`, so nine remain. Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-KANI": "25.12 -- Kani",
     "MS-PHASE18-FUZZ-CROSSWALK": "25.13 -- the Phase-18 fuzz crosswalk",
     "MS-PHASE24-SAFETY-COVERAGE": "25.14 -- the Phase-24 downstream safety coverage",
     "MS-HISTORICAL-CVE": "25.15 -- the historical CVE census",
@@ -1670,6 +1684,105 @@ def _ms_tsan_court(name: str) -> dict:
     }
 
 
+def _ms_kani_court(name: str) -> dict:
+    """`MS-KANI`: 25.12's court, the Kani harness results over the stated harnesses and their targets.
+
+    Stages no probe. It reads the committed `artifacts/phase25/kani.json` and re-runs the 25.12 pure
+    checks `ms_kani.kani_findings` and `ms_kani.kani_sensitivity_control` over it, together with the
+    committed harness source (`tests/kani_proofs.rs`) the stated harnesses live in -- no Kani, no
+    CBMC, no compiler; the measurement that produced the plane is `ms_kani.py --measure` (it runs the
+    committed Kani proof harnesses with the pinned Kani release), and this court only re-derives from
+    what it wrote. It establishes that the plane carries exactly one Kani state for every stated
+    harness and no other; that an `UNSUPPORTED` harness carries its reason; that a `PASS` cites a run
+    whose transcript reported the assertions SUCCESSFUL with zero failures and a `FAIL` cites a
+    failing run whose finding is preserved; that the kani_result records validate and every result
+    states its harness coverage granularity; that the counts are derived, not typed; that the
+    recorded harness-source digest matches the committed file; that no `PASS` is recorded while the
+    deliberate-failure positive control did not fire; and that the toolchain, the venue and the
+    crate-level case are recorded. Seeded mutations -- a `PASS` with no successful run, an
+    `UNSUPPORTED` marked `PASS`, a dropped harness, a typed count, an `UNSUPPORTED` run with no
+    reason, a `FAIL` with no finding, a crate-level `UNSUPPORTED` with no reason and a `PASS` with no
+    positive control -- are each caught with specificity holding. It is an **instrument**: it can
+    pass while the plane records property findings (the Kani findings), which are recorded as the
+    row's `findings` so a passing Kani court is never read as 'the candidate is memory safe'.
+    """
+    if not KANI.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "kani-missing",
+                "problems": [f"the Kani plane {rel(KANI)} is absent"], "findings": [], "control": {}}
+    if not KANI_HARNESS_SOURCE.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "harness-missing",
+                "problems": [f"the Kani harness source {rel(KANI_HARNESS_SOURCE)} is absent"],
+                "findings": [], "control": {}}
+
+    census_body, refs = _census_view()
+    del census_body
+    body = _decoded_body(KANI, refs)
+    harness_source = KANI_HARNESS_SOURCE.read_text(encoding="utf-8")
+    problems = ms_kani.kani_findings(body, harness_source)
+    control = ms_kani.kani_sensitivity_control(body, harness_source)
+
+    counts = body.get("counts") or {}
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    cl = (body.get("rule") or {}).get("crate_level") or {}
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/kani.json and re-runs the "
+            "25.12 pure checks (ms_kani.kani_findings and ms_kani.kani_sensitivity_control) over it "
+            "and the committed harness source tests/kani_proofs.rs the stated harnesses live in -- "
+            "no Kani, no CBMC, no compiler. The plane records a per-harness Kani state (KANI_PASS / "
+            "KANI_FAIL / KANI_NOT_REACHABLE / KANI_UNSUPPORTED) over the stated harnesses and their "
+            "targets, the runs (command hash, outcome, whether the verification succeeded), the "
+            "results and the residuals. A KANI_PASS is a bounded model-checking proof: Kani runs the "
+            "named harness against the exact admitted candidate and reports its assertions "
+            "SUCCESSFUL with zero failures for all inputs in the harness's bounded domain -- a "
+            "proof over that domain, never a claim about unbounded or concurrent behaviour and "
+            "never a claim about a target no harness names (the plane's top-level `pass_semantics` "
+            "and each result's `coverage_granularity: harness` state this). The committed harnesses "
+            "prove the pure public BLAKE2 provider parameter-block routines "
+            "(src/digest/blake2.rs); every exported extern \"C\" entry point runs inside "
+            "ffi::guard_ffi, whose std::panic::catch_unwind makes Kani 0.68.0 abort with an internal "
+            "compiler error on its pinned toolchain, so the whole FFI surface -- including the "
+            "ASN.1 length path -- is KANI_UNSUPPORTED, recorded with the reason and the exact "
+            "command rather than counted clean. A zero-failure result is trusted only because the "
+            "deliberate-failure positive control is known to fire. The Kani environment is the "
+            "admitted court image with the pinned Kani bundle and its toolchain on "
+            "PATH/LD_LIBRARY_PATH only; it removes no resource bound (no RLIMIT_DATA override). "
+            "Eight seeded mutations are each caught with specificity holding "
+            "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the Kani court re-derives only the plane's pure checks, so it stages no "
+            "artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "harnesses": counts.get("harnesses", 0),
+            "pass": counts.get("pass", 0),
+            "fail": counts.get("fail", 0),
+            "not_reachable": counts.get("not_reachable", 0),
+            "unsupported": counts.get("unsupported", 0),
+            "runs": len(body.get("runs") or []),
+            "findings": len(body.get("findings") or []),
+            "results": len(body.get("results") or []),
+            "residuals": len(body.get("residuals") or []),
+            "crate_ran": 1 if cl.get("state") == "KANI_RAN" else 0,
+        },
+        "runs": [
+            {"run_id": r.get("run_id"), "outcome": r.get("outcome"),
+             "verification_successful": r.get("verification_successful"),
+             "command_sha256": str(r.get("command_sha256"))[:16]}
+            for r in body.get("runs") or []
+        ],
+        "findings": list(body.get("findings") or []),
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1761,13 +1874,16 @@ def main(argv: list[str]) -> int:
             "recorded rather than counted clean, and "
             "**25.11 registers `MS-TSAN`**, the TSan results over the concurrency-relevant surface, "
             "each with its tool state and its unsupported reason, so a race the tool could not "
-            "observe under the recorded schedule is not read as absent. "
+            "observe under the recorded schedule is not read as absent, and "
+            "**25.12 registers `MS-KANI`**, the Kani harness results over the stated harnesses and "
+            "their targets, each with its tool state and its unsupported reason, so a target the "
+            "tool cannot express or compile is recorded rather than counted clean. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining ten of its twenty-two courts -- "
-            "MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
+            "remaining nine of its twenty-two courts -- "
+            "MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.12 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.13 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -1843,6 +1959,9 @@ def main(argv: list[str]) -> int:
         InputRef(name="tsan-canary-source", path=TSAN_CANARY_SOURCE),
         InputRef(name="tsan-canary-rust-source", path=TSAN_CANARY_RUST_SOURCE),
         InputRef(name="tsan-harness-source", path=TSAN_HARNESS_SOURCE),
+        InputRef(name="kani", path=KANI),
+        InputRef(name="ms-kani-tool", path=MS_KANI_TOOL),
+        InputRef(name="kani-harness-source", path=KANI_HARNESS_SOURCE),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

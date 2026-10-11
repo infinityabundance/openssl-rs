@@ -3868,7 +3868,7 @@
     {
       "name": "phase18-courts",
       "path": "artifacts/phase18/COURTS.json",
-      "sha256": "b88ba99215a373ca900a5e00bb9361596c4dc1dbd0a7ffdd6fd8047c161abdfa"
+      "sha256": "37e8e4ad61279e6174d87031b396c585e0af695bc212aa98963a34d9ae8635ea"
     },
     {
       "name": "downstream-corpus",
@@ -3913,7 +3913,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "a3dad851a7893d3e26898a7cc6f2ba134ae46cd0d1bd1aaa22ffd34d1b2448d5"
+      "sha256": "d49abd3c807f11f45469674dc58851ec1e2558c276ad9df832bca935dcc0c923"
     },
     {
       "name": "court-coverage-rows",
@@ -3923,7 +3923,7 @@
     {
       "name": "divergence-obligations",
       "path": "forensics/divergence-obligations.json",
-      "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008"
+      "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3"
     },
     {
       "name": "prerequisites",

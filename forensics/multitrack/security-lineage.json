@@ -31,7 +31,7 @@
       "L-security_backport-openssl-3.6.5-openssl-4.0.3-CVE-2026-84782"
     ],
     "boundary": "the plane observes the source's CVE records it binds and records the rest as unobserved; a fixed identifier that is not a catalogue release is an external release reference and is never admitted as an authority; the candidate disposition references docs/SECURITY_DIVERGENCE_POLICY.md and forensics/divergence-obligations.json rather than duplicating the register",
-    "content_hash": "6c6d6d6a8409c4752d66514aa1c8ce714e808d9725a66a6d6a71fd822542ff47",
+    "content_hash": "9d3d624e56d13533722eba48d8e8407708dc5e9c2f49ea84cced965e59b9024c",
     "counts": {
       "backport_edges": 27,
       "branch_fixes": 52,
@@ -1371,7 +1371,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008",
+            "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1441,7 +1441,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008",
+            "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1511,7 +1511,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008",
+            "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1581,7 +1581,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008",
+            "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1651,7 +1651,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008",
+            "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1721,7 +1721,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008",
+            "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1791,7 +1791,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008",
+            "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1860,7 +1860,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008",
+            "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1929,7 +1929,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008",
+            "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1998,7 +1998,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008",
+            "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -2067,7 +2067,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008",
+            "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -2136,7 +2136,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008",
+            "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -2205,7 +2205,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008",
+            "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -4754,7 +4754,7 @@
     {
       "name": "divergence-obligations",
       "path": "forensics/divergence-obligations.json",
-      "sha256": "2203ee392579bda7ae5e39a7ae59723807766c2f92e81683e37ee25675057008"
+      "sha256": "a297ccb49dab7aa20d9fdb58a6fcb359e5e43e24418673bd67e3290412c07de3"
     },
     {
       "name": "security-divergence-policy",
