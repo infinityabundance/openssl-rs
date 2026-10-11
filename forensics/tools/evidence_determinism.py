@@ -488,6 +488,20 @@ GENERATORS_BEFORE_LEDGERS = [
     # `ms_asan.asan_sensitivity_control`) over the committed artefact and the committed census. If a
     # later subphase derives a pure aggregate from this plane, that aggregate is what belongs in this
     # list.
+    # **Phase 25.11's TSan measurement (`forensics/tools/ms_tsan.py` -> `artifacts/phase25/tsan.json`)
+    # follows the same `ms_census.py`/`ms_miri.py`/`ms_asan.py` measurement precedent, so it is
+    # deliberately NOT listed here and NOT in `COMPARED`.** It builds the exact admitted candidate
+    # under ThreadSanitizer (`-Zsanitizer=thread -Zbuild-std` with the pinned nightly, the first-party
+    # C adapters through a `-fsanitize=thread` CC wrapper), runs the instrumented test binary over the
+    # concurrency-relevant surface with the recorded deterministic one-thread libtest schedule and
+    # records a per-surface-site state -- so its states, its executed-test coverage and its findings
+    # are a function of the court's toolchain and its schedule, not of committed inputs. A CI runner
+    # has no compiler, no pinned nightly and no TSan runtime, and the Docker-only guard refuses a host
+    # invocation of `ms_tsan.py` before it builds anything. The `MS-TSAN` court re-runs only its pure
+    # checks (`ms_tsan.tsan_findings` and `ms_tsan.tsan_sensitivity_control`) over the committed
+    # artefact, the committed census and the committed 25.3 obligation rule that defines the surface.
+    # If a later subphase derives a pure aggregate from this plane, that aggregate is what belongs in
+    # this list.
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court

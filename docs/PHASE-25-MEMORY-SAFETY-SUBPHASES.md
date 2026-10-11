@@ -467,6 +467,33 @@ the crate-level state (`ASAN_RAN` or `ASAN_UNSUPPORTED`) are recorded in
 per-site states are ASAN_PASS / ASAN_FAIL / ASAN_NOT_REACHABLE / ASAN_UNSUPPORTED, and an
 `UNSUPPORTED` site is never a pass.
 
+**25.11 records the TSan environment's one deviation from the court's `exec`, its deterministic
+schedule and the surface it measures, and they are checked rather than asserted.** TSan maps a
+~35.1 TB sparse shadow (`PROT_NONE` + `MAP_NORESERVE`) before it instruments anything --
+`ThreadSanitizer failed to allocate 0x200000000000 (35184372088832) bytes ... can not mmap the
+shadow memory` -- so, exactly as ASan cannot, a TSan binary cannot *start* under the court's
+per-process `RLIMIT_DATA` (4 GiB). The cap is kept for the hostile courts rather than weakened, and
+25.11 records the TSan environment as a **derivation of the admitted court venue** -- the same
+admitted image (`openssl-rs-court:1`) executed with the venue's own documented
+`OPENSSL_RS_COURT_DATA` override, which removes *only* that per-process virtual-space cap; every
+bound that bounds resident resources is unchanged, because TSan's shadow is `PROT_NONE` +
+`MAP_NORESERVE` virtual address space the cgroup does not count as resident. TSan observes the
+schedule a run happens to take, so a race it did not observe is not absent: 25.11 pins the libtest
+schedule to one thread (`--test-threads=1`, the deterministic scheduling `docs/CONCURRENCY_MODEL.md`
+section 6 sanctions for reproducibility) and records the schedule on every run, so a clean result is
+a claim about that **recorded schedule**, never that the candidate is globally race-free. The
+measured surface is the **concurrency-relevant surface** of the 25.1 census: the sites whose
+operation kind requires a `THREAD_AFFINITY`, `SEND_SYNC` or `INIT_ONCE` obligation in the committed
+25.3 `KIND_DIMENSIONS` rule -- the unsafe `Send`/`Sync` impls (`UNSAFE_IMPL`) and the mutable statics
+(`STATIC_MUT_ACCESS`) -- so the surface is derived rather than a hand list, and the plane restates no
+other census site. A deliberate data-race canary must be diagnosed (`data race` + nonzero exit)
+before any no-race result is trusted, and a `TSAN_PASS` is a file-granular instrument/coverage claim
+under the recorded schedule, never a race-freedom guarantee. The venue, the canary, the crate-level
+state (`TSAN_RAN` or `TSAN_UNSUPPORTED`) and the per-site states (`TSAN_PASS` / `TSAN_FAIL` /
+`TSAN_NOT_REACHABLE` / `TSAN_UNSUPPORTED`) are recorded in `artifacts/phase25/tsan.json` and in the
+venue manifest's `environment_derivations`, and the `MS-TSAN` court re-runs the plane's pure checks
+over the committed evidence; an `UNSUPPORTED` site is never a pass.
+
 ## 5. Process
 
 This stratum inherits Phases 8 through 24's process unchanged: a subphase lands its code, its court

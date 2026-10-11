@@ -185,10 +185,10 @@
         "closure": "the `MS-TSAN` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-TSAN is pending",
+        "measurement_state": "complete",
+        "observation": "MS-TSAN is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "tsan",
         "what": "the TSan results over the concurrency-relevant surface of the claimed profile, each with its tool state and its unsupported reason, so a data race the tool could not observe is not read as absent"
@@ -319,8 +319,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 11,
-      "open_in_this_stratum": 11,
+      "implemented": 12,
+      "open_in_this_stratum": 10,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -356,12 +356,12 @@
     {
       "name": "phase-25-plan",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "e94eb6322e8b45b68830ccaaf8cbbd76a13966711e0d2d2fee23f0d90a7b632f"
+      "sha256": "a2d5cde1a0939bc4f8699d35199675c6674aaf51af98c6a9496f5e406e09f532"
     },
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "bd1fcd27f11652bb28bafdd48b90043a7cf057b69aff6f4273ff154f799cb43f"
+      "sha256": "0a1742117a5ec397c46f0a9934c5fc88e88ddb807b8a78dbffea018da4c21fe5"
     },
     {
       "name": "phase25-guard",

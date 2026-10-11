@@ -29,6 +29,16 @@
       "dimension": "the venue's documented per-process RLIMIT_DATA override (OPENSSL_RS_COURT_DATA=unlimited)",
       "reason": "AddressSanitizer reserves a ~15.4 TB sparse shadow (PROT_NONE + MAP_NORESERVE) before it instruments anything, which the court's 4 GiB RLIMIT_DATA refuses, so the instrument cannot start under the default `exec`. The override removes only that virtual-space cap; the container cgroup memory cap, PIDs, CPUs, the wall clock and no-new-privileges are unchanged, so no bound on resident resources is weakened. This is the same derivation the Phase-18 ASan venue records for the same reason.",
       "measured": "the ASan run is a measurement (it builds and runs the instrumented candidate), so ms_asan.py is not metadata-only and is refused on the host; the MS-ASAN-MSMAN court re-runs only its pure checks over the committed plane"
+    },
+    "tsan": {
+      "subphase": "25.11",
+      "tool": "forensics/tools/ms_tsan.py",
+      "plane": "artifacts/phase25/tsan.json",
+      "from": "openssl-rs-court:1 (the admitted image, built from canonical_base)",
+      "differs_from": "the court's `exec`, and only here",
+      "dimension": "the venue's documented per-process RLIMIT_DATA override (OPENSSL_RS_COURT_DATA=unlimited)",
+      "reason": "ThreadSanitizer maps a ~35.1 TB sparse shadow (PROT_NONE + MAP_NORESERVE) at startup -- measured in this venue as `ThreadSanitizer failed to allocate 0x200000000000 (35184372088832) bytes ... can not mmap the shadow memory` -- which the court's 4 GiB RLIMIT_DATA refuses, so the instrument cannot start under the default `exec` exactly as ASan cannot. TSan's shadow is larger than ASan's, not smaller; the override removes only that virtual-space cap. The container cgroup memory cap, PIDs, CPUs, the wall clock and no-new-privileges are unchanged, so no bound on resident resources is weakened. This is the same derivation the Phase-18 ASan venue and 25.10 record.",
+      "measured": "the TSan run is a measurement (it builds and runs the instrumented candidate over the concurrency-relevant surface with a recorded deterministic one-thread libtest schedule), so ms_tsan.py is not metadata-only and is refused on the host; the MS-TSAN court re-runs only its pure checks over the committed plane"
     }
   },
   "metadata_only": [
@@ -47,6 +57,7 @@
     "the manifest is authored evidence, not proof the container is unmodified: it binds the venue a receipt names, and the base digest is the stronger binding a later subphase may carry into each derived environment",
     "admitting a metadata-only generator on the host is not admitting host execution: that generator runs no command and produces no runtime evidence",
     "naming one canonical base is not claiming the base is byte-identical to every derived environment: each derived environment is recorded as its own derivation when a later subphase lands it",
-    "the ASan environment's removal of only the venue's per-process RLIMIT_DATA is not weakening the court: ASan's shadow is PROT_NONE + MAP_NORESERVE virtual address space the cgroup does not count as resident, and every bound that bounds real resources is unchanged (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4, the 25.10 correction)"
+    "the ASan environment's removal of only the venue's per-process RLIMIT_DATA is not weakening the court: ASan's shadow is PROT_NONE + MAP_NORESERVE virtual address space the cgroup does not count as resident, and every bound that bounds real resources is unchanged (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4, the 25.10 correction)",
+    "the TSan environment's removal of only the venue's per-process RLIMIT_DATA is not weakening the court: TSan's ~35.1 TB shadow is PROT_NONE + MAP_NORESERVE virtual address space the cgroup does not count as resident, and every bound that bounds real resources is unchanged (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4, the 25.11 correction)"
   ]
 }
