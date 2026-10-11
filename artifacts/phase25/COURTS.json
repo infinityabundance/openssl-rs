@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census, and **25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable compiler-derived sites that records each candidate safe-intrinsic replacement, the sites that remain named rather than dropped, and the frozen post-reduction census, and is a local-replacement feasibility census rather than an impossibility result, and **25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its tool state and its unsupported reason where Miri could not express the question, so an unsupported site is never read as a pass, and **25.10 registers `MS-ASAN-MSMAN`**, the ASan/MSan results over the claimed profile, each with its tool state and its unsupported reason where a sanitizer could not instrument or reach a target, so a site the instrument cannot reach or instrument is recorded rather than counted clean, and **25.11 registers `MS-TSAN`**, the TSan results over the concurrency-relevant surface, each with its tool state and its unsupported reason, so a race the tool could not observe under the recorded schedule is not read as absent. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining ten of its twenty-two courts -- MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.12 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census, and **25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable compiler-derived sites that records each candidate safe-intrinsic replacement, the sites that remain named rather than dropped, and the frozen post-reduction census, and is a local-replacement feasibility census rather than an impossibility result, and **25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its tool state and its unsupported reason where Miri could not express the question, so an unsupported site is never read as a pass, and **25.10 registers `MS-ASAN-MSMAN`**, the ASan/MSan results over the claimed profile, each with its tool state and its unsupported reason where a sanitizer could not instrument or reach a target, so a site the instrument cannot reach or instrument is recorded rather than counted clean, and **25.11 registers `MS-TSAN`**, the TSan results over the concurrency-relevant surface, each with its tool state and its unsupported reason, so a race the tool could not observe under the recorded schedule is not read as absent, and **25.12 registers `MS-KANI`**, the Kani harness results over the stated harnesses and their targets, each with its tool state and its unsupported reason, so a target the tool cannot express or compile is recorded rather than counted clean. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining nine of its twenty-two courts -- MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.13 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -91,7 +91,7 @@
         },
         "counts": {
           "contexts_without_site": 6664,
-          "files": 873,
+          "files": 874,
           "generated_files": 15,
           "residuals": 3,
           "sites": 172070,
@@ -114,9 +114,9 @@
         "frf_exclusion": "the census court reads the committed census and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
         "loc": {
           "note": "a secondary projection of the compiler-derived census; unsafe LOC is not a vulnerability count (docs/UNSAFE.md, docs/NON_CLAIMS.md)",
-          "rust_code_loc": 536048,
-          "rust_physical_loc": 803280,
-          "safe_rust_code_loc": 211323,
+          "rust_code_loc": 536140,
+          "rust_physical_loc": 803429,
+          "safe_rust_code_loc": 211415,
           "unsafe_context_code_loc": 324725
         },
         "method": "stages no probe: it reads the committed artifacts/phase25/source-census.json and re-runs the 25.1 pure checks (ms_census.census_findings and ms_census.census_sensitivity_control) over it, without a compiler. The census was derived by one clippy run with the built-in `unsafe_code` lint (the enumerating authority) plus the three named documentation lints, --message-format=json, and the macro-expanded source from a pinned nightly. It establishes file coverage, compiler-derivedness of every site, stable/unique ids, consistent back-references, derived counts and the LOC split, and that every cross-check disagreement is a classified residual; five seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.2).",
@@ -135,7 +135,7 @@
           "UNSAFE_METHOD_CALL": 41864
         },
         "size_budget_bytes": 20971520,
-        "size_bytes": 11026621,
+        "size_bytes": 11026749,
         "toolchain": {
           "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
           "clippy": "clippy 0.1.98 (48a229ceae 2026-09-01)",
@@ -1411,6 +1411,111 @@
           }
         ],
         "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught": 8,
+          "honest": true,
+          "mutations": {
+            "crate_unsupported_without_reason": {
+              "caught": true,
+              "delta": 3,
+              "findings": 3,
+              "marker": "carries no reason"
+            },
+            "dropped_harness": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "has no Kani state"
+            },
+            "fail_without_finding": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "no finding records it"
+            },
+            "pass_without_control": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "positive control did not fire"
+            },
+            "pass_without_successful_run": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "did not report a successful verification"
+            },
+            "typed_count": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "not the derived `counts`"
+            },
+            "unsupported_marked_pass": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "UNSUPPORTED is not PASS"
+            },
+            "unsupported_without_reason": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "UNSUPPORTED with an empty reason"
+            }
+          },
+          "seeded": 8,
+          "specificity_holds": true
+        },
+        "counts": {
+          "crate_ran": 1,
+          "fail": 0,
+          "findings": 0,
+          "harnesses": 4,
+          "not_reachable": 0,
+          "pass": 2,
+          "residuals": 6,
+          "results": 4,
+          "runs": 4,
+          "unsupported": 2
+        },
+        "court": "MS-KANI",
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the Kani court re-derives only the plane's pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
+        "method": "stages no probe: it reads the committed artifacts/phase25/kani.json and re-runs the 25.12 pure checks (ms_kani.kani_findings and ms_kani.kani_sensitivity_control) over it and the committed harness source tests/kani_proofs.rs the stated harnesses live in -- no Kani, no CBMC, no compiler. The plane records a per-harness Kani state (KANI_PASS / KANI_FAIL / KANI_NOT_REACHABLE / KANI_UNSUPPORTED) over the stated harnesses and their targets, the runs (command hash, outcome, whether the verification succeeded), the results and the residuals. A KANI_PASS is a bounded model-checking proof: Kani runs the named harness against the exact admitted candidate and reports its assertions SUCCESSFUL with zero failures for all inputs in the harness's bounded domain -- a proof over that domain, never a claim about unbounded or concurrent behaviour and never a claim about a target no harness names (the plane's top-level `pass_semantics` and each result's `coverage_granularity: harness` state this). The committed harnesses prove the pure public BLAKE2 provider parameter-block routines (src/digest/blake2.rs); every exported extern \"C\" entry point runs inside ffi::guard_ffi, whose std::panic::catch_unwind makes Kani 0.68.0 abort with an internal compiler error on its pinned toolchain, so the whole FFI surface -- including the ASN.1 length path -- is KANI_UNSUPPORTED, recorded with the reason and the exact command rather than counted clean. A zero-failure result is trusted only because the deliberate-failure positive control is known to fire. The Kani environment is the admitted court image with the pinned Kani bundle and its toolchain on PATH/LD_LIBRARY_PATH only; it removes no resource bound (no RLIMIT_DATA override). Eight seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6).",
+        "probe": "",
+        "problems": [],
+        "runs": [
+          {
+            "command_sha256": "40352357d6ea6353",
+            "outcome": "PASS",
+            "run_id": "kani-blake2b-param-init",
+            "verification_successful": true
+          },
+          {
+            "command_sha256": "34409d1c0b63a798",
+            "outcome": "PASS",
+            "run_id": "kani-blake2b-param-set-personal",
+            "verification_successful": true
+          },
+          {
+            "command_sha256": "b8246e73137338a5",
+            "outcome": "UNSUPPORTED",
+            "run_id": "kani-asn1-object-size-overhead",
+            "verification_successful": false
+          },
+          {
+            "command_sha256": "1eff4514804c6358",
+            "outcome": "UNSUPPORTED",
+            "run_id": "kani-asn1-object-size-negative-length",
+            "verification_successful": false
+          }
+        ],
+        "verdict": "pass"
       }
     ],
     "cve_replay_states": [
@@ -1499,7 +1604,6 @@
       "MS-CVE-REPLAY": "25.16 -- the historical CVE replay",
       "MS-FRF-CLOSURE": "25.20 -- the FRF/Gemel closure",
       "MS-HISTORICAL-CVE": "25.15 -- the historical CVE census",
-      "MS-KANI": "25.12 -- Kani",
       "MS-MECHANISM-RECONCILIATION": "25.17 -- the vulnerability-mechanism reconciliation",
       "MS-PHASE18-FUZZ-CROSSWALK": "25.13 -- the Phase-18 fuzz crosswalk",
       "MS-PHASE24-SAFETY-COVERAGE": "25.14 -- the Phase-24 downstream safety coverage",
@@ -1777,8 +1881,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 12,
-      "total": 12
+      "pass": 13,
+      "total": 13
     },
     "tool_states": [
       "PASS",
@@ -1826,7 +1930,7 @@
     {
       "name": "phase25-container-manifest",
       "path": "forensics/memory-safety/container.json",
-      "sha256": "302e2826bb1a1fea1a3f21d249f2570fc8716449bdc76c40217af035928f03b7"
+      "sha256": "deefd44215db05fc4831c24b60faa3b84b1a9f7369aa83e2ad560fa3bfbf152d"
     },
     {
       "name": "cargo-toml",
@@ -1841,7 +1945,7 @@
     {
       "name": "source-census",
       "path": "artifacts/phase25/source-census.json",
-      "sha256": "2c8ee97ea07af86917665687877fa8bd023d6ca749bf38b272fd1dbb83bc9953"
+      "sha256": "0b88ffd67562ccefbf92d29fcbaa2c21793c71b5f73abc180c2fc7d2600bb3a4"
     },
     {
       "name": "ms-census-tool",
@@ -1861,7 +1965,7 @@
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "7aa10ce0b14e282d56dbae79ebb723ebd01b57c75ccc0794cdf0a96921721804"
+      "sha256": "df896097bebb6c697614e1704e8513fc9c18b33bd1165899a49ad31354001c97"
     },
     {
       "name": "ms-obligations-tool",
@@ -1871,7 +1975,7 @@
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "9d27ac580fb9e69ef34c9b680da8bf9a13f3bf06153f6658bd2da36c38451580"
+      "sha256": "6cb364b53f9bffb5d24da87142956c3a495532815b3465c9bcfdf2973d39ff10"
     },
     {
       "name": "ms-ownership-planes-tool",
@@ -1881,7 +1985,7 @@
     {
       "name": "phase22-crosswalk",
       "path": "artifacts/phase25/phase22-crosswalk.json",
-      "sha256": "ce46e8a3e3b5ad054d93fa12dee4938e9ad05e6042d66be7006b4f84e8137879"
+      "sha256": "b0211f627144e9235bf5ebef569c2a4b76e4da3ccc4639a1f3af72e5959b0ec1"
     },
     {
       "name": "ms-phase22-crosswalk-tool",
@@ -1916,7 +2020,7 @@
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "430e770aba9de3c2a9e96225b3daaafca1ab4a857fa9ca8a3ba0574a72392913"
+      "sha256": "fe6c024dc8c691c5a3184f4a41c45ea73e454eee74377562ca8e68bc3c5c4b5e"
     },
     {
       "name": "ms-phase24-crosswalk-tool",
@@ -1956,7 +2060,7 @@
     {
       "name": "exposure",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "bc7708e7b7b3118139c8b67a576522aaddcd8b16da6ce4dbafca0ba813539f50"
+      "sha256": "e4261231b3e6bd4d6e33e9a3fda5b1d7c5ae88880d572ee321e331de918a2800"
     },
     {
       "name": "ms-exposure-tool",
@@ -1966,7 +2070,7 @@
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "c7a40852c41559b9a5cc22ef537916acb1e7b82def5df1f5b47b1181d9bf0668"
+      "sha256": "6dc20adb5c6884ea0ac585f2da4bcbc4dcef3c3f9c41fa138d860e947d9afd41"
     },
     {
       "name": "ms-reduction-tool",
@@ -2037,6 +2141,21 @@
       "name": "tsan-harness-source",
       "path": "src/runtime/thread.rs",
       "sha256": "1dd062fbce4e0a9699d981766e7995bf43ddd78458e8f48e7086e1c7150c8ce9"
+    },
+    {
+      "name": "kani",
+      "path": "artifacts/phase25/kani.json",
+      "sha256": "73a0f344d9f903a8b86b511ee06400b4f1350a94c2b4bf47ad3080b53536add0"
+    },
+    {
+      "name": "ms-kani-tool",
+      "path": "forensics/tools/ms_kani.py",
+      "sha256": "8ed36d47d9309f9560d285391e70b6dabf65457cbf83654e601e8e1a4f88858e"
+    },
+    {
+      "name": "kani-harness-source",
+      "path": "tests/kani_proofs.rs",
+      "sha256": "cf8430850d1230354737ff483c5c93c8ac0708426302d93af323a0edad7bbf53"
     }
   ],
   "kind": "phase25-courts",

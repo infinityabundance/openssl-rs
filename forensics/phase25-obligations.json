@@ -199,10 +199,10 @@
         "closure": "the `MS-KANI` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-KANI is pending",
+        "measurement_state": "complete",
+        "observation": "MS-KANI is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "kani",
         "what": "the Kani harness results over the stated harnesses and their targets, each with its tool state and its unsupported reason, and no claim beyond the harnesses that exist: Kani proves what a supported harness expresses, not unsupported or concurrent whole-program behaviour"
@@ -321,8 +321,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 12,
-      "open_in_this_stratum": 10,
+      "implemented": 13,
+      "open_in_this_stratum": 9,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -363,7 +363,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "ec0086e8e25f71a8d17ece09c13ee02fb0f982e942d3d615a9f4e6376717347f"
+      "sha256": "09a3276c7f168c967bdfa3d4e6337a0e90ec37e1e117e55b6f743f6187dd66e0"
     },
     {
       "name": "phase25-guard",

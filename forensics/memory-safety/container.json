@@ -39,6 +39,16 @@
       "dimension": "the venue's documented per-process RLIMIT_DATA override (OPENSSL_RS_COURT_DATA=unlimited)",
       "reason": "ThreadSanitizer maps a ~35.1 TB sparse shadow (PROT_NONE + MAP_NORESERVE) at startup -- measured in this venue as `ThreadSanitizer failed to allocate 0x200000000000 (35184372088832) bytes ... can not mmap the shadow memory` -- which the court's 4 GiB RLIMIT_DATA refuses, so the instrument cannot start under the default `exec` exactly as ASan cannot. TSan's shadow is larger than ASan's, not smaller; the override removes only that virtual-space cap. The container cgroup memory cap, PIDs, CPUs, the wall clock and no-new-privileges are unchanged, so no bound on resident resources is weakened. This is the same derivation the Phase-18 ASan venue and 25.10 record.",
       "measured": "the TSan run is a measurement (it builds and runs the instrumented candidate over the concurrency-relevant surface with a recorded deterministic one-thread libtest schedule), so ms_tsan.py is not metadata-only and is refused on the host; the MS-TSAN court re-runs only its pure checks over the committed plane"
+    },
+    "kani": {
+      "subphase": "25.12",
+      "tool": "forensics/tools/ms_kani.py",
+      "plane": "artifacts/phase25/kani.json",
+      "from": "openssl-rs-court:1 (the admitted image, built from canonical_base)",
+      "differs_from": "the court's `exec`, and only here",
+      "dimension": "the pinned Kani 0.68.0 release bundle and its pinned toolchain (nightly-2026-08-21) added to PATH/LD_LIBRARY_PATH from the /work scratch",
+      "reason": "Kani is a bounded model checker (Kani 0.68.0 with its CBMC 6.11.0 backend), a heavy tool not in the admitted image, installed into the /work scratch by the documented route -- the upstream x86_64-unknown-linux-gnu release bundle plus its pinned toolchain -- and the tool derives the `toolchain/` symlink and the `cargo-kani` plugin that `cargo kani setup` would create. Unlike the ASan and TSan environments this adds no RLIMIT_DATA override: a Kani proof fits the court's default per-process cap, and the container cgroup memory cap, PIDs, CPUs and the wall clock are unchanged, so no bound on resident resources is weakened.",
+      "measured": "the Kani run is a measurement (it model-checks the committed harnesses against the admitted candidate), so ms_kani.py is not metadata-only and is refused on the host; the MS-KANI court re-runs only its pure checks over the committed plane and the committed harness source"
     }
   },
   "metadata_only": [
@@ -58,6 +68,7 @@
     "admitting a metadata-only generator on the host is not admitting host execution: that generator runs no command and produces no runtime evidence",
     "naming one canonical base is not claiming the base is byte-identical to every derived environment: each derived environment is recorded as its own derivation when a later subphase lands it",
     "the ASan environment's removal of only the venue's per-process RLIMIT_DATA is not weakening the court: ASan's shadow is PROT_NONE + MAP_NORESERVE virtual address space the cgroup does not count as resident, and every bound that bounds real resources is unchanged (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4, the 25.10 correction)",
-    "the TSan environment's removal of only the venue's per-process RLIMIT_DATA is not weakening the court: TSan's ~35.1 TB shadow is PROT_NONE + MAP_NORESERVE virtual address space the cgroup does not count as resident, and every bound that bounds real resources is unchanged (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4, the 25.11 correction)"
+    "the TSan environment's removal of only the venue's per-process RLIMIT_DATA is not weakening the court: TSan's ~35.1 TB shadow is PROT_NONE + MAP_NORESERVE virtual address space the cgroup does not count as resident, and every bound that bounds real resources is unchanged (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4, the 25.11 correction)",
+    "the Kani environment's addition of only the pinned Kani bundle and its toolchain to PATH/LD_LIBRARY_PATH is not weakening the court: it removes no per-process RLIMIT_DATA and every bound that bounds real resources is unchanged, and a KANI_PASS is a bounded model-checking proof over one harness's domain, never a whole-program or concurrency claim (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4, the 25.12 record)"
   ]
 }
