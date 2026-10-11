@@ -194,6 +194,13 @@ import ms_exposure  # noqa: E402
 # artefact, the census and the exposure classification.
 import ms_reduction  # noqa: E402
 
+# 25.13's Phase-18 fuzz crosswalk and the tool that derives it from the committed census, the
+# committed 25.7 exposure routes and the committed Phase-18 hostile-fuzz evidence (the
+# hostile-boundary register, the courts registry and the bounded mutational screen). The court
+# re-runs the tool's pure `crosswalk_findings` / `crosswalk_sensitivity_control` over the committed
+# artefact and those committed planes.
+import ms_phase18_fuzz_crosswalk  # noqa: E402
+
 # 25.9's Miri results and the tool that records them. The court re-runs the tool's pure
 # `miri_findings` / `miri_sensitivity_control` over the committed plane and the committed census.
 import ms_miri  # noqa: E402
@@ -342,6 +349,20 @@ MS_KANI_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_kani.py"
 KANI_COURT = "MS-KANI"
 KANI_HARNESS_SOURCE = REPO_ROOT / "tests" / "kani_proofs.rs"
 
+# 25.13's Phase-18 fuzz crosswalk and the pure tool that derives it from the committed census, the
+# committed 25.7 exposure routes and the committed Phase-18 hostile-fuzz evidence. The Phase-18
+# evidence is the hostile-boundary register, the Phase-18 courts registry and the bounded mutational
+# screen over the hostile-X.509 corpus.
+PHASE18_FUZZ_CROSSWALK = REPO_ROOT / "artifacts" / "phase25" / "phase18-fuzz-crosswalk.json"
+MS_PHASE18_FUZZ_CROSSWALK_TOOL = (REPO_ROOT / "forensics" / "tools"
+                                  / "ms_phase18_fuzz_crosswalk.py")
+PHASE18_FUZZ_CROSSWALK_COURT = "MS-PHASE18-FUZZ-CROSSWALK"
+PHASE18_HOSTILE_REGISTER = (REPO_ROOT / "artifacts" / "phase18"
+                            / "hostile-boundary-register.json")
+PHASE18_COURTS = REPO_ROOT / "artifacts" / "phase18" / "COURTS.json"
+PHASE18_FUZZ_HOSTILE_CORPUS = (REPO_ROOT / "artifacts" / "phase18"
+                               / "fuzz-hostile-corpus.json")
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -374,6 +395,7 @@ COURTS: list[tuple[str, str]] = [
     (ASAN_MSAN_COURT, "_ms_asan_msan_court"),
     (TSAN_COURT, "_ms_tsan_court"),
     (KANI_COURT, "_ms_kani_court"),
+    (PHASE18_FUZZ_CROSSWALK_COURT, "_ms_phase18_fuzz_crosswalk_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
@@ -381,9 +403,9 @@ COURTS: list[tuple[str, str]] = [
 # removed `MS-OWNERSHIP-PLANES`, 25.5 removed `MS-PHASE22-CROSSWALK`, 25.6 removed
 # `MS-PHASE24-CROSSWALK`, 25.7 removed `MS-EXPOSURE-CLASSIFICATION`, 25.8 removed
 # `MS-UNSAFE-REDUCTION`, 25.9 removed `MS-MIRI`, 25.10 removed `MS-ASAN-MSMAN`, 25.11 removed
-# `MS-TSAN` and 25.12 removed `MS-KANI`, so nine remain. Ordered as the plan orders them.
+# `MS-TSAN`, 25.12 removed `MS-KANI` and 25.13 removed `MS-PHASE18-FUZZ-CROSSWALK`, so eight
+# remain. Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-PHASE18-FUZZ-CROSSWALK": "25.13 -- the Phase-18 fuzz crosswalk",
     "MS-PHASE24-SAFETY-COVERAGE": "25.14 -- the Phase-24 downstream safety coverage",
     "MS-HISTORICAL-CVE": "25.15 -- the historical CVE census",
     "MS-CVE-REPLAY": "25.16 -- the historical CVE replay",
@@ -1783,6 +1805,104 @@ def _ms_kani_court(name: str) -> dict:
     }
 
 
+def _ms_phase18_fuzz_crosswalk_court(name: str) -> dict:
+    """`MS-PHASE18-FUZZ-CROSSWALK`: 25.13's court, the Phase-18 hostile-fuzz crosswalk.
+
+    Stages no probe. It reads the committed `artifacts/phase25/phase18-fuzz-crosswalk.json` and
+    re-runs the 25.13 pure checks `ms_phase18_fuzz_crosswalk.crosswalk_findings` and
+    `ms_phase18_fuzz_crosswalk.crosswalk_sensitivity_control` over it together with the committed
+    25.1 census, the committed 25.7 exposure routes it joins to, and the committed Phase-18
+    hostile-fuzz evidence (the hostile-boundary register, the courts registry and the bounded
+    mutational screen) -- no compiler, no fuzzer, no probe; the derivation that produced the plane
+    is `ms_phase18_fuzz_crosswalk.py --measure`, and this court only re-derives from what it wrote.
+    It establishes that every Phase-18 hostile-fuzz target is present with the sites on the routes
+    its inputs drive (so a site is neither dropped nor added); that a covered target names its
+    Phase-18 evidence; that the tool state, corpus size and findings are the register's; that the
+    inverse site view reproduces from the forward map; that the targets, the site view, the counts
+    and the residuals equal their derivation; that every coverage gap (an undriven attacker-input
+    route, a register group that is not a fuzz target, the sites on no attacker route) is a
+    residual; and that the mapping rule names the committed Phase-18 evidence rather than a typed
+    one. Six seeded mutations -- a site silently dropped from a target, a covered target whose
+    evidence is gone, an inverse view that disagrees with the forward map, a typed count, a
+    coverage gap with no residual and a typed tool state -- are each caught with specificity
+    holding. It is an **instrument**: it can pass while the crosswalk records real property
+    findings (the sites on an attacker-input route no Phase-18 corpus drives, the register groups
+    that are not fuzz targets, the sites no attacker route reaches and the fuzz-is-bounded
+    non-claim), which are recorded as the row's `findings` so a passing crosswalk court is never
+    read as a memory-safety claim.
+    """
+    if not PHASE18_FUZZ_CROSSWALK.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "crosswalk-missing",
+                "problems": [f"the Phase-18 fuzz crosswalk {rel(PHASE18_FUZZ_CROSSWALK)} is "
+                             f"absent"], "findings": [], "control": {}}
+    if not SOURCE_CENSUS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "census-missing",
+                "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
+                "findings": [], "control": {}}
+    if not PHASE18_HOSTILE_REGISTER.is_file():
+        return {"court": name, "probe": "", "verdict": "fail",
+                "stage": "phase18-evidence-missing",
+                "problems": [f"the Phase-18 hostile-boundary register "
+                             f"{rel(PHASE18_HOSTILE_REGISTER)} is absent"],
+                "findings": [], "control": {}}
+
+    census_body, refs = _census_view()
+    body = _decoded_body(PHASE18_FUZZ_CROSSWALK, refs)
+    authority = ms_phase18_fuzz_crosswalk.load_authority()
+    problems = ms_phase18_fuzz_crosswalk.crosswalk_findings(body, census_body, authority)
+    control = ms_phase18_fuzz_crosswalk.crosswalk_sensitivity_control(body, census_body, authority)
+
+    counts = body.get("counts") or {}
+    findings = list(body.get("findings") or [])
+
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/phase18-fuzz-crosswalk.json "
+            "and re-runs the 25.13 pure checks (ms_phase18_fuzz_crosswalk.crosswalk_findings and "
+            "ms_phase18_fuzz_crosswalk.crosswalk_sensitivity_control) over it, the committed 25.1 "
+            "census, the committed 25.7 exposure routes and the committed Phase-18 hostile-fuzz "
+            "evidence, without a compiler. The plane is a pure derivation: each census site's "
+            "25.7 attacker-input route (the parser its module or authority unit is) joins to the "
+            "Phase-18 hostile-fuzz target whose surface group drives that input route, and the "
+            "target's sites are the sites on those routes. It establishes target completeness and "
+            "the site join, the covered/evidence rule, the register-sourced tool state, the "
+            "inverse/forward agreement, the coverage-gap residuals and that the rule names the "
+            "committed Phase-18 evidence; six seeded mutations are each caught with specificity "
+            "holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the Phase-18 fuzz crosswalk court reads the committed crosswalk and re-derives only "
+            "its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF "
+            "declaration"
+        ),
+        "counts": {
+            "census_sites": counts.get("census_sites", 0),
+            "sites_on_a_fuzzed_route": counts.get("sites_on_a_fuzzed_route", 0),
+            "sites_not_fuzzed": counts.get("sites_not_fuzzed", 0),
+            "sites_on_no_attacker_route": counts.get("sites_on_no_attacker_route", 0),
+            "attacker_routes": counts.get("attacker_routes", 0),
+            "routes_driven_by_phase18": counts.get("routes_driven_by_phase18", 0),
+            "routes_not_driven_by_phase18": counts.get("routes_not_driven_by_phase18", 0),
+            "phase18_fuzz_targets": counts.get("phase18_fuzz_targets", 0),
+            "targets_covered": counts.get("targets_covered", 0),
+            "corpus_entries": counts.get("corpus_entries", 0),
+            "findings": counts.get("findings", 0),
+            "mutational_screen_findings": counts.get("mutational_screen_findings", 0),
+            "residuals": len(body.get("residuals") or []),
+        },
+        "sites_by_target": dict(counts.get("fuzzed_sites_by_target") or {}),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1877,13 +1997,16 @@ def main(argv: list[str]) -> int:
             "observe under the recorded schedule is not read as absent, and "
             "**25.12 registers `MS-KANI`**, the Kani harness results over the stated harnesses and "
             "their targets, each with its tool state and its unsupported reason, so a target the "
-            "tool cannot express or compile is recorded rather than counted clean. "
+            "tool cannot express or compile is recorded rather than counted clean, and "
+            "**25.13 registers `MS-PHASE18-FUZZ-CROSSWALK`**, the crosswalk from the memory-safety "
+            "census to the Phase-18 hostile-fuzz courts, so a discovered memory-safety failure is "
+            "a preserved Phase-18 record rather than a discarded run. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining nine of its twenty-two courts -- "
-            "MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
+            "remaining eight of its twenty-two courts -- "
+            "MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.13 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.14 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -1962,6 +2085,11 @@ def main(argv: list[str]) -> int:
         InputRef(name="kani", path=KANI),
         InputRef(name="ms-kani-tool", path=MS_KANI_TOOL),
         InputRef(name="kani-harness-source", path=KANI_HARNESS_SOURCE),
+        InputRef(name="phase18-fuzz-crosswalk", path=PHASE18_FUZZ_CROSSWALK),
+        InputRef(name="ms-phase18-fuzz-crosswalk-tool", path=MS_PHASE18_FUZZ_CROSSWALK_TOOL),
+        InputRef(name="phase18-hostile-boundary-register", path=PHASE18_HOSTILE_REGISTER),
+        InputRef(name="phase18-courts", path=PHASE18_COURTS),
+        InputRef(name="phase18-fuzz-hostile-corpus", path=PHASE18_FUZZ_HOSTILE_CORPUS),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

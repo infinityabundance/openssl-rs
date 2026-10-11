@@ -209,12 +209,18 @@
       },
       {
         "closure": "the `MS-PHASE18-FUZZ-CROSSWALK` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-PHASE18-FUZZ-CROSSWALK is pending",
+        "findings": [
+          "7416 of 16755 externally reachable buffer-operation site(s) are on a Phase-18 hostile-fuzz route across 2 hostile-fuzz target(s) (RT-HOSTILE-TLS=1470, RT-HOSTILE-X509=5946); 9339 are on an attacker-input route no Phase-18 corpus drives and are recorded as `evidence_missing` residuals, never zeroed",
+          "the 2 Phase-18 hostile-fuzz target(s) carry 220 corpus entr(ies) and 0 crash/OOM/timeout finding(s) (the bounded mutational screen adds 0); a finding is carried here rather than dropped with the run",
+          "5 of 18 attacker-input route(s) are driven by a Phase-18 hostile-fuzz target and 13 are not; 3 of 5 register group(s) are not hostile-input fuzz targets and are `out_of_scope`",
+          "155315 census site(s) are on no attacker-input route: they are not externally reachable buffer operations, so no fuzz target is expected to exercise them, and this is said rather than read as covered",
+          "a Phase-18 `PASS` is a bounded result over the corpus it drove, not a coverage or memory-safety claim: a site under a passing corpus is exercised by that corpus's classes, never proven safe"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-PHASE18-FUZZ-CROSSWALK is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "phase18-fuzz-crosswalk",
         "what": "the crosswalk from the memory-safety census to the Phase-18 hostile-fuzz courts, so a discovered memory-safety failure is a preserved Phase-18 record rather than a discarded run"
@@ -321,8 +327,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 13,
-      "open_in_this_stratum": 9,
+      "implemented": 14,
+      "open_in_this_stratum": 8,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -363,7 +369,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "09a3276c7f168c967bdfa3d4e6337a0e90ec37e1e117e55b6f743f6187dd66e0"
+      "sha256": "07207a650af962cdcfcea73ea6b340833485f3baf20d551ca7c50f4cc328bb8c"
     },
     {
       "name": "phase25-guard",

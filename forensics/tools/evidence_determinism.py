@@ -475,6 +475,23 @@ GENERATORS_BEFORE_LEDGERS = [
     # `MS-UNSAFE-REDUCTION` court re-runs the same pure checks over the committed artefact, the census
     # and the exposure classification.
     "forensics/tools/ms_reduction.py",
+    # **Phase 25.13's Phase-18 fuzz crosswalk (`forensics/tools/ms_phase18_fuzz_crosswalk.py` ->
+    # `artifacts/phase25/phase18-fuzz-crosswalk.json`) is a pure function of committed inputs too,
+    # so it belongs here and is byte-compared.** It joins every 25.7 attacker-input route to the
+    # Phase-18 hostile-fuzz target whose surface group drives that input, reading the committed 25.1
+    # census for the site universe, the committed 25.7 exposure classification for the routes and
+    # their sites, and the committed Phase-18 hostile-fuzz evidence (the hostile-boundary register
+    # for the target verdicts, corpus sizes and findings, the Phase-18 courts registry for the
+    # verdicts and the bounded mutational screen for the fuzz evidence). It compiles nothing -- no
+    # compiler, no fuzzer, no probe -- so `forensics/memory-safety/container.json` lists it
+    # `metadata_only` and the Docker-only guard admits it on any host, exactly as `ms_reduction` is.
+    # A stale committed crosswalk -- or a dropped site, a fuzzed-site claim with no Phase-18
+    # evidence, a typed count, an inverse view that disagrees with the forward map, a coverage gap
+    # with no residual or a tool state that is not the register's -- is a failure rather than a
+    # silent divergence, and the `MS-PHASE18-FUZZ-CROSSWALK` court re-runs the same pure checks over
+    # the committed artefact, the census, the committed 25.7 routes and the committed Phase-18
+    # evidence.
+    "forensics/tools/ms_phase18_fuzz_crosswalk.py",
     # **Phase 25.10's ASan measurement (`forensics/tools/ms_asan.py` ->
     # `artifacts/phase25/asan-msan.json`) follows the `ms_census.py`/`ms_miri.py` measurement
     # precedent, so it is deliberately NOT listed here and NOT in `COMPARED`.** It builds the exact
@@ -878,6 +895,15 @@ COMPARED = [
     # than a silent divergence. It executes nothing and reads no compiler output, so re-deriving it
     # needs no compiler and no candidate.
     "artifacts/phase25/unsafe-reduction.json",
+    # Phase 25.13's Phase-18 fuzz crosswalk: a pure function of the committed 25.1 census, the
+    # committed 25.7 exposure classification and the committed Phase-18 hostile-fuzz evidence (the
+    # hostile-boundary register, the Phase-18 courts registry and the bounded mutational screen over
+    # the hostile-X.509 corpus). A dropped site, a fuzzed-site claim with no Phase-18 evidence, a
+    # typed count, an inverse view that disagrees with the forward map, a coverage gap with no
+    # residual or a tool state that is not the register's is a failure rather than a silent
+    # divergence. It executes nothing and reads no compiler output, so re-deriving it needs no
+    # compiler, no fuzzer and no candidate.
+    "artifacts/phase25/phase18-fuzz-crosswalk.json",
 ]
 
 # ---------------------------------------------------------------------------
