@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census, and **25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable compiler-derived sites that records each candidate safe-intrinsic replacement, the sites that remain named rather than dropped, and the frozen post-reduction census, and is a local-replacement feasibility census rather than an impossibility result, and **25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its tool state and its unsupported reason where Miri could not express the question, so an unsupported site is never read as a pass, and **25.10 registers `MS-ASAN-MSMAN`**, the ASan/MSan results over the claimed profile, each with its tool state and its unsupported reason where a sanitizer could not instrument or reach a target, so a site the instrument cannot reach or instrument is recorded rather than counted clean. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining eleven of its twenty-two courts -- MS-TSAN, MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.11 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census, and **25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable compiler-derived sites that records each candidate safe-intrinsic replacement, the sites that remain named rather than dropped, and the frozen post-reduction census, and is a local-replacement feasibility census rather than an impossibility result, and **25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its tool state and its unsupported reason where Miri could not express the question, so an unsupported site is never read as a pass, and **25.10 registers `MS-ASAN-MSMAN`**, the ASan/MSan results over the claimed profile, each with its tool state and its unsupported reason where a sanitizer could not instrument or reach a target, so a site the instrument cannot reach or instrument is recorded rather than counted clean, and **25.11 registers `MS-TSAN`**, the TSan results over the concurrency-relevant surface, each with its tool state and its unsupported reason, so a race the tool could not observe under the recorded schedule is not read as absent. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining ten of its twenty-two courts -- MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.12 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -1240,6 +1240,109 @@
           }
         ],
         "verdict": "pass"
+      },
+      {
+        "control": {
+          "baseline_findings": 0,
+          "caught": 7,
+          "honest": true,
+          "mutations": {
+            "dropped_site": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "has no TSan state"
+            },
+            "pass_with_finding": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "PASS with a finding at it is refused"
+            },
+            "pass_without_positive_control": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "positive control did not fire"
+            },
+            "pass_without_run": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "cites no run"
+            },
+            "typed_count": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "not the derived `counts`"
+            },
+            "unsupported_marked_pass": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "UNSUPPORTED is not PASS"
+            },
+            "unsupported_without_reason": {
+              "caught": true,
+              "delta": 38,
+              "findings": 38,
+              "marker": "UNSUPPORTED with an empty reason"
+            }
+          },
+          "seeded": 7,
+          "specificity_holds": true
+        },
+        "counts": {
+          "crate_ran": 1,
+          "fail": 0,
+          "findings": 0,
+          "not_reachable": 96,
+          "pass": 56,
+          "residuals": 6,
+          "results": 4,
+          "runs": 4,
+          "sites": 153,
+          "unsupported": 1
+        },
+        "court": "MS-TSAN",
+        "findings": [],
+        "frf_declarable": false,
+        "frf_exclusion": "the TSan court re-derives only the plane's pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
+        "method": "stages no probe: it reads the committed artifacts/phase25/tsan.json and re-runs the 25.11 pure checks (ms_tsan.tsan_findings and ms_tsan.tsan_sensitivity_control) over it, the committed 25.1 census and the committed 25.3 obligation rule that defines the concurrency-relevant surface -- no TSan, no nightly, no compiler. The plane records a per-surface-site TSan state (TSAN_PASS / TSAN_FAIL / TSAN_NOT_REACHABLE / TSAN_UNSUPPORTED) over the census sites whose operation kind requires a concurrency obligation (thread-affinity, Send/Sync or init-once), the runs (schedule, command hash, outcome, executed tests), the findings, the sanitizer_result records and the residuals. The runs pin the libtest schedule to one thread (--test-threads=1, the deterministic schedule docs/CONCURRENCY_MODEL.md section 6 fixes for reproducibility), so a race the crate's own thread tests did not exercise under that schedule is not read as absent. TSan instruments the Rust crate, `std` (rebuilt with -Zbuild-std), the first-party C adapters and the interceptable libc; it cannot instrument a module loaded at run time (src/dso/dlfcn.rs) or see through an opaque operation, and a site the instrument cannot reach or instrument is NOT_REACHABLE/UNSUPPORTED, never silently clean. A no-race result is trusted only because the deliberate data-race canary is known to fire. The TSan environment is the admitted court image with the venue's documented OPENSSL_RS_COURT_DATA override (TSan's ~35.1 TB shadow is MAP_NORESERVE virtual address space); the crate-level state records TSAN_RAN or TSAN_UNSUPPORTED. Every TSAN_PASS is a file-granular claim under the recorded schedule -- the site's source FILE was instrumented and a passing run covered it, not a per-operation proof that the specific operation executed race-free (the plane's top-level `pass_semantics` and each result's `coverage_granularity: file` state this). Seven seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6).",
+        "probe": "",
+        "problems": [],
+        "runs": [
+          {
+            "command_sha256": "d62f5265390a0ec6",
+            "outcome": "PASS",
+            "run_id": "tsan-runtime",
+            "tests_passed": 218,
+            "tests_run": 218
+          },
+          {
+            "command_sha256": "28e873ec4cd41dba",
+            "outcome": "PASS",
+            "run_id": "tsan-context",
+            "tests_passed": 18,
+            "tests_run": 18
+          },
+          {
+            "command_sha256": "1dc5ae1565a5857f",
+            "outcome": "PASS",
+            "run_id": "tsan-digest",
+            "tests_passed": 53,
+            "tests_run": 53
+          },
+          {
+            "command_sha256": "45e2f5c437ef2e2c",
+            "outcome": "PASS",
+            "run_id": "tsan-evp",
+            "tests_passed": 189,
+            "tests_run": 189
+          }
+        ],
+        "verdict": "pass"
       }
     ],
     "cve_replay_states": [
@@ -1333,8 +1436,7 @@
       "MS-PHASE18-FUZZ-CROSSWALK": "25.13 -- the Phase-18 fuzz crosswalk",
       "MS-PHASE24-SAFETY-COVERAGE": "25.14 -- the Phase-24 downstream safety coverage",
       "MS-RED-TEAM": "25.18 -- the red team",
-      "MS-SEAL": "25.21 -- the memory-safety seal",
-      "MS-TSAN": "25.11 -- TSan"
+      "MS-SEAL": "25.21 -- the memory-safety seal"
     },
     "risk_tiers": [
       "S0",
@@ -1607,8 +1709,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 11,
-      "total": 11
+      "pass": 12,
+      "total": 12
     },
     "tool_states": [
       "PASS",
@@ -1641,7 +1743,7 @@
     {
       "name": "phase-25-plan",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "e94eb6322e8b45b68830ccaaf8cbbd76a13966711e0d2d2fee23f0d90a7b632f"
+      "sha256": "a2d5cde1a0939bc4f8699d35199675c6674aaf51af98c6a9496f5e406e09f532"
     },
     {
       "name": "memory-safety-schemas",
@@ -1656,7 +1758,7 @@
     {
       "name": "phase25-container-manifest",
       "path": "forensics/memory-safety/container.json",
-      "sha256": "729c3e13474fa325e0038244b0037ac988cc2958dcab7c2034a7e627979ee414"
+      "sha256": "302e2826bb1a1fea1a3f21d249f2570fc8716449bdc76c40217af035928f03b7"
     },
     {
       "name": "cargo-toml",
@@ -1691,7 +1793,7 @@
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "4865fcbac82885b88f0207615cee673fc3f3602e1fa54e185a926da2a126a23c"
+      "sha256": "833afab05623c31bf77a1aa68f170a5548c292863ca3f20d1243bf2fd5dd4c79"
     },
     {
       "name": "ms-obligations-tool",
@@ -1701,7 +1803,7 @@
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "6c29f79df89ef021e72073e5f107630c0b8b4391b3d24a29ef5d4dff5c2f8a35"
+      "sha256": "41bf9793fdfb7e02be275ba4aa26df64523086e682284fa1d5763bcf1bb8ef44"
     },
     {
       "name": "ms-ownership-planes-tool",
@@ -1711,7 +1813,7 @@
     {
       "name": "phase22-crosswalk",
       "path": "artifacts/phase25/phase22-crosswalk.json",
-      "sha256": "ce3bb7563e40483d61e05e7fb41c37913fc1a2f044e1ba118478391416f2809d"
+      "sha256": "22beb63e8b4cf83c468cf42c3868cd03fe5fa59e23a6130db9c3421658aeac17"
     },
     {
       "name": "ms-phase22-crosswalk-tool",
@@ -1746,7 +1848,7 @@
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "9a4253a70529e93f43278e53397a44260651cd94bee15c30bf1767b13de5af78"
+      "sha256": "5849da3921bab5a7fc0c5fe93cb823e8b8ddd06957b6be3bd50d003650cb960f"
     },
     {
       "name": "ms-phase24-crosswalk-tool",
@@ -1786,7 +1888,7 @@
     {
       "name": "exposure",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "33b33ea566023b8abbc993f165fc8220e68458e18d2f75b3268b99eb267e9b60"
+      "sha256": "669ceac1c0e82a9e2612eadbc324479d1df59638ce95080070ca2515f9bed7f5"
     },
     {
       "name": "ms-exposure-tool",
@@ -1796,7 +1898,7 @@
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "030410c3ee85674e314fdf29fd063d2d37a71297c2aa0e04ad0f6cdd168cb309"
+      "sha256": "81f58317374c82e11af342d5572f61aa15d4d20e41923753247c0cefe153e47e"
     },
     {
       "name": "ms-reduction-tool",
@@ -1842,6 +1944,31 @@
       "name": "asan-harness-source",
       "path": "src/aes.rs",
       "sha256": "bc7142f8a6627e0b929d35c73b2f0e2fb08f2f7ae47584fae4ac859ea2138502"
+    },
+    {
+      "name": "tsan",
+      "path": "artifacts/phase25/tsan.json",
+      "sha256": "596714cdbbf4b74cba76a80d73d0bde691e44d34cbdb072472cd2fb63d562dda"
+    },
+    {
+      "name": "ms-tsan-tool",
+      "path": "forensics/tools/ms_tsan.py",
+      "sha256": "9425e68984a2d48f2eb7ec70929b10210a2648ca5b1172854128645cd6bf5bc5"
+    },
+    {
+      "name": "tsan-canary-source",
+      "path": "forensics/tools/tsan_canary.c",
+      "sha256": "eb48026308730242cb26307d41a1ed696e98dd9d0c46d6731e1d2d35d79c55e2"
+    },
+    {
+      "name": "tsan-canary-rust-source",
+      "path": "forensics/tools/tsan_canary.rs",
+      "sha256": "1817e1ebd7d28f4d999cdec687b68d482d1f64e70555d5c71620b9c4f957fc9c"
+    },
+    {
+      "name": "tsan-harness-source",
+      "path": "src/runtime/thread.rs",
+      "sha256": "1dd062fbce4e0a9699d981766e7995bf43ddd78458e8f48e7086e1c7150c8ce9"
     }
   ],
   "kind": "phase25-courts",

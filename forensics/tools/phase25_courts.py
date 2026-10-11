@@ -202,6 +202,11 @@ import ms_miri  # noqa: E402
 # `asan_findings` / `asan_sensitivity_control` over the committed plane and the committed census.
 import ms_asan  # noqa: E402
 
+# 25.11's TSan results and the tool that records them. The court re-runs the tool's pure
+# `tsan_findings` / `tsan_sensitivity_control` over the committed plane, the committed census and
+# the committed 25.3 obligation rule that defines the concurrency-relevant surface.
+import ms_tsan  # noqa: E402
+
 # The lossless columnar codec the Phase-25 artefacts are stored in. Every court decodes the
 # committed artefact through `decode_body` before reading its records, so one implementation of the
 # scheme serves the generator, the court and every cross-reader; the scheme is named by
@@ -312,6 +317,17 @@ ASAN_MSAN_COURT = "MS-ASAN-MSMAN"
 ASAN_CANARY_SOURCE = REPO_ROOT / "forensics" / "tools" / "asan_canary.c"
 ASAN_HARNESS_SOURCE = REPO_ROOT / "src" / "aes.rs"
 
+# 25.11's TSan plane and the tool that records it. The plane is a measurement (it builds and runs the
+# TSan-instrumented candidate), so the tool is not a metadata-only generator; the court re-runs only
+# the pure checks over the committed artefact, the committed census and the committed 25.3 obligation
+# rule that defines the concurrency-relevant surface.
+TSAN = REPO_ROOT / "artifacts" / "phase25" / "tsan.json"
+MS_TSAN_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_tsan.py"
+TSAN_COURT = "MS-TSAN"
+TSAN_CANARY_SOURCE = REPO_ROOT / "forensics" / "tools" / "tsan_canary.c"
+TSAN_CANARY_RUST_SOURCE = REPO_ROOT / "forensics" / "tools" / "tsan_canary.rs"
+TSAN_HARNESS_SOURCE = REPO_ROOT / "src" / "runtime" / "thread.rs"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -342,16 +358,16 @@ COURTS: list[tuple[str, str]] = [
     (UNSAFE_REDUCTION_COURT, "_ms_unsafe_reduction_court"),
     (MIRI_COURT, "_ms_miri_court"),
     (ASAN_MSAN_COURT, "_ms_asan_msan_court"),
+    (TSAN_COURT, "_ms_tsan_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
 # `MS-SOURCE-CENSUS`, 25.2 removed `MS-NON-RUST-TCB`, 25.3 removed `MS-SAFETY-OBLIGATIONS`, 25.4
 # removed `MS-OWNERSHIP-PLANES`, 25.5 removed `MS-PHASE22-CROSSWALK`, 25.6 removed
 # `MS-PHASE24-CROSSWALK`, 25.7 removed `MS-EXPOSURE-CLASSIFICATION`, 25.8 removed
-# `MS-UNSAFE-REDUCTION`, 25.9 removed `MS-MIRI` and 25.10 removed `MS-ASAN-MSMAN`, so eleven remain.
-# Ordered as the plan orders them.
+# `MS-UNSAFE-REDUCTION`, 25.9 removed `MS-MIRI`, 25.10 removed `MS-ASAN-MSMAN` and 25.11 removed
+# `MS-TSAN`, so ten remain. Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-TSAN": "25.11 -- TSan",
     "MS-KANI": "25.12 -- Kani",
     "MS-PHASE18-FUZZ-CROSSWALK": "25.13 -- the Phase-18 fuzz crosswalk",
     "MS-PHASE24-SAFETY-COVERAGE": "25.14 -- the Phase-24 downstream safety coverage",
@@ -1546,6 +1562,107 @@ def _ms_asan_msan_court(name: str) -> dict:
     }
 
 
+def _ms_tsan_court(name: str) -> dict:
+    """`MS-TSAN`: 25.11's court, the TSan results over the concurrency-relevant surface.
+
+    Stages no probe. It reads the committed `artifacts/phase25/tsan.json` and re-runs the 25.11 pure
+    checks `ms_tsan.tsan_findings` and `ms_tsan.tsan_sensitivity_control` over it, together with the
+    committed 25.1 census and the committed 25.3 obligation rule that defines the concurrency-
+    relevant surface -- no TSan, no nightly, no compiler; the measurement that produced the plane is
+    `ms_tsan.py --measure` (it builds and runs the instrumented candidate), and this court only
+    re-derives from what it wrote. It establishes that the plane carries exactly one TSan state for
+    every site of the derived concurrency-relevant surface and no other census site; that an
+    `UNSUPPORTED` site carries its reason; that a `PASS`/`FAIL` cites a real run with a matching
+    outcome and command hash and that a `PASS` covers the site's file; that no `UNSUPPORTED` site and
+    no site with a finding at it is recorded `PASS`; that a `FAIL` run's finding is preserved; that
+    the sanitizer_result records validate and every result states its file coverage granularity; that
+    the counts are derived, not typed; that no `PASS` is recorded while the data-race positive control
+    did not fire; that the schedule is recorded; and that the venue, the canary and the crate-level
+    case are recorded. Seeded mutations -- a `PASS` with no run, a `PASS` with a finding at it, a
+    dropped site, an `UNSUPPORTED` marked `PASS`, a typed count, an `UNSUPPORTED` run with no reason
+    and a `PASS` with no positive control -- are each caught with specificity holding. It is an
+    **instrument**: it can pass while the plane records property findings (the TSan findings), which
+    are recorded as the row's `findings` so a passing sanitizer court is never read as 'the candidate
+    is race-free'.
+    """
+    if not TSAN.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "tsan-missing",
+                "problems": [f"the TSan plane {rel(TSAN)} is absent"], "findings": [],
+                "control": {}}
+    if not SOURCE_CENSUS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "census-missing",
+                "problems": [f"the source census {rel(SOURCE_CENSUS)} is absent"],
+                "findings": [], "control": {}}
+
+    census_body, refs = _census_view()
+    body = _decoded_body(TSAN, refs)
+    problems = ms_tsan.tsan_findings(body, census_body)
+    control = ms_tsan.tsan_sensitivity_control(body, census_body)
+
+    counts = body.get("counts") or {}
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    cl = (body.get("rule") or {}).get("crate_level") or {}
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/tsan.json and re-runs the "
+            "25.11 pure checks (ms_tsan.tsan_findings and ms_tsan.tsan_sensitivity_control) over it, "
+            "the committed 25.1 census and the committed 25.3 obligation rule that defines the "
+            "concurrency-relevant surface -- no TSan, no nightly, no compiler. The plane records a "
+            "per-surface-site TSan state (TSAN_PASS / TSAN_FAIL / TSAN_NOT_REACHABLE / "
+            "TSAN_UNSUPPORTED) over the census sites whose operation kind requires a concurrency "
+            "obligation (thread-affinity, Send/Sync or init-once), the runs (schedule, command hash, "
+            "outcome, executed tests), the findings, the sanitizer_result records and the residuals. "
+            "The runs pin the libtest schedule to one thread (--test-threads=1, the deterministic "
+            "schedule docs/CONCURRENCY_MODEL.md section 6 fixes for reproducibility), so a race the "
+            "crate's own thread tests did not exercise under that schedule is not read as absent. "
+            "TSan instruments the Rust crate, `std` (rebuilt with -Zbuild-std), the first-party C "
+            "adapters and the interceptable libc; it cannot instrument a module loaded at run time "
+            "(src/dso/dlfcn.rs) or see through an opaque operation, and a site the instrument cannot "
+            "reach or instrument is NOT_REACHABLE/UNSUPPORTED, never silently clean. A no-race "
+            "result is trusted only because the deliberate data-race canary is known to fire. The "
+            "TSan environment is the admitted court image with the venue's documented "
+            "OPENSSL_RS_COURT_DATA override (TSan's ~35.1 TB shadow is MAP_NORESERVE virtual "
+            "address space); the crate-level state records TSAN_RAN or TSAN_UNSUPPORTED. Every "
+            "TSAN_PASS is a file-granular claim under the recorded schedule -- the site's source "
+            "FILE was instrumented and a passing run covered it, not a per-operation proof that the "
+            "specific operation executed race-free (the plane's top-level `pass_semantics` and each "
+            "result's `coverage_granularity: file` state this). Seven seeded mutations are each "
+            "caught with specificity holding "
+            "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the TSan court re-derives only the plane's pure checks, so it stages no "
+            "artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "sites": counts.get("sites", 0),
+            "pass": counts.get("pass", 0),
+            "fail": counts.get("fail", 0),
+            "not_reachable": counts.get("not_reachable", 0),
+            "unsupported": counts.get("unsupported", 0),
+            "runs": len(body.get("runs") or []),
+            "findings": len(body.get("findings") or []),
+            "results": len(body.get("results") or []),
+            "residuals": len(body.get("residuals") or []),
+            "crate_ran": 1 if cl.get("state") == "TSAN_RAN" else 0,
+        },
+        "runs": [
+            {"run_id": r.get("run_id"), "outcome": r.get("outcome"),
+             "tests_passed": r.get("tests_passed"), "tests_run": r.get("tests_run"),
+             "command_sha256": str(r.get("command_sha256"))[:16]}
+            for r in body.get("runs") or []
+        ],
+        "findings": list(body.get("findings") or []),
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -1634,14 +1751,16 @@ def main(argv: list[str]) -> int:
             "**25.10 registers `MS-ASAN-MSMAN`**, the ASan/MSan results over the claimed profile, "
             "each with its tool state and its unsupported reason where a sanitizer could not "
             "instrument or reach a target, so a site the instrument cannot reach or instrument is "
-            "recorded rather than counted clean. "
+            "recorded rather than counted clean, and "
+            "**25.11 registers `MS-TSAN`**, the TSan results over the concurrency-relevant surface, "
+            "each with its tool state and its unsupported reason, so a race the tool could not "
+            "observe under the recorded schedule is not read as absent. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining eleven of its twenty-two courts -- "
-            "MS-TSAN, "
+            "remaining ten of its twenty-two courts -- "
             "MS-KANI, MS-PHASE18-FUZZ-CROSSWALK, MS-PHASE24-SAFETY-COVERAGE, MS-HISTORICAL-CVE, "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.11 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.12 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -1712,6 +1831,11 @@ def main(argv: list[str]) -> int:
         InputRef(name="ms-asan-tool", path=MS_ASAN_TOOL),
         InputRef(name="asan-canary-source", path=ASAN_CANARY_SOURCE),
         InputRef(name="asan-harness-source", path=ASAN_HARNESS_SOURCE),
+        InputRef(name="tsan", path=TSAN),
+        InputRef(name="ms-tsan-tool", path=MS_TSAN_TOOL),
+        InputRef(name="tsan-canary-source", path=TSAN_CANARY_SOURCE),
+        InputRef(name="tsan-canary-rust-source", path=TSAN_CANARY_RUST_SOURCE),
+        InputRef(name="tsan-harness-source", path=TSAN_HARNESS_SOURCE),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
