@@ -546,6 +546,25 @@ GENERATORS_BEFORE_LEDGERS = [
     # divergence, and the `MS-MECHANISM-RECONCILIATION` court re-runs the same pure checks over the
     # committed artefact and the committed evidence.
     "forensics/tools/ms_mechanism_reconciliation.py",
+    # **Phase 25.18's red team (`forensics/tools/ms_red_team.py` -> `artifacts/phase25/red-team.json`)
+    # is a pure function of committed inputs too, so it belongs here and is byte-compared.** It
+    # attacks the atlas's own claims: it tries to falsify "no unexplained reachable unsafe site" by
+    # hunting a reachable site the atlas left unexplained, UNKNOWN or unreachable, a claimed-safe
+    # site the committed Phase-22 typed edges reach from a public root, an UNREACHABLE_PROFILE or
+    # tool NOT_REACHABLE classification with no witness, an unpreserved discovered failure or a
+    # reachable site dropped from a plane -- reasoning only over the committed 25.7 exposure
+    # classification and its witnesses, the committed Phase-22 atlas through 25.5's crosswalk, the
+    # committed 25.8 reduction axis, the committed 25.13 fuzz crosswalk and its hostile corpus, the
+    # committed 25.14 coverage, the committed 25.17 mechanisms, the committed 25.9-25.12 evidence
+    # planes and the committed 25.16 replay index. It compiles nothing -- no compiler, no tool, no
+    # probe -- so `forensics/memory-safety/container.json` lists it `metadata_only` and the
+    # Docker-only guard admits it on any host, exactly as `ms_mechanism_reconciliation` is. A stale
+    # committed red team -- or a gap with no residual, an absence claim from a single method, an
+    # unreachable classification with no witness, a typed count, an outcome or method outside the
+    # closed vocabulary or a dropped attack -- is a failure rather than a silent divergence, and the
+    # `MS-RED-TEAM` court re-runs the same pure checks over the committed artefact and the committed
+    # evidence.
+    "forensics/tools/ms_red_team.py",
     # **Phase 25.10's ASan measurement (`forensics/tools/ms_asan.py` ->
     # `artifacts/phase25/asan-msan.json`) follows the `ms_census.py`/`ms_miri.py` measurement
     # precedent, so it is deliberately NOT listed here and NOT in `COMPARED`.** It builds the exact
@@ -1000,6 +1019,16 @@ COMPARED = [
     # evidence, a surviving operation read as ELIMINATED, a typed count or a non-extinct mechanism
     # with no residual is a failure rather than a silent divergence.
     "artifacts/phase25/mechanisms.json",
+    # Phase 25.18's red team: a pure function of the committed 25.7 exposure classification and its
+    # witnesses, the committed Phase-22 atlas through 25.5's crosswalk, the committed 25.8 reduction
+    # axis, the committed 25.13 fuzz crosswalk and its hostile corpus, the committed 25.14 coverage,
+    # the committed 25.17 mechanisms, the committed 25.9-25.12 evidence planes and the committed
+    # 25.16 replay index. It compiles nothing and reads no compiler output, so re-deriving it needs
+    # no compiler and no candidate machine. A gap with no residual, an absence claim from a single
+    # method, an unreachable classification with no witness, a typed count, an outcome or method
+    # outside the closed vocabulary or a dropped attack is a failure rather than a silent
+    # divergence.
+    "artifacts/phase25/red-team.json",
 ]
 
 # ---------------------------------------------------------------------------

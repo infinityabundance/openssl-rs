@@ -298,12 +298,19 @@
       },
       {
         "closure": "the `MS-RED-TEAM` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-RED-TEAM is pending",
+        "findings": [
+          "13 red-team attack(s) were run across 7 method(s) over 1252571 site(s): by outcome INCONCLUSIVE=1, NO_GAP=12; by method coverage_join=2, exposure_witness=3, fuzz_corpus=2, mechanism_witness=2, phase22_typed_edges=2, reduction_join=1, tool_witness=1",
+          "0 genuine gap(s) were found and 1 attack(s) are inconclusive; the attacks that found nothing are recorded as 'no gap found under method X', which is never proof of absence",
+          "the inconclusive attack(s) are named rather than smoothed over: rt-phase22-unwitnessed-external",
+          "a genuine gap is a property finding and a residual, never suppressed: none was found, so no residual is owed to a gap",
+          "every unreachable/not-reachable classification was audited for a committed witness (4 classification(s), 0 unwitnessed site(s)), so an unreachable classification without a witness is a finding",
+          "a passing red-team court records that the attacks ran and their controls were honest; it is an instrument, not a memory-safety property, and its clean result is not read as 'the atlas is complete' or 'the candidate is memory safe'"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-RED-TEAM is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "red-team",
         "what": "the red-team pass over the claimed profile: the reachable unsafe sites attacked with adversarial inputs and configurations, each attempt recorded with its outcome, so an unexplained reachable unsafe site is a finding rather than an omission"
@@ -350,8 +357,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 18,
-      "open_in_this_stratum": 4,
+      "implemented": 19,
+      "open_in_this_stratum": 3,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -392,7 +399,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "0e3f2b6c23aca37ccc70329f6c2252c382eb99bdec4c2763a1e6ed6f582cea49"
+      "sha256": "94cb5b3379086ccb82ba28ce4e4fe61ba755fb7da8d637315995a6bf33b43195"
     },
     {
       "name": "phase25-guard",

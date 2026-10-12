@@ -249,6 +249,15 @@ import ms_cve_replay  # noqa: E402
 # over the committed plane and the committed evidence.
 import ms_mechanism_reconciliation  # noqa: E402
 
+# 25.18's red team and the pure tool that derives it from the committed 25.7 exposure
+# classification and its witnesses, the committed Phase-22 atlas through 25.5's crosswalk, the
+# committed 25.8 reduction axis, the committed 25.13 fuzz crosswalk and its hostile corpus, the
+# committed 25.14 coverage, the committed 25.17 mechanisms, the committed 25.9-25.12 evidence planes
+# and the committed 25.16 replay index. It is a pure derivation, so the court re-runs only the
+# tool's pure `red_team_findings` / `red_team_sensitivity_control` over the committed plane and the
+# committed evidence.
+import ms_red_team  # noqa: E402
+
 # The lossless columnar codec the Phase-25 artefacts are stored in. Every court decodes the
 # committed artefact through `decode_body` before reading its records, so one implementation of the
 # scheme serves the generator, the court and every cross-reader; the scheme is named by
@@ -434,6 +443,14 @@ MS_MECHANISM_RECONCILIATION_TOOL = (REPO_ROOT / "forensics" / "tools"
                                     / "ms_mechanism_reconciliation.py")
 MECHANISM_RECONCILIATION_COURT = "MS-MECHANISM-RECONCILIATION"
 
+# 25.18's red team and the pure tool that derives it. The plan's artefact is `artifacts/phase25/
+# red-team.json`: the red-team outcomes and residuals, validated against the `residual` record kind.
+# The plane is a pure derivation (it reasons over the committed planes and executes nothing), so the
+# court re-runs only the tool's pure checks over the committed artefact and the committed evidence.
+RED_TEAM = REPO_ROOT / "artifacts" / "phase25" / "red-team.json"
+MS_RED_TEAM_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_red_team.py"
+RED_TEAM_COURT = "MS-RED-TEAM"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -471,6 +488,7 @@ COURTS: list[tuple[str, str]] = [
     (HISTORICAL_CVE_COURT, "_ms_historical_cve_court"),
     (CVE_REPLAY_COURT, "_ms_cve_replay_court"),
     (MECHANISM_RECONCILIATION_COURT, "_ms_mechanism_reconciliation_court"),
+    (RED_TEAM_COURT, "_ms_red_team_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
@@ -479,10 +497,10 @@ COURTS: list[tuple[str, str]] = [
 # `MS-PHASE24-CROSSWALK`, 25.7 removed `MS-EXPOSURE-CLASSIFICATION`, 25.8 removed
 # `MS-UNSAFE-REDUCTION`, 25.9 removed `MS-MIRI`, 25.10 removed `MS-ASAN-MSMAN`, 25.11 removed
 # `MS-TSAN`, 25.12 removed `MS-KANI`, 25.13 removed `MS-PHASE18-FUZZ-CROSSWALK`, 25.14 removed
-# `MS-PHASE24-SAFETY-COVERAGE`, 25.15 removed `MS-HISTORICAL-CVE`, 25.16 removed `MS-CVE-REPLAY`
-# and 25.17 removed `MS-MECHANISM-RECONCILIATION`, so four remain. Ordered as the plan orders them.
+# `MS-PHASE24-SAFETY-COVERAGE`, 25.15 removed `MS-HISTORICAL-CVE`, 25.16 removed `MS-CVE-REPLAY`,
+# 25.17 removed `MS-MECHANISM-RECONCILIATION` and 25.18 removed `MS-RED-TEAM`, so three remain.
+# Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-RED-TEAM": "25.18 -- the red team",
     "MS-CLEAN-REGEN": "25.19 -- the full clean regeneration",
     "MS-FRF-CLOSURE": "25.20 -- the FRF/Gemel closure",
     "MS-SEAL": "25.21 -- the memory-safety seal",
@@ -2365,6 +2383,95 @@ def _ms_mechanism_reconciliation_court(name: str) -> dict:
     }
 
 
+def _ms_red_team_court(name: str) -> dict:
+    """`MS-RED-TEAM`: 25.18's court, the red team over the claimed profile.
+
+    Stages no probe. It reads the committed `artifacts/phase25/red-team.json` and re-runs the 25.18
+    pure checks `ms_red_team.red_team_findings` and `ms_red_team.red_team_sensitivity_control` over
+    it together with the committed evidence it attacks -- the 25.7 exposure classification and its
+    witnesses, the committed Phase-22 atlas through 25.5's crosswalk, the 25.8 reduction axis, the
+    25.13 fuzz crosswalk and its hostile corpus, the 25.14 coverage, the 25.17 mechanisms, the
+    25.9-25.12 evidence planes (Miri, ASan/MSan, TSan, Kani) and the 25.16 replay index -- with no
+    compiler, no tool, no probe; the derivation that produced the plane is `ms_red_team.py
+    --measure`, and this court only re-derives from what it wrote.
+
+    It establishes that every attack reasons with a method from the closed vocabulary and records
+    an outcome from the closed vocabulary with committed evidence; that a genuine gap is a property
+    finding **and** an open residual and an inconclusive attempt carries its own residual; that the
+    absence claim rests on more than one method and never coexists with a gap; that no
+    `UNREACHABLE_PROFILE` or tool `NOT_REACHABLE` classification is presented without a committed
+    witness; and that the witness audit, the counts and the whole plane equal their derivation. It
+    refuses a plane that asserts the atlas is complete. Eight seeded mutations -- a gap with no
+    residual, an absence claim from a single method, an unreachable classification with no witness,
+    a typed count, an outcome outside the vocabulary, a dropped attack, an absence claim with a gap
+    and a method outside the vocabulary -- are each caught with specificity holding. It is an
+    **instrument**: it can pass while the plane records a genuine gap (which becomes a finding and a
+    residual, named in the court's `findings`) or an inconclusive attack, so a passing red-team
+    court is never read as 'the atlas is complete' or 'the candidate is memory safe'.
+    """
+    if not RED_TEAM.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "plane-missing",
+                "problems": [f"the red-team plane {rel(RED_TEAM)} is absent"],
+                "findings": [], "control": {}}
+
+    body = ms_red_team._body(ms_red_team._load(RED_TEAM))
+    authority = ms_red_team.load_authority()
+    problems = ms_red_team.red_team_findings(body, authority)
+    control = ms_red_team.red_team_sensitivity_control(body, authority)
+
+    counts = body.get("counts") or {}
+    claim = body.get("absence_claim") or {}
+    findings = list(body.get("findings") or [])
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/red-team.json and re-runs the "
+            "25.18 pure checks (ms_red_team.red_team_findings and "
+            "ms_red_team.red_team_sensitivity_control) over it and the committed evidence it "
+            "attacks -- the 25.7 exposure classification and its witnesses, the committed Phase-22 "
+            "atlas through 25.5's crosswalk, the 25.8 reduction axis, the 25.13 fuzz crosswalk and "
+            "its hostile corpus, the 25.14 coverage, the 25.17 mechanisms, the 25.9-25.12 evidence "
+            "planes and the 25.16 replay index -- without a compiler. The plane is a pure "
+            "derivation: the reachable unsafe sites are attacked with static reachability reasoning "
+            "over the committed Phase-22 typed edges and with the per-plane witness and join "
+            "audits and the committed hostile corpus, and every attempt records its method, its "
+            "outcome (FOUND_GAP / NO_GAP / INCONCLUSIVE) and its evidence, so an unexplained "
+            "reachable unsafe site is a finding rather than an omission. It establishes the closed "
+            "method and outcome vocabulary, the gap-residual and inconclusive-residual rules, the "
+            "absence-claim rule (more than one method, never alongside a gap), the unreachable "
+            "witness rule and the derivation equality; eight seeded mutations are each caught with "
+            "specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.5, 3.6)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the red-team court reads the committed plane and re-derives only its pure checks, so "
+            "it stages no artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "attacks": counts.get("attacks", 0),
+            "methods": counts.get("methods", 0),
+            "found_gap": counts.get("found_gap", 0),
+            "no_gap": counts.get("no_gap", 0),
+            "inconclusive": counts.get("inconclusive", 0),
+            "sites_attacked": counts.get("sites_attacked", 0),
+            "witness_audit_entries": counts.get("witness_audit_entries", 0),
+            "unwitnessed_classifications": counts.get("unwitnessed_classifications", 0),
+            "residuals": len(body.get("residuals") or []),
+        },
+        "by_method": dict(counts.get("by_method") or {}),
+        "by_outcome": dict(counts.get("by_outcome") or {}),
+        "absence_claim": {"asserted": bool(claim.get("asserted")),
+                          "methods": list(claim.get("methods") or [])},
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -2483,11 +2590,18 @@ def main(argv: list[str]) -> int:
             "PRESENT or UNRESOLVED), a structural immunity cited with its reason and its evidence, "
             "and an honest residual where the mechanism is not shown extinct, so extinction is a "
             "mechanism statement and never a future-CVE-count prediction. "
+            "**25.18 registers `MS-RED-TEAM`**, the red team: the reachable unsafe sites attacked "
+            "with static reachability reasoning over the committed Phase-22 typed edges, the "
+            "per-plane witness and join audits and the committed hostile corpus, each attempt "
+            "recording its method, its outcome (FOUND_GAP / NO_GAP / INCONCLUSIVE) and its "
+            "evidence, so an unexplained reachable unsafe site is a finding and a residual rather "
+            "than an omission, an inconclusive attempt is never a pass, and a claimed absence of "
+            "gaps is never read as proof that the atlas is complete. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining four of its twenty-two courts -- "
-            "MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.18 "
+            "remaining three of its twenty-two courts -- "
+            "MS-CLEAN-REGEN, "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.19 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -2583,6 +2697,8 @@ def main(argv: list[str]) -> int:
         InputRef(name="cve-replay-probe", path=CVE_REPLAY_PROBE),
         InputRef(name="mechanisms", path=MECHANISMS),
         InputRef(name="ms-mechanism-reconciliation-tool", path=MS_MECHANISM_RECONCILIATION_TOOL),
+        InputRef(name="red-team", path=RED_TEAM),
+        InputRef(name="ms-red-team-tool", path=MS_RED_TEAM_TOOL),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
