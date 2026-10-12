@@ -258,6 +258,13 @@ import ms_mechanism_reconciliation  # noqa: E402
 # committed evidence.
 import ms_red_team  # noqa: E402
 
+# 25.19's full clean regeneration and the measurement tool that orchestrates it. The tool re-runs
+# each measurement plane's own `--measure` (the compiler, Miri, ASan, TSan, Kani and the CVE
+# replays) and records the manifest binding and the determinism result; it is a measurement tool,
+# not `metadata_only`. The court re-runs only the tool's pure `regen_findings` /
+# `regen_sensitivity_control` over the committed plane and the committed manifest.
+import ms_regeneration  # noqa: E402
+
 # The lossless columnar codec the Phase-25 artefacts are stored in. Every court decodes the
 # committed artefact through `decode_body` before reading its records, so one implementation of the
 # scheme serves the generator, the court and every cross-reader; the scheme is named by
@@ -451,6 +458,16 @@ RED_TEAM = REPO_ROOT / "artifacts" / "phase25" / "red-team.json"
 MS_RED_TEAM_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_red_team.py"
 RED_TEAM_COURT = "MS-RED-TEAM"
 
+# 25.19's full clean regeneration and the measurement tool that orchestrates it. The plan's artefact
+# is `artifacts/phase25/regeneration.json`: the ordered regeneration procedure, each measurement
+# plane re-run with its exit, each plane's current manifest binding and the determinism result. The
+# tool re-runs the measurement planes (the compiler, Miri, ASan, TSan, Kani and the CVE replays), so
+# it is a measurement tool, not `metadata_only`; the court re-runs only its pure checks over the
+# committed artefact and the committed manifest.
+REGENERATION = REPO_ROOT / "artifacts" / "phase25" / "regeneration.json"
+MS_REGENERATION_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_regeneration.py"
+CLEAN_REGEN_COURT = "MS-CLEAN-REGEN"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -489,6 +506,7 @@ COURTS: list[tuple[str, str]] = [
     (CVE_REPLAY_COURT, "_ms_cve_replay_court"),
     (MECHANISM_RECONCILIATION_COURT, "_ms_mechanism_reconciliation_court"),
     (RED_TEAM_COURT, "_ms_red_team_court"),
+    (CLEAN_REGEN_COURT, "_ms_clean_regen_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
@@ -498,10 +516,9 @@ COURTS: list[tuple[str, str]] = [
 # `MS-UNSAFE-REDUCTION`, 25.9 removed `MS-MIRI`, 25.10 removed `MS-ASAN-MSMAN`, 25.11 removed
 # `MS-TSAN`, 25.12 removed `MS-KANI`, 25.13 removed `MS-PHASE18-FUZZ-CROSSWALK`, 25.14 removed
 # `MS-PHASE24-SAFETY-COVERAGE`, 25.15 removed `MS-HISTORICAL-CVE`, 25.16 removed `MS-CVE-REPLAY`,
-# 25.17 removed `MS-MECHANISM-RECONCILIATION` and 25.18 removed `MS-RED-TEAM`, so three remain.
-# Ordered as the plan orders them.
+# 25.17 removed `MS-MECHANISM-RECONCILIATION`, 25.18 removed `MS-RED-TEAM` and 25.19 removed
+# `MS-CLEAN-REGEN`, so two remain. Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-CLEAN-REGEN": "25.19 -- the full clean regeneration",
     "MS-FRF-CLOSURE": "25.20 -- the FRF/Gemel closure",
     "MS-SEAL": "25.21 -- the memory-safety seal",
 }
@@ -2472,6 +2489,84 @@ def _ms_red_team_court(name: str) -> dict:
     }
 
 
+def _ms_clean_regen_court(name: str) -> dict:
+    """`MS-CLEAN-REGEN`: 25.19's court, the full clean regeneration.
+
+    Stages no probe and runs no compiler. It reads the committed
+    `artifacts/phase25/regeneration.json` and re-runs the 25.19 pure checks
+    `ms_regeneration.regen_findings` and `ms_regeneration.regen_sensitivity_control` over it and the
+    committed venue manifest -- the derivation that re-ran the planes is `ms_regeneration.py
+    --measure`, and this court only re-derives from what it wrote.
+
+    It establishes that the regeneration re-ran every measurement plane of the stratum (the census,
+    the non-Rust TCB, Miri, ASan/MSan, TSan, Kani and the CVE-replay index), in dependency order, by
+    each plane's own `--measure`; that each re-measured plane records the **current**
+    `forensics/memory-safety/container.json` digest as an input and reproduced **byte-for-byte** on
+    a second run (a determinism claim is admitted only when the second run's digest exists and
+    equals the first's); that a plane that did not survive the regeneration is named in a finding;
+    and that a plane the venue could not re-run is recorded with its exact reason and an open
+    residual rather than silently accepted. It refuses a plane binding a **superseded** manifest
+    digest that is not recorded as a residual, a measurement plane **not re-run** with no reason or
+    residual, a **determinism claim with no second run**, and a **typed count** -- eight seeded
+    mutations are each caught with specificity holding. It is an **instrument**: it can pass while
+    the plane records real findings (the seven planes re-bound from a superseded manifest), so a
+    passing regeneration is a reproducibility statement and never a memory-safety claim.
+    """
+    if not REGENERATION.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "plane-missing",
+                "problems": [f"the regeneration plane {rel(REGENERATION)} is absent"],
+                "findings": [], "control": {}}
+
+    body = ms_regeneration._body(ms_regeneration._load(REGENERATION))
+    manifest_digest = ms_regeneration._manifest_digest()
+    problems = ms_regeneration.regen_findings(body, manifest_digest)
+    control = ms_regeneration.regen_sensitivity_control(body, manifest_digest)
+
+    counts = body.get("counts") or {}
+    det = body.get("determinism") or {}
+    findings = list(body.get("findings") or [])
+    residuals = list(body.get("residuals") or [])
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/regeneration.json and re-runs "
+            "the 25.19 pure checks (ms_regeneration.regen_findings and "
+            "ms_regeneration.regen_sensitivity_control) over it and the committed venue manifest "
+            "(forensics/memory-safety/container.json) -- no compiler, no tool. The regeneration "
+            "re-ran each measurement plane's own `--measure` in dependency order -- the source "
+            "census, the non-Rust TCB, Miri, ASan/MSan, TSan, Kani and the CVE-replay index -- and "
+            "records each re-run's exit, each plane's current manifest binding (the planes were "
+            "measured before the manifest's environment_derivations landed, so they bound a "
+            "superseded digest) and whether each reproduced byte-for-byte on a second run. It "
+            "establishes the ordered procedure, the per-plane exit, the current manifest binding, "
+            "the determinism result, the survival check against HEAD and the residual for a plane "
+            "the venue could not re-run; eight seeded mutations are each caught with specificity "
+            "holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the clean-regeneration court reads the committed plane and re-derives only its pure "
+            "checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "planes": counts.get("planes", 0),
+            "re_measured": counts.get("re_measured", 0),
+            "unmeasured": counts.get("unmeasured", 0),
+            "reproduced": counts.get("reproduced", 0),
+            "superseded_bindings": counts.get("superseded_bindings", 0),
+            "all_reproduced": bool(det.get("all_reproduced")),
+            "residuals": len(residuals),
+        },
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -2597,12 +2692,16 @@ def main(argv: list[str]) -> int:
             "evidence, so an unexplained reachable unsafe site is a finding and a residual rather "
             "than an omission, an inconclusive attempt is never a pass, and a claimed absence of "
             "gaps is never read as proof that the atlas is complete. "
+            "**25.19 registers `MS-CLEAN-REGEN`**, the full clean regeneration: each measurement "
+            "plane of the stratum re-run by its own `--measure` in dependency order, each recorded "
+            "as still binding the current venue manifest as an input and as byte-reproducible on a "
+            "second run, so the atlas is reproducible rather than assembled and a `PASS` that did "
+            "not survive the regeneration is a finding rather than a silent replacement. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining three of its twenty-two courts -- "
-            "MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.19 "
-            "through 25.21). The stratum's record kinds are defined and self-tested in "
+            "remaining two of its twenty-two courts -- "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.20 "
+            "and 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
             "obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, "
@@ -2699,6 +2798,8 @@ def main(argv: list[str]) -> int:
         InputRef(name="ms-mechanism-reconciliation-tool", path=MS_MECHANISM_RECONCILIATION_TOOL),
         InputRef(name="red-team", path=RED_TEAM),
         InputRef(name="ms-red-team-tool", path=MS_RED_TEAM_TOOL),
+        InputRef(name="regeneration", path=REGENERATION),
+        InputRef(name="ms-regeneration-tool", path=MS_REGENERATION_TOOL),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

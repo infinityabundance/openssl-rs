@@ -317,12 +317,24 @@
       },
       {
         "closure": "the `MS-CLEAN-REGEN` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-CLEAN-REGEN is pending",
+        "findings": [
+          "the clean regeneration re-ran 7 of 7 measurement plane(s); 7 reproduced their evidence on a second --measure, and 6 reproduced whole-file (the rest differ only in the non-evidence bytes their envelope or per-run fields carry)",
+          "every re-measured plane now binds the current venue manifest ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b as an input, so the measurement planes are mutually consistent on the manifest",
+          "artifacts/phase25/source-census.json bound a superseded manifest digest (302e2826bb1a1fea1a3f21d249f2570fc8716449bdc76c40217af035928f03b7) as committed at HEAD and was re-bound to the current ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b by the regeneration",
+          "artifacts/phase25/source-census.json did not survive the regeneration: its committed evidence (ff338042c8e16d0fd2b2d6ae59baad31624ab66f98db03547a8755dde662caf3) differs from the regenerated evidence (f08d88ba151a6a0e510f4f69e40746523f0b661601919092485174094989ec05), so a PASS read off the committed bytes had to be re-read off the regenerated ones",
+          "artifacts/phase25/non-rust-tcb.json bound a superseded manifest digest (36bd122506bf9d01f4afab3f3d8dd0f21fe7377174035a269890bfbe837a2445) as committed at HEAD and was re-bound to the current ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b by the regeneration",
+          "artifacts/phase25/miri.json bound a superseded manifest digest (36bd122506bf9d01f4afab3f3d8dd0f21fe7377174035a269890bfbe837a2445) as committed at HEAD and was re-bound to the current ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b by the regeneration",
+          "artifacts/phase25/miri.json reproduced its evidence while its whole file differs, because it records the declared non-evidence field(s) ['body.runs.rows[*].transcript_sha256'] -- a per-run transcript digest or a build product -- whose bytes are not reproducible; the difference is confined to those declared fields",
+          "artifacts/phase25/asan-msan.json bound a superseded manifest digest (729c3e13474fa325e0038244b0037ac988cc2958dcab7c2034a7e627979ee414) as committed at HEAD and was re-bound to the current ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b by the regeneration",
+          "artifacts/phase25/tsan.json bound a superseded manifest digest (302e2826bb1a1fea1a3f21d249f2570fc8716449bdc76c40217af035928f03b7) as committed at HEAD and was re-bound to the current ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b by the regeneration",
+          "artifacts/phase25/kani.json bound a superseded manifest digest (deefd44215db05fc4831c24b60faa3b84b1a9f7369aa83e2ad560fa3bfbf152d) as committed at HEAD and was re-bound to the current ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b by the regeneration",
+          "artifacts/phase25/cve-replay/index.json bound a superseded manifest digest (2fe4bb5ece8a470010f43a538c8c8819edb0b5de1c773b0db0fd4b8414083cc3) as committed at HEAD and was re-bound to the current ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b by the regeneration"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-CLEAN-REGEN is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "clean-regeneration",
         "what": "the full clean regeneration of the memory-safety census and its evidence from the frozen candidate and the frozen toolchain, so the atlas is reproducible rather than assembled, and a PASS that does not survive the regeneration is a finding"
@@ -357,8 +369,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 19,
-      "open_in_this_stratum": 3,
+      "implemented": 20,
+      "open_in_this_stratum": 2,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -399,7 +411,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "94cb5b3379086ccb82ba28ce4e4fe61ba755fb7da8d637315995a6bf33b43195"
+      "sha256": "e1b5fd750c37e4992ce1194711c0ad643aeb254926051b45744f640750ef55c1"
     },
     {
       "name": "phase25-guard",
