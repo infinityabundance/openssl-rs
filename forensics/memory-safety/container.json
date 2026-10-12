@@ -49,6 +49,16 @@
       "dimension": "the pinned Kani 0.68.0 release bundle and its pinned toolchain (nightly-2026-08-21) added to PATH/LD_LIBRARY_PATH from the /work scratch",
       "reason": "Kani is a bounded model checker (Kani 0.68.0 with its CBMC 6.11.0 backend), a heavy tool not in the admitted image, installed into the /work scratch by the documented route -- the upstream x86_64-unknown-linux-gnu release bundle plus its pinned toolchain -- and the tool derives the `toolchain/` symlink and the `cargo-kani` plugin that `cargo kani setup` would create. Unlike the ASan and TSan environments this adds no RLIMIT_DATA override: a Kani proof fits the court's default per-process cap, and the container cgroup memory cap, PIDs, CPUs and the wall clock are unchanged, so no bound on resident resources is weakened.",
       "measured": "the Kani run is a measurement (it model-checks the committed harnesses against the admitted candidate), so ms_kani.py is not metadata-only and is refused on the host; the MS-KANI court re-runs only its pure checks over the committed plane and the committed harness source"
+    },
+    "cve-replay": {
+      "subphase": "25.16",
+      "tool": "forensics/tools/ms_cve_replay.py",
+      "plane": "artifacts/phase25/cve-replay/",
+      "from": "openssl-rs-court:1 (the admitted image, built from canonical_base)",
+      "differs_from": "the court's `exec`, and only here",
+      "dimension": "the venue's own gcc compiles the committed probe (courts/phase25/cve_replay_probe.c) against the candidate's built C ABI (artifacts/phase2/libcrypto.so.3) and against a built vulnerable historical authority (forensics/authorities/prefix/openssl-*-historical)",
+      "reason": "the replay is a differential: the same committed probe and the same malformed input shape are driven through the candidate's public C ABI and through a vulnerable historical authority the advisory's affected range names, and the observed behaviours are compared. The venue's own C compiler is used -- the probe is first-party trial evidence, not a product -- and no RLIMIT_DATA override and no new tool are added: the compiler, the candidate's built shared object and the already-present historical prefixes are the whole environment, so the container cgroup memory cap, PIDs, CPUs, the wall clock and no-new-privileges are unchanged and no bound on resident resources is weakened.",
+      "measured": "the replay is a measurement (it compiles the committed probe and runs the historical CVEs' input shapes against the candidate's built ABI and the vulnerable authority), so ms_cve_replay.py is not metadata-only and is refused on the host; the MS-CVE-REPLAY court re-runs only its pure checks over the committed plane, the committed 25.15 census and the committed probe source"
     }
   },
   "metadata_only": [

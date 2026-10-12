@@ -233,6 +233,14 @@ import ms_tsan  # noqa: E402
 # source (tests/kani_proofs.rs) the stated harnesses live in.
 import ms_kani  # noqa: E402
 
+# 25.16's historical CVE replay and the tool that measures it. The plane is a measurement (it
+# compiles the committed probe against the exact admitted candidate's built C ABI and against a
+# vulnerable historical authority, and runs each case), so the tool is not a metadata-only
+# generator; the court re-runs only the tool's pure `cve_replay_findings` /
+# `cve_replay_sensitivity_control` over the committed plane, the committed 25.15 census and the
+# committed probe source.
+import ms_cve_replay  # noqa: E402
+
 # The lossless columnar codec the Phase-25 artefacts are stored in. Every court decodes the
 # committed artefact through `decode_body` before reading its records, so one implementation of the
 # scheme serves the generator, the court and every cross-reader; the scheme is named by
@@ -396,6 +404,19 @@ HISTORICAL_CVE_COURT = "MS-HISTORICAL-CVE"
 SECURITY_SOURCE = REPO_ROOT / "forensics" / "multitrack" / "security-source.json"
 SECURITY_LINEAGE = REPO_ROOT / "forensics" / "multitrack" / "security-lineage.json"
 
+# 25.16's historical CVE replay and the combined measurement that records it. The plan's artefact is
+# the directory `artifacts/phase25/cve-replay/`: its `index.json` envelope carries the run and the
+# derived dispositions, and its `replays/<cve>.json` files carry one `cve_replay` record each. The
+# measurement compiles the committed probe against the exact admitted candidate's built C ABI
+# (`artifacts/phase2`) and, where the CVE's affected range has a built vulnerable historical
+# authority, against that too -- the positive control.
+CVE_REPLAY_DIR = REPO_ROOT / "artifacts" / "phase25" / "cve-replay"
+CVE_REPLAY_INDEX = CVE_REPLAY_DIR / "index.json"
+MS_CVE_REPLAY_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_cve_replay.py"
+CVE_REPLAY_COURT = "MS-CVE-REPLAY"
+CVE_REPLAY_PROBE = REPO_ROOT / "courts" / "phase25" / "cve_replay_probe.c"
+CANDIDATE_PREFIX = REPO_ROOT / "artifacts" / "phase2"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -431,6 +452,7 @@ COURTS: list[tuple[str, str]] = [
     (PHASE18_FUZZ_CROSSWALK_COURT, "_ms_phase18_fuzz_crosswalk_court"),
     (PHASE24_SAFETY_COVERAGE_COURT, "_ms_phase24_safety_coverage_court"),
     (HISTORICAL_CVE_COURT, "_ms_historical_cve_court"),
+    (CVE_REPLAY_COURT, "_ms_cve_replay_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
@@ -439,10 +461,9 @@ COURTS: list[tuple[str, str]] = [
 # `MS-PHASE24-CROSSWALK`, 25.7 removed `MS-EXPOSURE-CLASSIFICATION`, 25.8 removed
 # `MS-UNSAFE-REDUCTION`, 25.9 removed `MS-MIRI`, 25.10 removed `MS-ASAN-MSMAN`, 25.11 removed
 # `MS-TSAN`, 25.12 removed `MS-KANI`, 25.13 removed `MS-PHASE18-FUZZ-CROSSWALK`, 25.14 removed
-# `MS-PHASE24-SAFETY-COVERAGE` and 25.15 removed `MS-HISTORICAL-CVE`, so six remain. Ordered as the
-# plan orders them.
+# `MS-PHASE24-SAFETY-COVERAGE`, 25.15 removed `MS-HISTORICAL-CVE` and 25.16 removed
+# `MS-CVE-REPLAY`, so five remain. Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-CVE-REPLAY": "25.16 -- the historical CVE replay",
     "MS-MECHANISM-RECONCILIATION": "25.17 -- the vulnerability-mechanism reconciliation",
     "MS-RED-TEAM": "25.18 -- the red team",
     "MS-CLEAN-REGEN": "25.19 -- the full clean regeneration",
@@ -2142,6 +2163,103 @@ def _ms_historical_cve_court(name: str) -> dict:
     }
 
 
+def _ms_cve_replay_court(name: str) -> dict:
+    """`MS-CVE-REPLAY`: 25.16's court, the historical CVE replay.
+
+    Stages no probe. It reads the committed `artifacts/phase25/cve-replay/` plane (the `index.json`
+    envelope and its per-CVE `cve_replay` records) and re-runs the 25.16 pure checks
+    `ms_cve_replay.cve_replay_findings` and `ms_cve_replay.cve_replay_sensitivity_control` over it
+    together with the committed 25.15 census (the memory-safety CVE set) and the committed probe
+    source -- no compiler, no probe; the derivation that produced the plane is
+    `ms_cve_replay.py --measure`, and this court only re-derives from what it wrote.
+
+    It establishes that every memory-safety CVE of the committed 25.15 census has exactly one
+    replay and no replay names a CVE the census does not classify (a CVE is neither dropped nor
+    fabricated); that every replay validates against the `cve_replay` schema and records a state
+    from the closed vocabulary; that a replay in a positive state actually ran and its positive
+    control actually fired (so a pass without a recorded run is refused); that a
+    `CANDIDATE_STRUCTURALLY_EXCLUDED` replay cites its structure; that the per-CVE record files
+    agree with the index; and that the counts equal their re-derivation. Four seeded mutations -- a
+    dropped replay, a positive replay whose harness did not run, a positive replay whose control
+    did not fire and a typed count -- are each caught with specificity holding. It is an
+    **instrument**: it can pass while the plane records real property findings (the CVEs whose
+    input shape cannot be expressed through the public ABI -- `UNKNOWN` with their reason -- and
+    their residuals), which are recorded as the court's `findings` so a passing replay court is
+    never read as a memory-safety claim.
+    """
+    if not CVE_REPLAY_INDEX.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "replay-missing",
+                "problems": [f"the CVE replay plane {rel(CVE_REPLAY_INDEX)} is absent"],
+                "findings": [], "control": {}}
+    if not HISTORICAL_CVES.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "census-missing",
+                "problems": [f"the historical CVE census {rel(HISTORICAL_CVES)} is absent"],
+                "findings": [], "control": {}}
+
+    doc = json.loads(CVE_REPLAY_INDEX.read_text(encoding="utf-8"))
+    census_doc = json.loads(SOURCE_CENSUS.read_text(encoding="utf-8")) if SOURCE_CENSUS.is_file() else {}
+    census_body = ms_census.decode_body(census_doc.get("body", census_doc))
+    refs = ms_codec.refs_from_census(census_body)
+    body = ms_codec.decode_body(doc.get("body", doc), refs)
+    historical_body = json.loads(HISTORICAL_CVES.read_text(encoding="utf-8")).get("body", {})
+    problems = ms_cve_replay.cve_replay_findings(body, historical_body)
+    control = ms_cve_replay.cve_replay_sensitivity_control(body, historical_body)
+
+    for r in body.get("replays", []):
+        f = CVE_REPLAY_DIR / "replays" / f"{r['cve_id']}.json"
+        if not f.is_file():
+            problems.append(f"the per-CVE record {rel(f)} is absent")
+        elif json.loads(f.read_text(encoding="utf-8")) != r:
+            problems.append(f"the per-CVE record {rel(f)} disagrees with the index")
+
+    counts = body.get("counts") or {}
+    findings = list(body.get("findings") or [])
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/cve-replay/ plane and "
+            "re-runs the 25.16 pure checks (ms_cve_replay.cve_replay_findings and "
+            "ms_cve_replay.cve_replay_sensitivity_control) over it, the committed 25.15 census "
+            "and the committed probe source, without a compiler. The plane is a measurement: for "
+            "each memory-safety CVE the committed probe "
+            "(courts/phase25/cve_replay_probe.c) is compiled against the exact admitted "
+            "candidate's built C ABI and, where the affected range has a built vulnerable "
+            "historical authority, against that too (the positive control), and each case is run "
+            "and its behaviour recorded. A replay claims a positive result only if its harness ran "
+            "and its control fired; a shape the public ABI cannot express is recorded UNKNOWN "
+            "with its reason and its residual. It establishes the replay-set completeness and the "
+            "no-fabrication rule, the schema validity, the ran-and-control-fired rule for a "
+            "positive state, the structural-exclusion evidence rule, the per-CVE file agreement "
+            "and the count equality; four seeded mutations are each caught with specificity "
+            "holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.7)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the historical CVE replay court reads the committed plane and re-derives only its "
+            "pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF "
+            "declaration"
+        ),
+        "counts": {
+            "memory_safety_cves": counts.get("memory_safety_cves", 0),
+            "replays": counts.get("replays", 0),
+            "replayed": counts.get("replayed", 0),
+            "positive": counts.get("positive", 0),
+            "unknown": counts.get("unknown", 0),
+            "control_fired": counts.get("control_fired", 0),
+            "residuals": len(body.get("residuals") or []),
+        },
+        "by_state": dict(counts.get("by_state") or {}),
+        "by_taxonomy": dict(counts.get("by_taxonomy") or {}),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -2246,12 +2364,18 @@ def main(argv: list[str]) -> int:
             "**25.15 registers `MS-HISTORICAL-CVE`**, the historical CVE census, classifying the "
             "historical memory-safety-relevant OpenSSL CVEs from the closed CVE taxonomy with their "
             "affected versions and their fix, so a historical vulnerability is a classified "
-            "observation rather than a remembered one. "
+            "observation rather than a remembered one, and "
+            "**25.16 registers `MS-CVE-REPLAY`**, the replay of the historical memory-safety CVEs "
+            "the 25.15 census classified against the exact admitted candidate, each in the closed "
+            "replay states, where a structural exclusion cites its structure, an unsafe path that "
+            "remains is named, a replay claims a positive result only if its harness ran and its "
+            "positive control fired, and a shape the public ABI cannot express is recorded UNKNOWN "
+            "with its reason and its residual rather than a pass. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining six of its twenty-two courts -- "
-            "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.16 "
+            "remaining five of its twenty-two courts -- "
+            "MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.17 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -2342,6 +2466,9 @@ def main(argv: list[str]) -> int:
         InputRef(name="ms-historical-cve-tool", path=MS_HISTORICAL_CVE_TOOL),
         InputRef(name="security-source", path=SECURITY_SOURCE),
         InputRef(name="security-lineage", path=SECURITY_LINEAGE),
+        InputRef(name="cve-replay", path=CVE_REPLAY_INDEX),
+        InputRef(name="ms-cve-replay-tool", path=MS_CVE_REPLAY_TOOL),
+        InputRef(name="cve-replay-probe", path=CVE_REPLAY_PROBE),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

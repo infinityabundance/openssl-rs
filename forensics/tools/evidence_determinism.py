@@ -566,6 +566,22 @@ GENERATORS_BEFORE_LEDGERS = [
     # `ms_kani.kani_sensitivity_control`) over the committed artefact and the committed harness
     # source. If a later subphase derives a pure aggregate from this plane, that aggregate is what
     # belongs in this list.
+    # **Phase 25.16's historical CVE replay (`forensics/tools/ms_cve_replay.py` ->
+    # `artifacts/phase25/cve-replay/`) follows the same
+    # `ms_census.py`/`ms_miri.py`/`ms_asan.py`/`ms_tsan.py`/`ms_kani.py` measurement precedent, so it
+    # is deliberately NOT listed here and NOT in `COMPARED`.** It compiles the committed probe
+    # (`courts/phase25/cve_replay_probe.c`) against the exact admitted candidate's built C ABI
+    # (`artifacts/phase2`) and, where the CVE's affected range has a built vulnerable historical
+    # authority, against that too -- the positive control -- then runs each memory-safety CVE's
+    # input shape and records what each library did, deriving a per-CVE state in the closed replay
+    # vocabulary. Its states, its commands and its control outcomes are a function of the court's C
+    # toolchain and of the candidate's built ABI, not of committed inputs. A CI runner has no
+    # `libcrypto.so.3` built from the candidate and no C toolchain, and the Docker-only guard refuses
+    # a host invocation of `ms_cve_replay.py` before it compiles anything. The `MS-CVE-REPLAY` court
+    # re-runs only its pure checks (`ms_cve_replay.cve_replay_findings` and
+    # `ms_cve_replay.cve_replay_sensitivity_control`) over the committed plane, the committed 25.15
+    # census and the committed probe source. If a later subphase derives a pure aggregate from this
+    # plane, that aggregate is what belongs in this list.
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
