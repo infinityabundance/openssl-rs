@@ -510,6 +510,23 @@ GENERATORS_BEFORE_LEDGERS = [
     # and the `MS-PHASE24-SAFETY-COVERAGE` court re-runs the same pure checks over the committed
     # artefact, the census and the committed 25.6/25.7/25.8 and Phase-24 planes.
     "forensics/tools/ms_phase24_safety_coverage.py",
+    # **Phase 25.15's historical CVE census (`forensics/tools/ms_historical_cve.py` ->
+    # `artifacts/phase25/historical-cves.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It classifies the historical memory-safety-relevant
+    # OpenSSL CVEs from the closed CVE taxonomy, reading the frozen official vulnerability index and
+    # the advisories it carries (`forensics/multitrack/security-source.json`) for the advisory text,
+    # the affected ranges and the commit URLs, the committed security lineage
+    # (`forensics/multitrack/security-lineage.json`) for the bound CVE records, 25.1's census for the
+    # candidate region paths and their compiler-derived unsafe-operation counts, and 25.2's non-Rust
+    # TCB for the layer a resolved region belongs to. It compiles nothing -- no compiler, no tool, no
+    # probe -- so `forensics/memory-safety/container.json` lists it `metadata_only` and the
+    # Docker-only guard admits it on any host, exactly as `ms_phase24_safety_coverage` is. A stale
+    # committed census -- or a dropped CVE, a fabricated CVE the committed evidence does not
+    # classify, a class outside the taxonomy, a typed count, an untraceable mechanism or an unjoined
+    # region read as correspondent without its residual -- is a failure rather than a silent
+    # divergence, and the `MS-HISTORICAL-CVE` court re-runs the same pure checks over the committed
+    # artefact and the committed evidence.
+    "forensics/tools/ms_historical_cve.py",
     # **Phase 25.10's ASan measurement (`forensics/tools/ms_asan.py` ->
     # `artifacts/phase25/asan-msan.json`) follows the `ms_census.py`/`ms_miri.py` measurement
     # precedent, so it is deliberately NOT listed here and NOT in `COMPARED`.** It builds the exact
@@ -930,6 +947,14 @@ COMPARED = [
     # as attributed is a failure rather than a silent divergence. It executes nothing and reads no
     # compiler output, so re-deriving it needs no compiler, no run driver and no candidate.
     "artifacts/phase25/phase24-safety-coverage.json",
+    # Phase 25.15's historical CVE census: a pure function of the frozen official vulnerability index
+    # and its advisories (forensics/multitrack/security-source.json), the committed security lineage
+    # (forensics/multitrack/security-lineage.json), the committed 25.1 census and the committed 25.2
+    # non-Rust TCB. It compiles nothing and reads no compiler output, so re-deriving it needs no
+    # compiler and no candidate machine. A dropped CVE, a fabricated CVE, a class outside the
+    # taxonomy, a typed count, an untraceable mechanism or an unjoined region read as correspondent
+    # without its residual is a failure rather than a silent divergence.
+    "artifacts/phase25/historical-cves.json",
 ]
 
 # ---------------------------------------------------------------------------

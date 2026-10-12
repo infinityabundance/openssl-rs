@@ -245,12 +245,18 @@
       },
       {
         "closure": "the `MS-HISTORICAL-CVE` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-HISTORICAL-CVE is pending",
+        "findings": [
+          "10 committed OpenSSL advisory record(s) are classified from the closed CVE taxonomy, 7 of them memory-safety-relevant (ALGORITHM_COMPLEXITY=1, BUFFER_OVERFLOW=1, HEAP_OOB_READ=2, HEAP_OOB_WRITE=1, NULL_DEREFERENCE=1, OTHER=1, SIDE_CHANNEL=1, STACK_OOB_WRITE=1, TYPE_CONFUSION=1); the classification is a reading of the committed advisory, not a re-derivation of the defect",
+          "the frozen official index names 297 reference(s); the committed security lineage binds 10, leaving 287 unbound -- 57 named by a committed advisory (`join_evidence_missing`) and 230 identifier-only (`evidence_missing`) -- each a recorded residual, never a fabricated row or a silent omission",
+          "8 of 10 classified CVE(s) resolve to a committed candidate region and 8 are covered (their region carries compiler-derived unsafe operations); 2 resolve to no region (1 of them memory-safety-relevant) and are recorded `join_evidence_missing` rather than assumed correspondent",
+          "10 of 10 classified CVE(s) carry a committed fix commit from the advisory's commit URLs; the affected ranges and the catalogue fixes are the committed lineage's own",
+          "the census is a documented selection, not the whole index: it classifies only what the committed evidence binds and records the rest, so a class present here is a classified observation and a class absent here is not an immunity claim"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-HISTORICAL-CVE is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "historical-cve-census",
         "what": "the historical OpenSSL CVE census, each memory-safety-relevant CVE classified from the closed CVE taxonomy with its affected versions and its fix, so the record is a classified census rather than a count"
@@ -333,8 +339,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 15,
-      "open_in_this_stratum": 7,
+      "implemented": 16,
+      "open_in_this_stratum": 6,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -375,7 +381,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "79fcaceefe1f167f3a622062c8fd382c3e393669371db7cc45a88e07bc347058"
+      "sha256": "f25f36fdbf093bed3c73d546689b6775a946f3b28108f7627bec4d07ecdb21cf"
     },
     {
       "name": "phase25-guard",
