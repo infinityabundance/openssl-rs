@@ -527,6 +527,25 @@ GENERATORS_BEFORE_LEDGERS = [
     # divergence, and the `MS-HISTORICAL-CVE` court re-runs the same pure checks over the committed
     # artefact and the committed evidence.
     "forensics/tools/ms_historical_cve.py",
+    # **Phase 25.17's vulnerability-mechanism reconciliation
+    # (`forensics/tools/ms_mechanism_reconciliation.py` ->
+    # `artifacts/phase25/mechanisms.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It reconciles each historical memory-corruption
+    # mechanism the 25.15 census classified against the committed 25.16 replay, the committed 25.1
+    # census (the candidate regions, sites and unsafe contexts), the committed 25.2 non-Rust TCB,
+    # the committed 25.7 exposure classification, the committed 25.8 reduction axis and the
+    # committed 25.9-25.12 evidence planes (Miri, ASan/MSan, TSan, Kani), giving each mechanism a
+    # disposition in the closed vocabulary (ELIMINATED / RELOCATED_TO_BOUNDARY / HIDDEN / PRESENT /
+    # UNRESOLVED), a structural-immunity reason that cites the 25.16 replay's own structure, and an
+    # honest residual where the operation survives. It compiles nothing -- no compiler, no tool, no
+    # probe -- so `forensics/memory-safety/container.json` lists it `metadata_only` and the
+    # Docker-only guard admits it on any host, exactly as `ms_historical_cve` is. A stale committed
+    # reconciliation -- or a dropped mechanism, a fabricated mechanism, a disposition outside the
+    # vocabulary, a disposition with no evidence, a surviving operation read as ELIMINATED, a typed
+    # count or a non-extinct mechanism with no residual -- is a failure rather than a silent
+    # divergence, and the `MS-MECHANISM-RECONCILIATION` court re-runs the same pure checks over the
+    # committed artefact and the committed evidence.
+    "forensics/tools/ms_mechanism_reconciliation.py",
     # **Phase 25.10's ASan measurement (`forensics/tools/ms_asan.py` ->
     # `artifacts/phase25/asan-msan.json`) follows the `ms_census.py`/`ms_miri.py` measurement
     # precedent, so it is deliberately NOT listed here and NOT in `COMPARED`.** It builds the exact
@@ -971,6 +990,16 @@ COMPARED = [
     # taxonomy, a typed count, an untraceable mechanism or an unjoined region read as correspondent
     # without its residual is a failure rather than a silent divergence.
     "artifacts/phase25/historical-cves.json",
+    # Phase 25.17's vulnerability-mechanism reconciliation: a pure function of the committed 25.15
+    # census (the mechanism set and the candidate regions), the committed 25.16 replay (the
+    # observed dispositions), the committed 25.1 census (the sites and their unsafe contexts), the
+    # committed 25.2 non-Rust TCB, the committed 25.7 exposure classification, the committed 25.8
+    # reduction axis and the committed 25.9-25.12 evidence planes. It compiles nothing and reads no
+    # compiler output, so re-deriving it needs no compiler and no candidate machine. A dropped or
+    # fabricated mechanism, a disposition outside the closed vocabulary, a disposition with no
+    # evidence, a surviving operation read as ELIMINATED, a typed count or a non-extinct mechanism
+    # with no residual is a failure rather than a silent divergence.
+    "artifacts/phase25/mechanisms.json",
 ]
 
 # ---------------------------------------------------------------------------

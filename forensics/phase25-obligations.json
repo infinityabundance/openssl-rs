@@ -280,12 +280,18 @@
       },
       {
         "closure": "the `MS-MECHANISM-RECONCILIATION` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-MECHANISM-RECONCILIATION is pending",
-        "property_status": "not_claimed",
-        "state": "open",
+        "findings": [
+          "7 memory-corruption mechanism(s) are reconciled over 7 memory-safety CVE(s) from the 25.15 census and the 25.16 replay: by disposition ELIMINATED=3, HIDDEN=3, UNRESOLVED=1; 3 are shown extinct and 4 are not",
+          "6 of 7 mechanism(s) still carry their operation kind in the candidate structure and 1 cite a structural exclusion; the two are recorded separately and never conflated, so a surviving operation is never read as extinct",
+          "6 of 7 mechanism(s) join a committed candidate region and 1 resolve to no region (recorded UNRESOLVED, an open residual) rather than assumed correspondent",
+          "the mechanisms not shown extinct are named rather than dropped: vm-heap-oob-read-ssl-dtls, vm-heap-oob-write-crypto-cms, vm-stack-oob-write-crypto-cms, vm-type-confusion-crypto-x509",
+          "the reconciliation is a mechanism statement about the candidate's structure and the committed replay evidence, never a future-CVE-count prediction; each row is corroborated by the independent tool evidence (25.9-25.12) and the 25.8 reconstruction axis"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-MECHANISM-RECONCILIATION is pass",
+        "property_status": "NOT_CLAIMED",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "mechanism-reconciliation",
         "what": "the vulnerability-mechanism reconciliation: each mechanism class is reconciled against the candidate's structure and the replay evidence, and a structural immunity is stated with its reason and its evidence, so historical CVE extinction is a mechanism statement and never a prediction of a future CVE count"
@@ -344,8 +350,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 17,
-      "open_in_this_stratum": 5,
+      "implemented": 18,
+      "open_in_this_stratum": 4,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -386,7 +392,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "ba5cec96ee48153dd6243841d15c994e045b8002bebb6921d21d6560ba7a79a8"
+      "sha256": "0e3f2b6c23aca37ccc70329f6c2252c382eb99bdec4c2763a1e6ed6f582cea49"
     },
     {
       "name": "phase25-guard",

@@ -241,6 +241,14 @@ import ms_kani  # noqa: E402
 # committed probe source.
 import ms_cve_replay  # noqa: E402
 
+# 25.17's vulnerability-mechanism reconciliation and the pure tool that derives it from the
+# committed 25.15 census and 25.16 replay, the committed 25.1 census and its unsafe contexts, the
+# committed 25.2 non-Rust TCB, the committed 25.7 exposure classification, the committed 25.8
+# reduction axis and the committed 25.9-25.12 evidence planes. It is a pure derivation, so the
+# court re-runs only the tool's pure `reconciliation_findings` / `reconciliation_sensitivity_control`
+# over the committed plane and the committed evidence.
+import ms_mechanism_reconciliation  # noqa: E402
+
 # The lossless columnar codec the Phase-25 artefacts are stored in. Every court decodes the
 # committed artefact through `decode_body` before reading its records, so one implementation of the
 # scheme serves the generator, the court and every cross-reader; the scheme is named by
@@ -417,6 +425,15 @@ CVE_REPLAY_COURT = "MS-CVE-REPLAY"
 CVE_REPLAY_PROBE = REPO_ROOT / "courts" / "phase25" / "cve_replay_probe.c"
 CANDIDATE_PREFIX = REPO_ROOT / "artifacts" / "phase2"
 
+# 25.17's vulnerability-mechanism reconciliation and the pure tool that derives it. The plan's
+# artefact is `artifacts/phase25/mechanisms.json`: one `vulnerability_mechanism` record per
+# historical memory-corruption mechanism, reconciled against the committed 25.16 replay, the
+# candidate's compiler-derived structure and the independent evidence planes.
+MECHANISMS = REPO_ROOT / "artifacts" / "phase25" / "mechanisms.json"
+MS_MECHANISM_RECONCILIATION_TOOL = (REPO_ROOT / "forensics" / "tools"
+                                    / "ms_mechanism_reconciliation.py")
+MECHANISM_RECONCILIATION_COURT = "MS-MECHANISM-RECONCILIATION"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -453,6 +470,7 @@ COURTS: list[tuple[str, str]] = [
     (PHASE24_SAFETY_COVERAGE_COURT, "_ms_phase24_safety_coverage_court"),
     (HISTORICAL_CVE_COURT, "_ms_historical_cve_court"),
     (CVE_REPLAY_COURT, "_ms_cve_replay_court"),
+    (MECHANISM_RECONCILIATION_COURT, "_ms_mechanism_reconciliation_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
@@ -461,10 +479,9 @@ COURTS: list[tuple[str, str]] = [
 # `MS-PHASE24-CROSSWALK`, 25.7 removed `MS-EXPOSURE-CLASSIFICATION`, 25.8 removed
 # `MS-UNSAFE-REDUCTION`, 25.9 removed `MS-MIRI`, 25.10 removed `MS-ASAN-MSMAN`, 25.11 removed
 # `MS-TSAN`, 25.12 removed `MS-KANI`, 25.13 removed `MS-PHASE18-FUZZ-CROSSWALK`, 25.14 removed
-# `MS-PHASE24-SAFETY-COVERAGE`, 25.15 removed `MS-HISTORICAL-CVE` and 25.16 removed
-# `MS-CVE-REPLAY`, so five remain. Ordered as the plan orders them.
+# `MS-PHASE24-SAFETY-COVERAGE`, 25.15 removed `MS-HISTORICAL-CVE`, 25.16 removed `MS-CVE-REPLAY`
+# and 25.17 removed `MS-MECHANISM-RECONCILIATION`, so four remain. Ordered as the plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-MECHANISM-RECONCILIATION": "25.17 -- the vulnerability-mechanism reconciliation",
     "MS-RED-TEAM": "25.18 -- the red team",
     "MS-CLEAN-REGEN": "25.19 -- the full clean regeneration",
     "MS-FRF-CLOSURE": "25.20 -- the FRF/Gemel closure",
@@ -2260,6 +2277,94 @@ def _ms_cve_replay_court(name: str) -> dict:
     }
 
 
+def _ms_mechanism_reconciliation_court(name: str) -> dict:
+    """`MS-MECHANISM-RECONCILIATION`: 25.17's court, the vulnerability-mechanism reconciliation.
+
+    Stages no probe. It reads the committed `artifacts/phase25/mechanisms.json` and re-runs the
+    25.17 pure checks `ms_mechanism_reconciliation.reconciliation_findings` and
+    `ms_mechanism_reconciliation.reconciliation_sensitivity_control` over it together with the
+    committed evidence it joins -- the 25.15 census (the mechanism set and the candidate regions),
+    the 25.16 replay (the observed dispositions), the 25.1 census (the candidate structure and its
+    unsafe contexts), the 25.2 non-Rust TCB, the 25.7 exposure classification, the 25.8 reduction
+    axis and the 25.9-25.12 evidence planes (Miri, ASan/MSan, TSan, Kani) -- no compiler, no tool,
+    no probe; the derivation that produced the plane is `ms_mechanism_reconciliation.py --measure`,
+    and this court only re-derives from what it wrote.
+
+    It establishes that every memory-safety CVE of the committed 25.15 census is reconciled by
+    exactly one row and no row names a CVE the census does not classify (a mechanism is neither
+    dropped nor fabricated); that every row validates against the `vulnerability_mechanism` schema
+    and carries a disposition from the closed vocabulary with committed evidence; that a present
+    mechanism class joins a committed census region; that a structural immunity cites the 25.16
+    replay's own structure; that a mechanism whose operation survives is never read as ELIMINATED;
+    that every non-extinct mechanism is a residual; and that the counts and the whole plane equal
+    their derivation. Six seeded mutations -- a dropped mechanism, a disposition with no evidence,
+    a hidden-unsafe mechanism read as eliminated, a mechanism with no census region, a typed count
+    and a disposition outside the vocabulary -- are each caught with specificity holding. It is an
+    **instrument**: it can pass while the plane records real property findings (the mechanisms not
+    shown extinct -- HIDDEN, RELOCATED_TO_BOUNDARY, PRESENT and UNRESOLVED -- and their residuals),
+    which are recorded as the court's `findings` so a passing reconciliation court is never read as
+    a memory-safety claim.
+    """
+    if not MECHANISMS.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "plane-missing",
+                "problems": [f"the mechanism reconciliation plane {rel(MECHANISMS)} is absent"],
+                "findings": [], "control": {}}
+
+    body = json.loads(MECHANISMS.read_text(encoding="utf-8")).get("body", {})
+    authority = ms_mechanism_reconciliation.load_authority()
+    problems = ms_mechanism_reconciliation.reconciliation_findings(body, authority)
+    control = ms_mechanism_reconciliation.reconciliation_sensitivity_control(body, authority)
+
+    counts = body.get("counts") or {}
+    findings = list(body.get("findings") or [])
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/mechanisms.json and re-runs "
+            "the 25.17 pure checks (ms_mechanism_reconciliation.reconciliation_findings and "
+            "ms_mechanism_reconciliation.reconciliation_sensitivity_control) over it, the committed "
+            "25.15 census and 25.16 replay, the committed 25.1 census and its unsafe contexts, the "
+            "committed 25.2 non-Rust TCB, the committed 25.7 exposure classification, the committed "
+            "25.8 reduction axis and the committed 25.9-25.12 evidence planes, without a compiler. "
+            "The plane is a pure derivation: each historical memory-corruption mechanism the 25.15 "
+            "census classified is joined to the 25.16 replay's disposition, to the candidate's "
+            "compiler-derived region and operation kinds, and to the independent tool evidence, and "
+            "recorded in the closed disposition vocabulary (ELIMINATED / RELOCATED_TO_BOUNDARY / "
+            "HIDDEN / PRESENT / UNRESOLVED) with a structural-immunity reason or an honest residual. "
+            "It establishes the mechanism-set completeness and the no-fabrication rule, the schema "
+            "validity, the disposition vocabulary, the region join, the structural-immunity "
+            "evidence rule, the never-read-a-surviving-operation-as-ELIMINATED discipline, the "
+            "non-extinct residual rule and the count equality; six seeded mutations are each caught "
+            "with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.7, 3.8)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the mechanism reconciliation court reads the committed plane and re-derives only its "
+            "pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF "
+            "declaration"
+        ),
+        "counts": {
+            "mechanisms": counts.get("mechanisms", 0),
+            "memory_safety_cves": counts.get("memory_safety_cves", 0),
+            "extinct": counts.get("extinct", 0),
+            "class_present": counts.get("class_present", 0),
+            "structurally_immune": counts.get("structurally_immune", 0),
+            "regions_resolved": counts.get("regions_resolved", 0),
+            "regions_unjoined": counts.get("regions_unjoined", 0),
+            "residuals": len(body.get("residuals") or []),
+        },
+        "by_disposition": dict(counts.get("by_disposition") or {}),
+        "by_taxonomy": dict(counts.get("by_taxonomy") or {}),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -2371,11 +2476,18 @@ def main(argv: list[str]) -> int:
             "remains is named, a replay claims a positive result only if its harness ran and its "
             "positive control fired, and a shape the public ABI cannot express is recorded UNKNOWN "
             "with its reason and its residual rather than a pass. "
+            "**25.17 registers `MS-MECHANISM-RECONCILIATION`**, the vulnerability-mechanism "
+            "reconciliation, joining each historical memory-corruption mechanism to the candidate's "
+            "compiler-derived structure and the 25.16 replay evidence and recording, per mechanism, "
+            "a disposition in the closed vocabulary (ELIMINATED, RELOCATED_TO_BOUNDARY, HIDDEN, "
+            "PRESENT or UNRESOLVED), a structural immunity cited with its reason and its evidence, "
+            "and an honest residual where the mechanism is not shown extinct, so extinction is a "
+            "mechanism statement and never a future-CVE-count prediction. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining five of its twenty-two courts -- "
-            "MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.17 "
+            "remaining four of its twenty-two courts -- "
+            "MS-RED-TEAM, MS-CLEAN-REGEN, "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.18 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -2469,6 +2581,8 @@ def main(argv: list[str]) -> int:
         InputRef(name="cve-replay", path=CVE_REPLAY_INDEX),
         InputRef(name="ms-cve-replay-tool", path=MS_CVE_REPLAY_TOOL),
         InputRef(name="cve-replay-probe", path=CVE_REPLAY_PROBE),
+        InputRef(name="mechanisms", path=MECHANISMS),
+        InputRef(name="ms-mechanism-reconciliation-tool", path=MS_MECHANISM_RECONCILIATION_TOOL),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
