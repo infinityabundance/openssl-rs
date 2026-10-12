@@ -208,6 +208,13 @@ import ms_phase18_fuzz_crosswalk  # noqa: E402
 # committed planes.
 import ms_phase24_safety_coverage  # noqa: E402
 
+# 25.15's historical CVE census and the tool that derives it from the frozen official vulnerability
+# index and its advisories, the committed security lineage, the committed 25.1 census and the
+# committed 25.2 non-Rust TCB. The court re-runs the tool's pure
+# `crosswalk_findings` / `crosswalk_sensitivity_control` over the committed artefact and those
+# committed planes.
+import ms_historical_cve  # noqa: E402
+
 # 25.9's Miri results and the tool that records them. The court re-runs the tool's pure
 # `miri_findings` / `miri_sensitivity_control` over the committed plane and the committed census.
 import ms_miri  # noqa: E402
@@ -380,6 +387,15 @@ MS_PHASE24_SAFETY_COVERAGE_TOOL = (REPO_ROOT / "forensics" / "tools"
 PHASE24_SAFETY_COVERAGE_COURT = "MS-PHASE24-SAFETY-COVERAGE"
 DOWNSTREAM_HOLDOUT = REPO_ROOT / "forensics" / "downstream" / "holdout.json"
 
+# 25.15's historical CVE census and the pure tool that derives it from the frozen official
+# vulnerability index and its advisories, the committed security lineage, the committed 25.1 census
+# (the candidate region paths) and the committed 25.2 non-Rust TCB (the layer a region belongs to).
+HISTORICAL_CVES = REPO_ROOT / "artifacts" / "phase25" / "historical-cves.json"
+MS_HISTORICAL_CVE_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_historical_cve.py"
+HISTORICAL_CVE_COURT = "MS-HISTORICAL-CVE"
+SECURITY_SOURCE = REPO_ROOT / "forensics" / "multitrack" / "security-source.json"
+SECURITY_LINEAGE = REPO_ROOT / "forensics" / "multitrack" / "security-lineage.json"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -414,6 +430,7 @@ COURTS: list[tuple[str, str]] = [
     (KANI_COURT, "_ms_kani_court"),
     (PHASE18_FUZZ_CROSSWALK_COURT, "_ms_phase18_fuzz_crosswalk_court"),
     (PHASE24_SAFETY_COVERAGE_COURT, "_ms_phase24_safety_coverage_court"),
+    (HISTORICAL_CVE_COURT, "_ms_historical_cve_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
@@ -421,10 +438,10 @@ COURTS: list[tuple[str, str]] = [
 # removed `MS-OWNERSHIP-PLANES`, 25.5 removed `MS-PHASE22-CROSSWALK`, 25.6 removed
 # `MS-PHASE24-CROSSWALK`, 25.7 removed `MS-EXPOSURE-CLASSIFICATION`, 25.8 removed
 # `MS-UNSAFE-REDUCTION`, 25.9 removed `MS-MIRI`, 25.10 removed `MS-ASAN-MSMAN`, 25.11 removed
-# `MS-TSAN`, 25.12 removed `MS-KANI`, 25.13 removed `MS-PHASE18-FUZZ-CROSSWALK` and 25.14 removed
-# `MS-PHASE24-SAFETY-COVERAGE`, so seven remain. Ordered as the plan orders them.
+# `MS-TSAN`, 25.12 removed `MS-KANI`, 25.13 removed `MS-PHASE18-FUZZ-CROSSWALK`, 25.14 removed
+# `MS-PHASE24-SAFETY-COVERAGE` and 25.15 removed `MS-HISTORICAL-CVE`, so six remain. Ordered as the
+# plan orders them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-HISTORICAL-CVE": "25.15 -- the historical CVE census",
     "MS-CVE-REPLAY": "25.16 -- the historical CVE replay",
     "MS-MECHANISM-RECONCILIATION": "25.17 -- the vulnerability-mechanism reconciliation",
     "MS-RED-TEAM": "25.18 -- the red team",
@@ -2024,6 +2041,107 @@ def _ms_phase24_safety_coverage_court(name: str) -> dict:
     }
 
 
+def _ms_historical_cve_court(name: str) -> dict:
+    """`MS-HISTORICAL-CVE`: 25.15's court, the historical CVE census.
+
+    Stages no probe. It reads the committed `artifacts/phase25/historical-cves.json` and re-runs
+    the 25.15 pure checks `ms_historical_cve.crosswalk_findings` and
+    `ms_historical_cve.crosswalk_sensitivity_control` over it together with the committed frozen
+    official vulnerability index and its advisories, the committed security lineage that binds the
+    CVE records, the committed 25.1 census (the candidate region paths) and the committed 25.2
+    non-Rust TCB -- no compiler, no tool, no probe; the derivation that produced the plane is
+    `ms_historical_cve.py --measure`, and this court only re-derives from what it wrote.
+
+    It establishes that every committed lineage vulnerability has exactly one classified row and no
+    row carries a CVE the committed evidence does not classify (so a CVE is neither dropped nor
+    fabricated); that every row's CVE id is a reference the frozen index names and carries a
+    committed advisory; that every row equals its derivation (its taxonomy class, its memory-safety
+    flag, its affected ranges, its fixes, its mechanism and its candidate region); that the mechanism
+    cites a committed advisory source; that every row validates; that the counts equal their
+    derivation; that every unbound index reference and every unjoined candidate region is a residual;
+    that every residual validates; and that the rule names the committed authorities. Six seeded
+    mutations -- a committed CVE dropped, a fabricated CVE, a class outside the taxonomy, a typed
+    count, an untraceable mechanism and an unjoined region with its residual removed -- are each
+    caught with specificity holding. It is an **instrument**: it can pass while the census records
+    real property findings (the unbound index references, the reference-only records and the
+    unjoined candidate regions), which are recorded as the row's `findings` so a passing census court
+    is never read as a full CVE inventory or a memory-safety claim.
+    """
+    if not HISTORICAL_CVES.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "census-missing",
+                "problems": [f"the historical CVE census {rel(HISTORICAL_CVES)} is absent"],
+                "findings": [], "control": {}}
+    if not SECURITY_SOURCE.is_file():
+        return {"court": name, "probe": "", "verdict": "fail",
+                "stage": "security-source-missing",
+                "problems": [f"the frozen official vulnerability index {rel(SECURITY_SOURCE)} is "
+                             f"absent"], "findings": [], "control": {}}
+    if not SECURITY_LINEAGE.is_file():
+        return {"court": name, "probe": "", "verdict": "fail",
+                "stage": "security-lineage-missing",
+                "problems": [f"the committed security lineage {rel(SECURITY_LINEAGE)} is absent"],
+                "findings": [], "control": {}}
+
+    body = json.loads(HISTORICAL_CVES.read_text(encoding="utf-8")).get("body", {})
+    authority = ms_historical_cve.load_authority()
+    problems = ms_historical_cve.crosswalk_findings(body, authority)
+    control = ms_historical_cve.crosswalk_sensitivity_control(body, authority)
+
+    counts = body.get("counts") or {}
+    findings = list(body.get("findings") or [])
+
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/historical-cves.json and "
+            "re-runs the 25.15 pure checks (ms_historical_cve.crosswalk_findings and "
+            "ms_historical_cve.crosswalk_sensitivity_control) over it, the frozen official "
+            "vulnerability index and its advisories, the committed security lineage, the committed "
+            "25.1 census and the committed 25.2 non-Rust TCB, without a compiler. The plane is a "
+            "pure derivation: each committed advisory (the index's observed records) joins to its "
+            "CVE record in the committed security lineage, the committed advisory section's "
+            "mechanism names the closed CVE taxonomy class, and the subsystem token resolves to the "
+            "candidate's own source region (25.1's census) whose unsafe-operation count decides "
+            "coverage. A reference the frozen index names but the lineage does not bind, and a "
+            "token that resolves to no candidate region, are recorded residuals. It establishes "
+            "the row completeness and the no-fabrication rule, the committed-evidence join, the "
+            "derivation equality, the mechanism traceability and the coverage-gap residuals; six "
+            "seeded mutations are each caught with specificity holding "
+            "(docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the historical CVE census court reads the committed census and re-derives only its "
+            "pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF "
+            "declaration"
+        ),
+        "counts": {
+            "advisories": counts.get("advisories", 0),
+            "cves": counts.get("cves", 0),
+            "memory_safety_cves": counts.get("memory_safety_cves", 0),
+            "index_references": counts.get("index_references", 0),
+            "index_observed": counts.get("index_observed", 0),
+            "index_unobserved": counts.get("index_unobserved", 0),
+            "unobserved_advisory_named": counts.get("unobserved_advisory_named", 0),
+            "unobserved_identifier_only": counts.get("unobserved_identifier_only", 0),
+            "regions_resolved": counts.get("regions_resolved", 0),
+            "regions_covered": counts.get("regions_covered", 0),
+            "regions_unjoined": counts.get("regions_unjoined", 0),
+            "memory_safety_regions_unjoined": counts.get("memory_safety_regions_unjoined", 0),
+            "fixes_with_commit": counts.get("fixes_with_commit", 0),
+            "residuals": len(body.get("residuals") or []),
+        },
+        "by_taxonomy": dict(counts.get("by_taxonomy") or {}),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -2125,12 +2243,15 @@ def main(argv: list[str]) -> int:
             "**25.14 registers `MS-PHASE24-SAFETY-COVERAGE`**, the coverage of the unreduced unsafe "
             "sites by the Phase-24 downstream runs, naming the reachable sites no downstream "
             "measurement observes so a reachable site is never assumed exercised. "
+            "**25.15 registers `MS-HISTORICAL-CVE`**, the historical CVE census, classifying the "
+            "historical memory-safety-relevant OpenSSL CVEs from the closed CVE taxonomy with their "
+            "affected versions and their fix, so a historical vulnerability is a classified "
+            "observation rather than a remembered one. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining seven of its twenty-two courts -- "
-            "MS-HISTORICAL-CVE, "
+            "remaining six of its twenty-two courts -- "
             "MS-CVE-REPLAY, MS-MECHANISM-RECONCILIATION, MS-RED-TEAM, MS-CLEAN-REGEN, "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.15 "
+            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.16 "
             "through 25.21). The stratum's record kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -2217,6 +2338,10 @@ def main(argv: list[str]) -> int:
         InputRef(name="phase24-safety-coverage", path=PHASE24_SAFETY_COVERAGE),
         InputRef(name="ms-phase24-safety-coverage-tool", path=MS_PHASE24_SAFETY_COVERAGE_TOOL),
         InputRef(name="downstream-holdout", path=DOWNSTREAM_HOLDOUT),
+        InputRef(name="historical-cves", path=HISTORICAL_CVES),
+        InputRef(name="ms-historical-cve-tool", path=MS_HISTORICAL_CVE_TOOL),
+        InputRef(name="security-source", path=SECURITY_SOURCE),
+        InputRef(name="security-lineage", path=SECURITY_LINEAGE),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
