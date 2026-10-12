@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census, and **25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable compiler-derived sites that records each candidate safe-intrinsic replacement, the sites that remain named rather than dropped, and the frozen post-reduction census, and is a local-replacement feasibility census rather than an impossibility result, and **25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its tool state and its unsupported reason where Miri could not express the question, so an unsupported site is never read as a pass, and **25.10 registers `MS-ASAN-MSMAN`**, the ASan/MSan results over the claimed profile, each with its tool state and its unsupported reason where a sanitizer could not instrument or reach a target, so a site the instrument cannot reach or instrument is recorded rather than counted clean, and **25.11 registers `MS-TSAN`**, the TSan results over the concurrency-relevant surface, each with its tool state and its unsupported reason, so a race the tool could not observe under the recorded schedule is not read as absent, and **25.12 registers `MS-KANI`**, the Kani harness results over the stated harnesses and their targets, each with its tool state and its unsupported reason, so a target the tool cannot express or compile is recorded rather than counted clean, and **25.13 registers `MS-PHASE18-FUZZ-CROSSWALK`**, the crosswalk from the memory-safety census to the Phase-18 hostile-fuzz courts, so a discovered memory-safety failure is a preserved Phase-18 record rather than a discarded run, and **25.14 registers `MS-PHASE24-SAFETY-COVERAGE`**, the coverage of the unreduced unsafe sites by the Phase-24 downstream runs, naming the reachable sites no downstream measurement observes so a reachable site is never assumed exercised. **25.15 registers `MS-HISTORICAL-CVE`**, the historical CVE census, classifying the historical memory-safety-relevant OpenSSL CVEs from the closed CVE taxonomy with their affected versions and their fix, so a historical vulnerability is a classified observation rather than a remembered one, and **25.16 registers `MS-CVE-REPLAY`**, the replay of the historical memory-safety CVEs the 25.15 census classified against the exact admitted candidate, each in the closed replay states, where a structural exclusion cites its structure, an unsafe path that remains is named, a replay claims a positive result only if its harness ran and its positive control fired, and a shape the public ABI cannot express is recorded UNKNOWN with its reason and its residual rather than a pass. **25.17 registers `MS-MECHANISM-RECONCILIATION`**, the vulnerability-mechanism reconciliation, joining each historical memory-corruption mechanism to the candidate's compiler-derived structure and the 25.16 replay evidence and recording, per mechanism, a disposition in the closed vocabulary (ELIMINATED, RELOCATED_TO_BOUNDARY, HIDDEN, PRESENT or UNRESOLVED), a structural immunity cited with its reason and its evidence, and an honest residual where the mechanism is not shown extinct, so extinction is a mechanism statement and never a future-CVE-count prediction. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining four of its twenty-two courts -- MS-RED-TEAM, MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.18 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
+    "claim": "**25.0 registers `MS-CONSTITUTION`**, the constitution gate over the plan, schemas, guard, venue manifest, obligation ledger and the frozen safety lint policy, **25.1 registers `MS-SOURCE-CENSUS`**, the compiler-backed source census, **25.2 registers `MS-NON-RUST-TCB`**, the non-Rust trusted computing base, **25.3 registers `MS-SAFETY-OBLIGATIONS`**, the safety obligations per compiler-derived unsafe site, **25.4 registers `MS-OWNERSHIP-PLANES`**, the ownership/allocation/callback planes, and **25.5 registers `MS-PHASE22-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-22 whole-program reachability atlas, and **25.6 registers `MS-PHASE24-CROSSWALK`**, the crosswalk from each unsafe site to the Phase-24 downstream-1000 measurement, and **25.7 registers `MS-EXPOSURE-CLASSIFICATION`**, the exposure/data-flow classification that gives every unsafe site exactly one exposure class and records the attacker-input routes and the buffer-operation census, and **25.8 registers `MS-UNSAFE-REDUCTION`**, the reduction worklist over the reachable compiler-derived sites that records each candidate safe-intrinsic replacement, the sites that remain named rather than dropped, and the frozen post-reduction census, and is a local-replacement feasibility census rather than an impossibility result, and **25.9 registers `MS-MIRI`**, the Miri results over the claimed profile, each with its tool state and its unsupported reason where Miri could not express the question, so an unsupported site is never read as a pass, and **25.10 registers `MS-ASAN-MSMAN`**, the ASan/MSan results over the claimed profile, each with its tool state and its unsupported reason where a sanitizer could not instrument or reach a target, so a site the instrument cannot reach or instrument is recorded rather than counted clean, and **25.11 registers `MS-TSAN`**, the TSan results over the concurrency-relevant surface, each with its tool state and its unsupported reason, so a race the tool could not observe under the recorded schedule is not read as absent, and **25.12 registers `MS-KANI`**, the Kani harness results over the stated harnesses and their targets, each with its tool state and its unsupported reason, so a target the tool cannot express or compile is recorded rather than counted clean, and **25.13 registers `MS-PHASE18-FUZZ-CROSSWALK`**, the crosswalk from the memory-safety census to the Phase-18 hostile-fuzz courts, so a discovered memory-safety failure is a preserved Phase-18 record rather than a discarded run, and **25.14 registers `MS-PHASE24-SAFETY-COVERAGE`**, the coverage of the unreduced unsafe sites by the Phase-24 downstream runs, naming the reachable sites no downstream measurement observes so a reachable site is never assumed exercised. **25.15 registers `MS-HISTORICAL-CVE`**, the historical CVE census, classifying the historical memory-safety-relevant OpenSSL CVEs from the closed CVE taxonomy with their affected versions and their fix, so a historical vulnerability is a classified observation rather than a remembered one, and **25.16 registers `MS-CVE-REPLAY`**, the replay of the historical memory-safety CVEs the 25.15 census classified against the exact admitted candidate, each in the closed replay states, where a structural exclusion cites its structure, an unsafe path that remains is named, a replay claims a positive result only if its harness ran and its positive control fired, and a shape the public ABI cannot express is recorded UNKNOWN with its reason and its residual rather than a pass. **25.17 registers `MS-MECHANISM-RECONCILIATION`**, the vulnerability-mechanism reconciliation, joining each historical memory-corruption mechanism to the candidate's compiler-derived structure and the 25.16 replay evidence and recording, per mechanism, a disposition in the closed vocabulary (ELIMINATED, RELOCATED_TO_BOUNDARY, HIDDEN, PRESENT or UNRESOLVED), a structural immunity cited with its reason and its evidence, and an honest residual where the mechanism is not shown extinct, so extinction is a mechanism statement and never a future-CVE-count prediction. **25.18 registers `MS-RED-TEAM`**, the red team: the reachable unsafe sites attacked with static reachability reasoning over the committed Phase-22 typed edges, the per-plane witness and join audits and the committed hostile corpus, each attempt recording its method, its outcome (FOUND_GAP / NO_GAP / INCONCLUSIVE) and its evidence, so an unexplained reachable unsafe site is a finding and a residual rather than an omission, an inconclusive attempt is never a pass, and a claimed absence of gaps is never read as proof that the atlas is complete. Phase 25 owns no exported symbol, so no differential probe over a symbol set is its evidence; the remaining three of its twenty-two courts -- MS-CLEAN-REGEN, MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.19 through 25.21). The stratum's record kinds are defined and self-tested in forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the source-census row, the compiler-derived unsafe site, the unsafe context, the safety obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, the callback lifetime, the unsafe Send/Sync impl, the global state, the panic boundary, the Miri/ASan/MSan/TSan/Kani results, the Phase-18 fuzz crosswalk, the coverage row, the historical CVE, the CVE replay, the vulnerability mechanism, the residual and the seal-class summary. The **primary unit is a compiler-derived unsafe operation**, and lines of unsafe code are a secondary projection, never the security claim. Every entry point calls the Docker-only execution guard (forensics/tools/phase25_guard.py) first, so nothing in this stratum executes on the host. A tool state of UNSUPPORTED is never PASS, and a CANDIDATE_STRUCTURALLY_EXCLUDED CVE replay must cite its evidence. The bounded claim is that the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface, with unsafe operations mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, and with no unexplained reachable unsafe site in the claimed profile. It is not 'no memory-safety bug can exist' and not '100% memory safe'; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 1, 2 and 4 record the measurement and the precondition.",
     "courts": [
       {
         "control": {
@@ -1946,6 +1946,116 @@
         "probe": "",
         "problems": [],
         "verdict": "pass"
+      },
+      {
+        "absence_claim": {
+          "asserted": true,
+          "methods": [
+            "coverage_join",
+            "exposure_witness",
+            "fuzz_corpus",
+            "mechanism_witness",
+            "phase22_typed_edges",
+            "reduction_join",
+            "tool_witness"
+          ]
+        },
+        "by_method": {
+          "coverage_join": 2,
+          "exposure_witness": 3,
+          "fuzz_corpus": 2,
+          "mechanism_witness": 2,
+          "phase22_typed_edges": 2,
+          "reduction_join": 1,
+          "tool_witness": 1
+        },
+        "by_outcome": {
+          "INCONCLUSIVE": 1,
+          "NO_GAP": 12
+        },
+        "control": {
+          "baseline_findings": 0,
+          "caught": 8,
+          "honest": true,
+          "mutations": {
+            "absence_from_single_method": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "single-method absence claim"
+            },
+            "absence_with_gap": {
+              "caught": true,
+              "delta": 3,
+              "findings": 3,
+              "marker": "asserts the absence of gaps while a FOUND_GAP"
+            },
+            "attack_dropped": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "omits the derived attack"
+            },
+            "gap_without_residual": {
+              "caught": true,
+              "delta": 3,
+              "findings": 3,
+              "marker": "with no residual"
+            },
+            "method_outside_vocabulary": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "not in the closed red-team method vocabulary"
+            },
+            "outcome_outside_vocabulary": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "not in the closed red-team outcome vocabulary"
+            },
+            "typed_count": {
+              "caught": true,
+              "delta": 1,
+              "findings": 1,
+              "marker": "not the derived `counts`"
+            },
+            "unreachable_without_witness": {
+              "caught": true,
+              "delta": 2,
+              "findings": 2,
+              "marker": "no committed witness"
+            }
+          },
+          "seeded": 8,
+          "specificity_holds": true
+        },
+        "counts": {
+          "attacks": 13,
+          "found_gap": 0,
+          "inconclusive": 1,
+          "methods": 7,
+          "no_gap": 12,
+          "residuals": 1,
+          "sites_attacked": 1252571,
+          "unwitnessed_classifications": 0,
+          "witness_audit_entries": 4
+        },
+        "court": "MS-RED-TEAM",
+        "findings": [
+          "13 red-team attack(s) were run across 7 method(s) over 1252571 site(s): by outcome INCONCLUSIVE=1, NO_GAP=12; by method coverage_join=2, exposure_witness=3, fuzz_corpus=2, mechanism_witness=2, phase22_typed_edges=2, reduction_join=1, tool_witness=1",
+          "0 genuine gap(s) were found and 1 attack(s) are inconclusive; the attacks that found nothing are recorded as 'no gap found under method X', which is never proof of absence",
+          "the inconclusive attack(s) are named rather than smoothed over: rt-phase22-unwitnessed-external",
+          "a genuine gap is a property finding and a residual, never suppressed: none was found, so no residual is owed to a gap",
+          "every unreachable/not-reachable classification was audited for a committed witness (4 classification(s), 0 unwitnessed site(s)), so an unreachable classification without a witness is a finding",
+          "a passing red-team court records that the attacks ran and their controls were honest; it is an instrument, not a memory-safety property, and its clean result is not read as 'the atlas is complete' or 'the candidate is memory safe'"
+        ],
+        "frf_declarable": false,
+        "frf_exclusion": "the red-team court reads the committed plane and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
+        "method": "stages no probe: it reads the committed artifacts/phase25/red-team.json and re-runs the 25.18 pure checks (ms_red_team.red_team_findings and ms_red_team.red_team_sensitivity_control) over it and the committed evidence it attacks -- the 25.7 exposure classification and its witnesses, the committed Phase-22 atlas through 25.5's crosswalk, the 25.8 reduction axis, the 25.13 fuzz crosswalk and its hostile corpus, the 25.14 coverage, the 25.17 mechanisms, the 25.9-25.12 evidence planes and the 25.16 replay index -- without a compiler. The plane is a pure derivation: the reachable unsafe sites are attacked with static reachability reasoning over the committed Phase-22 typed edges and with the per-plane witness and join audits and the committed hostile corpus, and every attempt records its method, its outcome (FOUND_GAP / NO_GAP / INCONCLUSIVE) and its evidence, so an unexplained reachable unsafe site is a finding rather than an omission. It establishes the closed method and outcome vocabulary, the gap-residual and inconclusive-residual rules, the absence-claim rule (more than one method, never alongside a gap), the unreachable witness rule and the derivation equality; eight seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.5, 3.6).",
+        "probe": "",
+        "problems": [],
+        "verdict": "pass"
       }
     ],
     "cve_replay_states": [
@@ -2032,7 +2142,6 @@
     "pending_courts": {
       "MS-CLEAN-REGEN": "25.19 -- the full clean regeneration",
       "MS-FRF-CLOSURE": "25.20 -- the FRF/Gemel closure",
-      "MS-RED-TEAM": "25.18 -- the red team",
       "MS-SEAL": "25.21 -- the memory-safety seal"
     },
     "risk_tiers": [
@@ -2306,8 +2415,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 18,
-      "total": 18
+      "pass": 19,
+      "total": 19
     },
     "tool_states": [
       "PASS",
@@ -2355,7 +2464,7 @@
     {
       "name": "phase25-container-manifest",
       "path": "forensics/memory-safety/container.json",
-      "sha256": "b95ca7cf076bbe3a63d3d15879df1da9097ea44f48f17e5e2cfcecc69053433e"
+      "sha256": "ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b"
     },
     {
       "name": "cargo-toml",
@@ -2390,7 +2499,7 @@
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "f839ff25a71d9c4433ab3a0f833d11aad731d0100ebff619ae79c6cc1ce38403"
+      "sha256": "c59e077372c6c6dc89e5889046a06049c17955b3bd21d7f658f9dc51b131091f"
     },
     {
       "name": "ms-obligations-tool",
@@ -2400,7 +2509,7 @@
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "9be7728fba74ac49a5cc20cd07544da32d93929619f4385e068b17afa5c4caf5"
+      "sha256": "f5f090f81b984f258308c4d6bf75f6e682f1bb896c2251e1dc12a581fb70d827"
     },
     {
       "name": "ms-ownership-planes-tool",
@@ -2410,7 +2519,7 @@
     {
       "name": "phase22-crosswalk",
       "path": "artifacts/phase25/phase22-crosswalk.json",
-      "sha256": "22ced8541acd3e7356e79a16625f949b3360b284c0b24220ca7e699fda5d8c05"
+      "sha256": "91f9eff47e10a4142a2b8cca69bbd689f9abc8b1d77ff0bcf0f78a7d1160e0fa"
     },
     {
       "name": "ms-phase22-crosswalk-tool",
@@ -2445,7 +2554,7 @@
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "460f5fbaab5618b81fc7b5c3570e0a5ec262eef0076ead9d3cec5507635a4e52"
+      "sha256": "da4c0876088b174c089bb57ec6121eb1a3afae4d3641e7309c789848d61d45cd"
     },
     {
       "name": "ms-phase24-crosswalk-tool",
@@ -2485,7 +2594,7 @@
     {
       "name": "exposure",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "0e3d396ab675c56413eb054628a2fc6b9dbafc7e85df7d1b55dfb6c1f2587d06"
+      "sha256": "bf38318bad06e663c7b9334006f0ae08d5dfd05fb4f267a375092985b97eaf1d"
     },
     {
       "name": "ms-exposure-tool",
@@ -2495,7 +2604,7 @@
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "33b404d43631f2393cb72458eb167ef322c12d08befda253efea3a02fd9f9da8"
+      "sha256": "abe3ed7fdc3b90968573c7cff9f3c109aea9d8a009399db9d0ef513662823685"
     },
     {
       "name": "ms-reduction-tool",
@@ -2585,7 +2694,7 @@
     {
       "name": "phase18-fuzz-crosswalk",
       "path": "artifacts/phase25/phase18-fuzz-crosswalk.json",
-      "sha256": "db36bc8223404eb3d458240ebfcacbd7c99775ebe4020ef94cb7bd369db1bb30"
+      "sha256": "bdc6377fa0dda4469958968fa92ed39bc358a97dc208d5355bfe194acbe4d4c4"
     },
     {
       "name": "ms-phase18-fuzz-crosswalk-tool",
@@ -2610,7 +2719,7 @@
     {
       "name": "phase24-safety-coverage",
       "path": "artifacts/phase25/phase24-safety-coverage.json",
-      "sha256": "2fdc98267bba2244f23f5250e7609848ddbe61d91530318f78a00cd91a5e8961"
+      "sha256": "d423c940cefec5cbab8a4b52d53accb6024c2cbff13607b0c78bf102d5528e69"
     },
     {
       "name": "ms-phase24-safety-coverage-tool",
@@ -2625,7 +2734,7 @@
     {
       "name": "historical-cves",
       "path": "artifacts/phase25/historical-cves.json",
-      "sha256": "3586e7b04e6d67156c0bab332882756ae7f8b5f30e363f63078fb8ba78e1554f"
+      "sha256": "24dbed1bb8f230b02e569000c2301d6ccfc2c669bd49145e4f6b67cad9c04581"
     },
     {
       "name": "ms-historical-cve-tool",
@@ -2640,7 +2749,7 @@
     {
       "name": "security-lineage",
       "path": "forensics/multitrack/security-lineage.json",
-      "sha256": "50f67b0b1d998573d36d30e8af3d544fa2f72617cb2ae018b081390517faaf38"
+      "sha256": "76c9f213073fca332fe2c26cd1c2997234c81420e5d9b9bbf279adc653cb0e63"
     },
     {
       "name": "cve-replay",
@@ -2660,12 +2769,22 @@
     {
       "name": "mechanisms",
       "path": "artifacts/phase25/mechanisms.json",
-      "sha256": "cb5cb8b5f91d558474ab854203e17d6f8f9d6a945c80b3920f26ad49ba724ff7"
+      "sha256": "ef0e8671b99520e704aa8def685709c03ef1b9c0327f9282b9e3aa410559aa75"
     },
     {
       "name": "ms-mechanism-reconciliation-tool",
       "path": "forensics/tools/ms_mechanism_reconciliation.py",
       "sha256": "ed9a3df73b4ee7bb386341c2614ca95d387da36e4b88130e1162c15afd86cd12"
+    },
+    {
+      "name": "red-team",
+      "path": "artifacts/phase25/red-team.json",
+      "sha256": "44cb20da58dd63e17eb4098b133ec4e3e3bad79c255d6bd456f7d4a72f7485f5"
+    },
+    {
+      "name": "ms-red-team-tool",
+      "path": "forensics/tools/ms_red_team.py",
+      "sha256": "a640bbc2219e347df2502292f1aa34a30a9cbd9ca5cd742852508a16058379bc"
     }
   ],
   "kind": "phase25-courts",
