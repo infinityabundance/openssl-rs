@@ -620,6 +620,20 @@ GENERATORS_BEFORE_LEDGERS = [
     # `ms_cve_replay.cve_replay_sensitivity_control`) over the committed plane, the committed 25.15
     # census and the committed probe source. If a later subphase derives a pure aggregate from this
     # plane, that aggregate is what belongs in this list.
+    # **Phase 25.19's full clean regeneration (`forensics/tools/ms_regeneration.py` ->
+    # `artifacts/phase25/regeneration.json`) follows the same
+    # `ms_census.py`/`ms_miri.py`/`ms_asan.py`/`ms_tsan.py`/`ms_kani.py`/`ms_cve_replay.py`
+    # measurement precedent, so it is deliberately NOT listed here and NOT in `COMPARED`.** It
+    # re-runs each measurement plane's own `--measure` -- the compiler, Miri, ASan, TSan, Kani and
+    # the CVE replays -- to confirm each still binds the current venue manifest and reproduces
+    # byte-for-byte on a second run, so its outputs (the per-plane exit codes, digests and the
+    # determinism result) are a function of the court's toolchain and of the frozen candidate, not
+    # of committed inputs. The Docker-only guard refuses a host invocation of `ms_regeneration.py`
+    # before it re-runs anything, and the manifest does not list it `metadata_only`. The
+    # `MS-CLEAN-REGEN` court re-runs only its pure checks (`ms_regeneration.regen_findings` and
+    # `ms_regeneration.regen_sensitivity_control`) over the committed plane and the committed
+    # manifest. Its procedure constant names the planes it re-runs, so a plane added to the stratum
+    # without being added to the procedure is a failure rather than a silent omission.
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
