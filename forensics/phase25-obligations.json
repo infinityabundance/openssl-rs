@@ -184,7 +184,7 @@
       {
         "closure": "the `MS-TSAN` court passes",
         "findings": [
-          "{'category': 'TSAN_DATA_RACE', 'column': 0, 'detail': \"run tsan-parallel-gate-parallel (parallel-safety-gate, schedule []) reported a ThreadSanitizer data race; the first-party access site of each racing access is recorded in `races` (the dependency frames and TSan's SUMMARY framing of the same race are a function of the default schedule's timing and are not part of the reproducible record)\", 'file': 'src/context/namemap.rs', 'finding_id': 'tf-tsan-parallel-gate-parallel', 'line': 488, 'races': [{'class': 'data race', 'sites': [{'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::ossl_namemap_empty', 'kind': 'Previous read', 'line': 488}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::name2num_inner', 'kind': 'Previous read', 'line': 633}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::namemap_add_name', 'kind': 'Previous write', 'line': 768}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::ossl_namemap_empty', 'kind': 'Read', 'line': 488}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::namemap_add_name', 'kind': 'Write', 'line': 768}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::namemap_add_name', 'kind': 'Write', 'line': 773}]}], 'run_id': 'tsan-parallel-gate-parallel', 'schedule': [], 'schedule_role': 'parallel-safety-gate'}"
+          "{'category': 'TSAN_DATA_RACE', 'column': 0, 'detail': \"run tsan-parallel-gate-parallel (parallel-safety-gate, schedule []) reported a ThreadSanitizer data race; the first-party access site of each racing access is recorded in `races` (the dependency frames and TSan's SUMMARY framing of the same race are a function of the default schedule's timing and are not part of the reproducible record)\", 'file': 'src/context/namemap.rs', 'finding_id': 'tf-tsan-parallel-gate-parallel', 'line': 488, 'races': [{'class': 'data race', 'sites': [{'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::ossl_namemap_empty', 'kind': 'Previous read', 'line': 488}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::name2num_inner', 'kind': 'Previous read', 'line': 633}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::namemap_add_name', 'kind': 'Previous write', 'line': 768}, {'file': 'src/runtime/mem.rs', 'function': 'openssl_rs::runtime::mem::default_malloc', 'kind': 'Previous write', 'line': 194}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::ossl_namemap_empty', 'kind': 'Read', 'line': 488}, {'file': 'src/runtime/thread_events.rs', 'function': 'openssl_rs::runtime::thread_events::init_thread_deregister', 'kind': 'Read', 'line': 680}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::namemap_add_name', 'kind': 'Write', 'line': 768}, {'file': 'src/context/namemap.rs', 'function': 'openssl_rs::context::namemap::namemap_add_name', 'kind': 'Write', 'line': 773}]}], 'run_id': 'tsan-parallel-gate-parallel', 'schedule': [], 'schedule_role': 'parallel-safety-gate'}"
         ],
         "findings_present": true,
         "measurement_state": "complete",
@@ -299,10 +299,10 @@
       {
         "closure": "the `MS-RED-TEAM` court passes",
         "findings": [
-          "13 red-team attack(s) were run across 7 method(s) over 1252571 site(s): by outcome INCONCLUSIVE=1, NO_GAP=12; by method coverage_join=2, exposure_witness=3, fuzz_corpus=2, mechanism_witness=2, phase22_typed_edges=2, reduction_join=1, tool_witness=1",
-          "0 genuine gap(s) were found and 1 attack(s) are inconclusive; the attacks that found nothing are recorded as 'no gap found under method X', which is never proof of absence",
+          "13 red-team attack(s) were run across 7 method(s) over 1252572 site(s): by outcome FOUND_GAP=1, INCONCLUSIVE=1, NO_GAP=11; by method coverage_join=2, exposure_witness=3, fuzz_corpus=2, mechanism_witness=2, phase22_typed_edges=2, reduction_join=1, tool_witness=1",
+          "1 genuine gap(s) were found and 1 attack(s) are inconclusive; the attacks that found nothing are recorded as 'no gap found under method X', which is never proof of absence",
           "the inconclusive attack(s) are named rather than smoothed over: rt-phase22-unwitnessed-external",
-          "a genuine gap is a property finding and a residual, never suppressed: none was found, so no residual is owed to a gap",
+          "a genuine gap is a property finding and a residual, never suppressed: rt-fuzz-unpreserved-failure",
           "every unreachable/not-reachable classification was audited for a committed witness (4 classification(s), 0 unwitnessed site(s)), so an unreachable classification without a witness is a finding",
           "a passing red-team court records that the attacks ran and their controls were honest; it is an instrument, not a memory-safety property, and its clean result is not read as 'the atlas is complete' or 'the candidate is memory safe'"
         ],
@@ -318,17 +318,24 @@
       {
         "closure": "the `MS-CLEAN-REGEN` court passes",
         "findings": [
-          "the clean regeneration re-ran 7 of 7 measurement plane(s); 7 reproduced their evidence on a second --measure, and 6 reproduced whole-file (the rest differ only in the non-evidence bytes their envelope or per-run fields carry)",
-          "every re-measured plane now binds the current venue manifest ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b as an input, so the measurement planes are mutually consistent on the manifest",
-          "artifacts/phase25/source-census.json bound a superseded manifest digest (302e2826bb1a1fea1a3f21d249f2570fc8716449bdc76c40217af035928f03b7) as committed at HEAD and was re-bound to the current ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b by the regeneration",
-          "artifacts/phase25/source-census.json did not survive the regeneration: its committed evidence (ff338042c8e16d0fd2b2d6ae59baad31624ab66f98db03547a8755dde662caf3) differs from the regenerated evidence (f08d88ba151a6a0e510f4f69e40746523f0b661601919092485174094989ec05), so a PASS read off the committed bytes had to be re-read off the regenerated ones",
-          "artifacts/phase25/non-rust-tcb.json bound a superseded manifest digest (36bd122506bf9d01f4afab3f3d8dd0f21fe7377174035a269890bfbe837a2445) as committed at HEAD and was re-bound to the current ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b by the regeneration",
-          "artifacts/phase25/miri.json bound a superseded manifest digest (36bd122506bf9d01f4afab3f3d8dd0f21fe7377174035a269890bfbe837a2445) as committed at HEAD and was re-bound to the current ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b by the regeneration",
+          "the clean regeneration re-ran 7 of 7 measurement plane(s); 5 reproduced their evidence on a second --measure, and 0 reproduced whole-file (the rest differ only in the non-evidence bytes their envelope or per-run fields carry)",
+          "every re-measured plane now binds the current venue manifest 461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3 as an input, so the measurement planes are mutually consistent on the manifest",
+          "artifacts/phase25/source-census.json bound a superseded manifest digest (ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b) as committed at HEAD and was re-bound to the current 461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3 by the regeneration",
+          "artifacts/phase25/source-census.json did not survive the regeneration: its committed evidence (f08d88ba151a6a0e510f4f69e40746523f0b661601919092485174094989ec05) differs from the regenerated evidence (4b1a3afc2bc37b21ae9bd8d4b32209f269e78e75ceec216349379758f54f54b3), so a PASS read off the committed bytes had to be re-read off the regenerated ones",
+          "artifacts/phase25/source-census.json reproduced its evidence while its whole file differs only in the pathless non-committed inputs its envelope records (the raw tool stream it derived from)",
+          "artifacts/phase25/non-rust-tcb.json bound a superseded manifest digest (ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b) as committed at HEAD and was re-bound to the current 461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3 by the regeneration",
+          "artifacts/phase25/non-rust-tcb.json reproduced its evidence while its whole file differs only in the pathless non-committed inputs its envelope records (the raw tool stream it derived from)",
+          "artifacts/phase25/miri.json bound a superseded manifest digest (ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b) as committed at HEAD and was re-bound to the current 461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3 by the regeneration",
           "artifacts/phase25/miri.json reproduced its evidence while its whole file differs, because it records the declared non-evidence field(s) ['body.runs.rows[*].transcript_sha256'] -- a per-run transcript digest or a build product -- whose bytes are not reproducible; the difference is confined to those declared fields",
-          "artifacts/phase25/asan-msan.json bound a superseded manifest digest (729c3e13474fa325e0038244b0037ac988cc2958dcab7c2034a7e627979ee414) as committed at HEAD and was re-bound to the current ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b by the regeneration",
-          "artifacts/phase25/tsan.json bound a superseded manifest digest (302e2826bb1a1fea1a3f21d249f2570fc8716449bdc76c40217af035928f03b7) as committed at HEAD and was re-bound to the current ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b by the regeneration",
-          "artifacts/phase25/kani.json bound a superseded manifest digest (deefd44215db05fc4831c24b60faa3b84b1a9f7369aa83e2ad560fa3bfbf152d) as committed at HEAD and was re-bound to the current ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b by the regeneration",
-          "artifacts/phase25/cve-replay/index.json bound a superseded manifest digest (2fe4bb5ece8a470010f43a538c8c8819edb0b5de1c773b0db0fd4b8414083cc3) as committed at HEAD and was re-bound to the current ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b by the regeneration"
+          "artifacts/phase25/asan-msan.json bound a superseded manifest digest (ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b) as committed at HEAD and was re-bound to the current 461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3 by the regeneration",
+          "artifacts/phase25/asan-msan.json was re-run twice and the second --measure did not reproduce the first's evidence, so it is recorded a non-reproducible finding rather than a pass",
+          "artifacts/phase25/tsan.json bound a superseded manifest digest (ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b) as committed at HEAD and was re-bound to the current 461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3 by the regeneration",
+          "artifacts/phase25/tsan.json did not survive the regeneration: its committed evidence (a1d8446ca9e6d61de6268bef308f079b3c18f34fdb68129b7d4f2894f623f541) differs from the regenerated evidence (1147269e524a81d4e41635900883c800d32ef28ea8cedabb44125a110d6ae46a), so a PASS read off the committed bytes had to be re-read off the regenerated ones",
+          "artifacts/phase25/tsan.json was re-run twice and the second --measure did not reproduce the first's evidence, so it is recorded a non-reproducible finding rather than a pass",
+          "artifacts/phase25/kani.json bound a superseded manifest digest (ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b) as committed at HEAD and was re-bound to the current 461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3 by the regeneration",
+          "artifacts/phase25/kani.json reproduced its evidence while its whole file differs only in the pathless non-committed inputs its envelope records (the raw tool stream it derived from)",
+          "artifacts/phase25/cve-replay/index.json bound a superseded manifest digest (ccd23b2cf8d3a0dad115c8b785cca299e95da6331946b103f9311b8b924d972b) as committed at HEAD and was re-bound to the current 461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3 by the regeneration",
+          "artifacts/phase25/cve-replay/index.json reproduced its evidence while its whole file differs only in the pathless non-committed inputs its envelope records (the raw tool stream it derived from)"
         ],
         "findings_present": true,
         "measurement_state": "complete",
@@ -341,12 +348,19 @@
       },
       {
         "closure": "the `MS-FRF-CLOSURE` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "not_measured",
-        "observation": "MS-FRF-CLOSURE is pending",
+        "findings": [
+          "the record set is 22 Phase-25 contract unit(s): 21 joined to their committed evidence and generator, 1 pending with the subphase that lands them and 0 orphaned",
+          "the FRF chain owes 0 receipt(s) and the stratum's 22 court obligation(s) join their committed evidence (22 joined, 0 owing a receipt, 0 orphaned), so no receipt/challenge/claim that names a Phase-25 court is orphaned",
+          "the residual census disposes 486 of 486 residual record(s) from the closed disposition vocabulary and records 11 light cross-check leftover(s); 452 residual(s) are open and 0 undisposed",
+          "2 residual(s) carry a class from a plane's own vocabulary rather than memory_safety_schemas.RESIDUAL_CLASSES (evidence_not_reproducible=2); each is recorded with its disposition rather than read as an undisposed leftover",
+          "the open residual(s) are named rather than smoothed to a zero (a bounded sample of 8 per plane; the full set is in the cited plane): clean-regeneration=2, cve-replay=4, exposure-classification=1, historical-cve-census=8, mechanism-reconciliation=4, phase18-fuzz-crosswalk=8, phase22-crosswalk=8, phase24-crosswalk=5, phase24-safety-coverage=8, red-team=2, tsan=1",
+          "a passing MS-FRF-CLOSURE is an instrument, not a property: the stratum's chain entry is vacuous (no Phase-25 court is declarable) and the atlas carries open residuals, so the closure records property_status NOT_CLAIMED rather than a chain that ran"
+        ],
+        "findings_present": true,
+        "measurement_state": "complete",
+        "observation": "MS-FRF-CLOSURE is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "frf-gemel-closure",
         "what": "the FRF/Gemel chain closure where the stratum stages a declarable court, so a passing atlas is not read as a chain that never ran"
@@ -369,8 +383,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 20,
-      "open_in_this_stratum": 2,
+      "implemented": 21,
+      "open_in_this_stratum": 1,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -411,7 +425,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "e1b5fd750c37e4992ce1194711c0ad643aeb254926051b45744f640750ef55c1"
+      "sha256": "c780f57aeab000c8613d0463efb1a67631287a6a010098e4247cce61f60f8735"
     },
     {
       "name": "phase25-guard",

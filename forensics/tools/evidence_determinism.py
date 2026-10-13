@@ -634,6 +634,21 @@ GENERATORS_BEFORE_LEDGERS = [
     # `ms_regeneration.regen_sensitivity_control`) over the committed plane and the committed
     # manifest. Its procedure constant names the planes it re-runs, so a plane added to the stratum
     # without being added to the procedure is a failure rather than a silent omission.
+    # **Phase 25.20's FRF/Gemel closure (`forensics/tools/ms_frf_closure.py` ->
+    # `forensics/atlas/phase25/frf-closure.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It joins every Phase-25 contract unit to its committed
+    # evidence and its committed generator, joins each obligation to its court and each `.frf`
+    # receipt/challenge/claim to a declarable court, disposes every residual from the closed
+    # vocabularies (naming the open ones) and records the FRF chain staging and the Gemel checkpoint
+    # projection. It reads only committed evidence -- the Phase-25 contract table and planes, the
+    # committed FRF registry, the committed Gemel projection and the committed `.frf` store -- and
+    # it compiles nothing, so `forensics/memory-safety/container.json` lists it `metadata_only` and
+    # the Docker-only guard admits it on any host, exactly as `ms_red_team` is. A stale committed
+    # closure -- a dropped record, an orphaned obligation, a join with no committed evidence, a
+    # typed count or a closure claimed closed with an open residual -- is a failure rather than a
+    # silent divergence, and the `MS-FRF-CLOSURE` court re-runs the same pure checks over the
+    # committed artefact and the committed evidence.
+    "forensics/tools/ms_frf_closure.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -1043,6 +1058,14 @@ COMPARED = [
     # outside the closed vocabulary or a dropped attack is a failure rather than a silent
     # divergence.
     "artifacts/phase25/red-team.json",
+    # Phase 25.20's FRF/Gemel closure: a pure function of the committed Phase-25 contract table and
+    # the committed planes that are each unit's evidence, the committed FRF registry, the committed
+    # Gemel projection and the committed `.frf` receipt/challenge/claim store. It compiles nothing
+    # and reads no compiler output, so re-deriving it needs no compiler and no candidate machine. A
+    # dropped record, an orphaned obligation, a join with no committed evidence, a typed count, a
+    # closure claimed closed with an open residual or an undisposed residual is a failure rather
+    # than a silent divergence.
+    "forensics/atlas/phase25/frf-closure.json",
 ]
 
 # ---------------------------------------------------------------------------
