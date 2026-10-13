@@ -1,7 +1,7 @@
 //! Phase 25.8 differential harness: the sparse array under a caller-installed allocator.
 //!
 //! This is test-only tooling, not product. `forensics/tools/ms_sparse_array_court.py` runs it
-//! against the crate and the matching C probe (`courts/phase25/rt_sparse_array_probe.c`)
+//! against the crate and the matching C probe (`courts/phase25/rt_sparse_array_differential.c`)
 //! against the admitted authority, and compares the two transcripts: the insert / replace /
 //! remove / depth-growth return values, the numeric boundary, the walk order, the
 //! allocation-hook observations and the allocation-failure answer.
@@ -47,7 +47,9 @@ unsafe extern "C" fn hook_malloc(n: usize, _file: *const c_char, _line: c_int) -
     }
     MALLOCS.fetch_add(1, Ordering::SeqCst);
     {
-        let mut sizes = SIZES.lock().unwrap();
+        let mut sizes = SIZES
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if sizes.len() < 256 {
             sizes.push(n as u64);
         }
@@ -122,7 +124,10 @@ unsafe fn order_note(_idx: OsslUintMax, val: *mut c_void, arg: *mut c_void) {
     // SAFETY: `arg` is the `*const Values` this harness passes.
     let values = unsafe { &*(arg as *const Values) };
     let tag = values.tag_of(val);
-    ORDER.lock().unwrap().push((tag + 1) as u64);
+    ORDER
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .push((tag + 1) as u64);
 }
 
 /// The differential transcript. `SPARSE_ARRAY_PROBE=1` runs it; otherwise it is a no-op so the
@@ -188,7 +193,10 @@ fn sparse_array_under_installed_allocator() {
     }
     out += "],";
 
-    ORDER.lock().unwrap().clear();
+    ORDER
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .clear();
     // SAFETY: `sa` is live; `order_note` is this harness's own Rust-ABI callback and `arg` is
     // the `Values` it reads.
     unsafe {
@@ -199,7 +207,12 @@ fn sparse_array_under_installed_allocator() {
         )
     };
     out += "\"order\":[";
-    for (i, o) in ORDER.lock().unwrap().iter().enumerate() {
+    for (i, o) in ORDER
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .iter()
+        .enumerate()
+    {
         out += &format!("{}{}", if i == 0 { "" } else { "," }, o);
     }
     out += "],";
@@ -214,7 +227,9 @@ fn sparse_array_under_installed_allocator() {
     {
         let malloc_count = MALLOCS.load(Ordering::SeqCst);
         let free_count = FREES.load(Ordering::SeqCst);
-        let sizes = SIZES.lock().unwrap();
+        let sizes = SIZES
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         out += &format!("\"alloc\":{{\"malloc\":{malloc_count},\"free\":{free_count},\"sizes\":[");
         for (i, s) in sizes.iter().enumerate() {
             out += &format!("{}{}", if i == 0 { "" } else { "," }, s);

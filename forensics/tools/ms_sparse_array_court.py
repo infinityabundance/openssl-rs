@@ -10,7 +10,7 @@ answers all three by **measurement**, not prose:
      global allocator (invisible to `CRYPTO_set_mem_functions`) and abort on exhaustion instead
      of returning the failure `ossl_sa_set` propagates. This court installs counting,
      failure-injecting allocator hooks over both the authority (`courts/phase25/
-     rt_sparse_array_probe.c`, linked against OpenSSL 3.6.4) and the crate (the
+     rt_sparse_array_differential.c`, linked against OpenSSL 3.6.4) and the crate (the
      `sparse_array_probe` harness) and compares the observable allocation behaviour.
 
   2. **Callback re-entrancy.** A `doall` callback may re-enter the array to clear the slot it was
@@ -66,7 +66,7 @@ import phase25_guard  # noqa: E402
 OUT = REPO_ROOT / "forensics" / "memory-safety" / "sparse-array-differential.json"
 GENERATOR = "forensics/tools/ms_sparse_array_court.py"
 TOOL = REPO_ROOT / "forensics" / "tools" / "ms_sparse_array_court.py"
-C_PROBE = REPO_ROOT / "courts" / "phase25" / "rt_sparse_array_probe.c"
+C_PROBE = REPO_ROOT / "courts" / "phase25" / "rt_sparse_array_differential.c"
 RUST_HARNESS = REPO_ROOT / "src" / "runtime" / "sparse_array_probe.rs"
 AUTHORITY = "openssl-3.6.4-production"
 AUTHORITY_PREFIX = REPO_ROOT / "forensics" / "authorities" / "prefix" / AUTHORITY
@@ -485,7 +485,7 @@ def build_body() -> dict:
                 "path": rel(AUTHORITY_PREFIX),
                 "declaration": (
                     "the authority side is the admitted OpenSSL 3.6.4 `ossl_sa_*` driven by "
-                    "`courts/phase25/rt_sparse_array_probe.c` under a caller-installed allocator; "
+                    "`courts/phase25/rt_sparse_array_differential.c` under a caller-installed allocator; "
                     "the candidate side is the crate's `sparse_array_probe` harness driving the same "
                     "sequence under the crate's `CRYPTO_set_mem_functions` seam"),
             },

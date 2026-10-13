@@ -114,10 +114,10 @@
         "frf_exclusion": "the census court reads the committed census and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
         "loc": {
           "note": "a secondary projection of the compiler-derived census; unsafe LOC is not a vulnerability count (docs/UNSAFE.md, docs/NON_CLAIMS.md)",
-          "rust_code_loc": 536140,
-          "rust_physical_loc": 803429,
-          "safe_rust_code_loc": 211415,
-          "unsafe_context_code_loc": 324725
+          "rust_code_loc": 536157,
+          "rust_physical_loc": 803447,
+          "safe_rust_code_loc": 211427,
+          "unsafe_context_code_loc": 324730
         },
         "method": "stages no probe: it reads the committed artifacts/phase25/source-census.json and re-runs the 25.1 pure checks (ms_census.census_findings and ms_census.census_sensitivity_control) over it, without a compiler. The census was derived by one clippy run with the built-in `unsafe_code` lint (the enumerating authority) plus the three named documentation lints, --message-format=json, and the macro-expanded source from a pinned nightly. It establishes file coverage, compiler-derivedness of every site, stable/unique ids, consistent back-references, derived counts and the LOC split, and that every cross-check disagreement is a classified residual; five seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.2).",
         "probe": "",
@@ -2672,7 +2672,7 @@
     {
       "name": "source-census",
       "path": "artifacts/phase25/source-census.json",
-      "sha256": "74ed38a50d5557184975865b18d313eeaec0accf683f846196815c11660bac20"
+      "sha256": "7991c43f59d4b52c297f81d017f813ad1de4bef68444287c5ea73b3cdf2ad127"
     },
     {
       "name": "ms-census-tool",
@@ -2692,7 +2692,7 @@
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "4a79e3d4bea8d969f7cfe65c867cf15afc40875a61a57a307f73b9d9f0135dfa"
+      "sha256": "45dc6830d191a8ac3fa59481ddc56b5e0b57662b53a16b7da2f23f5b8b3cbe6e"
     },
     {
       "name": "ms-obligations-tool",
@@ -2702,7 +2702,7 @@
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "68d2d8dfd1833f3a1a3e5fbb8a6e3c89fe4e613b60276fa687a4570c16f0efa3"
+      "sha256": "83074cdba20d7b5430ecab17a503522373ea729badbdf410470caad55a7cd80e"
     },
     {
       "name": "ms-ownership-planes-tool",
@@ -2712,7 +2712,7 @@
     {
       "name": "phase22-crosswalk",
       "path": "artifacts/phase25/phase22-crosswalk.json",
-      "sha256": "73f67eaf376d6e300a4b0f3952246cb38cec8670b6b01517a69ee2160edef28c"
+      "sha256": "824843747ff80be105072970049dfb2c1d80bf9376c57e255df991d0d312744e"
     },
     {
       "name": "ms-phase22-crosswalk-tool",
@@ -2747,7 +2747,7 @@
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "b4601495dcfa9f9efda040b000cbf6d7596fed134ef2a53465afb636a0e33280"
+      "sha256": "5cb7c238a9b6eae4387ebee0b47fc0603a46bc6163e603cbe8c0b392104154ed"
     },
     {
       "name": "ms-phase24-crosswalk-tool",
@@ -2762,7 +2762,7 @@
     {
       "name": "downstream-reconciliation",
       "path": "forensics/downstream/reconciliation.json",
-      "sha256": "1152f67402666e08fd0bf3a55dd745bad7fe64db8af3415e083b49d9fdcc1f92"
+      "sha256": "94b657439caf62fb33e0366ba0fe99a8f98aab08083a2cfc8d2a23072f21b44f"
     },
     {
       "name": "downstream-runtime-functional-atlas",
@@ -2777,7 +2777,7 @@
     {
       "name": "downstream-p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "d9d47d3b2f5587900ef837280ae3fd90f0500696c7db642048eb721aaa2ba16a"
+      "sha256": "061b78de7a019b10ee5bcefa0d85c384ea7a43d163b6e90aaafc85d012cf1717"
     },
     {
       "name": "downstream-family-freeze",
@@ -2787,7 +2787,7 @@
     {
       "name": "exposure",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "9fa125777b11ce266eaf7e88516ee222b63d62f34ad0a79f8579cb58799bcab0"
+      "sha256": "1530b933e1d5f3b74feaa7600a82466717a85ae7b2f51fa0bb81cf1cc8f87613"
     },
     {
       "name": "ms-exposure-tool",
@@ -2797,7 +2797,7 @@
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "24227ed018bb75cf7b4e755823ff7a2517d3aac5cc253f56c687063715586dfc"
+      "sha256": "5fdd637f34c61f4010dbc49294868e1c0769f31e64df2c8b6df754ebb510e32e"
     },
     {
       "name": "ms-reduction-tool",
@@ -2887,7 +2887,7 @@
     {
       "name": "phase18-fuzz-crosswalk",
       "path": "artifacts/phase25/phase18-fuzz-crosswalk.json",
-      "sha256": "dd4339d42ea12a05faf2a1746d69d1dcd8d567946dd891b221ae517a05eef2b4"
+      "sha256": "d703d62961dce08cbffebb83392a09b94ced38ec9bcdfb9516942e97e25383e2"
     },
     {
       "name": "ms-phase18-fuzz-crosswalk-tool",
@@ -2902,7 +2902,7 @@
     {
       "name": "phase18-courts",
       "path": "artifacts/phase18/COURTS.json",
-      "sha256": "37e8e4ad61279e6174d87031b396c585e0af695bc212aa98963a34d9ae8635ea"
+      "sha256": "309e47ff0f66ee3b3ec0a8299c74e92522d2e0a7f5fea3b4a4f1fe2f13bd19af"
     },
     {
       "name": "phase18-fuzz-hostile-corpus",
@@ -2912,7 +2912,7 @@
     {
       "name": "phase24-safety-coverage",
       "path": "artifacts/phase25/phase24-safety-coverage.json",
-      "sha256": "648cd14c91538907a9400b9d41276d0ccd0b937cd0c9dccd8dc1f252cfbebe92"
+      "sha256": "0114a07b4a75a466e4f7f19e56ae3124afbe68e203930c33c1751fa7f2da5ac0"
     },
     {
       "name": "ms-phase24-safety-coverage-tool",
@@ -2927,7 +2927,7 @@
     {
       "name": "historical-cves",
       "path": "artifacts/phase25/historical-cves.json",
-      "sha256": "4958898921f9f1705ca2f0ecf637bb685a9bd05828b70ef92b0a8f7c726b33ed"
+      "sha256": "73ec5b7465647709822f695b847a4f8cd8d8825f17e87c04c4d05801916e5b2b"
     },
     {
       "name": "ms-historical-cve-tool",
@@ -2942,7 +2942,7 @@
     {
       "name": "security-lineage",
       "path": "forensics/multitrack/security-lineage.json",
-      "sha256": "ae7305c1161a22b3be52fe48aaf0889b4342164c2709d1dfa1ba78f727acb178"
+      "sha256": "8f004a89fd32185f6a36ece1b3e36ad9a73a5a4bb7a8f2e1ced2b3d1bef7a20a"
     },
     {
       "name": "cve-replay",
@@ -2962,7 +2962,7 @@
     {
       "name": "mechanisms",
       "path": "artifacts/phase25/mechanisms.json",
-      "sha256": "6a1083edc887c12a128dd0ad8400816440de54849db3f77b798ced6d2d62663f"
+      "sha256": "ae4c4f65bc5c1ec7a53e48238ed87bd771cadf78811c0a95063df06707f0f0dc"
     },
     {
       "name": "ms-mechanism-reconciliation-tool",
@@ -2972,7 +2972,7 @@
     {
       "name": "red-team",
       "path": "artifacts/phase25/red-team.json",
-      "sha256": "3686af86bf699c6771a216985c3ef56024b4fbad1881867e63e13544967a5b47"
+      "sha256": "390a35cca44c45c402493af8082e8c4142f9d69a5c23f75b9e5af4e572296cb1"
     },
     {
       "name": "ms-red-team-tool",
@@ -2992,7 +2992,7 @@
     {
       "name": "frf-closure",
       "path": "forensics/atlas/phase25/frf-closure.json",
-      "sha256": "f7360e707ec7146abe524c0a7bdb43219742d59b3a447dbcdb1f546493d32632"
+      "sha256": "b40675b552ea1aa790ed3c4a789806248673644cd593d41fd6eaca05dbc3563d"
     },
     {
       "name": "ms-frf-closure-tool",

@@ -398,8 +398,11 @@ impl OpenSslSa {
         }
 
         let levels = self.levels as usize;
-        // `self.levels` is at least 1 after the growth above, so the root exists.
-        let root = self.root.as_deref_mut().expect("a grown array has a root");
+        // The growth above makes `self.levels` at least 1, so the root exists; a null root is
+        // reported as the failure `ossl_sa_set` propagates rather than as a panic.
+        let Some(root) = self.root.as_deref_mut() else {
+            return false;
+        };
         let Some(slot) = root.leaf_slot(levels, posn) else {
             return false;
         };

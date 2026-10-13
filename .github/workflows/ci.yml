@@ -85,7 +85,12 @@ jobs:
   static:
     name: static gates (build, tests, determinism, no-regression)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 60, not 30: the `Evidence determinism` step re-derives every artefact and takes
+    # ~13 minutes inside the 8-CPU court container, longer on a 2-vCPU runner, and it
+    # runs after Build + both Unit-test steps. The 30-minute budget cancelled the step
+    # before it finished, which read as a failure rather than a timeout. The check is
+    # unchanged; only the window it is allowed to complete in is.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:

@@ -205,7 +205,7 @@
     "tool": "forensics/tools/ms_sparse_array_court.py",
     "harness": {
       "ran": true,
-      "authority": "courts/phase25/rt_sparse_array_probe.c against openssl-3.6.4-production",
+      "authority": "courts/phase25/rt_sparse_array_differential.c against openssl-3.6.4-production",
       "candidate": "src/runtime/sparse_array_probe.rs under CRYPTO_set_mem_functions"
     },
     "allocator": {
