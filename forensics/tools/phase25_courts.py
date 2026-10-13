@@ -265,6 +265,13 @@ import ms_red_team  # noqa: E402
 # `regen_sensitivity_control` over the committed plane and the committed manifest.
 import ms_regeneration  # noqa: E402
 
+# 25.20's FRF/Gemel closure and the pure tool that derives it from the committed Phase-25 contract
+# table and the committed planes that are each unit's evidence, the committed FRF registry and Gemel
+# projection and the committed `.frf` receipt/challenge/claim store. It is a pure derivation, so the
+# court re-runs only the tool's pure `frf_closure_findings` / `frf_closure_sensitivity_control` over
+# the committed closure and the committed evidence.
+import ms_frf_closure  # noqa: E402
+
 # The lossless columnar codec the Phase-25 artefacts are stored in. Every court decodes the
 # committed artefact through `decode_body` before reading its records, so one implementation of the
 # scheme serves the generator, the court and every cross-reader; the scheme is named by
@@ -468,6 +475,16 @@ REGENERATION = REPO_ROOT / "artifacts" / "phase25" / "regeneration.json"
 MS_REGENERATION_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_regeneration.py"
 CLEAN_REGEN_COURT = "MS-CLEAN-REGEN"
 
+# 25.20's FRF/Gemel closure and the pure tool that derives it. The plan's artefact is
+# `forensics/atlas/phase25/frf-closure.json`: the record set (every Phase-25 contract unit joined to
+# its committed evidence and generator), the obligation and receipt joins, the residual census, the
+# FRF chain staging and the Gemel checkpoint projection. The plane is a pure derivation (it reads
+# committed evidence and executes nothing), so the court re-runs only the tool's pure checks over
+# the committed artefact and the committed evidence.
+FRF_CLOSURE = REPO_ROOT / "forensics" / "atlas" / "phase25" / "frf-closure.json"
+MS_FRF_CLOSURE_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_frf_closure.py"
+FRF_CLOSURE_COURT = "MS-FRF-CLOSURE"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -507,6 +524,7 @@ COURTS: list[tuple[str, str]] = [
     (MECHANISM_RECONCILIATION_COURT, "_ms_mechanism_reconciliation_court"),
     (RED_TEAM_COURT, "_ms_red_team_court"),
     (CLEAN_REGEN_COURT, "_ms_clean_regen_court"),
+    (FRF_CLOSURE_COURT, "_ms_frf_closure_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
@@ -516,10 +534,10 @@ COURTS: list[tuple[str, str]] = [
 # `MS-UNSAFE-REDUCTION`, 25.9 removed `MS-MIRI`, 25.10 removed `MS-ASAN-MSMAN`, 25.11 removed
 # `MS-TSAN`, 25.12 removed `MS-KANI`, 25.13 removed `MS-PHASE18-FUZZ-CROSSWALK`, 25.14 removed
 # `MS-PHASE24-SAFETY-COVERAGE`, 25.15 removed `MS-HISTORICAL-CVE`, 25.16 removed `MS-CVE-REPLAY`,
-# 25.17 removed `MS-MECHANISM-RECONCILIATION`, 25.18 removed `MS-RED-TEAM` and 25.19 removed
-# `MS-CLEAN-REGEN`, so two remain. Ordered as the plan orders them.
+# 25.17 removed `MS-MECHANISM-RECONCILIATION`, 25.18 removed `MS-RED-TEAM`, 25.19 removed
+# `MS-CLEAN-REGEN` and 25.20 removed `MS-FRF-CLOSURE`, so one remains. Ordered as the plan orders
+# them.
 PENDING_COURTS: dict[str, str] = {
-    "MS-FRF-CLOSURE": "25.20 -- the FRF/Gemel closure",
     "MS-SEAL": "25.21 -- the memory-safety seal",
 }
 
@@ -2567,6 +2585,92 @@ def _ms_clean_regen_court(name: str) -> dict:
     }
 
 
+def _ms_frf_closure_court(name: str) -> dict:
+    """`MS-FRF-CLOSURE`: 25.20's court, the FRF/Gemel chain closure.
+
+    Stages no probe and runs no compiler. It reads the committed
+    `forensics/atlas/phase25/frf-closure.json` and re-runs the 25.20 pure checks
+    `ms_frf_closure.frf_closure_findings` and `ms_frf_closure.frf_closure_sensitivity_control` over
+    it and the committed evidence -- the Phase-25 contract table and the committed planes that are
+    each unit's evidence, the committed FRF registry (`gen_frf_courts.py`), the committed Gemel
+    projection (`forensics/GEMEL_TRAJECTORY.md`) and the committed `.frf` receipt/challenge/claim
+    store -- with no compiler, no tool, no probe; the derivation that produced the closure is
+    `ms_frf_closure.py --measure`, and this court only re-derives from what it wrote.
+
+    It establishes that every Phase-25 contract unit is joined to its committed evidence and its
+    committed generator, that no obligation or receipt is orphaned, that every residual is classified
+    and disposed from the closed vocabularies (with open residuals named rather than smoothed to a
+    zero), that the FRF chain staging and the Gemel checkpoint projection reproduce, and that the
+    record set, the counts and the whole closure equal their derivation. Six seeded mutations -- a
+    dropped record, an orphaned obligation, a join with no committed evidence, a typed count, a
+    closure claimed closed with an open residual and an undisposed residual -- are each caught with
+    specificity holding. It is an **instrument**: it passes while the closure records the chain
+    entry vacuous and the atlas carrying open residuals, so a passing closure is never read as a
+    chain that ran or as a closed atlas.
+    """
+    if not FRF_CLOSURE.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "plane-missing",
+                "problems": [f"the FRF/Gemel closure {rel(FRF_CLOSURE)} is absent"],
+                "findings": [], "control": {}}
+
+    body = ms_frf_closure._body(ms_frf_closure._load(FRF_CLOSURE))
+    evidence = ms_frf_closure.collect_evidence()
+    problems = ms_frf_closure.frf_closure_findings(body, evidence)
+    control = ms_frf_closure.frf_closure_sensitivity_control(body, evidence)
+
+    counts = body.get("counts") or {}
+    findings = list(body.get("property_findings") or [])
+    unresolved = list((body.get("residual_census") or {}).get("undisposed_sets") or {})
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed forensics/atlas/phase25/frf-closure.json and "
+            "re-runs the 25.20 pure checks (ms_frf_closure.frf_closure_findings and "
+            "ms_frf_closure.frf_closure_sensitivity_control) over it and the committed evidence -- "
+            "the Phase-25 contract table and the committed planes that are each unit's evidence, "
+            "the committed FRF registry gen_frf_courts.py, the committed Gemel projection "
+            "forensics/GEMEL_TRAJECTORY.md and the committed .frf receipt/challenge/claim store -- "
+            "without a compiler or a probe. The closure joins every Phase-25 contract unit to its "
+            "committed evidence and generator, joins each obligation to its court and each "
+            "receipt/challenge/claim to a declarable court, disposes every residual from the closed "
+            "vocabularies (naming the open ones) and records whether the stratum stages a "
+            "declarable court. No Phase-25 court is declarable (gen_frf_courts.py declares no "
+            "Phase-25 court and the tree stages no artifacts/phase25/probes/ pair), so the "
+            "FRF/Gemel chain entry is vacuous and the property is NOT_CLAIMED; six seeded "
+            "mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-"
+            "SUBPHASES.md section 2 and section 4)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the FRF/Gemel closure court reads the committed closure and re-derives only its pure "
+            "checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "records": counts.get("records", 0),
+            "records_joined": counts.get("records_joined", 0),
+            "records_pending": counts.get("records_pending", 0),
+            "records_orphaned": counts.get("records_orphaned", 0),
+            "obligations": counts.get("obligations", 0),
+            "obligations_orphaned": counts.get("obligations_orphaned", 0),
+            "receipts_required": counts.get("receipts_required", 0),
+            "receipts_orphaned": counts.get("receipts_orphaned", 0),
+            "residuals": counts.get("residuals", 0),
+            "residuals_open": counts.get("residuals_open", 0),
+            "residuals_undisposed": counts.get("residuals_undisposed", 0),
+            "chain_vacuous": bool(counts.get("chain_vacuous")),
+            "unresolved_planes": len(unresolved),
+        },
+        "property_status": body.get("property_status"),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -2697,11 +2801,18 @@ def main(argv: list[str]) -> int:
             "as still binding the current venue manifest as an input and as byte-reproducible on a "
             "second run, so the atlas is reproducible rather than assembled and a `PASS` that did "
             "not survive the regeneration is a finding rather than a silent replacement. "
+            "**25.20 registers `MS-FRF-CLOSURE`**, the FRF/Gemel chain closure: every Phase-25 "
+            "contract unit joined to its committed evidence and generator, every obligation and "
+            "receipt joined to a declared court with none orphaned, every residual classified and "
+            "disposed from the closed vocabularies, and the FRF chain staging and Gemel checkpoint "
+            "projection recorded -- so a passing atlas is not read as a chain that never ran. No "
+            "Phase-25 court is declarable, so the chain entry is vacuous and the property is "
+            "NOT_CLAIMED. "
             "Phase 25 owns "
             "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining two of its twenty-two courts -- "
-            "MS-FRF-CLOSURE and MS-SEAL -- are pending with the subphases that land them (25.20 "
-            "and 25.21). The stratum's record kinds are defined and self-tested in "
+            "remaining one of its twenty-two courts -- "
+            "MS-SEAL -- is pending with the subphase that lands it (25.21). The stratum's record "
+            "kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
             "obligation, the FFI boundary, the C adapter, the allocation site, the ownership edge, "
@@ -2800,6 +2911,8 @@ def main(argv: list[str]) -> int:
         InputRef(name="ms-red-team-tool", path=MS_RED_TEAM_TOOL),
         InputRef(name="regeneration", path=REGENERATION),
         InputRef(name="ms-regeneration-tool", path=MS_REGENERATION_TOOL),
+        InputRef(name="frf-closure", path=FRF_CLOSURE),
+        InputRef(name="ms-frf-closure-tool", path=MS_FRF_CLOSURE_TOOL),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
