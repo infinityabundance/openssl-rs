@@ -13,7 +13,7 @@
  * boundary, the walk order, the allocation-hook observations and the failure answer.
  *
  * Build (inside the court only):
- *   clang -std=c11 -O1 -I <authority>/include -o probe rt_sparse_array_probe.c \
+ *   clang -std=c11 -O1 -I <authority>/include -o probe rt_sparse_array_differential.c \
  *       -L <authority>/lib -lcrypto -Wl,-rpath,<authority>/lib -lpthread -ldl -lm
  *
  * SPDX-License-Identifier: Apache-2.0

@@ -67,9 +67,12 @@ fn main() -> ExitCode {
 }
 
 fn run() -> Result<(), String> {
-    // The one conditional-configuration name this build may set (Phase 23.7's compatibility
-    // selection). Declaring it keeps `unexpected_cfgs` from firing in the crate that reads it.
+    // The conditional-configuration names this crate may read. Phase 23.7's compatibility
+    // selection is set by this build; Phase 25.12's `kani` is set by the external Kani harness
+    // when it drives the proof targets. Declaring each keeps `unexpected_cfgs` from firing in
+    // the code that reads it.
     println!("cargo:rustc-check-cfg=cfg(openssl_rs_compat_facades)");
+    println!("cargo:rustc-check-cfg=cfg(kani)");
 
     let manifest_dir =
         PathBuf::from(env::var("CARGO_MANIFEST_DIR").map_err(|_| "CARGO_MANIFEST_DIR is not set")?);

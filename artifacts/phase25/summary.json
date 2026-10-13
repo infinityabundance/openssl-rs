@@ -76,7 +76,7 @@
       },
       {
         "artefact": "artifacts/phase25/source-census.json",
-        "artefact_sha256": "74ed38a50d5557184975865b18d313eeaec0accf683f846196815c11660bac20",
+        "artefact_sha256": "7991c43f59d4b52c297f81d017f813ad1de4bef68444287c5ea73b3cdf2ad127",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-SOURCE-CENSUS",
@@ -96,7 +96,7 @@
       },
       {
         "artefact": "artifacts/phase25/safety-obligations.json",
-        "artefact_sha256": "4a79e3d4bea8d969f7cfe65c867cf15afc40875a61a57a307f73b9d9f0135dfa",
+        "artefact_sha256": "45dc6830d191a8ac3fa59481ddc56b5e0b57662b53a16b7da2f23f5b8b3cbe6e",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-SAFETY-OBLIGATIONS",
@@ -106,7 +106,7 @@
       },
       {
         "artefact": "artifacts/phase25/ownership-planes.json",
-        "artefact_sha256": "68d2d8dfd1833f3a1a3e5fbb8a6e3c89fe4e613b60276fa687a4570c16f0efa3",
+        "artefact_sha256": "83074cdba20d7b5430ecab17a503522373ea729badbdf410470caad55a7cd80e",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-OWNERSHIP-PLANES",
@@ -116,7 +116,7 @@
       },
       {
         "artefact": "artifacts/phase25/phase22-crosswalk.json",
-        "artefact_sha256": "73f67eaf376d6e300a4b0f3952246cb38cec8670b6b01517a69ee2160edef28c",
+        "artefact_sha256": "824843747ff80be105072970049dfb2c1d80bf9376c57e255df991d0d312744e",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-PHASE22-CROSSWALK",
@@ -126,7 +126,7 @@
       },
       {
         "artefact": "artifacts/phase25/phase24-crosswalk.json",
-        "artefact_sha256": "b4601495dcfa9f9efda040b000cbf6d7596fed134ef2a53465afb636a0e33280",
+        "artefact_sha256": "5cb7c238a9b6eae4387ebee0b47fc0603a46bc6163e603cbe8c0b392104154ed",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-PHASE24-CROSSWALK",
@@ -136,7 +136,7 @@
       },
       {
         "artefact": "artifacts/phase25/exposure.json",
-        "artefact_sha256": "9fa125777b11ce266eaf7e88516ee222b63d62f34ad0a79f8579cb58799bcab0",
+        "artefact_sha256": "1530b933e1d5f3b74feaa7600a82466717a85ae7b2f51fa0bb81cf1cc8f87613",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-EXPOSURE-CLASSIFICATION",
@@ -146,7 +146,7 @@
       },
       {
         "artefact": "artifacts/phase25/unsafe-reduction.json",
-        "artefact_sha256": "24227ed018bb75cf7b4e755823ff7a2517d3aac5cc253f56c687063715586dfc",
+        "artefact_sha256": "5fdd637f34c61f4010dbc49294868e1c0769f31e64df2c8b6df754ebb510e32e",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-UNSAFE-REDUCTION",
@@ -196,7 +196,7 @@
       },
       {
         "artefact": "artifacts/phase25/phase18-fuzz-crosswalk.json",
-        "artefact_sha256": "dd4339d42ea12a05faf2a1746d69d1dcd8d567946dd891b221ae517a05eef2b4",
+        "artefact_sha256": "d703d62961dce08cbffebb83392a09b94ced38ec9bcdfb9516942e97e25383e2",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-PHASE18-FUZZ-CROSSWALK",
@@ -206,7 +206,7 @@
       },
       {
         "artefact": "artifacts/phase25/phase24-safety-coverage.json",
-        "artefact_sha256": "648cd14c91538907a9400b9d41276d0ccd0b937cd0c9dccd8dc1f252cfbebe92",
+        "artefact_sha256": "0114a07b4a75a466e4f7f19e56ae3124afbe68e203930c33c1751fa7f2da5ac0",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-PHASE24-SAFETY-COVERAGE",
@@ -216,7 +216,7 @@
       },
       {
         "artefact": "artifacts/phase25/historical-cves.json",
-        "artefact_sha256": "4958898921f9f1705ca2f0ecf637bb685a9bd05828b70ef92b0a8f7c726b33ed",
+        "artefact_sha256": "73ec5b7465647709822f695b847a4f8cd8d8825f17e87c04c4d05801916e5b2b",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-HISTORICAL-CVE",
@@ -236,7 +236,7 @@
       },
       {
         "artefact": "artifacts/phase25/mechanisms.json",
-        "artefact_sha256": "6a1083edc887c12a128dd0ad8400816440de54849db3f77b798ced6d2d62663f",
+        "artefact_sha256": "ae4c4f65bc5c1ec7a53e48238ed87bd771cadf78811c0a95063df06707f0f0dc",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-MECHANISM-RECONCILIATION",
@@ -246,7 +246,7 @@
       },
       {
         "artefact": "artifacts/phase25/red-team.json",
-        "artefact_sha256": "3686af86bf699c6771a216985c3ef56024b4fbad1881867e63e13544967a5b47",
+        "artefact_sha256": "390a35cca44c45c402493af8082e8c4142f9d69a5c23f75b9e5af4e572296cb1",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-RED-TEAM",
@@ -266,7 +266,7 @@
       },
       {
         "artefact": "forensics/atlas/phase25/frf-closure.json",
-        "artefact_sha256": "f7360e707ec7146abe524c0a7bdb43219742d59b3a447dbcdb1f546493d32632",
+        "artefact_sha256": "b40675b552ea1aa790ed3c4a789806248673644cd593d41fd6eaca05dbc3563d",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-FRF-CLOSURE",
@@ -1232,7 +1232,7 @@
     },
     "what_this_is": "Phase 25.21's memory-safety seal: the courts (the twenty-one landed Phase-25 courts, each re-derived from the committed planes and joined to its committed artefact and digest), the residual census (every residual classified and disposed, the open ones named), the bounded claim (stated verbatim), the withheld parity claim and the non-claims. It is an instrument plus an observation record, and it records passed=false because externally reachable unsafe sites carry tool state UNSUPPORTED; it is never read as 'the candidate is memory safe'."
   },
-  "body_hash": "c426bce01d58368442c367d0717e597a99f3a24676a725e8ae24a89dd05e2793",
+  "body_hash": "5e56885bd5507eaee03ab5a27b4e21463575bd4799b010197301c6501694b4c7",
   "generator": "forensics/tools/ms_seal.py",
   "inputs": [
     {
@@ -1268,7 +1268,7 @@
     {
       "name": "source-census",
       "path": "artifacts/phase25/source-census.json",
-      "sha256": "74ed38a50d5557184975865b18d313eeaec0accf683f846196815c11660bac20"
+      "sha256": "7991c43f59d4b52c297f81d017f813ad1de4bef68444287c5ea73b3cdf2ad127"
     },
     {
       "name": "non-rust-tcb",
@@ -1278,32 +1278,32 @@
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "4a79e3d4bea8d969f7cfe65c867cf15afc40875a61a57a307f73b9d9f0135dfa"
+      "sha256": "45dc6830d191a8ac3fa59481ddc56b5e0b57662b53a16b7da2f23f5b8b3cbe6e"
     },
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "68d2d8dfd1833f3a1a3e5fbb8a6e3c89fe4e613b60276fa687a4570c16f0efa3"
+      "sha256": "83074cdba20d7b5430ecab17a503522373ea729badbdf410470caad55a7cd80e"
     },
     {
       "name": "phase22-crosswalk",
       "path": "artifacts/phase25/phase22-crosswalk.json",
-      "sha256": "73f67eaf376d6e300a4b0f3952246cb38cec8670b6b01517a69ee2160edef28c"
+      "sha256": "824843747ff80be105072970049dfb2c1d80bf9376c57e255df991d0d312744e"
     },
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "b4601495dcfa9f9efda040b000cbf6d7596fed134ef2a53465afb636a0e33280"
+      "sha256": "5cb7c238a9b6eae4387ebee0b47fc0603a46bc6163e603cbe8c0b392104154ed"
     },
     {
       "name": "exposure-classification",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "9fa125777b11ce266eaf7e88516ee222b63d62f34ad0a79f8579cb58799bcab0"
+      "sha256": "1530b933e1d5f3b74feaa7600a82466717a85ae7b2f51fa0bb81cf1cc8f87613"
     },
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "24227ed018bb75cf7b4e755823ff7a2517d3aac5cc253f56c687063715586dfc"
+      "sha256": "5fdd637f34c61f4010dbc49294868e1c0769f31e64df2c8b6df754ebb510e32e"
     },
     {
       "name": "miri",
@@ -1328,17 +1328,17 @@
     {
       "name": "phase18-fuzz-crosswalk",
       "path": "artifacts/phase25/phase18-fuzz-crosswalk.json",
-      "sha256": "dd4339d42ea12a05faf2a1746d69d1dcd8d567946dd891b221ae517a05eef2b4"
+      "sha256": "d703d62961dce08cbffebb83392a09b94ced38ec9bcdfb9516942e97e25383e2"
     },
     {
       "name": "phase24-safety-coverage",
       "path": "artifacts/phase25/phase24-safety-coverage.json",
-      "sha256": "648cd14c91538907a9400b9d41276d0ccd0b937cd0c9dccd8dc1f252cfbebe92"
+      "sha256": "0114a07b4a75a466e4f7f19e56ae3124afbe68e203930c33c1751fa7f2da5ac0"
     },
     {
       "name": "historical-cve-census",
       "path": "artifacts/phase25/historical-cves.json",
-      "sha256": "4958898921f9f1705ca2f0ecf637bb685a9bd05828b70ef92b0a8f7c726b33ed"
+      "sha256": "73ec5b7465647709822f695b847a4f8cd8d8825f17e87c04c4d05801916e5b2b"
     },
     {
       "name": "cve-replay",
@@ -1348,12 +1348,12 @@
     {
       "name": "mechanism-reconciliation",
       "path": "artifacts/phase25/mechanisms.json",
-      "sha256": "6a1083edc887c12a128dd0ad8400816440de54849db3f77b798ced6d2d62663f"
+      "sha256": "ae4c4f65bc5c1ec7a53e48238ed87bd771cadf78811c0a95063df06707f0f0dc"
     },
     {
       "name": "red-team",
       "path": "artifacts/phase25/red-team.json",
-      "sha256": "3686af86bf699c6771a216985c3ef56024b4fbad1881867e63e13544967a5b47"
+      "sha256": "390a35cca44c45c402493af8082e8c4142f9d69a5c23f75b9e5af4e572296cb1"
     },
     {
       "name": "clean-regeneration",
@@ -1363,7 +1363,7 @@
     {
       "name": "frf-gemel-closure",
       "path": "forensics/atlas/phase25/frf-closure.json",
-      "sha256": "f7360e707ec7146abe524c0a7bdb43219742d59b3a447dbcdb1f546493d32632"
+      "sha256": "b40675b552ea1aa790ed3c4a789806248673644cd593d41fd6eaca05dbc3563d"
     }
   ],
   "kind": "phase25-summary",
