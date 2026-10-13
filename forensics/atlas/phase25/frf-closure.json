@@ -16,7 +16,7 @@
     },
     "claim": {
       "closed": false,
-      "open_residuals": 452,
+      "open_residuals": 450,
       "orphans": 0,
       "reason": "the closure is closed only when every record and obligation is joined with no orphan, every receipt the stratum owes is present, and no residual is open or undisposed. No Phase-25 court is declarable, so the FRF/Gemel chain entry is vacuous and the atlas carries open residuals: the closure records this rather than claiming it closed",
       "undisposed_residuals": 0
@@ -35,15 +35,15 @@
       "receipts_orphaned": 0,
       "receipts_required": 0,
       "records": 22,
-      "records_joined": 21,
+      "records_joined": 22,
       "records_orphaned": 0,
-      "records_pending": 1,
-      "residual_classes_outside_schema": 2,
+      "records_pending": 0,
+      "residual_classes_outside_schema": 1,
       "residual_crosscheck": 11,
-      "residual_records": 486,
-      "residuals": 497,
-      "residuals_disposed": 486,
-      "residuals_open": 452,
+      "residual_records": 484,
+      "residuals": 495,
+      "residuals_disposed": 484,
+      "residuals_open": 450,
       "residuals_undisposed": 0
     },
     "gemel": {
@@ -365,11 +365,11 @@
       }
     ],
     "property_findings": [
-      "the record set is 22 Phase-25 contract unit(s): 21 joined to their committed evidence and generator, 1 pending with the subphase that lands them and 0 orphaned",
+      "the record set is 22 Phase-25 contract unit(s): 22 joined to their committed evidence and generator, 0 pending with the subphase that lands them and 0 orphaned",
       "the FRF chain owes 0 receipt(s) and the stratum's 22 court obligation(s) join their committed evidence (22 joined, 0 owing a receipt, 0 orphaned), so no receipt/challenge/claim that names a Phase-25 court is orphaned",
-      "the residual census disposes 486 of 486 residual record(s) from the closed disposition vocabulary and records 11 light cross-check leftover(s); 452 residual(s) are open and 0 undisposed",
-      "2 residual(s) carry a class from a plane's own vocabulary rather than memory_safety_schemas.RESIDUAL_CLASSES (evidence_not_reproducible=2); each is recorded with its disposition rather than read as an undisposed leftover",
-      "the open residual(s) are named rather than smoothed to a zero (a bounded sample of 8 per plane; the full set is in the cited plane): clean-regeneration=2, cve-replay=4, exposure-classification=1, historical-cve-census=8, mechanism-reconciliation=4, phase18-fuzz-crosswalk=8, phase22-crosswalk=8, phase24-crosswalk=5, phase24-safety-coverage=8, red-team=2, tsan=1",
+      "the residual census disposes 484 of 484 residual record(s) from the closed disposition vocabulary and records 11 light cross-check leftover(s); 450 residual(s) are open and 0 undisposed",
+      "1 residual(s) carry a class from a plane's own vocabulary rather than memory_safety_schemas.RESIDUAL_CLASSES (evidence_not_reproducible=1); each is recorded with its disposition rather than read as an undisposed leftover",
+      "the open residual(s) are named rather than smoothed to a zero (a bounded sample of 8 per plane; the full set is in the cited plane): clean-regeneration=1, cve-replay=4, exposure-classification=1, historical-cve-census=8, mechanism-reconciliation=4, phase18-fuzz-crosswalk=8, phase22-crosswalk=8, phase24-crosswalk=5, phase24-safety-coverage=8, red-team=1, tsan=1",
       "a passing MS-FRF-CLOSURE is an instrument, not a property: the stratum's chain entry is vacuous (no Phase-25 court is declarable) and the atlas carries open residuals, so the closure records property_status NOT_CLAIMED rather than a chain that ran"
     ],
     "property_status": "NOT_CLAIMED",
@@ -396,7 +396,7 @@
       {
         "artefact": "artifacts/phase25/asan-msan.json",
         "artefact_present": true,
-        "artefact_sha256": "f263d4491efd95356f195eb8103b717161f92ff13e8ff77dc1032c817158d6b4",
+        "artefact_sha256": "868ef83bc308d47e64e4d1899409c2a88db13f2fbfbd2c9a45566b471eb4c999",
         "court": "MS-ASAN-MSMAN",
         "generator": "forensics/tools/ms_asan.py",
         "generator_present": true,
@@ -412,7 +412,7 @@
       {
         "artefact": "artifacts/phase25/regeneration.json",
         "artefact_present": true,
-        "artefact_sha256": "3787bb300d5dd341c6dcbfa36c1cea93da71c09cec6a60b5fcb078731a11b285",
+        "artefact_sha256": "c57e67ec9176f33fc1683b5092248a82da8598880f3d2188f16fba719bccbdda",
         "court": "MS-CLEAN-REGEN",
         "generator": "forensics/tools/ms_regeneration.py",
         "generator_present": true,
@@ -444,7 +444,7 @@
       {
         "artefact": "artifacts/phase25/cve-replay/index.json",
         "artefact_present": true,
-        "artefact_sha256": "a6060d1f4f3288d63282638b23381f3c669e771ee5ae1b9700d6e8c998ffbe30",
+        "artefact_sha256": "9d6f7fc6ad8f8262b63526c0b8a5379a369c2005f8dfff9e5f53245c8c84a624",
         "court": "MS-CVE-REPLAY",
         "generator": "forensics/tools/ms_cve_replay.py",
         "generator_present": true,
@@ -460,7 +460,7 @@
       {
         "artefact": "artifacts/phase25/exposure.json",
         "artefact_present": true,
-        "artefact_sha256": "255cd73158a850464c9b3c3901c9d60fc86dce8231816e6256933e97ed007808",
+        "artefact_sha256": "9fa125777b11ce266eaf7e88516ee222b63d62f34ad0a79f8579cb58799bcab0",
         "court": "MS-EXPOSURE-CLASSIFICATION",
         "generator": "forensics/tools/ms_exposure.py",
         "generator_present": true,
@@ -492,7 +492,7 @@
       {
         "artefact": "artifacts/phase25/historical-cves.json",
         "artefact_present": true,
-        "artefact_sha256": "4d8983d7b7be834ccdaf32fa10d2b8cb554d92bb236a4a93706d2ec445d928b5",
+        "artefact_sha256": "4958898921f9f1705ca2f0ecf637bb685a9bd05828b70ef92b0a8f7c726b33ed",
         "court": "MS-HISTORICAL-CVE",
         "generator": "forensics/tools/ms_historical_cve.py",
         "generator_present": true,
@@ -508,7 +508,7 @@
       {
         "artefact": "artifacts/phase25/kani.json",
         "artefact_present": true,
-        "artefact_sha256": "3b2cae847b24a5305d3fd091cfd69346ded04b5025cee39a26b1b1b079c1fee8",
+        "artefact_sha256": "f17ca6894d1159a7527e1b044b87f2df46accc744c1c69f3ef8771d9befa6e88",
         "court": "MS-KANI",
         "generator": "forensics/tools/ms_kani.py",
         "generator_present": true,
@@ -524,7 +524,7 @@
       {
         "artefact": "artifacts/phase25/mechanisms.json",
         "artefact_present": true,
-        "artefact_sha256": "d39ff491aa5dcb3e8c19c209c8af0776acd7610ca4972916c42c3b9c8e59f71b",
+        "artefact_sha256": "6a1083edc887c12a128dd0ad8400816440de54849db3f77b798ced6d2d62663f",
         "court": "MS-MECHANISM-RECONCILIATION",
         "generator": "forensics/tools/ms_mechanism_reconciliation.py",
         "generator_present": true,
@@ -539,14 +539,14 @@
       },
       {
         "artefact": "docs/PHASE-25-MEMORY-SAFETY-SEAL.md",
-        "artefact_present": false,
+        "artefact_present": true,
         "artefact_sha256": null,
         "court": "MS-SEAL",
-        "generator": null,
-        "generator_present": false,
-        "joined": false,
+        "generator": "forensics/tools/ms_seal.py",
+        "generator_present": true,
+        "joined": true,
         "orphan": false,
-        "pending": true,
+        "pending": false,
         "record_kinds": [
           "summary"
         ],
@@ -556,7 +556,7 @@
       {
         "artefact": "artifacts/phase25/miri.json",
         "artefact_present": true,
-        "artefact_sha256": "6337a14122dcdd4f5770f8b89b6d187eab6fb116dc30d8cd3c3b9afb398ab614",
+        "artefact_sha256": "740c26bb6ebe62a14b21e7e7677980c6a4849562ba7e547d12769ceef0511f12",
         "court": "MS-MIRI",
         "generator": "forensics/tools/ms_miri.py",
         "generator_present": true,
@@ -572,7 +572,7 @@
       {
         "artefact": "artifacts/phase25/non-rust-tcb.json",
         "artefact_present": true,
-        "artefact_sha256": "c68add12cf1636378fb2b9c18679d99f56146d2c119ee8d2b916555990dddcac",
+        "artefact_sha256": "672027f1411e5a749e9388df220477c386430df51e2016d85ee5f924ecb1e35a",
         "court": "MS-NON-RUST-TCB",
         "generator": "forensics/tools/ms_non_rust_tcb.py",
         "generator_present": true,
@@ -589,7 +589,7 @@
       {
         "artefact": "artifacts/phase25/ownership-planes.json",
         "artefact_present": true,
-        "artefact_sha256": "1b03ed0a27dff52a542c44f361ff1e2731e34ed5bdc4e51ff6eff90b01fdc8a1",
+        "artefact_sha256": "68d2d8dfd1833f3a1a3e5fbb8a6e3c89fe4e613b60276fa687a4570c16f0efa3",
         "court": "MS-OWNERSHIP-PLANES",
         "generator": "forensics/tools/ms_ownership_planes.py",
         "generator_present": true,
@@ -610,7 +610,7 @@
       {
         "artefact": "artifacts/phase25/phase18-fuzz-crosswalk.json",
         "artefact_present": true,
-        "artefact_sha256": "77efa5bca1e3df950394d52a5bd768a50d0c47f2a5705533bf4c966b9608a154",
+        "artefact_sha256": "dd4339d42ea12a05faf2a1746d69d1dcd8d567946dd891b221ae517a05eef2b4",
         "court": "MS-PHASE18-FUZZ-CROSSWALK",
         "generator": "forensics/tools/ms_phase18_fuzz_crosswalk.py",
         "generator_present": true,
@@ -626,7 +626,7 @@
       {
         "artefact": "artifacts/phase25/phase22-crosswalk.json",
         "artefact_present": true,
-        "artefact_sha256": "2737efe459db61a39fcedc0c0726cc64f12d95ac10b76137757e4d75a58f0159",
+        "artefact_sha256": "73f67eaf376d6e300a4b0f3952246cb38cec8670b6b01517a69ee2160edef28c",
         "court": "MS-PHASE22-CROSSWALK",
         "generator": "forensics/tools/ms_phase22_crosswalk.py",
         "generator_present": true,
@@ -642,7 +642,7 @@
       {
         "artefact": "artifacts/phase25/phase24-crosswalk.json",
         "artefact_present": true,
-        "artefact_sha256": "7450f864102f82689290522207694156df6fd38970b39d92bcaf313cc562c59c",
+        "artefact_sha256": "b4601495dcfa9f9efda040b000cbf6d7596fed134ef2a53465afb636a0e33280",
         "court": "MS-PHASE24-CROSSWALK",
         "generator": "forensics/tools/ms_phase24_crosswalk.py",
         "generator_present": true,
@@ -658,7 +658,7 @@
       {
         "artefact": "artifacts/phase25/phase24-safety-coverage.json",
         "artefact_present": true,
-        "artefact_sha256": "8e734f5d46472ee7f6151ebb1005b985cacac920a211a30394740d4e08cc168c",
+        "artefact_sha256": "648cd14c91538907a9400b9d41276d0ccd0b937cd0c9dccd8dc1f252cfbebe92",
         "court": "MS-PHASE24-SAFETY-COVERAGE",
         "generator": "forensics/tools/ms_phase24_safety_coverage.py",
         "generator_present": true,
@@ -674,7 +674,7 @@
       {
         "artefact": "artifacts/phase25/red-team.json",
         "artefact_present": true,
-        "artefact_sha256": "1f03e2666bf488bf0aadd288dea341db8f0617e530f22e5bd5384e7a20620458",
+        "artefact_sha256": "3686af86bf699c6771a216985c3ef56024b4fbad1881867e63e13544967a5b47",
         "court": "MS-RED-TEAM",
         "generator": "forensics/tools/ms_red_team.py",
         "generator_present": true,
@@ -690,7 +690,7 @@
       {
         "artefact": "artifacts/phase25/safety-obligations.json",
         "artefact_present": true,
-        "artefact_sha256": "8f42a89a93d8e88c777f37cd533167dbc9ad481425f2144ead0bc086d50d2ffd",
+        "artefact_sha256": "4a79e3d4bea8d969f7cfe65c867cf15afc40875a61a57a307f73b9d9f0135dfa",
         "court": "MS-SAFETY-OBLIGATIONS",
         "generator": "forensics/tools/ms_obligations.py",
         "generator_present": true,
@@ -706,7 +706,7 @@
       {
         "artefact": "artifacts/phase25/source-census.json",
         "artefact_present": true,
-        "artefact_sha256": "0983e70336412a9ec21477d25b79d482d64e092da62a1391c57a9daddeef6709",
+        "artefact_sha256": "74ed38a50d5557184975865b18d313eeaec0accf683f846196815c11660bac20",
         "court": "MS-SOURCE-CENSUS",
         "generator": "forensics/tools/ms_census.py",
         "generator_present": true,
@@ -724,7 +724,7 @@
       {
         "artefact": "artifacts/phase25/tsan.json",
         "artefact_present": true,
-        "artefact_sha256": "ff67b40b98f2b4cd124f7ef5f56fbb223fad63d4f7429233911cc7595cb481df",
+        "artefact_sha256": "fe07ca7e362781fbd04307059b1e4f0af8f5f09ee94501a4f5386e6b62966f96",
         "court": "MS-TSAN",
         "generator": "forensics/tools/ms_tsan.py",
         "generator_present": true,
@@ -740,7 +740,7 @@
       {
         "artefact": "artifacts/phase25/unsafe-reduction.json",
         "artefact_present": true,
-        "artefact_sha256": "eb6951724b427127fac660b702e01df0bcc01b2e70143232ef531ed2e01aa205",
+        "artefact_sha256": "24227ed018bb75cf7b4e755823ff7a2517d3aac5cc253f56c687063715586dfc",
         "court": "MS-UNSAFE-REDUCTION",
         "generator": "forensics/tools/ms_reduction.py",
         "generator_present": true,
@@ -757,18 +757,18 @@
     "residual_census": {
       "by_class": {
         "evidence_missing": 390,
-        "evidence_not_reproducible": 2,
+        "evidence_not_reproducible": 1,
         "historical_cve_unreplayed": 4,
         "join_evidence_missing": 65,
         "mechanism_unreconciled": 4,
         "out_of_scope": 20,
         "tool_not_reachable": 4,
         "tool_unsupported": 6,
-        "unexplained_reachable_unsafe": 2
+        "unexplained_reachable_unsafe": 1
       },
       "by_disposition": {
         "classified": 1,
-        "open": 452,
+        "open": 450,
         "preserved": 33
       },
       "by_plane": {
@@ -788,15 +788,15 @@
         },
         "clean-regeneration": {
           "by_class": {
-            "evidence_not_reproducible": 2
+            "evidence_not_reproducible": 1
           },
           "by_disposition": {
-            "open": 2
+            "open": 1
           },
           "crosscheck": 0,
-          "open": 2,
-          "records": 2,
-          "total": 2
+          "open": 1,
+          "records": 1,
+          "total": 1
         },
         "cve-replay": {
           "by_class": {
@@ -953,16 +953,15 @@
         },
         "red-team": {
           "by_class": {
-            "evidence_missing": 1,
-            "unexplained_reachable_unsafe": 1
+            "evidence_missing": 1
           },
           "by_disposition": {
-            "open": 2
+            "open": 1
           },
           "crosscheck": 0,
-          "open": 2,
-          "records": 2,
-          "total": 2
+          "open": 1,
+          "records": 1,
+          "total": 1
         },
         "source-census": {
           "by_class": {
@@ -1004,15 +1003,14 @@
         }
       },
       "classes_outside_schema": {
-        "evidence_not_reproducible": 2
+        "evidence_not_reproducible": 1
       },
       "crosscheck": 11,
-      "disposed": 486,
-      "open": 452,
+      "disposed": 484,
+      "open": 450,
       "open_sample": {
         "clean-regeneration": [
-          "res-regen-4-drift",
-          "res-regen-5-drift"
+          "res-regen-4-drift"
         ],
         "cve-replay": [
           "residual-CVE-2023-0286",
@@ -1077,23 +1075,22 @@
           "rx:a8ae19c7095ac9c4"
         ],
         "red-team": [
-          "rt-res-rt-fuzz-unpreserved-failure",
           "rt-res-rt-phase22-unwitnessed-external"
         ],
         "tsan": [
           "res-tsan-default-libctx-race"
         ]
       },
-      "records": 486,
+      "records": 484,
       "sample_bound": 8,
-      "total": 497,
+      "total": 495,
       "undisposed": 0,
       "undisposed_sets": {}
     },
     "sort_key": "records by unit; obligations by unit; receipts/challenges/claims by court id; residual_census planes/by_class/by_disposition by key with every list sorted; chain.declared_courts and chain.probe_pairs sorted; gemel so the current checkpoint and the naming sets are derived from the committed projection; every list sorted",
     "what_this_is": "Phase 25.20's FRF/Gemel closure: the record set (every Phase-25 contract unit joined to its committed evidence and its committed generator), the obligation and receipt joins (no unit and no receipt orphaned), the residual census (every residual classified and disposed, the open ones named), the FRF chain staging (why no Phase-25 court is declarable, and the harness challenge that stands in its place) and the Gemel checkpoint projection (the state of the committed forensics/GEMEL_TRAJECTORY.md, never the store). It is an instrument plus an observation record, not a claim that the stratum has a declarable court."
   },
-  "body_hash": "737b0cd27c225f2f1c6429e07743a3be7e93823c714c944e3a24ea0f04b2c781",
+  "body_hash": "1e99582ecaadf41bb513d70dc2a080116eba326ed06f3e8387174f3f1337f9f9",
   "generator": "forensics/tools/ms_frf_closure.py",
   "inputs": [
     {
@@ -1114,12 +1111,12 @@
     {
       "name": "phase25-container-manifest",
       "path": "forensics/memory-safety/container.json",
-      "sha256": "461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3"
+      "sha256": "8812838c85cb47bf8c2f1edc3c0c4ddeb0e5a7fe1ef8e6ff6cae83a02bb2bb54"
     },
     {
       "name": "ms-frf-closure-tool",
       "path": "forensics/tools/ms_frf_closure.py",
-      "sha256": "65e1c207cb288c4ee342fa990daa182372af1d178ebb5ab807fad0e699b5de5f"
+      "sha256": "2ab1c904fdc0ed6625482b8d407e99efc919787a8ac094d2f028f90f7eee60ad"
     },
     {
       "name": "frf-registry",
@@ -1134,97 +1131,97 @@
     {
       "name": "source-census",
       "path": "artifacts/phase25/source-census.json",
-      "sha256": "0983e70336412a9ec21477d25b79d482d64e092da62a1391c57a9daddeef6709"
+      "sha256": "74ed38a50d5557184975865b18d313eeaec0accf683f846196815c11660bac20"
     },
     {
       "name": "non-rust-tcb",
       "path": "artifacts/phase25/non-rust-tcb.json",
-      "sha256": "c68add12cf1636378fb2b9c18679d99f56146d2c119ee8d2b916555990dddcac"
+      "sha256": "672027f1411e5a749e9388df220477c386430df51e2016d85ee5f924ecb1e35a"
     },
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "8f42a89a93d8e88c777f37cd533167dbc9ad481425f2144ead0bc086d50d2ffd"
+      "sha256": "4a79e3d4bea8d969f7cfe65c867cf15afc40875a61a57a307f73b9d9f0135dfa"
     },
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "1b03ed0a27dff52a542c44f361ff1e2731e34ed5bdc4e51ff6eff90b01fdc8a1"
+      "sha256": "68d2d8dfd1833f3a1a3e5fbb8a6e3c89fe4e613b60276fa687a4570c16f0efa3"
     },
     {
       "name": "phase22-crosswalk",
       "path": "artifacts/phase25/phase22-crosswalk.json",
-      "sha256": "2737efe459db61a39fcedc0c0726cc64f12d95ac10b76137757e4d75a58f0159"
+      "sha256": "73f67eaf376d6e300a4b0f3952246cb38cec8670b6b01517a69ee2160edef28c"
     },
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "7450f864102f82689290522207694156df6fd38970b39d92bcaf313cc562c59c"
+      "sha256": "b4601495dcfa9f9efda040b000cbf6d7596fed134ef2a53465afb636a0e33280"
     },
     {
       "name": "exposure-classification",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "255cd73158a850464c9b3c3901c9d60fc86dce8231816e6256933e97ed007808"
+      "sha256": "9fa125777b11ce266eaf7e88516ee222b63d62f34ad0a79f8579cb58799bcab0"
     },
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "eb6951724b427127fac660b702e01df0bcc01b2e70143232ef531ed2e01aa205"
+      "sha256": "24227ed018bb75cf7b4e755823ff7a2517d3aac5cc253f56c687063715586dfc"
     },
     {
       "name": "miri",
       "path": "artifacts/phase25/miri.json",
-      "sha256": "6337a14122dcdd4f5770f8b89b6d187eab6fb116dc30d8cd3c3b9afb398ab614"
+      "sha256": "740c26bb6ebe62a14b21e7e7677980c6a4849562ba7e547d12769ceef0511f12"
     },
     {
       "name": "asan-msan",
       "path": "artifacts/phase25/asan-msan.json",
-      "sha256": "f263d4491efd95356f195eb8103b717161f92ff13e8ff77dc1032c817158d6b4"
+      "sha256": "868ef83bc308d47e64e4d1899409c2a88db13f2fbfbd2c9a45566b471eb4c999"
     },
     {
       "name": "tsan",
       "path": "artifacts/phase25/tsan.json",
-      "sha256": "ff67b40b98f2b4cd124f7ef5f56fbb223fad63d4f7429233911cc7595cb481df"
+      "sha256": "fe07ca7e362781fbd04307059b1e4f0af8f5f09ee94501a4f5386e6b62966f96"
     },
     {
       "name": "kani",
       "path": "artifacts/phase25/kani.json",
-      "sha256": "3b2cae847b24a5305d3fd091cfd69346ded04b5025cee39a26b1b1b079c1fee8"
+      "sha256": "f17ca6894d1159a7527e1b044b87f2df46accc744c1c69f3ef8771d9befa6e88"
     },
     {
       "name": "phase18-fuzz-crosswalk",
       "path": "artifacts/phase25/phase18-fuzz-crosswalk.json",
-      "sha256": "77efa5bca1e3df950394d52a5bd768a50d0c47f2a5705533bf4c966b9608a154"
+      "sha256": "dd4339d42ea12a05faf2a1746d69d1dcd8d567946dd891b221ae517a05eef2b4"
     },
     {
       "name": "phase24-safety-coverage",
       "path": "artifacts/phase25/phase24-safety-coverage.json",
-      "sha256": "8e734f5d46472ee7f6151ebb1005b985cacac920a211a30394740d4e08cc168c"
+      "sha256": "648cd14c91538907a9400b9d41276d0ccd0b937cd0c9dccd8dc1f252cfbebe92"
     },
     {
       "name": "historical-cve-census",
       "path": "artifacts/phase25/historical-cves.json",
-      "sha256": "4d8983d7b7be834ccdaf32fa10d2b8cb554d92bb236a4a93706d2ec445d928b5"
+      "sha256": "4958898921f9f1705ca2f0ecf637bb685a9bd05828b70ef92b0a8f7c726b33ed"
     },
     {
       "name": "cve-replay",
       "path": "artifacts/phase25/cve-replay/index.json",
-      "sha256": "a6060d1f4f3288d63282638b23381f3c669e771ee5ae1b9700d6e8c998ffbe30"
+      "sha256": "9d6f7fc6ad8f8262b63526c0b8a5379a369c2005f8dfff9e5f53245c8c84a624"
     },
     {
       "name": "mechanism-reconciliation",
       "path": "artifacts/phase25/mechanisms.json",
-      "sha256": "d39ff491aa5dcb3e8c19c209c8af0776acd7610ca4972916c42c3b9c8e59f71b"
+      "sha256": "6a1083edc887c12a128dd0ad8400816440de54849db3f77b798ced6d2d62663f"
     },
     {
       "name": "red-team",
       "path": "artifacts/phase25/red-team.json",
-      "sha256": "1f03e2666bf488bf0aadd288dea341db8f0617e530f22e5bd5384e7a20620458"
+      "sha256": "3686af86bf699c6771a216985c3ef56024b4fbad1881867e63e13544967a5b47"
     },
     {
       "name": "clean-regeneration",
       "path": "artifacts/phase25/regeneration.json",
-      "sha256": "3787bb300d5dd341c6dcbfa36c1cea93da71c09cec6a60b5fcb078731a11b285"
+      "sha256": "c57e67ec9176f33fc1683b5092248a82da8598880f3d2188f16fba719bccbdda"
     },
     {
       "name": "tool:asan-msan",
@@ -1239,7 +1236,7 @@
     {
       "name": "tool:constitution",
       "path": "forensics/tools/phase25_courts.py",
-      "sha256": "e24cff6b8e394eb1fedb9c7a98d2dee8aa3a2a7335a272957ea72185807f7217"
+      "sha256": "c732464729ded9212cc09f6bf5e9a0898cc138a7151b1bf572b69ebf055bfb2f"
     },
     {
       "name": "tool:cve-replay",
@@ -1265,6 +1262,11 @@
       "name": "tool:mechanism-reconciliation",
       "path": "forensics/tools/ms_mechanism_reconciliation.py",
       "sha256": "ed9a3df73b4ee7bb386341c2614ca95d387da36e4b88130e1162c15afd86cd12"
+    },
+    {
+      "name": "tool:memory-safety-seal",
+      "path": "forensics/tools/ms_seal.py",
+      "sha256": "96d94563f78cc168cf4cd314cb6270533a234cf1ecffc8c454822d9a8839aa8f"
     },
     {
       "name": "tool:miri",

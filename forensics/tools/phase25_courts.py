@@ -104,8 +104,9 @@ The twenty-two courts, and the subphase that lands each
   * `MS-FRF-CLOSURE` -- 25.20, the FRF/Gemel closure.
   * `MS-SEAL` -- 25.21, the seal.
 
-Every one is `pending` at activation and each becomes a registered, re-derivable court as the
-subphase that lands its instrument commits. A passing court is an instrument, not a property claim,
+Every one was `pending` at activation and all twenty-two are now registered, re-derivable courts:
+25.0 through 25.21 each landed its court in the commit that landed its instrument, and
+`PENDING_COURTS` is empty. A passing court is an instrument, not a property claim,
 and this stratum makes no claim beyond its bounded one: safe Rust does not prove protocol
 correctness, unsafe Rust is not inherently vulnerable, unsafe LOC is not a vulnerability count,
 Miri/ASan/TSan are not exhaustive, Kani does not prove unsupported or concurrent whole-program
@@ -485,6 +486,18 @@ FRF_CLOSURE = REPO_ROOT / "forensics" / "atlas" / "phase25" / "frf-closure.json"
 MS_FRF_CLOSURE_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_frf_closure.py"
 FRF_CLOSURE_COURT = "MS-FRF-CLOSURE"
 
+# 25.21's memory-safety seal and the pure tool that derives it. The plan's artefact is
+# `artifacts/phase25/summary.json` (the seal-class closure record, kind `summary`), and the seal
+# document `docs/PHASE-25-MEMORY-SAFETY-SEAL.md` is generated from the same derivation. The seal is a
+# pure derivation: it re-runs each landed court's own handler over the committed planes and
+# derives the bounded claim, the residual census, the withheld parity claim and the non-claims, so
+# the court re-runs only the tool's pure checks over the committed artefact and the committed
+# evidence.
+SUMMARY = REPO_ROOT / "artifacts" / "phase25" / "summary.json"
+MS_SEAL_TOOL = REPO_ROOT / "forensics" / "tools" / "ms_seal.py"
+SEAL_DOC = REPO_ROOT / "docs" / "PHASE-25-MEMORY-SAFETY-SEAL.md"
+SEAL_COURT = "MS-SEAL"
+
 # 25.0's constitution court and the constitution artefacts it re-derives.
 CONSTITUTION_COURT = "MS-CONSTITUTION"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
@@ -525,6 +538,7 @@ COURTS: list[tuple[str, str]] = [
     (RED_TEAM_COURT, "_ms_red_team_court"),
     (CLEAN_REGEN_COURT, "_ms_clean_regen_court"),
     (FRF_CLOSURE_COURT, "_ms_frf_closure_court"),
+    (SEAL_COURT, "_ms_seal_court"),
 ]
 
 # The remaining courts the plan names, each pending with the subphase that lands it. 25.1 removed
@@ -535,11 +549,9 @@ COURTS: list[tuple[str, str]] = [
 # `MS-TSAN`, 25.12 removed `MS-KANI`, 25.13 removed `MS-PHASE18-FUZZ-CROSSWALK`, 25.14 removed
 # `MS-PHASE24-SAFETY-COVERAGE`, 25.15 removed `MS-HISTORICAL-CVE`, 25.16 removed `MS-CVE-REPLAY`,
 # 25.17 removed `MS-MECHANISM-RECONCILIATION`, 25.18 removed `MS-RED-TEAM`, 25.19 removed
-# `MS-CLEAN-REGEN` and 25.20 removed `MS-FRF-CLOSURE`, so one remains. Ordered as the plan orders
-# them.
-PENDING_COURTS: dict[str, str] = {
-    "MS-SEAL": "25.21 -- the memory-safety seal",
-}
+# `MS-CLEAN-REGEN`, 25.20 removed `MS-FRF-CLOSURE` and 25.21 removed `MS-SEAL`, so none remains and
+# all twenty-two contract units are registered.
+PENDING_COURTS: dict[str, str] = {}
 
 
 def _plan_units(plan_text: str) -> list[tuple[int, str]]:
@@ -2671,6 +2683,87 @@ def _ms_frf_closure_court(name: str) -> dict:
     }
 
 
+def _ms_seal_court(name: str) -> dict:
+    """`MS-SEAL`: 25.21's court, the memory-safety seal.
+
+    Stages no probe and runs no compiler. It reads the committed `artifacts/phase25/summary.json`
+    (the seal-class closure record, kind `summary`) and re-runs the 25.21 pure checks
+    `ms_seal.seal_findings` and `ms_seal.seal_sensitivity_control` over it and the committed
+    evidence -- the committed planes and the twenty-one landed courts re-derived by running each
+    court's own handler, never `artifacts/phase25/COURTS.json` (which this runner writes) -- with no
+    compiler, no tool, no probe; the derivation that produced the seal is `ms_seal.py --measure`,
+    and this court only re-derives from what it wrote.
+
+    It establishes that every landed court's result is present and equal to its re-derivation, that
+    the residual census is the derived census (a dropped residual is a finding), that the bounded
+    claim is the plan's claim and carries no overclaim, that `PARITY_VERIFIED` is withheld, that no
+    non-claim has been dropped, and that the counts, the claim, `passed` and the property status
+    equal their derivation. Six seeded mutations -- a dropped court result, a dropped residual, a
+    claim of completeness, a granted parity, a typed count and a removed non-claim -- are each
+    caught with specificity holding. It is an **instrument**: it passes while the seal records the
+    open residuals and `passed=false` (externally reachable sites carry tool state `UNSUPPORTED`),
+    so a passing seal is never read as "the candidate is memory safe".
+    """
+    if not SUMMARY.is_file():
+        return {"court": name, "probe": "", "verdict": "fail", "stage": "plane-missing",
+                "problems": [f"the memory-safety seal {rel(SUMMARY)} is absent"],
+                "findings": [], "control": {}}
+
+    # Imported lazily: `ms_seal` imports this module lazily to re-run the landed court handlers, so
+    # the two modules stay acyclic at load time.
+    import ms_seal  # noqa: E402
+
+    body = ms_seal._body(ms_seal._load(SUMMARY))
+    evidence = ms_seal.collect_evidence()
+    problems = ms_seal.seal_findings(body, evidence)
+    control = ms_seal.seal_sensitivity_control(body, evidence)
+
+    counts = body.get("counts") or {}
+    findings = list(body.get("property_findings") or [])
+    verdict = "pass" if (not problems and control.get("honest")
+                         and control.get("specificity_holds")) else "fail"
+    return {
+        "court": name,
+        "probe": "",
+        "method": (
+            "stages no probe: it reads the committed artifacts/phase25/summary.json and re-runs the "
+            "25.21 pure checks (ms_seal.seal_findings and ms_seal.seal_sensitivity_control) over it "
+            "and the committed evidence -- the committed planes and the twenty-one landed courts "
+            "re-derived by running each court's own handler -- without a compiler or a probe. The "
+            "seal summarises every landed Phase-25 court (a dropped court result is a finding), "
+            "publishes the residual census over every plane (a dropped residual is a finding), "
+            "states the plan's bounded claim with no overclaim, withholds PARITY_VERIFIED and "
+            "records the non-claims; it carries passed=false because externally reachable unsafe "
+            "sites carry tool state UNSUPPORTED, so a passing seal is an instrument, not 'the "
+            "candidate is memory safe'. Six seeded mutations are each caught with specificity "
+            "holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 0, 2, 3 and 4)."
+        ),
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "the memory-safety seal court reads the committed seal and re-derives only its pure "
+            "checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration"
+        ),
+        "counts": {
+            "courts": counts.get("courts", 0),
+            "courts_pass": counts.get("courts_pass", 0),
+            "courts_fail": counts.get("courts_fail", 0),
+            "unsafe_sites": counts.get("unsafe_sites", 0),
+            "externally_reachable": counts.get("externally_reachable", 0),
+            "externally_reachable_unsupported": counts.get("externally_reachable_unsupported", 0),
+            "residuals": counts.get("residual_total", 0),
+            "residuals_open": counts.get("residual_open", 0),
+            "residuals_undisposed": counts.get("residual_undisposed", 0),
+            "parity_status": (body.get("parity") or {}).get("status"),
+            "passed": body.get("passed"),
+        },
+        "property_status": body.get("property_status"),
+        "findings": findings,
+        "control": control,
+        "problems": problems,
+        "verdict": verdict,
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -2808,10 +2901,15 @@ def main(argv: list[str]) -> int:
             "projection recorded -- so a passing atlas is not read as a chain that never ran. No "
             "Phase-25 court is declarable, so the chain entry is vacuous and the property is "
             "NOT_CLAIMED. "
-            "Phase 25 owns "
-            "no exported symbol, so no differential probe over a symbol set is its evidence; the "
-            "remaining one of its twenty-two courts -- "
-            "MS-SEAL -- is pending with the subphase that lands it (25.21). The stratum's record "
+            "**25.21 registers `MS-SEAL`**, the memory-safety seal: every landed Phase-25 court's "
+            "result re-derived and joined to its committed artefact and digest, the residual census "
+            "published with every residual classified and disposed and the open ones named, the "
+            "plan's bounded claim stated with no overclaim, PARITY_VERIFIED withheld and the "
+            "non-claims recorded -- so a passing seal is an instrument plus an observation record, "
+            "never 'the candidate is memory safe'. Phase 25 owns "
+            "no exported symbol, so no differential probe over a symbol set is its evidence; all "
+            "twenty-two of its courts -- `MS-SEAL` is the last -- are registered and passing. The "
+            "stratum's record "
             "kinds are defined and self-tested in "
             "forensics/tools/memory_safety_schemas.py, whose inventory this registry records: the "
             "source-census row, the compiler-derived unsafe site, the unsafe context, the safety "
@@ -2913,6 +3011,13 @@ def main(argv: list[str]) -> int:
         InputRef(name="ms-regeneration-tool", path=MS_REGENERATION_TOOL),
         InputRef(name="frf-closure", path=FRF_CLOSURE),
         InputRef(name="ms-frf-closure-tool", path=MS_FRF_CLOSURE_TOOL),
+        # The seal's own artefacts (`artifacts/phase25/summary.json` and the generated
+        # `docs/PHASE-25-MEMORY-SAFETY-SEAL.md`) are deliberately **not** bound. summary.json embeds
+        # the obligation ledger's digest, the ledger embeds this registry's digest and the seal
+        # court reads summary.json, so binding the seal artefacts back would form a digest cycle
+        # (summary -> ledger -> COURTS.json -> summary) neither artefact could reproduce -- the same
+        # reason the FRF/Gemel closure neither binds COURTS.json nor hashes the seal document.
+        InputRef(name="ms-seal-tool", path=MS_SEAL_TOOL),
     ]
     doc = envelope(kind="phase25-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

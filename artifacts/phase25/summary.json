@@ -1,0 +1,1371 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "bounded_claim": "the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface; unsafe operations are mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, with no unexplained reachable unsafe site in the claimed profile",
+    "candidate_identity": "openssl-rs 0.0.27 (reconstructing openssl-3.6.4-production)",
+    "claim": {
+      "complete": false,
+      "reason": "the seal records a complete closure only when every court passes and no residual is open or undisposed and no externally reachable site is UNSUPPORTED. The atlas carries 450 open residual(s), 0 undisposed residual(s) and 183 externally reachable UNSUPPORTED site(s), so the closure is not complete and the bounded claim is recorded rather than a stronger one"
+    },
+    "counts": {
+      "courts": 21,
+      "courts_fail": 0,
+      "courts_pass": 21,
+      "externally_reachable": 154323,
+      "externally_reachable_fail": 5,
+      "externally_reachable_unsupported": 183,
+      "first_party_files": 874,
+      "geiger_status": "unavailable",
+      "ledger": {
+        "contract_units": 22,
+        "implemented": 22,
+        "open_in_this_stratum": 0,
+        "owned": 22
+      },
+      "mechanisms_eliminated": 3,
+      "mechanisms_hidden": 3,
+      "mechanisms_unresolved": 1,
+      "parity_status": "WITHHELD",
+      "passed": false,
+      "reachable_sample": 64,
+      "red_team_found_gap": 0,
+      "red_team_inconclusive": 1,
+      "residual_crosscheck": 11,
+      "residual_disposed": 484,
+      "residual_open": 450,
+      "residual_records": 484,
+      "residual_total": 495,
+      "residual_undisposed": 0,
+      "residuals_by_class": {
+        "evidence_missing": 390,
+        "evidence_not_reproducible": 1,
+        "historical_cve_unreplayed": 4,
+        "join_evidence_missing": 65,
+        "mechanism_unreconciled": 4,
+        "out_of_scope": 20,
+        "tool_not_reachable": 4,
+        "tool_unsupported": 6,
+        "unexplained_reachable_unsafe": 1
+      },
+      "residuals_by_disposition": {
+        "classified": 1,
+        "open": 450,
+        "preserved": 33
+      },
+      "sites_by_tool_state": {
+        "FAIL": 5,
+        "NOT_REACHABLE": 92984,
+        "PASS": 78898,
+        "UNSUPPORTED": 183
+      },
+      "sites_unknown_reachability": 17747,
+      "unknown_cves": 4,
+      "unsafe_contexts": 64347,
+      "unsafe_sites": 172070
+    },
+    "courts": [
+      {
+        "artefact": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
+        "artefact_sha256": "1b80484986e7a4cc3646ac88ced5ebecc7040a1ceaba1550a4cd628f4e5bfb02",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-CONSTITUTION",
+        "findings": 0,
+        "unit": "constitution",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/source-census.json",
+        "artefact_sha256": "74ed38a50d5557184975865b18d313eeaec0accf683f846196815c11660bac20",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-SOURCE-CENSUS",
+        "findings": 3,
+        "unit": "source-census",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/non-rust-tcb.json",
+        "artefact_sha256": "672027f1411e5a749e9388df220477c386430df51e2016d85ee5f924ecb1e35a",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-NON-RUST-TCB",
+        "findings": 3,
+        "unit": "non-rust-tcb",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/safety-obligations.json",
+        "artefact_sha256": "4a79e3d4bea8d969f7cfe65c867cf15afc40875a61a57a307f73b9d9f0135dfa",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-SAFETY-OBLIGATIONS",
+        "findings": 3,
+        "unit": "safety-obligations",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/ownership-planes.json",
+        "artefact_sha256": "68d2d8dfd1833f3a1a3e5fbb8a6e3c89fe4e613b60276fa687a4570c16f0efa3",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-OWNERSHIP-PLANES",
+        "findings": 8,
+        "unit": "ownership-planes",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/phase22-crosswalk.json",
+        "artefact_sha256": "73f67eaf376d6e300a4b0f3952246cb38cec8670b6b01517a69ee2160edef28c",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-PHASE22-CROSSWALK",
+        "findings": 4,
+        "unit": "phase22-crosswalk",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/phase24-crosswalk.json",
+        "artefact_sha256": "b4601495dcfa9f9efda040b000cbf6d7596fed134ef2a53465afb636a0e33280",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-PHASE24-CROSSWALK",
+        "findings": 5,
+        "unit": "phase24-crosswalk",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/exposure.json",
+        "artefact_sha256": "9fa125777b11ce266eaf7e88516ee222b63d62f34ad0a79f8579cb58799bcab0",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-EXPOSURE-CLASSIFICATION",
+        "findings": 5,
+        "unit": "exposure-classification",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/unsafe-reduction.json",
+        "artefact_sha256": "24227ed018bb75cf7b4e755823ff7a2517d3aac5cc253f56c687063715586dfc",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-UNSAFE-REDUCTION",
+        "findings": 3,
+        "unit": "unsafe-reduction",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/miri.json",
+        "artefact_sha256": "740c26bb6ebe62a14b21e7e7677980c6a4849562ba7e547d12769ceef0511f12",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-MIRI",
+        "findings": 4,
+        "unit": "miri",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/asan-msan.json",
+        "artefact_sha256": "868ef83bc308d47e64e4d1899409c2a88db13f2fbfbd2c9a45566b471eb4c999",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-ASAN-MSMAN",
+        "findings": 0,
+        "unit": "asan-msan",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/tsan.json",
+        "artefact_sha256": "fe07ca7e362781fbd04307059b1e4f0af8f5f09ee94501a4f5386e6b62966f96",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-TSAN",
+        "findings": 1,
+        "unit": "tsan",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/kani.json",
+        "artefact_sha256": "f17ca6894d1159a7527e1b044b87f2df46accc744c1c69f3ef8771d9befa6e88",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-KANI",
+        "findings": 0,
+        "unit": "kani",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/phase18-fuzz-crosswalk.json",
+        "artefact_sha256": "dd4339d42ea12a05faf2a1746d69d1dcd8d567946dd891b221ae517a05eef2b4",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-PHASE18-FUZZ-CROSSWALK",
+        "findings": 5,
+        "unit": "phase18-fuzz-crosswalk",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/phase24-safety-coverage.json",
+        "artefact_sha256": "648cd14c91538907a9400b9d41276d0ccd0b937cd0c9dccd8dc1f252cfbebe92",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-PHASE24-SAFETY-COVERAGE",
+        "findings": 5,
+        "unit": "phase24-safety-coverage",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/historical-cves.json",
+        "artefact_sha256": "4958898921f9f1705ca2f0ecf637bb685a9bd05828b70ef92b0a8f7c726b33ed",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-HISTORICAL-CVE",
+        "findings": 5,
+        "unit": "historical-cve-census",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/cve-replay/index.json",
+        "artefact_sha256": "9d6f7fc6ad8f8262b63526c0b8a5379a369c2005f8dfff9e5f53245c8c84a624",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-CVE-REPLAY",
+        "findings": 4,
+        "unit": "cve-replay",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/mechanisms.json",
+        "artefact_sha256": "6a1083edc887c12a128dd0ad8400816440de54849db3f77b798ced6d2d62663f",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-MECHANISM-RECONCILIATION",
+        "findings": 5,
+        "unit": "mechanism-reconciliation",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/red-team.json",
+        "artefact_sha256": "3686af86bf699c6771a216985c3ef56024b4fbad1881867e63e13544967a5b47",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-RED-TEAM",
+        "findings": 6,
+        "unit": "red-team",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "artifacts/phase25/regeneration.json",
+        "artefact_sha256": "c57e67ec9176f33fc1683b5092248a82da8598880f3d2188f16fba719bccbdda",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-CLEAN-REGEN",
+        "findings": 18,
+        "unit": "clean-regeneration",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase25/frf-closure.json",
+        "artefact_sha256": "f7360e707ec7146abe524c0a7bdb43219742d59b3a447dbcdb1f546493d32632",
+        "control_honest": true,
+        "control_specificity": true,
+        "court": "MS-FRF-CLOSURE",
+        "findings": 6,
+        "unit": "frf-gemel-closure",
+        "verdict": "pass"
+      }
+    ],
+    "evidence": [
+      "artifacts/phase25/asan-msan.json",
+      "artifacts/phase25/cve-replay/index.json",
+      "artifacts/phase25/exposure.json",
+      "artifacts/phase25/historical-cves.json",
+      "artifacts/phase25/kani.json",
+      "artifacts/phase25/mechanisms.json",
+      "artifacts/phase25/miri.json",
+      "artifacts/phase25/non-rust-tcb.json",
+      "artifacts/phase25/ownership-planes.json",
+      "artifacts/phase25/phase18-fuzz-crosswalk.json",
+      "artifacts/phase25/phase22-crosswalk.json",
+      "artifacts/phase25/phase24-crosswalk.json",
+      "artifacts/phase25/phase24-safety-coverage.json",
+      "artifacts/phase25/red-team.json",
+      "artifacts/phase25/regeneration.json",
+      "artifacts/phase25/safety-obligations.json",
+      "artifacts/phase25/source-census.json",
+      "artifacts/phase25/summary.json",
+      "artifacts/phase25/tsan.json",
+      "artifacts/phase25/unsafe-reduction.json",
+      "docs/PHASE-25-MEMORY-SAFETY-SEAL.md",
+      "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
+      "forensics/atlas/phase25/frf-closure.json",
+      "forensics/phase25-obligations.json"
+    ],
+    "ledger": {
+      "artefact": "forensics/phase25-obligations.json",
+      "counts": {
+        "contract_units": 22,
+        "implemented": 22,
+        "open_in_this_stratum": 0,
+        "owned": 22
+      }
+    },
+    "non_claims": [
+      "safe Rust does not prove protocol correctness: memory safety is not behavioural correctness, and a sound unsafe site is not a correct protocol",
+      "unsafe Rust is not inherently vulnerable: an unsafe operation with a discharged contract is a sound operation, so an unsafe site is not a defect",
+      "unsafe LOC is not a vulnerability count: lines of unsafe code are a secondary projection of the compiler-derived census, and a count is not a risk",
+      "Miri, ASan and TSan are not exhaustive: a tool that instruments a target records what it observed, and NOT_REACHABLE and UNSUPPORTED are not clean results",
+      "Kani does not prove unsupported or concurrent whole-program behaviour: a proof is only as wide as the harness that expresses it",
+      "historical CVE extinction does not predict a future CVE count: replaying the past is not a statement about an unmeasured future",
+      "compatibility is not security: passing the compatibility strata is not memory safety",
+      "memory safety is not cryptographic correctness: a sound implementation can still be cryptographically wrong",
+      "absence of a crash is not structural proof: a run that did not crash is not a proof that no path can",
+      "Miri, the sanitizers and Kani are complementary evidence, not whole-program proofs: each covers the profile, harness and schedule it ran, and none of them proves the candidate",
+      "matching transcripts are not memory-safety proofs: a differential replay matching the authority is evidence about behaviour, not a proof about memory",
+      "a green instrument is not a proof of absence: a passing court records that the instrument ran and its control was honest, not that no unsafe path exists",
+      "the bounded claim is not a claim that no bug can exist: it is a statement about the inventory of a fixed candidate's first-party surface in the claimed profile"
+    ],
+    "open_items": [
+      {
+        "detail": "the pinned cargo-geiger binary /work/.phase25-geiger/bin/cargo-geiger is absent (install with `cargo install cargo-geiger --root /work/.phase25-geiger --locked`); the census records its absence rather than skipping it silently",
+        "disposition": "open",
+        "evidence": [
+          "artifacts/phase25/source-census.json"
+        ],
+        "id": "census-geiger-unavailable",
+        "kind": "tool_unsupported",
+        "summary": "the cargo-geiger cross-check is unavailable"
+      },
+      {
+        "detail": "phase22 unresolved_by_class={'evidence_missing': 118}",
+        "disposition": "open",
+        "evidence": [
+          "artifacts/phase25/phase22-crosswalk.json",
+          "artifacts/phase25/exposure.json"
+        ],
+        "id": "census-unresolved-reachability",
+        "kind": "evidence_missing",
+        "summary": "18756 census site(s) have no resolved Phase-22 authority mapping and 17747 site(s) are UNKNOWN_REACHABILITY"
+      },
+      {
+        "detail": "CVE-2023-0286, CVE-2025-15467, CVE-2026-63072, CVE-2026-84782",
+        "disposition": "open",
+        "evidence": [
+          "artifacts/phase25/cve-replay/index.json"
+        ],
+        "id": "cve-replay-unknown",
+        "kind": "cve_replay_unknown",
+        "summary": "4 historical CVE(s) the public ABI cannot express"
+      },
+      {
+        "detail": "us-34f86f7b33caa811, us-4a3bec3745963739, us-76291594ee963989, us-a0b9e29cba2ddc70, us-f7f495db1e6489f2",
+        "disposition": "classified",
+        "evidence": [
+          "artifacts/phase25/miri.json",
+          "artifacts/phase25/tsan.json"
+        ],
+        "id": "externally-reachable-fail",
+        "kind": "unexplained_reachable_unsafe",
+        "summary": "5 externally reachable site(s) carry tool state FAIL (each dispositioned in its plane)"
+      },
+      {
+        "detail": "the tool planes could not instrument or execute this many externally reachable sites, so the seal records passed=false",
+        "disposition": "open",
+        "evidence": [
+          "artifacts/phase25/miri.json",
+          "artifacts/phase25/asan-msan.json",
+          "artifacts/phase25/tsan.json",
+          "artifacts/phase25/exposure.json"
+        ],
+        "id": "externally-reachable-unsupported",
+        "kind": "tool_unsupported",
+        "summary": "183 externally reachable site(s) carry tool state UNSUPPORTED"
+      },
+      {
+        "detail": "vm-heap-oob-write-crypto-cms; vm-stack-oob-write-crypto-cms; vm-type-confusion-crypto-x509; vm-heap-oob-read-ssl-dtls",
+        "disposition": "open",
+        "evidence": [
+          "artifacts/phase25/mechanisms.json"
+        ],
+        "id": "mechanism-reconciliation-open",
+        "kind": "mechanism_unreconciled",
+        "summary": "3 HIDDEN and 1 UNRESOLVED mechanism(s)"
+      },
+      {
+        "detail": "the default-thread gate observed a ThreadSanitizer data race on the default OSSL_LIB_CTX's namemap: a write in context::namemap::namemap_add_name (under add_names_locked) racing a read in context::namemap::ossl_namemap_empty via ossl_namemap_stored from the EVP fetch path. The crate models the authority's non-TSAN_REQUIRES_LOCKING arm, which reads the namemap counter without a lock; two threads fe",
+        "disposition": "open",
+        "evidence": [
+          "artifacts/phase25/tsan.json"
+        ],
+        "id": "res-tsan-default-libctx-race",
+        "kind": "product_residual",
+        "summary": "a TSan data race on the default OSSL_LIB_CTX namemap counter"
+      },
+      {
+        "detail": "154323 site(s) are externally reachable and 1009 has no Phase-22 reachable root; each is nevertheless grounded in a committed parser-route justification, and the committed typed edges carry no edge for a local-file route, so the typed-edge method can neither witness nor refute it -- recorded inconclusive, not a pass",
+        "disposition": "open",
+        "evidence": [
+          "artifacts/phase25/red-team.json"
+        ],
+        "id": "rt-phase22-unwitnessed-external",
+        "kind": "red_team_inconclusive",
+        "summary": "an inconclusive attack over 1009 site(s); an inconclusive attack is not a pass"
+      }
+    ],
+    "parity": {
+      "reason": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md requires PARITY_VERIFIED to be withheld: the stratum's courts stage no artifacts/phase25/probes/<probe>.{authority,candidate} pair, so no Phase-25 court is FRF-declarable and no parity between an authority and the candidate is declared here. A memory-safety inventory is not a parity claim",
+      "status": "WITHHELD"
+    },
+    "passed": false,
+    "profile": "openssl-rs-court:1 · cargo-profile dev",
+    "property_findings": [
+      "the seal consolidates 21 Phase-25 court result(s): 21 pass, 0 fail, each joined to its committed artefact and digest",
+      "the residual census classifies and disposes 484 residual record(s) plus 11 light cross-check leftover(s); 450 are open and 0 undisposed",
+      "the seal records passed=false because 183 externally reachable site(s) carry tool state UNSUPPORTED; UNSUPPORTED is never PASS (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+      "the open items are named rather than smoothed to a zero: census-geiger-unavailable, census-unresolved-reachability, cve-replay-unknown, externally-reachable-fail, externally-reachable-unsupported, mechanism-reconciliation-open, res-tsan-default-libctx-race, rt-phase22-unwitnessed-external",
+      "the bounded claim is the inventory of a fixed candidate's first-party surface in the claimed profile; it is NOT 'no memory-safety bug can exist' and NOT '100% memory safe'",
+      "PARITY_VERIFIED is WITHHELD: the stratum stages no probe pair, so no Phase-25 court is parity-declarable",
+      "the non-claims are recorded as findings (safe Rust does not prove protocol correctness; unsafe Rust is not inherently vulnerable; unsafe LOC is not a vulnerability count; Miri/ASan/TSan are not exhaustive; Kani does not prove unsupported or concurrent whole-program behaviour; historical CVE extinction does not predict a future CVE count; compatibility is not security; memory safety is not cryptographic correctness; absence of a crash is not structural proof), so a passing seal is never 'the candidate is memory safe'"
+    ],
+    "property_status": "NOT_CLAIMED",
+    "reachable_unsafe_sites": [
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-00bbc2da7309c745"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-0214faf9e7365ece"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-03a2c93b0be1c642"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-0511665522dfd1ad"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-05ea695ae3f892ea"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-08a4cf625b9597b1"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-08fe4974ad1716e6"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-09e42af449d0aa0e"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-0c447c295a64d312"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-0ce5a003ab2c5d0d"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-0dd52c3fcceca7e7"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-0df3d94cb23d24b1"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-0e25305bd9450d41"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-0e5858e3f5a611b3"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-135dcda4c4be2d62"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-13a34d9a4e022878"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-161845c0ab22262c"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-1701936c919774e8"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-17973ddd55472778"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-1a96bc8175e47cb2"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-1b9b549a2f77c556"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-1d2b51f2add91637"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-1f402e5a4d7986c5"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-21e564120ba2aa86"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-233381eec5302140"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-25e3a8a68ef89f19"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-2768431e2c183c80"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-283a3d10e6e5c0a2"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-28c1c4dad98ef65e"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-2acf7b62152667dd"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-2b865f691fe8a97d"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-2dd9366f85880af5"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-2f05821722eed912"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-2f2c16669c3a3c55"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-30a69d200ebbbef0"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-30d6421d44dfa5ad"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-3287d3a8570de580"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-35cb82278248b46a"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-37b4b2ba3806b983"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-37b4ee2200946d73"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-387ac3c06533ac32"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-3a8e69333447433e"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-3aac08e7ea92b42b"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri, tsan could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-3c7ba72c422ec9f7"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-3d1f660c20d0e4c6"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-3d85acc1ae7fd1af"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-3ee0538f0815ebea"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-3f20f11b583f16ee"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-422bdccbdd409285"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-4508a2a1f137cfb4"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-459a9c65fd50f163"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-46c611350ab53481"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-48904de332a6bfdd"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-4b479751ef476ebf"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-4bcaae0ac57925bb"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-4c558d7c0f13c718"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-4d004750d2601d40"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-4d5add8b0a4efe03"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-4e645b123c93691e"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-4e751d74c9c72a87"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-4f66bef0fbc2292e"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-5047b67751f21386"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-50fc6e1e7abd474a"
+      },
+      {
+        "claimed_pass": false,
+        "explanation": "no dynamic/formal instrument expressed this externally reachable site (tool plane(s) asan-msan, miri could not instrument or execute it); UNSUPPORTED is never a pass (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
+        "exposure_class": "CLI_INPUT_REACHABLE",
+        "tool_state": "UNSUPPORTED",
+        "unsafe_site_id": "us-518c6b3eacd746b5"
+      }
+    ],
+    "residual_census": {
+      "by_class": {
+        "evidence_missing": 390,
+        "evidence_not_reproducible": 1,
+        "historical_cve_unreplayed": 4,
+        "join_evidence_missing": 65,
+        "mechanism_unreconciled": 4,
+        "out_of_scope": 20,
+        "tool_not_reachable": 4,
+        "tool_unsupported": 6,
+        "unexplained_reachable_unsafe": 1
+      },
+      "by_disposition": {
+        "classified": 1,
+        "open": 450,
+        "preserved": 33
+      },
+      "by_plane": {
+        "asan-msan": {
+          "by_class": {
+            "evidence_missing": 3,
+            "tool_not_reachable": 1,
+            "tool_unsupported": 2
+          },
+          "by_disposition": {
+            "preserved": 6
+          },
+          "crosscheck": 0,
+          "open": 0,
+          "records": 6,
+          "total": 6
+        },
+        "clean-regeneration": {
+          "by_class": {
+            "evidence_not_reproducible": 1
+          },
+          "by_disposition": {
+            "open": 1
+          },
+          "crosscheck": 0,
+          "open": 1,
+          "records": 1,
+          "total": 1
+        },
+        "cve-replay": {
+          "by_class": {
+            "historical_cve_unreplayed": 4
+          },
+          "by_disposition": {
+            "open": 4
+          },
+          "crosscheck": 0,
+          "open": 4,
+          "records": 4,
+          "total": 4
+        },
+        "exposure-classification": {
+          "by_class": {
+            "evidence_missing": 2
+          },
+          "by_disposition": {
+            "open": 1,
+            "preserved": 1
+          },
+          "crosscheck": 0,
+          "open": 1,
+          "records": 2,
+          "total": 2
+        },
+        "historical-cve-census": {
+          "by_class": {
+            "evidence_missing": 230,
+            "join_evidence_missing": 59
+          },
+          "by_disposition": {
+            "open": 289
+          },
+          "crosscheck": 0,
+          "open": 289,
+          "records": 289,
+          "total": 289
+        },
+        "kani": {
+          "by_class": {
+            "evidence_missing": 3,
+            "tool_not_reachable": 1,
+            "tool_unsupported": 2
+          },
+          "by_disposition": {
+            "preserved": 6
+          },
+          "crosscheck": 0,
+          "open": 0,
+          "records": 6,
+          "total": 6
+        },
+        "mechanism-reconciliation": {
+          "by_class": {
+            "mechanism_unreconciled": 4
+          },
+          "by_disposition": {
+            "open": 4
+          },
+          "crosscheck": 0,
+          "open": 4,
+          "records": 4,
+          "total": 4
+        },
+        "miri": {
+          "by_class": {
+            "evidence_missing": 2,
+            "tool_not_reachable": 1,
+            "tool_unsupported": 1
+          },
+          "by_disposition": {
+            "classified": 1,
+            "preserved": 3
+          },
+          "crosscheck": 0,
+          "open": 0,
+          "records": 4,
+          "total": 4
+        },
+        "non-rust-tcb": {
+          "by_class": {
+            "evidence_missing": 3,
+            "out_of_scope": 3
+          },
+          "by_disposition": {},
+          "crosscheck": 6,
+          "open": 0,
+          "records": 0,
+          "total": 6
+        },
+        "ownership-planes": {
+          "by_class": {
+            "evidence_missing": 1,
+            "unexplained_reachable_unsafe": 1
+          },
+          "by_disposition": {},
+          "crosscheck": 2,
+          "open": 0,
+          "records": 0,
+          "total": 2
+        },
+        "phase18-fuzz-crosswalk": {
+          "by_class": {
+            "evidence_missing": 13,
+            "out_of_scope": 4
+          },
+          "by_disposition": {
+            "open": 17
+          },
+          "crosscheck": 0,
+          "open": 17,
+          "records": 17,
+          "total": 17
+        },
+        "phase22-crosswalk": {
+          "by_class": {
+            "evidence_missing": 118
+          },
+          "by_disposition": {
+            "open": 118
+          },
+          "crosscheck": 0,
+          "open": 118,
+          "records": 118,
+          "total": 118
+        },
+        "phase24-crosswalk": {
+          "by_class": {
+            "evidence_missing": 1,
+            "join_evidence_missing": 4
+          },
+          "by_disposition": {
+            "open": 5
+          },
+          "crosscheck": 0,
+          "open": 5,
+          "records": 5,
+          "total": 5
+        },
+        "phase24-safety-coverage": {
+          "by_class": {
+            "evidence_missing": 6,
+            "join_evidence_missing": 2,
+            "out_of_scope": 1
+          },
+          "by_disposition": {
+            "open": 9
+          },
+          "crosscheck": 0,
+          "open": 9,
+          "records": 9,
+          "total": 9
+        },
+        "red-team": {
+          "by_class": {
+            "evidence_missing": 1
+          },
+          "by_disposition": {
+            "open": 1
+          },
+          "crosscheck": 0,
+          "open": 1,
+          "records": 1,
+          "total": 1
+        },
+        "source-census": {
+          "by_class": {
+            "evidence_missing": 1,
+            "out_of_scope": 2
+          },
+          "by_disposition": {},
+          "crosscheck": 3,
+          "open": 0,
+          "records": 0,
+          "total": 3
+        },
+        "tsan": {
+          "by_class": {
+            "evidence_missing": 6,
+            "tool_not_reachable": 1,
+            "tool_unsupported": 1
+          },
+          "by_disposition": {
+            "open": 1,
+            "preserved": 7
+          },
+          "crosscheck": 0,
+          "open": 1,
+          "records": 8,
+          "total": 8
+        },
+        "unsafe-reduction": {
+          "by_class": {
+            "out_of_scope": 10
+          },
+          "by_disposition": {
+            "preserved": 10
+          },
+          "crosscheck": 0,
+          "open": 0,
+          "records": 10,
+          "total": 10
+        }
+      },
+      "classes_outside_schema": {
+        "evidence_not_reproducible": 1
+      },
+      "crosscheck": 11,
+      "disposed": 484,
+      "open": 450,
+      "open_sample": {
+        "clean-regeneration": [
+          "res-regen-4-drift"
+        ],
+        "cve-replay": [
+          "residual-CVE-2023-0286",
+          "residual-CVE-2025-15467",
+          "residual-CVE-2026-63072",
+          "residual-CVE-2026-84782"
+        ],
+        "exposure-classification": [
+          "rx:0b6b96cbf2bd638d"
+        ],
+        "historical-cve-census": [
+          "res-index-CVE-2002-0655",
+          "res-index-CVE-2002-0656",
+          "res-index-CVE-2002-0657",
+          "res-index-CVE-2002-0659",
+          "res-index-CVE-2002-1568",
+          "res-index-CVE-2003-0078",
+          "res-index-CVE-2003-0131",
+          "res-index-CVE-2003-0147"
+        ],
+        "mechanism-reconciliation": [
+          "res-mech-vm-heap-oob-read-ssl-dtls",
+          "res-mech-vm-heap-oob-write-crypto-cms",
+          "res-mech-vm-stack-oob-write-crypto-cms",
+          "res-mech-vm-type-confusion-crypto-x509"
+        ],
+        "phase18-fuzz-crosswalk": [
+          "rx:5640cf41277dd97b",
+          "rx:512d2c47a2d17501",
+          "rx:571fb38166749883",
+          "rx:a9efed7c7ccca87e",
+          "rx:69540dbfca74a312",
+          "rx:1d5a02c583ce7471",
+          "rx:05b354cffb742d0e",
+          "rx:1bd23ef4cb319b2a"
+        ],
+        "phase22-crosswalk": [
+          "rx:5348917d89181461",
+          "rx:101e4a7346648c6b",
+          "rx:81e8c7770d616907",
+          "rx:d22e581885454eef",
+          "rx:8ee5882e0ba00689",
+          "rx:f2cf10cd47789dd6",
+          "rx:a3d33f0002572b87",
+          "rx:ee78f041c2b07f20"
+        ],
+        "phase24-crosswalk": [
+          "rx:67146b255d4330fd",
+          "rx:d1f041e2571a1994",
+          "rx:b3bbb11af0c29fcb",
+          "rx:f4fe1dc88b06ab3a",
+          "rx:0d29d1d143efe8e2"
+        ],
+        "phase24-safety-coverage": [
+          "rx:b93d7b6ce37d13e6",
+          "rx:78e442fb81621335",
+          "rx:084e3477a1daf717",
+          "rx:6e03af533e9cfa45",
+          "rx:71e8d67fd6bb2deb",
+          "rx:3435ce56b36d3967",
+          "rx:36055eb93ea5bcdd",
+          "rx:a8ae19c7095ac9c4"
+        ],
+        "red-team": [
+          "rt-res-rt-phase22-unwitnessed-external"
+        ],
+        "tsan": [
+          "res-tsan-default-libctx-race"
+        ]
+      },
+      "records": 484,
+      "sample_bound": 8,
+      "total": 495,
+      "undisposed": 0,
+      "undisposed_sets": {}
+    },
+    "sort_key": "courts by the plan's subphase order; residual_census by class and by disposition; open_items by id; reachable_unsafe_sites by site id; counts/courts/census/parity/claim the derivation of the committed planes; every list sorted",
+    "summary_id": "phase25-memory-safety-seal",
+    "tool_surface": {
+      "externally_reachable": 154323,
+      "externally_reachable_by_tool_state": {
+        "FAIL": 5,
+        "NOT_REACHABLE": 81460,
+        "PASS": 72675,
+        "UNSUPPORTED": 183
+      },
+      "externally_reachable_fail": 5,
+      "externally_reachable_unsupported": 183,
+      "sites_by_tool_state": {
+        "FAIL": 5,
+        "NOT_REACHABLE": 92984,
+        "PASS": 78898,
+        "UNSUPPORTED": 183
+      }
+    },
+    "what_this_is": "Phase 25.21's memory-safety seal: the courts (the twenty-one landed Phase-25 courts, each re-derived from the committed planes and joined to its committed artefact and digest), the residual census (every residual classified and disposed, the open ones named), the bounded claim (stated verbatim), the withheld parity claim and the non-claims. It is an instrument plus an observation record, and it records passed=false because externally reachable unsafe sites carry tool state UNSUPPORTED; it is never read as 'the candidate is memory safe'."
+  },
+  "body_hash": "c426bce01d58368442c367d0717e597a99f3a24676a725e8ae24a89dd05e2793",
+  "generator": "forensics/tools/ms_seal.py",
+  "inputs": [
+    {
+      "name": "phase-25-plan",
+      "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
+      "sha256": "1b80484986e7a4cc3646ac88ced5ebecc7040a1ceaba1550a4cd628f4e5bfb02"
+    },
+    {
+      "name": "memory-safety-schemas",
+      "path": "forensics/tools/memory_safety_schemas.py",
+      "sha256": "58d0759dcbc3ab418d878a8e09755fdce76777790814ce3eee777b313db9b1c0"
+    },
+    {
+      "name": "phase25-guard",
+      "path": "forensics/tools/phase25_guard.py",
+      "sha256": "fa88056a76e69be741d9b41d9c3c683329ccb6f885ac1f6cd5fa0e0358a37e10"
+    },
+    {
+      "name": "phase25-container-manifest",
+      "path": "forensics/memory-safety/container.json",
+      "sha256": "8812838c85cb47bf8c2f1edc3c0c4ddeb0e5a7fe1ef8e6ff6cae83a02bb2bb54"
+    },
+    {
+      "name": "ms-frf-closure-tool",
+      "path": "forensics/tools/ms_frf_closure.py",
+      "sha256": "2ab1c904fdc0ed6625482b8d407e99efc919787a8ac094d2f028f90f7eee60ad"
+    },
+    {
+      "name": "ms-seal-tool",
+      "path": "forensics/tools/ms_seal.py",
+      "sha256": "96d94563f78cc168cf4cd314cb6270533a234cf1ecffc8c454822d9a8839aa8f"
+    },
+    {
+      "name": "source-census",
+      "path": "artifacts/phase25/source-census.json",
+      "sha256": "74ed38a50d5557184975865b18d313eeaec0accf683f846196815c11660bac20"
+    },
+    {
+      "name": "non-rust-tcb",
+      "path": "artifacts/phase25/non-rust-tcb.json",
+      "sha256": "672027f1411e5a749e9388df220477c386430df51e2016d85ee5f924ecb1e35a"
+    },
+    {
+      "name": "safety-obligations",
+      "path": "artifacts/phase25/safety-obligations.json",
+      "sha256": "4a79e3d4bea8d969f7cfe65c867cf15afc40875a61a57a307f73b9d9f0135dfa"
+    },
+    {
+      "name": "ownership-planes",
+      "path": "artifacts/phase25/ownership-planes.json",
+      "sha256": "68d2d8dfd1833f3a1a3e5fbb8a6e3c89fe4e613b60276fa687a4570c16f0efa3"
+    },
+    {
+      "name": "phase22-crosswalk",
+      "path": "artifacts/phase25/phase22-crosswalk.json",
+      "sha256": "73f67eaf376d6e300a4b0f3952246cb38cec8670b6b01517a69ee2160edef28c"
+    },
+    {
+      "name": "phase24-crosswalk",
+      "path": "artifacts/phase25/phase24-crosswalk.json",
+      "sha256": "b4601495dcfa9f9efda040b000cbf6d7596fed134ef2a53465afb636a0e33280"
+    },
+    {
+      "name": "exposure-classification",
+      "path": "artifacts/phase25/exposure.json",
+      "sha256": "9fa125777b11ce266eaf7e88516ee222b63d62f34ad0a79f8579cb58799bcab0"
+    },
+    {
+      "name": "unsafe-reduction",
+      "path": "artifacts/phase25/unsafe-reduction.json",
+      "sha256": "24227ed018bb75cf7b4e755823ff7a2517d3aac5cc253f56c687063715586dfc"
+    },
+    {
+      "name": "miri",
+      "path": "artifacts/phase25/miri.json",
+      "sha256": "740c26bb6ebe62a14b21e7e7677980c6a4849562ba7e547d12769ceef0511f12"
+    },
+    {
+      "name": "asan-msan",
+      "path": "artifacts/phase25/asan-msan.json",
+      "sha256": "868ef83bc308d47e64e4d1899409c2a88db13f2fbfbd2c9a45566b471eb4c999"
+    },
+    {
+      "name": "tsan",
+      "path": "artifacts/phase25/tsan.json",
+      "sha256": "fe07ca7e362781fbd04307059b1e4f0af8f5f09ee94501a4f5386e6b62966f96"
+    },
+    {
+      "name": "kani",
+      "path": "artifacts/phase25/kani.json",
+      "sha256": "f17ca6894d1159a7527e1b044b87f2df46accc744c1c69f3ef8771d9befa6e88"
+    },
+    {
+      "name": "phase18-fuzz-crosswalk",
+      "path": "artifacts/phase25/phase18-fuzz-crosswalk.json",
+      "sha256": "dd4339d42ea12a05faf2a1746d69d1dcd8d567946dd891b221ae517a05eef2b4"
+    },
+    {
+      "name": "phase24-safety-coverage",
+      "path": "artifacts/phase25/phase24-safety-coverage.json",
+      "sha256": "648cd14c91538907a9400b9d41276d0ccd0b937cd0c9dccd8dc1f252cfbebe92"
+    },
+    {
+      "name": "historical-cve-census",
+      "path": "artifacts/phase25/historical-cves.json",
+      "sha256": "4958898921f9f1705ca2f0ecf637bb685a9bd05828b70ef92b0a8f7c726b33ed"
+    },
+    {
+      "name": "cve-replay",
+      "path": "artifacts/phase25/cve-replay/index.json",
+      "sha256": "9d6f7fc6ad8f8262b63526c0b8a5379a369c2005f8dfff9e5f53245c8c84a624"
+    },
+    {
+      "name": "mechanism-reconciliation",
+      "path": "artifacts/phase25/mechanisms.json",
+      "sha256": "6a1083edc887c12a128dd0ad8400816440de54849db3f77b798ced6d2d62663f"
+    },
+    {
+      "name": "red-team",
+      "path": "artifacts/phase25/red-team.json",
+      "sha256": "3686af86bf699c6771a216985c3ef56024b4fbad1881867e63e13544967a5b47"
+    },
+    {
+      "name": "clean-regeneration",
+      "path": "artifacts/phase25/regeneration.json",
+      "sha256": "c57e67ec9176f33fc1683b5092248a82da8598880f3d2188f16fba719bccbdda"
+    },
+    {
+      "name": "frf-gemel-closure",
+      "path": "forensics/atlas/phase25/frf-closure.json",
+      "sha256": "f7360e707ec7146abe524c0a7bdb43219742d59b3a447dbcdb1f546493d32632"
+    }
+  ],
+  "kind": "phase25-summary",
+  "schema": "openssl-rs/atlas/phase25-summary/v1"
+}

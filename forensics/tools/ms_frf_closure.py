@@ -174,8 +174,10 @@ class NotDriven(Exception):
 
 # unit -> (committed evidence path, the record kinds the plan names for it). Keyed by the *unit*
 # names `phase25_obligations.COURT_UNITS` uses, so the record set and the obligation ledger are two
-# views of one set of twenty-two units. `memory-safety-seal`'s artefact is the seal document, which
-# 25.21 lands; until then it is recorded pending rather than dropped.
+# views of one set of twenty-two units. `memory-safety-seal`'s artefact is the seal document,
+# which 25.21 lands in the commit that lands `ms_seal.py`, so the unit is joined once 25.21 lands;
+# the document is the one artefact whose digest this closure does not record (see the cycle note in
+# `derive_records`).
 RECORD_EVIDENCE: dict[str, tuple[str, tuple[str, ...]]] = {
     # The constitution unit's representative committed artefact is the plan -- its authored surface.
     # `artifacts/phase25/COURTS.json` is deliberately NOT cited: the closure is validated by the
@@ -213,7 +215,8 @@ RECORD_EVIDENCE: dict[str, tuple[str, tuple[str, ...]]] = {
 }
 
 # unit -> the committed tool that produced its evidence. The constitution's evidence is the runner's
-# registry; the seal's tool is 25.21's and has not landed, so it is `None` and recorded pending.
+# registry; the seal's tool is 25.21's `ms_seal.py`, which lands with the seal document in the same
+# commit, so the seal unit is joined rather than pending once 25.21 lands.
 TOOL_OF: dict[str, str | None] = {
     "constitution": "forensics/tools/phase25_courts.py",
     "source-census": "forensics/tools/ms_census.py",
@@ -236,7 +239,7 @@ TOOL_OF: dict[str, str | None] = {
     "red-team": "forensics/tools/ms_red_team.py",
     "clean-regeneration": "forensics/tools/ms_regeneration.py",
     "frf-gemel-closure": GENERATOR,
-    "memory-safety-seal": None,
+    "memory-safety-seal": "forensics/tools/ms_seal.py",
 }
 
 
@@ -397,6 +400,14 @@ def derive_records(evidence: dict) -> list[dict]:
         if unit == SELF_UNIT:
             # This closure's own artefact is the derivation; it does not hash or test itself.
             present, sha = True, None
+        elif unit == SEAL_UNIT:
+            # The seal document cites this closure -- its courts table carries this artefact's
+            # digest and its body cites the closure's -- so hashing it here would form a digest
+            # cycle neither artefact could reproduce. The seal is joined on the presence of its
+            # committed artefact and its landed generator alone, exactly as this closure does not
+            # hash itself (`SELF_UNIT` above).
+            present = relpath is not None and relpath in existing
+            sha = None
         else:
             present = relpath is not None and relpath in existing
             sha = _sha_or_none(relpath, existing) if relpath else None
@@ -1068,7 +1079,9 @@ def _inputs() -> list:
     ]
     seen = {i.path for i in inputs if i.path is not None}
     for unit, (relpath, _kinds) in RECORD_EVIDENCE.items():
-        if unit == SELF_UNIT or relpath is None:
+        # The seal document is excluded for the same reason its digest is not recorded above: it
+        # cites this closure, so binding its bytes here would form a digest cycle.
+        if unit in (SELF_UNIT, SEAL_UNIT) or relpath is None:
             continue
         p = REPO_ROOT / relpath
         if p.is_file() and p not in seen:
@@ -1162,12 +1175,13 @@ def self_test() -> int:
             {"residual_id": "res-rt-2", "subject": "rt", "class": "tool_unsupported",
              "disposition": "preserved", "detail": "d", "evidence": ["x"]}]},
     }
-    # Every Phase-25 court's committed evidence and generator is present except the seal document,
-    # which 25.21 lands (no artefact and no generator -> pending, not orphaned).
+    # Every Phase-25 contract unit's committed evidence and generator is present, including the
+    # seal document and `ms_seal.py` which 25.21 lands, so the seal unit is joined rather than
+    # pending (only this closure's own artefact is excluded, because it is not committed yet).
     existing = [rel(PLAN), rel(REGISTRY), rel(GEMEL_TRAJECTORY), rel(GUARD), rel(MANIFEST),
                 rel(SCHEMAS), present]
     existing += [relpath for unit, (relpath, _k) in RECORD_EVIDENCE.items()
-                 if unit not in (SELF_UNIT, SEAL_UNIT) and relpath]
+                 if unit != SELF_UNIT and relpath]
     existing += [t for t in TOOL_OF.values() if t]
     evidence = {
         "registry": [["rt-selftest", 25, "rt_selftest_probe", "synthetic"]],

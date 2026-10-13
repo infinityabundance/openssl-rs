@@ -543,7 +543,7 @@
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "017041bae93c2b4076f40e9cf7f25cf79ff0175516816c3e8912625884a9f4a9"
+      "sha256": "dc50a7e60c53e649735945cfb4f07159db3eec65dcbe4e288a93513bac439aec"
     }
   ],
   "kind": "phase23-obligations",
