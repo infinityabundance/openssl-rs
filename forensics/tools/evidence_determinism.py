@@ -649,6 +649,21 @@ GENERATORS_BEFORE_LEDGERS = [
     # silent divergence, and the `MS-FRF-CLOSURE` court re-runs the same pure checks over the
     # committed artefact and the committed evidence.
     "forensics/tools/ms_frf_closure.py",
+    # **Phase 25.21's memory-safety seal (`forensics/tools/ms_seal.py` ->
+    # `artifacts/phase25/summary.json` and the generated `docs/PHASE-25-MEMORY-SAFETY-SEAL.md`) is a
+    # pure function of committed inputs too, so it belongs here and is byte-compared.** It re-runs
+    # each landed Phase-25 court's own handler over the committed planes, joins the census's
+    # externally reachable sites to the committed tool planes' per-site state and derives the
+    # seal-class closure record -- the bounded claim, the residual census, the withheld parity claim
+    # and the non-claims -- and renders the seal document from the same derivation. It reads only
+    # committed evidence and compiles nothing, so `forensics/memory-safety/container.json` lists it
+    # `metadata_only` and the Docker-only guard admits it on any host, exactly as `ms_frf_closure`
+    # is. It sits after `ms_frf_closure.py` because it embeds each court's artefact digest, the
+    # closure's included, and the closure in turn reads the seal document it writes; the `MS-SEAL`
+    # court re-runs the same pure checks over the committed artefact and the committed evidence. A
+    # dropped court result, a dropped residual, an overclaim, a granted parity, a typed count or a
+    # dropped non-claim is a failure rather than a silent divergence.
+    "forensics/tools/ms_seal.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -1066,6 +1081,15 @@ COMPARED = [
     # closure claimed closed with an open residual or an undisposed residual is a failure rather
     # than a silent divergence.
     "forensics/atlas/phase25/frf-closure.json",
+    # Phase 25.21's memory-safety seal: a pure function of the committed Phase-25 planes and the
+    # re-derived landed courts, the committed tool planes and the committed obligation ledger. It
+    # compiles nothing and reads no compiler output, so re-deriving it needs no compiler and no
+    # candidate machine. The seal-class closure record and the generated seal document are compared
+    # together; a dropped court result, a dropped residual, an overclaim in the bounded claim, a
+    # granted parity, a typed count or a dropped non-claim is a failure rather than a silent
+    # divergence.
+    "artifacts/phase25/summary.json",
+    "docs/PHASE-25-MEMORY-SAFETY-SEAL.md",
 ]
 
 # ---------------------------------------------------------------------------
