@@ -32,7 +32,7 @@ name = "openssl-rs"
 # be published. 0.0.x is used deliberately: no symbol is `PARITY_VERIFIED`, so the
 # version must not imply a compatibility claim it does not carry (docs/PARITY_MODEL.md,
 # docs/NON_CLAIMS.md).
-version = "0.0.27"
+version = "0.0.28"
 edition = "2021"
 rust-version = "1.98.1"
 description = "Custodian-level native-Rust reconstruction of the OpenSSL 3.x contract"
@@ -84,6 +84,21 @@ exclude = [
     "forensics/multitrack/semantic-courts.json",
     "forensics/multitrack/downstream-multitrack.json",
     "forensics/deltas/**",
+    # Phase 24's downstream-1000 measurement: the 1000-family corpus, its runtime
+    # fingerprints, the candidate list, the build-link atlas and the freeze. ~43 MB
+    # of measured evidence, reproducible from the downstream sources and the authority
+    # registries, and not product -- excluded for the same reason as the atlas, so it
+    # does not bloat every downstream `cargo fetch`. This is the growth that pushed the
+    # 0.0.28 package past crates.io's 10 MiB upload limit (the 0.0.27 package predates
+    # Phase 24). NOTE: `forensics/downstream/candidate-freeze.json` is NOT read by
+    # `build.rs`, by the crate or by the tests (verified: no `forensics/downstream`
+    # reference in build.rs/src/tests).
+    "forensics/downstream/**",
+    # The generated conformance vector corpora (drbg, ccm, aes, aria, camellia, ...), which
+    # are emitted by the vector generators and read by the courts, not by the crate: no
+    # `build.rs`, source or test path references `forensics/vectors`. ~8 MB of reproducible
+    # evidence, excluded so the package stays under crates.io's 10 MiB upload limit.
+    "forensics/vectors/**",
     "forensics/tools/**",
     "forensics/receipts/**",
     "forensics/STATUS.md",
