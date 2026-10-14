@@ -99,6 +99,7 @@ from atlas_common import (  # noqa: E402
     PRODUCTION_AUTHORITY,
     REPO_ROOT,
     InputRef,
+    artefact_evidence_digest,
     content_hash,
     envelope,
     rel,
@@ -258,10 +259,14 @@ def _body(doc: dict) -> dict:
 
 
 def _sha_or_none(relpath: str, existing: set[str]) -> str | None:
+    # The commitment is the artefact's **evidence** digest (`body_hash`), not its file digest:
+    # the Phase-25 planes record the downstream chain's file digest, and that chain records
+    # `implemented-surface.json`'s build product, so a file-digest commitment moves with the
+    # build host. `artefact_evidence_digest` is the shared policy (docs/DECISIONS.md D30).
     if relpath not in existing:
         return None
     p = REPO_ROOT / relpath
-    return sha256_file(p) if p.is_file() else None
+    return artefact_evidence_digest(p) if p.is_file() else None
 
 
 def _receipt_index() -> dict[str, list[str]]:

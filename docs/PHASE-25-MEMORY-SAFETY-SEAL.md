@@ -39,11 +39,14 @@ carry (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.8). This seal records
 One row per landed Phase-25 court (25.0 through 25.20). The verdict is the court's own
 re-derived verdict and the finding count is its own, so the row is a re-derivation, not a
 reading of `artifacts/phase25/COURTS.json` (which the runner deletes and rewrites). Each
-court's committed artefact digest is carried by the machine artefact
-`artifacts/phase25/summary.json`, whose `courts[].artefact_sha256` is the committed file's
-digest; it is deliberately not restated here, because this document's own digest is what
-`forensics/phase-state.json` records as the phase's `seal_sha256`, and rendering a file digest
-here would form a digest cycle the pipeline could not reproduce.
+court's committed artefact **evidence** digest is carried by the machine artefact
+`artifacts/phase25/summary.json`, whose `courts[].artefact_sha256` is that artefact's
+`body_hash` (its evidence digest), not its file digest -- the file digest moves with the
+build product the derived planes carry (docs/DECISIONS.md D30), so binding it would make
+this seal irreproducible across machines. It is deliberately not restated here, because this
+document's own digest is what `forensics/phase-state.json` records as the phase's
+`seal_sha256`, and rendering a digest here would form a digest cycle the pipeline could not
+reproduce.
 
 | court | unit | verdict | finding(s) | control | artefact |
 |---|---|---|---|---|---|
