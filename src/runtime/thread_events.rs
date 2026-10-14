@@ -599,14 +599,39 @@ pub(crate) unsafe fn ossl_init_thread_start(
     if hand.is_null() {
         return 0;
     }
-    // SAFETY: `hands` is live (it was just allocated and registered), so `*hands` is a live
-    // head slot; `hand` is this function's own allocation.
+    // `hand` is fully built before it is published, so these three writes touch no shared state.
+    // SAFETY: `hand` is this function's own fresh allocation.
     unsafe {
         (*hand).handfn = handfn;
         (*hand).arg = arg;
         (*hand).index = index;
+    }
+
+    // Publishing the head **is** shared state: the global register holds the *address* of every
+    // thread's head, and another thread's `init_thread_deregister` (reached from
+    // `ossl_provider_free`) or `init_thread_stop` walks those heads under the register's write
+    // lock. The authority stores `*hands` with no lock, so a registration racing a deregistration
+    // is a data race in the authority too; the crate does not reproduce it
+    // (`docs/SECURITY_DIVERGENCE_POLICY.md` section 5) and takes the same lock the walk holds --
+    // see D-TEVENT-DEREG-RACE-1.
+    let gtr = get_global_tevent_register();
+    if gtr.is_null() {
+        // SAFETY: `hand` was never published, so nothing else holds it.
+        unsafe { CRYPTO_free(hand.cast::<c_void>(), FILE, lines::L_DEREG_FREE_HAND) };
+        return 0;
+    }
+    // SAFETY: `gtr` is live and non-NULL, so its lock is live and so is the head slot `hands`.
+    unsafe {
+        if CRYPTO_THREAD_write_lock((*gtr).lock) == 0 {
+            // The only way this fails is a same-thread re-acquisition: a handler registering
+            // during a stop that already holds this lock. The crate refuses that
+            // (`D-TEVENT-REENTRANT-1`) and releases `hand` rather than leaving it unreachable.
+            CRYPTO_free(hand.cast::<c_void>(), FILE, lines::L_DEREG_FREE_HAND);
+            return 0;
+        }
         (*hand).next = *hands;
         *hands = hand;
+        CRYPTO_THREAD_unlock((*gtr).lock);
     }
     1
 }

@@ -72,7 +72,7 @@ reproduce.
  `artifacts/phase25/miri.json` |
 | `MS-ASAN-MSMAN` | `asan-msan` | pass | 0 | honest |
  `artifacts/phase25/asan-msan.json` |
-| `MS-TSAN` | `tsan` | pass | 1 | honest |
+| `MS-TSAN` | `tsan` | pass | 0 | honest |
  `artifacts/phase25/tsan.json` |
 | `MS-KANI` | `kani` | pass | 0 | honest |
  `artifacts/phase25/kani.json` |
@@ -88,7 +88,7 @@ reproduce.
  `artifacts/phase25/mechanisms.json` |
 | `MS-RED-TEAM` | `red-team` | pass | 6 | honest |
  `artifacts/phase25/red-team.json` |
-| `MS-CLEAN-REGEN` | `clean-regeneration` | pass | 18 | honest |
+| `MS-CLEAN-REGEN` | `clean-regeneration` | pass | 14 | honest |
  `artifacts/phase25/regeneration.json` |
 | `MS-FRF-CLOSURE` | `frf-gemel-closure` | pass | 6 | honest |
  `forensics/atlas/phase25/frf-closure.json` |
@@ -98,14 +98,14 @@ reproduce.
 Every residual the committed planes carry, classified from
 `memory_safety_schemas.RESIDUAL_CLASSES` and disposed from `RESIDUAL_DISPOSITIONS`:
 
-- total 495 residual(s): 484 schema record(s) plus
+- total 494 residual(s): 483 schema record(s) plus
   11 light cross-check leftover(s);
-- 484 disposed, 450 open, 0
+- 483 disposed, 449 open, 0
   undisposed.
 
 By class:
 
-- `evidence_missing`: 390
+- `evidence_missing`: 389
 - `evidence_not_reproducible`: 1
 - `historical_cve_unreplayed`: 4
 - `join_evidence_missing`: 65
@@ -118,7 +118,7 @@ By class:
 By disposition:
 
 - `classified`: 1
-- `open`: 450
+- `open`: 449
 - `preserved`: 33
 
 ## 3. The open items
@@ -131,7 +131,6 @@ The leftovers the seal does not resolve, named rather than smoothed to a zero:
 - **externally-reachable-fail** (`unexplained_reachable_unsafe`, classified): 5 externally reachable site(s) carry tool state FAIL (each dispositioned in its plane)
 - **externally-reachable-unsupported** (`tool_unsupported`, open): 183 externally reachable site(s) carry tool state UNSUPPORTED
 - **mechanism-reconciliation-open** (`mechanism_unreconciled`, open): 3 HIDDEN and 1 UNRESOLVED mechanism(s)
-- **res-tsan-default-libctx-race** (`product_residual`, open): a TSan data race on the default OSSL_LIB_CTX namemap counter
 - **rt-phase22-unwitnessed-external** (`red_team_inconclusive`, open): an inconclusive attack over 1009 site(s); an inconclusive attack is not a pass
 
 ## 4. Parity

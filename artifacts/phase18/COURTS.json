@@ -1890,11 +1890,11 @@
             "sha256": "e7c63098c60ad7cdfbfdc90bc51da50882fa6731a1b7591896d2059f34d43872"
           },
           "measured": {
-            "boundary_unsafe_sites": 5899,
+            "boundary_unsafe_sites": 5902,
             "core_extern_c_fns": 9777,
             "core_unsafe_sites": 52943,
             "extern_c_fns": 10869,
-            "unsafe_sites": 58842
+            "unsafe_sites": 58845
           }
         },
         "verdict": "pass"
@@ -2002,7 +2002,7 @@
     {
       "name": "unsafe-footprint",
       "path": "forensics/atlas/unsafe-footprint.json",
-      "sha256": "27adab774d0382667a532b214291a2adfdb64007b0ed27dea5a9c2938341112d"
+      "sha256": "28cf91f1ebcdbd6b7c1482abe05f1319f7b282e60fba110e72661b688e4d8953"
     },
     {
       "name": "unsafe-bounds",
