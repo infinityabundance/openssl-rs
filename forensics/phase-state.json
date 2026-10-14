@@ -773,19 +773,42 @@
         "name": "downstream-1000",
         "phase": 24,
         "provider_rows": null,
-        "seal_sha256": "126f35566afc2281d81482b03e031b00c64bff708d26a3da70cc937ea9c10ae4",
+        "seal_sha256": "c23d93410d2b0d72786d14518375601eeaa4c8c34986508b660ddda70b8bc3ef",
         "state": "complete",
         "stratum": "Downstream-1000 replacement atlas and empirical drop-in corpus"
+      },
+      {
+        "blocking": "",
+        "deferred": [],
+        "evidence_absent": [],
+        "evidence_present": [
+          "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
+          "forensics/tools/phase25_obligations.py",
+          "forensics/tools/phase25_guard.py",
+          "forensics/tools/memory_safety_schemas.py",
+          "docs/PHASE-25-MEMORY-SAFETY-SEAL.md",
+          "forensics/phase25-obligations.json",
+          "artifacts/phase25/COURTS.json",
+          "forensics/atlas/court-coverage.json",
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
+        ],
+        "name": "memory-safety",
+        "phase": 25,
+        "provider_rows": null,
+        "seal_sha256": "0c58a1345ff701747b54b42501477460d4e84467dafd95406c39098ba5eb05fc",
+        "state": "complete",
+        "stratum": "Memory-safety atlas, unsafe trusted-computing-base census and historical CVE extinction court"
       }
     ],
     "rule": "a phase may be complete only if every phase it requires is complete (forensics/tools/phase_state.py REQUIRES; docs/PHASE-22-SUBPHASES.md section 8)",
     "summary": {
-      "complete": 25,
+      "complete": 26,
       "in_progress": 0,
       "not_started": 0
     }
   },
-  "body_hash": "1eb55490a425a7ddf11b8fc682f0731f38380af6ce4990b8cff7b0a92aa56d91",
+  "body_hash": "62d95f985680bdd820552c4016c379c881e20c8324b0988ea86d69f452c04742",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

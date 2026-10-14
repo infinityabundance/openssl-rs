@@ -1,0 +1,91 @@
+{
+  "schema": "openssl-rs/phase25/container/v1",
+  "container": "openssl-rs-court",
+  "image": "openssl-rs-court:1",
+  "platform": "linux",
+  "marker": "/.dockerenv",
+  "env_flag": "PHASE25_CONTAINER",
+  "env_image": "PHASE25_IMAGE",
+  "env_platform": "PHASE25_PLATFORM",
+  "canonical_base": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+  "canonical_base_note": "the admitted venue is the Debian official image, pinned by digest (the `debian` Docker Hub base the court Dockerfile builds FROM), and it is the smallest practical admitted base for this stratum. The running court image `openssl-rs-court:1` is the environment every entry point records in PHASE25_IMAGE; the base is the one source the tool-specific environments are derived from rather than a second, drifting base.",
+  "derived_environments": [
+    "census",
+    "miri",
+    "asan",
+    "msan",
+    "tsan",
+    "kani",
+    "cve-replay"
+  ],
+  "derivation_policy": "Phase 25 runs one tool-specific environment per instrument -- the compiler-backed census, Miri, ASan, MSan, TSan, Kani and the CVE replays -- and every one of them is derived from the single minimal base this manifest names, in later subphases. The stratum deliberately does not maintain one mutable kitchen-sink image that accumulates every tool: a kitchen-sink image makes the environment a function of whoever last rebuilt it, so a result depends on state nothing binds, whereas deriving each environment from one pinned base makes the toolchain a fact the manifest records. The running court image `openssl-rs-court:1` is the admitted venue the guard binds; a later subphase that needs an extra tool adds a derived environment and records it here rather than widening the court image.",
+  "environment_derivations": {
+    "asan": {
+      "subphase": "25.10",
+      "tool": "forensics/tools/ms_asan.py",
+      "plane": "artifacts/phase25/asan-msan.json",
+      "from": "openssl-rs-court:1 (the admitted image, built from canonical_base)",
+      "differs_from": "the court's `exec`, and only here",
+      "dimension": "the venue's documented per-process RLIMIT_DATA override (OPENSSL_RS_COURT_DATA=unlimited)",
+      "reason": "AddressSanitizer reserves a ~15.4 TB sparse shadow (PROT_NONE + MAP_NORESERVE) before it instruments anything, which the court's 4 GiB RLIMIT_DATA refuses, so the instrument cannot start under the default `exec`. The override removes only that virtual-space cap; the container cgroup memory cap, PIDs, CPUs, the wall clock and no-new-privileges are unchanged, so no bound on resident resources is weakened. This is the same derivation the Phase-18 ASan venue records for the same reason.",
+      "measured": "the ASan run is a measurement (it builds and runs the instrumented candidate), so ms_asan.py is not metadata-only and is refused on the host; the MS-ASAN-MSMAN court re-runs only its pure checks over the committed plane"
+    },
+    "tsan": {
+      "subphase": "25.11",
+      "tool": "forensics/tools/ms_tsan.py",
+      "plane": "artifacts/phase25/tsan.json",
+      "from": "openssl-rs-court:1 (the admitted image, built from canonical_base)",
+      "differs_from": "the court's `exec`, and only here",
+      "dimension": "the venue's documented per-process RLIMIT_DATA override (OPENSSL_RS_COURT_DATA=unlimited)",
+      "reason": "ThreadSanitizer maps a ~35.1 TB sparse shadow (PROT_NONE + MAP_NORESERVE) at startup -- measured in this venue as `ThreadSanitizer failed to allocate 0x200000000000 (35184372088832) bytes ... can not mmap the shadow memory` -- which the court's 4 GiB RLIMIT_DATA refuses, so the instrument cannot start under the default `exec` exactly as ASan cannot. TSan's shadow is larger than ASan's, not smaller; the override removes only that virtual-space cap. The container cgroup memory cap, PIDs, CPUs, the wall clock and no-new-privileges are unchanged, so no bound on resident resources is weakened. This is the same derivation the Phase-18 ASan venue and 25.10 record.",
+      "measured": "the TSan run is a measurement (it builds and runs the instrumented candidate over the concurrency-relevant surface with a recorded deterministic one-thread libtest schedule), so ms_tsan.py is not metadata-only and is refused on the host; the MS-TSAN court re-runs only its pure checks over the committed plane"
+    },
+    "kani": {
+      "subphase": "25.12",
+      "tool": "forensics/tools/ms_kani.py",
+      "plane": "artifacts/phase25/kani.json",
+      "from": "openssl-rs-court:1 (the admitted image, built from canonical_base)",
+      "differs_from": "the court's `exec`, and only here",
+      "dimension": "the pinned Kani 0.68.0 release bundle and its pinned toolchain (nightly-2026-08-21) added to PATH/LD_LIBRARY_PATH from the /work scratch",
+      "reason": "Kani is a bounded model checker (Kani 0.68.0 with its CBMC 6.11.0 backend), a heavy tool not in the admitted image, installed into the /work scratch by the documented route -- the upstream x86_64-unknown-linux-gnu release bundle plus its pinned toolchain -- and the tool derives the `toolchain/` symlink and the `cargo-kani` plugin that `cargo kani setup` would create. Unlike the ASan and TSan environments this adds no RLIMIT_DATA override: a Kani proof fits the court's default per-process cap, and the container cgroup memory cap, PIDs, CPUs and the wall clock are unchanged, so no bound on resident resources is weakened.",
+      "measured": "the Kani run is a measurement (it model-checks the committed harnesses against the admitted candidate), so ms_kani.py is not metadata-only and is refused on the host; the MS-KANI court re-runs only its pure checks over the committed plane and the committed harness source"
+    },
+    "cve-replay": {
+      "subphase": "25.16",
+      "tool": "forensics/tools/ms_cve_replay.py",
+      "plane": "artifacts/phase25/cve-replay/",
+      "from": "openssl-rs-court:1 (the admitted image, built from canonical_base)",
+      "differs_from": "the court's `exec`, and only here",
+      "dimension": "the venue's own gcc compiles the committed probe (courts/phase25/cve_replay_probe.c) against the candidate's built C ABI (artifacts/phase2/libcrypto.so.3) and against a built vulnerable historical authority (forensics/authorities/prefix/openssl-*-historical)",
+      "reason": "the replay is a differential: the same committed probe and the same malformed input shape are driven through the candidate's public C ABI and through a vulnerable historical authority the advisory's affected range names, and the observed behaviours are compared. The venue's own C compiler is used -- the probe is first-party trial evidence, not a product -- and no RLIMIT_DATA override and no new tool are added: the compiler, the candidate's built shared object and the already-present historical prefixes are the whole environment, so the container cgroup memory cap, PIDs, CPUs, the wall clock and no-new-privileges are unchanged and no bound on resident resources is weakened.",
+      "measured": "the replay is a measurement (it compiles the committed probe and runs the historical CVEs' input shapes against the candidate's built ABI and the vulnerable authority), so ms_cve_replay.py is not metadata-only and is refused on the host; the MS-CVE-REPLAY court re-runs only its pure checks over the committed plane, the committed 25.15 census and the committed probe source"
+    }
+  },
+  "metadata_only": [
+    "phase25_obligations.py",
+    "ms_obligations.py",
+    "ms_ownership_planes.py",
+    "ms_phase22_crosswalk.py",
+    "ms_phase24_crosswalk.py",
+    "ms_exposure.py",
+    "ms_reduction.py",
+    "ms_phase18_fuzz_crosswalk.py",
+    "ms_phase24_safety_coverage.py",
+    "ms_historical_cve.py",
+    "ms_mechanism_reconciliation.py",
+    "ms_red_team.py",
+    "ms_frf_closure.py",
+    "ms_seal.py"
+  ],
+  "selection_rule": "Phase 25 executes only inside the admitted court container. This committed manifest records the one admitted venue -- the container marker, the opt-in environment flag, and the image identity and platform the venue records in the environment -- and `forensics/tools/phase25_guard.py` fails closed unless every one of them is present and matches. Nothing about the memory-safety census, the sanitizers, the proof harnesses or the CVE replays is built, run or probed outside this venue (docs/REPRODUCIBILITY.md section 1). The canonical base is the minimal Debian image the venue is built from; the tool-specific environments are derived from it in later subphases rather than being separate admitted bases.",
+  "metadata_only_rule": "`metadata_only` names the Phase-25 generators that read committed atlases and write a derived plane -- they execute nothing, no compiler, no tool, no probe -- so the guard admits them on any host exactly as the other strata's obligation generators run host-side in CI's static job. `phase25_obligations.py` is the ledger, `ms_obligations.py` (25.3) is a pure derivation over the committed 25.1 census and 25.2 non-Rust TCB, `ms_ownership_planes.py` (25.4) is a pure derivation over the committed census, the committed TCB and the committed source text, `ms_phase22_crosswalk.py` (25.5) is a pure derivation over the committed census and the committed Phase-22 atlas, `ms_phase24_crosswalk.py` (25.6) is a pure derivation over the committed census, the committed 25.5 crosswalk and the committed Phase-24 downstream measurement, `ms_exposure.py` (25.7) is a pure derivation over the committed census, the committed 25.5 crosswalk, the committed 25.6 crosswalk and the committed 25.4 ownership planes,  `ms_reduction.py` (25.8) is a pure derivation over the committed census, the committed exposure classification and the committed source spans the census names -- it applies no reduction, so the census is unchanged and it runs no compiler -- and `ms_phase18_fuzz_crosswalk.py` (25.13) is a pure derivation over the committed census, the committed 25.7 exposure classification and the committed Phase-18 hostile-fuzz evidence (the hostile-boundary register, the courts registry and the bounded mutational screen), and `ms_phase24_safety_coverage.py` (25.14) is a pure derivation over the committed census, the committed 25.6 crosswalk, the committed 25.7 exposure classification, the committed 25.8 reduction counts and the committed Phase-24 downstream measurement (the usage fingerprints, the runtime-functional atlas, the p1000 drop-in receipts, the family freeze and the holdout partition), and `ms_historical_cve.py` (25.15) is a pure derivation over the frozen official vulnerability index and the advisories it carries, the committed security lineage that binds the CVE records, the committed 25.1 census and the committed 25.2 non-Rust TCB, and `ms_mechanism_reconciliation.py` (25.17) is a pure derivation over the committed 25.15 census and 25.16 replay, the committed 25.1 census and its unsafe contexts, the committed 25.2 non-Rust TCB, the committed 25.7 exposure classification, the committed 25.8 reduction axis and the committed 25.9-25.12 evidence planes (Miri, ASan/MSan, TSan, Kani), and `ms_red_team.py` (25.18) is a pure derivation over the committed 25.7 exposure classification and its witnesses, the committed Phase-22 atlas it reaches through 25.5's crosswalk, the committed 25.8 reduction axis, the committed 25.13 fuzz crosswalk and its hostile corpus, the committed 25.14 coverage, the committed 25.17 mechanisms, the committed 25.9-25.12 evidence planes and the committed 25.16 replay index, and `ms_frf_closure.py` (25.20) is a pure derivation over the committed Phase-25 contract table and the committed planes that are each unit's evidence, the committed FRF registry and Gemel projection and the committed `.frf` receipt/challenge/claim store, and `ms_seal.py` (25.21) is a pure derivation that re-runs each landed Phase-25 court's own handler over the committed planes, joins the census's externally reachable sites to the committed tool planes' per-site state and derives the seal-class closure record -- the bounded claim, the residual census and the non-claims -- writing `artifacts/phase25/summary.json` and the generated seal `docs/PHASE-25-MEMORY-SAFETY-SEAL.md`: none runs a compiler and none builds anything, so each is admitted beside the ledger. Every execution entry point (the runner `phase25_courts.py`, and every later subphase tool that compiles the census, runs Miri/ASan/MSan/TSan/Kani or replays a CVE) is deliberately absent from this list, so a host invocation of one is refused. A pure derivation that reads only committed Phase-25 artefacts (and the committed source it classifies, the committed Phase-22 atlas it reads, or the committed Phase-24 measurement it joins to) and writes a derived plane is admitted beside `phase25_obligations.py` in the commit that lands it, exactly as the Phase-24 derivations are, and any tool that compiles, instruments, proves or replays stays deliberately absent and is refused on the host.",
+  "non_claims": [
+    "the admitted venue is a container identity, not a security boundary: it records where Phase 25 runs, not what it may claim",
+    "the manifest is authored evidence, not proof the container is unmodified: it binds the venue a receipt names, and the base digest is the stronger binding a later subphase may carry into each derived environment",
+    "admitting a metadata-only generator on the host is not admitting host execution: that generator runs no command and produces no runtime evidence",
+    "naming one canonical base is not claiming the base is byte-identical to every derived environment: each derived environment is recorded as its own derivation when a later subphase lands it",
+    "the ASan environment's removal of only the venue's per-process RLIMIT_DATA is not weakening the court: ASan's shadow is PROT_NONE + MAP_NORESERVE virtual address space the cgroup does not count as resident, and every bound that bounds real resources is unchanged (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4, the 25.10 correction)",
+    "the TSan environment's removal of only the venue's per-process RLIMIT_DATA is not weakening the court: TSan's ~35.1 TB shadow is PROT_NONE + MAP_NORESERVE virtual address space the cgroup does not count as resident, and every bound that bounds real resources is unchanged (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4, the 25.11 correction)",
+    "the Kani environment's addition of only the pinned Kani bundle and its toolchain to PATH/LD_LIBRARY_PATH is not weakening the court: it removes no per-process RLIMIT_DATA and every bound that bounds real resources is unchanged, and a KANI_PASS is a bounded model-checking proof over one harness's domain, never a whole-program or concurrency claim (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 4, the 25.12 record)"
+  ]
+}

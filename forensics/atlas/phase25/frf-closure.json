@@ -1,0 +1,1334 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "chain": {
+      "declarable_courts": [],
+      "declared_courts": [],
+      "phase": 25,
+      "probe_pairs": [],
+      "reason": "the stratum stages a declarable court only if a Phase-25 court is declared in gen_frf_courts.py and its artifacts/phase25/probes/<probe>.{authority,candidate} pair is staged. Neither holds: the registry declares no Phase-25 court, the tree holds no such pair, and every Phase-25 court row records frf_declarable false, so every Phase-25 court reads committed evidence and carries no {fixture}-driven FRF declaration and phase_state.py's frf_gemel_blocking_reason(25) is empty by its own scoping -- the stratum owes no .frf declaration, receipt, adjudicated challenge or sensitivity-backed claim, and no Gemel checkpoint",
+      "registry": "forensics/tools/gen_frf_courts.py",
+      "stands_in_place": [
+        "the MS-FRF-CLOSURE harness challenge: the record/obligation/receipt/residual joins and the chain and Gemel records are re-derived from the committed evidence and required to agree, and the classifier is proved not a rubber stamp",
+        "the Gemel checkpoint projection forensics/GEMEL_TRAJECTORY.md, which records the current checkpoint the release re-creates the store at"
+      ],
+      "vacuous": true
+    },
+    "claim": {
+      "closed": false,
+      "open_residuals": 450,
+      "orphans": 0,
+      "reason": "the closure is closed only when every record and obligation is joined with no orphan, every receipt the stratum owes is present, and no residual is open or undisposed. No Phase-25 court is declarable, so the FRF/Gemel chain entry is vacuous and the atlas carries open residuals: the closure records this rather than claiming it closed",
+      "undisposed_residuals": 0
+    },
+    "counts": {
+      "chain_declared_courts": 0,
+      "chain_probe_pairs": 0,
+      "chain_vacuous": true,
+      "challenges_orphaned": 0,
+      "challenges_required": 0,
+      "claims_orphaned": 0,
+      "obligations": 22,
+      "obligations_joined": 22,
+      "obligations_orphaned": 0,
+      "obligations_owed": 0,
+      "receipts_orphaned": 0,
+      "receipts_required": 0,
+      "records": 22,
+      "records_joined": 22,
+      "records_orphaned": 0,
+      "records_pending": 0,
+      "residual_classes_outside_schema": 1,
+      "residual_crosscheck": 11,
+      "residual_records": 484,
+      "residuals": 495,
+      "residuals_disposed": 484,
+      "residuals_open": 450,
+      "residuals_undisposed": 0
+    },
+    "gemel": {
+      "checkpoint_count": 70,
+      "checkpoint_owed": false,
+      "checkpoints_naming_frf_chain": [
+        "K45",
+        "K48",
+        "K49",
+        "K50",
+        "K51",
+        "K52",
+        "K53",
+        "K54",
+        "K55",
+        "K56",
+        "K57",
+        "K58",
+        "K59",
+        "K60",
+        "K61",
+        "K62",
+        "K63",
+        "K64",
+        "K65",
+        "K66",
+        "K67",
+        "K68",
+        "K69",
+        "K70"
+      ],
+      "checkpoints_naming_phase": [],
+      "current": "checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d",
+      "identity": {
+        "candidate_version": "0.0.27",
+        "checkpoint_state_hash": "a887e4176ee59aec0a6d958696c805efffe6df8a2620c4b9339b849138ac805d",
+        "plan": {
+          "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
+          "sha256": "1b80484986e7a4cc3646ac88ced5ebecc7040a1ceaba1550a4cd628f4e5bfb02"
+        },
+        "registry": {
+          "path": "forensics/tools/gen_frf_courts.py",
+          "sha256": "f413e98312e470ee93eb483766e93e9860855349c8a0deea41bf258f4df7c1ca"
+        }
+      },
+      "projection": "forensics/GEMEL_TRAJECTORY.md",
+      "reason": "the FRF/Gemel chain entry is vacuous (no Phase-25 court is declarable), so the stratum owes no Gemel change or checkpoint of its own; the release's current checkpoint in the committed projection is the boundary a later session resumes from, and this record binds it rather than reading the uncommitted store"
+    },
+    "non_claims": [
+      "the closure is an instrument plus an observation record, not a claim that the stratum has a declarable court or that the FRF/Gemel chain ran for it",
+      "a record joined to its committed evidence says the evidence is present and its court is registered, not that the evidence is correct: each plane's own court judges that",
+      "a disposed residual is honestly recorded, not resolved: an `open` disposition is an unresolved leftover whose disposition is `open`",
+      "the Gemel projection is a committed projection of a store that is not committed (docs/DECISIONS.md D17); the closure binds the projection, never the store"
+    ],
+    "obligations": [
+      {
+        "challenges": [],
+        "closure": "the `MS-ASAN-MSMAN` court passes",
+        "court": "MS-ASAN-MSMAN",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-asan-msman",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "asan-msan"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-CLEAN-REGEN` court passes",
+        "court": "MS-CLEAN-REGEN",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-clean-regen",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "clean-regeneration"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-CONSTITUTION` court passes",
+        "court": "MS-CONSTITUTION",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-constitution",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "constitution"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-CVE-REPLAY` court passes",
+        "court": "MS-CVE-REPLAY",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-cve-replay",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "cve-replay"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-EXPOSURE-CLASSIFICATION` court passes",
+        "court": "MS-EXPOSURE-CLASSIFICATION",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-exposure-classification",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "exposure-classification"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-FRF-CLOSURE` court passes",
+        "court": "MS-FRF-CLOSURE",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-frf-closure",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "frf-gemel-closure"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-HISTORICAL-CVE` court passes",
+        "court": "MS-HISTORICAL-CVE",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-historical-cve",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "historical-cve-census"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-KANI` court passes",
+        "court": "MS-KANI",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-kani",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "kani"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-MECHANISM-RECONCILIATION` court passes",
+        "court": "MS-MECHANISM-RECONCILIATION",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-mechanism-reconciliation",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "mechanism-reconciliation"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-SEAL` court passes",
+        "court": "MS-SEAL",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-seal",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "memory-safety-seal"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-MIRI` court passes",
+        "court": "MS-MIRI",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-miri",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "miri"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-NON-RUST-TCB` court passes",
+        "court": "MS-NON-RUST-TCB",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-non-rust-tcb",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "non-rust-tcb"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-OWNERSHIP-PLANES` court passes",
+        "court": "MS-OWNERSHIP-PLANES",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-ownership-planes",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "ownership-planes"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-PHASE18-FUZZ-CROSSWALK` court passes",
+        "court": "MS-PHASE18-FUZZ-CROSSWALK",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-phase18-fuzz-crosswalk",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "phase18-fuzz-crosswalk"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-PHASE22-CROSSWALK` court passes",
+        "court": "MS-PHASE22-CROSSWALK",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-phase22-crosswalk",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "phase22-crosswalk"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-PHASE24-CROSSWALK` court passes",
+        "court": "MS-PHASE24-CROSSWALK",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-phase24-crosswalk",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "phase24-crosswalk"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-PHASE24-SAFETY-COVERAGE` court passes",
+        "court": "MS-PHASE24-SAFETY-COVERAGE",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-phase24-safety-coverage",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "phase24-safety-coverage"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-RED-TEAM` court passes",
+        "court": "MS-RED-TEAM",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-red-team",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "red-team"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-SAFETY-OBLIGATIONS` court passes",
+        "court": "MS-SAFETY-OBLIGATIONS",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-safety-obligations",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "safety-obligations"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-SOURCE-CENSUS` court passes",
+        "court": "MS-SOURCE-CENSUS",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-source-census",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "source-census"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-TSAN` court passes",
+        "court": "MS-TSAN",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-tsan",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "tsan"
+      },
+      {
+        "challenges": [],
+        "closure": "the `MS-UNSAFE-REDUCTION` court passes",
+        "court": "MS-UNSAFE-REDUCTION",
+        "declared_in_registry": false,
+        "frf_court_id": "openssl-rs-ms-unsafe-reduction",
+        "joined": true,
+        "orphan": false,
+        "owes_receipt": false,
+        "receipts": [],
+        "unit": "unsafe-reduction"
+      }
+    ],
+    "property_findings": [
+      "the record set is 22 Phase-25 contract unit(s): 22 joined to their committed evidence and generator, 0 pending with the subphase that lands them and 0 orphaned",
+      "the FRF chain owes 0 receipt(s) and the stratum's 22 court obligation(s) join their committed evidence (22 joined, 0 owing a receipt, 0 orphaned), so no receipt/challenge/claim that names a Phase-25 court is orphaned",
+      "the residual census disposes 484 of 484 residual record(s) from the closed disposition vocabulary and records 11 light cross-check leftover(s); 450 residual(s) are open and 0 undisposed",
+      "1 residual(s) carry a class from a plane's own vocabulary rather than memory_safety_schemas.RESIDUAL_CLASSES (evidence_not_reproducible=1); each is recorded with its disposition rather than read as an undisposed leftover",
+      "the open residual(s) are named rather than smoothed to a zero (a bounded sample of 8 per plane; the full set is in the cited plane): clean-regeneration=1, cve-replay=4, exposure-classification=1, historical-cve-census=8, mechanism-reconciliation=4, phase18-fuzz-crosswalk=8, phase22-crosswalk=8, phase24-crosswalk=5, phase24-safety-coverage=8, red-team=1, tsan=1",
+      "a passing MS-FRF-CLOSURE is an instrument, not a property: the stratum's chain entry is vacuous (no Phase-25 court is declarable) and the atlas carries open residuals, so the closure records property_status NOT_CLAIMED rather than a chain that ran"
+    ],
+    "property_status": "NOT_CLAIMED",
+    "receipts": {
+      "challenges": {
+        "orphaned": {},
+        "orphaned_count": 0,
+        "present": {},
+        "present_count": 0,
+        "required": []
+      },
+      "claims_naming_phase_courts": [],
+      "claims_orphaned": [],
+      "declarable_courts": [],
+      "receipts": {
+        "orphaned": {},
+        "orphaned_count": 0,
+        "present": {},
+        "present_count": 0,
+        "required": []
+      }
+    },
+    "records": [
+      {
+        "artefact": "artifacts/phase25/asan-msan.json",
+        "artefact_present": true,
+        "artefact_sha256": "69a7eb34489bbde7d555a3ad25ad3b87017037fca325945e846011afd9a01e0a",
+        "court": "MS-ASAN-MSMAN",
+        "generator": "forensics/tools/ms_asan.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "sanitizer_result"
+        ],
+        "self": false,
+        "unit": "asan-msan"
+      },
+      {
+        "artefact": "artifacts/phase25/regeneration.json",
+        "artefact_present": true,
+        "artefact_sha256": "7cc6b11a42b1271c7c63a00376170222f9e831708a0c74df53693c5063470b89",
+        "court": "MS-CLEAN-REGEN",
+        "generator": "forensics/tools/ms_regeneration.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "regeneration"
+        ],
+        "self": false,
+        "unit": "clean-regeneration"
+      },
+      {
+        "artefact": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
+        "artefact_present": true,
+        "artefact_sha256": "1b80484986e7a4cc3646ac88ced5ebecc7040a1ceaba1550a4cd628f4e5bfb02",
+        "court": "MS-CONSTITUTION",
+        "generator": "forensics/tools/phase25_courts.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "constitution"
+        ],
+        "self": false,
+        "unit": "constitution"
+      },
+      {
+        "artefact": "artifacts/phase25/cve-replay/index.json",
+        "artefact_present": true,
+        "artefact_sha256": "7d388d135622d7bc7d238ccb0e4c99fae3a315e4a187d30e587715df6944fd51",
+        "court": "MS-CVE-REPLAY",
+        "generator": "forensics/tools/ms_cve_replay.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "cve_replay"
+        ],
+        "self": false,
+        "unit": "cve-replay"
+      },
+      {
+        "artefact": "artifacts/phase25/exposure.json",
+        "artefact_present": true,
+        "artefact_sha256": "a9131fb5ecd852e3f7dac31e691348856e8ba56243e9316986a2f87865661390",
+        "court": "MS-EXPOSURE-CLASSIFICATION",
+        "generator": "forensics/tools/ms_exposure.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "exposure"
+        ],
+        "self": false,
+        "unit": "exposure-classification"
+      },
+      {
+        "artefact": "forensics/atlas/phase25/frf-closure.json",
+        "artefact_present": true,
+        "artefact_sha256": null,
+        "court": "MS-FRF-CLOSURE",
+        "generator": "forensics/tools/ms_frf_closure.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "frf_closure"
+        ],
+        "self": true,
+        "unit": "frf-gemel-closure"
+      },
+      {
+        "artefact": "artifacts/phase25/historical-cves.json",
+        "artefact_present": true,
+        "artefact_sha256": "1a21e7308b0efea9052fc82a6bdf92344bb84b0d0b3b78770650a9d9fd83de76",
+        "court": "MS-HISTORICAL-CVE",
+        "generator": "forensics/tools/ms_historical_cve.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "historical_cve"
+        ],
+        "self": false,
+        "unit": "historical-cve-census"
+      },
+      {
+        "artefact": "artifacts/phase25/kani.json",
+        "artefact_present": true,
+        "artefact_sha256": "abb1181a2b3c7cdbc8985f010f6b8c0103cc0c30b6b00e32727882ef40044b23",
+        "court": "MS-KANI",
+        "generator": "forensics/tools/ms_kani.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "kani_result"
+        ],
+        "self": false,
+        "unit": "kani"
+      },
+      {
+        "artefact": "artifacts/phase25/mechanisms.json",
+        "artefact_present": true,
+        "artefact_sha256": "88ff114e81d7816ada796bf911ca7a7ea3aa63bfe5e683ebb1eedf0edde06925",
+        "court": "MS-MECHANISM-RECONCILIATION",
+        "generator": "forensics/tools/ms_mechanism_reconciliation.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "vulnerability_mechanism"
+        ],
+        "self": false,
+        "unit": "mechanism-reconciliation"
+      },
+      {
+        "artefact": "docs/PHASE-25-MEMORY-SAFETY-SEAL.md",
+        "artefact_present": true,
+        "artefact_sha256": null,
+        "court": "MS-SEAL",
+        "generator": "forensics/tools/ms_seal.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "summary"
+        ],
+        "self": false,
+        "unit": "memory-safety-seal"
+      },
+      {
+        "artefact": "artifacts/phase25/miri.json",
+        "artefact_present": true,
+        "artefact_sha256": "ef437ef1062a1cbc66990b9599267f7aa656d73929cc422f857e0ea9a52e16e9",
+        "court": "MS-MIRI",
+        "generator": "forensics/tools/ms_miri.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "miri_result"
+        ],
+        "self": false,
+        "unit": "miri"
+      },
+      {
+        "artefact": "artifacts/phase25/non-rust-tcb.json",
+        "artefact_present": true,
+        "artefact_sha256": "3d3d0b55ae90dc4f85a6e07a8d1a0fcce0272db48384e8e1b8b969732affa834",
+        "court": "MS-NON-RUST-TCB",
+        "generator": "forensics/tools/ms_non_rust_tcb.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "c_adapter",
+          "ffi_boundary"
+        ],
+        "self": false,
+        "unit": "non-rust-tcb"
+      },
+      {
+        "artefact": "artifacts/phase25/ownership-planes.json",
+        "artefact_present": true,
+        "artefact_sha256": "5ded55df070be076ebc46f4638eec4bb938a386ea2088927354129cc23cc4b85",
+        "court": "MS-OWNERSHIP-PLANES",
+        "generator": "forensics/tools/ms_ownership_planes.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "allocation_site",
+          "ownership_edge",
+          "callback_lifetime",
+          "send_sync_impl",
+          "global_state",
+          "panic_boundary"
+        ],
+        "self": false,
+        "unit": "ownership-planes"
+      },
+      {
+        "artefact": "artifacts/phase25/phase18-fuzz-crosswalk.json",
+        "artefact_present": true,
+        "artefact_sha256": "1565059290338bb44c47946bf8d9950e1b1ed70b32ccb8205630aa56c98d6d04",
+        "court": "MS-PHASE18-FUZZ-CROSSWALK",
+        "generator": "forensics/tools/ms_phase18_fuzz_crosswalk.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "fuzz_crosswalk"
+        ],
+        "self": false,
+        "unit": "phase18-fuzz-crosswalk"
+      },
+      {
+        "artefact": "artifacts/phase25/phase22-crosswalk.json",
+        "artefact_present": true,
+        "artefact_sha256": "7b94a7954795de3af1b23452d93f870f8f11f1c78007c202d317ed2699cb12d7",
+        "court": "MS-PHASE22-CROSSWALK",
+        "generator": "forensics/tools/ms_phase22_crosswalk.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "crosswalk"
+        ],
+        "self": false,
+        "unit": "phase22-crosswalk"
+      },
+      {
+        "artefact": "artifacts/phase25/phase24-crosswalk.json",
+        "artefact_present": true,
+        "artefact_sha256": "870df134a610255ad5e12b6a317469a9c270c42280c4691e98ed88decf95ce05",
+        "court": "MS-PHASE24-CROSSWALK",
+        "generator": "forensics/tools/ms_phase24_crosswalk.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "crosswalk"
+        ],
+        "self": false,
+        "unit": "phase24-crosswalk"
+      },
+      {
+        "artefact": "artifacts/phase25/phase24-safety-coverage.json",
+        "artefact_present": true,
+        "artefact_sha256": "14b86647651912bbebfc8fa0d1f1c5e048cff262fb6a231a46855ee1ea53627f",
+        "court": "MS-PHASE24-SAFETY-COVERAGE",
+        "generator": "forensics/tools/ms_phase24_safety_coverage.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "coverage"
+        ],
+        "self": false,
+        "unit": "phase24-safety-coverage"
+      },
+      {
+        "artefact": "artifacts/phase25/red-team.json",
+        "artefact_present": true,
+        "artefact_sha256": "1346a477d10af8a3b7cf7cc653cdaed52b2b891ab8065ed3eecf6bf7248f26a4",
+        "court": "MS-RED-TEAM",
+        "generator": "forensics/tools/ms_red_team.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "residual"
+        ],
+        "self": false,
+        "unit": "red-team"
+      },
+      {
+        "artefact": "artifacts/phase25/safety-obligations.json",
+        "artefact_present": true,
+        "artefact_sha256": "4e4f188e06a2ba4989ac5b78e88845785e591673ed6e33c368619ab9052dfa7d",
+        "court": "MS-SAFETY-OBLIGATIONS",
+        "generator": "forensics/tools/ms_obligations.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "safety_obligation"
+        ],
+        "self": false,
+        "unit": "safety-obligations"
+      },
+      {
+        "artefact": "artifacts/phase25/source-census.json",
+        "artefact_present": true,
+        "artefact_sha256": "141f61a1565b4e0dee665cae89ae6bea12f3aea6415710428a1c3549c707508a",
+        "court": "MS-SOURCE-CENSUS",
+        "generator": "forensics/tools/ms_census.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "source_census",
+          "unsafe_context",
+          "unsafe_site"
+        ],
+        "self": false,
+        "unit": "source-census"
+      },
+      {
+        "artefact": "artifacts/phase25/tsan.json",
+        "artefact_present": true,
+        "artefact_sha256": "5eb7c5ae29a9c6f142cb369f433ce9b0bdc156ae537d9ea54f5e427b64cc5af3",
+        "court": "MS-TSAN",
+        "generator": "forensics/tools/ms_tsan.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "sanitizer_result"
+        ],
+        "self": false,
+        "unit": "tsan"
+      },
+      {
+        "artefact": "artifacts/phase25/unsafe-reduction.json",
+        "artefact_present": true,
+        "artefact_sha256": "7af3ef39c657234852472766b3251efd282539c8ee1dbc08d2608a92439435b4",
+        "court": "MS-UNSAFE-REDUCTION",
+        "generator": "forensics/tools/ms_reduction.py",
+        "generator_present": true,
+        "joined": true,
+        "orphan": false,
+        "pending": false,
+        "record_kinds": [
+          "reduction"
+        ],
+        "self": false,
+        "unit": "unsafe-reduction"
+      }
+    ],
+    "residual_census": {
+      "by_class": {
+        "evidence_missing": 390,
+        "evidence_not_reproducible": 1,
+        "historical_cve_unreplayed": 4,
+        "join_evidence_missing": 65,
+        "mechanism_unreconciled": 4,
+        "out_of_scope": 20,
+        "tool_not_reachable": 4,
+        "tool_unsupported": 6,
+        "unexplained_reachable_unsafe": 1
+      },
+      "by_disposition": {
+        "classified": 1,
+        "open": 450,
+        "preserved": 33
+      },
+      "by_plane": {
+        "asan-msan": {
+          "by_class": {
+            "evidence_missing": 3,
+            "tool_not_reachable": 1,
+            "tool_unsupported": 2
+          },
+          "by_disposition": {
+            "preserved": 6
+          },
+          "crosscheck": 0,
+          "open": 0,
+          "records": 6,
+          "total": 6
+        },
+        "clean-regeneration": {
+          "by_class": {
+            "evidence_not_reproducible": 1
+          },
+          "by_disposition": {
+            "open": 1
+          },
+          "crosscheck": 0,
+          "open": 1,
+          "records": 1,
+          "total": 1
+        },
+        "cve-replay": {
+          "by_class": {
+            "historical_cve_unreplayed": 4
+          },
+          "by_disposition": {
+            "open": 4
+          },
+          "crosscheck": 0,
+          "open": 4,
+          "records": 4,
+          "total": 4
+        },
+        "exposure-classification": {
+          "by_class": {
+            "evidence_missing": 2
+          },
+          "by_disposition": {
+            "open": 1,
+            "preserved": 1
+          },
+          "crosscheck": 0,
+          "open": 1,
+          "records": 2,
+          "total": 2
+        },
+        "historical-cve-census": {
+          "by_class": {
+            "evidence_missing": 230,
+            "join_evidence_missing": 59
+          },
+          "by_disposition": {
+            "open": 289
+          },
+          "crosscheck": 0,
+          "open": 289,
+          "records": 289,
+          "total": 289
+        },
+        "kani": {
+          "by_class": {
+            "evidence_missing": 3,
+            "tool_not_reachable": 1,
+            "tool_unsupported": 2
+          },
+          "by_disposition": {
+            "preserved": 6
+          },
+          "crosscheck": 0,
+          "open": 0,
+          "records": 6,
+          "total": 6
+        },
+        "mechanism-reconciliation": {
+          "by_class": {
+            "mechanism_unreconciled": 4
+          },
+          "by_disposition": {
+            "open": 4
+          },
+          "crosscheck": 0,
+          "open": 4,
+          "records": 4,
+          "total": 4
+        },
+        "miri": {
+          "by_class": {
+            "evidence_missing": 2,
+            "tool_not_reachable": 1,
+            "tool_unsupported": 1
+          },
+          "by_disposition": {
+            "classified": 1,
+            "preserved": 3
+          },
+          "crosscheck": 0,
+          "open": 0,
+          "records": 4,
+          "total": 4
+        },
+        "non-rust-tcb": {
+          "by_class": {
+            "evidence_missing": 3,
+            "out_of_scope": 3
+          },
+          "by_disposition": {},
+          "crosscheck": 6,
+          "open": 0,
+          "records": 0,
+          "total": 6
+        },
+        "ownership-planes": {
+          "by_class": {
+            "evidence_missing": 1,
+            "unexplained_reachable_unsafe": 1
+          },
+          "by_disposition": {},
+          "crosscheck": 2,
+          "open": 0,
+          "records": 0,
+          "total": 2
+        },
+        "phase18-fuzz-crosswalk": {
+          "by_class": {
+            "evidence_missing": 13,
+            "out_of_scope": 4
+          },
+          "by_disposition": {
+            "open": 17
+          },
+          "crosscheck": 0,
+          "open": 17,
+          "records": 17,
+          "total": 17
+        },
+        "phase22-crosswalk": {
+          "by_class": {
+            "evidence_missing": 118
+          },
+          "by_disposition": {
+            "open": 118
+          },
+          "crosscheck": 0,
+          "open": 118,
+          "records": 118,
+          "total": 118
+        },
+        "phase24-crosswalk": {
+          "by_class": {
+            "evidence_missing": 1,
+            "join_evidence_missing": 4
+          },
+          "by_disposition": {
+            "open": 5
+          },
+          "crosscheck": 0,
+          "open": 5,
+          "records": 5,
+          "total": 5
+        },
+        "phase24-safety-coverage": {
+          "by_class": {
+            "evidence_missing": 6,
+            "join_evidence_missing": 2,
+            "out_of_scope": 1
+          },
+          "by_disposition": {
+            "open": 9
+          },
+          "crosscheck": 0,
+          "open": 9,
+          "records": 9,
+          "total": 9
+        },
+        "red-team": {
+          "by_class": {
+            "evidence_missing": 1
+          },
+          "by_disposition": {
+            "open": 1
+          },
+          "crosscheck": 0,
+          "open": 1,
+          "records": 1,
+          "total": 1
+        },
+        "source-census": {
+          "by_class": {
+            "evidence_missing": 1,
+            "out_of_scope": 2
+          },
+          "by_disposition": {},
+          "crosscheck": 3,
+          "open": 0,
+          "records": 0,
+          "total": 3
+        },
+        "tsan": {
+          "by_class": {
+            "evidence_missing": 6,
+            "tool_not_reachable": 1,
+            "tool_unsupported": 1
+          },
+          "by_disposition": {
+            "open": 1,
+            "preserved": 7
+          },
+          "crosscheck": 0,
+          "open": 1,
+          "records": 8,
+          "total": 8
+        },
+        "unsafe-reduction": {
+          "by_class": {
+            "out_of_scope": 10
+          },
+          "by_disposition": {
+            "preserved": 10
+          },
+          "crosscheck": 0,
+          "open": 0,
+          "records": 10,
+          "total": 10
+        }
+      },
+      "classes_outside_schema": {
+        "evidence_not_reproducible": 1
+      },
+      "crosscheck": 11,
+      "disposed": 484,
+      "open": 450,
+      "open_sample": {
+        "clean-regeneration": [
+          "res-regen-4-drift"
+        ],
+        "cve-replay": [
+          "residual-CVE-2023-0286",
+          "residual-CVE-2025-15467",
+          "residual-CVE-2026-63072",
+          "residual-CVE-2026-84782"
+        ],
+        "exposure-classification": [
+          "rx:0b6b96cbf2bd638d"
+        ],
+        "historical-cve-census": [
+          "res-index-CVE-2002-0655",
+          "res-index-CVE-2002-0656",
+          "res-index-CVE-2002-0657",
+          "res-index-CVE-2002-0659",
+          "res-index-CVE-2002-1568",
+          "res-index-CVE-2003-0078",
+          "res-index-CVE-2003-0131",
+          "res-index-CVE-2003-0147"
+        ],
+        "mechanism-reconciliation": [
+          "res-mech-vm-heap-oob-read-ssl-dtls",
+          "res-mech-vm-heap-oob-write-crypto-cms",
+          "res-mech-vm-stack-oob-write-crypto-cms",
+          "res-mech-vm-type-confusion-crypto-x509"
+        ],
+        "phase18-fuzz-crosswalk": [
+          "rx:5640cf41277dd97b",
+          "rx:512d2c47a2d17501",
+          "rx:571fb38166749883",
+          "rx:a9efed7c7ccca87e",
+          "rx:69540dbfca74a312",
+          "rx:1d5a02c583ce7471",
+          "rx:05b354cffb742d0e",
+          "rx:1bd23ef4cb319b2a"
+        ],
+        "phase22-crosswalk": [
+          "rx:5348917d89181461",
+          "rx:101e4a7346648c6b",
+          "rx:81e8c7770d616907",
+          "rx:d22e581885454eef",
+          "rx:8ee5882e0ba00689",
+          "rx:f2cf10cd47789dd6",
+          "rx:a3d33f0002572b87",
+          "rx:ee78f041c2b07f20"
+        ],
+        "phase24-crosswalk": [
+          "rx:67146b255d4330fd",
+          "rx:d1f041e2571a1994",
+          "rx:b3bbb11af0c29fcb",
+          "rx:f4fe1dc88b06ab3a",
+          "rx:0d29d1d143efe8e2"
+        ],
+        "phase24-safety-coverage": [
+          "rx:b93d7b6ce37d13e6",
+          "rx:78e442fb81621335",
+          "rx:084e3477a1daf717",
+          "rx:6e03af533e9cfa45",
+          "rx:71e8d67fd6bb2deb",
+          "rx:3435ce56b36d3967",
+          "rx:36055eb93ea5bcdd",
+          "rx:a8ae19c7095ac9c4"
+        ],
+        "red-team": [
+          "rt-res-rt-phase22-unwitnessed-external"
+        ],
+        "tsan": [
+          "res-tsan-default-libctx-race"
+        ]
+      },
+      "records": 484,
+      "sample_bound": 8,
+      "total": 495,
+      "undisposed": 0,
+      "undisposed_sets": {}
+    },
+    "sort_key": "records by unit; obligations by unit; receipts/challenges/claims by court id; residual_census planes/by_class/by_disposition by key with every list sorted; chain.declared_courts and chain.probe_pairs sorted; gemel so the current checkpoint and the naming sets are derived from the committed projection; every list sorted",
+    "what_this_is": "Phase 25.20's FRF/Gemel closure: the record set (every Phase-25 contract unit joined to its committed evidence and its committed generator), the obligation and receipt joins (no unit and no receipt orphaned), the residual census (every residual classified and disposed, the open ones named), the FRF chain staging (why no Phase-25 court is declarable, and the harness challenge that stands in its place) and the Gemel checkpoint projection (the state of the committed forensics/GEMEL_TRAJECTORY.md, never the store). It is an instrument plus an observation record, not a claim that the stratum has a declarable court."
+  },
+  "body_hash": "beddbff283066f542810ae8354875b096108e4e4da226cf12e5c92363a235904",
+  "generator": "forensics/tools/ms_frf_closure.py",
+  "inputs": [
+    {
+      "name": "phase-25-plan",
+      "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
+      "sha256": "1b80484986e7a4cc3646ac88ced5ebecc7040a1ceaba1550a4cd628f4e5bfb02"
+    },
+    {
+      "name": "memory-safety-schemas",
+      "path": "forensics/tools/memory_safety_schemas.py",
+      "sha256": "58d0759dcbc3ab418d878a8e09755fdce76777790814ce3eee777b313db9b1c0"
+    },
+    {
+      "name": "phase25-guard",
+      "path": "forensics/tools/phase25_guard.py",
+      "sha256": "fa88056a76e69be741d9b41d9c3c683329ccb6f885ac1f6cd5fa0e0358a37e10"
+    },
+    {
+      "name": "phase25-container-manifest",
+      "path": "forensics/memory-safety/container.json",
+      "sha256": "8812838c85cb47bf8c2f1edc3c0c4ddeb0e5a7fe1ef8e6ff6cae83a02bb2bb54"
+    },
+    {
+      "name": "ms-frf-closure-tool",
+      "path": "forensics/tools/ms_frf_closure.py",
+      "sha256": "1e43b16422824a58771097afe7f4243538b09e141f0b74863bdf50c05e4c492f"
+    },
+    {
+      "name": "frf-registry",
+      "path": "forensics/tools/gen_frf_courts.py",
+      "sha256": "f413e98312e470ee93eb483766e93e9860855349c8a0deea41bf258f4df7c1ca"
+    },
+    {
+      "name": "gemel-trajectory",
+      "path": "forensics/GEMEL_TRAJECTORY.md",
+      "sha256": "02d0faf30973faaa59f66098ff85d399df4ee9f2746f9ef73c8b117fa99db6b1"
+    },
+    {
+      "name": "source-census",
+      "path": "artifacts/phase25/source-census.json",
+      "sha256": "7991c43f59d4b52c297f81d017f813ad1de4bef68444287c5ea73b3cdf2ad127"
+    },
+    {
+      "name": "non-rust-tcb",
+      "path": "artifacts/phase25/non-rust-tcb.json",
+      "sha256": "672027f1411e5a749e9388df220477c386430df51e2016d85ee5f924ecb1e35a"
+    },
+    {
+      "name": "safety-obligations",
+      "path": "artifacts/phase25/safety-obligations.json",
+      "sha256": "45dc6830d191a8ac3fa59481ddc56b5e0b57662b53a16b7da2f23f5b8b3cbe6e"
+    },
+    {
+      "name": "ownership-planes",
+      "path": "artifacts/phase25/ownership-planes.json",
+      "sha256": "83074cdba20d7b5430ecab17a503522373ea729badbdf410470caad55a7cd80e"
+    },
+    {
+      "name": "phase22-crosswalk",
+      "path": "artifacts/phase25/phase22-crosswalk.json",
+      "sha256": "824843747ff80be105072970049dfb2c1d80bf9376c57e255df991d0d312744e"
+    },
+    {
+      "name": "phase24-crosswalk",
+      "path": "artifacts/phase25/phase24-crosswalk.json",
+      "sha256": "5cb7c238a9b6eae4387ebee0b47fc0603a46bc6163e603cbe8c0b392104154ed"
+    },
+    {
+      "name": "exposure-classification",
+      "path": "artifacts/phase25/exposure.json",
+      "sha256": "1530b933e1d5f3b74feaa7600a82466717a85ae7b2f51fa0bb81cf1cc8f87613"
+    },
+    {
+      "name": "unsafe-reduction",
+      "path": "artifacts/phase25/unsafe-reduction.json",
+      "sha256": "5fdd637f34c61f4010dbc49294868e1c0769f31e64df2c8b6df754ebb510e32e"
+    },
+    {
+      "name": "miri",
+      "path": "artifacts/phase25/miri.json",
+      "sha256": "740c26bb6ebe62a14b21e7e7677980c6a4849562ba7e547d12769ceef0511f12"
+    },
+    {
+      "name": "asan-msan",
+      "path": "artifacts/phase25/asan-msan.json",
+      "sha256": "868ef83bc308d47e64e4d1899409c2a88db13f2fbfbd2c9a45566b471eb4c999"
+    },
+    {
+      "name": "tsan",
+      "path": "artifacts/phase25/tsan.json",
+      "sha256": "fe07ca7e362781fbd04307059b1e4f0af8f5f09ee94501a4f5386e6b62966f96"
+    },
+    {
+      "name": "kani",
+      "path": "artifacts/phase25/kani.json",
+      "sha256": "f17ca6894d1159a7527e1b044b87f2df46accc744c1c69f3ef8771d9befa6e88"
+    },
+    {
+      "name": "phase18-fuzz-crosswalk",
+      "path": "artifacts/phase25/phase18-fuzz-crosswalk.json",
+      "sha256": "d703d62961dce08cbffebb83392a09b94ced38ec9bcdfb9516942e97e25383e2"
+    },
+    {
+      "name": "phase24-safety-coverage",
+      "path": "artifacts/phase25/phase24-safety-coverage.json",
+      "sha256": "0114a07b4a75a466e4f7f19e56ae3124afbe68e203930c33c1751fa7f2da5ac0"
+    },
+    {
+      "name": "historical-cve-census",
+      "path": "artifacts/phase25/historical-cves.json",
+      "sha256": "1867491e286680625aea3609bdeea56c823dbdc46e37e8219f5098632df35921"
+    },
+    {
+      "name": "cve-replay",
+      "path": "artifacts/phase25/cve-replay/index.json",
+      "sha256": "9d6f7fc6ad8f8262b63526c0b8a5379a369c2005f8dfff9e5f53245c8c84a624"
+    },
+    {
+      "name": "mechanism-reconciliation",
+      "path": "artifacts/phase25/mechanisms.json",
+      "sha256": "fc2411a7a8e08250c55d9dc26c11ea93327ce5cd291941528c100aa927cab24d"
+    },
+    {
+      "name": "red-team",
+      "path": "artifacts/phase25/red-team.json",
+      "sha256": "1d866fba56fd155b757b196e8ef222c08587c0f7e05ec01c18d863910ffcd0fe"
+    },
+    {
+      "name": "clean-regeneration",
+      "path": "artifacts/phase25/regeneration.json",
+      "sha256": "c57e67ec9176f33fc1683b5092248a82da8598880f3d2188f16fba719bccbdda"
+    },
+    {
+      "name": "tool:asan-msan",
+      "path": "forensics/tools/ms_asan.py",
+      "sha256": "2a4673af4b6bc2376d5bfd3dcfa727ffac630d4b96f86c5e88974ff978d9d32d"
+    },
+    {
+      "name": "tool:clean-regeneration",
+      "path": "forensics/tools/ms_regeneration.py",
+      "sha256": "c42f6b8d47adf9522565902b3d781f7bde033fea86e77aa25e188be5aa7bde01"
+    },
+    {
+      "name": "tool:constitution",
+      "path": "forensics/tools/phase25_courts.py",
+      "sha256": "c732464729ded9212cc09f6bf5e9a0898cc138a7151b1bf572b69ebf055bfb2f"
+    },
+    {
+      "name": "tool:cve-replay",
+      "path": "forensics/tools/ms_cve_replay.py",
+      "sha256": "b172656bd679783398fddb25f45382101815e181c119953c3dafcbcb3caf4f18"
+    },
+    {
+      "name": "tool:exposure-classification",
+      "path": "forensics/tools/ms_exposure.py",
+      "sha256": "b13fc4ee9688efbbd0dbee6898f201aca82b996424e63e695a1e31e40ed2551d"
+    },
+    {
+      "name": "tool:historical-cve-census",
+      "path": "forensics/tools/ms_historical_cve.py",
+      "sha256": "9f805b572a86adff5a8e122aac20285a6d00c5eff29a9fd67f74bc88a45b61e2"
+    },
+    {
+      "name": "tool:kani",
+      "path": "forensics/tools/ms_kani.py",
+      "sha256": "8ed36d47d9309f9560d285391e70b6dabf65457cbf83654e601e8e1a4f88858e"
+    },
+    {
+      "name": "tool:mechanism-reconciliation",
+      "path": "forensics/tools/ms_mechanism_reconciliation.py",
+      "sha256": "ed9a3df73b4ee7bb386341c2614ca95d387da36e4b88130e1162c15afd86cd12"
+    },
+    {
+      "name": "tool:memory-safety-seal",
+      "path": "forensics/tools/ms_seal.py",
+      "sha256": "f3b2aaa6b9fcd9d81cc613f1c7d6833ac4567a8fb4a47cf2274937933e8f49c2"
+    },
+    {
+      "name": "tool:miri",
+      "path": "forensics/tools/ms_miri.py",
+      "sha256": "abb6905a00c939383da5b75430c69a2a921f0b703821177c7ba7a5a5a6c0006e"
+    },
+    {
+      "name": "tool:non-rust-tcb",
+      "path": "forensics/tools/ms_non_rust_tcb.py",
+      "sha256": "060bf1eb400233cb445f5d9c6d0e0bbaa973561506b720ad4b8e75bee51cc98a"
+    },
+    {
+      "name": "tool:ownership-planes",
+      "path": "forensics/tools/ms_ownership_planes.py",
+      "sha256": "58f6965121148ae01286c52de306e6408ba87f86fd3c6ecd92275921051420cd"
+    },
+    {
+      "name": "tool:phase18-fuzz-crosswalk",
+      "path": "forensics/tools/ms_phase18_fuzz_crosswalk.py",
+      "sha256": "2c139e78cd17660d02b09a67ed3cf5a2467199b479e7b6c37049248ba5ad8761"
+    },
+    {
+      "name": "tool:phase22-crosswalk",
+      "path": "forensics/tools/ms_phase22_crosswalk.py",
+      "sha256": "45ddc65bc6031924644d04a019310cf9eaab44cff3ae40c5fde776a1107f3c2e"
+    },
+    {
+      "name": "tool:phase24-crosswalk",
+      "path": "forensics/tools/ms_phase24_crosswalk.py",
+      "sha256": "982628a140a18ab0c4f6e28d166a75a5a848b5ba8af661aad0ac9613037d177e"
+    },
+    {
+      "name": "tool:phase24-safety-coverage",
+      "path": "forensics/tools/ms_phase24_safety_coverage.py",
+      "sha256": "7c2f0a0bdad1a0c6c58f766983dd66cf92d8145bb9fd1beaa718efaac2bfee9b"
+    },
+    {
+      "name": "tool:red-team",
+      "path": "forensics/tools/ms_red_team.py",
+      "sha256": "a640bbc2219e347df2502292f1aa34a30a9cbd9ca5cd742852508a16058379bc"
+    },
+    {
+      "name": "tool:safety-obligations",
+      "path": "forensics/tools/ms_obligations.py",
+      "sha256": "8049b083e35416a390da5030def53887fd5d69d1470d42cc97fdb1fba4eababc"
+    },
+    {
+      "name": "tool:source-census",
+      "path": "forensics/tools/ms_census.py",
+      "sha256": "dfc3eeeb8b2a54e10451ecf7f3535aa687452c43ce10864b955f4aad2130efd6"
+    },
+    {
+      "name": "tool:tsan",
+      "path": "forensics/tools/ms_tsan.py",
+      "sha256": "8672be8690a2b67b4c58b86eef4d0417b5bf8f9e648d0869eb40c7866acf0ba5"
+    },
+    {
+      "name": "tool:unsafe-reduction",
+      "path": "forensics/tools/ms_reduction.py",
+      "sha256": "0a8c81c5203adf944eca066664a28045a546f17679a903e7b952a0d6d86ee084"
+    }
+  ],
+  "kind": "phase25-frf-closure",
+  "schema": "openssl-rs/atlas/phase25-frf-closure/v1"
+}

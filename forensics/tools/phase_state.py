@@ -176,6 +176,9 @@ STRATA: list[tuple[int, str, str]] = [
      "Multitrack authority compatibility and OpenSSL lineage"),
     (24, "downstream-1000",
      "Downstream-1000 replacement atlas and empirical drop-in corpus"),
+    (25, "memory-safety",
+     "Memory-safety atlas, unsafe trusted-computing-base census and historical CVE extinction "
+     "court"),
 ]
 
 # The dependency the strata are ordered by (D138). It is a DAG, not "the previous number".
@@ -206,6 +209,13 @@ REQUIRES: dict[int, tuple[int, ...]] = {
     # machinery and the multitrack authority lineage. No existing phase is renumbered
     # (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md section 0).
     24: (23,),
+    # Phase 25 (D554) is dependency-ordered after the downstream-1000 stratum, not after the
+    # highest number. It is admitted once Phase 24 is complete, and because 24 -> 23 -> 21 -> ... ->
+    # (10, 22) that one edge transitively requires the multitrack authority lineage, the
+    # maintenance-delta machinery and the authority archaeology; its crosswalks additionally read
+    # Phase-18 hostile-fuzz evidence and Phase-22 whole-program reachability evidence. No existing
+    # phase is renumbered (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 0).
+    25: (24,),
 }
 
 CONSTITUTION_DOCS = [
@@ -1318,6 +1328,58 @@ PHASE24_MODULES = [
     "forensics/downstream/close-batch-attempts.json",
 ]
 
+# Phase 25 is the memory-safety stratum, and **it owns no exported symbol either**: reading
+# `forensics/atlas/symbol-ownership.json` for `owner_phase == 25` yields no record, so its ledger's
+# unit is not a symbol. `forensics/phase25-obligations.json` records its unit as `memory-safety
+# contract` (in `atlas_common.NON_EXPORT_UNITS`, so the export-partitioning tools skip it, as they
+# skip Phase 16's `cli-config contract` through Phase 24's `downstream 1000 contract`), and its
+# working set is twenty-two contract units -- one per subphase 25.0 through 25.21: the constitution,
+# the compiler-backed source census, the non-Rust TCB, the safety obligations, the
+# ownership/allocation/callback planes, the Phase-22 and Phase-24 crosswalks, the exposure/data-flow
+# classification, the unsafe reduction, Miri, ASan/MSan, TSan, Kani, the Phase-18 fuzz crosswalk,
+# the Phase-24 downstream safety coverage, the historical CVE census, the historical CVE replay, the
+# vulnerability-mechanism reconciliation, the red team, the full clean regeneration, the FRF/Gemel
+# closure and the memory-safety seal.
+# Like Phases 18 through 24 it hands nothing forward and receives nothing: it owns no provider
+# registration row, no symbol deferral and no prerequisite unit, because it inventories the shipped
+# first-party source/build surface of a candidate that is already identified rather than adding
+# library surface. Its entry points run only in an admitted container --
+# `forensics/tools/phase25_guard.py` is the Docker-only execution guard they call first, so on the
+# host the stratum refuses rather than compiling, instrumenting, proving or replaying anything
+# (docs/REPRODUCIBILITY.md section 1). Its runner's registry was empty at activation (25.0); each
+# later subphase registers its court in the commit that lands it, and a court still unregistered is
+# `pending` with the subphase that lands it. The ledger measures its contract-unit states from the
+# courts registry, so the runner does not bind the ledger (the edge runs ledger -> courts, the
+# reverse of Phase 16's). A passing court is an *instrument*: the property it names may still carry
+# findings. The **primary unit is a compiler-derived unsafe operation**, and unsafe LOC is a
+# secondary projection. The stratum's non-claims are that **safe Rust does not prove protocol
+# correctness**, that **unsafe Rust is not inherently vulnerable**, that **unsafe LOC is not a
+# vulnerability count**, that **Miri/ASan/TSan are not exhaustive**, that **Kani does not prove
+# unsupported or concurrent whole-program behaviour**, and that **historical CVE extinction does not
+# predict a future CVE count**. `docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md` section 0 records the
+# activation measurement and the precondition it places on the runner.
+PHASE25_COURTS = "artifacts/phase25/COURTS.json"
+PHASE25_OBLIGATIONS = "forensics/phase25-obligations.json"
+PHASE25_MODULES = [
+    "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
+    "forensics/tools/phase25_obligations.py",
+    # The Docker-only execution guard every Phase-25 entry point calls first. It is authored
+    # evidence from 25.0: on the host it refuses, so a stratum whose whole subject is executing a
+    # compiler-backed census, the sanitizers, the proof harnesses and the CVE replays cannot execute
+    # anything outside the admitted container.
+    "forensics/tools/phase25_guard.py",
+    # The schemas the later subphases validate their records against. They are authored evidence
+    # from 25.0, and the runner binds them as an input, so the stratum's record types are a file the
+    # evidence points at rather than prose this module would have to restate.
+    "forensics/tools/memory_safety_schemas.py",
+    # Phase 25 owns no FRF-declarable court -- its courts stage no probe and read committed
+    # evidence -- so the FRF/Gemel chain rule is correctly vacuous for it. Its seal document is its
+    # closing evidence, exactly as it is for Phases 3 through 7 and Phases 20 through 24: the
+    # stratum stays `in-progress` until 25.21 writes this file, so a passing reconciliation at 25.20
+    # cannot be read as the finished memory-safety atlas.
+    "docs/PHASE-25-MEMORY-SAFETY-SEAL.md",
+]
+
 
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
     3: StratumEvidence(PHASE3_MODULES, PHASE3_OBLIGATIONS, PHASE3_COURTS,
@@ -1900,6 +1962,52 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "the reverse of Phase 16's. "
                             "`docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md` sections 0 and 4 and "
                             "docs/DECISIONS.md D548 through D553 record the measurement"
+                        )),
+    25: StratumEvidence(PHASE25_MODULES, PHASE25_OBLIGATIONS, PHASE25_COURTS,
+                        ledger_note=(
+                            "This stratum owns **no exported symbol**, so its ledger's unit is "
+                            "not a symbol: `forensics/phase25-obligations.json` publishes "
+                            "`unit: memory-safety contract` and its `implemented`/`open` "
+                            "*export* lists are empty by measurement, while "
+                            "`open_in_this_stratum` counts the twenty-two contract units "
+                            "(`constitution`, `source-census`, `non-rust-tcb`, "
+                            "`safety-obligations`, `ownership-planes`, `phase22-crosswalk`, "
+                            "`phase24-crosswalk`, `exposure-classification`, "
+                            "`unsafe-reduction`, `miri`, `asan-msan`, `tsan`, `kani`, "
+                            "`phase18-fuzz-crosswalk`, `phase24-safety-coverage`, "
+                            "`historical-cve-census`, `cve-replay`, "
+                            "`mechanism-reconciliation`, `red-team`, `clean-regeneration`, "
+                            "`frf-gemel-closure` and `memory-safety-seal`). It owns no provider "
+                            "registration row, no symbol deferral and no prerequisite unit: it "
+                            "activates no provider and adds no library surface, because it "
+                            "inventories the shipped first-party source/build surface of a "
+                            "candidate that is already identified. Its courts stage no probe, "
+                            "because it owns no symbol for a differential probe to observe: they "
+                            "read committed evidence about the compiler-derived unsafe "
+                            "operations of a fixed candidate. Every entry point calls the "
+                            "Docker-only execution guard (`forensics/tools/phase25_guard.py`) "
+                            "first, so on the host the stratum refuses rather than compiling, "
+                            "instrumenting, proving or replaying anything "
+                            "(docs/REPRODUCIBILITY.md section 1). The **primary unit is a "
+                            "compiler-derived unsafe operation**, and lines of unsafe code are a "
+                            "secondary projection, never the security claim. A passing court is "
+                            "an **instrument**, not a property claim: the property it names may "
+                            "still carry findings, so `measurement_state` says the instrument "
+                            "completed while `property_status`/`findings` say what is claimed. "
+                            "The stratum's non-claims are: safe Rust does not prove protocol "
+                            "correctness; unsafe Rust is not inherently vulnerable; unsafe LOC "
+                            "is not a vulnerability count; Miri, ASan and TSan are not "
+                            "exhaustive; Kani does not prove unsupported or concurrent "
+                            "whole-program behaviour; historical CVE extinction does not predict "
+                            "a future CVE count; compatibility is not security; memory safety is "
+                            "not cryptographic correctness; and absence of a crash is not "
+                            "structural proof. A tool state of `UNSUPPORTED` is never `PASS`, and "
+                            "a `CANDIDATE_STRUCTURALLY_EXCLUDED` CVE replay must cite its "
+                            "evidence. The ledger's contract-unit states are measured from the "
+                            "courts registry, so the runner does not bind the ledger and the "
+                            "edge runs ledger -> courts, the reverse of Phase 16's. "
+                            "`docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md` sections 0 and 4 and "
+                            "docs/DECISIONS.md D554 through D560 record the measurement"
                         )),
 }
 
