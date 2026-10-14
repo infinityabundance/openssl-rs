@@ -796,7 +796,7 @@
         "name": "memory-safety",
         "phase": 25,
         "provider_rows": null,
-        "seal_sha256": "45ab7ce3da3e1f5f634b3fe01bca44be8150659512dee2ad37ac001f8ca3ede7",
+        "seal_sha256": "0c58a1345ff701747b54b42501477460d4e84467dafd95406c39098ba5eb05fc",
         "state": "complete",
         "stratum": "Memory-safety atlas, unsafe trusted-computing-base census and historical CVE extinction court"
       }
@@ -808,7 +808,7 @@
       "not_started": 0
     }
   },
-  "body_hash": "8fe8588b8fc3c8d2c3e6f639b6e2609a64ed6f86bacc24f317f2025c5f89f74f",
+  "body_hash": "62d95f985680bdd820552c4016c379c881e20c8324b0988ea86d69f452c04742",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

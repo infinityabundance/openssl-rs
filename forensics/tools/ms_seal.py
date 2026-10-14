@@ -97,11 +97,11 @@ from atlas_common import (  # noqa: E402
     PRODUCTION_AUTHORITY,
     REPO_ROOT,
     InputRef,
+    artefact_evidence_digest,
     content_hash,
     envelope,
     rel,
     resolve_authority,
-    sha256_file,
     write_json,
     write_text,
 )
@@ -274,12 +274,17 @@ def collect_evidence() -> dict:
             continue
         court_results[name] = fn(name)
 
+    # Each court's artefact is bound by its **evidence** digest (`body_hash`), not its file
+    # digest. The derived planes record the file digest of the downstream chain, and that chain
+    # records `implemented-surface.json`'s build product, so a file-digest binding is not
+    # reproducible across machines. `artefact_evidence_digest` is the shared policy (D30).
     artefact_path: dict[str, str | None] = {}
     artefact_sha: dict[str, str | None] = {}
     for unit, (relpath, _kinds) in ms_frf_closure.RECORD_EVIDENCE.items():
         artefact_path[unit] = relpath
         p = REPO_ROOT / relpath if relpath else None
-        artefact_sha[unit] = sha256_file(p) if (p is not None and p.is_file()) else None
+        artefact_sha[unit] = (artefact_evidence_digest(p)
+                             if (p is not None and p.is_file()) else None)
 
     candidate_identity = None
     for p in planes.values():
@@ -842,11 +847,14 @@ def render_seal(evidence: dict, body: dict) -> str:
     A("One row per landed Phase-25 court (25.0 through 25.20). The verdict is the court's own")
     A("re-derived verdict and the finding count is its own, so the row is a re-derivation, not a")
     A("reading of `artifacts/phase25/COURTS.json` (which the runner deletes and rewrites). Each")
-    A("court's committed artefact digest is carried by the machine artefact")
-    A("`artifacts/phase25/summary.json`, whose `courts[].artefact_sha256` is the committed file's")
-    A("digest; it is deliberately not restated here, because this document's own digest is what")
-    A("`forensics/phase-state.json` records as the phase's `seal_sha256`, and rendering a file digest")
-    A("here would form a digest cycle the pipeline could not reproduce.")
+    A("court's committed artefact **evidence** digest is carried by the machine artefact")
+    A("`artifacts/phase25/summary.json`, whose `courts[].artefact_sha256` is that artefact's")
+    A("`body_hash` (its evidence digest), not its file digest -- the file digest moves with the")
+    A("build product the derived planes carry (docs/DECISIONS.md D30), so binding it would make")
+    A("this seal irreproducible across machines. It is deliberately not restated here, because this")
+    A("document's own digest is what `forensics/phase-state.json` records as the phase's")
+    A("`seal_sha256`, and rendering a digest here would form a digest cycle the pipeline could not")
+    A("reproduce.")
     A("")
     A("| court | unit | verdict | finding(s) | control | artefact |")
     A("|---|---|---|---|---|---|")

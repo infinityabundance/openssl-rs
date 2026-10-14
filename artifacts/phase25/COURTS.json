@@ -2927,7 +2927,7 @@
     {
       "name": "historical-cves",
       "path": "artifacts/phase25/historical-cves.json",
-      "sha256": "73ec5b7465647709822f695b847a4f8cd8d8825f17e87c04c4d05801916e5b2b"
+      "sha256": "1867491e286680625aea3609bdeea56c823dbdc46e37e8219f5098632df35921"
     },
     {
       "name": "ms-historical-cve-tool",
@@ -2942,7 +2942,7 @@
     {
       "name": "security-lineage",
       "path": "forensics/multitrack/security-lineage.json",
-      "sha256": "8f004a89fd32185f6a36ece1b3e36ad9a73a5a4bb7a8f2e1ced2b3d1bef7a20a"
+      "sha256": "e22b4a924a383c31e18d041943b0036cb09425dcf155e9c6b02b878132eeba1c"
     },
     {
       "name": "cve-replay",
@@ -2962,7 +2962,7 @@
     {
       "name": "mechanisms",
       "path": "artifacts/phase25/mechanisms.json",
-      "sha256": "ae4c4f65bc5c1ec7a53e48238ed87bd771cadf78811c0a95063df06707f0f0dc"
+      "sha256": "fc2411a7a8e08250c55d9dc26c11ea93327ce5cd291941528c100aa927cab24d"
     },
     {
       "name": "ms-mechanism-reconciliation-tool",
@@ -2972,7 +2972,7 @@
     {
       "name": "red-team",
       "path": "artifacts/phase25/red-team.json",
-      "sha256": "390a35cca44c45c402493af8082e8c4142f9d69a5c23f75b9e5af4e572296cb1"
+      "sha256": "1d866fba56fd155b757b196e8ef222c08587c0f7e05ec01c18d863910ffcd0fe"
     },
     {
       "name": "ms-red-team-tool",
@@ -2992,17 +2992,17 @@
     {
       "name": "frf-closure",
       "path": "forensics/atlas/phase25/frf-closure.json",
-      "sha256": "b40675b552ea1aa790ed3c4a789806248673644cd593d41fd6eaca05dbc3563d"
+      "sha256": "f7b331c3cbd137efe756f01256dc52611e7e9b06a360025995ec40806cc27495"
     },
     {
       "name": "ms-frf-closure-tool",
       "path": "forensics/tools/ms_frf_closure.py",
-      "sha256": "2ab1c904fdc0ed6625482b8d407e99efc919787a8ac094d2f028f90f7eee60ad"
+      "sha256": "1e43b16422824a58771097afe7f4243538b09e141f0b74863bdf50c05e4c492f"
     },
     {
       "name": "ms-seal-tool",
       "path": "forensics/tools/ms_seal.py",
-      "sha256": "96d94563f78cc168cf4cd314cb6270533a234cf1ecffc8c454822d9a8839aa8f"
+      "sha256": "f3b2aaa6b9fcd9d81cc613f1c7d6833ac4567a8fb4a47cf2274937933e8f49c2"
     }
   ],
   "kind": "phase25-courts",

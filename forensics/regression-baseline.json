@@ -110,7 +110,43 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "MS-ASAN-MSMAN": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-CLEAN-REGEN": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "MS-CONSTITUTION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-CVE-REPLAY": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-EXPOSURE-CLASSIFICATION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-FRF-CLOSURE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-HISTORICAL-CVE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-KANI": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-MECHANISM-RECONCILIATION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-MIRI": {
       "observations": 0,
       "verdict": "pass"
     },
@@ -118,11 +154,47 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "MS-OWNERSHIP-PLANES": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-PHASE18-FUZZ-CROSSWALK": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-PHASE22-CROSSWALK": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-PHASE24-CROSSWALK": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-PHASE24-SAFETY-COVERAGE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-RED-TEAM": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "MS-SAFETY-OBLIGATIONS": {
       "observations": 0,
       "verdict": "pass"
     },
+    "MS-SEAL": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "MS-SOURCE-CENSUS": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-TSAN": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "MS-UNSAFE-REDUCTION": {
       "observations": 0,
       "verdict": "pass"
     },
@@ -1028,7 +1100,7 @@
     "phase22": 0,
     "phase23": 0,
     "phase24": 0,
-    "phase25": 18,
+    "phase25": 0,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
@@ -1081,7 +1153,7 @@
     "22": "complete",
     "23": "complete",
     "24": "complete",
-    "25": "in-progress",
+    "25": "complete",
     "3": "complete",
     "4": "complete",
     "5": "complete",

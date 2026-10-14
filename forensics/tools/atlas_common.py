@@ -331,6 +331,30 @@ def implemented_surface_input() -> InputRef:
     )
 
 
+def artefact_evidence_digest(path: Path) -> str:
+    """The digest a cross-artefact *binding* records for `path`: its evidence digest.
+
+    A JSON artefact carries `body_hash`, the content hash of its evidence body. Because the
+    body is a function of committed inputs, `body_hash` stays fixed even when the artefact's
+    file bytes move for the reasons the pipeline declares non-evidence: a build-product
+    observation (the crate archive digest, the compiler-emitted symbol count) or an
+    `inputs[]` entry that records another compared artefact's file digest (which
+    `evidence_determinism.py` normalises). Binding the file digest instead -- as `ms_seal.py`
+    and `ms_frf_closure.py` did -- pushes those build products into every binding and makes it
+    irreproducible across machines, exactly the failure `implemented_surface_input()` (above,
+    docs/DECISIONS.md D30) avoids for the ledgers. A non-JSON artefact, or a JSON one with no
+    `body_hash`, has no such digest and is bound by its file bytes.
+    """
+    if path.is_file() and path.suffix == ".json":
+        try:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            doc = None
+        if isinstance(doc, dict) and isinstance(doc.get("body_hash"), str):
+            return doc["body_hash"]
+    return sha256_file(path)
+
+
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
