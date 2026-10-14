@@ -222,7 +222,14 @@ pub(crate) fn ossl_namemap_stored(libctx: *mut c_void) -> *mut OsslNamemap {
     // SAFETY: `namemap` is a live stored map and the pre-population is the authority's own
     // first-use step; the map's own lock guards each insertion (*not* the block as a whole,
     // which matches the authority, whose pre-population runs outside the map's lock).
-    if ossl_namemap_empty(namemap) == 1 {
+    let nms = ossl_namemap_empty(namemap);
+    if nms < 0 {
+        // The authority's "could not get lock to make the count, so maybe internal objects
+        // weren't added. This seems safest." -- it answers NULL rather than a map whose
+        // legacy names the pre-population may not have installed.
+        return ptr::null_mut();
+    }
+    if nms == 1 {
         // SAFETY: `namemap` is a live, empty stored map, which is `prepopulate_legacy_names`'
         // precondition.
         unsafe { prepopulate_legacy_names(namemap) };
@@ -433,6 +440,23 @@ unsafe fn map_mut<'a>(nm: *mut OsslNamemap) -> &'a mut HashMap<Vec<u8>, c_int> {
     unsafe { &mut (*nm).namenum }
 }
 
+/// The `name -> number` table as a **shared** reference, for a lookup taken under the
+/// namemap **read** lock.
+///
+/// The authority's `ossl_namemap_name2num` reads its `HT` lockless (an RCU table); this
+/// crate's table is a `HashMap`, so a read must take the namemap's read lock, and a
+/// read-side lookup must not form a mutable alias beside a concurrent reader. Two threads
+/// fetching on the same library context is supported concurrent use, which is why a reader
+/// goes through this rather than [`map_mut`].
+///
+/// # Safety
+/// `nm` must be a live namemap and the caller must hold `nm`'s read lock (or write lock).
+unsafe fn map_ref<'a>(nm: *mut OsslNamemap) -> &'a HashMap<Vec<u8>, c_int> {
+    // SAFETY: `nm` is live per the caller's contract; the field is a `HashMap`
+    // initialised by `ossl_namemap_new` and owned by this namemap.
+    unsafe { &(*nm).namenum }
+}
+
 /// `void ossl_namemap_free(OSSL_NAMEMAP *namemap)`
 ///
 /// Does **nothing** for a namemap that belongs to a library context — the context
@@ -476,19 +500,28 @@ unsafe extern "C" fn names_stack_free(n: *mut c_void) {
 
 /// `int ossl_namemap_empty(OSSL_NAMEMAP *namemap)` — true for NULL as well.
 ///
-/// The authority's `TSAN_REQUIRES_LOCKING` arm takes the read lock; this platform
-/// is the other arm, which reads the counter directly. Both answer the same thing
-/// for every state a single-threaded caller can reach.
+/// The authority's `TSAN_REQUIRES_LOCKING` arm takes the namemap's read lock and answers
+/// `-1` when it cannot; this platform models that arm. The crate's table is not the
+/// authority's lockless RCU `HT`, so two threads fetching on the same library context
+/// (supported concurrent use) must not read the counter beside a writer that stores it
+/// under the write lock in [`namemap_add_name`]. Answering the counter without the lock
+/// was the data race TSan's parallel gate found (finding `tf-tsan-parallel-gate-parallel`).
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
 pub(crate) fn ossl_namemap_empty(namemap: *mut OsslNamemap) -> c_int {
     if namemap.is_null() {
         return 1;
     }
-    // SAFETY: `namemap` is live, so the field is readable.
-    if unsafe { (*namemap).max_number } == 0 {
-        1
-    } else {
-        0
+    // SAFETY: `namemap` is live, so its lock and the counter are live. The read lock is
+    // the authority's `TSAN_REQUIRES_LOCKING` arm; the counter it guards is written under
+    // the write lock in `namemap_add_name`, so the reader takes the same lock.
+    unsafe {
+        if CRYPTO_THREAD_read_lock((*namemap).lock) == 0 {
+            // "Could not get lock to make the count" -- the authority's `-1`.
+            return -1;
+        }
+        let rv = if (*namemap).max_number == 0 { 1 } else { 0 };
+        CRYPTO_THREAD_unlock((*namemap).lock);
+        rv
     }
 }
 
@@ -525,13 +558,24 @@ pub(crate) unsafe fn ossl_namemap_doall_names(
     let Some(callback) = callback else {
         return 0;
     };
-    // SAFETY: `namemap` is live.
-    let names = unsafe { names_of(namemap, number) };
+    // The `numnames` stack is read and duplicated under the read lock, then the lock is
+    // released before any callback runs -- the authority's order, so a callback that
+    // re-enters the map cannot deadlock it. The list is a reader of the same state
+    // `namemap_add_name` writes under the write lock, so it takes the lock read-side.
     let mut dup = ptr::null_mut();
-    if !names.is_null() {
-        // SAFETY: `names` is a live name list owned by the map; `dup` is a shallow
-        // copy of its pointer array.
-        dup = unsafe { OPENSSL_sk_dup(names) };
+    // SAFETY: `namemap` is live, so its lock is live.
+    unsafe {
+        if CRYPTO_THREAD_read_lock((*namemap).lock) == 0 {
+            return 0;
+        }
+        let names = names_of(namemap, number);
+        if !names.is_null() {
+            // SAFETY: `names` is a live name list owned by the map; `dup` is a shallow
+            // copy of its pointer array.
+            dup = OPENSSL_sk_dup(names);
+        }
+        // The lock is released before the callback loop, which the authority does too.
+        CRYPTO_THREAD_unlock((*namemap).lock);
     }
     if dup.is_null() {
         return 0;
@@ -629,8 +673,21 @@ unsafe fn name2num_inner(
         // comes first, per the two callers' contracts.
         unsafe { key(name, limit) }
     };
-    // SAFETY: `nm` is live.
-    unsafe { map_mut(nm) }.get(&k).copied().unwrap_or(0)
+    // SAFETY: `nm` is live, so its lock is live. The stored map is resolved *before* the
+    // read lock is taken (above), so the lock is never held across `ossl_namemap_stored`'s
+    // first-use pre-population, which takes the write lock -- the authority's ordering,
+    // where `ossl_namemap_name2num` resolves the stored map before locking and looks its
+    // `HT` up under the lock. The lookup is what races the writer's `insert` at
+    // `namemap_add_name` (finding `tf-tsan-parallel-gate-parallel`), so it takes the same
+    // lock read-side.
+    unsafe {
+        if CRYPTO_THREAD_read_lock((*nm).lock) == 0 {
+            return 0;
+        }
+        let number = map_ref(nm).get(&k).copied().unwrap_or(0);
+        CRYPTO_THREAD_unlock((*nm).lock);
+        number
+    }
 }
 
 /// `const char *ossl_namemap_num2name(const OSSL_NAMEMAP *namemap, int number, int idx)`
