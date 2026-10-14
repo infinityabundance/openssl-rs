@@ -625,17 +625,17 @@
     {
       "name": "candidate-freeze",
       "path": "forensics/downstream/candidate-freeze.json",
-      "sha256": "43ca472dbb82dab134bdb241a4fc3cbfe522046e0623070a4efd238f6ac37fdf"
+      "sha256": "802285010a81dfb92ae9d0c0681711b782290ffbca0fb86e44bb498379f49058"
     },
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "4b0c4bfd813e2bf023ae656535ae838ec6bf06199bd6f33d1be1b6cc5f688782"
+      "sha256": "061b78de7a019b10ee5bcefa0d85c384ea7a43d163b6e90aaafc85d012cf1717"
     },
     {
       "name": "reconciliation",
       "path": "forensics/downstream/reconciliation.json",
-      "sha256": "8af4d8fec6df9a1b33e104dbc69793943aeecb997dfb2c904e0191181bdeaf61"
+      "sha256": "94b657439caf62fb33e0366ba0fe99a8f98aab08083a2cfc8d2a23072f21b44f"
     }
   ],
   "kind": "phase24-frf-closure",

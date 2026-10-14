@@ -69,7 +69,10 @@ MULTITRACK = FORENSICS / "multitrack"
 # contract over twelve contract units and no deferral, which a symbol-counting ledger would
 # count zero. **Phase 24 owns no export either**: the ownership atlas assigns `owner_phase == 24`
 # no row, and its unit is the downstream 1000 contract over sixteen contract units and no
-# deferral, which a symbol-counting ledger would count zero. The marker is a property
+# deferral, which a symbol-counting ledger would count zero. **Phase 25 owns no export either**:
+# the ownership atlas assigns `owner_phase == 25` no row, and its unit is the memory-safety
+# contract over twenty-two contract units and no deferral, which a symbol-counting ledger would
+# count zero. The marker is a property
 # of the document rather than a phase number those tools know (`docs/PHASE-22-SUBPHASES.md`, D485;
 # `docs/PHASE-16-SUBPHASES.md`, section 1; `docs/PHASE-17-SUBPHASES.md`, section 1;
 # `docs/PHASE-18-SUBPHASES.md`, section 1; `docs/PHASE-19-SUBPHASES.md`, section 1;
@@ -86,6 +89,7 @@ NON_EXPORT_UNITS = {
     "maintenance delta contract",
     "multitrack authority contract",
     "downstream 1000 contract",
+    "memory-safety contract",
 }
 HISTORICAL_AUTHORITY = "openssl-3.6.3-historical"
 
@@ -140,6 +144,11 @@ SEAL_DOCS: dict[int, str] = {
     # plan, so its absence is the record that the stratum is still open rather than a missing table
     # row.
     24: "docs/PHASE-24-DOWNSTREAM-1000-SEAL.md",
+    # Phase 25 is another non-export stratum (its unit is the memory-safety contract), so it too
+    # is read by the generic `STRATUM_EVIDENCE` rule. Its seal is named from the day 25.0 lands the
+    # plan, so its absence is the record that the stratum is still open rather than a missing table
+    # row.
+    25: "docs/PHASE-25-MEMORY-SAFETY-SEAL.md",
 }
 
 
@@ -320,6 +329,30 @@ def implemented_surface_input() -> InputRef:
             "also records build-product observations"
         ),
     )
+
+
+def artefact_evidence_digest(path: Path) -> str:
+    """The digest a cross-artefact *binding* records for `path`: its evidence digest.
+
+    A JSON artefact carries `body_hash`, the content hash of its evidence body. Because the
+    body is a function of committed inputs, `body_hash` stays fixed even when the artefact's
+    file bytes move for the reasons the pipeline declares non-evidence: a build-product
+    observation (the crate archive digest, the compiler-emitted symbol count) or an
+    `inputs[]` entry that records another compared artefact's file digest (which
+    `evidence_determinism.py` normalises). Binding the file digest instead -- as `ms_seal.py`
+    and `ms_frf_closure.py` did -- pushes those build products into every binding and makes it
+    irreproducible across machines, exactly the failure `implemented_surface_input()` (above,
+    docs/DECISIONS.md D30) avoids for the ledgers. A non-JSON artefact, or a JSON one with no
+    `body_hash`, has no such digest and is bound by its file bytes.
+    """
+    if path.is_file() and path.suffix == ".json":
+        try:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            doc = None
+        if isinstance(doc, dict) and isinstance(doc.get("body_hash"), str):
+            return doc["body_hash"]
+    return sha256_file(path)
 
 
 def sha256_bytes(data: bytes) -> str:

@@ -33,6 +33,7 @@ enforced here:
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 | 23 | Multitrack authority compatibility and OpenSSL lineage | `complete` |  |
 | 24 | Downstream-1000 replacement atlas and empirical drop-in corpus | `complete` |  |
+| 25 | Memory-safety atlas, unsafe trusted-computing-base census and historical CVE extinction court | `complete` |  |
 
 Deferred out of phase 3 (recorded hand-offs, not parity
 claims):

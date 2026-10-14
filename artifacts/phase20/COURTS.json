@@ -389,6 +389,7 @@
           "22": "complete",
           "23": "complete",
           "24": "complete",
+          "25": "complete",
           "3": "complete",
           "4": "complete",
           "5": "complete",
@@ -3747,7 +3748,7 @@
           },
           "path": "artifacts/phase20/custodian-boundary-register.json",
           "schema": "openssl-rs/custodian-boundary-register/v1",
-          "sha256": "a45c19c9c8b75515bc849f371feba8f9b2026e9f97df706ee2ed9611a1180b23",
+          "sha256": "bc4a46aa63213bd3563ab8ef445476195dff01ed770ac91688130c116906af75",
           "total": 8
         },
         "surfaces": [
@@ -3837,7 +3838,7 @@
     {
       "name": "release-gates",
       "path": "docs/RELEASE_GATES.md",
-      "sha256": "3a4892d36740ccefa48e3361c5fe792513597bf9e7f7b55b7f03e1248593abe6"
+      "sha256": "760af7678886e85bc533b9965918dc5ad52e30f212b87fa883d8d6f1f3166c25"
     },
     {
       "name": "custodian-contract",
@@ -3867,7 +3868,7 @@
     {
       "name": "phase18-courts",
       "path": "artifacts/phase18/COURTS.json",
-      "sha256": "3b78ac45ee2e37149d8ceaf466760f30506911a5ab712d2986ab27df6d25f9c2"
+      "sha256": "309e47ff0f66ee3b3ec0a8299c74e92522d2e0a7f5fea3b4a4f1fe2f13bd19af"
     },
     {
       "name": "downstream-corpus",
@@ -3912,7 +3913,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "c8bf660b6f769628ebd828842d1147110adee5874f678b727dc7dd0a285e4697"
+      "sha256": "e32becabfd54bbf1a47b19951ffa87cbfa63cd4b0301327fffd2f5785571fd1d"
     },
     {
       "name": "court-coverage-rows",
@@ -3922,7 +3923,7 @@
     {
       "name": "divergence-obligations",
       "path": "forensics/divergence-obligations.json",
-      "sha256": "785b7b16c4e75710976de73f46a2ca846f145da3549ed393202baefbb642ccd2"
+      "sha256": "19e318d4df3f513cc6f717660e1beeeb6fb88c1e7f2dc97b76e3820725f318a9"
     },
     {
       "name": "prerequisites",
@@ -3962,7 +3963,7 @@
     {
       "name": "custodian-boundary-register",
       "path": "artifacts/phase20/custodian-boundary-register.json",
-      "sha256": "a45c19c9c8b75515bc849f371feba8f9b2026e9f97df706ee2ed9611a1180b23"
+      "sha256": "bc4a46aa63213bd3563ab8ef445476195dff01ed770ac91688130c116906af75"
     },
     {
       "name": "non-claims",
@@ -3992,7 +3993,7 @@
     {
       "name": "unsafe-footprint",
       "path": "forensics/atlas/unsafe-footprint.json",
-      "sha256": "a74612fede10e4cb44db75c6567bf785daf6fcfee8e43208b651606ce68a0dff"
+      "sha256": "27adab774d0382667a532b214291a2adfdb64007b0ed27dea5a9c2938341112d"
     },
     {
       "name": "unsafe-bounds",

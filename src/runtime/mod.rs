@@ -52,6 +52,12 @@ pub mod rcu;
 pub mod rdtsc;
 pub mod secure;
 pub mod sparse_array;
+// Phase 25.8's differential harness over the sparse array. Test-only tooling: it is a no-op
+// unless `SPARSE_ARRAY_PROBE=1` is set, so the ordinary suite never has its process-global
+// allocator seam replaced. `forensics/tools/ms_sparse_array_court.py` runs it against the C
+// probe's transcript of the authority. See the module docs.
+#[cfg(test)]
+pub(crate) mod sparse_array_probe;
 pub mod stack;
 pub mod str;
 pub mod thread;

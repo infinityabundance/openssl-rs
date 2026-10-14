@@ -34,6 +34,16 @@ before its evidence exists.
 | 22 | Authority exhaustiveness / whole-program compatibility atlas |
 | 23 | Multitrack authority compatibility and OpenSSL lineage |
 | 24 | Downstream-1000 replacement atlas and empirical drop-in corpus |
+| 25 | Memory-safety atlas, unsafe trusted-computing-base census and historical CVE extinction court |
+
+**Phase 25 is dependency-ordered after the downstream-1000 stratum, not after the highest
+number.** It is admitted once Phase 24 is complete, and because Phase 24 requires Phase 23 (which
+requires Phase 21, which requires Phase 22) the single edge transitively requires the multitrack
+authority lineage, the maintenance-delta machinery and the authority archaeology; its crosswalks
+additionally read Phase-18 hostile-fuzz evidence and Phase-22 whole-program reachability evidence,
+so it depends on Phases 18, 22, 23 and 24. No existing phase is renumbered. The dependency is
+declared rather than read off the numbers (`forensics/tools/phase_state.py`'s `REQUIRES`;
+`docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md` section 0).
 
 **Phase 24 is dependency-ordered after the multitrack authority stratum, not after the highest
 number.** It is admitted once Phase 23 is complete, and because Phase 23 requires Phase 21 (which

@@ -355,6 +355,315 @@ GENERATORS_BEFORE_LEDGERS = [
     # equality with the 24.11 freeze, the one-verdict-per-counted-family re-derivation, the section-20
     # PASS refusal, the UNKNOWN-is-zero check, the ladder and the counts -- over the committed
     # artefact.
+    #
+    # Phase 25.1's **compiler-backed source census follows the same precedent, for the same reason.**
+    # `forensics/tools/ms_census.py` produces `artifacts/phase25/source-census.json` by measurement --
+    # one clippy run with the built-in `unsafe_code` lint (plus the three named documentation lints)
+    # and a pinned-nightly `-Zunpretty=expanded` -- so its unsafe contexts, compiler-derived sites
+    # and LOC projection are a function of the court's exact toolchain and of the network, not of
+    # committed inputs. A CI runner has no compiler and no pinned nightly, and the Docker-only guard
+    # refuses a host invocation of `ms_census.py` before it runs anything. It is therefore not listed
+    # here and not in `COMPARED`; the `MS-SOURCE-CENSUS` court re-runs only its pure checks
+    # (`ms_census.census_findings` and `ms_census.census_sensitivity_control`) over the committed
+    # artefact. If a later subphase derives a pure aggregate from the census, that aggregate is what
+    # belongs in this list.
+    #
+    # **Phase 25.2's non-Rust trusted computing base (`forensics/tools/ms_non_rust_tcb.py` ->
+    # `artifacts/phase25/non-rust-tcb.json`) follows the same precedent, for the same reason.** It
+    # inventories the first-party C the crate compiles by compiling every adapter under
+    # `-std=c11 -Wall -Wextra -Werror` and running `nm` for the object's symbol sets, and it scans
+    # `src` for the extern blocks and the `core::arch` intrinsics -- so its rows are a function of the
+    # court's exact C toolchain and its read of the crate, not of committed inputs, and it also
+    # carries the 25.1 census's FFI site ids as a cross-reference. A CI runner has no C compiler and
+    # no `nm`, and the Docker-only guard refuses a host invocation of `ms_non_rust_tcb.py` before it
+    # runs anything. It is therefore not listed here and not in `COMPARED`; the `MS-NON-RUST-TCB`
+    # court re-runs only its pure checks (`ms_non_rust_tcb.non_rust_findings` and
+    # `ms_non_rust_tcb.non_rust_sensitivity_control`) over the committed artefact and the on-disk file
+    # universe. If a later subphase derives a pure aggregate from this inventory, that aggregate is
+    # what belongs in this list.
+    #
+    # **Phase 25.3's safety obligations (`forensics/tools/ms_obligations.py` ->
+    # `artifacts/phase25/safety-obligations.json`) are a pure function of committed inputs, so they
+    # belong here and are byte-compared.** The plane binds every compiler-derived unsafe site of the
+    # 25.1 census to a grouped contract whose per-dimension obligations follow from the operation-kind
+    # -> dimension rule recorded in the plane and the source-stated contract the census indexed; it
+    # runs no compiler and reads no source tree, so `forensics/memory-safety/container.json` lists it
+    # `metadata_only` and the Docker-only guard admits it on any host. A stale committed plane -- or a
+    # typed count, a dropped site, or a discharge no source-stated contract can establish -- is a
+    # failure rather than a silent divergence, and the `MS-SAFETY-OBLIGATIONS` court re-runs the same
+    # pure checks over the committed artefact and the census it is derived from.
+    "forensics/tools/ms_obligations.py",
+    # **Phase 25.4's ownership/allocation/callback planes (`forensics/tools/ms_ownership_planes.py` ->
+    # `artifacts/phase25/ownership-planes.json`) are a pure function of committed inputs too, so they
+    # belong here and are byte-compared.** The plane classifies the compiler-derived sites of the
+    # 25.1 census, the FFI boundaries of the 25.2 TCB and the committed source text (the allocation
+    # families, the set/get/up_ref conventions, the callback registrations, the unsafe Send/Sync
+    # impls, the globals and the exported bodies) against tables recorded in the plane. It compiles
+    # nothing -- no compiler, no tool, no probe -- so `forensics/memory-safety/container.json` lists
+    # it `metadata_only` and the Docker-only guard admits it on any host, exactly as `ms_obligations`
+    # is. A stale committed plane -- or a typed count, a dropped record, a hidden UNKNOWN panic class
+    # or an unmatched FREES edge with no finding -- is a failure rather than a silent divergence, and
+    # the `MS-OWNERSHIP-PLANES` court re-runs the same pure checks over the committed artefact, the
+    # census, the TCB and the source it classifies.
+    "forensics/tools/ms_ownership_planes.py",
+    # **Phase 25.5's Phase-22 reachability crosswalk (`forensics/tools/ms_phase22_crosswalk.py` ->
+    # `artifacts/phase25/phase22-crosswalk.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It maps every compiler-derived unsafe site of the 25.1
+    # census to the OpenSSL public compatibility roots that can reach it, reading the committed
+    # Phase-22 reachability atlas (`compatibility-closure.json`), its entity plane
+    # (`reconciliation.json`) and the module -> authority-unit correspondence
+    # (`transcription-edges.json`, `internal-symbols.json`, `export-defining-units.json`). It
+    # compiles nothing -- no compiler, no tool, no probe -- so `forensics/memory-safety/container.json`
+    # lists it `metadata_only` and the Docker-only guard admits it on any host, exactly as
+    # `ms_ownership_planes` is. A stale committed crosswalk -- or a dropped site, a site mapped to a
+    # root the atlas does not reach, an inverse view that disagrees with the site map, an unresolved
+    # site defaulted to a root or a re-derived graph -- is a failure rather than a silent divergence,
+    # and the `MS-PHASE22-CROSSWALK` court re-runs the same pure checks over the committed artefact,
+    # the census and the committed Phase-22 atlas.
+    "forensics/tools/ms_phase22_crosswalk.py",
+    # **Phase 25.6's Phase-24 downstream crosswalk (`forensics/tools/ms_phase24_crosswalk.py` ->
+    # `artifacts/phase25/phase24-crosswalk.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It maps every compiler-derived unsafe site of the 25.1
+    # census to the Phase-24 measured consumers that reach it, reading the committed 25.5 crosswalk
+    # for the site -> authority-unit resolution, the Phase-22 entity plane for the name index, and
+    # the committed Phase-24 downstream measurement (`usage-fingerprints.json`, `reconciliation.json`,
+    # `runtime-functional-atlas.json`, `build-link-atlas.json`, `p1000-run.json`,
+    # `family-freeze.json`) for the imports, the runtime levels, the clusters and the counted
+    # population. It compiles nothing -- no compiler, no tool, no probe -- so
+    # `forensics/memory-safety/container.json` lists it `metadata_only` and the Docker-only guard
+    # admits it on any host, exactly as `ms_phase22_crosswalk` is. A stale committed crosswalk -- or
+    # a typed consumer, a dropped site, a runtime-observed site with no runtime row, an inverse view
+    # that disagrees with the forward map or a partial join with no residual -- is a failure rather
+    # than a silent divergence, and the `MS-PHASE24-CROSSWALK` court re-runs the same pure checks
+    # over the committed artefact, the census and the committed Phase-24 measurement.
+    "forensics/tools/ms_phase24_crosswalk.py",
+    # **Phase 25.7's exposure/data-flow classification (`forensics/tools/ms_exposure.py` ->
+    # `artifacts/phase25/exposure.json`) is a pure function of committed inputs too, so it belongs
+    # here and is byte-compared.** It gives every compiler-derived unsafe site of the 25.1 census
+    # exactly one class from the closed exposure vocabulary, reading the committed 25.5 crosswalk
+    # for the authority unit and public roots, the committed 25.6 crosswalk for the downstream
+    # state, the committed 25.4 ownership planes for the manual allocation sites, and the census's
+    # own file/module context; the attacker-input routes and the buffer-operation census follow from
+    # the same committed parser identities. It compiles nothing -- no compiler, no tool, no probe --
+    # so `forensics/memory-safety/container.json` lists it `metadata_only` and the Docker-only guard
+    # admits it on any host, exactly as `ms_phase24_crosswalk` is. A stale committed classification
+    # A stale committed classification
+    # -- or a dropped site, a remote class with no justification, an attacker route with no path, an
+    # inverse view that disagrees, a boundary plan marked executed, a typed count or an
+    # unknown-reachability site assigned the non-exposed tier S0 (an unknown is tier SU) -- is a
+    # failure
+    # rather than a silent divergence, and the `MS-EXPOSURE-CLASSIFICATION` court re-runs the same
+    # pure checks over the committed artefact and the committed planes it is derived from.
+    "forensics/tools/ms_exposure.py",
+    # **Phase 25.8's unsafe reduction (`forensics/tools/ms_reduction.py` ->
+    # `artifacts/phase25/unsafe-reduction.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It is a pure derivation because this venue applies **no**
+    # reduction: the worklist is a local-replacement feasibility census, not an impossibility result
+    # -- none of the reachable operations screened against the ten local-substitution patterns was
+    # locally replaceable without changing the public surface or behaviour (each candidate
+    # replacement would change a signature or the foreign ABI, turn a documented precondition the
+    # authority states into a defined panic, or remove no site at all), which is not a claim that the
+    # rest of the core is irreducible -- so the census is unchanged and the tool runs no compiler. It
+    # reads the committed 25.1 census, the committed 25.7 exposure
+    # classification and the committed source spans the census names; `forensics/memory-safety/
+    # container.json` lists it `metadata_only` and the Docker-only guard admits it on any host,
+    # exactly as `ms_exposure` is. Had a reduction been applied, re-running the compiler census would
+    # have been required and the tool would have followed the `ms_census.py` measurement precedent
+    # instead of this list. A stale committed worklist -- or a dropped candidate class, a typed count,
+    # an applied reduction with no test evidence, a weakened lint or a frozen census that disagrees
+    # with the live census -- is a failure rather than a silent divergence, and the
+    # `MS-UNSAFE-REDUCTION` court re-runs the same pure checks over the committed artefact, the census
+    # and the exposure classification.
+    "forensics/tools/ms_reduction.py",
+    # **Phase 25.13's Phase-18 fuzz crosswalk (`forensics/tools/ms_phase18_fuzz_crosswalk.py` ->
+    # `artifacts/phase25/phase18-fuzz-crosswalk.json`) is a pure function of committed inputs too,
+    # so it belongs here and is byte-compared.** It joins every 25.7 attacker-input route to the
+    # Phase-18 hostile-fuzz target whose surface group drives that input, reading the committed 25.1
+    # census for the site universe, the committed 25.7 exposure classification for the routes and
+    # their sites, and the committed Phase-18 hostile-fuzz evidence (the hostile-boundary register
+    # for the target verdicts, corpus sizes and findings, the Phase-18 courts registry for the
+    # verdicts and the bounded mutational screen for the fuzz evidence). It compiles nothing -- no
+    # compiler, no fuzzer, no probe -- so `forensics/memory-safety/container.json` lists it
+    # `metadata_only` and the Docker-only guard admits it on any host, exactly as `ms_reduction` is.
+    # A stale committed crosswalk -- or a dropped site, a fuzzed-site claim with no Phase-18
+    # evidence, a typed count, an inverse view that disagrees with the forward map, a coverage gap
+    # with no residual or a tool state that is not the register's -- is a failure rather than a
+    # silent divergence, and the `MS-PHASE18-FUZZ-CROSSWALK` court re-runs the same pure checks over
+    # the committed artefact, the census, the committed 25.7 routes and the committed Phase-18
+    # evidence.
+    "forensics/tools/ms_phase18_fuzz_crosswalk.py",
+    # **Phase 25.14's Phase-24 downstream safety coverage
+    # (`forensics/tools/ms_phase24_safety_coverage.py` ->
+    # `artifacts/phase25/phase24-safety-coverage.json`) is a pure function of committed inputs too,
+    # so it belongs here and is byte-compared.** It measures the coverage of the unreduced unsafe
+    # sites by the Phase-24 downstream runs, reading the committed 25.1 census for the site
+    # universe, the committed 25.6 crosswalk for the measured consumers that reach each site, the
+    # committed 25.7 exposure classification for reachability, the committed 25.8 reduction counts
+    # the unreduced universe is tied to, and the committed Phase-24 downstream measurement (the
+    # usage fingerprints, the runtime-functional atlas, the p1000 drop-in receipts, the family
+    # freeze and the holdout partition). It compiles nothing -- no compiler, no run driver, no probe
+    # -- so `forensics/memory-safety/container.json` lists it `metadata_only` and the Docker-only
+    # guard admits it on any host, exactly as `ms_phase18_fuzz_crosswalk` is. A stale committed
+    # coverage -- or a dropped site, a coverage claim with no runtime evidence, a typed count, an
+    # inverse view that disagrees with the forward map, a coverage gap with no residual or a run
+    # family with no fingerprint read as attributed -- is a failure rather than a silent divergence,
+    # and the `MS-PHASE24-SAFETY-COVERAGE` court re-runs the same pure checks over the committed
+    # artefact, the census and the committed 25.6/25.7/25.8 and Phase-24 planes.
+    "forensics/tools/ms_phase24_safety_coverage.py",
+    # **Phase 25.15's historical CVE census (`forensics/tools/ms_historical_cve.py` ->
+    # `artifacts/phase25/historical-cves.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It classifies the historical memory-safety-relevant
+    # OpenSSL CVEs from the closed CVE taxonomy, reading the frozen official vulnerability index and
+    # the advisories it carries (`forensics/multitrack/security-source.json`) for the advisory text,
+    # the affected ranges and the commit URLs, the committed security lineage
+    # (`forensics/multitrack/security-lineage.json`) for the bound CVE records, 25.1's census for the
+    # candidate region paths and their compiler-derived unsafe-operation counts, and 25.2's non-Rust
+    # TCB for the layer a resolved region belongs to. It compiles nothing -- no compiler, no tool, no
+    # probe -- so `forensics/memory-safety/container.json` lists it `metadata_only` and the
+    # Docker-only guard admits it on any host, exactly as `ms_phase24_safety_coverage` is. A stale
+    # committed census -- or a dropped CVE, a fabricated CVE the committed evidence does not
+    # classify, a class outside the taxonomy, a typed count, an untraceable mechanism or an unjoined
+    # region read as correspondent without its residual -- is a failure rather than a silent
+    # divergence, and the `MS-HISTORICAL-CVE` court re-runs the same pure checks over the committed
+    # artefact and the committed evidence.
+    "forensics/tools/ms_historical_cve.py",
+    # **Phase 25.17's vulnerability-mechanism reconciliation
+    # (`forensics/tools/ms_mechanism_reconciliation.py` ->
+    # `artifacts/phase25/mechanisms.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It reconciles each historical memory-corruption
+    # mechanism the 25.15 census classified against the committed 25.16 replay, the committed 25.1
+    # census (the candidate regions, sites and unsafe contexts), the committed 25.2 non-Rust TCB,
+    # the committed 25.7 exposure classification, the committed 25.8 reduction axis and the
+    # committed 25.9-25.12 evidence planes (Miri, ASan/MSan, TSan, Kani), giving each mechanism a
+    # disposition in the closed vocabulary (ELIMINATED / RELOCATED_TO_BOUNDARY / HIDDEN / PRESENT /
+    # UNRESOLVED), a structural-immunity reason that cites the 25.16 replay's own structure, and an
+    # honest residual where the operation survives. It compiles nothing -- no compiler, no tool, no
+    # probe -- so `forensics/memory-safety/container.json` lists it `metadata_only` and the
+    # Docker-only guard admits it on any host, exactly as `ms_historical_cve` is. A stale committed
+    # reconciliation -- or a dropped mechanism, a fabricated mechanism, a disposition outside the
+    # vocabulary, a disposition with no evidence, a surviving operation read as ELIMINATED, a typed
+    # count or a non-extinct mechanism with no residual -- is a failure rather than a silent
+    # divergence, and the `MS-MECHANISM-RECONCILIATION` court re-runs the same pure checks over the
+    # committed artefact and the committed evidence.
+    "forensics/tools/ms_mechanism_reconciliation.py",
+    # **Phase 25.18's red team (`forensics/tools/ms_red_team.py` -> `artifacts/phase25/red-team.json`)
+    # is a pure function of committed inputs too, so it belongs here and is byte-compared.** It
+    # attacks the atlas's own claims: it tries to falsify "no unexplained reachable unsafe site" by
+    # hunting a reachable site the atlas left unexplained, UNKNOWN or unreachable, a claimed-safe
+    # site the committed Phase-22 typed edges reach from a public root, an UNREACHABLE_PROFILE or
+    # tool NOT_REACHABLE classification with no witness, an unpreserved discovered failure or a
+    # reachable site dropped from a plane -- reasoning only over the committed 25.7 exposure
+    # classification and its witnesses, the committed Phase-22 atlas through 25.5's crosswalk, the
+    # committed 25.8 reduction axis, the committed 25.13 fuzz crosswalk and its hostile corpus, the
+    # committed 25.14 coverage, the committed 25.17 mechanisms, the committed 25.9-25.12 evidence
+    # planes and the committed 25.16 replay index. It compiles nothing -- no compiler, no tool, no
+    # probe -- so `forensics/memory-safety/container.json` lists it `metadata_only` and the
+    # Docker-only guard admits it on any host, exactly as `ms_mechanism_reconciliation` is. A stale
+    # committed red team -- or a gap with no residual, an absence claim from a single method, an
+    # unreachable classification with no witness, a typed count, an outcome or method outside the
+    # closed vocabulary or a dropped attack -- is a failure rather than a silent divergence, and the
+    # `MS-RED-TEAM` court re-runs the same pure checks over the committed artefact and the committed
+    # evidence.
+    "forensics/tools/ms_red_team.py",
+    # **Phase 25.10's ASan measurement (`forensics/tools/ms_asan.py` ->
+    # `artifacts/phase25/asan-msan.json`) follows the `ms_census.py`/`ms_miri.py` measurement
+    # precedent, so it is deliberately NOT listed here and NOT in `COMPARED`.** It builds the exact
+    # admitted candidate under AddressSanitizer (`-Zsanitizer=address -Zbuild-std` with the pinned
+    # nightly, the first-party C adapters through a `-fsanitize=address` CC wrapper), runs the
+    # instrumented test binary and records a per-census-site state -- so its states, its executed-test
+    # coverage and its findings are a function of the court's toolchain and its run, not of committed
+    # inputs. A CI runner has no compiler, no pinned nightly and no ASan runtime, and the Docker-only
+    # guard refuses a host invocation of `ms_asan.py` before it builds anything. The `MS-ASAN-MSMAN`
+    # court re-runs only its pure checks (`ms_asan.asan_findings` and
+    # `ms_asan.asan_sensitivity_control`) over the committed artefact and the committed census. If a
+    # later subphase derives a pure aggregate from this plane, that aggregate is what belongs in this
+    # list.
+    # **Phase 25.11's TSan measurement (`forensics/tools/ms_tsan.py` -> `artifacts/phase25/tsan.json`)
+    # follows the same `ms_census.py`/`ms_miri.py`/`ms_asan.py` measurement precedent, so it is
+    # deliberately NOT listed here and NOT in `COMPARED`.** It builds the exact admitted candidate
+    # under ThreadSanitizer (`-Zsanitizer=thread -Zbuild-std` with the pinned nightly, the first-party
+    # C adapters through a `-fsanitize=thread` CC wrapper), runs the instrumented test binary over the
+    # concurrency-relevant surface with the recorded deterministic one-thread libtest schedule and
+    # records a per-surface-site state -- so its states, its executed-test coverage and its findings
+    # are a function of the court's toolchain and its schedule, not of committed inputs. A CI runner
+    # has no compiler, no pinned nightly and no TSan runtime, and the Docker-only guard refuses a host
+    # invocation of `ms_tsan.py` before it builds anything. The `MS-TSAN` court re-runs only its pure
+    # checks (`ms_tsan.tsan_findings` and `ms_tsan.tsan_sensitivity_control`) over the committed
+    # artefact, the committed census and the committed 25.3 obligation rule that defines the surface.
+    # If a later subphase derives a pure aggregate from this plane, that aggregate is what belongs in
+    # this list.
+    # **Phase 25.12's Kani measurement (`forensics/tools/ms_kani.py` -> `artifacts/phase25/kani.json`)
+    # follows the same `ms_census.py`/`ms_miri.py`/`ms_asan.py`/`ms_tsan.py` measurement precedent, so
+    # it is deliberately NOT listed here and NOT in `COMPARED`.** It runs the committed Kani proof
+    # harnesses (`tests/kani_proofs.rs`) with the pinned release-bundle Kani 0.68.0 and its own pinned
+    # toolchain (`nightly-2026-08-21`) against the exact admitted candidate and records a per-harness
+    # tool state -- so its states, its transcripts and its findings are a function of the court's Kani
+    # and CBMC, not of committed inputs. A CI runner has no Kani, no CBMC and no compiler, and the
+    # Docker-only guard refuses a host invocation of `ms_kani.py` before it model-checks anything. The
+    # `MS-KANI` court re-runs only its pure checks (`ms_kani.kani_findings` and
+    # `ms_kani.kani_sensitivity_control`) over the committed artefact and the committed harness
+    # source. If a later subphase derives a pure aggregate from this plane, that aggregate is what
+    # belongs in this list.
+    # **Phase 25.16's historical CVE replay (`forensics/tools/ms_cve_replay.py` ->
+    # `artifacts/phase25/cve-replay/`) follows the same
+    # `ms_census.py`/`ms_miri.py`/`ms_asan.py`/`ms_tsan.py`/`ms_kani.py` measurement precedent, so it
+    # is deliberately NOT listed here and NOT in `COMPARED`.** It compiles the committed probe
+    # (`courts/phase25/cve_replay_probe.c`) against the exact admitted candidate's built C ABI
+    # (`artifacts/phase2`) and, where the CVE's affected range has a built vulnerable historical
+    # authority, against that too -- the positive control -- then runs each memory-safety CVE's
+    # input shape and records what each library did, deriving a per-CVE state in the closed replay
+    # vocabulary. Its states, its commands and its control outcomes are a function of the court's C
+    # toolchain and of the candidate's built ABI, not of committed inputs. A CI runner has no
+    # `libcrypto.so.3` built from the candidate and no C toolchain, and the Docker-only guard refuses
+    # a host invocation of `ms_cve_replay.py` before it compiles anything. The `MS-CVE-REPLAY` court
+    # re-runs only its pure checks (`ms_cve_replay.cve_replay_findings` and
+    # `ms_cve_replay.cve_replay_sensitivity_control`) over the committed plane, the committed 25.15
+    # census and the committed probe source. If a later subphase derives a pure aggregate from this
+    # plane, that aggregate is what belongs in this list.
+    # **Phase 25.19's full clean regeneration (`forensics/tools/ms_regeneration.py` ->
+    # `artifacts/phase25/regeneration.json`) follows the same
+    # `ms_census.py`/`ms_miri.py`/`ms_asan.py`/`ms_tsan.py`/`ms_kani.py`/`ms_cve_replay.py`
+    # measurement precedent, so it is deliberately NOT listed here and NOT in `COMPARED`.** It
+    # re-runs each measurement plane's own `--measure` -- the compiler, Miri, ASan, TSan, Kani and
+    # the CVE replays -- to confirm each still binds the current venue manifest and reproduces
+    # byte-for-byte on a second run, so its outputs (the per-plane exit codes, digests and the
+    # determinism result) are a function of the court's toolchain and of the frozen candidate, not
+    # of committed inputs. The Docker-only guard refuses a host invocation of `ms_regeneration.py`
+    # before it re-runs anything, and the manifest does not list it `metadata_only`. The
+    # `MS-CLEAN-REGEN` court re-runs only its pure checks (`ms_regeneration.regen_findings` and
+    # `ms_regeneration.regen_sensitivity_control`) over the committed plane and the committed
+    # manifest. Its procedure constant names the planes it re-runs, so a plane added to the stratum
+    # without being added to the procedure is a failure rather than a silent omission.
+    # **Phase 25.20's FRF/Gemel closure (`forensics/tools/ms_frf_closure.py` ->
+    # `forensics/atlas/phase25/frf-closure.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It joins every Phase-25 contract unit to its committed
+    # evidence and its committed generator, joins each obligation to its court and each `.frf`
+    # receipt/challenge/claim to a declarable court, disposes every residual from the closed
+    # vocabularies (naming the open ones) and records the FRF chain staging and the Gemel checkpoint
+    # projection. It reads only committed evidence -- the Phase-25 contract table and planes, the
+    # committed FRF registry, the committed Gemel projection and the committed `.frf` store -- and
+    # it compiles nothing, so `forensics/memory-safety/container.json` lists it `metadata_only` and
+    # the Docker-only guard admits it on any host, exactly as `ms_red_team` is. A stale committed
+    # closure -- a dropped record, an orphaned obligation, a join with no committed evidence, a
+    # typed count or a closure claimed closed with an open residual -- is a failure rather than a
+    # silent divergence, and the `MS-FRF-CLOSURE` court re-runs the same pure checks over the
+    # committed artefact and the committed evidence.
+    "forensics/tools/ms_frf_closure.py",
+    # **Phase 25.21's memory-safety seal (`forensics/tools/ms_seal.py` ->
+    # `artifacts/phase25/summary.json` and the generated `docs/PHASE-25-MEMORY-SAFETY-SEAL.md`) is a
+    # pure function of committed inputs too, so it belongs here and is byte-compared.** It re-runs
+    # each landed Phase-25 court's own handler over the committed planes, joins the census's
+    # externally reachable sites to the committed tool planes' per-site state and derives the
+    # seal-class closure record -- the bounded claim, the residual census, the withheld parity claim
+    # and the non-claims -- and renders the seal document from the same derivation. It reads only
+    # committed evidence and compiles nothing, so `forensics/memory-safety/container.json` lists it
+    # `metadata_only` and the Docker-only guard admits it on any host, exactly as `ms_frf_closure`
+    # is. It sits after `ms_frf_closure.py` because it embeds each court's artefact digest, the
+    # closure's included, and the closure in turn reads the seal document it writes; the `MS-SEAL`
+    # court re-runs the same pure checks over the committed artefact and the committed evidence. A
+    # dropped court result, a dropped residual, an overclaim, a granted parity, a typed count or a
+    # dropped non-claim is a failure rather than a silent divergence.
+    "forensics/tools/ms_seal.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -671,6 +980,116 @@ COMPARED = [
     # checkpoint that moved is a failure rather than a silent divergence. It executes no probe and
     # opens no store.
     "forensics/atlas/phase24/frf-closure.json",
+    # Phase 25.3's safety obligations: a pure function of the committed 25.1 census and 25.2 non-Rust
+    # TCB and the operation-kind -> dimension rule the plane records, so a stale plane -- or a typed
+    # count, a dropped site, or a `discharged` obligation no source-stated contract can establish --
+    # is a failure rather than a silent divergence. It executes nothing and reads no source tree, so
+    # re-deriving it needs no compiler and no authority.
+    "artifacts/phase25/safety-obligations.json",
+    # Phase 25.4's ownership/allocation/callback planes: a pure function of the committed 25.1
+    # census, the committed 25.2 non-Rust TCB and the committed source text it classifies against the
+    # tables the plane records, so a stale plane -- or a typed count, a dropped record, a hidden
+    # UNKNOWN panic class or an unmatched `FREES` edge with no finding -- is a failure rather than a
+    # silent divergence. It compiles nothing and reads no authority, so re-deriving it needs no
+    # compiler and no candidate.
+    "artifacts/phase25/ownership-planes.json",
+    # Phase 25.5's Phase-22 reachability crosswalk: a pure function of the committed 25.1 census and
+    # the committed Phase-22 reachability atlas (its closure, its entity plane and the module ->
+    # authority-unit correspondence), so a stale crosswalk -- or a dropped site, a site mapped to a
+    # root the atlas does not reach, an inverse view that disagrees with the site map, an unresolved
+    # site defaulted to a root or a re-derived graph -- is a failure rather than a silent divergence.
+    # It executes nothing and reads no compiler output, so re-deriving it needs no compiler and no
+    # candidate.
+    "artifacts/phase25/phase22-crosswalk.json",
+    # Phase 25.6's Phase-24 downstream crosswalk: a pure function of the committed 25.1 census, the
+    # committed 25.5 crosswalk and the committed Phase-24 downstream measurement (the usage
+    # fingerprints, the reconciliation clusters, the runtime and build/link atlases, the drop-in run
+    # and the family freeze), so a stale crosswalk -- or a typed consumer, a dropped site, a
+    # runtime-observed site with no runtime row, an inverse view that disagrees with the forward map
+    # or a partial join with no residual -- is a failure rather than a silent divergence. It executes
+    # nothing and reads no compiler output, so re-deriving it needs no compiler and no candidate.
+    "artifacts/phase25/phase24-crosswalk.json",
+    # Phase 25.7's exposure/data-flow classification: a pure function of the committed 25.1 census,
+    # the committed 25.5 crosswalk, the committed 25.6 crosswalk and the committed 25.4 ownership
+    # planes. A dropped site, a remote class with no justification, an attacker route with no path,
+    # an inverse view that disagrees, a boundary plan marked executed or a typed count is a failure
+    # rather than a silent divergence. It executes nothing and reads no compiler output, so
+    # re-deriving it needs no compiler and no candidate.
+    "artifacts/phase25/exposure.json",
+    # Phase 25.8's unsafe reduction: a pure function of the committed 25.1 census, the committed 25.7
+    # exposure classification and the committed source spans the census names. It applies no
+    # worklist reduction -- the worklist is a local-replacement feasibility census, not an
+    # impossibility result: no reachable operation screened against the ten local-substitution
+    # patterns was locally replaceable without changing the public surface or behaviour, which is not
+    # a claim that the rest of the core is irreducible -- so the census is unchanged and it runs no
+    # compiler. A dropped candidate
+    # class, a typed count, an applied reduction with no test evidence, a weakened lint, a reduced
+    # site still present or a frozen census that disagrees with the live census is a failure rather
+    # than a silent divergence. It executes nothing and reads no compiler output, so re-deriving it
+    # needs no compiler and no candidate.
+    "artifacts/phase25/unsafe-reduction.json",
+    # Phase 25.13's Phase-18 fuzz crosswalk: a pure function of the committed 25.1 census, the
+    # committed 25.7 exposure classification and the committed Phase-18 hostile-fuzz evidence (the
+    # hostile-boundary register, the Phase-18 courts registry and the bounded mutational screen over
+    # the hostile-X.509 corpus). A dropped site, a fuzzed-site claim with no Phase-18 evidence, a
+    # typed count, an inverse view that disagrees with the forward map, a coverage gap with no
+    # residual or a tool state that is not the register's is a failure rather than a silent
+    # divergence. It executes nothing and reads no compiler output, so re-deriving it needs no
+    # compiler, no fuzzer and no candidate.
+    "artifacts/phase25/phase18-fuzz-crosswalk.json",
+    # Phase 25.14's Phase-24 downstream safety coverage: a pure function of the committed 25.1
+    # census, the committed 25.6 crosswalk, the committed 25.7 exposure classification, the
+    # committed 25.8 reduction counts and the committed Phase-24 downstream measurement. A dropped
+    # site, a coverage claim with no runtime evidence, a typed count, an inverse view that disagrees
+    # with the forward map, a coverage gap with no residual or a run family with no fingerprint read
+    # as attributed is a failure rather than a silent divergence. It executes nothing and reads no
+    # compiler output, so re-deriving it needs no compiler, no run driver and no candidate.
+    "artifacts/phase25/phase24-safety-coverage.json",
+    # Phase 25.15's historical CVE census: a pure function of the frozen official vulnerability index
+    # and its advisories (forensics/multitrack/security-source.json), the committed security lineage
+    # (forensics/multitrack/security-lineage.json), the committed 25.1 census and the committed 25.2
+    # non-Rust TCB. It compiles nothing and reads no compiler output, so re-deriving it needs no
+    # compiler and no candidate machine. A dropped CVE, a fabricated CVE, a class outside the
+    # taxonomy, a typed count, an untraceable mechanism or an unjoined region read as correspondent
+    # without its residual is a failure rather than a silent divergence.
+    "artifacts/phase25/historical-cves.json",
+    # Phase 25.17's vulnerability-mechanism reconciliation: a pure function of the committed 25.15
+    # census (the mechanism set and the candidate regions), the committed 25.16 replay (the
+    # observed dispositions), the committed 25.1 census (the sites and their unsafe contexts), the
+    # committed 25.2 non-Rust TCB, the committed 25.7 exposure classification, the committed 25.8
+    # reduction axis and the committed 25.9-25.12 evidence planes. It compiles nothing and reads no
+    # compiler output, so re-deriving it needs no compiler and no candidate machine. A dropped or
+    # fabricated mechanism, a disposition outside the closed vocabulary, a disposition with no
+    # evidence, a surviving operation read as ELIMINATED, a typed count or a non-extinct mechanism
+    # with no residual is a failure rather than a silent divergence.
+    "artifacts/phase25/mechanisms.json",
+    # Phase 25.18's red team: a pure function of the committed 25.7 exposure classification and its
+    # witnesses, the committed Phase-22 atlas through 25.5's crosswalk, the committed 25.8 reduction
+    # axis, the committed 25.13 fuzz crosswalk and its hostile corpus, the committed 25.14 coverage,
+    # the committed 25.17 mechanisms, the committed 25.9-25.12 evidence planes and the committed
+    # 25.16 replay index. It compiles nothing and reads no compiler output, so re-deriving it needs
+    # no compiler and no candidate machine. A gap with no residual, an absence claim from a single
+    # method, an unreachable classification with no witness, a typed count, an outcome or method
+    # outside the closed vocabulary or a dropped attack is a failure rather than a silent
+    # divergence.
+    "artifacts/phase25/red-team.json",
+    # Phase 25.20's FRF/Gemel closure: a pure function of the committed Phase-25 contract table and
+    # the committed planes that are each unit's evidence, the committed FRF registry, the committed
+    # Gemel projection and the committed `.frf` receipt/challenge/claim store. It compiles nothing
+    # and reads no compiler output, so re-deriving it needs no compiler and no candidate machine. A
+    # dropped record, an orphaned obligation, a join with no committed evidence, a typed count, a
+    # closure claimed closed with an open residual or an undisposed residual is a failure rather
+    # than a silent divergence.
+    "forensics/atlas/phase25/frf-closure.json",
+    # Phase 25.21's memory-safety seal: a pure function of the committed Phase-25 planes and the
+    # re-derived landed courts, the committed tool planes and the committed obligation ledger. It
+    # compiles nothing and reads no compiler output, so re-deriving it needs no compiler and no
+    # candidate machine. The seal-class closure record and the generated seal document are compared
+    # together; a dropped court result, a dropped residual, an overclaim in the bounded claim, a
+    # granted parity, a typed count or a dropped non-claim is a failure rather than a silent
+    # divergence.
+    "artifacts/phase25/summary.json",
+    "docs/PHASE-25-MEMORY-SAFETY-SEAL.md",
 ]
 
 # ---------------------------------------------------------------------------

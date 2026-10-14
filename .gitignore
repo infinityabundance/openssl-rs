@@ -74,3 +74,6 @@ __pycache__/
 # above, one directory up: a dot-prefixed file at the repository root is never
 # evidence, so the shape is excluded rather than the names.
 .*.tmp
+
+# Phase-25 in-container toolchain/scratch homes (bind-mounted at /work; must never be committed)
+/.phase25-*/

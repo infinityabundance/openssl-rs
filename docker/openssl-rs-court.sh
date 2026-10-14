@@ -216,17 +216,21 @@ do_exec() {
   # archive path recorded in `forensics/atlas/implemented-surface.json`, and
   # evidence is not reshaped to suit the tooling. See docs/DECISIONS.md D62.
   #
-  # The three `-e` flags record the admitted venue for the Phase-24 Docker-only
-  # execution guard (forensics/tools/phase24_guard.py): the guard admits only a
-  # container whose marker (/.dockerenv) is present *and* whose environment records
-  # PHASE24_CONTAINER=1 with the admitted image and platform the committed manifest
-  # (forensics/downstream/container.json) names. `docker exec -e` sets them for the
-  # exec'd process and everything it spawns, so a host invocation -- which has no
-  # marker -- is refused rather than proceeding. See docs/DECISIONS.md D550.
+  # The `-e` flags record the admitted venue for the Phase-24 and Phase-25 Docker-only
+  # execution guards (forensics/tools/phase24_guard.py, forensics/tools/phase25_guard.py): a
+  # guard admits only a container whose marker (/.dockerenv) is present *and* whose environment
+  # records PHASE24_CONTAINER=1 / PHASE25_CONTAINER=1 with the admitted image and platform the
+  # committed manifests (forensics/downstream/container.json, forensics/memory-safety/
+  # container.json) name. `docker exec -e` sets them for the exec'd process and everything it
+  # spawns, so a host invocation -- which has no marker -- is refused rather than proceeding.
+  # See docs/DECISIONS.md D550 and D555.
   docker exec -i \
     -e PHASE24_CONTAINER=1 \
     -e PHASE24_IMAGE="${IMAGE}" \
     -e PHASE24_PLATFORM=linux \
+    -e PHASE25_CONTAINER=1 \
+    -e PHASE25_IMAGE="${IMAGE}" \
+    -e PHASE25_PLATFORM=linux \
     "${NAME}" sh -c 'ulimit -d "$1" 2>/dev/null || { echo "openssl-rs-court: cannot set RLIMIT_DATA to $1" >&2; exit 3; }; shift;
     if [ "$(id -u)" = 0 ] && { [ -d /work/target/flycheck0 ] \
        || { [ -d /work/target/debug ] \
