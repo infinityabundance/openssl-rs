@@ -40,8 +40,8 @@
         "contexts_by_kind": {
           "EXTERN_BLOCK": 10,
           "FFI_EXPORT_FN": 6565,
-          "UNSAFE_BLOCK": 44533,
-          "UNSAFE_FN": 13104,
+          "UNSAFE_BLOCK": 44535,
+          "UNSAFE_FN": 13105,
           "UNSAFE_IMPL": 135
         },
         "control": {
@@ -90,34 +90,34 @@
           "specificity_holds": true
         },
         "counts": {
-          "contexts_without_site": 6664,
+          "contexts_without_site": 6665,
           "files": 874,
           "generated_files": 15,
           "residuals": 3,
-          "sites": 172070,
+          "sites": 172091,
           "uncontracted_contexts": 2476,
-          "unsafe_contexts": 64347
+          "unsafe_contexts": 64350
         },
         "court": "MS-SOURCE-CENSUS",
         "crosschecks": {
           "geiger": "unavailable",
-          "lexical_unsafe_keywords": 58842,
+          "lexical_unsafe_keywords": 58845,
           "residual_count": 3
         },
         "encoding": "ms-columnar-v1",
         "findings": [
           "2476 compiler-identified unsafe context(s) carry no source-stated SAFETY contract (recorded open; 25.3 owns the obligations)",
-          "6664 unsafe context(s) hold no classified operation (a declaration, not an operation)",
+          "6665 unsafe context(s) hold no classified operation (a declaration, not an operation)",
           "3 cross-check residual(s): context-tokenizer/out_of_scope; lexical/out_of_scope; geiger/evidence_missing"
         ],
         "frf_declarable": false,
         "frf_exclusion": "the census court reads the committed census and re-derives only its pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
         "loc": {
           "note": "a secondary projection of the compiler-derived census; unsafe LOC is not a vulnerability count (docs/UNSAFE.md, docs/NON_CLAIMS.md)",
-          "rust_code_loc": 536157,
-          "rust_physical_loc": 803447,
-          "safe_rust_code_loc": 211427,
-          "unsafe_context_code_loc": 324730
+          "rust_code_loc": 536194,
+          "rust_physical_loc": 803535,
+          "safe_rust_code_loc": 211429,
+          "unsafe_context_code_loc": 324765
         },
         "method": "stages no probe: it reads the committed artifacts/phase25/source-census.json and re-runs the 25.1 pure checks (ms_census.census_findings and ms_census.census_sensitivity_control) over it, without a compiler. The census was derived by one clippy run with the built-in `unsafe_code` lint (the enumerating authority) plus the three named documentation lints, --message-format=json, and the macro-expanded source from a pinned nightly. It establishes file coverage, compiler-derivedness of every site, stable/unique ids, consistent back-references, derived counts and the LOC split, and that every cross-check disagreement is a classified residual; five seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.1, 3.2).",
         "probe": "",
@@ -125,17 +125,17 @@
         "sites_by_kind": {
           "EXTERN_FUNCTION_CALL": 10,
           "FFI_EXPORT": 6565,
-          "RAW_POINTER_DEREFERENCE": 40413,
+          "RAW_POINTER_DEREFERENCE": 40422,
           "RAW_POINTER_READ": 61,
           "RAW_POINTER_WRITE": 947,
           "STATIC_MUT_ACCESS": 18,
           "TRANSMUTE": 111,
-          "UNSAFE_FUNCTION_CALL": 81946,
+          "UNSAFE_FUNCTION_CALL": 81957,
           "UNSAFE_IMPL": 135,
-          "UNSAFE_METHOD_CALL": 41864
+          "UNSAFE_METHOD_CALL": 41865
         },
         "size_budget_bytes": 20971520,
-        "size_bytes": 11026749,
+        "size_bytes": 11028421,
         "toolchain": {
           "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
           "clippy": "clippy 0.1.98 (48a229ceae 2026-09-01)",
@@ -261,21 +261,21 @@
           "specificity_holds": true
         },
         "counts": {
-          "census_contexts": 64347,
-          "census_sites": 172070,
-          "contexts_represented": 64347,
-          "contexts_without_site": 6664,
+          "census_contexts": 64350,
+          "census_sites": 172091,
+          "contexts_represented": 64350,
+          "contexts_without_site": 6665,
           "contracts": 153,
           "discharged": 0,
-          "escaping_obligations": 46330,
-          "escaping_sites": 61950,
-          "high_risk_sites": 48199,
-          "obligations": 895879,
-          "open": 761605,
-          "sites_bound": 172070,
-          "stated": 134274,
+          "escaping_obligations": 46333,
+          "escaping_sites": 61949,
+          "high_risk_sites": 48208,
+          "obligations": 895993,
+          "open": 761690,
+          "sites_bound": 172091,
+          "stated": 134303,
           "uncontracted_contexts": 2476,
-          "uncontracted_sites": 4104
+          "uncontracted_sites": 4103
         },
         "court": "MS-SAFETY-OBLIGATIONS",
         "crosschecks": {
@@ -287,8 +287,8 @@
           "tcb_variadic_boundaries": 23
         },
         "findings": [
-          "761605 obligation dimension(s) are open: no source-stated SAFETY contract names them (4104 unsafe site(s) state no contract at all), recorded open rather than hidden -- their establishment is later evidence's measurement, not this subphase's claim",
-          "61950 unsafe site(s) carry their contract to a caller (escapes_to_caller): the 46330 named dimension(s) on them are the caller's obligation, and this stratum records the escape without establishing the caller chain (the Phase-22 reachability crosswalk is 25.5's measurement), so they are findings, never discharges",
+          "761690 obligation dimension(s) are open: no source-stated SAFETY contract names them (4103 unsafe site(s) state no contract at all), recorded open rather than hidden -- their establishment is later evidence's measurement, not this subphase's claim",
+          "61949 unsafe site(s) carry their contract to a caller (escapes_to_caller): the 46333 named dimension(s) on them are the caller's obligation, and this stratum records the escape without establishing the caller chain (the Phase-22 reachability crosswalk is 25.5's measurement), so they are findings, never discharges",
           "0 obligation dimension(s) are classified discharged: a `// SAFETY:` comment is a source-stated contract, so naming a dimension makes it stated, never discharged, and this stratum never upgrades a statement to a discharge"
         ],
         "frf_declarable": false,
@@ -333,18 +333,18 @@
           "specificity_holds": true
         },
         "counts": {
-          "allocation_sites": 2418,
+          "allocation_sites": 2420,
           "callback_lifetimes": 266,
           "callbacks_that_may_outlive": 150,
           "double_free_contexts": 35,
           "globals": 280,
           "globals_without_source_contract": 25,
-          "ownership_edges": 8976,
+          "ownership_edges": 8978,
           "ownership_edges_by_kind": {
             "ALLOCATES": 926,
             "BORROWS": 101,
             "DECREMENTS_REFCOUNT": 6020,
-            "FREES": 1468,
+            "FREES": 1470,
             "INCREMENTS_REFCOUNT": 326,
             "RETURNS_OWNERSHIP": 5,
             "TRANSFERS_OWNERSHIP": 130
@@ -423,18 +423,18 @@
         "counts": {
           "authority_entities": 8490,
           "authority_units": 638,
-          "census_sites": 172070,
+          "census_sites": 172091,
           "edge_kinds": {
-            "ADDRESS_TAKEN": 40616,
-            "CLI_DISPATCH": 149731,
-            "DIRECT_CALL": 147896,
-            "ENV_READ": 149731,
-            "EXPORTED_AS": 149731,
-            "RELOCATION_REFERENCE": 149731
+            "ADDRESS_TAKEN": 40637,
+            "CLI_DISPATCH": 149752,
+            "DIRECT_CALL": 147917,
+            "ENV_READ": 149752,
+            "EXPORTED_AS": 149752,
+            "RELOCATION_REFERENCE": 149752
           },
           "public_roots": 7,
           "roots_with_sites": 6,
-          "sites_mapped": 153314,
+          "sites_mapped": 153335,
           "sites_unresolved": 18756,
           "transcription_modules": 664,
           "unresolved_by_class": {
@@ -444,8 +444,8 @@
         "court": "MS-PHASE22-CROSSWALK",
         "findings": [
           "18756 census site(s) have no authority translation unit in the Phase-22 transcription atlas and are recorded as explicit unresolved residuals (class evidence_missing); none is dropped and none is defaulted to a root",
-          "the `distribution` compatibility root family reaches 0 of the 153314 mapped census site(s) over the atlas's typed edges: its members are installed-file entries, so it is a declared root that no unsafe site's authority entity is reached from",
-          "reachability is the Phase-22 graph's answer, not execution: the 153314 mapped site(s) are reachable from a public root through the typed edges, not exercised",
+          "the `distribution` compatibility root family reaches 0 of the 153335 mapped census site(s) over the atlas's typed edges: its members are installed-file entries, so it is a declared root that no unsafe site's authority entity is reached from",
+          "reachability is the Phase-22 graph's answer, not execution: the 153335 mapped site(s) are reachable from a public root through the typed edges, not exercised",
           "8490 authority implementation entit(ies) across 638 translation unit(s) anchor the map to the OpenSSL authority"
         ],
         "frf_declarable": false,
@@ -454,13 +454,13 @@
         "probe": "",
         "problems": [],
         "sites_by_root": {
-          "binary-abi": 153314,
-          "callbacks": 149731,
-          "cli": 149731,
-          "configuration": 149731,
+          "binary-abi": 153335,
+          "callbacks": 149752,
+          "cli": 149752,
+          "configuration": 149752,
           "distribution": 0,
-          "modules": 149731,
-          "source-api": 153314
+          "modules": 149752,
+          "source-api": 153335
         },
         "verdict": "pass"
       },
@@ -505,7 +505,7 @@
           "specificity_holds": true
         },
         "counts": {
-          "census_sites": 172070,
+          "census_sites": 172091,
           "consumers": 6,
           "consumers_runtime_observed": 6,
           "counted_families": 1000,
@@ -513,19 +513,19 @@
           "imported_symbols_unmapped": 2,
           "not_observed_by_reason": {
             "no_authority_unit": 18756,
-            "no_measured_consumer_reaches_the_surface": 108442
+            "no_measured_consumer_reaches_the_surface": 108463
           },
           "reachable_sites": 44872,
           "residuals": 5,
           "runtime_families_without_a_fingerprint": 2,
           "sites_import_observed": 0,
-          "sites_not_observed": 127198,
+          "sites_not_observed": 127219,
           "sites_runtime_observed": 44872,
           "usage_clusters": 3
         },
         "court": "MS-PHASE24-CROSSWALK",
         "findings": [
-          "127198 census site(s) are `NOT_OBSERVED`: 18756 have no Phase-22 authority unit (the 25.5 residual) and 108442 are mapped to a unit no measured consumer imports; recorded, never dropped",
+          "127219 census site(s) are `NOT_OBSERVED`: 18756 have no Phase-22 authority unit (the 25.5 residual) and 108463 are mapped to a unit no measured consumer imports; recorded, never dropped",
           "the join speaks for 6 measured consumer(s) of 1000 fingerprinted famil(ies): only the families the 24.3 usage census fingerprinted carry symbol-level import evidence, so a counted family without a fingerprint is not counted as reaching any site",
           "the top consumers by reachable-site count are haproxy=34751, curl=22181, openssh=19051; 44872 site(s) are DOWNSTREAM_RUNTIME_OBSERVED and 0 DOWNSTREAM_IMPORT_OBSERVED",
           "2 imported symbol(s) (HMAC, SHA256) have no clean Phase-22 entity mapping and are recorded as join_evidence_missing residuals; 2 runtime-observed family/-ies without a fingerprint cannot be attributed to a site and are recorded too",
@@ -613,23 +613,23 @@
         "counts": {
           "attacker_routes": 18,
           "attacker_routes_with_sites": 17,
-          "buffer_operations": 37964,
-          "census_sites": 172070,
-          "externally_reachable": 154323,
+          "buffer_operations": 37973,
+          "census_sites": 172091,
+          "externally_reachable": 154344,
           "justifications": 19,
           "network_reachable": 5881,
           "residuals": 2,
           "routed_sites": 16755,
-          "sites_classified": 172070,
+          "sites_classified": 172091,
           "sites_unknown_reachability": 17747,
           "unreachable_profile": 0
         },
         "court": "MS-EXPOSURE-CLASSIFICATION",
         "findings": [
-          "172070 census site(s) carry exactly one exposure class: 5881 are network-reachable (3543 server, 2338 client), 154323 are externally reachable, 0 are `UNREACHABLE_PROFILE` and 17747 carry `UNKNOWN_REACHABILITY`. Every unreachable site carries a justified exclusion witness; an unknown is the site whose 25.5 mapping is missing, and an unknown is not a zero and not an unreachability claim",
+          "172091 census site(s) carry exactly one exposure class: 5881 are network-reachable (3543 server, 2338 client), 154344 are externally reachable, 0 are `UNREACHABLE_PROFILE` and 17747 carry `UNKNOWN_REACHABILITY`. Every unreachable site carries a justified exclusion witness; an unknown is the site whose 25.5 mapping is missing, and an unknown is not a zero and not an unreachability claim",
           "16755 site(s) are attacker-input reachable across 17 of 18 route(s); the largest are PROVIDER_PARAMETERS=4815, X509_CERTIFICATE=4289, DER=1340. The routes are a rule over committed parser identities, not a dynamic taint result",
-          "37964 externally reachable buffer operation(s) are censused by buffer origin, pointer origin and capacity origin; the length origin, the integer-conversion path and the copy primitive are `NOT_MEASURED` and are the dynamic subphases' subject",
-          "the risk tiers are a review priority: S0=0, SU=17747, S1=116359, S2=36227, S3=0, S4=1737; an unknown exposure is SU, not S0, so 17747 unknown site(s) stay eligible for high-priority investigation; 3 network site(s) are named as the review head",
+          "37973 externally reachable buffer operation(s) are censused by buffer origin, pointer origin and capacity origin; the length origin, the integer-conversion path and the copy primitive are `NOT_MEASURED` and are the dynamic subphases' subject",
+          "the risk tiers are a review priority: S0=0, SU=17747, S1=116371, S2=36236, S3=0, S4=1737; an unknown exposure is SU, not S0, so 17747 unknown site(s) stay eligible for high-priority investigation; 3 network site(s) are named as the review head",
           "the Phase-22 closure's `protocol` family is unpopulated, so a network class is grounded in the parser's committed role (the module or authority unit the peer drives) and is recorded as an `evidence_missing` residual, never read as a wire observation"
         ],
         "frf_declarable": false,
@@ -658,7 +658,7 @@
           "X509_CERTIFICATE": 4289
         },
         "sites_by_exposure": {
-          "CLI_INPUT_REACHABLE": 96727,
+          "CLI_INPUT_REACHABLE": 96748,
           "CONFIG_REACHABLE": 1915,
           "DOWNSTREAM_RUNTIME_OBSERVED": 978,
           "INTERNAL_REACHABLE": 0,
@@ -673,8 +673,8 @@
         },
         "sites_by_risk_tier": {
           "S0": 0,
-          "S1": 116359,
-          "S2": 36227,
+          "S1": 116371,
+          "S2": 36236,
           "S3": 0,
           "S4": 1737,
           "SU": 17747
@@ -784,16 +784,16 @@
         "counts": {
           "applied": 0,
           "candidate_classes": 10,
-          "candidates": 154323,
-          "census_sites": 172070,
-          "reachable_sites": 154323,
+          "candidates": 154344,
+          "census_sites": 172091,
+          "reachable_sites": 154344,
           "reduced": 50,
-          "rejected": 154323,
+          "rejected": 154344,
           "residuals": 10
         },
         "court": "MS-UNSAFE-REDUCTION",
         "findings": [
-          "154323 externally reachable compiler-derived unsafe site(s) carry exactly one candidate class across 10 pattern(s); **0 were reduced on the worklist**, so the reachable count is unchanged",
+          "154344 externally reachable compiler-derived unsafe site(s) carry exactly one candidate class across 10 pattern(s); **0 were reduced on the worklist**, so the reachable count is unchanged",
           "every candidate replacement would change a function signature or the foreign ABI, turn a documented precondition the authority states into a defined panic, or remove no site because the census site is the enclosing raw dereference; consolidating repeated reads into one helper is forbidden by section 3.4 and the brief. This is a local-replacement feasibility census, not an impossibility result: of the reachable operations screened against the ten local-substitution patterns none was locally replaceable without changing the public surface or behaviour, which is not a claim that the rest of the core is irreducible -- a structural (representation-level) reconstruction is a separate campaign, recorded in forensics/memory-safety/unsafe-reconstruction.json",
           "the safe-core reconstruction is separate from the worklist: it replaced the internal unsafe mechanism of one subsystem --- recorded below with its per-operation classification --- so the crate's total operation count moved while the externally reachable count, the ABI and the lints are unchanged"
         ],
@@ -909,10 +909,10 @@
           "FROM_RAW_PARTS_OVER_SLICE": 63,
           "FUNCTION_POINTER_TRANSMUTE": 174,
           "RAW_POINTER_ARITHMETIC": 7948,
-          "RAW_POINTER_DEREFERENCE": 34726,
+          "RAW_POINTER_DEREFERENCE": 34735,
           "STATIC_MUT": 18,
           "UNCLASSIFIED": 8,
-          "UNSAFE_CALL": 104628,
+          "UNSAFE_CALL": 104640,
           "UNSAFE_IMPL": 116
         }
       },
@@ -972,11 +972,11 @@
           "dispositions": 4,
           "fail": 5,
           "findings": 4,
-          "not_reachable": 163227,
+          "not_reachable": 163248,
           "pass": 1824,
           "residuals": 4,
           "runs": 8,
-          "sites": 172070,
+          "sites": 172091,
           "unsupported": 7014
         },
         "court": "MS-MIRI",
@@ -1196,8 +1196,8 @@
             },
             "unsupported_without_reason": {
               "caught": true,
-              "delta": 156227,
-              "findings": 156227,
+              "delta": 156269,
+              "findings": 156269,
               "marker": "UNSUPPORTED with an empty reason"
             }
           },
@@ -1209,11 +1209,11 @@
           "fail": 0,
           "findings": 0,
           "not_reachable": 93295,
-          "pass": 78592,
+          "pass": 78613,
           "residuals": 6,
           "results": 3,
           "runs": 2,
-          "sites": 172070,
+          "sites": 172091,
           "unsupported": 183
         },
         "court": "MS-ASAN-MSMAN",
@@ -1255,8 +1255,8 @@
             },
             "omitted_parallel_run": {
               "caught": true,
-              "delta": 2,
-              "findings": 2,
+              "delta": 1,
+              "findings": 1,
               "marker": "omits the mandated"
             },
             "pass_with_finding": {
@@ -1302,60 +1302,17 @@
         "counts": {
           "crate_ran": 1,
           "fail": 0,
-          "findings": 1,
+          "findings": 0,
           "not_reachable": 96,
           "pass": 56,
-          "residuals": 8,
+          "residuals": 7,
           "results": 5,
           "runs": 5,
           "sites": 153,
           "unsupported": 1
         },
         "court": "MS-TSAN",
-        "findings": [
-          {
-            "category": "TSAN_DATA_RACE",
-            "column": 0,
-            "detail": "run tsan-parallel-gate-parallel (parallel-safety-gate, schedule []) reported a ThreadSanitizer data race; the first-party access site of each racing access is recorded in `races` (the dependency frames and TSan's SUMMARY framing of the same race are a function of the default schedule's timing and are not part of the reproducible record)",
-            "file": "src/context/namemap.rs",
-            "finding_id": "tf-tsan-parallel-gate-parallel",
-            "line": 488,
-            "races": [
-              {
-                "class": "data race",
-                "sites": [
-                  {
-                    "file": "src/context/namemap.rs",
-                    "function": "openssl_rs::context::namemap::ossl_namemap_empty",
-                    "kind": "Previous read",
-                    "line": 488
-                  },
-                  {
-                    "file": "src/context/namemap.rs",
-                    "function": "openssl_rs::context::namemap::name2num_inner",
-                    "kind": "Previous read",
-                    "line": 633
-                  },
-                  {
-                    "file": "src/context/namemap.rs",
-                    "function": "openssl_rs::context::namemap::namemap_add_name",
-                    "kind": "Write",
-                    "line": 768
-                  },
-                  {
-                    "file": "src/context/namemap.rs",
-                    "function": "openssl_rs::context::namemap::namemap_add_name",
-                    "kind": "Write",
-                    "line": 773
-                  }
-                ]
-              }
-            ],
-            "run_id": "tsan-parallel-gate-parallel",
-            "schedule": [],
-            "schedule_role": "parallel-safety-gate"
-          }
-        ],
+        "findings": [],
         "frf_declarable": false,
         "frf_exclusion": "the TSan court re-derives only the plane's pure checks, so it stages no artifacts/phase25/probes/ pair and carries no FRF declaration",
         "method": "stages no probe: it reads the committed artifacts/phase25/tsan.json and re-runs the 25.11 pure checks (ms_tsan.tsan_findings and ms_tsan.tsan_sensitivity_control) over it, the committed 25.1 census and the committed 25.3 obligation rule that defines the concurrency-relevant surface -- no TSan, no nightly, no compiler. The plane records a per-surface-site TSan state (TSAN_PASS / TSAN_FAIL / TSAN_NOT_REACHABLE / TSAN_UNSUPPORTED) over the census sites whose operation kind requires a concurrency obligation (thread-affinity, Send/Sync or init-once), the runs (schedule, command hash, outcome, executed tests), the findings, the sanitizer_result records and the residuals. Both schedules docs/CONCURRENCY_MODEL.md section 7 requires are run and recorded: the serial authoritative run (--test-threads=1, the deterministic schedule section 6 fixes for reproducibility) and the default-thread parallel-safety gate. A site the gate observed racing is TSAN_FAIL, never TSAN_PASS; the gate's races are real but which tests meet is a function of timing, so each race is recorded by its reproducible core (class, summary and the first first-party frame of each racing access), never by its schedule-dependent outer stacks, and the gate is otherwise a gate. TSan instruments the Rust crate, `std` (rebuilt with -Zbuild-std), the first-party C adapters and the interceptable libc; it cannot instrument a module loaded at run time (src/dso/dlfcn.rs) or see through an opaque operation, and a site the instrument cannot reach or instrument is NOT_REACHABLE/UNSUPPORTED, never silently clean. A no-race result is trusted only because the deliberate data-race canary is known to fire. The TSan environment is the admitted court image with the venue's documented OPENSSL_RS_COURT_DATA override (TSan's ~35.1 TB shadow is MAP_NORESERVE virtual address space); the crate-level state records TSAN_RAN or TSAN_UNSUPPORTED. Every TSAN_PASS is a file-granular claim under the recorded schedule -- the site's source FILE was instrumented and a passing run covered it, not a per-operation proof that the specific operation executed race-free (the plane's top-level `pass_semantics` and each result's `coverage_granularity: file` state this). Eight seeded mutations are each caught with specificity holding (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md sections 2, 3.6).",
@@ -1392,7 +1349,7 @@
           },
           {
             "command_sha256": "6e61453cd5b087a0",
-            "outcome": "FAIL",
+            "outcome": "PASS",
             "run_id": "tsan-parallel-gate-parallel",
             "tests_passed": 0,
             "tests_run": 0
@@ -1553,7 +1510,7 @@
         },
         "counts": {
           "attacker_routes": 18,
-          "census_sites": 172070,
+          "census_sites": 172091,
           "corpus_entries": 220,
           "findings": 0,
           "mutational_screen_findings": 0,
@@ -1563,7 +1520,7 @@
           "routes_not_driven_by_phase18": 13,
           "sites_not_fuzzed": 9339,
           "sites_on_a_fuzzed_route": 7416,
-          "sites_on_no_attacker_route": 155315,
+          "sites_on_no_attacker_route": 155336,
           "targets_covered": 2
         },
         "court": "MS-PHASE18-FUZZ-CROSSWALK",
@@ -1571,7 +1528,7 @@
           "7416 of 16755 externally reachable buffer-operation site(s) are on a Phase-18 hostile-fuzz route across 2 hostile-fuzz target(s) (RT-HOSTILE-TLS=1470, RT-HOSTILE-X509=5946); 9339 are on an attacker-input route no Phase-18 corpus drives and are recorded as `evidence_missing` residuals, never zeroed",
           "the 2 Phase-18 hostile-fuzz target(s) carry 220 corpus entr(ies) and 0 crash/OOM/timeout finding(s) (the bounded mutational screen adds 0); a finding is carried here rather than dropped with the run",
           "5 of 18 attacker-input route(s) are driven by a Phase-18 hostile-fuzz target and 13 are not; 3 of 5 register group(s) are not hostile-input fuzz targets and are `out_of_scope`",
-          "155315 census site(s) are on no attacker-input route: they are not externally reachable buffer operations, so no fuzz target is expected to exercise them, and this is said rather than read as covered",
+          "155336 census site(s) are on no attacker-input route: they are not externally reachable buffer operations, so no fuzz target is expected to exercise them, and this is said rather than read as covered",
           "a Phase-18 `PASS` is a bounded result over the corpus it drove, not a coverage or memory-safety claim: a site under a passing corpus is exercised by that corpus's classes, never proven safe"
         ],
         "frf_declarable": false,
@@ -1632,25 +1589,25 @@
           "specificity_holds": true
         },
         "counts": {
-          "census_sites": 172070,
+          "census_sites": 172091,
           "consumers_runtime_observed": 6,
           "counted_families": 1000,
           "drop_in_pass_families": 33,
           "fingerprinted_families": 6,
           "functional_candidate_runs": 8,
           "measured_consumers": 6,
-          "reduction_sites_after": 172070,
+          "reduction_sites_after": 172091,
           "residuals": 9,
           "sites_not_reachable": 17747,
           "sites_observed": 44872,
-          "sites_reachable": 154323,
-          "sites_reachable_unobserved": 109451,
-          "unreduced_sites": 172070
+          "sites_reachable": 154344,
+          "sites_reachable_unobserved": 109472,
+          "unreduced_sites": 172091
         },
         "court": "MS-PHASE24-SAFETY-COVERAGE",
         "findings": [
-          "44872 of 154323 externally reachable compiler-derived unsafe site(s) are observed by a Phase-24 downstream run across 6 runtime-observed measured consumer(s) (curl=22181, haproxy=34751, monit=11122, openssh=19051, pure-ftpd=6268, redis=9828); 109451 are externally reachable but observed by no downstream run and are recorded as `evidence_missing` residuals (CLI_INPUT_REACHABLE=65229, CONFIG_REACHABLE=1636, LOCAL_API_REACHABLE=2107, LOCAL_FILE_INPUT_REACHABLE=34907, NETWORK_CLIENT_REACHABLE=2338, NETWORK_SERVER_REACHABLE=3234), never zeroed",
-          "the unreduced universe is the live census's 172070 site(s), tied to 25.8's post-reduction `sites_after`=172070 and its 50 ELIMINATED operation(s); 17747 site(s) are outside the externally reachable set and are `out_of_scope`, never read as observed",
+          "44872 of 154344 externally reachable compiler-derived unsafe site(s) are observed by a Phase-24 downstream run across 6 runtime-observed measured consumer(s) (curl=22181, haproxy=34751, monit=11122, openssh=19051, pure-ftpd=6268, redis=9828); 109472 are externally reachable but observed by no downstream run and are recorded as `evidence_missing` residuals (CLI_INPUT_REACHABLE=65250, CONFIG_REACHABLE=1636, LOCAL_API_REACHABLE=2107, LOCAL_FILE_INPUT_REACHABLE=34907, NETWORK_CLIENT_REACHABLE=2338, NETWORK_SERVER_REACHABLE=3234), never zeroed",
+          "the unreduced universe is the live census's 172091 site(s), tied to 25.8's post-reduction `sites_after`=172091 and its 50 ELIMINATED operation(s); 17747 site(s) are outside the externally reachable set and are `out_of_scope`, never read as observed",
           "the runtime-functional atlas records 8 functional candidate run(s) and the p1000 ladder 33 `DROP_IN_PASS` family(ies); 6 of the 1000 frozen families carry a committed usage fingerprint, so a run family without one is a `join_evidence_missing` residual rather than a site attribution",
           "the coverage is a post-freeze measurement over the frozen population (holdout status `opened`: 800 development + 200 holdout) and selects nothing by a holdout label",
           "a downstream observation is a bounded result over the workload it drove, not a coverage or memory-safety claim: a site observed by a passing run is exercised by that run's surface classes, never proven safe"
@@ -1669,7 +1626,7 @@
         "probe": "",
         "problems": [],
         "reachable_unobserved_by_exposure": {
-          "CLI_INPUT_REACHABLE": 65229,
+          "CLI_INPUT_REACHABLE": 65250,
           "CONFIG_REACHABLE": 1636,
           "LOCAL_API_REACHABLE": 2107,
           "LOCAL_FILE_INPUT_REACHABLE": 34907,
@@ -2025,13 +1982,13 @@
           "methods": 7,
           "no_gap": 12,
           "residuals": 1,
-          "sites_attacked": 1252571,
+          "sites_attacked": 1252718,
           "unwitnessed_classifications": 0,
           "witness_audit_entries": 4
         },
         "court": "MS-RED-TEAM",
         "findings": [
-          "13 red-team attack(s) were run across 7 method(s) over 1252571 site(s): by outcome INCONCLUSIVE=1, NO_GAP=12; by method coverage_join=2, exposure_witness=3, fuzz_corpus=2, mechanism_witness=2, phase22_typed_edges=2, reduction_join=1, tool_witness=1",
+          "13 red-team attack(s) were run across 7 method(s) over 1252718 site(s): by outcome INCONCLUSIVE=1, NO_GAP=12; by method coverage_join=2, exposure_witness=3, fuzz_corpus=2, mechanism_witness=2, phase22_typed_edges=2, reduction_join=1, tool_witness=1",
           "0 genuine gap(s) were found and 1 attack(s) are inconclusive; the attacks that found nothing are recorded as 'no gap found under method X', which is never proof of absence",
           "the inconclusive attack(s) are named rather than smoothed over: rt-phase22-unwitnessed-external",
           "a genuine gap is a property finding and a residual, never suppressed: none was found, so no residual is owed to a gap",
@@ -2051,7 +2008,7 @@
           "caught": 9,
           "caught_determinism_all_reproduced_lie": 1,
           "caught_determinism_with_no_second_run": 2,
-          "caught_dropped_plane": 8,
+          "caught_dropped_plane": 7,
           "caught_not_re_run_with_no_reason": 8,
           "caught_procedure_out_of_dependency_order": 7,
           "caught_reproduced_claim_contradicts_evidence": 1,
@@ -2068,28 +2025,24 @@
           "re_measured": 7,
           "reproduced": 6,
           "residuals": 1,
-          "superseded_bindings": 7,
+          "superseded_bindings": 0,
           "unmeasured": 0
         },
         "court": "MS-CLEAN-REGEN",
         "findings": [
           "the clean regeneration re-ran 7 of 7 measurement plane(s); 6 reproduced their evidence on a second --measure, and 0 reproduced whole-file (the rest differ only in the non-evidence bytes their envelope or per-run fields carry)",
           "every re-measured plane now binds the current venue manifest 8812838c85cb47bf8c2f1edc3c0c4ddeb0e5a7fe1ef8e6ff6cae83a02bb2bb54 as an input, so the measurement planes are mutually consistent on the manifest",
-          "artifacts/phase25/source-census.json bound a superseded manifest digest (461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3) as committed at HEAD and was re-bound to the current 8812838c85cb47bf8c2f1edc3c0c4ddeb0e5a7fe1ef8e6ff6cae83a02bb2bb54 by the regeneration",
-          "artifacts/phase25/source-census.json did not survive the regeneration: its committed evidence (4b1a3afc2bc37b21ae9bd8d4b32209f269e78e75ceec216349379758f54f54b3) differs from the regenerated evidence (42a9cfcf001bc3b85cc6a189d2c462044184f2571815569da96388c42f8f0d05), so a PASS read off the committed bytes had to be re-read off the regenerated ones",
+          "artifacts/phase25/source-census.json did not survive the regeneration: its committed evidence (e91765263aeed0ec463409a8a610858e92b6f3d121892755a0e71d8f5fd34974) differs from the regenerated evidence (95dc1dbd0d6fd7ed861912c080eeff7065d8280a33cd719b55fb4faeb2c7455c), so a PASS read off the committed bytes had to be re-read off the regenerated ones",
           "artifacts/phase25/source-census.json reproduced its evidence while its whole file differs only in the pathless non-committed inputs its envelope records (the raw tool stream it derived from)",
-          "artifacts/phase25/non-rust-tcb.json bound a superseded manifest digest (461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3) as committed at HEAD and was re-bound to the current 8812838c85cb47bf8c2f1edc3c0c4ddeb0e5a7fe1ef8e6ff6cae83a02bb2bb54 by the regeneration",
+          "artifacts/phase25/non-rust-tcb.json did not survive the regeneration: its committed evidence (a9925f2a0896e886b08d219a3f4e668c299cad8b5a9b49e7e686a90863796ad4) differs from the regenerated evidence (ea836262304289f5817d6e2af1d7f36f43c2b25b091410309b8b41d5a812e7e1), so a PASS read off the committed bytes had to be re-read off the regenerated ones",
           "artifacts/phase25/non-rust-tcb.json reproduced its evidence while its whole file differs only in the pathless non-committed inputs its envelope records (the raw tool stream it derived from)",
-          "artifacts/phase25/miri.json bound a superseded manifest digest (461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3) as committed at HEAD and was re-bound to the current 8812838c85cb47bf8c2f1edc3c0c4ddeb0e5a7fe1ef8e6ff6cae83a02bb2bb54 by the regeneration",
+          "artifacts/phase25/miri.json did not survive the regeneration: its committed evidence (66fa838fd9f754cd13404588bf1c5019b0245d9d8d7744aefc054e5b6e1f4c84) differs from the regenerated evidence (65516c361f3f966fc76eb830d5d9ad79bbec91a042c32ab7b656904ca0ae89cb), so a PASS read off the committed bytes had to be re-read off the regenerated ones",
           "artifacts/phase25/miri.json reproduced its evidence while its whole file differs, because it records the declared non-evidence field(s) ['body.runs.rows[*].transcript_sha256'] -- a per-run transcript digest or a build product -- whose bytes are not reproducible; the difference is confined to those declared fields",
-          "artifacts/phase25/asan-msan.json bound a superseded manifest digest (461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3) as committed at HEAD and was re-bound to the current 8812838c85cb47bf8c2f1edc3c0c4ddeb0e5a7fe1ef8e6ff6cae83a02bb2bb54 by the regeneration",
+          "artifacts/phase25/asan-msan.json did not survive the regeneration: its committed evidence (a643e9f5c4580deaa68fbf2b6981386390e7d39dd592f866c6f5822c4db543b4) differs from the regenerated evidence (35ca1f7e32ef89e6c3d3d4fa6a4f05479745715e832b679b3fb5bd45a3ca8195), so a PASS read off the committed bytes had to be re-read off the regenerated ones",
           "artifacts/phase25/asan-msan.json was re-run twice and the second --measure did not reproduce the first's evidence, so it is recorded a non-reproducible finding rather than a pass",
-          "artifacts/phase25/tsan.json bound a superseded manifest digest (461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3) as committed at HEAD and was re-bound to the current 8812838c85cb47bf8c2f1edc3c0c4ddeb0e5a7fe1ef8e6ff6cae83a02bb2bb54 by the regeneration",
-          "artifacts/phase25/tsan.json did not survive the regeneration: its committed evidence (1147269e524a81d4e41635900883c800d32ef28ea8cedabb44125a110d6ae46a) differs from the regenerated evidence (c47bd56ee1252d92eebd34f26d5e62f7335f806ca56687ed3a794520a2869fcc), so a PASS read off the committed bytes had to be re-read off the regenerated ones",
+          "artifacts/phase25/tsan.json did not survive the regeneration: its committed evidence (c47bd56ee1252d92eebd34f26d5e62f7335f806ca56687ed3a794520a2869fcc) differs from the regenerated evidence (831374d2d6e1c11fd92314e8b727dba11e3ffd9f25e1c091fe1281b1d3ca3f5d), so a PASS read off the committed bytes had to be re-read off the regenerated ones",
           "artifacts/phase25/tsan.json reproduced its evidence while its whole file differs, because it records the declared non-evidence field(s) ['body.instrumentation.test_binary', 'body.instrumentation.test_binary_sha256', 'body.instrumentation.test_binary_bytes'] -- a per-run transcript digest or a build product -- whose bytes are not reproducible; the difference is confined to those declared fields",
-          "artifacts/phase25/kani.json bound a superseded manifest digest (461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3) as committed at HEAD and was re-bound to the current 8812838c85cb47bf8c2f1edc3c0c4ddeb0e5a7fe1ef8e6ff6cae83a02bb2bb54 by the regeneration",
           "artifacts/phase25/kani.json reproduced its evidence while its whole file differs only in the pathless non-committed inputs its envelope records (the raw tool stream it derived from)",
-          "artifacts/phase25/cve-replay/index.json bound a superseded manifest digest (461128aef6ce09bbb480c7c1e7d94c074721771a8e5d59104e8bc9ee1566dcf3) as committed at HEAD and was re-bound to the current 8812838c85cb47bf8c2f1edc3c0c4ddeb0e5a7fe1ef8e6ff6cae83a02bb2bb54 by the regeneration",
           "artifacts/phase25/cve-replay/index.json reproduced its evidence while its whole file differs only in the pathless non-committed inputs its envelope records (the raw tool stream it derived from)"
         ],
         "frf_declarable": false,
@@ -2155,8 +2108,8 @@
           "records_joined": 22,
           "records_orphaned": 0,
           "records_pending": 0,
-          "residuals": 495,
-          "residuals_open": 450,
+          "residuals": 494,
+          "residuals_open": 449,
           "residuals_undisposed": 0,
           "unresolved_planes": 0
         },
@@ -2164,9 +2117,9 @@
         "findings": [
           "the record set is 22 Phase-25 contract unit(s): 22 joined to their committed evidence and generator, 0 pending with the subphase that lands them and 0 orphaned",
           "the FRF chain owes 0 receipt(s) and the stratum's 22 court obligation(s) join their committed evidence (22 joined, 0 owing a receipt, 0 orphaned), so no receipt/challenge/claim that names a Phase-25 court is orphaned",
-          "the residual census disposes 484 of 484 residual record(s) from the closed disposition vocabulary and records 11 light cross-check leftover(s); 450 residual(s) are open and 0 undisposed",
+          "the residual census disposes 483 of 483 residual record(s) from the closed disposition vocabulary and records 11 light cross-check leftover(s); 449 residual(s) are open and 0 undisposed",
           "1 residual(s) carry a class from a plane's own vocabulary rather than memory_safety_schemas.RESIDUAL_CLASSES (evidence_not_reproducible=1); each is recorded with its disposition rather than read as an undisposed leftover",
-          "the open residual(s) are named rather than smoothed to a zero (a bounded sample of 8 per plane; the full set is in the cited plane): clean-regeneration=1, cve-replay=4, exposure-classification=1, historical-cve-census=8, mechanism-reconciliation=4, phase18-fuzz-crosswalk=8, phase22-crosswalk=8, phase24-crosswalk=5, phase24-safety-coverage=8, red-team=1, tsan=1",
+          "the open residual(s) are named rather than smoothed to a zero (a bounded sample of 8 per plane; the full set is in the cited plane): clean-regeneration=1, cve-replay=4, exposure-classification=1, historical-cve-census=8, mechanism-reconciliation=4, phase18-fuzz-crosswalk=8, phase22-crosswalk=8, phase24-crosswalk=5, phase24-safety-coverage=8, red-team=1",
           "a passing MS-FRF-CLOSURE is an instrument, not a property: the stratum's chain entry is vacuous (no Phase-25 court is declarable) and the atlas carries open residuals, so the closure records property_status NOT_CLAIMED rather than a chain that ran"
         ],
         "frf_declarable": false,
@@ -2227,21 +2180,21 @@
           "courts": 21,
           "courts_fail": 0,
           "courts_pass": 21,
-          "externally_reachable": 154323,
+          "externally_reachable": 154344,
           "externally_reachable_unsupported": 183,
           "parity_status": "WITHHELD",
           "passed": false,
-          "residuals": 495,
-          "residuals_open": 450,
+          "residuals": 494,
+          "residuals_open": 449,
           "residuals_undisposed": 0,
-          "unsafe_sites": 172070
+          "unsafe_sites": 172091
         },
         "court": "MS-SEAL",
         "findings": [
           "the seal consolidates 21 Phase-25 court result(s): 21 pass, 0 fail, each joined to its committed artefact and digest",
-          "the residual census classifies and disposes 484 residual record(s) plus 11 light cross-check leftover(s); 450 are open and 0 undisposed",
+          "the residual census classifies and disposes 483 residual record(s) plus 11 light cross-check leftover(s); 449 are open and 0 undisposed",
           "the seal records passed=false because 183 externally reachable site(s) carry tool state UNSUPPORTED; UNSUPPORTED is never PASS (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
-          "the open items are named rather than smoothed to a zero: census-geiger-unavailable, census-unresolved-reachability, cve-replay-unknown, externally-reachable-fail, externally-reachable-unsupported, mechanism-reconciliation-open, res-tsan-default-libctx-race, rt-phase22-unwitnessed-external",
+          "the open items are named rather than smoothed to a zero: census-geiger-unavailable, census-unresolved-reachability, cve-replay-unknown, externally-reachable-fail, externally-reachable-unsupported, mechanism-reconciliation-open, rt-phase22-unwitnessed-external",
           "the bounded claim is the inventory of a fixed candidate's first-party surface in the claimed profile; it is NOT 'no memory-safety bug can exist' and NOT '100% memory safe'",
           "PARITY_VERIFIED is WITHHELD: the stratum stages no probe pair, so no Phase-25 court is parity-declarable",
           "the non-claims are recorded as findings (safe Rust does not prove protocol correctness; unsafe Rust is not inherently vulnerable; unsafe LOC is not a vulnerability count; Miri/ASan/TSan are not exhaustive; Kani does not prove unsupported or concurrent whole-program behaviour; historical CVE extinction does not predict a future CVE count; compatibility is not security; memory safety is not cryptographic correctness; absence of a crash is not structural proof), so a passing seal is never 'the candidate is memory safe'"
@@ -2672,7 +2625,7 @@
     {
       "name": "source-census",
       "path": "artifacts/phase25/source-census.json",
-      "sha256": "7991c43f59d4b52c297f81d017f813ad1de4bef68444287c5ea73b3cdf2ad127"
+      "sha256": "9634a5edc5f4d05d36c5debb6a2bdcb775cf80fab7f10e9c3b3bf31557b78ae0"
     },
     {
       "name": "ms-census-tool",
@@ -2682,7 +2635,7 @@
     {
       "name": "non-rust-tcb",
       "path": "artifacts/phase25/non-rust-tcb.json",
-      "sha256": "672027f1411e5a749e9388df220477c386430df51e2016d85ee5f924ecb1e35a"
+      "sha256": "9a7c7d34ece8b6ec8f24b966c1c74f8d319c26ddff56ec3e1586c73007234aed"
     },
     {
       "name": "ms-non-rust-tcb-tool",
@@ -2692,7 +2645,7 @@
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "45dc6830d191a8ac3fa59481ddc56b5e0b57662b53a16b7da2f23f5b8b3cbe6e"
+      "sha256": "ba2d47a48342e0811b25f579cd291ae7bc4b0c9b58c3a571c9cc21ccdbcb9fd4"
     },
     {
       "name": "ms-obligations-tool",
@@ -2702,7 +2655,7 @@
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "83074cdba20d7b5430ecab17a503522373ea729badbdf410470caad55a7cd80e"
+      "sha256": "89e2ceb471ba4864d9107ef4ff6432e4d670f4354e4ee4bafcf9fcf13e557039"
     },
     {
       "name": "ms-ownership-planes-tool",
@@ -2712,7 +2665,7 @@
     {
       "name": "phase22-crosswalk",
       "path": "artifacts/phase25/phase22-crosswalk.json",
-      "sha256": "824843747ff80be105072970049dfb2c1d80bf9376c57e255df991d0d312744e"
+      "sha256": "797e1b63753e99d523d79feea7ca81beea124123ca7ad9356daa36f6110b3f7d"
     },
     {
       "name": "ms-phase22-crosswalk-tool",
@@ -2747,7 +2700,7 @@
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "5cb7c238a9b6eae4387ebee0b47fc0603a46bc6163e603cbe8c0b392104154ed"
+      "sha256": "ce2fb63d93cb6b607aaa5c5b06d57fba07b8e5c8998d87db8d5f8923bb19940e"
     },
     {
       "name": "ms-phase24-crosswalk-tool",
@@ -2762,7 +2715,7 @@
     {
       "name": "downstream-reconciliation",
       "path": "forensics/downstream/reconciliation.json",
-      "sha256": "94b657439caf62fb33e0366ba0fe99a8f98aab08083a2cfc8d2a23072f21b44f"
+      "sha256": "b4bfb936fa97a0f07bc4e8535c1af08f0a5ba369e3d3a0fd6c39ee7fa338d8fa"
     },
     {
       "name": "downstream-runtime-functional-atlas",
@@ -2777,7 +2730,7 @@
     {
       "name": "downstream-p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "061b78de7a019b10ee5bcefa0d85c384ea7a43d163b6e90aaafc85d012cf1717"
+      "sha256": "725e137ee5165531a4c3550d7cd374a0642575171e5454526cab6aac6a2eb947"
     },
     {
       "name": "downstream-family-freeze",
@@ -2787,7 +2740,7 @@
     {
       "name": "exposure",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "1530b933e1d5f3b74feaa7600a82466717a85ae7b2f51fa0bb81cf1cc8f87613"
+      "sha256": "b2a277b98ddeb09da6cbe429af563e9e8348d2f058c8f64311020066afe199c0"
     },
     {
       "name": "ms-exposure-tool",
@@ -2797,7 +2750,7 @@
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "5fdd637f34c61f4010dbc49294868e1c0769f31e64df2c8b6df754ebb510e32e"
+      "sha256": "6449016f5a68c064e6505f1e40415dbb502c51b0ca829802c0e3550485f76868"
     },
     {
       "name": "ms-reduction-tool",
@@ -2807,7 +2760,7 @@
     {
       "name": "miri",
       "path": "artifacts/phase25/miri.json",
-      "sha256": "740c26bb6ebe62a14b21e7e7677980c6a4849562ba7e547d12769ceef0511f12"
+      "sha256": "af3124f40d473a1928c40622492550784735b40248f24a6ee89f4887ee40f263"
     },
     {
       "name": "ms-miri-tool",
@@ -2827,7 +2780,7 @@
     {
       "name": "asan-msan",
       "path": "artifacts/phase25/asan-msan.json",
-      "sha256": "868ef83bc308d47e64e4d1899409c2a88db13f2fbfbd2c9a45566b471eb4c999"
+      "sha256": "ebc93666c5c9aaa5ce5287d73680a9ca251adca2269209ca5c6373011a563ce7"
     },
     {
       "name": "ms-asan-tool",
@@ -2847,7 +2800,7 @@
     {
       "name": "tsan",
       "path": "artifacts/phase25/tsan.json",
-      "sha256": "fe07ca7e362781fbd04307059b1e4f0af8f5f09ee94501a4f5386e6b62966f96"
+      "sha256": "b379cf4718fda1fb21be51455b659cc45b7316fce27c5f74c3c90434a94748ff"
     },
     {
       "name": "ms-tsan-tool",
@@ -2872,7 +2825,7 @@
     {
       "name": "kani",
       "path": "artifacts/phase25/kani.json",
-      "sha256": "f17ca6894d1159a7527e1b044b87f2df46accc744c1c69f3ef8771d9befa6e88"
+      "sha256": "f3f5d3d029e30dcd5a3a02792690add858478e23c30faac27c2fcba1d77f9eb0"
     },
     {
       "name": "ms-kani-tool",
@@ -2887,7 +2840,7 @@
     {
       "name": "phase18-fuzz-crosswalk",
       "path": "artifacts/phase25/phase18-fuzz-crosswalk.json",
-      "sha256": "d703d62961dce08cbffebb83392a09b94ced38ec9bcdfb9516942e97e25383e2"
+      "sha256": "caad9935e72f4950ecfe96c66b6cf440641dd44d545ff24ba1637ed282a3aa08"
     },
     {
       "name": "ms-phase18-fuzz-crosswalk-tool",
@@ -2902,7 +2855,7 @@
     {
       "name": "phase18-courts",
       "path": "artifacts/phase18/COURTS.json",
-      "sha256": "309e47ff0f66ee3b3ec0a8299c74e92522d2e0a7f5fea3b4a4f1fe2f13bd19af"
+      "sha256": "21f5a9d612a47d317dac345d1c1729fc9f2888493971e6492db2166bbca5996d"
     },
     {
       "name": "phase18-fuzz-hostile-corpus",
@@ -2912,7 +2865,7 @@
     {
       "name": "phase24-safety-coverage",
       "path": "artifacts/phase25/phase24-safety-coverage.json",
-      "sha256": "0114a07b4a75a466e4f7f19e56ae3124afbe68e203930c33c1751fa7f2da5ac0"
+      "sha256": "3a5ed4706cff32d3eeaab467de3202487fa8bd3f43201211d3beaaa009704d83"
     },
     {
       "name": "ms-phase24-safety-coverage-tool",
@@ -2927,7 +2880,7 @@
     {
       "name": "historical-cves",
       "path": "artifacts/phase25/historical-cves.json",
-      "sha256": "1867491e286680625aea3609bdeea56c823dbdc46e37e8219f5098632df35921"
+      "sha256": "3de452f14bcb2fa11d9644435f52ac0022b824d73909df708ca4b2065a0664e8"
     },
     {
       "name": "ms-historical-cve-tool",
@@ -2942,12 +2895,12 @@
     {
       "name": "security-lineage",
       "path": "forensics/multitrack/security-lineage.json",
-      "sha256": "e22b4a924a383c31e18d041943b0036cb09425dcf155e9c6b02b878132eeba1c"
+      "sha256": "767d8f2225ca1c296db6b492a8c144a8a67f3cda6a359928227489fe50c473ab"
     },
     {
       "name": "cve-replay",
       "path": "artifacts/phase25/cve-replay/index.json",
-      "sha256": "9d6f7fc6ad8f8262b63526c0b8a5379a369c2005f8dfff9e5f53245c8c84a624"
+      "sha256": "ccd1a948994d7805ea522acdb7e20c2875f769dfa84c79a04f34adf3dd9acd8d"
     },
     {
       "name": "ms-cve-replay-tool",
@@ -2962,7 +2915,7 @@
     {
       "name": "mechanisms",
       "path": "artifacts/phase25/mechanisms.json",
-      "sha256": "fc2411a7a8e08250c55d9dc26c11ea93327ce5cd291941528c100aa927cab24d"
+      "sha256": "b93c25d538a6d6170460ff5106399ba5c43354715ffc0561585470ff64b1dede"
     },
     {
       "name": "ms-mechanism-reconciliation-tool",
@@ -2972,7 +2925,7 @@
     {
       "name": "red-team",
       "path": "artifacts/phase25/red-team.json",
-      "sha256": "1d866fba56fd155b757b196e8ef222c08587c0f7e05ec01c18d863910ffcd0fe"
+      "sha256": "0a2225a2293a338e9ab34317ef7e7b42bec91096fd16bf317bff3129ac37833f"
     },
     {
       "name": "ms-red-team-tool",
@@ -2982,7 +2935,7 @@
     {
       "name": "regeneration",
       "path": "artifacts/phase25/regeneration.json",
-      "sha256": "c57e67ec9176f33fc1683b5092248a82da8598880f3d2188f16fba719bccbdda"
+      "sha256": "43ef0eed7b7b93fc0f8ff1cae3820aa3ec24dc3be5d6186b76ae9d22675d4598"
     },
     {
       "name": "ms-regeneration-tool",
@@ -2992,7 +2945,7 @@
     {
       "name": "frf-closure",
       "path": "forensics/atlas/phase25/frf-closure.json",
-      "sha256": "f7b331c3cbd137efe756f01256dc52611e7e9b06a360025995ec40806cc27495"
+      "sha256": "212654f2e2079ddd1dc5c3d18d7a852c690a55373f3dc65710a5eb12ee623c11"
     },
     {
       "name": "ms-frf-closure-tool",

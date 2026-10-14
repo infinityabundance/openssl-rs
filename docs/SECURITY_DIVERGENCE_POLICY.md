@@ -681,6 +681,36 @@ because the hand-typed trigger state it replaces is exactly what let `D-DECODER-
   and the *certain* half — that the nested handler is not called by the same stop, because the
   walk unlinks as it goes — is asserted with it.
 
+### D-TEVENT-DEREG-RACE-1 — `ossl_init_thread_start` publishes a thread's handler head without the register lock
+
+- **Obligation:** `ossl_init_thread_start`, `crypto/initthread.c`. It is reached from ordinary concurrent
+  work — the first `RAND_bytes` on a thread registers RAND's thread-stop handler through
+  `ossl_rand_get0_public`, and `ossl_rcu_read_lock` registers the RCU handler (D118) — while
+  `ossl_provider_free` reaches `ossl_init_thread_deregister` and `OSSL_LIB_CTX_free` reaches
+  `ossl_ctx_thread_stop`, both on whatever thread is tearing a context down.
+- **Authority:** the global register holds the **address** of every thread's handler-list head.
+  `init_thread_deregister` and `init_thread_stop` walk those heads under the register's write lock,
+  but `ossl_init_thread_start` stores the new head (`*hands = hand`) with **no lock**. A thread
+  registering a handler while another thread frees a provider — or a context — therefore writes and
+  reads the same head slot concurrently: a data race, and a torn read walks a list the same race can
+  have released. Every admitted authority carries it (`initthread.c` is byte-identical across
+  3.6.4/3.6.5/4.0.0/4.0.3 here). Measured: the default-thread parallel-safety gate reported a
+  `Read` in `init_thread_deregister` racing a `Previous write` in `ossl_init_thread_start` under
+  `TSAN`.
+- **Candidate:** the head is published under the register's **write lock** — the same lock the walk
+  holds — so the store and the walk are ordered. The one behavioural consequence is inside the
+  re-entrant case the crate already refuses (`D-TEVENT-REENTRANT-1`): a handler registering during a
+  stop meets the lock and is refused with `0` for a **non-fresh** head as well as a fresh one. The
+  authority's success in that case *is* the re-entrant race that entry records as UB, so no
+  observable it is claimed to reproduce is lost.
+- **Reason:** `docs/SECURITY_DIVERGENCE_POLICY.md` section 5. A data race is undefined behaviour, and
+  the candidate does not reproduce it merely because an observed run happened to yield a particular
+  result. Recording it is the alternative to claiming an ordering that does not exist.
+- **Claim removed:** "a handler registration concurrent with a deregistration is ordered exactly as
+  the authority orders it" is not claimed; there is no ordering to reproduce. The registration still
+  answers `1`, the LIFO run order is unchanged, and the thread-event court's observations are
+  unchanged.
+
 ### D-CHILD-DEREGISTER-NULL-1 — `ossl_provider_init_as_child` does not validate one pointer, and `ossl_provider_deinit_child` calls it unguarded
 
 - **Obligation:** `ossl_provider_init_as_child` and `ossl_provider_deinit_child`,
