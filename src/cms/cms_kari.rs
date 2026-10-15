@@ -7,7 +7,7 @@
 // assignments are kept so the transcription reads as the source does.
 #![allow(unused_assignments)]
 
-use core::ffi::{c_int, c_uchar, c_uint, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
 
 use crate::asn1::layout::Asn1String;
@@ -37,6 +37,104 @@ const CMS_USE_KEYID: c_uint = 0x10000;
 const CMS_USE_ORIGINATOR_KEYID: c_uint = 0x200000;
 /// `EVP_MAX_KEY_LENGTH` — `include/openssl/evp.h:35`.
 const EVP_MAX_KEY_LENGTH: usize = 64;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
+/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_cleansed`
+/// allocate it, `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that
+/// takes it over (`ec->key`, or a `*pout` slot). [`Self::adopt`] takes in a block the crate
+/// allocated inside a helper (`cms_kek_cipher`) so the failure paths that follow release what they
+/// built. A NULL pointer is a valid, empty buffer whose release is the authority's own no-op
+/// `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+/// How the authority releases a scratch buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`cek`).
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `OPENSSL_clear_free(ptr, num)`, which zeroes `num` bytes first
+    /// (`out`).
+    Cleansed { num: usize },
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// `CRYPTO_malloc(len, file, line)` for a block whose release is the cleansing
+    /// `OPENSSL_clear_free(ptr, len)`, or `None` when the allocator answers NULL.
+    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Cleansed { num: len },
+        })
+    }
+
+    /// Adopt a plain block this crate allocated inside a helper, for release by `Drop` at the
+    /// authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
+    /// is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf {
+            ptr,
+            release: BufRelease::Plain { file, line },
+        }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Cleansed { num } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `OPENSSL_clear_free` zeroes then releases it and accepts NULL.
+                unsafe { super::cms_asn1::OPENSSL_clear_free(self.ptr, num) };
+            }
+        }
+    }
+}
 
 /// `int CMS_RecipientInfo_kari_get0_alg(CMS_RecipientInfo *ri, X509_ALGOR **palg,`
 /// `ASN1_OCTET_STRING **pukm)` — `cms_kari.c:22-35`.
@@ -418,8 +516,6 @@ unsafe fn cms_kek_cipher(
     let mut kek = [0u8; EVP_MAX_KEY_LENGTH];
     let mut keklen;
     let mut rv = 0;
-    let mut out: *mut c_uchar = ptr::null_mut();
-    let mut out_alloc_len = 0usize;
     let mut outlen: c_int = 0;
     let mut outsize = 0usize;
 
@@ -489,9 +585,10 @@ unsafe fn cms_kek_cipher(
     } else {
         outlen as usize
     };
+    // The ciphered key is this frame's scratch, allocated through the crate's allocator seam at
+    // `outsize`; its release is the authority's cleansing `OPENSSL_clear_free`, run by `Drop`.
     // SAFETY: `outsize > 0`.
-    out = CRYPTO_malloc(outsize, c"cms_kari.c".as_ptr(), 235).cast::<c_uchar>();
-    if out.is_null() {
+    let Some(out) = OwnedBuf::new_cleansed(outsize, c"cms_kari.c".as_ptr(), 235) else {
         // SAFETY: the context and key are live.
         unsafe {
             OPENSSL_cleanse(kek.as_mut_ptr().cast(), keklen);
@@ -500,13 +597,20 @@ unsafe fn cms_kek_cipher(
             (*kari).pctx = ptr::null_mut();
         }
         return 0;
-    }
-    out_alloc_len = outlen as usize;
+    };
     // SAFETY: `kari` is live; `out` is writable.
-    if unsafe { EVP_CipherUpdate((*kari).ctx.cast(), out, &mut outlen, input, inlen as c_int) } == 0
+    if unsafe {
+        EVP_CipherUpdate(
+            (*kari).ctx.cast(),
+            out.as_ptr(),
+            &mut outlen,
+            input,
+            inlen as c_int,
+        )
+    } == 0
     {
-        // SAFETY: `out` is owned here.
-        unsafe { super::cms_asn1::OPENSSL_clear_free(out, out_alloc_len) };
+        // `out` clears and releases its own block, at the authority's own site.
+        drop(out);
         // SAFETY: the context and key are live.
         unsafe {
             OPENSSL_cleanse(kek.as_mut_ptr().cast(), keklen);
@@ -516,9 +620,9 @@ unsafe fn cms_kek_cipher(
         }
         return 0;
     }
-    // SAFETY: `pout`/`poutlen` are writable.
+    // SAFETY: `pout`/`poutlen` are writable; ownership of the block transfers to the caller.
     unsafe {
-        *pout = out;
+        *pout = out.into_raw();
         *poutlen = outlen as usize;
     }
     rv = 1;
@@ -571,23 +675,26 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_kari_decrypt(
         )
     } == 0
     {
-        // SAFETY: `cek` is NULL or owned.
-        unsafe { CRYPTO_free(cek.cast(), c"cms_kari.c".as_ptr(), 281) };
+        // The helper leaves no block in the slot on failure; the authority's `err:` release is a
+        // plain `CRYPTO_free`, run here by `Drop`.
+        // SAFETY: `cek` is NULL or a live block the helper allocated and no one else owns.
+        let cek_owned = unsafe { OwnedBuf::adopt(cek, c"cms_kari.c".as_ptr(), 281) };
+        drop(cek_owned);
         return rv;
     }
+    // The decrypted CEK is the helper's block; its release is the authority's plain `CRYPTO_free`.
+    // SAFETY: `cek` is a live block the helper allocated and no one else owns.
+    let cek_owned = unsafe { OwnedBuf::adopt(cek, c"cms_kari.c".as_ptr(), 281) };
     // SAFETY: `cms` is live.
     let ec = unsafe { super::cms_env::ossl_cms_get0_env_enc_content(cms) };
     // SAFETY: `ec` is live.
     unsafe { super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen) };
-    // SAFETY: `ec` is live.
+    // SAFETY: `ec` is live; ownership of the block moves into `ec->key`.
     unsafe {
-        (*ec).key = cek;
+        (*ec).key = cek_owned.into_raw();
         (*ec).keylen = ceklen;
     }
-    cek = ptr::null_mut();
     rv = 1;
-    // SAFETY: `cek` is NULL here.
-    unsafe { CRYPTO_free(cek.cast(), c"cms_kari.c".as_ptr(), 281) };
     rv
 }
 
