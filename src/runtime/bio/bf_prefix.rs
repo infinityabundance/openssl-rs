@@ -25,8 +25,9 @@ use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
 
 use crate::ffi::guard_ffi;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_free;
 
+use super::owned::{CtxDestroy, OwnedCtx};
 use super::{
     Bio, BioMethod, BIO_CTRL_GET_INDENT, BIO_CTRL_RESET, BIO_CTRL_SET_INDENT, BIO_CTRL_SET_PREFIX,
     BIO_C_FILE_SEEK, BIO_TYPE_BUFFER,
@@ -44,6 +45,20 @@ struct PrefixCtx {
     indent: u32,
     /// Non-zero while the next output begins a line.
     linestart: c_int,
+}
+
+/// The authority's `prefix_destroy` body *minus* the block release [`OwnedCtx`]'s `Drop` performs:
+/// the context's `prefix` duplicate, when it has one, is released exactly as `prefix_destroy`
+/// releases it. `prefix` stays a plain `#[repr(C)]` member the authority owns and frees by hand;
+/// only the context block's own ownership moves to the handle.
+impl CtxDestroy for PrefixCtx {
+    unsafe fn destroy_body(ptr: *mut PrefixCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        if !unsafe { (*ptr).prefix }.is_null() {
+            // SAFETY: `prefix` is NULL or an owned duplicate.
+            unsafe { CRYPTO_free((*ptr).prefix.cast(), ptr::null(), 0) };
+        }
+    }
 }
 
 /// A compiled-in method table. `BIO_f_prefix()` returns its address.
@@ -88,11 +103,11 @@ unsafe fn ctx(b: *mut Bio) -> *mut PrefixCtx {
 /// # Safety
 /// `b` must be a live BIO.
 unsafe extern "C" fn prefix_create(b: *mut Bio) -> c_int {
-    // SAFETY: `CRYPTO_zalloc` returns nulled memory of the requested size.
-    let c: *mut PrefixCtx = CRYPTO_zalloc(core::mem::size_of::<PrefixCtx>(), ptr::null(), 0).cast();
-    if c.is_null() {
+    // SAFETY: `OwnedCtx::zalloc` returns nulled memory of the requested size, or NULL.
+    let Some(ctx) = OwnedCtx::<PrefixCtx>::zalloc() else {
         return 0;
-    }
+    };
+    let c = ctx.as_ptr();
     // SAFETY: `c` is a fresh allocation and `b` is live.
     unsafe {
         (*c).prefix = ptr::null_mut();
@@ -101,6 +116,8 @@ unsafe extern "C" fn prefix_create(b: *mut Bio) -> c_int {
         (*b).ptr = c.cast();
         (*b).init = 1;
     }
+    // The context is now the BIO's; `prefix_destroy` reclaims it through `OwnedCtx::from_raw`.
+    let _ = ctx.into_raw();
     1
 }
 
@@ -109,17 +126,9 @@ unsafe extern "C" fn prefix_create(b: *mut Bio) -> c_int {
 /// # Safety
 /// `b` must be a live BIO created from this method.
 unsafe extern "C" fn prefix_destroy(b: *mut Bio) -> c_int {
-    // SAFETY: `b` is live and holds a `PrefixCtx`.
-    let c = unsafe { ctx(b) };
-    if !c.is_null() {
-        // SAFETY: `prefix` is NULL or an owned duplicate.
-        unsafe {
-            if !(*c).prefix.is_null() {
-                CRYPTO_free((*c).prefix.cast(), ptr::null(), 0);
-            }
-            CRYPTO_free(c.cast(), ptr::null(), 0);
-        }
-    }
+    // SAFETY: `b` is live and holds a `PrefixCtx`; `from_raw` maps a NULL context to `None`, and
+    // `Drop` runs the authority's own `prefix_destroy` body before the block release.
+    unsafe { drop(OwnedCtx::<PrefixCtx>::from_raw(ctx(b))) };
     1
 }
 
