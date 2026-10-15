@@ -55,6 +55,110 @@ const HEX_DIGITS: &[u8; 16] = b"0123456789ABCDEF";
 /// The size of the stack buffer `i2a_ASN1_OBJECT` renders into.
 const OBJ_BUF: usize = 80;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer grown and released through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc`/`CRYPTO_realloc` at the authority's exact size/`file`/`line` --
+/// a Rust `Vec` would hide both the growth and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new` allocates the
+/// fixed `i2a_ASN1_OBJECT` render buffer, `empty` starts an `a2i_*` reader with no block at all,
+/// [`Self::clear_realloc`]/[`Self::realloc`] grow a reader's buffer exactly as the authority's
+/// `OPENSSL_clear_realloc`/`OPENSSL_realloc` do, `Drop` is its single release, and
+/// [`Self::into_raw`] hands a reader's finished value to the `ASN1_STRING` that takes it over. A
+/// NULL pointer is a valid, empty block whose release is the authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut u8,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)` for the fixed render buffer, or `None` when the allocator
+    /// answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<u8>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// A reader's empty scratch buffer, before its first growth.
+    fn empty(file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf {
+            ptr: core::ptr::null_mut(),
+            file,
+            line,
+        }
+    }
+
+    /// `CRYPTO_clear_realloc(ptr, old, new, file, line)` — `a2i_ASN1_INTEGER`'s growth, whose
+    /// cleared tail the shift-and-or reads. `None` when the allocator answers NULL; the block, if
+    /// any, is left for `Drop` exactly as the authority leaves it for its error tail.
+    ///
+    /// # Safety
+    ///
+    /// `self.ptr` is NULL or a live block of at least `old` bytes that this handle owns.
+    unsafe fn clear_realloc(&mut self, old: usize, new: usize) -> Option<()> {
+        // SAFETY: per this method's contract, the block is NULL or this handle's own of `old`
+        // bytes; `CRYPTO_clear_realloc` clears the tail it discards.
+        let raw = unsafe {
+            CRYPTO_clear_realloc(self.ptr.cast::<c_void>(), old, new, self.file, self.line)
+        }
+        .cast::<u8>();
+        if raw.is_null() {
+            return None;
+        }
+        self.ptr = raw;
+        Some(())
+    }
+
+    /// `CRYPTO_realloc(ptr, new, file, line)` — `a2i_ASN1_STRING`'s growth. `None` when the
+    /// allocator answers NULL; the block, if any, is left for `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `self.ptr` is NULL or a live block that this handle owns.
+    unsafe fn realloc(&mut self, new: usize) -> Option<()> {
+        // SAFETY: per this method's contract, the block is NULL or this handle's own.
+        let raw = unsafe { CRYPTO_realloc(self.ptr.cast::<c_void>(), new, self.file, self.line) }
+            .cast::<u8>();
+        if raw.is_null() {
+            return None;
+        }
+        self.ptr = raw;
+        Some(())
+    }
+
+    /// The start of the block.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut u8 {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL, which the readers' `err:` tails pass it.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// Write one octet as two uppercase hex digits. Returns 2, the count the callers
 /// add to their own.
 /// `ossl_to_hex`'s digit table. Uppercase, as the authority's is.
@@ -105,30 +209,26 @@ pub unsafe extern "C" fn i2a_ASN1_OBJECT(
             return unsafe { BIO_write(bp, c"NULL".as_ptr().cast(), 4) };
         }
         let mut buf = [0 as c_char; OBJ_BUF];
-        // SAFETY: `buf` is `OBJ_BUF` writable bytes.
         // SAFETY: `buf` is `OBJ_BUF` writable bytes; `a` is live.
         let i = unsafe { i2t_ASN1_OBJECT(buf.as_mut_ptr(), OBJ_BUF as c_int, a) };
-        let mut heap: *mut c_char = core::ptr::null_mut();
+        let mut heap: Option<OwnedBuf> = None;
         if i > (OBJ_BUF - 1) as c_int {
             if i > c_int::MAX - 1 {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::A_OBJECT_198) };
                 return -1;
             }
-            // SAFETY: `CRYPTO_malloc` answers null or `i + 1` writable bytes.
-            let p = CRYPTO_malloc(i as usize + 1, OBJECT_FILE.as_ptr(), LINE) as *mut c_char;
-            if p.is_null() {
+            let Some(h) = OwnedBuf::new(i as usize + 1, OBJECT_FILE.as_ptr(), LINE) else {
                 return -1;
-            }
-            heap = p;
+            };
+            let p = h.as_ptr().cast::<c_char>();
             // SAFETY: `p` is `i + 1` bytes.
             unsafe { i2t_ASN1_OBJECT(p, i + 1, a) };
+            heap = Some(h);
         }
-        let p = if heap.is_null() {
-            buf.as_mut_ptr()
-        } else {
-            heap
-        };
+        let p = heap
+            .as_ref()
+            .map_or(buf.as_mut_ptr(), |h| h.as_ptr().cast::<c_char>());
         if i <= 0 {
             // SAFETY: `bp` is null or live.
             let mut n = unsafe { BIO_write(bp, c"<INVALID>".as_ptr().cast(), 9) };
@@ -137,18 +237,10 @@ pub unsafe extern "C" fn i2a_ASN1_OBJECT(
                 // null or live.
                 n += unsafe { BIO_dump(bp, obj.data.cast::<c_void>(), obj.length) };
             }
-            if !heap.is_null() {
-                // SAFETY: `heap` came from this layer's allocator.
-                unsafe { CRYPTO_free(heap.cast::<c_void>(), OBJECT_FILE.as_ptr(), LINE) };
-            }
             return n;
         }
         // SAFETY: `p` holds at least `i` readable bytes; `bp` is null or live.
         let n = unsafe { BIO_write(bp, p.cast::<c_void>(), i) };
-        if !heap.is_null() {
-            // SAFETY: `heap` came from this layer's allocator.
-            unsafe { CRYPTO_free(heap.cast::<c_void>(), OBJECT_FILE.as_ptr(), LINE) };
-        }
         // The authority ignores `BIO_write`'s answer here and returns `i`. That is
         // observable when the BIO is short, so it is reproduced.
         let _ = n;
@@ -326,7 +418,7 @@ pub unsafe extern "C" fn a2i_ASN1_INTEGER(
     size: c_int,
 ) -> c_int {
     guard_ffi(0, || {
-        let mut s: *mut u8 = core::ptr::null_mut();
+        let mut s = OwnedBuf::empty(F_INT_FILE.as_ptr(), LINE);
         let mut slen: c_int = 0;
         let mut num: c_int = 0;
         let mut first = true;
@@ -398,31 +490,18 @@ pub unsafe extern "C" fn a2i_ASN1_INTEGER(
             if i % 2 != 0 {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::F_INT_100) };
-                // SAFETY: `s` is this call's buffer or null.
-                unsafe { CRYPTO_free(s.cast::<c_void>(), F_INT_FILE.as_ptr(), LINE) };
                 return 0;
             }
             i /= 2;
             if num + i > slen {
                 // The clear matters: the destination octet is shifted into below.
                 // SAFETY: `s` is this call's buffer of `slen` bytes, or null with `slen`
-                // 0, which is exactly `CRYPTO_clear_realloc`'s contract.
-                let sp = unsafe {
-                    CRYPTO_clear_realloc(
-                        s.cast::<c_void>(),
-                        slen.max(0) as usize,
-                        (num + i * 2) as usize,
-                        F_INT_FILE.as_ptr(),
-                        LINE,
-                    )
-                }
-                .cast::<u8>();
-                if sp.is_null() {
-                    // SAFETY: `s` is this call's buffer or null.
-                    unsafe { CRYPTO_free(s.cast::<c_void>(), F_INT_FILE.as_ptr(), LINE) };
+                // 0, which is exactly `OwnedBuf::clear_realloc`'s contract.
+                if unsafe { s.clear_realloc(slen.max(0) as usize, (num + i * 2) as usize) }
+                    .is_none()
+                {
                     return 0;
                 }
-                s = sp;
                 slen = num + i * 2;
             }
             let mut jj: c_int = 0;
@@ -438,7 +517,7 @@ pub unsafe extern "C" fn a2i_ASN1_INTEGER(
                         break 'outer 0;
                     }
                     // SAFETY: `num + jj < slen` by the growth above.
-                    let cell = unsafe { s.add((num + jj) as usize) };
+                    let cell = unsafe { s.as_ptr().add((num + jj) as usize) };
                     // SAFETY: `cell` is a live octet.
                     unsafe { *cell = (*cell << 4) | (m as u8) };
                     n += 1;
@@ -458,14 +537,12 @@ pub unsafe extern "C" fn a2i_ASN1_INTEGER(
         if outcome == 0 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::F_INT_135) };
-            // SAFETY: `s` is this call's buffer or null.
-            unsafe { CRYPTO_free(s.cast::<c_void>(), F_INT_FILE.as_ptr(), LINE) };
             return 0;
         }
         // SAFETY: `bs` is the caller's live string and takes the buffer.
         unsafe {
             (*bs).length = num;
-            (*bs).data = s;
+            (*bs).data = s.into_raw();
         }
         1
     })
@@ -529,7 +606,7 @@ pub unsafe extern "C" fn a2i_ASN1_STRING(
     size: c_int,
 ) -> c_int {
     guard_ffi(0, || {
-        let mut s: *mut u8 = core::ptr::null_mut();
+        let mut s = OwnedBuf::empty(F_STRING_FILE.as_ptr(), LINE);
         let mut slen: c_int = 0;
         let mut num: c_int = 0;
         let mut first = true;
@@ -594,29 +671,14 @@ pub unsafe extern "C" fn a2i_ASN1_STRING(
             if i % 2 != 0 {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::F_STRING_92) };
-                // SAFETY: `s` is this call's buffer or null.
-                unsafe { CRYPTO_free(s.cast::<c_void>(), F_STRING_FILE.as_ptr(), LINE) };
                 return 0;
             }
             i /= 2;
             if num + i > slen {
-                // SAFETY: `s` is this call's buffer or null, which `CRYPTO_realloc`
-                // accepts.
-                let sp = unsafe {
-                    CRYPTO_realloc(
-                        s.cast::<c_void>(),
-                        (num + i * 2) as usize,
-                        F_STRING_FILE.as_ptr(),
-                        LINE,
-                    )
-                }
-                .cast::<u8>();
-                if sp.is_null() {
-                    // SAFETY: `s` is this call's buffer or null.
-                    unsafe { CRYPTO_free(s.cast::<c_void>(), F_STRING_FILE.as_ptr(), LINE) };
+                // SAFETY: `s` is this call's buffer or null, which `OwnedBuf::realloc` accepts.
+                if unsafe { s.realloc((num + i * 2) as usize) }.is_none() {
                     return 0;
                 }
-                s = sp;
                 slen = num + i * 2;
             }
             let mut jj: c_int = 0;
@@ -628,8 +690,6 @@ pub unsafe extern "C" fn a2i_ASN1_STRING(
                     if m < 0 {
                         // SAFETY: a compile-time-constant site.
                         unsafe { raise_site(&err_sites::F_STRING_110) };
-                        // SAFETY: `s` is this call's buffer or null.
-                        unsafe { CRYPTO_free(s.cast::<c_void>(), F_STRING_FILE.as_ptr(), LINE) };
                         return 0;
                     }
                     // Shift-and-or, exactly as the INTEGER reader does and as the
@@ -640,7 +700,7 @@ pub unsafe extern "C" fn a2i_ASN1_STRING(
                     // instead of or-ing it produced `01` where the authority produces `41`
                     // for the text `414243`, which `RT-ASN1` caught.
                     // SAFETY: `num + jj < slen` by the growth above.
-                    let cell = unsafe { s.add((num + jj) as usize) };
+                    let cell = unsafe { s.as_ptr().add((num + jj) as usize) };
                     // SAFETY: `cell` is a live octet.
                     unsafe { *cell = (*cell << 4) | (m as u8) };
                     n += 1;
@@ -660,14 +720,12 @@ pub unsafe extern "C" fn a2i_ASN1_STRING(
         if outcome == 0 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::F_STRING_129) };
-            // SAFETY: `s` is this call's buffer or null.
-            unsafe { CRYPTO_free(s.cast::<c_void>(), F_STRING_FILE.as_ptr(), LINE) };
             return 0;
         }
         // SAFETY: `bs` is the caller's live string and takes the buffer.
         unsafe {
             (*bs).length = num;
-            (*bs).data = s;
+            (*bs).data = s.into_raw();
         }
         1
     })
