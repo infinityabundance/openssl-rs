@@ -389,7 +389,7 @@
           "22": "complete",
           "23": "complete",
           "24": "complete",
-          "25": "complete",
+          "25": "in-progress",
           "3": "complete",
           "4": "complete",
           "5": "complete",
@@ -401,7 +401,7 @@
         "verdict": "pass"
       },
       {
-        "candidate_version": "0.0.27",
+        "candidate_version": "0.0.28",
         "closure_authority": [
           "docs/CUSTODIAN_CONTRACT.md",
           "docs/RELEASE_GATES.md",
@@ -416,11 +416,11 @@
           "caught_nonzero_blocker": true,
           "caught_stale_identity": true,
           "honest": true,
-          "injected_blocker_claim": "d1bdf1baf535369a3f237f8995f79e9e70ad473d3dae66bc7f97ffbcd84d7e3d",
+          "injected_blocker_claim": "5bce1cbb7322240e8b5141b4977ca74d9971987fb303b6dccebfaa7c685f1791",
           "injected_blocker_count": 1,
           "injected_missing_receipt_court": "openssl-rs-rt-mem",
           "injected_missing_receipt_gaps": 251,
-          "injected_stale_claim": "d1bdf1baf535369a3f237f8995f79e9e70ad473d3dae66bc7f97ffbcd84d7e3d"
+          "injected_stale_claim": "5bce1cbb7322240e8b5141b4977ca74d9971987fb303b6dccebfaa7c685f1791"
         },
         "court": "RT-RECEIPT-CLOSURE",
         "findings": [],
@@ -433,7 +433,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "d1bdf1baf535369a3f237f8995f79e9e70ad473d3dae66bc7f97ffbcd84d7e3d",
+            "covering_claim": "5bce1cbb7322240e8b5141b4977ca74d9971987fb303b6dccebfaa7c685f1791",
             "joined": true,
             "missing": [],
             "obligations": 251,
@@ -456,7 +456,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "a51c43a8992a5de3a68be20716dae831400a672d74126191194324eb8575e182",
+            "covering_claim": "c5de3f56459dbc1cb9a077cc97f4ae170e425971f29574c49ccab5f8a3235299",
             "joined": true,
             "missing": [],
             "obligations": 249,
@@ -486,7 +486,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "23db5983b27c4c6459a83724fcc089e0380f3743a3fef5c9269c6ec0fc3023cc",
+            "covering_claim": "d4f1332bae6f0f3812a6ff80d47b22812264228c84d7f7df11b9acb55d8f86e0",
             "joined": true,
             "missing": [],
             "obligations": 474,
@@ -508,7 +508,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "7c3a29258bff3b0011c3d345bde70caf66c1dbf9ebdccab5333efc56762f64b1",
+            "covering_claim": "136733f17ce7ddca45f9a66cc678b4c836cd2afb652d8b9ca003e3c4f02e0ff7",
             "joined": true,
             "missing": [],
             "obligations": 161,
@@ -530,7 +530,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "79ee2486c1a5fc3ece9d42b4c0f2a6792f6e883b48f6a2b961715489de033ae2",
+            "covering_claim": "42d2daede4ba7473fe19a6b8777d07193252af8c8e437091616cb4e31f4f687c",
             "joined": true,
             "missing": [],
             "obligations": 736,
@@ -561,7 +561,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "063bec0bb5bb2c9403cdeb57899802c1196019c4d228012008a56486af20a77b",
+            "covering_claim": "e2b713cecbc433b453af366e0a2c62c5478f73af5b36a12d38337592eb4b06a9",
             "joined": true,
             "missing": [],
             "obligations": 786,
@@ -589,7 +589,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "98c89ac00b84e90f302fd436e6f6fb207dbce5e2282d6d65bd48f8860ea84f76",
+            "covering_claim": "4512dfb7776b5f7b4858501a116f0def4bd769dde02455e29b2f1e19b626e028",
             "joined": true,
             "missing": [],
             "obligations": 69,
@@ -606,7 +606,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "dd25b37c57dac2bc949b0beeaf93130d12126923386c85de0c8f028958aa1115",
+            "covering_claim": "62cdc6eb06b63bb8aa2f9b2970c89a76444be25362e49637b049ca1d08783aa0",
             "joined": true,
             "missing": [],
             "obligations": 298,
@@ -623,7 +623,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "45230337e18e3075d3c57b9ea63a024cbb59d4d9a08cc6fb5730d505af202546",
+            "covering_claim": "d8925056eee9a6568389176fae4d95563dbdc5b85a6435da0f6909c920e876ad",
             "joined": true,
             "missing": [],
             "obligations": 1465,
@@ -644,7 +644,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "f546a1d024878df20c9b7cac41832441c1c5841825c9e8a8135f3c191b8afd13",
+            "covering_claim": "ecc74d8c9274914c3b5471e01e7db8d77049ef04fbf4557a36b5c47112b20d71",
             "joined": true,
             "missing": [],
             "obligations": 1030,
@@ -667,7 +667,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "24a301f18c74abee302d2f7bea57726bc4b0d61bd82fcd31c8e8ed5c98afbfdc",
+            "covering_claim": "c5446b5b555cbe0c4176b8598db6475462c2dd80a5b03b33ac5ad1a52bb3ccb3",
             "joined": true,
             "missing": [],
             "obligations": 377,
@@ -688,7 +688,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "ed363f6575bee9ff9247af8ec93d49f52a8362a4ffed39eaed2678f6ec09f5b8",
+            "covering_claim": "c6acc63046af0542b1d938d90509b0015092c0fb72ad5c64c753961c50cf8092",
             "joined": true,
             "missing": [],
             "obligations": 600,
@@ -711,7 +711,7 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": "e0a02c0d45a319fef92ed59b1b95a6d39355813eea83c0ca040ab044e93600bd",
+            "covering_claim": "f1056ec488abc50e1ac12c44e7ec96fa163f9d8766f61bfdaeea97b1d5a17e23",
             "joined": true,
             "missing": [],
             "obligations": 3,
@@ -725,7 +725,7 @@
           {
             "blockers": 0,
             "closed": false,
-            "covering_claim": "ddb8b3fdbc4e06047fef941f0a63db112ecf0601768cbf22e694a81eda5bc02a",
+            "covering_claim": "bc71fc7f0672055fddc813d37a35b4602cba53aa18deefcb9fec35bd24c78abd",
             "joined": true,
             "missing": [],
             "obligations": 3,
@@ -744,7 +744,7 @@
           {
             "blockers": 0,
             "closed": false,
-            "covering_claim": "dd9d5e28705ae2aff7f8edfffb3bd10abf512305a02108f0edbe78776d4a0361",
+            "covering_claim": "771485fe2b5649683f067f4a75541e332ac47538fc38dc769fd656dfa5930743",
             "joined": true,
             "missing": [],
             "obligations": 5,
@@ -762,7 +762,7 @@
           {
             "blockers": 0,
             "closed": false,
-            "covering_claim": "f845f0624f905d54adb86ced302fc711f4e019b4ed4ec9ab971edf8482b397e3",
+            "covering_claim": "d9bdf1766ece89ba83516e318690f5d002b4916de888b613b6b1148a3fd64d9e",
             "joined": true,
             "missing": [],
             "obligations": 5,
@@ -778,7 +778,7 @@
           {
             "blockers": 0,
             "closed": false,
-            "covering_claim": "653139fc299b5493f42d685bccd2dc1543c6077663d29b03d0089d9ee651c4af",
+            "covering_claim": "2ba0815066c4964c3d5458c5b5f78e66469b0fb301f2f80e760a9a7264b9125f",
             "joined": true,
             "missing": [],
             "obligations": 5,
@@ -834,7 +834,7 @@
         "production_profile": {
           "authority": "openssl-3.6.4-production",
           "build_profile": "linux-x86_64-default-shared-legacy-notests",
-          "candidate_version": "0.0.27",
+          "candidate_version": "0.0.28",
           "observable_roots": [
             "binary-abi",
             "callbacks",
@@ -3567,7 +3567,7 @@
       },
       {
         "candidate_install": "artifacts/phase2/install",
-        "candidate_version": "0.0.27",
+        "candidate_version": "0.0.28",
         "control": {
           "baseline_current": 9,
           "baseline_functional": 9,
@@ -3650,7 +3650,7 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.27",
+            "candidate": "0.0.28",
             "chain": "downstream-corpus",
             "currency": "current",
             "current": true,
@@ -3662,7 +3662,7 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.27",
+            "candidate": "0.0.28",
             "chain": "downstream-corpus",
             "currency": "current",
             "current": true,
@@ -3674,7 +3674,7 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.27",
+            "candidate": "0.0.28",
             "chain": "downstream-corpus",
             "currency": "current",
             "current": true,
@@ -3686,7 +3686,7 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.27",
+            "candidate": "0.0.28",
             "chain": "downstream-corpus",
             "currency": "current",
             "current": true,
@@ -3698,7 +3698,7 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.27",
+            "candidate": "0.0.28",
             "chain": "downstream-corpus",
             "currency": "current",
             "current": true,
@@ -3710,7 +3710,7 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.27",
+            "candidate": "0.0.28",
             "chain": "downstream-corpus",
             "currency": "current",
             "current": true,
@@ -3863,7 +3863,7 @@
     {
       "name": "phase17-courts",
       "path": "artifacts/phase17/COURTS.json",
-      "sha256": "39566cb8dd56a2f748feb0aa4943a0b389b850d53e430a4e6a8d85183b65aefa"
+      "sha256": "86b2eaf735ea517ea697dec6aadbe3a086a9457508fe385cc5b2faf71324ca94"
     },
     {
       "name": "phase18-courts",
@@ -3873,7 +3873,7 @@
     {
       "name": "downstream-corpus",
       "path": "forensics/atlas/downstream-corpus.json",
-      "sha256": "b54149bbbbbe5e2282f058d7624e9559bc163114e08c6017e88a102909fb55da"
+      "sha256": "7920505eff9f2a340ae287f912b897ca028f8006a155254ccedad18b9ea4f445"
     },
     {
       "name": "downstream-runner",
@@ -3913,7 +3913,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "e32becabfd54bbf1a47b19951ffa87cbfa63cd4b0301327fffd2f5785571fd1d"
+      "sha256": "ad0dc68662fa08b467da1d69c261595c7c029176db255567dc98c9ae2c0bb996"
     },
     {
       "name": "court-coverage-rows",
@@ -3923,7 +3923,7 @@
     {
       "name": "divergence-obligations",
       "path": "forensics/divergence-obligations.json",
-      "sha256": "19e318d4df3f513cc6f717660e1beeeb6fb88c1e7f2dc97b76e3820725f318a9"
+      "sha256": "3ca822af5511443650d097b2d5af78714f92f05bbd74ad2bf3a85794947a80fd"
     },
     {
       "name": "prerequisites",
@@ -4013,7 +4013,7 @@
     {
       "name": "gemel-trajectory",
       "path": "forensics/GEMEL_TRAJECTORY.md",
-      "sha256": "02d0faf30973faaa59f66098ff85d399df4ee9f2746f9ef73c8b117fa99db6b1"
+      "sha256": "02896ef10a3015049add671ab243776c7569b4b89c9a0bf256f890011f03bac4"
     }
   ],
   "kind": "phase20-courts",

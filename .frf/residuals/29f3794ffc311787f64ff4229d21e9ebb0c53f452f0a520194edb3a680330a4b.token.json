@@ -1,0 +1,1 @@
+{"authority":"openssl-rt-3.6.4-r2","blocks_claims":["rt-cipher-mem exit parity"],"disposition":"open","kind":"exit","magnitude":"class-change","next_court":"cli-exit-minimize","residual_id":"29f3794ffc311787f64ff4229d21e9ebb0c53f452f0a520194edb3a680330a4b","schema_version":"frf-token-v1","scope":"rt-cipher-mem","surface":"exit-class","token":"exit/exit-class/class-change/open"}

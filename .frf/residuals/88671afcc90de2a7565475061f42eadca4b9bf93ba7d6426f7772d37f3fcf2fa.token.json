@@ -1,0 +1,1 @@
+{"authority":"openssl-rt-3.6.4-r2","blocks_claims":["rt-bn-rand exit parity"],"disposition":"open","kind":"exit","magnitude":"class-change","next_court":"cli-exit-minimize","residual_id":"88671afcc90de2a7565475061f42eadca4b9bf93ba7d6426f7772d37f3fcf2fa","schema_version":"frf-token-v1","scope":"rt-bn-rand","surface":"exit-class","token":"exit/exit-class/class-change/open"}

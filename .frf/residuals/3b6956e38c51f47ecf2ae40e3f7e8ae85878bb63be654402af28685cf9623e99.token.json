@@ -1,0 +1,1 @@
+{"authority":"openssl-3.6.3","blocks_claims":["cli-dgst exit parity"],"disposition":"open","kind":"exit","magnitude":"class-change","next_court":"cli-exit-minimize","residual_id":"3b6956e38c51f47ecf2ae40e3f7e8ae85878bb63be654402af28685cf9623e99","schema_version":"frf-token-v1","scope":"cli-dgst","surface":"exit-class","token":"exit/exit-class/class-change/open"}

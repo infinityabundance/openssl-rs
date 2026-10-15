@@ -2837,29 +2837,29 @@
             "platform": "linux"
           },
           "crate_name": "openssl-rs",
-          "crate_version": "0.0.27",
+          "crate_version": "0.0.28",
           "headers": {
             "count": 142,
             "present": true,
             "sha256": "0153fdd3eeb6bf3c3dd0832727f611e01e51b762386c1ce09b0ab42d56ed0cad"
           },
-          "identity_hash": "cb037dbad3a88e3f76b81521001340c87ae120688e4a8c4d91018d57f294d523",
+          "identity_hash": "af81e7e881fc6a2c8d10fab6683712fdf446a54f298d151f39bf1b3db3b2c41e",
           "install_prefix": "artifacts/phase2/install",
-          "libcrypto_sha256": "4613f8dfaebcfeb2a5f7a05564de71c3e11d7d7fd363a4a43cc1b68d093181b3",
+          "libcrypto_sha256": "5dfac7d206f060030691ed2969ddea99335595ea77608ffaaa30f75d079319b2",
           "libcrypto_soname": "libcrypto.so.3",
-          "libssl_sha256": "16222b07d3d87d6b89db397cf2712324aa7125a66933e3fd0fb3878acb973757",
+          "libssl_sha256": "830e1a8c20371333a2f02804381300784678675b5e996d8589486b14b56b77c5",
           "libssl_soname": "libssl.so.3",
           "ossl_modules": {
             "count": 1,
             "present": true,
-            "sha256": "76bb5f76db171e4d4be1d9159512573b629498244b94e393b685b48aa76ed6a6"
+            "sha256": "a73c64376f504d12f120e68536261af89d03e7c81878727100ceab40c9a230ad"
           },
           "pkgconfig": {
             "count": 2,
             "present": true,
             "sha256": "9d746f0900a36f97a1ef19bc12b34759717ebf8f77895f375b442369e402ce33"
           },
-          "source_commit": "8c52ffdd3cd4920780d169cac12897b91cbe40bc"
+          "source_commit": "1a261203e7f090c46b9fa28be77b4fafb086d588"
         },
         "control": {
           "baseline_findings": 0,
@@ -2891,7 +2891,7 @@
           "holdout_families": 200,
           "measurable_families": 1,
           "recipe_backed_families": 1,
-          "reruns": 8,
+          "reruns": 10,
           "rows": 400,
           "venue_limited_families": 199,
           "verdicts": {
@@ -2998,29 +2998,29 @@
               "platform": "linux"
             },
             "crate_name": "openssl-rs",
-            "crate_version": "0.0.27",
+            "crate_version": "0.0.28",
             "headers": {
               "count": 142,
               "present": true,
               "sha256": "0153fdd3eeb6bf3c3dd0832727f611e01e51b762386c1ce09b0ab42d56ed0cad"
             },
-            "identity_hash": "cb037dbad3a88e3f76b81521001340c87ae120688e4a8c4d91018d57f294d523",
+            "identity_hash": "af81e7e881fc6a2c8d10fab6683712fdf446a54f298d151f39bf1b3db3b2c41e",
             "install_prefix": "artifacts/phase2/install",
-            "libcrypto_sha256": "4613f8dfaebcfeb2a5f7a05564de71c3e11d7d7fd363a4a43cc1b68d093181b3",
+            "libcrypto_sha256": "5dfac7d206f060030691ed2969ddea99335595ea77608ffaaa30f75d079319b2",
             "libcrypto_soname": "libcrypto.so.3",
-            "libssl_sha256": "16222b07d3d87d6b89db397cf2712324aa7125a66933e3fd0fb3878acb973757",
+            "libssl_sha256": "830e1a8c20371333a2f02804381300784678675b5e996d8589486b14b56b77c5",
             "libssl_soname": "libssl.so.3",
             "ossl_modules": {
               "count": 1,
               "present": true,
-              "sha256": "76bb5f76db171e4d4be1d9159512573b629498244b94e393b685b48aa76ed6a6"
+              "sha256": "a73c64376f504d12f120e68536261af89d03e7c81878727100ceab40c9a230ad"
             },
             "pkgconfig": {
               "count": 2,
               "present": true,
               "sha256": "9d746f0900a36f97a1ef19bc12b34759717ebf8f77895f375b442369e402ce33"
             },
-            "source_commit": "8c52ffdd3cd4920780d169cac12897b91cbe40bc"
+            "source_commit": "1a261203e7f090c46b9fa28be77b4fafb086d588"
           },
           "candidate_specific_patch_count": 0,
           "first_run": {
@@ -3201,6 +3201,16 @@
               "candidate_identity_hash": "cb037dbad3a88e3f76b81521001340c87ae120688e4a8c4d91018d57f294d523",
               "first_run_hash": "93f2c518f214e72aca2ae3e462aa596324552d5ead9a1d9468bcf381196934f7",
               "rerun_index": 8
+            },
+            {
+              "candidate_identity_hash": "076dabc78e2788c5c32ba3c15f30f77e9f29f1f6e94b45135ac3b1c56f924acf",
+              "first_run_hash": "93f2c518f214e72aca2ae3e462aa596324552d5ead9a1d9468bcf381196934f7",
+              "rerun_index": 9
+            },
+            {
+              "candidate_identity_hash": "af81e7e881fc6a2c8d10fab6683712fdf446a54f298d151f39bf1b3db3b2c41e",
+              "first_run_hash": "93f2c518f214e72aca2ae3e462aa596324552d5ead9a1d9468bcf381196934f7",
+              "rerun_index": 10
             }
           ],
           "rule": {
@@ -3274,29 +3284,29 @@
             "platform": "linux"
           },
           "crate_name": "openssl-rs",
-          "crate_version": "0.0.27",
+          "crate_version": "0.0.28",
           "headers": {
             "count": 142,
             "present": true,
             "sha256": "0153fdd3eeb6bf3c3dd0832727f611e01e51b762386c1ce09b0ab42d56ed0cad"
           },
-          "identity_hash": "cb037dbad3a88e3f76b81521001340c87ae120688e4a8c4d91018d57f294d523",
+          "identity_hash": "af81e7e881fc6a2c8d10fab6683712fdf446a54f298d151f39bf1b3db3b2c41e",
           "install_prefix": "artifacts/phase2/install",
-          "libcrypto_sha256": "4613f8dfaebcfeb2a5f7a05564de71c3e11d7d7fd363a4a43cc1b68d093181b3",
+          "libcrypto_sha256": "5dfac7d206f060030691ed2969ddea99335595ea77608ffaaa30f75d079319b2",
           "libcrypto_soname": "libcrypto.so.3",
-          "libssl_sha256": "16222b07d3d87d6b89db397cf2712324aa7125a66933e3fd0fb3878acb973757",
+          "libssl_sha256": "830e1a8c20371333a2f02804381300784678675b5e996d8589486b14b56b77c5",
           "libssl_soname": "libssl.so.3",
           "ossl_modules": {
             "count": 1,
             "present": true,
-            "sha256": "76bb5f76db171e4d4be1d9159512573b629498244b94e393b685b48aa76ed6a6"
+            "sha256": "a73c64376f504d12f120e68536261af89d03e7c81878727100ceab40c9a230ad"
           },
           "pkgconfig": {
             "count": 2,
             "present": true,
             "sha256": "9d746f0900a36f97a1ef19bc12b34759717ebf8f77895f375b442369e402ce33"
           },
-          "source_commit": "8c52ffdd3cd4920780d169cac12897b91cbe40bc"
+          "source_commit": "1a261203e7f090c46b9fa28be77b4fafb086d588"
         },
         "control": {
           "baseline_findings": 0,
@@ -3338,29 +3348,29 @@
               "platform": "linux"
             },
             "crate_name": "openssl-rs",
-            "crate_version": "0.0.27",
+            "crate_version": "0.0.28",
             "headers": {
               "count": 142,
               "present": true,
               "sha256": "0153fdd3eeb6bf3c3dd0832727f611e01e51b762386c1ce09b0ab42d56ed0cad"
             },
-            "identity_hash": "cb037dbad3a88e3f76b81521001340c87ae120688e4a8c4d91018d57f294d523",
+            "identity_hash": "af81e7e881fc6a2c8d10fab6683712fdf446a54f298d151f39bf1b3db3b2c41e",
             "install_prefix": "artifacts/phase2/install",
-            "libcrypto_sha256": "4613f8dfaebcfeb2a5f7a05564de71c3e11d7d7fd363a4a43cc1b68d093181b3",
+            "libcrypto_sha256": "5dfac7d206f060030691ed2969ddea99335595ea77608ffaaa30f75d079319b2",
             "libcrypto_soname": "libcrypto.so.3",
-            "libssl_sha256": "16222b07d3d87d6b89db397cf2712324aa7125a66933e3fd0fb3878acb973757",
+            "libssl_sha256": "830e1a8c20371333a2f02804381300784678675b5e996d8589486b14b56b77c5",
             "libssl_soname": "libssl.so.3",
             "ossl_modules": {
               "count": 1,
               "present": true,
-              "sha256": "76bb5f76db171e4d4be1d9159512573b629498244b94e393b685b48aa76ed6a6"
+              "sha256": "a73c64376f504d12f120e68536261af89d03e7c81878727100ceab40c9a230ad"
             },
             "pkgconfig": {
               "count": 2,
               "present": true,
               "sha256": "9d746f0900a36f97a1ef19bc12b34759717ebf8f77895f375b442369e402ce33"
             },
-            "source_commit": "8c52ffdd3cd4920780d169cac12897b91cbe40bc"
+            "source_commit": "1a261203e7f090c46b9fa28be77b4fafb086d588"
           },
           "counts": {
             "candidate_specific_patch_count": 0,
@@ -3425,7 +3435,7 @@
               "what_ran": {
                 "level": "L7-functional",
                 "outcome": "reached",
-                "transcript_sha256": "50e1be2cb8403054f0321d5711bac580d6da9a44a124eae983b6a12a2ffe63a4"
+                "transcript_sha256": "0bd44565d1faa594112aa9bf6b1e2c333c2361122c59b000c8c2e800b8cbcd2a"
               },
               "which_source": {
                 "recipe_id": "recipe:curl:8.10.1",
@@ -3663,7 +3673,7 @@
               "what_ran": {
                 "level": "L7-functional",
                 "outcome": "reached",
-                "transcript_sha256": "bec948fdb91be556e3060e729482961e0dbf24f2b3bccfeb7aa53c2ea8e87fc8"
+                "transcript_sha256": "02d1c8a12859297e311ebdae52a1d4b48ae352792f67206e61b45268de697514"
               },
               "which_source": {
                 "recipe_id": "recipe:monit:5.34.3",
@@ -4903,8 +4913,8 @@
           "declared_courts": 0,
           "detected": 13,
           "gemel_checkpoint_owed": false,
-          "gemel_checkpoints": 70,
-          "gemel_current": "checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d",
+          "gemel_checkpoints": 71,
+          "gemel_current": "checkpoint.ba154dee224976ff20092b1dcb8fd7cd4b0944c96cf54e56b421485b111f1a5f",
           "not_detected": 0,
           "not_driven": 0,
           "planes": 13,
@@ -5103,7 +5113,7 @@
             }
           ],
           "gemel": {
-            "checkpoint_count": 70,
+            "checkpoint_count": 71,
             "checkpoint_owed": false,
             "checkpoints_naming_frf_chain": [
               "K45",
@@ -5129,12 +5139,13 @@
               "K67",
               "K68",
               "K69",
-              "K70"
+              "K70",
+              "K71"
             ],
             "checkpoints_naming_phase": [],
-            "current": "checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d",
+            "current": "checkpoint.ba154dee224976ff20092b1dcb8fd7cd4b0944c96cf54e56b421485b111f1a5f",
             "identity": {
-              "checkpoint_state_hash": "a887e4176ee59aec0a6d958696c805efffe6df8a2620c4b9339b849138ac805d",
+              "checkpoint_state_hash": "4604b305ce76480bfafae36eac69ec96b809fa2303c779e27b50a53050751bf5",
               "plan": {
                 "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
                 "sha256": "beb0417ee8a6f610f89f41dcaf17825fafa4f2a568efe8729e787ec4c275498a"
@@ -5167,7 +5178,7 @@
         "frf_declarable": false,
         "frf_exclusion": "the FRF/Gemel closure court reads committed artefacts and the FRF registry and stages no artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
         "gemel": {
-          "checkpoint_count": 70,
+          "checkpoint_count": 71,
           "checkpoint_owed": false,
           "checkpoints_naming_frf_chain": [
             "K45",
@@ -5193,12 +5204,13 @@
             "K67",
             "K68",
             "K69",
-            "K70"
+            "K70",
+            "K71"
           ],
           "checkpoints_naming_phase": [],
-          "current": "checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d",
+          "current": "checkpoint.ba154dee224976ff20092b1dcb8fd7cd4b0944c96cf54e56b421485b111f1a5f",
           "identity": {
-            "checkpoint_state_hash": "a887e4176ee59aec0a6d958696c805efffe6df8a2620c4b9339b849138ac805d",
+            "checkpoint_state_hash": "4604b305ce76480bfafae36eac69ec96b809fa2303c779e27b50a53050751bf5",
             "plan": {
               "path": "docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md",
               "sha256": "beb0417ee8a6f610f89f41dcaf17825fafa4f2a568efe8729e787ec4c275498a"
@@ -5614,16 +5626,16 @@
       {
         "bound_roots": {
           "atlas": "327ab08b20ad5cbacc95e7c668bd03eafe7c06fa0514fd3a28c03207b97adbe9",
-          "candidate_identity": "cb037dbad3a88e3f76b81521001340c87ae120688e4a8c4d91018d57f294d523",
-          "consumer_receipts": "92c52496e4326e9a0300cde24b1ba06ea70d4bd2126e09c3ca9bc97805fc8a0f",
+          "candidate_identity": "af81e7e881fc6a2c8d10fab6683712fdf446a54f298d151f39bf1b3db3b2c41e",
+          "consumer_receipts": "8033967082c8f3c536c3de7655fbe5ee3ec4ad440db3d6047146ca6b922ff4dc",
           "coverage": "c18b7a4f90919ac4c69ff0bacf8f97e03c1f77cd3f8f050878c4c590f785d68c",
-          "frf_checkpoint": "checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d",
+          "frf_checkpoint": "checkpoint.ba154dee224976ff20092b1dcb8fd7cd4b0944c96cf54e56b421485b111f1a5f",
           "p1000_selection": "f2a0454fe4dca98556da2e958b6e70cebaf76becbebba69b2abd752e63deba4e",
           "residuals": "670b3ba9cb6b4995e15414904d53bbeab52dfb7daaa9f25ec29786fca8b48ab1"
         },
         "chain": {
           "declared_courts": [],
-          "gemel_current": "checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d",
+          "gemel_current": "checkpoint.ba154dee224976ff20092b1dcb8fd7cd4b0944c96cf54e56b421485b111f1a5f",
           "probe_pairs": [],
           "vacuous": true
         },
@@ -6085,7 +6097,7 @@
     {
       "name": "phase22-implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "846725df381eacdbb35f7e9aac5cf73392708831cf8f6f5cb4ade8926c48487a"
+      "sha256": "016a85aa0119fefd9b6d488a5087016939ce741edbea48199972b63beaaadb71"
     },
     {
       "name": "hostility-probe/cms.c",
@@ -6160,7 +6172,7 @@
     {
       "name": "candidate-freeze",
       "path": "forensics/downstream/candidate-freeze.json",
-      "sha256": "802285010a81dfb92ae9d0c0681711b782290ffbca0fb86e44bb498379f49058"
+      "sha256": "1580fd3af6398324171ff29d4ab109bbccc5f097802f79cf1b4b3f3dc75ed5ab"
     },
     {
       "name": "downstream-candidate-freeze",
@@ -6170,7 +6182,7 @@
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "061b78de7a019b10ee5bcefa0d85c384ea7a43d163b6e90aaafc85d012cf1717"
+      "sha256": "e6cb9620ed5dff410cffa499792259bd024b7c1703d2c89dfa8c6454653c4a3d"
     },
     {
       "name": "downstream-p1000-run",
@@ -6180,7 +6192,7 @@
     {
       "name": "reconciliation",
       "path": "forensics/downstream/reconciliation.json",
-      "sha256": "94b657439caf62fb33e0366ba0fe99a8f98aab08083a2cfc8d2a23072f21b44f"
+      "sha256": "10220895c954c7c32121322061403f365f588005494051eb5b89886df3720f7d"
     },
     {
       "name": "downstream-reconciliation",
@@ -6190,7 +6202,7 @@
     {
       "name": "frf-closure",
       "path": "forensics/atlas/phase24/frf-closure.json",
-      "sha256": "90e5a991d776a2d8928031dfd213fcd68054fb583081fbc3ad040095e1c7c750"
+      "sha256": "1b0f5831a7f80f2738eef40d9cc066e235664e615285dee397b204cf76e5ba57"
     },
     {
       "name": "phase24-frf",
@@ -6200,22 +6212,22 @@
     {
       "name": "gemel-trajectory",
       "path": "forensics/GEMEL_TRAJECTORY.md",
-      "sha256": "02d0faf30973faaa59f66098ff85d399df4ee9f2746f9ef73c8b117fa99db6b1"
+      "sha256": "02896ef10a3015049add671ab243776c7569b4b89c9a0bf256f890011f03bac4"
     },
     {
       "name": "phase-24-seal",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SEAL.md",
-      "sha256": "c23d93410d2b0d72786d14518375601eeaa4c8c34986508b660ddda70b8bc3ef"
+      "sha256": "9e318d8f70d39c2c39909ea26f127ce43d51cf5fa6e358b56d65ea39276ba599"
     },
     {
       "name": "seal-census",
       "path": "docs/SEAL-CENSUS.md",
-      "sha256": "98996aba66029ea504ca6983368a1d1263934bbd53402abb86403864ed16d162"
+      "sha256": "5406525b1d9779b898ed0cb8bd7a575b3bc6bb4f1c3db928ef27750e7d29f841"
     },
     {
       "name": "shared-blockers",
       "path": "forensics/downstream/shared-blockers.json",
-      "sha256": "8114db381460bbd0c8462ad2e97801af9c3dd218b331686287d61de1525caff3"
+      "sha256": "5669ce6f2ddf3099c3689b88fdfed98b662a2878d41ba6e32d7721e8f4671b95"
     },
     {
       "name": "biggest-movers",
@@ -6240,7 +6252,7 @@
     {
       "name": "recipe-campaign",
       "path": "forensics/downstream/recipe-campaign.json",
-      "sha256": "59a68955a3400e383ff44e6a9375a2ac0ecdf9fb37e6ac7e91370e926f866e2c"
+      "sha256": "63df10f8e22081e84898778c2652f5e6b183d9bb1af761a57feea8f230fdecb7"
     },
     {
       "name": "recipe-campaign-baseline",
@@ -6255,7 +6267,7 @@
     {
       "name": "blocker-remediation",
       "path": "forensics/downstream/blocker-remediation.json",
-      "sha256": "366f264158a91dc826cc567c167e47f2e487f22b9778b77355d384e2f0b6d0c7"
+      "sha256": "53ccabd7e7a1c98f1e5b2b5fc180deffcca1948d9f2d56de713cbd2a0a4389bc"
     },
     {
       "name": "blocker-remediation-baseline",
@@ -6270,7 +6282,7 @@
     {
       "name": "close-batch",
       "path": "forensics/downstream/close-batch.json",
-      "sha256": "610e871fd7f77ac54f53c314128017e2bb4e54e937482c4580e56eadf0942c3c"
+      "sha256": "730ed1e5d8713d5b1f4ffd041c2806cd57c73d298cfbd98cbf8cfc3c622ebedc"
     },
     {
       "name": "close-batch-baseline",

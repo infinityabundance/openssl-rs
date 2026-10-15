@@ -292,8 +292,8 @@ requires none. What stands in the place of a declarable court is recorded in
   observed result is mutated in memory is reported `NOT_DETECTED`): 13 `DETECTED`, 0 `NOT_DETECTED`,
   0 `NOT_DRIVEN`; and
 * the **committed Gemel checkpoint projection** — `forensics/GEMEL_TRAJECTORY.md`'s `current:`
-  checkpoint `checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d` — over
-  **70** checkpoints, which is the boundary a later session resumes from.
+  checkpoint `checkpoint.ba154dee224976ff20092b1dcb8fd7cd4b0944c96cf54e56b421485b111f1a5f` — over
+  **71** checkpoints, which is the boundary a later session resumes from.
 
 The store is **re-created at a release, not at a stratum seal**: the stratum records the chain
 status and the release re-creates the store. This seal records the division rather than moving it.
@@ -402,13 +402,13 @@ is the measured surface hash, and the candidate identity is the frozen install's
 |---|---|
 | P1000 selection root | `f2a0454fe4dca98556da2e958b6e70cebaf76becbebba69b2abd752e63deba4e` |
 | atlas root (reconciliation body) | `327ab08b20ad5cbacc95e7c668bd03eafe7c06fa0514fd3a28c03207b97adbe9` |
-| consumer-receipt root | `92c52496e4326e9a0300cde24b1ba06ea70d4bd2126e09c3ca9bc97805fc8a0f` |
+| consumer-receipt root | `8033967082c8f3c536c3de7655fbe5ee3ec4ad440db3d6047146ca6b922ff4dc` |
 | residual root | `670b3ba9cb6b4995e15414904d53bbeab52dfb7daaa9f25ec29786fca8b48ab1` |
 | coverage root (measured surface) | `c18b7a4f90919ac4c69ff0bacf8f97e03c1f77cd3f8f050878c4c590f785d68c` |
-| candidate identity | `cb037dbad3a88e3f76b81521001340c87ae120688e4a8c4d91018d57f294d523` |
+| candidate identity | `af81e7e881fc6a2c8d10fab6683712fdf446a54f298d151f39bf1b3db3b2c41e` |
 
 The FRF/Gemel chain boundary is the checkpoint projection §8 records:
-`checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d`.
+`checkpoint.ba154dee224976ff20092b1dcb8fd7cd4b0944c96cf54e56b421485b111f1a5f`.
 
 ## 12. What this atlas does not establish
 

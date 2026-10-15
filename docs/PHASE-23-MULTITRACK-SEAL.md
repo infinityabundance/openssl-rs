@@ -260,14 +260,15 @@ sealed without a chain entry. `MULTITRACK-SEAL` re-checks the scoping directly: 
 No `.frf` object and no Gemel change or checkpoint was created for Phase 23, because the mechanism
 requires none. The FRF store's chain status is recorded here rather than moved: the store carries
 **21** compiled claims with zero blockers — the **17** sensitivity-backed claims (one per runtime
-stratum, Phases 3 through 19) each recording candidate `openssl-rs 0.0.27` (`identity_hash
+stratum, Phases 3 through 19) each recording candidate `openssl-rs 0.0.28` (`identity_hash
 e4f60d8b`) plus the abi/dgst/inventory/baseline oracle claims — over **147** receipts, and
-`forensics/GEMEL_TRAJECTORY.md`'s `current:` is the **0.0.27** release checkpoint `K70`
-(`checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d`), closing change
-`C116`. The store is **re-created at a release, not at a stratum seal**: the `0.0.27` release removed
-and rebuilt it at the new version, folded the now-complete Phases 20, 21, 22 and 23 into the release,
-and recorded the Gemel change and checkpoint exactly as the `0.0.26` release did (the `0.0.26`
-release commit `f75f6879`; the `0.0.25` release commit `ad6fd709` did the same for Phase 20). This
+`forensics/GEMEL_TRAJECTORY.md`'s `current:` is the **0.0.28** release checkpoint `K71`
+(`checkpoint.ba154dee224976ff20092b1dcb8fd7cd4b0944c96cf54e56b421485b111f1a5f`), closing change
+`C117`. The store is **re-created at a release, not at a stratum seal**: the `0.0.28` release removed
+and rebuilt it at the new version, folded the now-complete Phases 20 through 25 into the release,
+and recorded the Gemel change and checkpoint exactly as the `0.0.27` release did (the `0.0.27`
+release commit `a2ce1a7e`; the `0.0.26` release commit `f75f6879` did the same for Phases 20, 21, 22
+and 23). This
 seal records the division: **the stratum records the chain status; the release re-creates the
 store.**
 

@@ -377,10 +377,10 @@
           "the non-claims are recorded as findings (safe Rust does not prove protocol correctness; unsafe Rust is not inherently vulnerable; unsafe LOC is not a vulnerability count; Miri/ASan/TSan are not exhaustive; Kani does not prove unsupported or concurrent whole-program behaviour; historical CVE extinction does not predict a future CVE count; compatibility is not security; memory safety is not cryptographic correctness; absence of a crash is not structural proof), so a passing seal is never 'the candidate is memory safe'"
         ],
         "findings_present": true,
-        "measurement_state": "complete",
-        "observation": "MS-SEAL is pass",
+        "measurement_state": "not_measured",
+        "observation": "MS-SEAL is fail",
         "property_status": "NOT_CLAIMED",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "memory-safety-seal",
         "what": "the seal `docs/PHASE-25-MEMORY-SAFETY-SEAL.md`, which closes the bounded claim and records the non-claims it never exceeds"
@@ -391,8 +391,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 22,
-      "open_in_this_stratum": 0,
+      "implemented": 21,
+      "open_in_this_stratum": 1,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -433,7 +433,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "4f8ece561012074d7cf68f93daec917898ebb83edb70b4e45c993444a412367d"
+      "sha256": "4747351c7b85a68a345177280d5ba37fb3cb49abf13561cbd23dbb8ccdff4bca"
     },
     {
       "name": "phase25-guard",

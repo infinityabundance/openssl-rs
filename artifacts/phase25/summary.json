@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "bounded_claim": "the memory-safety-relevant trusted computing base of the exact admitted candidate has been exhaustively inventoried over its first-party shipped source/build surface; unsafe operations are mapped to their safety contracts, Phase-22 reachability, Phase-24 downstream usage and available dynamic/formal evidence, with no unexplained reachable unsafe site in the claimed profile",
-    "candidate_identity": "openssl-rs 0.0.27 (reconstructing openssl-3.6.4-production)",
+    "candidate_identity": "openssl-rs 0.0.28 (reconstructing openssl-3.6.4-production)",
     "claim": {
       "complete": false,
       "reason": "the seal records a complete closure only when every court passes and no residual is open or undisposed and no externally reachable site is UNSUPPORTED. The atlas carries 450 open residual(s), 0 undisposed residual(s) and 183 externally reachable UNSUPPORTED site(s), so the closure is not complete and the bounded claim is recorded rather than a stronger one"
@@ -18,8 +18,8 @@
       "geiger_status": "unavailable",
       "ledger": {
         "contract_units": 22,
-        "implemented": 22,
-        "open_in_this_stratum": 0,
+        "implemented": 21,
+        "open_in_this_stratum": 1,
         "owned": 22
       },
       "mechanisms_eliminated": 3,
@@ -76,7 +76,7 @@
       },
       {
         "artefact": "artifacts/phase25/source-census.json",
-        "artefact_sha256": "141f61a1565b4e0dee665cae89ae6bea12f3aea6415710428a1c3549c707508a",
+        "artefact_sha256": "4423f3e71f24a47978ce51345cc3abf01664be9d3e6f5f733df2087af143563f",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-SOURCE-CENSUS",
@@ -146,7 +146,7 @@
       },
       {
         "artefact": "artifacts/phase25/unsafe-reduction.json",
-        "artefact_sha256": "7af3ef39c657234852472766b3251efd282539c8ee1dbc08d2608a92439435b4",
+        "artefact_sha256": "b7e801b1d2397fa0d8fb9a03f01883de4bbafe223ff4ed95d77d094d8e1d937d",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-UNSAFE-REDUCTION",
@@ -156,7 +156,7 @@
       },
       {
         "artefact": "artifacts/phase25/miri.json",
-        "artefact_sha256": "ef437ef1062a1cbc66990b9599267f7aa656d73929cc422f857e0ea9a52e16e9",
+        "artefact_sha256": "eae53ed35a4f453fc495470cbb30b7a755ca3066ea50f06b6f5b621228ef58b4",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-MIRI",
@@ -226,7 +226,7 @@
       },
       {
         "artefact": "artifacts/phase25/cve-replay/index.json",
-        "artefact_sha256": "7d388d135622d7bc7d238ccb0e4c99fae3a315e4a187d30e587715df6944fd51",
+        "artefact_sha256": "3618873741be422cfc66b5c39326e86d66bb6fd07cabfb460fe1c740c1c701d9",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-CVE-REPLAY",
@@ -266,7 +266,7 @@
       },
       {
         "artefact": "forensics/atlas/phase25/frf-closure.json",
-        "artefact_sha256": "beddbff283066f542810ae8354875b096108e4e4da226cf12e5c92363a235904",
+        "artefact_sha256": "444bc3e369a255b31dc1f802c829cdfaa6991d4371d3c70c3a0620b360be2758",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-FRF-CLOSURE",
@@ -305,8 +305,8 @@
       "artefact": "forensics/phase25-obligations.json",
       "counts": {
         "contract_units": 22,
-        "implemented": 22,
-        "open_in_this_stratum": 0,
+        "implemented": 21,
+        "open_in_this_stratum": 1,
         "owned": 22
       }
     },
@@ -1232,7 +1232,7 @@
     },
     "what_this_is": "Phase 25.21's memory-safety seal: the courts (the twenty-one landed Phase-25 courts, each re-derived from the committed planes and joined to its committed artefact and digest), the residual census (every residual classified and disposed, the open ones named), the bounded claim (stated verbatim), the withheld parity claim and the non-claims. It is an instrument plus an observation record, and it records passed=false because externally reachable unsafe sites carry tool state UNSUPPORTED; it is never read as 'the candidate is memory safe'."
   },
-  "body_hash": "9101bacdb2b23df348b62b67e0a9ad463e4224094df362bb6becb2d0d0629e1f",
+  "body_hash": "e435f85d3451589a8ac3a1eeae392c72c3b514ac9d76cf3a29ff28ccee6177cc",
   "generator": "forensics/tools/ms_seal.py",
   "inputs": [
     {
@@ -1268,47 +1268,47 @@
     {
       "name": "source-census",
       "path": "artifacts/phase25/source-census.json",
-      "sha256": "7991c43f59d4b52c297f81d017f813ad1de4bef68444287c5ea73b3cdf2ad127"
+      "sha256": "7c30456e66c5c104ea3a997f47040609b0dc992e4dc917d882d3c2a1337ea2bc"
     },
     {
       "name": "non-rust-tcb",
       "path": "artifacts/phase25/non-rust-tcb.json",
-      "sha256": "672027f1411e5a749e9388df220477c386430df51e2016d85ee5f924ecb1e35a"
+      "sha256": "f20ebcf0aa2af714195ac34fe43c0795f057e38f8fb4e5f74a3d85a3a2779ebd"
     },
     {
       "name": "safety-obligations",
       "path": "artifacts/phase25/safety-obligations.json",
-      "sha256": "45dc6830d191a8ac3fa59481ddc56b5e0b57662b53a16b7da2f23f5b8b3cbe6e"
+      "sha256": "79cf9edee7df8f0ae74bfef777883bb1d9ee9878ece2d0214d2635b9cd6f22f3"
     },
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "83074cdba20d7b5430ecab17a503522373ea729badbdf410470caad55a7cd80e"
+      "sha256": "504030b6496f5b9690dc08eeac7e61612d978c3b4cd1fa123d62a2de5a373f8b"
     },
     {
       "name": "phase22-crosswalk",
       "path": "artifacts/phase25/phase22-crosswalk.json",
-      "sha256": "824843747ff80be105072970049dfb2c1d80bf9376c57e255df991d0d312744e"
+      "sha256": "8e690995142f21f70125f27e2c4ff3b1baf0deafacde07fdefd14a32c4be6db6"
     },
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "5cb7c238a9b6eae4387ebee0b47fc0603a46bc6163e603cbe8c0b392104154ed"
+      "sha256": "7b3dd175f9265752d297dfc9a1d68885c014ec0e2d8bf3ea81ecd7b7b37bdc7c"
     },
     {
       "name": "exposure-classification",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "1530b933e1d5f3b74feaa7600a82466717a85ae7b2f51fa0bb81cf1cc8f87613"
+      "sha256": "471a2781f08ab8f13106a0b61bf42b773de903f8a727dc2b3771e7f199ad7f56"
     },
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "5fdd637f34c61f4010dbc49294868e1c0769f31e64df2c8b6df754ebb510e32e"
+      "sha256": "bda3775bfe53a08a97d1d737a2d934344ae09aac915bfa47eb4f2e377b25371c"
     },
     {
       "name": "miri",
       "path": "artifacts/phase25/miri.json",
-      "sha256": "740c26bb6ebe62a14b21e7e7677980c6a4849562ba7e547d12769ceef0511f12"
+      "sha256": "9a52677f3ccbb623a165f66763ab25cb4c0331bfd893fe7e7f67e0b9dbc05ca4"
     },
     {
       "name": "asan-msan",
@@ -1323,37 +1323,37 @@
     {
       "name": "kani",
       "path": "artifacts/phase25/kani.json",
-      "sha256": "f17ca6894d1159a7527e1b044b87f2df46accc744c1c69f3ef8771d9befa6e88"
+      "sha256": "66ce652b0a92c5af8f607c3f502c3ba79defd234062a065cbd7970095eecd11a"
     },
     {
       "name": "phase18-fuzz-crosswalk",
       "path": "artifacts/phase25/phase18-fuzz-crosswalk.json",
-      "sha256": "d703d62961dce08cbffebb83392a09b94ced38ec9bcdfb9516942e97e25383e2"
+      "sha256": "725646d78b5a3257ab7c8fbbf026a834576c3ee2e07edca7c561875d6c97fc69"
     },
     {
       "name": "phase24-safety-coverage",
       "path": "artifacts/phase25/phase24-safety-coverage.json",
-      "sha256": "0114a07b4a75a466e4f7f19e56ae3124afbe68e203930c33c1751fa7f2da5ac0"
+      "sha256": "91d1c478a7b672df05b6ef05978c07eaf02da60020f1b2765f503b5f6a2ec4ce"
     },
     {
       "name": "historical-cve-census",
       "path": "artifacts/phase25/historical-cves.json",
-      "sha256": "1867491e286680625aea3609bdeea56c823dbdc46e37e8219f5098632df35921"
+      "sha256": "1ea7cbf93415836d1bd1d919026d7e70d412cbc6b9caa22db9a464a370f375b7"
     },
     {
       "name": "cve-replay",
       "path": "artifacts/phase25/cve-replay/index.json",
-      "sha256": "9d6f7fc6ad8f8262b63526c0b8a5379a369c2005f8dfff9e5f53245c8c84a624"
+      "sha256": "6e2b6063f365c5d7e3c6bf5a2bcb715067b6f40b8194ed9c183328cf39b07d12"
     },
     {
       "name": "mechanism-reconciliation",
       "path": "artifacts/phase25/mechanisms.json",
-      "sha256": "fc2411a7a8e08250c55d9dc26c11ea93327ce5cd291941528c100aa927cab24d"
+      "sha256": "645b7d25bfd5c7a0852cbde72702c9acafab364632c19c3506be6e645e176a47"
     },
     {
       "name": "red-team",
       "path": "artifacts/phase25/red-team.json",
-      "sha256": "1d866fba56fd155b757b196e8ef222c08587c0f7e05ec01c18d863910ffcd0fe"
+      "sha256": "fde610907031f75eeff42531c8d14d58d4a3ddaa96414aac7204dfb514ae83b1"
     },
     {
       "name": "clean-regeneration",
@@ -1363,7 +1363,7 @@
     {
       "name": "frf-gemel-closure",
       "path": "forensics/atlas/phase25/frf-closure.json",
-      "sha256": "f7b331c3cbd137efe756f01256dc52611e7e9b06a360025995ec40806cc27495"
+      "sha256": "563d3b627d680902b3864dfb1e01244be6281117436008410cb7c0e08d992482"
     }
   ],
   "kind": "phase25-summary",
