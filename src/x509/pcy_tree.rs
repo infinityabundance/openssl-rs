@@ -30,6 +30,23 @@
 //! sentence as their record (the same treatment `evp_cnf.rs`/`rand_lib.rs` give their traces); no
 //! runtime behaviour differs.
 //!
+//! ## Ownership
+//!
+//! The graph's own blocks are owned Rust handles. `tree_init` builds an [`OwnedTree`] and an
+//! [`OwnedLevels`] through the crate's allocator seam and publishes the header's address as
+//! `*ptree`; `X509_policy_tree_free` reclaims that owner, and [`OwnedTree`]'s `Drop` is the whole
+//! graph destructor — the sets, every level's certificate ref, node set and anyPolicy, the extra
+//! data, the level array and the header. Each node is an [`OwnedNode`](crate::x509::pcy_node) and
+//! each datum a `Box` (`pcy_data.rs`). No hand-written `CRYPTO_free` for a graph member remains.
+//!
+//! The header, level array and node blocks stay `CRYPTO_*` allocations at the authority's exact
+//! sizes rather than Rust `Box`es, and that is deliberate: the differential's caller-installed hook
+//! observes the graph's own 24-byte (node) and 64-byte (tree, level array) blocks and the
+//! failure-injection refuses the first 24-byte request to prove `add_node` propagates NULL, while
+//! the crate's Rust global allocator is invisible to the hook. Moving these blocks off the seam
+//! would change an observable, so ownership is expressed above the seam and the seam is the
+//! residual raw boundary the freeze records.
+//!
 //! ## No raise
 //!
 //! The landed unit raises nothing of its own, so it is not an entry in
@@ -41,6 +58,7 @@
 #![allow(non_snake_case)]
 
 use core::ffi::{c_int, c_uint, c_void, CStr};
+use core::ptr::NonNull;
 
 use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::obj::{Asn1Object, NID_any_policy, OBJ_nid2obj, OBJ_obj2nid};
@@ -51,11 +69,11 @@ use crate::runtime::stack::{
 use crate::x509::pcy_cache::ossl_policy_cache_set;
 use crate::x509::pcy_data::{ossl_policy_data_free, ossl_policy_data_new, policy_data_free_void};
 use crate::x509::pcy_lib::{
-    X509PolicyCache, X509PolicyData, X509PolicyLevel, X509PolicyNode, X509PolicyTree,
+    tree_levels, X509PolicyCache, X509PolicyData, X509PolicyLevel, X509PolicyNode, X509PolicyTree,
 };
 use crate::x509::pcy_node::{
     ossl_policy_level_add_node, ossl_policy_level_find_node, ossl_policy_node_cmp_new,
-    ossl_policy_node_free, ossl_policy_node_match, ossl_policy_tree_find_sk,
+    ossl_policy_node_free, ossl_policy_node_match, ossl_policy_tree_find_sk, Node,
 };
 use crate::x509::v3_purp::{X509_check_purpose, X509_get_extension_flags};
 use crate::x509::x509_set::X509_up_ref;
@@ -113,28 +131,28 @@ const TREE_CALC_OK_NOFREE: c_int = 1;
 const TREE_CALC_OK_DOFREE: c_int = 2;
 
 /// `node_critical(node)` — `crypto/x509/pcy_local.h:139`, the node datum's critical flag.
-///
-/// # Safety
-///
-/// `node` must be a live node with live data.
-unsafe fn node_critical(node: *const X509PolicyNode) -> c_int {
-    // SAFETY: `node` is live per the contract; its data is a live datum.
-    (unsafe { (*(*node).data).flags } & POLICY_DATA_FLAG_CRITICAL) as c_int
+fn node_critical(node: &Node<'_>) -> c_int {
+    (node.data.flags & POLICY_DATA_FLAG_CRITICAL) as c_int
 }
 
 /// `static void exnode_free(X509_POLICY_NODE *node)` — `crypto/x509/pcy_tree.c:622-626`.
 ///
-/// Frees a node only when its data carries `POLICY_DATA_FLAG_EXTRA_NODE`.
+/// Frees a node only when its data carries `POLICY_DATA_FLAG_EXTRA_NODE`. The node is read through
+/// [`Node`], so the datum is a borrow rather than an inline dereference; a NULL node, or one whose
+/// datum is NULL, is left alone — the authority's `node->data` guard, made a total function.
 ///
 /// # Safety
 ///
-/// `node` must be a live node owned by the user-policy set.
+/// `node` must be NULL or a live node owned by the user-policy set.
 unsafe fn exnode_free(node: *mut X509PolicyNode) {
-    // SAFETY: `node` is live per the contract.
-    unsafe {
-        if !(*node).data.is_null() && ((*(*node).data).flags & POLICY_DATA_FLAG_EXTRA_NODE) != 0 {
-            CRYPTO_free(node.cast(), FILE.as_ptr(), 0);
-        }
+    // SAFETY: `node` is NULL or live per the contract; `Node::of` is the node's recorded boundary.
+    let extra = match unsafe { Node::of(node) } {
+        Some(view) => (view.data.flags & POLICY_DATA_FLAG_EXTRA_NODE) != 0,
+        None => false,
+    };
+    if extra {
+        // SAFETY: `node` is the live node just read; `ossl_policy_node_free` reclaims it.
+        unsafe { ossl_policy_node_free(node) };
     }
 }
 
@@ -156,6 +174,165 @@ unsafe extern "C" fn exnode_free_void(n: *mut c_void) {
 unsafe extern "C" fn policy_node_free_void(n: *mut c_void) {
     // SAFETY: `n` is NULL or owned per the contract.
     unsafe { ossl_policy_node_free(n.cast()) };
+}
+
+/// An owned policy-level array — the owner of the graph's [`X509PolicyLevel`] blocks.
+///
+/// The levels stay one contiguous `CRYPTO_calloc` allocation of `nlevel` `#[repr(C)]`
+/// `X509PolicyLevel`s, because the graph compares levels by address and the `get0` accessor hands
+/// one out by index, so every level must keep a stable address for the tree's lifetime. Ownership
+/// is nevertheless this type's: `new` allocates the block through the crate's allocator seam and
+/// `Drop` is its single release. The seam block is kept (rather than a Rust `Box<[..]>`) so the
+/// graph-block census of the differential — the 64-byte tree/levels blocks — is conserved.
+///
+/// The array's only raw level-address arithmetic is [`tree_levels`](crate::x509::pcy_lib::tree_levels)
+/// and [`level_ptr`](crate::x509::pcy_lib::level_ptr): a walk indexes the slice those answer rather
+/// than stepping a `*mut X509PolicyLevel`.
+struct OwnedLevels {
+    ptr: NonNull<X509PolicyLevel>,
+}
+
+impl OwnedLevels {
+    /// Allocate a zeroed array of `nlevel` levels through the installed allocator, or `None` if it
+    /// answers NULL.
+    fn new(nlevel: usize) -> Option<OwnedLevels> {
+        // `CRYPTO_calloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `nlevel * size_of::<X509PolicyLevel>()` bytes.
+        let raw = CRYPTO_calloc(
+            nlevel,
+            core::mem::size_of::<X509PolicyLevel>(),
+            FILE.as_ptr(),
+            0,
+        )
+        .cast::<X509PolicyLevel>();
+        NonNull::new(raw).map(|ptr| OwnedLevels { ptr })
+    }
+
+    /// The stable address of the first level, for the accessor and the traversal boundary.
+    fn as_ptr(&self) -> *mut X509PolicyLevel {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the array to the tree that links it.
+    fn into_raw(self) -> *mut X509PolicyLevel {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim the array the tree links, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` must be NULL or a live array a previous `into_raw` gave up.
+    unsafe fn from_raw(ptr: *mut X509PolicyLevel) -> Option<OwnedLevels> {
+        NonNull::new(ptr).map(|ptr| OwnedLevels { ptr })
+    }
+}
+
+impl Drop for OwnedLevels {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed), and this is its
+        // single release; `Drop` runs once.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast(), FILE.as_ptr(), 0) };
+    }
+}
+
+/// An owned policy-tree header — the owner of the graph.
+///
+/// The header keeps the authority's `#[repr(C)]` layout (the `get0` accessors read it), but its
+/// ownership is this type: `new` allocates the 64-byte block through the crate's allocator seam and
+/// `Drop` is the whole graph's destructor. The block stays on the seam (not a `Box`) so the
+/// differential's 64-byte tree census is conserved.
+struct OwnedTree {
+    ptr: NonNull<X509PolicyTree>,
+}
+
+impl OwnedTree {
+    /// Allocate a zeroed header through the installed allocator, or `None` if it answers NULL.
+    fn new() -> Option<OwnedTree> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // the header's size, which is exactly `X509PolicyTree`'s layout (every field NULL/0, the
+        // authority's `OPENSSL_zalloc`).
+        let raw = CRYPTO_zalloc(core::mem::size_of::<X509PolicyTree>(), FILE.as_ptr(), 0)
+            .cast::<X509PolicyTree>();
+        NonNull::new(raw).map(|ptr| OwnedTree { ptr })
+    }
+
+    /// The stable address the C ABI hands out and takes back.
+    fn as_ptr(&self) -> *mut X509PolicyTree {
+        self.ptr.as_ptr()
+    }
+
+    /// The header as a shared borrow — `self.ptr` is this owner's live, uniquely-owned block.
+    fn header(&self) -> &X509PolicyTree {
+        // SAFETY: `self.ptr` is the live, uniquely-owned header `new` allocated (or `from_raw`
+        // reclaimed), and the borrow does not outlive the owner.
+        unsafe { &*self.ptr.as_ptr() }
+    }
+
+    /// The header as a mutable borrow — `self.ptr` is this owner's live, uniquely-owned block.
+    fn header_mut(&mut self) -> &mut X509PolicyTree {
+        // SAFETY: `self.ptr` is the live, uniquely-owned header `new` allocated (or `from_raw`
+        // reclaimed), and `&mut self` rules out any other borrow for its use.
+        unsafe { &mut *self.ptr.as_ptr() }
+    }
+
+    /// Give up ownership of the header to the C caller's `*ptree`.
+    fn into_raw(self) -> *mut X509PolicyTree {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a header a previous `into_raw` published, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` must be NULL or a live header a previous `into_raw` gave up and `Drop` has not yet
+    /// released.
+    unsafe fn from_raw(ptr: *mut X509PolicyTree) -> Option<OwnedTree> {
+        NonNull::new(ptr).map(|ptr| OwnedTree { ptr })
+    }
+}
+
+impl Drop for OwnedTree {
+    /// The graph destructor: the release `X509_policy_tree_free` performed by hand, now the tree's
+    /// own. It frees exactly the authority's set — the authority- and user-constrained policy sets,
+    /// each level's borrowed certificate ref, node set and anyPolicy node, the extra data, the level
+    /// array, and the header — through the same allocator seam.
+    fn drop(&mut self) {
+        // SAFETY: the header and everything it points at are owned by this tree and live; each
+        // member is NULL or owned here, and each release below is the one the authority performs.
+        unsafe {
+            let tree = self.ptr.as_ptr();
+            // The header is read through the owner's own borrow, not a raw dereference.
+            let (auth_policies, user_policies, extra_data, levels) = {
+                let header = self.header();
+                (
+                    header.auth_policies,
+                    header.user_policies,
+                    header.extra_data,
+                    header.levels,
+                )
+            };
+            OPENSSL_sk_free(auth_policies);
+            OPENSSL_sk_pop_free(user_policies, Some(exnode_free_void));
+
+            // The level array as a checked slice: every level is reached by iterating it, not by
+            // stepping a raw level pointer.
+            for level in tree_levels(tree).iter() {
+                X509_free(level.cert);
+                OPENSSL_sk_pop_free(level.nodes, Some(policy_node_free_void));
+                ossl_policy_node_free(level.anyPolicy);
+            }
+
+            OPENSSL_sk_pop_free(extra_data, Some(policy_data_free_void));
+            // The level array is this tree's own block; `OwnedLevels`'s `Drop` releases it.
+            drop(OwnedLevels::from_raw(levels));
+            CRYPTO_free(tree.cast(), FILE.as_ptr(), 0);
+        }
+    }
 }
 
 /// `static int tree_init(X509_POLICY_TREE **ptree, STACK_OF(X509) *certs, unsigned int flags)` —
@@ -227,15 +404,15 @@ unsafe fn tree_init(
         // SAFETY: `x` is live.
         let cache = unsafe { ossl_policy_cache_set(x) };
         // SAFETY: `cache` is non-null here.
-        if (ret & X509_PCY_TREE_VALID) != 0 && unsafe { (*cache).data }.is_null() {
+        let cache = unsafe { &*cache };
+        if (ret & X509_PCY_TREE_VALID) != 0 && cache.data.is_null() {
             ret = X509_PCY_TREE_EMPTY;
         }
         if explicit_policy > 0 {
             if (ex_flags & EXFLAG_SI) == 0 {
                 explicit_policy -= 1;
             }
-            // SAFETY: `cache` is non-null here.
-            let explicit_skip = unsafe { (*cache).explicit_skip };
+            let explicit_skip = cache.explicit_skip;
             if explicit_skip >= 0 && explicit_skip < explicit_policy as i64 {
                 explicit_policy = explicit_skip as c_int;
             }
@@ -250,52 +427,54 @@ unsafe fn tree_init(
         return ret;
     }
 
-    // If we get this far, initialize the tree.
-    // A fresh, zeroed block of the tree's own size.
-    let tree = CRYPTO_zalloc(core::mem::size_of::<X509PolicyTree>(), FILE.as_ptr(), 0)
-        .cast::<X509PolicyTree>();
-    if tree.is_null() {
+    // If we get this far, initialize the tree. The header and the level array are owned handles
+    // until the tree is published; every error path below drops the tree, whose `Drop` releases
+    // whatever was linked.
+    let Some(mut tree) = OwnedTree::new() else {
         return X509_PCY_TREE_INTERNAL;
-    }
-    // Limit the growth of the tree to mitigate CVE-2023-0464.
-    // SAFETY: `tree` is live and writable.
-    unsafe { (*tree).node_maximum = OPENSSL_POLICY_TREE_NODES_MAX };
+    };
+    // Limit the growth of the tree to mitigate CVE-2023-0464. The header is written through the
+    // owner's own borrow, not a raw dereference.
+    tree.header_mut().node_maximum = OPENSSL_POLICY_TREE_NODES_MAX;
 
-    // A fresh, zeroed array of `n + 1` levels.
-    let levels = CRYPTO_calloc(
-        (n + 1) as usize,
-        core::mem::size_of::<X509PolicyLevel>(),
-        FILE.as_ptr(),
-        0,
-    )
-    .cast::<X509PolicyLevel>();
-    if levels.is_null() {
-        // SAFETY: `tree` is owned here.
-        unsafe { CRYPTO_free(tree.cast(), FILE.as_ptr(), 0) };
+    // A fresh, zeroed array of `n + 1` levels, owned until the tree links it.
+    let Some(levels_owner) = OwnedLevels::new((n + 1) as usize) else {
+        // `tree` drops here, releasing the header.
         return X509_PCY_TREE_INTERNAL;
+    };
+    {
+        let header = tree.header_mut();
+        header.levels = levels_owner.as_ptr();
+        header.nlevel = n + 1;
     }
-    // SAFETY: `tree` is live and writable.
-    unsafe {
-        (*tree).levels = levels;
-        (*tree).nlevel = n + 1;
-    }
-    let mut level = levels;
+    // The tree now owns the level array; its own `Drop` reclaims it.
+    levels_owner.into_raw();
+    // The level array as a checked slice: every level below is reached by indexing this, never by
+    // stepping a raw level pointer.
+    // SAFETY: `tree` is a live tree whose level array was just linked, and it is unaliased here.
+    let levels = unsafe { tree_levels(tree.as_ptr()) };
     // SAFETY: `OBJ_nid2obj(NID_any_policy)` is a static object.
     let data =
         unsafe { ossl_policy_data_new(core::ptr::null_mut(), OBJ_nid2obj(NID_any_policy), 0) };
     if data.is_null() {
-        // SAFETY: `tree` is owned here.
-        unsafe { X509_policy_tree_free(tree) };
+        // `tree` drops here, releasing the header and the level array.
         return X509_PCY_TREE_INTERNAL;
     }
-    // SAFETY: `level`, `data` and `tree` are live.
-    if unsafe { ossl_policy_level_add_node(level, data, core::ptr::null_mut(), tree, 1) }.is_null()
+    // SAFETY: level 0 is present in the `n + 1` array; `data` and `tree` are live.
+    if unsafe {
+        ossl_policy_level_add_node(
+            &raw mut levels[0],
+            data,
+            core::ptr::null_mut(),
+            tree.as_ptr(),
+            1,
+        )
+    }
+    .is_null()
     {
-        // SAFETY: `data` is owned here; `tree` is owned here.
-        unsafe {
-            ossl_policy_data_free(data);
-            X509_policy_tree_free(tree);
-        }
+        // SAFETY: `data` is owned here.
+        unsafe { ossl_policy_data_free(data) };
+        // `tree` drops here, releasing whatever was linked.
         return X509_PCY_TREE_INTERNAL;
     }
 
@@ -310,48 +489,45 @@ unsafe fn tree_init(
 
         // SAFETY: `x` is live.
         if unsafe { X509_up_ref(x) } == 0 {
-            // SAFETY: `tree` is owned here.
-            unsafe { X509_policy_tree_free(tree) };
+            // `tree` drops here, releasing the graph built so far.
             return X509_PCY_TREE_INTERNAL;
         }
 
-        // SAFETY: `level.add(1)` stays inside the `n + 1` levels array.
-        level = unsafe { level.add(1) };
-        // SAFETY: `level` is live and writable.
-        unsafe { (*level).cert = x };
+        // The certificate at index `i` is level `n - i`: level 0 is the anyPolicy root, and the
+        // walk adds the certificate nearest the anchor (index `n - 1`) as level 1 first.
+        let idx = (n - i) as usize;
+        // SAFETY: `idx` is in `1..=n`, inside the `n + 1` level array; the array is unaliased here.
+        let level = &mut levels[idx];
+        level.cert = x;
 
         // SAFETY: `cache` is non-null here.
-        if unsafe { (*cache).anyPolicy }.is_null() {
-            // SAFETY: `level` is live and writable.
-            unsafe { (*level).flags |= X509_V_FLAG_INHIBIT_ANY };
+        let cache = unsafe { &*cache };
+        if cache.anyPolicy.is_null() {
+            level.flags |= X509_V_FLAG_INHIBIT_ANY;
         }
 
         // Determine inhibit any and inhibit map flags.
         if any_skip == 0 {
             if (ex_flags & EXFLAG_SI) == 0 || i == 0 {
-                // SAFETY: `level` is live and writable.
-                unsafe { (*level).flags |= X509_V_FLAG_INHIBIT_ANY };
+                level.flags |= X509_V_FLAG_INHIBIT_ANY;
             }
         } else {
             if (ex_flags & EXFLAG_SI) == 0 {
                 any_skip -= 1;
             }
-            // SAFETY: `cache` is non-null here.
-            let cache_any_skip = unsafe { (*cache).any_skip };
+            let cache_any_skip = cache.any_skip;
             if cache_any_skip >= 0 && cache_any_skip < any_skip as i64 {
                 any_skip = cache_any_skip as c_int;
             }
         }
 
         if map_skip == 0 {
-            // SAFETY: `level` is live and writable.
-            unsafe { (*level).flags |= X509_V_FLAG_INHIBIT_MAP };
+            level.flags |= X509_V_FLAG_INHIBIT_MAP;
         } else {
             if (ex_flags & EXFLAG_SI) == 0 {
                 map_skip -= 1;
             }
-            // SAFETY: `cache` is non-null here.
-            let cache_map_skip = unsafe { (*cache).map_skip };
+            let cache_map_skip = cache.map_skip;
             if cache_map_skip >= 0 && cache_map_skip < map_skip as i64 {
                 map_skip = cache_map_skip as c_int;
             }
@@ -359,44 +535,71 @@ unsafe fn tree_init(
         i -= 1;
     }
 
-    // SAFETY: `ptree` is writable per the contract.
-    unsafe { *ptree = tree };
+    // SAFETY: `ptree` is writable per the contract; ownership of the header moves to the caller.
+    unsafe { *ptree = tree.into_raw() };
     ret
 }
 
 /// `static int tree_link_matching_nodes(X509_POLICY_LEVEL *curr, X509_POLICY_DATA *data, X509_POLICY_TREE *tree)`
 /// — `crypto/x509/pcy_tree.c:260-282`.
 ///
+/// `curr` is `levels[i]` and the authority's `curr - 1` is `levels[i - 1]`; the two halves of the
+/// slice are reached with `split_at_mut`, so the level below is read while the level above is
+/// linked without either walking a raw level pointer.
+///
 /// # Safety
 ///
-/// `curr` (and `curr - 1`) are live levels; `data` is a live datum; `tree` is live.
+/// `levels[i - 1]` and `levels[i]` are live levels; `data` is a live datum; `tree` is live.
 unsafe fn tree_link_matching_nodes(
-    curr: *mut X509PolicyLevel,
+    levels: &mut [X509PolicyLevel],
+    i: usize,
     data: *mut X509PolicyData,
     tree: *mut X509PolicyTree,
 ) -> c_int {
-    // SAFETY: `curr` is the second-or-later level, so `curr - 1` is in range.
-    let last = unsafe { curr.sub(1) };
+    // SAFETY: `data` is a live datum per the contract.
+    let data = unsafe { &*data };
+    // The level below the one being linked, read while the node is linked into `levels[i]`.
+    let (below, from) = levels.split_at_mut(i);
+    let last = &below[i - 1];
     let mut matched = 0;
 
-    // SAFETY: `last` is live.
-    let num = unsafe { OPENSSL_sk_num((*last).nodes) };
-    for i in 0..num {
-        // SAFETY: `i` is in range; the element is a live node.
-        let node = unsafe { OPENSSL_sk_value((*last).nodes, i) }.cast::<X509PolicyNode>();
+    // SAFETY: `last.nodes` is NULL or a live node stack.
+    let num = unsafe { OPENSSL_sk_num(last.nodes) };
+    for k in 0..num {
+        // SAFETY: `k` is in range; the element is a live node.
+        let node = unsafe { OPENSSL_sk_value(last.nodes, k) }.cast::<X509PolicyNode>();
         // SAFETY: `last`, `node` and `data` are live.
-        if unsafe { ossl_policy_node_match(last, node, (*data).valid_policy) } != 0 {
-            // SAFETY: `curr`, `data`, `node` and `tree` are live.
-            if unsafe { ossl_policy_level_add_node(curr, data, node, tree, 0) }.is_null() {
+        if unsafe { ossl_policy_node_match(last, node, data.valid_policy) } != 0 {
+            // SAFETY: `from[0]`, `data`, `node` and `tree` are live.
+            if unsafe {
+                ossl_policy_level_add_node(
+                    &raw mut from[0],
+                    data as *const _ as *mut _,
+                    node,
+                    tree,
+                    0,
+                )
+            }
+            .is_null()
+            {
                 return 0;
             }
             matched = 1;
         }
     }
-    // SAFETY: `last` is live.
-    if matched == 0 && !unsafe { (*last).anyPolicy }.is_null() {
-        // SAFETY: `curr`, `data`, `last` and `tree` are live.
-        if unsafe { ossl_policy_level_add_node(curr, data, (*last).anyPolicy, tree, 0) }.is_null() {
+    if matched == 0 && !last.anyPolicy.is_null() {
+        // SAFETY: `from[0]`, `data`, `last` and `tree` are live.
+        if unsafe {
+            ossl_policy_level_add_node(
+                &raw mut from[0],
+                data as *const _ as *mut _,
+                last.anyPolicy,
+                tree,
+                0,
+            )
+        }
+        .is_null()
+        {
             return 0;
         }
     }
@@ -408,19 +611,22 @@ unsafe fn tree_link_matching_nodes(
 ///
 /// # Safety
 ///
-/// `curr` is a live level; `cache` is a live policy cache; `tree` is live.
+/// `levels[i]` is a live level; `cache` is a live policy cache; `tree` is live.
 unsafe fn tree_link_nodes(
-    curr: *mut X509PolicyLevel,
+    levels: &mut [X509PolicyLevel],
+    i: usize,
     cache: *const X509PolicyCache,
     tree: *mut X509PolicyTree,
 ) -> c_int {
     // SAFETY: `cache` is live per the contract.
-    let num = unsafe { OPENSSL_sk_num((*cache).data) };
-    for i in 0..num {
-        // SAFETY: `i` is in range; the element is a live datum.
-        let data = unsafe { OPENSSL_sk_value((*cache).data, i) }.cast::<X509PolicyData>();
-        // SAFETY: `curr`, `data` and `tree` are live.
-        if unsafe { tree_link_matching_nodes(curr, data, tree) } == 0 {
+    let cache = unsafe { &*cache };
+    // SAFETY: `cache.data` is NULL or a live datum stack.
+    let num = unsafe { OPENSSL_sk_num(cache.data) };
+    for k in 0..num {
+        // SAFETY: `k` is in range; the element is a live datum.
+        let data = unsafe { OPENSSL_sk_value(cache.data, k) }.cast::<X509PolicyData>();
+        // SAFETY: `levels`, `data` and `tree` are live.
+        if unsafe { tree_link_matching_nodes(levels, i, data, tree) } == 0 {
             return 0;
         }
     }
@@ -441,24 +647,34 @@ unsafe fn tree_add_unmatched(
     node: *mut X509PolicyNode,
     tree: *mut X509PolicyTree,
 ) -> c_int {
-    // `node` is live per the contract.
+    // SAFETY: `node` and `cache` are live per the contract.
+    let (node_view, cache) = unsafe { (Node::of(node), &*cache) };
+    // A live node the graph linked always refers to a live datum, which the authority here
+    // dereferences unconditionally; the `None` arm is therefore unreachable and only keeps the Rust
+    // total where the authority would fault.
+    let Some(node_view) = node_view else {
+        return 0;
+    };
     let id = if id.is_null() {
-        // SAFETY: `node` is live under this branch.
-        unsafe { (*(*node).data).valid_policy }
+        node_view.data.valid_policy
     } else {
         id as *mut Asn1Object
     };
-    // SAFETY: `node` is live.
-    let crit = unsafe { node_critical(node) };
-    // SAFETY: `id` is live.
+    let crit = node_critical(&node_view);
+    // SAFETY: `id` is a live `ASN1_OBJECT` (or NULL).
     let data = unsafe { ossl_policy_data_new(core::ptr::null_mut(), id, crit) };
     if data.is_null() {
         return 0;
     }
-    // SAFETY: `data` is live and writable; `cache` is live with an anyPolicy.
+    // The cache's anyPolicy datum, whose qualifiers the new datum shares (`tree_add_unmatched`'s
+    // contract requires the cache to have an anyPolicy, exactly as the authority assumes).
+    // SAFETY: `cache.anyPolicy` is a live datum under the contract.
+    let any = unsafe { &*cache.anyPolicy };
+    // SAFETY: `data` is live and writable; `any` is a live datum.
     unsafe {
-        (*data).qualifier_set = (*(*cache).anyPolicy).qualifier_set;
-        (*data).flags |= POLICY_DATA_FLAG_SHARED_QUALIFIERS;
+        let data = &mut *data;
+        data.qualifier_set = any.qualifier_set;
+        data.flags |= POLICY_DATA_FLAG_SHARED_QUALIFIERS;
     }
     // SAFETY: `curr`, `data`, `node` and `tree` are live.
     if unsafe { ossl_policy_level_add_node(curr, data, node, tree, 1) }.is_null() {
@@ -474,25 +690,29 @@ unsafe fn tree_add_unmatched(
 ///
 /// # Safety
 ///
-/// `curr` (and `curr - 1`) are live levels; `cache` is a live cache; `node` is a live node;
+/// `levels[i - 1]` and `levels[i]` are live levels; `cache` is a live cache; `node` is a live node;
 /// `tree` is live.
 unsafe fn tree_link_unmatched(
-    curr: *mut X509PolicyLevel,
+    levels: &mut [X509PolicyLevel],
+    i: usize,
     cache: *const X509PolicyCache,
     node: *mut X509PolicyNode,
     tree: *mut X509PolicyTree,
 ) -> c_int {
-    // SAFETY: `curr` is the second-or-later level, so `curr - 1` is in range.
-    let last = unsafe { curr.sub(1) };
+    // SAFETY: `node` is a live node per the contract.
+    let Some(node_view) = (unsafe { Node::of(node) }) else {
+        return 0;
+    };
+    // The authority's `curr - 1` and `curr`: the level below is read, `levels[i]` is linked into.
+    let (below, from) = levels.split_at_mut(i);
+    let last = &below[i - 1];
+    let curr: *mut X509PolicyLevel = &raw mut from[0];
 
-    // SAFETY: `last` and `node` are live.
-    if unsafe {
-        ((*last).flags & X509_V_FLAG_INHIBIT_MAP) != 0
-            || ((*(*node).data).flags & POLICY_DATA_FLAG_MAPPED) == 0
-    } {
+    if (last.flags & X509_V_FLAG_INHIBIT_MAP) != 0
+        || (node_view.data.flags & POLICY_DATA_FLAG_MAPPED) == 0
+    {
         // If no policy mapping: matched if one child present.
-        // SAFETY: `node` is live.
-        if unsafe { (*node).nchild } != 0 {
+        if node_view.node.nchild != 0 {
             return 1;
         }
         // SAFETY: `curr`, `cache`, `node` and `tree` are live.
@@ -500,18 +720,18 @@ unsafe fn tree_link_unmatched(
     }
 
     // If mapping: matched if one child per expected policy set.
-    // SAFETY: `node` is live.
-    let expset = unsafe { (*(*node).data).expected_policy_set };
-    // SAFETY: `expset` is live; `node` is live.
-    if unsafe { (*node).nchild } == unsafe { OPENSSL_sk_num(expset) } {
+    let expset = node_view.data.expected_policy_set;
+    // SAFETY: `expset` is NULL or a live stack.
+    let expset_num = unsafe { OPENSSL_sk_num(expset) };
+    if node_view.node.nchild == expset_num {
         return 1;
     }
     // Locate unmatched nodes.
-    // SAFETY: `expset` is live.
+    // SAFETY: `expset` is NULL or a live `ASN1_OBJECT` stack.
     let num = unsafe { OPENSSL_sk_num(expset) };
-    for i in 0..num {
-        // SAFETY: `i` is in range; the element is a live `ASN1_OBJECT`.
-        let oid = unsafe { OPENSSL_sk_value(expset, i) }.cast::<Asn1Object>();
+    for k in 0..num {
+        // SAFETY: `k` is in range; the element is a live `ASN1_OBJECT`.
+        let oid = unsafe { OPENSSL_sk_value(expset, k) }.cast::<Asn1Object>();
         // SAFETY: `curr`, `node` and `oid` are live.
         if !unsafe { ossl_policy_level_find_node(curr, node, oid) }.is_null() {
             continue;
@@ -529,32 +749,33 @@ unsafe fn tree_link_unmatched(
 ///
 /// # Safety
 ///
-/// `curr` (and `curr - 1`) are live levels; `cache` is a live cache; `tree` is live.
+/// `levels[i - 1]` and `levels[i]` are live levels; `cache` is a live cache; `tree` is live.
 unsafe fn tree_link_any(
-    curr: *mut X509PolicyLevel,
+    levels: &mut [X509PolicyLevel],
+    i: usize,
     cache: *const X509PolicyCache,
     tree: *mut X509PolicyTree,
 ) -> c_int {
-    // SAFETY: `curr` is the second-or-later level, so `curr - 1` is in range.
-    let last = unsafe { curr.sub(1) };
-    // SAFETY: `last` is live.
-    let num = unsafe { OPENSSL_sk_num((*last).nodes) };
-    for i in 0..num {
-        // SAFETY: `i` is in range; the element is a live node.
-        let node = unsafe { OPENSSL_sk_value((*last).nodes, i) }.cast::<X509PolicyNode>();
-        // SAFETY: `curr`, `cache`, `node` and `tree` are live.
-        if unsafe { tree_link_unmatched(curr, cache, node, tree) } == 0 {
+    // The level below (`curr - 1`), whose node stack is walked and whose anyPolicy seeds the link.
+    let last_nodes = levels[i - 1].nodes;
+    // SAFETY: `last_nodes` is NULL or a live node stack.
+    let num = unsafe { OPENSSL_sk_num(last_nodes) };
+    for k in 0..num {
+        // SAFETY: `k` is in range; the element is a live node.
+        let node = unsafe { OPENSSL_sk_value(last_nodes, k) }.cast::<X509PolicyNode>();
+        // SAFETY: `levels`, `cache`, `node` and `tree` are live.
+        if unsafe { tree_link_unmatched(levels, i, cache, node, tree) } == 0 {
             return 0;
         }
     }
     // Finally add link to anyPolicy.
-    // SAFETY: `last` and `cache` are live.
-    if !unsafe { (*last).anyPolicy }.is_null() {
-        // SAFETY: `curr`, `cache`, `last` and `tree` are live.
-        if unsafe {
-            ossl_policy_level_add_node(curr, (*cache).anyPolicy, (*last).anyPolicy, tree, 0)
-        }
-        .is_null()
+    let any = levels[i - 1].anyPolicy;
+    if !any.is_null() {
+        // SAFETY: `cache` is live with an anyPolicy.
+        let cache = unsafe { &*cache };
+        // SAFETY: `levels[i]`, `cache.anyPolicy`, `any` and `tree` are live.
+        if unsafe { ossl_policy_level_add_node(&raw mut levels[i], cache.anyPolicy, any, tree, 0) }
+            .is_null()
         {
             return 0;
         }
@@ -565,77 +786,93 @@ unsafe fn tree_link_any(
 /// `static int tree_prune(X509_POLICY_TREE *tree, X509_POLICY_LEVEL *curr)` —
 /// `crypto/x509/pcy_tree.c:406-449`.
 ///
+/// `curr` is `levels[start]`, and the authority's `--curr` walk to `tree->levels` is the index walk
+/// `start - 1 ..= 0`, so each level below is reached by indexing the array, never by decrementing a
+/// raw level pointer; the `curr == tree->levels` test is the index reaching `0`.
+///
 /// # Safety
 ///
-/// `tree` is live; `curr` is a live level at index >= 1.
-unsafe fn tree_prune(tree: *mut X509PolicyTree, mut curr: *mut X509PolicyLevel) -> c_int {
-    // SAFETY: `curr` is live.
-    let mut nodes = unsafe { (*curr).nodes };
-    // SAFETY: `curr` is live.
-    if (unsafe { (*curr).flags } & X509_V_FLAG_INHIBIT_MAP) != 0 {
-        // SAFETY: `nodes` is live.
+/// `levels[start]` is a live level with `start >= 1`.
+unsafe fn tree_prune(levels: &mut [X509PolicyLevel], start: usize) -> c_int {
+    // The map-inhibited pass over the level being evaluated.
+    let nodes = levels[start].nodes;
+    if (levels[start].flags & X509_V_FLAG_INHIBIT_MAP) != 0 {
+        // SAFETY: `nodes` is NULL or a live node stack.
         let mut i = unsafe { OPENSSL_sk_num(nodes) } - 1;
         while i >= 0 {
             // SAFETY: `i` is in range; the element is a live node.
-            let node = unsafe { OPENSSL_sk_value(nodes, i) }.cast::<X509PolicyNode>();
-            // SAFETY: `node` is live.
-            if (unsafe { (*(*node).data).flags } & POLICY_DATA_FLAG_MAP_MASK) != 0 {
-                // SAFETY: `node` is live; its parent is live.
-                unsafe {
-                    (*(*node).parent).nchild -= 1;
-                    CRYPTO_free(node.cast(), FILE.as_ptr(), 0);
-                    OPENSSL_sk_delete(nodes, i);
+            let raw = unsafe { OPENSSL_sk_value(nodes, i) }.cast::<X509PolicyNode>();
+            // SAFETY: `raw` is a live node; the graph links it a live datum.
+            if let Some(node) = unsafe { Node::of(raw) } {
+                if (node.data.flags & POLICY_DATA_FLAG_MAP_MASK) != 0 {
+                    // SAFETY: the node's parent edge is a live node, not otherwise borrowed.
+                    if let Some(parent) = unsafe { node.parent_mut() } {
+                        parent.nchild -= 1;
+                    }
+                    // SAFETY: `raw` is the live node, and the `delete` below removes it from
+                    // `nodes`; `ossl_policy_node_free` is its release.
+                    unsafe {
+                        ossl_policy_node_free(raw);
+                        OPENSSL_sk_delete(nodes, i);
+                    }
                 }
             }
             i -= 1;
         }
     }
 
+    let mut k = start;
     loop {
-        // SAFETY: `curr` is at index >= 1, so `curr - 1` is in range.
-        curr = unsafe { curr.sub(1) };
-        // SAFETY: `curr` is live.
-        nodes = unsafe { (*curr).nodes };
-        // SAFETY: `nodes` is NULL or live.
+        // The authority's `--curr`: the next level down.
+        k -= 1;
+        let nodes = levels[k].nodes;
+        // SAFETY: `nodes` is NULL or a live node stack.
         let mut i = unsafe { OPENSSL_sk_num(nodes) } - 1;
         while i >= 0 {
             // SAFETY: `i` is in range; the element is a live node.
-            let node = unsafe { OPENSSL_sk_value(nodes, i) }.cast::<X509PolicyNode>();
-            // SAFETY: `node` is live.
-            if unsafe { (*node).nchild } == 0 {
-                // SAFETY: `node` is live; its parent is live.
-                unsafe {
-                    (*(*node).parent).nchild -= 1;
-                    CRYPTO_free(node.cast(), FILE.as_ptr(), 0);
-                    OPENSSL_sk_delete(nodes, i);
+            let raw = unsafe { OPENSSL_sk_value(nodes, i) }.cast::<X509PolicyNode>();
+            // SAFETY: `raw` is a live node.
+            if let Some(node) = unsafe { Node::of(raw) } {
+                if node.node.nchild == 0 {
+                    // SAFETY: the node's parent edge is a live node, not otherwise borrowed.
+                    if let Some(parent) = unsafe { node.parent_mut() } {
+                        parent.nchild -= 1;
+                    }
+                    // SAFETY: `raw` is the live node, and the `delete` below removes it from
+                    // `nodes`; `ossl_policy_node_free` is its release.
+                    unsafe {
+                        ossl_policy_node_free(raw);
+                        OPENSSL_sk_delete(nodes, i);
+                    }
                 }
             }
             i -= 1;
         }
-        // SAFETY: `curr` is live.
-        if !unsafe { (*curr).anyPolicy }.is_null() && unsafe { (*(*curr).anyPolicy).nchild } == 0 {
-            // SAFETY: `curr` is live.
-            if !unsafe { (*(*curr).anyPolicy).parent }.is_null() {
-                // SAFETY: the anyPolicy's parent is live.
-                unsafe { (*(*(*curr).anyPolicy).parent).nchild -= 1 };
-            }
-            // SAFETY: the anyPolicy node is owned here.
-            unsafe {
-                CRYPTO_free((*curr).anyPolicy.cast(), FILE.as_ptr(), 0);
-                (*curr).anyPolicy = core::ptr::null_mut();
+        let any = levels[k].anyPolicy;
+        if !any.is_null() {
+            // SAFETY: `any` is a live node.
+            if let Some(node) = unsafe { Node::of(any) } {
+                if node.node.nchild == 0 {
+                    // SAFETY: the anyPolicy's parent edge is a live node, not otherwise borrowed.
+                    if let Some(parent) = unsafe { node.parent_mut() } {
+                        parent.nchild -= 1;
+                    }
+                    // SAFETY: `any` is the node this level owns; release it and clear the slot.
+                    unsafe { ossl_policy_node_free(any) };
+                    levels[k].anyPolicy = core::ptr::null_mut();
+                }
             }
         }
-        // SAFETY: `curr` and `tree` are live.
-        if curr == unsafe { (*tree).levels } {
+        // `k == 0` is the authority's `curr == tree->levels`.
+        if k == 0 {
             // If we zapped anyPolicy at top then the tree is empty.
-            // SAFETY: `curr` is live.
-            if unsafe { (*curr).anyPolicy }.is_null() {
-                return X509_PCY_TREE_EMPTY;
-            }
-            break;
+            return if levels[0].anyPolicy.is_null() {
+                X509_PCY_TREE_EMPTY
+            } else {
+                X509_PCY_TREE_VALID
+            };
         }
     }
-    X509_PCY_TREE_VALID
 }
 
 /// `static int tree_add_auth_node(STACK_OF(X509_POLICY_NODE) **pnodes, X509_POLICY_NODE *pcy)` —
@@ -670,42 +907,46 @@ unsafe fn tree_calculate_authority_set(
     tree: *mut X509PolicyTree,
     pnodes: *mut *mut OpenSslStack,
 ) -> c_int {
-    // SAFETY: `tree` is live.
-    let mut curr = unsafe { (*tree).levels.add(((*tree).nlevel - 1) as usize) };
+    // The level array as a checked slice: the authority's `curr`/`curr++` walk is an index walk.
+    // SAFETY: `tree` is live, so its level array is unaliased here.
+    let levels = unsafe { tree_levels(tree) };
+    let nlevel = levels.len();
+    // SAFETY: `tree` is live and writable per the contract.
+    let tree = unsafe { &mut *tree };
 
-    // SAFETY: `curr` is live.
-    let addnodes = if !unsafe { (*curr).anyPolicy }.is_null() {
-        // SAFETY: `tree.auth_policies` is writable; `curr.anyPolicy` is live.
-        if unsafe { tree_add_auth_node(&raw mut (*tree).auth_policies, (*curr).anyPolicy) } == 0 {
+    // The last level, whose anyPolicy seeds the authority set.
+    let addnodes = if !levels[nlevel - 1].anyPolicy.is_null() {
+        // SAFETY: `tree.auth_policies` is writable; the anyPolicy node is live.
+        if unsafe { tree_add_auth_node(&raw mut tree.auth_policies, levels[nlevel - 1].anyPolicy) }
+            == 0
+        {
             return TREE_CALC_FAILURE;
         }
         pnodes
     } else {
-        // SAFETY: `tree` is live and its auth_policies slot is writable.
-        unsafe { &raw mut (*tree).auth_policies }
+        &raw mut tree.auth_policies
     };
 
-    // SAFETY: `tree` is live.
-    curr = unsafe { (*tree).levels };
-    // SAFETY: `tree` is live.
-    let nlevel = unsafe { (*tree).nlevel };
-    for _ in 1..nlevel {
-        // SAFETY: `curr` is live.
-        let anyptr = unsafe { (*curr).anyPolicy };
+    // `levels[0]` supplies the parent anyPolicy for `levels[1]`, and so on up; the walk stops at the
+    // first level whose anyPolicy is absent (the authority's `break`).
+    for i in 1..nlevel {
+        let anyptr = levels[i - 1].anyPolicy;
         if anyptr.is_null() {
             break;
         }
-        // SAFETY: `curr` is inside the levels array.
-        curr = unsafe { curr.add(1) };
-        // SAFETY: `curr` is live.
-        let num = unsafe { OPENSSL_sk_num((*curr).nodes) };
+        let nodes = levels[i].nodes;
+        // SAFETY: `nodes` is NULL or a live node stack.
+        let num = unsafe { OPENSSL_sk_num(nodes) };
         for j in 0..num {
             // SAFETY: `j` is in range; the element is a live node.
-            let node = unsafe { OPENSSL_sk_value((*curr).nodes, j) }.cast::<X509PolicyNode>();
-            // SAFETY: `node` and `anyptr` are live.
-            let parent_match = unsafe { (*node).parent } == anyptr;
+            let node = unsafe { OPENSSL_sk_value(nodes, j) }.cast::<X509PolicyNode>();
+            // SAFETY: `node` is a live node; the graph links it a live datum.
+            let Some(node_view) = (unsafe { Node::of(node) }) else {
+                continue;
+            };
             // SAFETY: `addnodes` and `node` are live.
-            if parent_match && unsafe { tree_add_auth_node(addnodes, node) } == 0 {
+            if node_view.node.parent == anyptr && unsafe { tree_add_auth_node(addnodes, node) } == 0
+            {
                 if addnodes == pnodes {
                     // SAFETY: `pnodes` is writable; the stack is owned here.
                     unsafe {
@@ -720,8 +961,8 @@ unsafe fn tree_calculate_authority_set(
     if addnodes == pnodes {
         return TREE_CALC_OK_DOFREE;
     }
-    // SAFETY: `pnodes` is writable.
-    unsafe { *pnodes = (*tree).auth_policies };
+    // SAFETY: `pnodes` is writable per the contract.
+    unsafe { *pnodes = tree.auth_policies };
     TREE_CALC_OK_NOFREE
 }
 
@@ -742,8 +983,12 @@ unsafe fn tree_calculate_user_set(
         return 1;
     }
 
-    // SAFETY: `tree` is live.
-    let any_policy = unsafe { (*(*tree).levels.add(((*tree).nlevel - 1) as usize)).anyPolicy };
+    // The top level's anyPolicy, the level array reached by indexing it.
+    // SAFETY: `tree` is live, so its level array is unaliased here.
+    let levels = unsafe { tree_levels(tree) };
+    let any_policy = levels[levels.len() - 1].anyPolicy;
+    // SAFETY: `tree` is live and writable per the contract.
+    let tree = unsafe { &mut *tree };
 
     // SAFETY: `policy_oids` is live.
     let num = unsafe { OPENSSL_sk_num(policy_oids) };
@@ -752,8 +997,7 @@ unsafe fn tree_calculate_user_set(
         let oid = unsafe { OPENSSL_sk_value(policy_oids, i) }.cast::<Asn1Object>();
         // SAFETY: `oid` is live.
         if unsafe { OBJ_obj2nid(oid) } == NID_any_policy {
-            // SAFETY: `tree` is live and writable.
-            unsafe { (*tree).flags |= POLICY_FLAG_ANY_POLICY };
+            tree.flags |= POLICY_FLAG_ANY_POLICY;
             return 1;
         }
     }
@@ -767,24 +1011,29 @@ unsafe fn tree_calculate_user_set(
             if any_policy.is_null() {
                 continue;
             }
-            // SAFETY: `oid` is live; `any_policy` is live.
+            // SAFETY: `any_policy` is a live node; the graph links it a live datum.
+            let Some(any_view) = (unsafe { Node::of(any_policy) }) else {
+                continue;
+            };
+            // SAFETY: `oid` is live.
             let extra = unsafe {
-                ossl_policy_data_new(core::ptr::null_mut(), oid, node_critical(any_policy))
+                ossl_policy_data_new(core::ptr::null_mut(), oid, node_critical(&any_view))
             };
             if extra.is_null() {
                 return 0;
             }
-            // SAFETY: `extra` and `any_policy` are live.
+            // SAFETY: `extra` is live and writable; `any_view.data` is a live datum.
             unsafe {
-                (*extra).qualifier_set = (*(*any_policy).data).qualifier_set;
-                (*extra).flags = POLICY_DATA_FLAG_SHARED_QUALIFIERS | POLICY_DATA_FLAG_EXTRA_NODE;
+                let extra = &mut *extra;
+                extra.qualifier_set = any_view.data.qualifier_set;
+                extra.flags = POLICY_DATA_FLAG_SHARED_QUALIFIERS | POLICY_DATA_FLAG_EXTRA_NODE;
             }
-            // SAFETY: `extra`, `any_policy` and `tree` are live.
+            // SAFETY: `extra`, `any_view`'s parent edge and `tree` are live.
             node = unsafe {
                 ossl_policy_level_add_node(
                     core::ptr::null_mut(),
                     extra,
-                    (*any_policy).parent,
+                    any_view.node.parent,
                     tree,
                     1,
                 )
@@ -795,19 +1044,16 @@ unsafe fn tree_calculate_user_set(
                 return 0;
             }
         }
-        // SAFETY: `tree` is live and writable.
-        if unsafe { (*tree).user_policies }.is_null() {
-            // SAFETY: `tree` is live and writable.
-            unsafe { (*tree).user_policies = OPENSSL_sk_new_null() };
-            // SAFETY: `tree` is live.
-            if unsafe { (*tree).user_policies }.is_null() {
+        if tree.user_policies.is_null() {
+            tree.user_policies = OPENSSL_sk_new_null();
+            if tree.user_policies.is_null() {
                 // SAFETY: `node` is owned here.
                 unsafe { exnode_free(node) };
                 return 0;
             }
         }
-        // SAFETY: `tree` is live; `node` is live.
-        if unsafe { OPENSSL_sk_push((*tree).user_policies, node.cast::<c_void>()) } == 0 {
+        // SAFETY: `tree.user_policies` is a live stack; `node` is a live node.
+        if unsafe { OPENSSL_sk_push(tree.user_policies, node.cast::<c_void>()) } == 0 {
             // SAFETY: `node` is owned here.
             unsafe { exnode_free(node) };
             return 0;
@@ -822,32 +1068,29 @@ unsafe fn tree_calculate_user_set(
 ///
 /// `tree` is live with at least two levels.
 unsafe fn tree_evaluate(tree: *mut X509PolicyTree) -> c_int {
-    // SAFETY: `tree` is live with at least two levels.
-    let mut curr = unsafe { (*tree).levels.add(1) };
-    // SAFETY: `tree` is live.
-    let nlevel = unsafe { (*tree).nlevel };
-    for _ in 1..nlevel {
-        // SAFETY: `curr` is live.
-        let cert = unsafe { (*curr).cert };
+    // The level array as a checked slice: the authority's `curr`/`curr++` walk is an index walk, and
+    // each level is reached by indexing it.
+    // SAFETY: `tree` is live with at least two levels, so its level array is unaliased here.
+    let levels = unsafe { tree_levels(tree) };
+    let nlevel = levels.len();
+    for i in 1..nlevel {
+        let cert = levels[i].cert;
         // SAFETY: `cert` is live.
         let cache = unsafe { ossl_policy_cache_set(cert) };
-        // SAFETY: `curr`, `cache` and `tree` are live.
-        if unsafe { tree_link_nodes(curr, cache, tree) } == 0 {
+        // SAFETY: `levels`, `cache` and `tree` are live.
+        if unsafe { tree_link_nodes(levels, i, cache, tree) } == 0 {
             return X509_PCY_TREE_INTERNAL;
         }
-        // SAFETY: `curr` is live.
-        let inhibit_any = (unsafe { (*curr).flags } & X509_V_FLAG_INHIBIT_ANY) != 0;
-        // SAFETY: `curr`, `cache` and `tree` are live.
-        if !inhibit_any && unsafe { tree_link_any(curr, cache, tree) } == 0 {
+        let inhibit_any = (levels[i].flags & X509_V_FLAG_INHIBIT_ANY) != 0;
+        // SAFETY: `levels`, `cache` and `tree` are live.
+        if !inhibit_any && unsafe { tree_link_any(levels, i, cache, tree) } == 0 {
             return X509_PCY_TREE_INTERNAL;
         }
-        // SAFETY: `tree` and `curr` are live.
-        let ret = unsafe { tree_prune(tree, curr) };
+        // SAFETY: `levels` is live and unaliased here.
+        let ret = unsafe { tree_prune(levels, i) };
         if ret != X509_PCY_TREE_VALID {
             return ret;
         }
-        // SAFETY: `curr` stays inside the levels array.
-        curr = unsafe { curr.add(1) };
     }
     X509_PCY_TREE_VALID
 }
@@ -858,34 +1101,17 @@ unsafe fn tree_evaluate(tree: *mut X509PolicyTree) -> c_int {
 /// certificate, node set and anyPolicy node, then the extra data, the level array and the tree.
 /// A NULL tree is a no-op, matching the authority's first guard.
 ///
+/// The body is now the tree's own release: [`OwnedTree`]'s `Drop`, reached by reclaiming the header
+/// this function was handed. There is no hand-written `CRYPTO_free` for the graph here.
+///
 /// # Safety
 ///
 /// `tree` must be NULL or a live tree not already freed.
 #[no_mangle]
 pub unsafe extern "C" fn X509_policy_tree_free(tree: *mut X509PolicyTree) {
-    if tree.is_null() {
-        return;
-    }
-    // SAFETY: `tree` is live per the contract; each pointer member is NULL or owned by it.
-    unsafe {
-        OPENSSL_sk_free((*tree).auth_policies);
-        OPENSSL_sk_pop_free((*tree).user_policies, Some(exnode_free_void));
-
-        let mut curr: *mut X509PolicyLevel = (*tree).levels;
-        for _ in 0..(*tree).nlevel {
-            // SAFETY: `curr` walks the live `levels` array.
-            X509_free((*curr).cert);
-            // SAFETY: the same contract.
-            OPENSSL_sk_pop_free((*curr).nodes, Some(policy_node_free_void));
-            // SAFETY: the same contract.
-            ossl_policy_node_free((*curr).anyPolicy);
-            curr = curr.add(1);
-        }
-
-        OPENSSL_sk_pop_free((*tree).extra_data, Some(policy_data_free_void));
-        CRYPTO_free((*tree).levels.cast(), FILE.as_ptr(), 0);
-        CRYPTO_free(tree.cast(), FILE.as_ptr(), 0);
-    }
+    // SAFETY: `tree` is NULL or live per the contract; `from_raw` answers `None` for NULL (the
+    // authority's no-op guard) and a live owner otherwise, whose `Drop` releases the whole graph.
+    drop(unsafe { OwnedTree::from_raw(tree) });
 }
 
 /// `int X509_policy_check(X509_POLICY_TREE **ptree, int *pexplicit_policy, STACK_OF(X509) *certs, STACK_OF(ASN1_OBJECT) *policy_oids, unsigned int flags)`
