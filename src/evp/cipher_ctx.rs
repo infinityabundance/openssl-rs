@@ -66,6 +66,7 @@ use crate::asn1::evp_asn1::{
     ASN1_TYPE_get_octetstring, ASN1_TYPE_set_octetstring,
 };
 use crate::asn1::layout::*;
+use crate::asn1::owned::OwnedBlock;
 use crate::evp::cipher::{
     evp_do_ciph_ctx_getparams, evp_do_ciph_ctx_setparams, EVP_CIPHER_free,
     EVP_CIPHER_get0_provider, EVP_CIPHER_get_block_size, EVP_CIPHER_get_flags,
@@ -80,6 +81,7 @@ use crate::params::{
 };
 use crate::provider::{ossl_provider_ctx, ossl_provider_libctx};
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::obj::NID_undef;
@@ -272,6 +274,14 @@ pub struct EvpCipherCtx {
     /// `unsigned long flags` — `EVP_CIPH_*`, and on a context the caller may set.
     pub(crate) flags: c_ulong,
     /// `void *cipher_data` — the legacy implementation's own block.
+    ///
+    /// **Retained raw boundary.** The block is a `#[repr(C)]` member whose stable address the ABI
+    /// hands out (`EVP_CIPHER_CTX_get_cipher_data`), whose size is the *dynamic* `cipher->ctx_size`
+    /// rather than `size_of::<Self>()`, and whose release the authority performs inline in
+    /// `EVP_CIPHER_CTX_reset` and in the two legacy init sites at their own `__LINE__`s. It cannot
+    /// become an owned Rust block without changing the layout the ABI publishes or the release
+    /// coordinate a caller's `CRYPTO_set_mem_functions` hook observes, so it stays a raw pointer
+    /// released by the authority's own `CRYPTO_free`/`CRYPTO_clear_free` at those sites.
     pub(crate) cipher_data: *mut c_void,
     /// `int final_used`.
     pub(crate) final_used: c_int,
@@ -287,6 +297,23 @@ pub struct EvpCipherCtx {
     pub(crate) fetched_cipher: *mut EvpCipher,
 }
 
+/// The context's destructor is the authority's `EVP_CIPHER_CTX_free` body: `EVP_CIPHER_CTX_reset`
+/// (the same reset a caller may call itself), which releases the provider's `algctx`, drops the
+/// fetched cipher's reference and releases the legacy `cipher_data`. [`OwnedCtx`]'s `Drop` then adds
+/// the block release the authority wrote by hand.
+impl CtxDestroy for EvpCipherCtx {
+    const FILE: *const c_char = FILE_ENC;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_CTX;
+    const LINE_FREE: c_int = LINE_FREE_CTX;
+
+    /// The authority's `EVP_CIPHER_CTX_free` body, without the block release [`OwnedCtx`]'s `Drop`
+    /// performs.
+    unsafe fn destroy_body(ptr: *mut EvpCipherCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { EVP_CIPHER_CTX_reset(ptr) };
+    }
+}
+
 /// `EVP_CIPHER_CTX *EVP_CIPHER_CTX_new(void)`.
 ///
 /// A zeroed block with `iv_len` set to **-1**, which is the sentinel every accessor tests: it
@@ -294,17 +321,14 @@ pub struct EvpCipherCtx {
 /// answers the cipher's length rather than zero.
 #[no_mangle]
 pub extern "C" fn EVP_CIPHER_CTX_new() -> *mut EvpCipherCtx {
-    let ctx = CRYPTO_zalloc(
-        core::mem::size_of::<EvpCipherCtx>(),
-        FILE_ENC,
-        LINE_ZALLOC_CTX,
-    )
-    .cast::<EvpCipherCtx>();
-    if !ctx.is_null() {
-        // SAFETY: `ctx` is a fresh zeroed block this call owns.
-        unsafe { (*ctx).iv_len = -1 };
-    }
-    ctx
+    // The block, allocated through the crate's allocator seam at the authority's own line and owned
+    // by `ctx` until it is handed to the caller below.
+    let Some(ctx) = OwnedCtx::<EvpCipherCtx>::zalloc() else {
+        return ptr::null_mut();
+    };
+    // SAFETY: `ctx` is a fresh zeroed block this call owns.
+    unsafe { (*ctx.as_ptr()).iv_len = -1 };
+    ctx.into_raw()
 }
 
 /// `int EVP_CIPHER_CTX_reset(EVP_CIPHER_CTX *ctx)`.
@@ -402,13 +426,10 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_reset(ctx: *mut EvpCipherCtx) -> c_int {
 /// `ctx` must be NULL or a live `EvpCipherCtx`.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_CIPHER_CTX_free(ctx: *mut EvpCipherCtx) {
-    if ctx.is_null() {
-        return;
-    }
-    // SAFETY: `ctx` is live per the contract.
-    unsafe { EVP_CIPHER_CTX_reset(ctx) };
-    // SAFETY: `ctx` is a live block this call owns and just released.
-    unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE_ENC, LINE_FREE_CTX) };
+    // SAFETY: `ctx` is NULL or a live context; `from_raw` reclaims it (NULL is a no-op) and `Drop`
+    // runs the authority's own `EVP_CIPHER_CTX_free` body followed by the block release at the
+    // authority's own line.
+    unsafe { drop(OwnedCtx::<EvpCipherCtx>::from_raw(ctx)) };
 }
 
 /// `static int evp_cipher_ctx_enable_use_bits(EVP_CIPHER_CTX *ctx, unsigned int enable)`.
@@ -3201,10 +3222,17 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_set_algor_params(
     alg: *const X509Algor,
 ) -> c_int {
     let mut ret = -1;
-    let mut der: *mut c_uchar = ptr::null_mut();
+    let mut der_raw: *mut c_uchar = ptr::null_mut();
     // SAFETY: `alg` is live per the contract.
-    let derl = unsafe { i2d_ASN1_TYPE((*alg).parameter, &mut der) };
+    let derl = unsafe { i2d_ASN1_TYPE((*alg).parameter, &mut der_raw) };
+    // The block `i2d_ASN1_TYPE` allocated is owned here: its `Drop` is its single release at the
+    // authority's own site, so no path below writes a `CRYPTO_free` by hand.
+    // SAFETY: `der_raw` is NULL or the block `i2d_ASN1_TYPE` allocated for this call.
+    let der = unsafe { OwnedBlock::<c_uchar>::from_raw(der_raw, FILE_LIB, LINE_FREE_DER) };
     if derl >= 0 {
+        let derp = der
+            .as_ref()
+            .map_or(ptr::null_mut(), |b| b.as_ptr().cast::<c_void>());
         let mut params: [OsslParam; 3] = [
             OSSL_PARAM_construct_end(),
             OSSL_PARAM_construct_end(),
@@ -3214,12 +3242,12 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_set_algor_params(
         unsafe {
             params[0] = OSSL_PARAM_construct_octet_string(
                 OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS_OLD,
-                der.cast::<c_void>(),
+                derp,
                 derl as usize,
             );
             params[1] = OSSL_PARAM_construct_octet_string(
                 OSSL_SIGNATURE_PARAM_ALGORITHM_ID_PARAMS,
-                der.cast::<c_void>(),
+                derp,
                 derl as usize,
             );
             params[2] = OSSL_PARAM_construct_end();
@@ -3227,8 +3255,6 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_set_algor_params(
         // SAFETY: `ctx` is live and `params` is this frame's own terminated array.
         ret = unsafe { EVP_CIPHER_CTX_set_params(ctx, params.as_ptr()) };
     }
-    // SAFETY: `der` is NULL or the block `i2d_ASN1_TYPE` allocated for this call.
-    unsafe { CRYPTO_free(der.cast::<c_void>(), FILE_LIB, LINE_FREE_DER) };
     ret
 }
 
@@ -3293,14 +3319,17 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_get_algor_params(
     let idx = i as usize;
     let derk = params[idx].key;
     let derl = params[idx].return_size;
-    // SAFETY: this allocates a fresh block of `derl` bytes.
-    let der = CRYPTO_malloc(derl, FILE_LIB, LINE_FREE_AID).cast::<c_uchar>();
-    if !der.is_null() {
-        let mut derp: *const c_uchar = der;
+    // The block is owned here: its `Drop` is its single release at the authority's own site, so no
+    // path below writes a `CRYPTO_free` by hand.
+    // SAFETY: this allocates a fresh block of `derl` bytes through the installed allocator.
+    let der = OwnedBlock::<c_uchar>::malloc(derl, FILE_LIB, LINE_FREE_AID);
+    if let Some(der) = &der {
+        let mut derp: *const c_uchar = der.as_ptr();
         // SAFETY: the constructor writes one entry of this frame's own array, and `der` holds
         // `derl` bytes.
         unsafe {
-            params[idx] = OSSL_PARAM_construct_octet_string(derk, der.cast::<c_void>(), derl)
+            params[idx] =
+                OSSL_PARAM_construct_octet_string(derk, der.as_ptr().cast::<c_void>(), derl)
         };
         // SAFETY: `ctx` is live, `params` is this frame's array, `derp` is this frame's slot, and
         // `type_` is the caller's saved pointer.
@@ -3314,8 +3343,6 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_get_algor_params(
             }
         }
     }
-    // SAFETY: `der` is NULL or the block allocated above, released exactly once.
-    unsafe { CRYPTO_free(der.cast::<c_void>(), FILE_LIB, LINE_FREE_AID) };
     ret
 }
 
