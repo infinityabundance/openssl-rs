@@ -879,16 +879,78 @@ pub extern "C" fn OPENSSL_init_crypto(opts: u64, settings: *const OpenSslInitSet
 
 /// `typedef struct ossl_init_stop_st OPENSSL_INIT_STOP` — `crypto/init.c`.
 ///
-/// `next` is a raw pointer, so the node is allocated with `CRYPTO_malloc` rather than `Box`:
-/// an application that installs its own allocator through `CRYPTO_set_mem_functions` must see
-/// these exactly as it sees the authority's, and Phase 3's memory-debug court reads the
-/// coordinates back.
+/// The block is the authority's, and its `next` field stays a raw pointer because the list is
+/// the intrusive, lock-free-push singly-linked list the authority's atomics make it. Ownership
+/// of the block itself is [`OwnedInitStop`]'s, not a bare `CRYPTO_free` at a call site.
 #[repr(C)]
 struct OpenSslInitStop {
     /// The handler `OPENSSL_atexit` was given.
     handler: extern "C" fn(),
     /// The next node, or NULL.
     next: *mut OpenSslInitStop,
+}
+
+/// An owned `OPENSSL_INIT_STOP` node.
+///
+/// `OPENSSL_atexit` allocates the node with `OPENSSL_malloc` at its own (`file`, `line`) and
+/// `OPENSSL_cleanup` releases it with `OPENSSL_free`; both route through
+/// `CRYPTO_set_mem_functions`' dispatch, so an application that installs its own allocator
+/// observes every node, and Phase 3's memory-debug court reads the coordinates back. A `Box`
+/// would allocate through Rust's global allocator (invisible to those hooks) and abort on
+/// exhaustion instead of returning the authority's `0`, so the block stays a
+/// `CRYPTO_malloc`/`CRYPTO_free` at the authority's exact coordinates and ownership is expressed
+/// *above* the seam: this owner holds the block, [`Self::into_raw`]/[`Self::from_raw`] move it
+/// to and from the intrusive list, and `Drop` is its single release.
+///
+/// The one remaining raw boundary is the list traversal in [`run_atexit_handlers`], which reads
+/// each node's `next` before reclaiming that node.
+struct OwnedInitStop(core::ptr::NonNull<OpenSslInitStop>);
+
+impl OwnedInitStop {
+    /// Allocate a fresh node for `handler` linked to `next`, or `None` when the installed
+    /// allocator answers NULL.
+    fn new(handler: extern "C" fn(), next: *mut OpenSslInitStop) -> Option<OwnedInitStop> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
+        // `size_of::<OpenSslInitStop>()` bytes at the authority's own (file, line).
+        let raw = crate::runtime::mem::CRYPTO_malloc(
+            core::mem::size_of::<OpenSslInitStop>(),
+            FILE_INIT,
+            L_ATEXIT_NEWHAND,
+        )
+        .cast::<OpenSslInitStop>();
+        let ptr = core::ptr::NonNull::new(raw)?;
+        let dst = ptr.as_ptr();
+        // SAFETY: `dst` is a fresh, uniquely-owned, writable block of `OpenSslInitStop`'s size,
+        // so writing the whole value in place initialises it.
+        unsafe { dst.write(OpenSslInitStop { handler, next }) };
+        Some(OwnedInitStop(ptr))
+    }
+
+    /// Give the block to the intrusive list, which takes it over.
+    fn into_raw(self) -> *mut OpenSslInitStop {
+        let p = self.0.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a node the list handed back, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` must be NULL or a live node this list owns and has not released.
+    unsafe fn from_raw(ptr: *mut OpenSslInitStop) -> Option<OwnedInitStop> {
+        core::ptr::NonNull::new(ptr).map(OwnedInitStop)
+    }
+}
+
+impl Drop for OwnedInitStop {
+    /// The authority's `OPENSSL_cleanup` release, `OPENSSL_free(lasthandler)`, at its own
+    /// coordinates and through the same allocator seam the node was allocated on.
+    fn drop(&mut self) {
+        let p = self.0.as_ptr().cast::<c_void>();
+        // SAFETY: `p` is the live node this owner uniquely owns; `Drop` runs once, so this is its
+        // single release.
+        unsafe { crate::runtime::mem::CRYPTO_free(p, FILE_INIT, L_CLEANUP_FREE_HANDLER) };
+    }
 }
 
 /// `static OPENSSL_INIT_STOP *stop_handlers = NULL`.
@@ -939,23 +1001,12 @@ pub unsafe extern "C" fn OPENSSL_atexit(handler: Option<extern "C" fn()>) -> c_i
         let Some(handler) = handler else {
             return 0;
         };
-        // `CRYPTO_malloc` is a SAFE function in this crate (D113), so this is unguarded.
-        let newhand = crate::runtime::mem::CRYPTO_malloc(
-            core::mem::size_of::<OpenSslInitStop>(),
-            FILE_INIT,
-            L_ATEXIT_NEWHAND,
-        )
-        .cast::<OpenSslInitStop>();
-        if newhand.is_null() {
+        let Some(node) = OwnedInitStop::new(handler, STOP_HANDLERS.load(Ordering::Acquire)) else {
             return 0;
-        }
-        // SAFETY: `newhand` is this function's own allocation, so both writes are to owned
-        // storage, and the push is a single release store.
-        unsafe {
-            (*newhand).handler = handler;
-            (*newhand).next = STOP_HANDLERS.load(Ordering::Acquire);
-            STOP_HANDLERS.store(newhand, Ordering::Release);
-        }
+        };
+        // The store is the single release store that publishes the node and transfers ownership
+        // of the block to the list.
+        STOP_HANDLERS.store(node.into_raw(), Ordering::Release);
         1
     })
 }
@@ -969,17 +1020,16 @@ fn run_atexit_handlers() {
         }
         let mut curr = node;
         while !curr.is_null() {
-            // SAFETY: `curr` is a node this module allocated, still owned until freed below.
+            // SAFETY: `curr` is a node this list owns; its `handler` and `next` are read here,
+            // before the node is reclaimed, so the walk can continue and the authority's order
+            // (call the handler, then read `next`, then free) is preserved.
             let (handler, next) = unsafe { ((*curr).handler, (*curr).next) };
             handler();
-            // SAFETY: `curr` is live and owned here, and `next` was read before the free.
-            unsafe {
-                crate::runtime::mem::CRYPTO_free(
-                    curr.cast::<core::ffi::c_void>(),
-                    FILE_INIT,
-                    L_CLEANUP_FREE_HANDLER,
-                );
-            }
+            // SAFETY: `curr` is a live node the list owns and has not released; `from_raw`
+            // reclaims it, and the binding's `Drop` performs its single release at the
+            // authority's own coordinates.
+            let owned = unsafe { OwnedInitStop::from_raw(curr) };
+            drop(owned);
             curr = next;
         }
     }
