@@ -79,7 +79,7 @@ use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use crate::ffi::guard_ffi;
 use crate::runtime::init;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 
 #[path = "err_strings.rs"]
 mod err_strings;
@@ -290,13 +290,16 @@ impl ErrState {
     pub(crate) fn clear_data(&mut self, i: usize, deall: bool) {
         if (self.err_data_flags[i] & ERR_TXT_MALLOCED) != 0 {
             if deall {
-                // SAFETY: the MALLOCED flag says this state owns the pointer.
-                unsafe { CRYPTO_free(self.err_data[i].cast::<c_void>(), core::ptr::null(), 0) };
+                // Release the buffer this slot owns; the handle's `Drop` is the release.
+                // SAFETY: the MALLOCED flag says this state owns the pointer, and no other
+                // handle has released it.
+                unsafe { drop(OwnedSlotBuf::from_raw(self.err_data[i])) };
                 self.err_data[i] = core::ptr::null_mut();
                 self.err_data_size[i] = 0;
                 self.err_data_flags[i] = 0;
             } else if !self.err_data[i].is_null() {
-                // SAFETY: as above; the buffer is at least one byte.
+                // SAFETY: as above; the buffer is at least one byte and is kept (not
+                // released), so writing its first byte truncates it in place.
                 unsafe { *self.err_data[i] = 0 };
                 self.err_data_flags[i] = ERR_TXT_MALLOCED;
             }
@@ -314,11 +317,12 @@ impl ErrState {
         self.err_flags[i] = 0;
         self.err_buffer[i] = 0;
         self.err_line[i] = -1;
-        // SAFETY: these pointers are always either NULL or owned by this state.
+        // SAFETY: these pointers are always either NULL or owned by this state, and no
+        // other handle has released them.
         unsafe {
-            CRYPTO_free(self.err_file[i].cast::<c_void>(), core::ptr::null(), 0);
+            drop(OwnedSlotBuf::from_raw(self.err_file[i]));
             self.err_file[i] = core::ptr::null_mut();
-            CRYPTO_free(self.err_func[i].cast::<c_void>(), core::ptr::null(), 0);
+            drop(OwnedSlotBuf::from_raw(self.err_func[i]));
             self.err_func[i] = core::ptr::null_mut();
         }
     }
@@ -347,12 +351,21 @@ impl ErrState {
         line: c_int,
         func: *const c_char,
     ) {
-        // SAFETY: ownership of these pointers is this state's.
+        // SAFETY: the slot's string pointers are NULL or owned by this state and no other
+        // handle has released them; `file`/`func` are NULL or NUL-terminated C strings. Each
+        // fresh duplicate is taken through the seam and stored raw, and the slot's previous
+        // buffer is released by `Drop`. The release-then-allocate order is the authority's.
         unsafe {
-            CRYPTO_free(self.err_file[i].cast::<c_void>(), core::ptr::null(), 0);
-            self.err_file[i] = dup_c_string(file);
-            CRYPTO_free(self.err_func[i].cast::<c_void>(), core::ptr::null(), 0);
-            self.err_func[i] = dup_c_string(func);
+            drop(OwnedSlotBuf::from_raw(self.err_file[i]));
+            self.err_file[i] = match OwnedSlotBuf::dup_c(file) {
+                Some(buf) => buf.into_raw(),
+                None => core::ptr::null_mut(),
+            };
+            drop(OwnedSlotBuf::from_raw(self.err_func[i]));
+            self.err_func[i] = match OwnedSlotBuf::dup_c(func) {
+                Some(buf) => buf.into_raw(),
+                None => core::ptr::null_mut(),
+            };
         }
         self.err_line[i] = line;
     }
@@ -360,8 +373,10 @@ impl ErrState {
     /// `err_set_data`.
     pub(crate) fn set_data(&mut self, i: usize, data: *mut c_char, size: usize, flags: c_int) {
         if (self.err_data_flags[i] & ERR_TXT_MALLOCED) != 0 {
-            // SAFETY: MALLOCED means this state owns the buffer.
-            unsafe { CRYPTO_free(self.err_data[i].cast::<c_void>(), core::ptr::null(), 0) };
+            // Release the buffer this slot already owned before adopting the new one.
+            // SAFETY: the MALLOCED flag says this state owns the pointer and no other
+            // handle has released it; the new `data` is adopted raw below.
+            unsafe { drop(OwnedSlotBuf::from_raw(self.err_data[i])) };
         }
         self.err_data[i] = data;
         self.err_data_size[i] = size;
@@ -494,28 +509,158 @@ pub(crate) fn peek_last_lib() -> c_ulong {
     }
 }
 
-/// Duplicate a C string for storage in the ring, or NULL for NULL/empty input.
+/// The `__FILE__`/`__LINE__` the error-state block and every per-slot buffer record.
 ///
-/// # Safety
-/// `s` must be NULL or a NUL-terminated C string.
-unsafe fn dup_c_string(s: *const c_char) -> *mut c_char {
-    if s.is_null() {
-        return core::ptr::null_mut();
-    }
-    // SAFETY: `s` is NUL-terminated per the caller's contract.
-    let len = unsafe { c_strlen(s) };
-    if len == 0 {
-        return core::ptr::null_mut();
-    }
-    // SAFETY: allocating `len + 1` bytes and copying exactly that many.
-    unsafe {
-        let p = CRYPTO_malloc(len + 1, core::ptr::null(), 0).cast::<c_char>();
-        if p.is_null() {
-            return core::ptr::null_mut();
+/// The authority reaches the allocator directly for all of them rather than through the
+/// `OPENSSL_malloc`/`OPENSSL_free` macros, so the value it records is the inert one at every
+/// site — `NULL` and `0` — and that is what a caller's `CRYPTO_set_mem_functions` hook sees.
+const ERR_FILE: *const c_char = core::ptr::null();
+const ERR_LINE: c_int = 0;
+
+/// An owned per-slot buffer: the allocation a ring slot keeps in `err_data` (when
+/// `ERR_TXT_MALLOCED`), `err_file` or `err_func`.
+///
+/// The slot keeps the authority's `#[repr(C)]` raw `*mut c_char` — that layout is public and
+/// cannot change — so ownership crosses the slot as a raw pointer. But it is *this* type that
+/// allocates through the crate's allocator seam and *this* type whose `Drop` is the single
+/// release, through the same seam. [`Self::alloc`] and [`Self::dup_c`] are the only allocating
+/// constructors; [`Self::into_raw`] stores one into a slot and [`Self::from_raw`] reclaims a
+/// slot's pointer for release, so the `CRYPTO_malloc`/`CRYPTO_free` pair is no longer written
+/// by hand at a call site. The recorded `__FILE__`/`__LINE__` are unchanged, so the hook
+/// observes the same file and line as it observes for the authority's own `err_*` helpers.
+pub(crate) struct OwnedSlotBuf {
+    ptr: *mut c_char,
+}
+
+impl OwnedSlotBuf {
+    /// Allocate a fresh buffer of `len` bytes through the installed allocator, or `None` when
+    /// it answers NULL (the authority's refused `CRYPTO_malloc`).
+    pub(crate) fn alloc(len: usize) -> Option<OwnedSlotBuf> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
+        // `len` bytes, which the returned handle owns until its `Drop`.
+        let raw = CRYPTO_malloc(len, ERR_FILE, ERR_LINE).cast::<c_char>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedSlotBuf { ptr: raw })
         }
-        core::ptr::copy_nonoverlapping(s, p, len);
-        *p.add(len) = 0;
+    }
+
+    /// A NUL-terminated duplicate of `s`, or `None` for NULL or empty input — the rule
+    /// `err_set_debug` applies to the file and function strings.
+    ///
+    /// # Safety
+    /// `s` must be NULL or a NUL-terminated C string.
+    unsafe fn dup_c(s: *const c_char) -> Option<OwnedSlotBuf> {
+        if s.is_null() {
+            return None;
+        }
+        // SAFETY: `s` is NUL-terminated per the caller's contract.
+        let len = unsafe { c_strlen(s) };
+        if len == 0 {
+            return None;
+        }
+        let buf = OwnedSlotBuf::alloc(len + 1)?;
+        // SAFETY: `buf` is `len + 1` fresh bytes and `s` is valid for `len`.
+        unsafe {
+            core::ptr::copy_nonoverlapping(s, buf.as_ptr(), len);
+            *buf.as_ptr().add(len) = 0;
+        }
+        Some(buf)
+    }
+
+    /// Reclaim a slot's raw pointer for release by `Drop`, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live buffer this state owns that no other handle has released.
+    unsafe fn from_raw(ptr: *mut c_char) -> Option<OwnedSlotBuf> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedSlotBuf { ptr })
+        }
+    }
+
+    /// The buffer's address, for the copy a caller performs into it before it is stored.
+    pub(crate) fn as_ptr(&self) -> *mut c_char {
+        self.ptr
+    }
+
+    /// Give the buffer up to a slot as the raw pointer the layout stores.
+    pub(crate) fn into_raw(self) -> *mut c_char {
+        let p = self.ptr;
+        core::mem::forget(self);
         p
+    }
+}
+
+impl Drop for OwnedSlotBuf {
+    /// The buffer's single release, through the same allocator seam it was allocated on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block from this allocator — the constructors only ever hold
+        // a fresh `CRYPTO_malloc` block, or a slot pointer `from_raw` adopted — and this is its
+        // single release.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), ERR_FILE, ERR_LINE) };
+    }
+}
+
+/// An owned heap `ERR_STATE`.
+///
+/// The authority's `OSSL_ERR_STATE_new` allocates the block with
+/// `CRYPTO_zalloc(sizeof(ERR_STATE), NULL, 0)` and `OSSL_ERR_STATE_free` releases every owned
+/// per-slot buffer and then the block. Ownership is this type: `new` allocates through the
+/// crate's allocator seam and `Drop` runs the authority's own free body ([`ErrState::clear_all`]
+/// with `deall`) followed by the block release, through the same seam. The `#[repr(C)]` layout,
+/// the stable address the C ABI hands out and takes back, and the recorded `__FILE__`/`__LINE__`
+/// of both the allocation and the release are unchanged, so a caller's
+/// `CRYPTO_set_mem_functions` hook observes the same size, file and sequence.
+///
+/// The **thread-local** state is deliberately not governed by this type: it is a
+/// `thread_local!` value with no `Drop`, exactly as it had none before, so nothing new is
+/// released at thread exit (see [`STATE`]).
+pub(crate) struct OwnedErrState {
+    ptr: ptr::NonNull<ErrState>,
+}
+
+impl OwnedErrState {
+    /// Allocate a fresh, zeroed state through the installed allocator, or `None` when it answers
+    /// NULL (the authority's refused `CRYPTO_zalloc`).
+    pub(crate) fn new() -> Option<OwnedErrState> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
+        // of `size_of::<ErrState>()` bytes, which is exactly the layout the C ABI expects.
+        let raw =
+            CRYPTO_zalloc(core::mem::size_of::<ErrState>(), ERR_FILE, ERR_LINE).cast::<ErrState>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedErrState { ptr })
+    }
+
+    /// Give up ownership of the block to the C caller's state pointer.
+    pub(crate) fn into_raw(self) -> *mut ErrState {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    pub(crate) unsafe fn from_raw(ptr: *mut ErrState) -> Option<OwnedErrState> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedErrState { ptr })
+    }
+}
+
+impl Drop for OwnedErrState {
+    /// The authority's `OSSL_ERR_STATE_free` body: every slot is cleared with `deall` — its
+    /// owned buffers released — and then the block is released, through the same allocator seam
+    /// it was allocated on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is
+        // its single release; `clear_all(true)` is the authority's own free body, releasing each
+        // owned per-slot buffer first.
+        unsafe {
+            (*self.ptr.as_ptr()).clear_all(true);
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), ERR_FILE, ERR_LINE);
+        }
     }
 }
 
@@ -737,16 +882,23 @@ unsafe fn attach_message(s: &mut ErrState, t: usize, msg: *const c_char) {
     }
     // SAFETY: `msg` is NUL-terminated per the caller's contract.
     let len = unsafe { c_strlen(msg) };
-    // SAFETY: allocate `len + 1`, copy, terminate.
+    // The buffer is built through the owned handle and then handed to the slot raw; the
+    // handle's `Drop` owns its release. A refused allocation attaches nothing, as the
+    // authority's own NULL `CRYPTO_malloc` does.
+    let Some(buf) = OwnedSlotBuf::alloc(len + 1) else {
+        return;
+    };
+    // SAFETY: `buf` is `len + 1` fresh bytes and `msg` is valid for `len`.
     unsafe {
-        let p = CRYPTO_malloc(len + 1, core::ptr::null(), 0).cast::<c_char>();
-        if p.is_null() {
-            return;
-        }
-        core::ptr::copy_nonoverlapping(msg, p, len);
-        *p.add(len) = 0;
-        s.set_data(t, p, len + 1, ERR_TXT_MALLOCED | ERR_TXT_STRING);
+        core::ptr::copy_nonoverlapping(msg, buf.as_ptr(), len);
+        *buf.as_ptr().add(len) = 0;
     }
+    s.set_data(
+        t,
+        buf.into_raw(),
+        len + 1,
+        ERR_TXT_MALLOCED | ERR_TXT_STRING,
+    );
 }
 
 /// `ERR_raise_data(lib, reason, "...")` at a recorded authority site.
@@ -862,16 +1014,21 @@ pub unsafe extern "C" fn openssl_rs_err_set_error(lib: c_int, reason: c_int, msg
             }
             // SAFETY: `msg` is NUL-terminated per the caller's contract.
             let len = unsafe { c_strlen(msg) };
-            // SAFETY: allocate `len + 1`, copy, terminate.
+            // The owned buffer's `Drop` owns the release once the slot holds it.
+            let Some(buf) = OwnedSlotBuf::alloc(len + 1) else {
+                return;
+            };
+            // SAFETY: `buf` is `len + 1` fresh bytes and `msg` is valid for `len`.
             unsafe {
-                let p = CRYPTO_malloc(len + 1, core::ptr::null(), 0).cast::<c_char>();
-                if p.is_null() {
-                    return;
-                }
-                core::ptr::copy_nonoverlapping(msg, p, len);
-                *p.add(len) = 0;
-                s.set_data(t, p, len + 1, ERR_TXT_MALLOCED | ERR_TXT_STRING);
+                core::ptr::copy_nonoverlapping(msg, buf.as_ptr(), len);
+                *buf.as_ptr().add(len) = 0;
             }
+            s.set_data(
+                t,
+                buf.into_raw(),
+                len + 1,
+                ERR_TXT_MALLOCED | ERR_TXT_STRING,
+            );
         });
     })
 }
@@ -966,20 +1123,25 @@ pub unsafe extern "C" fn openssl_rs_err_add_data(msg: *const c_char) {
                     0
                 };
             let total = old_len + add_len;
-            // SAFETY: fresh allocation of `total + 1`; the old buffer, if any, is
-            // copied into it and then released.
+            let Some(buf) = OwnedSlotBuf::alloc(total + 1) else {
+                return;
+            };
+            // SAFETY: `buf` is `total + 1` fresh bytes; the old buffer (when `old_len` > 0)
+            // is valid for `old_len` and `msg` for `add_len`.
             unsafe {
-                let p = CRYPTO_malloc(total + 1, core::ptr::null(), 0).cast::<c_char>();
-                if p.is_null() {
-                    return;
-                }
+                let p = buf.as_ptr();
                 if old_len > 0 {
                     core::ptr::copy_nonoverlapping(s.err_data[t], p, old_len);
                 }
                 core::ptr::copy_nonoverlapping(msg, p.add(old_len), add_len);
                 *p.add(total) = 0;
-                s.set_data(t, p, total + 1, ERR_TXT_MALLOCED | ERR_TXT_STRING);
             }
+            s.set_data(
+                t,
+                buf.into_raw(),
+                total + 1,
+                ERR_TXT_MALLOCED | ERR_TXT_STRING,
+            );
         });
     })
 }
@@ -1064,12 +1226,13 @@ pub unsafe extern "C" fn ERR_add_error_txt(sepr: *const c_char, txt: *const c_ch
                     0
                 };
             let total = old_len + sep_len + txt_len;
-            // SAFETY: fresh allocation of `total + 1`, copying the three parts.
+            let Some(buf) = OwnedSlotBuf::alloc(total + 1) else {
+                return;
+            };
+            // SAFETY: `buf` is `total + 1` fresh bytes; the old data is valid for `old_len`,
+            // `sepr` for `sep_len` and `txt` for `txt_len`.
             unsafe {
-                let p = CRYPTO_malloc(total + 1, core::ptr::null(), 0).cast::<c_char>();
-                if p.is_null() {
-                    return;
-                }
+                let p = buf.as_ptr();
                 if old_len > 0 {
                     core::ptr::copy_nonoverlapping(s.err_data[t], p, old_len);
                 }
@@ -1080,8 +1243,13 @@ pub unsafe extern "C" fn ERR_add_error_txt(sepr: *const c_char, txt: *const c_ch
                     core::ptr::copy_nonoverlapping(txt, p.add(old_len + sep_len), txt_len);
                 }
                 *p.add(total) = 0;
-                s.set_data(t, p, total + 1, ERR_TXT_MALLOCED | ERR_TXT_STRING);
             }
+            s.set_data(
+                t,
+                buf.into_raw(),
+                total + 1,
+                ERR_TXT_MALLOCED | ERR_TXT_STRING,
+            );
         });
     })
 }
