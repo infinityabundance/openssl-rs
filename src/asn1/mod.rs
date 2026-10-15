@@ -92,6 +92,10 @@ pub mod new;
 // Phase 11.6's `crypto/asn1/nsseq.c` -- the `NETSCAPE_CERT_SEQUENCE` item, landed with the
 // `pem_all.c` container readers and writers that name its `d2i_*`/`i2d_*` (section 2 row 11.6).
 pub mod nsseq;
+// The owning handles for the template machinery's transient seam blocks
+// (`crypto/asn1/tasn_dec.c`, `tasn_enc.c`, `a_object.c`). No exported symbol;
+// the blocks' ownership, above the `CRYPTO_*` seam they still allocate on.
+pub(crate) mod owned;
 // D443's pull-forward: `crypto/asn1/p5_pbe.c` and `crypto/asn1/p5_pbev2.c` are Phase 11's
 // `x509.h` units, landed early because `PKCS8_encrypt_ex`'s only unlanded names are their
 // `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex` (and the MAC setters need `PKCS5_pbkdf2_set` and
