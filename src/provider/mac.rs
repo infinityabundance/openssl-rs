@@ -193,6 +193,173 @@ fn fail_at(site: &err_sites::ErrSite) -> c_int {
     0
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a context block
+// ---------------------------------------------------------------------------------------------
+
+/// A MAC unit's context block: the `__FILE__` its own `CRYPTO_*` calls name, and the whole context
+/// destructor.
+///
+/// `destroy_body` is the authority's `*_free` body *minus* the block release -- HMAC's digest reset
+/// and cleansed key, BLAKE2's cleansed key member, CMAC's and GMAC's cipher reset and inner context,
+/// KMAC's digest reset and two cleansed members, and nothing at all for SIPHASH and POLY1305, whose
+/// authorities write a bare free -- and `FILE` is the `__FILE__` the block's own release records.
+/// Implementing the trait on each `#[repr(C)]` context lets [`OwnedCtx`] run the right destructor
+/// from `Drop` without a `CRYPTO_free` written at any call site.
+trait MacDestroy: Sized {
+    /// `__FILE__` for this unit's `CRYPTO_*` calls.
+    const FILE: *const c_char;
+
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live context this unit allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned MAC context block.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the dispatch hands it
+/// out as `*mut c_void` and takes it back in `*_free`), but its *ownership* is this type: `new`
+/// allocates it through the crate's allocator seam and `Drop` is its single release. The block stays
+/// a `CRYPTO_zalloc` at `size_of::<T>()` and is released with the **plain** `CRYPTO_free` the
+/// authority's own `*_free` ends in -- not a Rust `Box` -- on purpose: a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the allocation, its size and its release exactly as it
+/// observes the authority's, which a Rust global allocation would hide.
+struct OwnedCtx<T: MacDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: MacDestroy> OwnedCtx<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
+    /// it answers NULL (the authority's refused `CRYPTO_zalloc`).
+    fn new() -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, LINE).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// A shallow copy of `src`, allocated with the authority's own `CRYPTO_malloc` at
+    /// `size_of::<T>()` and owned until it is handed to the caller.
+    ///
+    /// # Safety
+    /// `src` is a live `T`.
+    unsafe fn dup(src: *const T) -> Option<OwnedCtx<T>> {
+        let raw = CRYPTO_malloc(core::mem::size_of::<T>(), T::FILE, LINE).cast::<T>();
+        let owner = OwnedCtx {
+            ptr: ptr::NonNull::new(raw)?,
+        };
+        // SAFETY: both regions are `size_of::<T>()` bytes and distinct.
+        unsafe { ptr::copy_nonoverlapping(src, owner.ptr.as_ptr(), 1) };
+        Some(owner)
+    }
+
+    /// The stable address the dispatch hands out and `*_free` takes back.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's context pointer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+}
+
+impl<T: MacDestroy> Drop for OwnedCtx<T> {
+    /// The context destructor: the authority's `*_free` body ([`Self::destroy_body`]) followed by
+    /// the block's own release, through the same allocator seam the block was allocated on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new`/`dup`/`from_raw` produced and this is its single
+        // release; `Drop` runs once, and `destroy_body` is the authority's own `*_free` body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, LINE);
+        }
+    }
+}
+
+/// An owned block whose single release is the authority's plain `CRYPTO_free` *without* the context
+/// destructor.
+///
+/// This is the release a unit's `*_new` performs on a block it abandons before the context is built:
+/// `cmac_new`'s failed `CMAC_CTX_new` and `hmac_new`'s failed `HMAC_CTX_new` both write a bare
+/// `OPENSSL_free`, so the context destructor must not run. The block stays a `CRYPTO_zalloc` at
+/// `size_of::<T>()` on the seam. A block that builds successfully is handed back out through
+/// [`Self::into_raw`] and is released, later, by the row's `*_free` (an [`OwnedCtx`]).
+struct OwnedRaw<T: MacDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: MacDestroy> OwnedRaw<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
+    /// it answers NULL.
+    fn new() -> Option<OwnedRaw<T>> {
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, LINE).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedRaw { ptr })
+    }
+
+    /// The block's address, for the fields the constructor fills.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller: the context was built.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl<T: MacDestroy> Drop for OwnedRaw<T> {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not handed out; its single release
+        // is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, LINE) };
+    }
+}
+
+/// An owned scratch buffer: `new` allocates `len` bytes through the crate's allocator seam and
+/// `Drop` releases them with the authority's own plain `CRYPTO_free`.
+///
+/// Used for the KMAC `init` bytepad buffer, which the authority `OPENSSL_malloc`s sized, fills, and
+/// releases before returning.
+struct OwnedScratch {
+    ptr: ptr::NonNull<c_uchar>,
+    file: *const c_char,
+}
+
+impl OwnedScratch {
+    /// Allocate `len` bytes through the installed allocator, or `None` when it answers NULL.
+    fn new(len: usize, file: *const c_char) -> Option<OwnedScratch> {
+        let raw = CRYPTO_malloc(len, file, LINE).cast::<c_uchar>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedScratch { ptr, file })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&mut self) -> *mut c_uchar {
+        self.ptr.as_ptr()
+    }
+}
+
+impl Drop for OwnedScratch {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the buffer `new` allocated and has not released.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, LINE) };
+    }
+}
+
 /// `struct cmac_data_st` — `cmac_prov.c:55-60`. `OSSL_FIPS_IND_DECLARE` contributes no field when
 /// `FIPS_MODULE` is undefined, so the three fields are the whole struct in this profile.
 #[repr(C)]
@@ -203,6 +370,18 @@ pub(crate) struct CmacData {
     pub ctx: *mut CmacCtx,
     /// `PROV_CIPHER cipher` — the construct's cipher, resolved from a *name*.
     pub cipher: ProvCipher,
+}
+
+impl MacDestroy for CmacData {
+    const FILE: *const c_char = self::FILE;
+
+    unsafe fn destroy_body(ptr: *mut CmacData) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe {
+            CMAC_CTX_free((*ptr).ctx);
+            ossl_prov_cipher_reset(ptr::addr_of_mut!((*ptr).cipher));
+        }
+    }
 }
 
 /// The two keys `cmac_get_ctx_params_decoder` locates in this profile, each with the site of its
@@ -235,17 +414,19 @@ unsafe extern "C" fn cmac_new(provctx: *mut c_void) -> *mut c_void {
             return ptr::null_mut();
         }
 
-        let macctx = CRYPTO_zalloc(core::mem::size_of::<CmacData>(), FILE, LINE).cast::<CmacData>();
-        if macctx.is_null() {
+        // The context block, allocated through the crate's allocator seam and owned by `macctx`
+        // until it is handed to the caller below. `cmac_new`'s only failure release is the
+        // authority's bare `OPENSSL_free` -- the context destructor must not run on the half-built
+        // block -- which is `OwnedRaw`'s `Drop`.
+        let Some(macctx) = OwnedRaw::<CmacData>::new() else {
+            return ptr::null_mut();
+        };
+        (*macctx.as_ptr()).ctx = CMAC_CTX_new();
+        if (*macctx.as_ptr()).ctx.is_null() {
             return ptr::null_mut();
         }
-        (*macctx).ctx = CMAC_CTX_new();
-        if (*macctx).ctx.is_null() {
-            CRYPTO_free(macctx.cast(), FILE, LINE);
-            return ptr::null_mut();
-        }
-        (*macctx).provctx = provctx;
-        macctx.cast()
+        (*macctx.as_ptr()).provctx = provctx;
+        macctx.into_raw().cast()
     }
 }
 
@@ -256,15 +437,8 @@ unsafe extern "C" fn cmac_new(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn cmac_free(vmacctx: *mut c_void) {
-    // SAFETY: the caller's contract; `vmacctx` is a context `cmac_new` allocated.
-    unsafe {
-        if !vmacctx.is_null() {
-            let macctx = vmacctx.cast::<CmacData>();
-            CMAC_CTX_free((*macctx).ctx);
-            ossl_prov_cipher_reset(ptr::addr_of_mut!((*macctx).cipher));
-            CRYPTO_free(vmacctx, FILE, LINE);
-        }
-    }
+    // SAFETY: `vmacctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<CmacData>::from_raw(vmacctx.cast())) };
 }
 
 /// `static void *cmac_dup(void *vsrc)` — `cmac_prov.c:92-110`.
@@ -280,20 +454,19 @@ unsafe extern "C" fn cmac_dup(vsrc: *mut c_void) -> *mut c_void {
             return ptr::null_mut();
         }
 
-        let dst = cmac_new((*src).provctx).cast::<CmacData>();
-        if dst.is_null() {
+        // `cmac_new` answers a fresh context; own it here so that a failed copy or up-ref releases
+        // what was built through `cmac_free`'s destructor, exactly as the authority's `cmac_free`.
+        let Some(dst) = OwnedCtx::<CmacData>::from_raw(cmac_new((*src).provctx).cast()) else {
             return ptr::null_mut();
-        }
-        if CMAC_CTX_copy((*dst).ctx, (*src).ctx) == 0
-            || ossl_prov_cipher_copy(
-                ptr::addr_of_mut!((*dst).cipher),
-                ptr::addr_of!((*src).cipher),
-            ) == 0
+        };
+        let d = dst.as_ptr();
+        if CMAC_CTX_copy((*d).ctx, (*src).ctx) == 0
+            || ossl_prov_cipher_copy(ptr::addr_of_mut!((*d).cipher), ptr::addr_of!((*src).cipher))
+                == 0
         {
-            cmac_free(dst.cast());
             return ptr::null_mut();
         }
-        dst.cast()
+        dst.into_raw().cast()
     }
 }
 
@@ -705,6 +878,18 @@ pub(crate) struct GmacData {
     pub cipher: ProvCipher,
 }
 
+impl MacDestroy for GmacData {
+    const FILE: *const c_char = FILE_GMAC;
+
+    unsafe fn destroy_body(ptr: *mut GmacData) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe {
+            EVP_CIPHER_CTX_free((*ptr).ctx);
+            ossl_prov_cipher_reset(ptr::addr_of_mut!((*ptr).cipher));
+        }
+    }
+}
+
 /// The one key `gmac_get_params_decoder` locates (`gmac_prov.c:200`), which is the only decoder
 /// in this unit with a single key.
 const GMAC_GET_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 1] =
@@ -727,15 +912,8 @@ const GMAC_SET_CTX_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 5
 /// # Safety
 /// The dispatch contract; `vmacctx` NULL or a live `GmacData`.
 unsafe extern "C" fn gmac_free(vmacctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        if !vmacctx.is_null() {
-            let macctx = vmacctx.cast::<GmacData>();
-            EVP_CIPHER_CTX_free((*macctx).ctx);
-            ossl_prov_cipher_reset(ptr::addr_of_mut!((*macctx).cipher));
-            CRYPTO_free(vmacctx, FILE_GMAC, LINE);
-        }
-    }
+    // SAFETY: `vmacctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<GmacData>::from_raw(vmacctx.cast())) };
 }
 
 /// `static void *gmac_new(void *provctx)` — `gmac_prov.c:65-80`.
@@ -748,18 +926,17 @@ unsafe extern "C" fn gmac_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let macctx =
-            CRYPTO_zalloc(core::mem::size_of::<GmacData>(), FILE_GMAC, LINE).cast::<GmacData>();
-        if macctx.is_null() {
+        // The context block, owned here until it is handed to the caller. `gmac_new`'s failure
+        // release is the authority's own `gmac_free`, so the destructor runs through `Drop`.
+        let Some(macctx) = OwnedCtx::<GmacData>::new() else {
+            return ptr::null_mut();
+        };
+        (*macctx.as_ptr()).ctx = EVP_CIPHER_CTX_new();
+        if (*macctx.as_ptr()).ctx.is_null() {
             return ptr::null_mut();
         }
-        (*macctx).ctx = EVP_CIPHER_CTX_new();
-        if (*macctx).ctx.is_null() {
-            gmac_free(macctx.cast());
-            return ptr::null_mut();
-        }
-        (*macctx).provctx = provctx;
-        macctx.cast()
+        (*macctx.as_ptr()).provctx = provctx;
+        macctx.into_raw().cast()
     }
 }
 
@@ -775,20 +952,18 @@ unsafe extern "C" fn gmac_dup(vsrc: *mut c_void) -> *mut c_void {
             return ptr::null_mut();
         }
         let src = vsrc.cast::<GmacData>();
-        let dst = gmac_new((*src).provctx).cast::<GmacData>();
-        if dst.is_null() {
+        // Own the fresh context so a failed copy releases it through `gmac_free`'s destructor.
+        let Some(dst) = OwnedCtx::<GmacData>::from_raw(gmac_new((*src).provctx).cast()) else {
             return ptr::null_mut();
-        }
-        if EVP_CIPHER_CTX_copy((*dst).ctx, (*src).ctx) == 0
-            || ossl_prov_cipher_copy(
-                ptr::addr_of_mut!((*dst).cipher),
-                ptr::addr_of!((*src).cipher),
-            ) == 0
+        };
+        let d = dst.as_ptr();
+        if EVP_CIPHER_CTX_copy((*d).ctx, (*src).ctx) == 0
+            || ossl_prov_cipher_copy(ptr::addr_of_mut!((*d).cipher), ptr::addr_of!((*src).cipher))
+                == 0
         {
-            gmac_free(dst.cast());
             return ptr::null_mut();
         }
-        dst.cast()
+        dst.into_raw().cast()
     }
 }
 
@@ -1168,6 +1343,12 @@ pub(crate) struct SiphashData {
     pub drounds: c_uint,
 }
 
+impl MacDestroy for SiphashData {
+    const FILE: *const c_char = FILE_SIPHASH;
+
+    unsafe fn destroy_body(_ptr: *mut SiphashData) {}
+}
+
 /// `static unsigned int crounds(struct siphash_data_st *ctx)` — `siphash_prov.c:52-55`. Zero is the
 /// *unset* value, which is what lets `SipHash_Init` supply `SIPHASH_C_ROUNDS`.
 fn crounds(ctx: *const SiphashData) -> c_uint {
@@ -1202,12 +1383,12 @@ unsafe extern "C" fn siphash_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<SiphashData>(), FILE_SIPHASH, LINE);
-        if !ctx.is_null() {
-            let ctx = ctx.cast::<SiphashData>();
-            (*ctx).provctx = provctx;
-        }
-        ctx
+        // The context block, owned here until it is handed to the caller.
+        let Some(ctx) = OwnedCtx::<SiphashData>::new() else {
+            return ptr::null_mut();
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -1217,12 +1398,8 @@ unsafe extern "C" fn siphash_new(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract; `vmacctx` NULL or live.
 unsafe extern "C" fn siphash_free(vmacctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        if !vmacctx.is_null() {
-            CRYPTO_free(vmacctx, FILE_SIPHASH, LINE);
-        }
-    }
+    // SAFETY: `vmacctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<SiphashData>::from_raw(vmacctx.cast())) };
 }
 
 /// `static void *siphash_dup(void *vsrc)` — `siphash_prov.c:79-92`. A struct copy, because there is
@@ -1236,14 +1413,12 @@ unsafe extern "C" fn siphash_dup(vsrc: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let dst = CRYPTO_malloc(core::mem::size_of::<SiphashData>(), FILE_SIPHASH, LINE)
-            .cast::<SiphashData>();
-        if dst.is_null() {
+        // The copy the authority `OPENSSL_malloc`s and fills with C's `*sdst = *ssrc`; it is owned
+        // until it is handed to the caller and released, later, by `siphash_free`'s `Drop`.
+        let Some(dst) = OwnedCtx::<SiphashData>::dup(vsrc.cast()) else {
             return ptr::null_mut();
-        }
-        // SAFETY: both are live `SiphashData`s, and the copy C's `*sdst = *ssrc` performs.
-        ptr::copy_nonoverlapping(vsrc.cast::<SiphashData>(), dst, 1);
-        dst.cast()
+        };
+        dst.into_raw().cast()
     }
 }
 
@@ -1609,6 +1784,19 @@ pub(crate) struct HmacData {
     pub tls_mac_out_size: usize,
 }
 
+impl MacDestroy for HmacData {
+    const FILE: *const c_char = FILE_HMAC;
+
+    unsafe fn destroy_body(ptr: *mut HmacData) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe {
+            HMAC_CTX_free((*ptr).ctx);
+            ossl_prov_digest_reset(ptr::addr_of_mut!((*ptr).digest));
+            CRYPTO_clear_free((*ptr).key.cast(), (*ptr).keylen, FILE_HMAC, LINE);
+        }
+    }
+}
+
 /// The two keys `hmac_get_ctx_params_decoder` locates in this profile, each with the site of its own
 /// repeated-parameter raise (`hmac_prov.c:313`, `:337`). The third the generator emits,
 /// `fips-indicator`, is `# if defined(FIPS_MODULE)`-guarded and absent here.
@@ -1648,18 +1836,19 @@ unsafe extern "C" fn hmac_new(provctx: *mut c_void) -> *mut c_void {
             return ptr::null_mut();
         }
 
-        let macctx =
-            CRYPTO_zalloc(core::mem::size_of::<HmacData>(), FILE_HMAC, LINE).cast::<HmacData>();
-        if macctx.is_null() {
+        // The context block, allocated through the crate's allocator seam and owned by `macctx`
+        // until it is handed to the caller below. `hmac_new`'s only failure release is the
+        // authority's bare `OPENSSL_free` -- the context destructor must not run -- which is
+        // `OwnedRaw`'s `Drop`.
+        let Some(macctx) = OwnedRaw::<HmacData>::new() else {
+            return ptr::null_mut();
+        };
+        (*macctx.as_ptr()).ctx = HMAC_CTX_new();
+        if (*macctx.as_ptr()).ctx.is_null() {
             return ptr::null_mut();
         }
-        (*macctx).ctx = HMAC_CTX_new();
-        if (*macctx).ctx.is_null() {
-            CRYPTO_free(macctx.cast(), FILE_HMAC, LINE);
-            return ptr::null_mut();
-        }
-        (*macctx).provctx = provctx;
-        macctx.cast()
+        (*macctx.as_ptr()).provctx = provctx;
+        macctx.into_raw().cast()
     }
 }
 
@@ -1671,16 +1860,9 @@ unsafe extern "C" fn hmac_new(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn hmac_free(vmacctx: *mut c_void) {
-    // SAFETY: the caller's contract; `vmacctx` is a context `hmac_new` allocated.
-    unsafe {
-        if !vmacctx.is_null() {
-            let macctx = vmacctx.cast::<HmacData>();
-            HMAC_CTX_free((*macctx).ctx);
-            ossl_prov_digest_reset(ptr::addr_of_mut!((*macctx).digest));
-            CRYPTO_clear_free((*macctx).key.cast(), (*macctx).keylen, FILE_HMAC, LINE);
-            CRYPTO_free(vmacctx, FILE_HMAC, LINE);
-        }
-    }
+    // SAFETY: `vmacctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release
+    // -- the key's cleansing release among them.
+    unsafe { drop(OwnedCtx::<HmacData>::from_raw(vmacctx.cast())) };
 }
 
 /// `static void *hmac_dup(void *vsrc)` — `hmac_prov.c:110-143`.
@@ -1693,7 +1875,7 @@ unsafe extern "C" fn hmac_free(vmacctx: *mut c_void) {
 /// the digest copy is what makes the failed-copy path free a context that is fully built.
 ///
 /// Both `return 0` paths after the copy return NULL, and the `dst` they abandon is the one
-/// `hmac_free` has already released.
+/// `hmac_free`'s destructor has already released -- here, the `OwnedCtx` owner's `Drop`.
 ///
 /// # Safety
 /// The dispatch contract.
@@ -1705,10 +1887,12 @@ unsafe extern "C" fn hmac_dup(vsrc: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let dst = hmac_new((*src).provctx).cast::<HmacData>();
-        if dst.is_null() {
+        // Own the fresh context so that either failure below releases what it built (including the
+        // key member) through `hmac_free`'s destructor.
+        let Some(owner) = OwnedCtx::<HmacData>::from_raw(hmac_new((*src).provctx).cast()) else {
             return ptr::null_mut();
-        }
+        };
+        let dst = owner.as_ptr();
 
         let ctx = (*dst).ctx;
         // The authority's `*dst = *src`. `ptr::read`/`ptr::write` rather than an assignment: the
@@ -1726,7 +1910,6 @@ unsafe extern "C" fn hmac_dup(vsrc: *mut c_void) -> *mut c_void {
                 ptr::addr_of!((*src).digest),
             ) == 0
         {
-            hmac_free(dst.cast());
             return ptr::null_mut();
         }
         if !(*src).key.is_null() {
@@ -1738,14 +1921,13 @@ unsafe extern "C" fn hmac_dup(vsrc: *mut c_void) -> *mut c_void {
             )
             .cast::<c_uchar>();
             if (*dst).key.is_null() {
-                hmac_free(dst.cast());
                 return ptr::null_mut();
             }
             if (*src).keylen > 0 {
                 ptr::copy_nonoverlapping((*src).key, (*dst).key, (*src).keylen);
             }
         }
-        dst.cast()
+        owner.into_raw().cast()
     }
 }
 
@@ -2234,6 +2416,15 @@ macro_rules! blake2_mac_row {
                 pub key: [c_uchar; b2::KEYBYTES],
             }
 
+            impl MacDestroy for MacData {
+                const FILE: *const c_char = FILE_BLAKE2_MAC;
+
+                unsafe fn destroy_body(ptr: *mut MacData) {
+                    // SAFETY: `ptr` is a live context per the trait contract.
+                    unsafe { cleanse((*ptr).key.as_mut_ptr(), b2::KEYBYTES) };
+                }
+            }
+
             /// `static void *blake2_mac_new(void *unused_provctx)` — `blake2_mac_impl.c:44-57`.
             ///
             /// # Safety
@@ -2244,13 +2435,12 @@ macro_rules! blake2_mac_row {
                     if is_running() == 0 {
                         return ptr::null_mut();
                     }
-                    let macctx =
-                        CRYPTO_zalloc(core::mem::size_of::<MacData>(), FILE_BLAKE2_MAC, LINE)
-                            .cast::<MacData>();
-                    if !macctx.is_null() {
-                        b2::param_init(&mut (*macctx).params);
-                    }
-                    macctx.cast()
+                    // The context block, owned here until it is handed to the caller.
+                    let Some(macctx) = OwnedCtx::<MacData>::new() else {
+                        return ptr::null_mut();
+                    };
+                    b2::param_init(&mut (*macctx.as_ptr()).params);
+                    macctx.into_raw().cast()
                 }
             }
 
@@ -2260,7 +2450,8 @@ macro_rules! blake2_mac_row {
             /// the row owns no pointer of its own, so the copy *is* the duplicate. The `zalloc`
             /// before it is the authority's own redundancy -- the `*dst = *src` then overwrites
             /// every byte of the block -- and it is transcribed rather than simplified away,
-            /// because a failed `zalloc` is an observable refusal.
+            /// because a failed `zalloc` is an observable refusal; it is the owner's own
+            /// `CRYPTO_zalloc` at `size_of::<MacData>()`.
             ///
             /// # Safety
             /// The dispatch contract.
@@ -2270,35 +2461,29 @@ macro_rules! blake2_mac_row {
                     if is_running() == 0 {
                         return ptr::null_mut();
                     }
-                    let dst = CRYPTO_zalloc(core::mem::size_of::<MacData>(), FILE_BLAKE2_MAC, LINE)
-                        .cast::<MacData>();
-                    if dst.is_null() {
+                    let Some(dst) = OwnedCtx::<MacData>::new() else {
                         return ptr::null_mut();
-                    }
+                    };
                     ptr::copy_nonoverlapping(
                         vsrc.cast::<u8>(),
-                        dst.cast::<u8>(),
+                        dst.as_ptr().cast::<u8>(),
                         core::mem::size_of::<MacData>(),
                     );
-                    dst.cast()
+                    dst.into_raw().cast()
                 }
             }
 
             /// `static void blake2_mac_free(void *vmacctx)` — `blake2_mac_impl.c:75-83`. The key
             /// *member* is cleansed and then the struct is freed, which is not
-            /// `CRYPTO_clear_free`'s cleanse-and-free of a single block.
+            /// `CRYPTO_clear_free`'s cleanse-and-free of a single block -- the cleanse is the
+            /// owner's `destroy_body` and the free its `Drop`.
             ///
             /// # Safety
             /// The dispatch contract.
             unsafe extern "C" fn free(vmacctx: *mut c_void) {
-                // SAFETY: the caller's contract; `vmacctx` is a context `newctx` allocated.
-                unsafe {
-                    if !vmacctx.is_null() {
-                        let macctx = vmacctx.cast::<MacData>();
-                        cleanse((*macctx).key.as_mut_ptr(), b2::KEYBYTES);
-                        CRYPTO_free(vmacctx, FILE_BLAKE2_MAC, LINE);
-                    }
-                }
+                // SAFETY: `vmacctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is
+                // its release.
+                unsafe { drop(OwnedCtx::<MacData>::from_raw(vmacctx.cast())) }
             }
 
             /// `static size_t blake2_mac_size(void *vmacctx)` — `blake2_mac_impl.c:85-90`. The
@@ -2679,6 +2864,12 @@ pub(crate) struct Poly1305Data {
     pub poly1305: Poly1305,
 }
 
+impl MacDestroy for Poly1305Data {
+    const FILE: *const c_char = FILE_POLY1305;
+
+    unsafe fn destroy_body(_ptr: *mut Poly1305Data) {}
+}
+
 /// `static void *poly1305_new(void *provctx)` — `poly1305_prov.c:51-61`.
 ///
 /// # Safety
@@ -2689,12 +2880,12 @@ unsafe extern "C" fn poly1305_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<Poly1305Data>(), FILE_POLY1305, LINE)
-            .cast::<Poly1305Data>();
-        if !ctx.is_null() {
-            (*ctx).provctx = provctx;
-        }
-        ctx.cast()
+        // The context block, owned here until it is handed to the caller.
+        let Some(ctx) = OwnedCtx::<Poly1305Data>::new() else {
+            return ptr::null_mut();
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -2708,8 +2899,8 @@ unsafe extern "C" fn poly1305_new(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn poly1305_free(vmacctx: *mut c_void) {
-    // SAFETY: the caller's contract; `vmacctx` is a context `poly1305_new` allocated.
-    unsafe { CRYPTO_free(vmacctx, FILE_POLY1305, LINE) }
+    // SAFETY: `vmacctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<Poly1305Data>::from_raw(vmacctx.cast())) };
 }
 
 /// `static void *poly1305_dup(void *vsrc)` — `poly1305_prov.c:68-81`.
@@ -2726,17 +2917,12 @@ unsafe extern "C" fn poly1305_dup(vsrc: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let dst = CRYPTO_malloc(core::mem::size_of::<Poly1305Data>(), FILE_POLY1305, LINE)
-            .cast::<Poly1305Data>();
-        if dst.is_null() {
+        // The copy the authority `OPENSSL_malloc`s and fills; owned until it is handed to the caller
+        // and released, later, by `poly1305_free`'s `Drop`.
+        let Some(dst) = OwnedCtx::<Poly1305Data>::dup(vsrc.cast()) else {
             return ptr::null_mut();
-        }
-        ptr::copy_nonoverlapping(
-            vsrc.cast::<u8>(),
-            dst.cast::<u8>(),
-            core::mem::size_of::<Poly1305Data>(),
-        );
-        dst.cast()
+        };
+        dst.into_raw().cast()
     }
 }
 
@@ -3128,6 +3314,20 @@ pub(crate) struct KmacData {
     pub custom: [c_uchar; KMAC_MAX_CUSTOM_ENCODED],
 }
 
+impl MacDestroy for KmacData {
+    const FILE: *const c_char = FILE_KMAC;
+
+    unsafe fn destroy_body(ptr: *mut KmacData) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe {
+            EVP_MD_CTX_free((*ptr).ctx);
+            ossl_prov_digest_reset(ptr::addr_of_mut!((*ptr).digest));
+            cleanse((*ptr).key.as_mut_ptr().cast(), (*ptr).key_len);
+            cleanse((*ptr).custom.as_mut_ptr().cast(), (*ptr).custom_len);
+        }
+    }
+}
+
 /// The two keys `kmac_get_ctx_params_decoder` locates in this profile, each with the site of its own
 /// repeated-parameter raise (`kmac_prov.c:434`, `:458`). The third the generator emits,
 /// `fips-indicator`, is `# if defined(FIPS_MODULE)`-guarded and absent here.
@@ -3457,18 +3657,9 @@ unsafe fn kmac_bytepad_encode_key(
 /// # Safety
 /// The dispatch contract; `vmacctx` NULL or a live `KmacData`.
 unsafe extern "C" fn kmac_free(vmacctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        if vmacctx.is_null() {
-            return;
-        }
-        let kctx = vmacctx.cast::<KmacData>();
-        EVP_MD_CTX_free((*kctx).ctx);
-        ossl_prov_digest_reset(ptr::addr_of_mut!((*kctx).digest));
-        cleanse((*kctx).key.as_mut_ptr().cast(), (*kctx).key_len);
-        cleanse((*kctx).custom.as_mut_ptr().cast(), (*kctx).custom_len);
-        CRYPTO_free(vmacctx, FILE_KMAC, LINE);
-    }
+    // SAFETY: `vmacctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release,
+    // with the two cleansed members among what it performs.
+    unsafe { drop(OwnedCtx::<KmacData>::from_raw(vmacctx.cast())) };
 }
 
 /// `static struct kmac_data_st *kmac_new(void *provctx)` — `kmac_prov.c:172-187`.
@@ -3481,24 +3672,24 @@ unsafe extern "C" fn kmac_free(vmacctx: *mut c_void) {
 /// # Safety
 /// `provctx` is the provider's context, passed through unchanged.
 unsafe fn kmac_new(provctx: *mut c_void) -> *mut KmacData {
-    // SAFETY: the caller's contract; the allocation is released by `kmac_free` on every path.
+    // SAFETY: the caller's contract; the allocation is released by `kmac_free`'s destructor on
+    // every path.
     unsafe {
         if is_running() == 0 {
             return ptr::null_mut();
         }
 
-        let kctx =
-            CRYPTO_zalloc(core::mem::size_of::<KmacData>(), FILE_KMAC, LINE).cast::<KmacData>();
-        if kctx.is_null() {
+        // The context block, owned here until it is handed to the caller. `kmac_new`'s failure
+        // release is the authority's own `kmac_free`, so the destructor runs through `Drop`.
+        let Some(kctx) = OwnedCtx::<KmacData>::new() else {
+            return ptr::null_mut();
+        };
+        (*kctx.as_ptr()).ctx = EVP_MD_CTX_new();
+        if (*kctx.as_ptr()).ctx.is_null() {
             return ptr::null_mut();
         }
-        (*kctx).ctx = EVP_MD_CTX_new();
-        if (*kctx).ctx.is_null() {
-            kmac_free(kctx.cast());
-            return ptr::null_mut();
-        }
-        (*kctx).provctx = provctx;
-        kctx
+        (*kctx.as_ptr()).provctx = provctx;
+        kctx.into_raw()
     }
 }
 
@@ -3516,27 +3707,27 @@ unsafe fn kmac_new(provctx: *mut c_void) -> *mut KmacData {
 unsafe fn kmac_fetch_new(provctx: *mut c_void, params: *const OsslParam) -> *mut c_void {
     // SAFETY: the caller's contract; every failure path releases the context it built.
     unsafe {
-        let kctx = kmac_new(provctx);
-        if kctx.is_null() {
+        // Own the fresh context so a failed fetch or an unusable size releases it -- including the
+        // digest `kmac_new`'s fetch installed -- through `kmac_free`'s destructor.
+        let Some(kctx) = OwnedCtx::<KmacData>::from_raw(kmac_new(provctx)) else {
             return ptr::null_mut();
-        }
+        };
+        let k = kctx.as_ptr();
         if ossl_prov_digest_load_from_params(
-            ptr::addr_of_mut!((*kctx).digest),
+            ptr::addr_of_mut!((*k).digest),
             params,
             prov_libctx_of(provctx),
         ) == 0
         {
-            kmac_free(kctx.cast());
             return ptr::null_mut();
         }
 
-        let md_size = EVP_MD_get_size(ossl_prov_digest_md(ptr::addr_of!((*kctx).digest)));
+        let md_size = EVP_MD_get_size(ossl_prov_digest_md(ptr::addr_of!((*k).digest)));
         if md_size <= 0 {
-            kmac_free(kctx.cast());
             return ptr::null_mut();
         }
-        (*kctx).out_len = md_size as usize;
-        kctx.cast()
+        (*k).out_len = md_size as usize;
+        kctx.into_raw().cast()
     }
 }
 
@@ -3577,10 +3768,12 @@ unsafe extern "C" fn kmac_dup(vsrc: *mut c_void) -> *mut c_void {
             return ptr::null_mut();
         }
         let src = vsrc.cast::<KmacData>();
-        let dst = kmac_new((*src).provctx);
-        if dst.is_null() {
+        // Own the fresh context so a failed copy (or digest up-ref) releases it -- including the
+        // digest `kmac_new`'s fetch installed -- through `kmac_free`'s destructor.
+        let Some(owner) = OwnedCtx::<KmacData>::from_raw(kmac_new((*src).provctx)) else {
             return ptr::null_mut();
-        }
+        };
+        let dst = owner.as_ptr();
 
         if EVP_MD_CTX_copy((*dst).ctx, (*src).ctx) == 0
             || ossl_prov_digest_copy(
@@ -3588,7 +3781,6 @@ unsafe extern "C" fn kmac_dup(vsrc: *mut c_void) -> *mut c_void {
                 ptr::addr_of!((*src).digest),
             ) == 0
         {
-            kmac_free(dst.cast());
             return ptr::null_mut();
         }
         (*dst).out_len = (*src).out_len;
@@ -3606,7 +3798,7 @@ unsafe extern "C" fn kmac_dup(vsrc: *mut c_void) -> *mut c_void {
             (*src).custom_len,
         );
 
-        dst.cast()
+        owner.into_raw().cast()
     }
 }
 
@@ -3736,12 +3928,13 @@ unsafe extern "C" fn kmac_init(
         {
             return fail_at(&err_sites::PROV_KMAC_PROV_351);
         }
-        let out = CRYPTO_malloc(out_len, FILE_KMAC, LINE).cast::<c_uchar>();
-        if out.is_null() {
+        // The scratch buffer the authority `OPENSSL_malloc`s sized, fills and releases before it
+        // returns; it is owned by `out` and released by `Drop` at the end of this scope.
+        let Some(mut out) = OwnedScratch::new(out_len, FILE_KMAC) else {
             return 0;
-        }
+        };
         let res = bytepad(
-            out,
+            out.as_ptr(),
             ptr::null_mut(),
             KMAC_STRING.as_ptr(),
             KMAC_STRING.len(),
@@ -3749,9 +3942,8 @@ unsafe extern "C" fn kmac_init(
             (*kctx).custom_len,
             block_len,
         ) != 0
-            && EVP_DigestUpdate(ctx, out.cast(), out_len) != 0
+            && EVP_DigestUpdate(ctx, out.as_ptr().cast(), out_len) != 0
             && EVP_DigestUpdate(ctx, (*kctx).key.as_ptr().cast(), (*kctx).key_len) != 0;
-        CRYPTO_free(out.cast(), FILE_KMAC, LINE);
         res as c_int
     }
 }
