@@ -9,6 +9,30 @@
 //! The structures are opaque to a consumer, so their field order is this crate's own rather than
 //! the authority's; `#[repr(C)]` is kept because the pointers cross the FFI boundary.
 //!
+//! ## Ownership: the object blocks own themselves
+//!
+//! Every object this unit allocates for itself -- [`Cert`] (`cert_new`/`cert_free`), the `SSL_CTX`
+//! (`SSL_CTX_new`/`SSL_CTX_free`), the `SSL` (`SSL_new`/`SSL_free`) and the `danetls_record`
+//! (`dane_tlsa_add`/`tlsa_free`) -- is an [`OwnedCtx`] whose `Drop` runs the authority's own free
+//! body ([`CtxDestroy::destroy_body`]) followed by the block release. Each block stays a
+//! `CRYPTO_zalloc`/`CRYPTO_malloc` at the authority's own size, file and line, so a
+//! caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly
+//! as it observes the authority's; only the *ownership* is the handle, and it is expressed above the
+//! seam. The constructors' refusal ladders and the `*_free` functions therefore no longer walk a
+//! release by hand, and the block's stable address is still what the ABI hands out and what the
+//! enclosing object stores. The two frame byte buffers that are not members of a `#[repr(C)]`
+//! object -- `SSL_add1_host`'s `get1_ip_asc` string and `SSL_add_expected_rpk`'s `i2d_PUBKEY` copy
+//! -- are [`OwnedBlock`]s.
+//!
+//! **The `#[repr(C)]` member buffers and the ABI out-pointers stay raw and are the documented
+//! boundary.** The `Cert`/`SSL_CTX`/`SSL`/`DaneCtx`/`danetls_record` fields that hold a
+//! `CRYPTO_*` block (alpn/cert-type/hostname/supportedgroups/psk blocks, the SRP login/info
+//! strings, `dane`'s `mdevp`/`mdord` arrays and the record's `data`) are members of a struct that
+//! crosses the FFI boundary, so their releases stay the object's own; and
+//! `SSL_client_hello_get1_extensions_present`'s `present` array is handed to the caller, so the
+//! caller's `OPENSSL_free` releases it. `tlsa_free` keeps the stack's `void (*)(void *)` signature
+//! because it is the `OPENSSL_sk_pop_free` freefunc.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void};
@@ -513,6 +537,136 @@ const MSG_FLOW_UNINITED: c_int = 0;
 const SSL_ST_READ_HEADER: c_int = 0xF0;
 
 // -------------------------------------------------------------------------------------------
+// Ownership of the file's own object blocks and frame byte buffers
+// -------------------------------------------------------------------------------------------
+
+/// The authority's `*_free` body for one of the file's `#[repr(C)]` objects, without the block's
+/// own release, which [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live object this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned object block (`Cert`, `SSL_CTX`, `SSL`, `danetls_record`).
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
+/// hands it out and takes it back, and it is a member of another object), but its *ownership* is
+/// this type: [`Self::new`] allocates it through the crate's allocator seam at the authority's own
+/// `(file, alloc_line)` and `Drop` releases it at the authority's own `(file, line)`. It stays a
+/// `CRYPTO_zalloc`/`CRYPTO_malloc` at the authority's own size rather than a Rust `Box`, so a
+/// caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly
+/// as it observes the authority's.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Allocate a fresh block of `T`'s size through the installed allocator, or `None` when it
+    /// answers NULL. `alloc_line` is the authority's allocation site and `line` its release site.
+    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` answers NULL or a fresh, zeroed, writable block of `size_of::<T>()`
+        // bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// The stable address the exported ABI and the enclosing objects hold.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's out-pointer or to its enclosing object.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller or an enclosing object,
+    /// for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// Release the block without the destructor body, at `line` -- the authority's own bare
+    /// `CRYPTO_free` for the refusal that runs *before* the object is a live object, so it does not
+    /// reach the object's destructor. The destructor body is skipped deliberately; this is the
+    /// one place the owner is not the destructor, and it is the authority's own partial teardown.
+    fn release_block(self, line: c_int) {
+        let ptr = self.ptr.as_ptr().cast::<c_void>();
+        let file = self.file;
+        core::mem::forget(self);
+        // SAFETY: `ptr` is the block `new` allocated and this is its single release; the authority's
+        // refusal writes its own bare `CRYPTO_free` and never reaches the destructor.
+        unsafe { CRYPTO_free(ptr, file, line) };
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The object destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`]) followed
+    /// by the block release, through the same allocator seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw`/`take` reclaimed) and this
+        // is its single release; `Drop` runs once, and `destroy_body` is the authority's own free
+        // body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+/// An owned frame byte buffer: the authority's own `CRYPTO_*` block whose release is this type, so
+/// its single release is `Drop` and no call site writes a `CRYPTO_free` by hand.
+///
+/// The block stays at the authority's own size and file, so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
+/// the authority's.
+struct OwnedBlock {
+    ptr: *mut c_void,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBlock {
+    /// Adopt a block the seam answered, or `None` for NULL.
+    fn take(ptr: *mut c_void, file: *const c_char, line: c_int) -> Option<OwnedBlock> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBlock { ptr, file, line })
+        }
+    }
+
+    /// Adopt a block a helper allocated, or NULL as an empty block whose release is a no-op. Used
+    /// where the authority keeps and later frees the block unconditionally.
+    fn adopt(ptr: *mut c_void, file: *const c_char, line: c_int) -> OwnedBlock {
+        OwnedBlock { ptr, file, line }
+    }
+
+    /// The buffer's address, typed for the calls that read it.
+    fn as_ptr<T>(&self) -> *mut T {
+        self.ptr.cast::<T>()
+    }
+}
+
+impl Drop for OwnedBlock {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
+        // released before; its single release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr, self.file, self.line) };
+    }
+}
+
+// -------------------------------------------------------------------------------------------
 // Method table (pulled forward from 14.2 for the one constructor the court needs)
 // -------------------------------------------------------------------------------------------
 
@@ -614,23 +768,27 @@ pub struct Cert {
 
 /// A context's or a connection's certificate container, freshly allocated and empty.
 ///
+/// The block is an [`OwnedCtx`] whose `Drop` runs [`CtxDestroy::destroy_body`] (the authority's
+/// `cert_free` body) and then the block release; the caller takes ownership with
+/// [`OwnedCtx::into_raw`], and [`cert_free`] reclaims it. `Drop` is the only release.
+///
 /// # Safety
-/// The returned pointer is a live, zeroed `Cert` with the authority's security-level default
-/// (`ssl_cert.c:84`'s `OPENSSL_TLS_SECURITY_LEVEL` = 2); the caller owns it.
-unsafe fn cert_new() -> *mut Cert {
-    // SAFETY: `CRYPTO_zalloc` returns either NULL or a zeroed block of the requested size.
-    let c = CRYPTO_zalloc(core::mem::size_of::<Cert>(), FILE, 0).cast::<Cert>();
-    if !c.is_null() {
-        // SAFETY: `c` is a fresh zeroed allocation.
-        unsafe {
-            (*c).sec_level = 2;
-            (*c).sec_cb = Some(ssl_security_default_callback);
-            (*c).ssl_pkey_num = SSL_PKEY_NUM;
-            (*c).key_index = SSL_PKEY_RSA;
-            (*c).references = AtomicI32::new(1);
-        }
+/// The returned handle is a live, zeroed `Cert` with the authority's security-level default
+/// (`ssl_cert.c:84`'s `OPENSSL_TLS_SECURITY_LEVEL` = 2).
+unsafe fn cert_new() -> Option<OwnedCtx<Cert>> {
+    // The container block, allocated through the crate's allocator seam (authority size). `Drop` is
+    // its single release and `into_raw` hands it to the enclosing object.
+    let c_owner = OwnedCtx::<Cert>::new(FILE, 0, 0)?;
+    let c = c_owner.as_ptr();
+    // SAFETY: `c` is a fresh zeroed allocation.
+    unsafe {
+        (*c).sec_level = 2;
+        (*c).sec_cb = Some(ssl_security_default_callback);
+        (*c).ssl_pkey_num = SSL_PKEY_NUM;
+        (*c).key_index = SSL_PKEY_RSA;
+        (*c).references = AtomicI32::new(1);
     }
-    c
+    Some(c_owner)
 }
 
 /// The active `CERT_PKEY` a certificate container holds (`c->key`, stored here as an index).
@@ -673,23 +831,29 @@ unsafe fn cert_pkey_clear(cpk: *mut CertKey) {
 /// # Safety
 /// `c` must be NULL or a live `Cert` previously returned by [`cert_new`].
 unsafe fn cert_free(c: *mut Cert) {
-    if !c.is_null() {
-        // SAFETY: `c` is a live `Cert` per the caller's contract; a NULL `psk_identity_hint` is
-        // `CRYPTO_free`'s own no-op.
+    // SAFETY: `c` is NULL or a live container; `from_raw` reclaims it (NULL is a no-op) and `Drop`
+    // runs the authority's own body ([`CtxDestroy::destroy_body`]) followed by the block release.
+    unsafe { drop(OwnedCtx::<Cert>::from_raw(c, FILE, 0)) };
+}
+
+/// The authority's `cert_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+impl CtxDestroy for Cert {
+    /// # Safety
+    /// `ptr` is a live container this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Cert) {
+        // SAFETY: `ptr` is live per the contract; a NULL `psk_identity_hint` is `CRYPTO_free`'s own
+        // no-op. `custext` is the `Vec` `cert_new` zero-initialised and `SSL_CTX_add_*_custom_ext`
+        // may have grown; dropping it in place releases the record buffer (the records hold only
+        // borrowed callback pointers and raw args the caller owns, exactly as the authority's
+        // `custom_exts_free` releases only the array when the old-style wrapper is absent).
         unsafe {
             for i in 0..SSL_PKEY_NUM {
-                cert_pkey_clear(ptr::addr_of_mut!((*c).pkeys[i]));
+                cert_pkey_clear(ptr::addr_of_mut!((*ptr).pkeys[i]));
             }
-            // SAFETY: `c` is live; `custext` is the `Vec` `cert_new` zero-initialised and
-            // `SSL_CTX_add_*_custom_ext` may have grown. Dropping it in place releases the
-            // record buffer (the records hold only borrowed callback pointers and raw args the
-            // caller owns, exactly as the authority's `custom_exts_free` releases only the
-            // array when the old-style wrapper is absent).
-            ptr::drop_in_place(ptr::addr_of_mut!((*c).custext));
-            CRYPTO_free((*c).psk_identity_hint.cast(), FILE, 0);
+            ptr::drop_in_place(ptr::addr_of_mut!((*ptr).custext));
+            CRYPTO_free((*ptr).psk_identity_hint.cast(), FILE, 0);
             // SAFETY: `dh_tmp` is NULL or the key the tmp-DH setter installed.
-            EVP_PKEY_free((*c).dh_tmp.cast());
-            CRYPTO_free(c.cast(), FILE, 0);
+            EVP_PKEY_free((*ptr).dh_tmp.cast());
         }
     }
 }
@@ -743,19 +907,22 @@ unsafe fn ssl_cert_dup(cert: *const Cert) -> *mut Cert {
     if cert.is_null() {
         return ptr::null_mut();
     }
-    // SAFETY: `cert_new` returns a live zeroed container or NULL.
-    let ret = unsafe { cert_new() };
-    if ret.is_null() {
+    // The duplicated container, owned here; `Drop` releases what it built on any refusal and
+    // `into_raw` hands it out on success. `ret` is its stable address, and the authority's refusals
+    // reach `cert_free`, which is `OwnedCtx`'s `Drop`.
+    // SAFETY: `cert_new` allocates a fresh zeroed container and has no other precondition.
+    let Some(ret_owner) = (unsafe { cert_new() }) else {
         return ptr::null_mut();
-    }
-    // SAFETY: `cert` and `ret` are live; every write is to the fresh container `ret`.
+    };
+    let ret = ret_owner.as_ptr();
+    // SAFETY: `cert` and `ret` are live; every write is to the fresh container `ret`. Each refusal
+    // returns and lets `ret_owner`'s `Drop` free what the ladder built.
     unsafe {
         (*ret).ssl_pkey_num = (*cert).ssl_pkey_num;
         (*ret).key_index = (*cert).key_index;
 
         if !(*cert).dh_tmp.is_null() {
             if EVP_PKEY_up_ref((*cert).dh_tmp.cast()) == 0 {
-                cert_free(ret);
                 return ptr::null_mut();
             }
             (*ret).dh_tmp = (*cert).dh_tmp;
@@ -776,7 +943,6 @@ unsafe fn ssl_cert_dup(cert: *const Cert) -> *mut Cert {
             if !cpk.chain.is_null() {
                 rpk.chain = X509_chain_up_ref(cpk.chain);
                 if rpk.chain.is_null() {
-                    cert_free(ret);
                     return ptr::null_mut();
                 }
             }
@@ -785,7 +951,6 @@ unsafe fn ssl_cert_dup(cert: *const Cert) -> *mut Cert {
                     CRYPTO_memdup(cpk.serverinfo.cast(), cpk.serverinfo_length, FILE, 154)
                         .cast::<u8>();
                 if rpk.serverinfo.is_null() {
-                    cert_free(ret);
                     return ptr::null_mut();
                 }
                 rpk.serverinfo_length = cpk.serverinfo_length;
@@ -806,18 +971,16 @@ unsafe fn ssl_cert_dup(cert: *const Cert) -> *mut Cert {
         (*ret).sec_ex = (*cert).sec_ex;
 
         if custom_exts_copy(&mut (*ret).custext, &(*cert).custext) == 0 {
-            cert_free(ret);
             return ptr::null_mut();
         }
         if !(*cert).psk_identity_hint.is_null() {
             (*ret).psk_identity_hint = CRYPTO_strdup((*cert).psk_identity_hint, FILE, 225);
             if (*ret).psk_identity_hint.is_null() {
-                cert_free(ret);
                 return ptr::null_mut();
             }
         }
     }
-    ret
+    ret_owner.into_raw()
 }
 
 /// `static int dup_ca_names(STACK_OF(X509_NAME) **dst, STACK_OF(X509_NAME) *src)` —
@@ -2100,24 +2263,25 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
         }
         let _ = crate::runtime::dso_shared::openssl_init_crypto(OPENSSL_INIT_LOAD_SSL_STRINGS);
 
-        // SAFETY: a zeroed block of this size is a valid initial `SslCtx` image.
-        let ret = CRYPTO_zalloc(core::mem::size_of::<SslCtx>(), FILE, 4014).cast::<SslCtx>();
-        if ret.is_null() {
+        // The context block, allocated through the crate's allocator seam (authority size); `Drop`
+        // is its single release on every refusal below and `into_raw` hands it out on success. `ret`
+        // is the block's stable address, and every refusal reaches `SSL_CTX_free`, which is
+        // `OwnedCtx`'s `Drop`.
+        let Some(ret_owner) = OwnedCtx::<SslCtx>::new(FILE, 4014, 4467) else {
             return ptr::null_mut();
-        }
+        };
+        let ret = ret_owner.as_ptr();
         // SAFETY: `ret` is a fresh zeroed allocation; every write below is to it.
         unsafe {
             (*ret).references = AtomicI32::new(1);
             (*ret).lock = CRYPTO_THREAD_lock_new();
             if (*ret).lock.is_null() {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
             (*ret).libctx = libctx;
             if !propq.is_null() {
                 (*ret).propq = CRYPTO_strdup(propq, FILE, 4040);
                 if (*ret).propq.is_null() {
-                    SSL_CTX_free(ret);
                     return ptr::null_mut();
                 }
             }
@@ -2132,36 +2296,32 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
 
             (*ret).param = X509_VERIFY_PARAM_new();
             if (*ret).param.is_null() {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
             (*ret).cert_store = X509_STORE_new();
             if (*ret).cert_store.is_null() {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
-            (*ret).cert = cert_new();
-            if (*ret).cert.is_null() {
-                SSL_CTX_free(ret);
+            // The container block `cert_new` hands over; the context owns it and `cert_free`
+            // reclaims it. A NULL answer refuses from this frame, whose `Drop` releases the context.
+            let Some(cert_owner) = cert_new() else {
                 return ptr::null_mut();
-            }
+            };
+            (*ret).cert = cert_owner.into_raw();
             // `ssl_lib.c:4174`: the authority initialises the SRP credential block at construction
             // (`ssl_ctx_srp_ctx_init_intern`), which zeroes it and sets `strength = SRP_MINIMAL_N`.
             crate::ssl::tls_srp::ssl_ctx_srp_ctx_init_intern(ret);
             // `ssl_lib.c:4056`: allocate the internal session cache at construction.
             (*ret).sessions = OPENSSL_sk_new_null();
             if (*ret).sessions.is_null() {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
             // `ssl_lib.c:4067` allocates the CT log store for every context.
             (*ret).ctlog_store = CTLOG_STORE_new_ex(libctx, propq);
             if (*ret).ctlog_store.is_null() {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
             if CRYPTO_new_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ret.cast(), &mut (*ret).ex_data) == 0 {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
 
@@ -2183,7 +2343,6 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
                 crate::ssl::ssl_ciph::OSSL_default_ciphersuites(),
             ) == 0
             {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
             let sk = crate::ssl::ssl_ciph::ssl_create_cipher_list(
@@ -2195,16 +2354,14 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
                 (*ret).cert,
             );
             if sk.is_null() || crate::runtime::stack::OPENSSL_sk_num(sk) <= 0 {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
             // `ssl_lib.c:4280`: apply the configuration's `system_default` command set.
             if crate::ssl::ssl_mcnf::ssl_ctx_system_config(ret) == 0 {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
         }
-        ret
+        ret_owner.into_raw()
     })
 }
 
@@ -2249,7 +2406,22 @@ pub unsafe extern "C" fn SSL_CTX_free(ctx: *mut SslCtx) {
         if i > 0 {
             return;
         }
-        // SAFETY: the count reached zero, so this is the last reference and `ctx` is owned here.
+        // SAFETY: the count reached zero, so this is the last reference and `ctx` is owned here;
+        // `from_raw` reclaims it (NULL is a no-op) and `Drop` runs the authority's own `SSL_CTX_free`
+        // body followed by the block release, so the body below no longer walks a release by hand.
+        unsafe { drop(OwnedCtx::<SslCtx>::from_raw(ctx, FILE, 4467)) };
+    })
+}
+
+/// The authority's `SSL_CTX_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+impl CtxDestroy for SslCtx {
+    /// # Safety
+    /// `ctx` is a live context whose reference count has reached zero and which this file owns.
+    unsafe fn destroy_body(ctx: *mut SslCtx) {
+        // SAFETY: `ctx` is live per the contract; every member is NULL or owned, exactly as the
+        // authority's `SSL_CTX_free` walks it. The `#[repr(C)]` member buffers
+        // (`client_cert_type`/`server_cert_type`/`ext_alpn`/`supportedgroups`/`propq`) stay the
+        // object's own releases, as in the authority.
         unsafe {
             OPENSSL_sk_free((*ctx).cipher_list);
             OPENSSL_sk_free((*ctx).cipher_list_by_id);
@@ -2271,9 +2443,8 @@ pub unsafe extern "C" fn SSL_CTX_free(ctx: *mut SslCtx) {
             CRYPTO_free((*ctx).supportedgroups.cast(), FILE, 0);
             CRYPTO_THREAD_lock_free((*ctx).lock);
             CRYPTO_free((*ctx).propq.cast(), FILE, 4458);
-            CRYPTO_free(ctx.cast(), FILE, 4467);
         }
-    })
+    }
 }
 
 /// `SSL *SSL_new(SSL_CTX *ctx)` — `ssl/ssl_lib.c:690-701`.
@@ -2296,18 +2467,23 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
         }
         // SAFETY: `ctx` is non-NULL and live; its method was checked above.
         let method = unsafe { (*ctx).method };
-        // SAFETY: a zeroed block of this size is a valid initial `Ssl` image.
-        let s = CRYPTO_zalloc(core::mem::size_of::<Ssl>(), FILE, 731).cast::<Ssl>();
-        if s.is_null() {
+        // The connection block, allocated through the crate's allocator seam (authority size);
+        // `Drop` is its single release and `into_raw` hands it out on success. `s` is the block's
+        // stable address. The authority's two early refusals below tear down only the lock and the
+        // block (`ssl_lib.c:731`), so they release the block without the destructor body; every
+        // later refusal reaches `SSL_free`, which is `OwnedCtx`'s `Drop`.
+        let Some(s_owner) = OwnedCtx::<Ssl>::new(FILE, 731, 1442) else {
             return ptr::null_mut();
-        }
+        };
+        let s = s_owner.as_ptr();
         // SAFETY: `s` is a fresh zeroed allocation; every write below is to it.
         unsafe {
             (*s).references = AtomicI32::new(1);
             (*s).lock = CRYPTO_THREAD_lock_new();
             if (*s).lock.is_null() || SSL_CTX_up_ref(ctx) == 0 {
+                // The authority's partial refusal releases the lock and the block only.
                 CRYPTO_THREAD_lock_free((*s).lock);
-                CRYPTO_free(s.cast(), FILE, 731);
+                s_owner.release_block(731);
                 return ptr::null_mut();
             }
             (*s).ctx = ctx;
@@ -2351,7 +2527,6 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             if (*method).dtls {
                 (*s).d1 = dtls1_new_state((*s).server != 0);
                 if (*s).d1.is_null() {
-                    SSL_free(s);
                     return ptr::null_mut();
                 }
             }
@@ -2359,7 +2534,8 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             if CRYPTO_new_ex_data(CRYPTO_EX_INDEX_SSL, s.cast(), &mut (*s).ex_data) == 0 {
                 SSL_CTX_free(ctx);
                 CRYPTO_THREAD_lock_free((*s).lock);
-                CRYPTO_free(s.cast(), FILE, 731);
+                // The authority's partial refusal releases the lock and the block only.
+                s_owner.release_block(731);
                 return ptr::null_mut();
             }
 
@@ -2399,14 +2575,12 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
 
             (*s).param = X509_VERIFY_PARAM_new();
             if (*s).param.is_null() {
-                SSL_free(s);
                 return ptr::null_mut();
             }
             X509_VERIFY_PARAM_inherit((*s).param, (*ctx).param);
 
             (*s).cert = ssl_cert_dup((*ctx).cert);
             if (*s).cert.is_null() {
-                SSL_free(s);
                 return ptr::null_mut();
             }
 
@@ -2415,7 +2589,6 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             // does not run the method's `ssl_init`, so the copy is made here for the one field that
             // an observable reader (`SSL_SRP_CTX_init`, the `SSL_get_srp_*` accessors) reaches.
             if crate::ssl::tls_srp::ssl_srp_ctx_init_intern(s) == 0 {
-                SSL_free(s);
                 return ptr::null_mut();
             }
 
@@ -2428,7 +2601,6 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             // SNI callback has switched the connection over, and `session_ctx` must keep it alive
             // until `SSL_free` (`ssl_lib.c:1485`).
             if SSL_CTX_up_ref(ctx) == 0 {
-                SSL_free(s);
                 return ptr::null_mut();
             }
             (*s).session_ctx = ctx;
@@ -2446,7 +2618,6 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
                 )
                 .cast::<u8>();
                 if (*s).client_cert_type.is_null() {
-                    SSL_free(s);
                     return ptr::null_mut();
                 }
                 (*s).client_cert_type_len = (*ctx).client_cert_type_len;
@@ -2460,7 +2631,6 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
                 )
                 .cast::<u8>();
                 if (*s).server_cert_type.is_null() {
-                    SSL_free(s);
                     return ptr::null_mut();
                 }
                 (*s).server_cert_type_len = (*ctx).server_cert_type_len;
@@ -2474,7 +2644,6 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
                 )
                 .cast::<u8>();
                 if (*s).ext_alpn.is_null() {
-                    SSL_free(s);
                     return ptr::null_mut();
                 }
                 (*s).ext_alpn_len = (*ctx).ext_alpn_len;
@@ -2488,13 +2657,12 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
                 )
                 .cast::<u16>();
                 if (*s).supportedgroups.is_null() {
-                    SSL_free(s);
                     return ptr::null_mut();
                 }
                 (*s).supportedgroups_len = (*ctx).supportedgroups_len;
             }
         }
-        s
+        s_owner.into_raw()
     })
 }
 
@@ -2605,7 +2773,23 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
         if i > 0 {
             return;
         }
-        // SAFETY: the count reached zero, so this is the last reference and `s` is owned here.
+        // SAFETY: the count reached zero, so this is the last reference and `s` is owned here;
+        // `from_raw` reclaims it (NULL is a no-op) and `Drop` runs the authority's own `SSL_free`
+        // body followed by the block release, so the body below no longer walks a release by hand.
+        unsafe { drop(OwnedCtx::<Ssl>::from_raw(s, FILE, 1442)) };
+    })
+}
+
+/// The authority's `SSL_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+impl CtxDestroy for Ssl {
+    /// # Safety
+    /// `s` is a live connection whose reference count has reached zero and which this file owns.
+    unsafe fn destroy_body(s: *mut Ssl) {
+        // SAFETY: `s` is live per the contract; every member is NULL or owned, exactly as the
+        // authority's `SSL_free` walks it. The `#[repr(C)]` member buffers (`session_ticket`,
+        // `client_cert_type`/`server_cert_type`/`ext_alpn`/`ext_npn`/`ext_hostname`/
+        // `s3_alpn_selected`/`s3_alpn_proposed`/`supportedgroups`/`pha_context`) stay the object's
+        // own releases, as in the authority.
         unsafe {
             OPENSSL_sk_free((*s).cipher_list);
             OPENSSL_sk_free((*s).cipher_list_by_id);
@@ -2655,9 +2839,8 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             // `SSL_CTX_up_ref`s `SSL_new` performed (`ssl_lib.c:705`, `ssl_lib.c:828`).
             SSL_CTX_free((*s).session_ctx);
             CRYPTO_THREAD_lock_free((*s).lock);
-            CRYPTO_free(s.cast(), FILE, 1442);
         }
-    })
+    }
 }
 
 /// `SSL_CTX *SSL_get_SSL_CTX(const SSL *ssl)` — `ssl/ssl_lib.c:5487-5490`.
@@ -7020,9 +7203,11 @@ pub unsafe extern "C" fn SSL_add1_host(s: *mut Ssl, host: *const c_char) -> c_in
                 unsafe { ASN1_STRING_free(ip) };
                 // SAFETY: `param` is live.
                 let old_ip = unsafe { X509_VERIFY_PARAM_get1_ip_asc(param) };
-                if !old_ip.is_null() {
-                    // SAFETY: `old_ip` is the allocation `get1_ip_asc` returned.
-                    unsafe { CRYPTO_free(old_ip.cast(), FILE, 1175) };
+                // The string `get1_ip_asc` hands over is owned here on the crate's allocator seam
+                // (authority size and file); `Drop` is its single release, at the authority's own
+                // refusal line.
+                let old_ip = OwnedBlock::take(old_ip.cast::<c_void>(), FILE, 1175);
+                if old_ip.is_some() {
                     // SAFETY: a constant site.
                     unsafe { raise_ssl(ERR_R_PASSED_INVALID_ARGUMENT, 1177) };
                     return 0;
@@ -10503,18 +10688,29 @@ unsafe fn dane_ctx_final(dctx: *mut DaneCtx) {
 
 /// `static void tlsa_free(danetls_record *t)` — `ssl/ssl_lib.c:159-166`.
 ///
+/// `t` is the stack's `OPENSSL_sk_pop_free` freefunc, so it keeps the stack's `void (*)(void *)`
+/// signature; its body reclaims the record as an [`OwnedCtx`] whose `Drop` runs the authority's own
+/// `tlsa_free` body then the block release.
+///
 /// # Safety
 /// `t` must be NULL or an owned `danetls_record`.
 unsafe extern "C" fn tlsa_free(t: *mut c_void) {
-    let t = t.cast::<DanetlsRecord>();
-    if t.is_null() {
-        return;
-    }
-    // SAFETY: `t` is a live owned record per the caller's contract.
-    unsafe {
-        CRYPTO_free((*t).data.cast(), FILE, 163);
-        EVP_PKEY_free((*t).spki);
-        CRYPTO_free(t.cast(), FILE, 165);
+    // SAFETY: `t` is NULL or a live record owned by the stack being released; `from_raw` reclaims it
+    // (NULL is a no-op) and `Drop` runs [`CtxDestroy::destroy_body`] then the block release.
+    unsafe { drop(OwnedCtx::<DanetlsRecord>::from_raw(t.cast(), FILE, 165)) };
+}
+
+/// The authority's `tlsa_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+impl CtxDestroy for DanetlsRecord {
+    /// # Safety
+    /// `t` is a live record this file allocated and has not released.
+    unsafe fn destroy_body(t: *mut DanetlsRecord) {
+        // SAFETY: `t` is live per the contract; its `data` is NULL or an owned block and `spki` is
+        // NULL or an owned key.
+        unsafe {
+            CRYPTO_free((*t).data.cast(), FILE, 163);
+            EVP_PKEY_free((*t).spki);
+        }
     }
 }
 
@@ -10722,10 +10918,14 @@ unsafe fn dane_tlsa_add(
         return 0;
     }
     // SAFETY: a fresh zeroed `danetls_record`.
-    let t = CRYPTO_zalloc(core::mem::size_of::<DanetlsRecord>(), FILE, 316).cast::<DanetlsRecord>();
-    if t.is_null() {
+    // The record block, allocated through the crate's allocator seam (authority size); `Drop` is its
+    // single release on every refusal below and `into_raw` hands it to the stack on success. `t` is
+    // the block's stable address, and every refusal reaches `tlsa_free`, which is `OwnedCtx`'s
+    // `Drop`. The record's `data` member buffer stays the object's own release, as in the authority.
+    let Some(t_owner) = OwnedCtx::<DanetlsRecord>::new(FILE, 316, 165) else {
         return -1;
-    }
+    };
+    let t = t_owner.as_ptr();
     // SAFETY: `t` is a fresh record; `data` is readable for `dlen` bytes.
     unsafe {
         (*t).usage = usage;
@@ -10735,8 +10935,7 @@ unsafe fn dane_tlsa_add(
     }
     // SAFETY: `t->data` was just assigned.
     if unsafe { (*t).data }.is_null() {
-        // SAFETY: `t` is an owned record.
-        unsafe { tlsa_free(t.cast()) };
+        // The refusal releases the record and its block: returning drops `t_owner`.
         return -1;
     }
     // SAFETY: `t->data` has `dlen` bytes; `data` is readable for `dlen`.
@@ -10757,19 +10956,16 @@ unsafe fn dane_tlsa_add(
                 if decoded.is_null() || p < data || dlen != p as usize - data as usize {
                     // SAFETY: `cert` is NULL or an owned certificate.
                     unsafe { X509_free(cert) };
-                    // SAFETY: `t` is an owned record.
-                    unsafe { tlsa_free(t.cast()) };
+                    // The refusal also releases the record: returning drops `t_owner`.
                     // SAFETY: thread-local error state.
                     unsafe { raise_ssl(SSL_R_DANE_TLSA_BAD_CERTIFICATE, 341) };
                     return 0;
                 }
                 // SAFETY: `cert` is a live certificate.
                 if unsafe { X509_get0_pubkey(cert) }.is_null() {
-                    // SAFETY: `cert` is an owned certificate; `t` an owned record.
-                    unsafe {
-                        X509_free(cert);
-                        tlsa_free(t.cast());
-                    }
+                    // SAFETY: `cert` is an owned certificate.
+                    unsafe { X509_free(cert) };
+                    // The refusal also releases the record: returning drops `t_owner`.
                     // SAFETY: thread-local error state.
                     unsafe { raise_ssl(SSL_R_DANE_TLSA_BAD_CERTIFICATE, 347) };
                     return 0;
@@ -10788,11 +10984,9 @@ unsafe fn dane_tlsa_add(
                     if !pushed {
                         // SAFETY: thread-local error state.
                         unsafe { raise_ssl(ERR_R_CRYPTO_LIB, 376) };
-                        // SAFETY: `cert` an owned certificate; `t` an owned record.
-                        unsafe {
-                            X509_free(cert);
-                            tlsa_free(t.cast());
-                        }
+                        // SAFETY: `cert` an owned certificate.
+                        unsafe { X509_free(cert) };
+                        // The refusal also releases the record: returning drops `t_owner`.
                         return -1;
                     }
                 }
@@ -10803,8 +10997,7 @@ unsafe fn dane_tlsa_add(
                 if decoded.is_null() || p < data || dlen != p as usize - data as usize {
                     // SAFETY: `pkey` is NULL or an owned key.
                     unsafe { EVP_PKEY_free(pkey) };
-                    // SAFETY: `t` is an owned record.
-                    unsafe { tlsa_free(t.cast()) };
+                    // The refusal also releases the record: returning drops `t_owner`.
                     // SAFETY: thread-local error state.
                     unsafe { raise_ssl(SSL_R_DANE_TLSA_BAD_PUBLIC_KEY, 387) };
                     return 0;
@@ -10852,16 +11045,17 @@ unsafe fn dane_tlsa_add(
             break;
         }
     }
-    // SAFETY: `dane->trecs` is live; `t` is an owned record whose ownership moves into the stack.
+    // SAFETY: `dane->trecs` is live; `t` is the record whose ownership moves into the stack.
     if unsafe { OPENSSL_sk_insert((*dane).trecs, t.cast(), i) } == 0 {
-        // SAFETY: `t` is an owned record.
-        unsafe { tlsa_free(t.cast()) };
+        // The refusal releases the record: returning drops `t_owner`.
         // SAFETY: thread-local error state.
         unsafe { raise_ssl(ERR_R_CRYPTO_LIB, 437) };
         return -1;
     }
     // SAFETY: `dane` is live.
     unsafe { (*dane).umask |= danetls_usage_bit(usage as u32) };
+    // The record's ownership moved into `dane->trecs`.
+    t_owner.into_raw();
     1
 }
 
@@ -11187,15 +11381,17 @@ pub unsafe extern "C" fn SSL_add_expected_rpk(s: *mut Ssl, rpk: *mut EvpPkey) ->
             if ret <= 0 {
                 return 0;
             }
+            // The DER copy `i2d_PUBKEY` hands over is owned here on the crate's allocator seam
+            // (authority size and file); `Drop` is its single release.
+            let data = OwnedBlock::adopt(data.cast::<c_void>(), FILE, 8206);
             let ok = SSL_dane_tlsa_add(
                 s,
                 DANETLS_USAGE_DANE_EE,
                 DANETLS_SELECTOR_SPKI,
                 DANETLS_MATCHING_FULL,
-                data,
+                data.as_ptr::<u8>(),
                 ret as usize,
             ) > 0;
-            CRYPTO_free(data.cast(), FILE, 8206);
             c_int::from(ok)
         }
     })
@@ -11220,38 +11416,36 @@ pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
                 return s;
             }
 
-            let ret = SSL_new((*s).ctx);
-            if ret.is_null() {
+            // The duplicate block, owned here; `Drop` is its single release on every refusal below
+            // and `into_raw` hands it out on success. `ret` is its stable address, and every refusal
+            // reaches `SSL_free`, which is `OwnedCtx`'s `Drop`.
+            let Some(ret_owner) = OwnedCtx::<Ssl>::from_raw(SSL_new((*s).ctx), FILE, 1442) else {
                 return ptr::null_mut();
-            }
+            };
+            let ret = ret_owner.as_ptr();
 
             if !(*s).session.is_null() {
                 if SSL_copy_session_id(ret, s) == 0 {
-                    SSL_free(ret);
                     return ptr::null_mut();
                 }
             } else {
                 if SSL_set_ssl_method(ret, (*s).method) == 0 {
-                    SSL_free(ret);
                     return ptr::null_mut();
                 }
                 if !(*s).cert.is_null() {
                     cert_free((*ret).cert);
                     (*ret).cert = ssl_cert_dup((*s).cert);
                     if (*ret).cert.is_null() {
-                        SSL_free(ret);
                         return ptr::null_mut();
                     }
                 }
                 if SSL_set_session_id_context(ret, (*s).sid_ctx.as_ptr(), (*s).sid_ctx_length) == 0
                 {
-                    SSL_free(ret);
                     return ptr::null_mut();
                 }
             }
 
             if ssl_dane_dup(ret, s) == 0 {
-                SSL_free(ret);
                 return ptr::null_mut();
             }
             (*ret).version = (*s).version;
@@ -11274,7 +11468,6 @@ pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
             SSL_set_info_callback(ret, SSL_get_info_callback(s));
 
             if CRYPTO_dup_ex_data(CRYPTO_EX_INDEX_SSL, &mut (*ret).ex_data, &(*s).ex_data) == 0 {
-                SSL_free(ret);
                 return ptr::null_mut();
             }
 
@@ -11295,14 +11488,12 @@ pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
             if !(*s).cipher_list.is_null() {
                 (*ret).cipher_list = OPENSSL_sk_dup((*s).cipher_list);
                 if (*ret).cipher_list.is_null() {
-                    SSL_free(ret);
                     return ptr::null_mut();
                 }
             }
             if !(*s).cipher_list_by_id.is_null() {
                 (*ret).cipher_list_by_id = OPENSSL_sk_dup((*s).cipher_list_by_id);
                 if (*ret).cipher_list_by_id.is_null() {
-                    SSL_free(ret);
                     return ptr::null_mut();
                 }
             }
@@ -11310,7 +11501,6 @@ pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
             if dup_ca_names(&mut (*ret).ca_names, (*s).ca_names) == 0
                 || dup_ca_names(&mut (*ret).client_ca_names, (*s).client_ca_names) == 0
             {
-                SSL_free(ret);
                 return ptr::null_mut();
             }
 
@@ -11324,7 +11514,6 @@ pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
                 )
                 .cast::<u8>();
                 if (*ret).server_cert_type.is_null() {
-                    SSL_free(ret);
                     return ptr::null_mut();
                 }
                 (*ret).server_cert_type_len = (*s).server_cert_type_len;
@@ -11339,7 +11528,6 @@ pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
                 )
                 .cast::<u8>();
                 if (*ret).client_cert_type.is_null() {
-                    SSL_free(ret);
                     return ptr::null_mut();
                 }
                 (*ret).client_cert_type_len = (*s).client_cert_type_len;
@@ -11349,7 +11537,7 @@ pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
             (*ret).ct_validation_callback_arg = (*s).ct_validation_callback_arg;
             (*ret).ext_status_type = (*s).ext_status_type;
 
-            ret
+            ret_owner.into_raw()
         }
     })
 }
