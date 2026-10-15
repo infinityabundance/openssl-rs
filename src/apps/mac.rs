@@ -48,7 +48,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::c_int;
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 use crate::apps::openssl::not_landed;
@@ -70,11 +70,55 @@ use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 /// `#define BUFSIZE 1024 * 8` — `apps/mac.c:21`.
 const BUFSIZE: usize = 1024 * 8;
 
-/// `app_malloc(num, ...)` — `apps/lib/apps.c`, reduced to the allocation the body
-/// observes.
-fn app_malloc(num: usize) -> *mut u8 {
-    // SAFETY: a non-zero size and a static file/line label.
-    CRYPTO_malloc(num, c"apps/mac.c".as_ptr(), 98).cast::<u8>()
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
+/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::new`]
+/// allocates it and `Drop` is its single release. A NULL pointer is a valid, empty buffer whose
+/// release is the authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+/// How the authority releases a scratch buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`buf`).
+    Plain { file: *const c_char, line: c_int },
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        let BufRelease::Plain { file, line } = self.release;
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+    }
 }
 
 /// `app_params_new_from_opts(opts, paramdefs)` — `apps/lib/apps.c:3477-3523`,
@@ -200,11 +244,12 @@ pub fn main(argv: &[String]) -> i32 {
     // `STACK_OF(OPENSSL_STRING) *opts = NULL;` — `apps/mac.c:85`.
     let mut optstack: Vec<String> = Vec::new();
 
-    // `buf = app_malloc(BUFSIZE, "I/O buffer");` — `apps/mac.c:98`.
-    let buf = app_malloc(BUFSIZE);
-    if buf.is_null() {
+    // `buf = app_malloc(BUFSIZE, "I/O buffer");` — `apps/mac.c:98`. The block is this frame's
+    // scratch, allocated through the crate's allocator seam at the authority's own size/`file`/
+    // `line` and released once by `Drop` on every exit below.
+    let Some(buf) = OwnedBuf::new(BUFSIZE, c"apps/mac.c".as_ptr(), 98) else {
         return ret;
-    }
+    };
 
     loop {
         // `while ((o = opt_next()) != OPT_EOF)` — `apps/mac.c:99`.
@@ -213,9 +258,6 @@ pub fn main(argv: &[String]) -> i32 {
             // `case OPT_HELP: opt_help(mac_options); ret = 0; goto err;` —
             // `apps/mac.c:105-108`.
             OptMatch::Help => {
-                // SAFETY: `buf` is the block from `app_malloc`; freed under
-                // `OPENSSL_clear_free`.
-                unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
                 return not_landed("mac -help");
             }
             // `default: opthelp: BIO_printf(bio_err, "%s: Use -help for
@@ -223,8 +265,6 @@ pub fn main(argv: &[String]) -> i32 {
             OptMatch::Error(e) => {
                 eprintln!("{e}");
                 eprintln!("{}: Use -help for summary.", opts.prog());
-                // SAFETY: `buf` is the block from `app_malloc`.
-                unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
                 return 1;
             }
             // `case OPT_BIN: out_bin = 1; break;` — `apps/mac.c:109-111`.
@@ -248,14 +288,10 @@ pub fn main(argv: &[String]) -> i32 {
             | OptMatch::Value("provider", _)
             | OptMatch::Value("provparam", _)
             | OptMatch::Value("propquery", _) => {
-                // SAFETY: `buf` is the block from `app_malloc`.
-                unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
                 return not_landed("mac -provider");
             }
             OptMatch::Flag(_) | OptMatch::Value(_, _) => {
                 eprintln!("{}: Use -help for summary.", opts.prog());
-                // SAFETY: `buf` is the block from `app_malloc`.
-                unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
                 return 1;
             }
         }
@@ -264,8 +300,6 @@ pub fn main(argv: &[String]) -> i32 {
     // `if (!opt_check_rest_arg("MAC name")) goto opthelp;` — `apps/mac.c:144-145`.
     if !opts.check_rest_arg(Some("MAC name")) {
         eprintln!("{}: Use -help for summary.", opts.prog());
-        // SAFETY: `buf` is the block from `app_malloc`.
-        unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
         return ret;
     }
     let mac_name = opts.rest()[0].clone();
@@ -276,8 +310,6 @@ pub fn main(argv: &[String]) -> i32 {
     let Ok(name_c) = std::ffi::CString::new(mac_name.as_str()) else {
         eprintln!("Invalid MAC name {mac_name}");
         eprintln!("{}: Use -help for summary.", opts.prog());
-        // SAFETY: `buf` is the block from `app_malloc`.
-        unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
         return ret;
     };
     // SAFETY: `name_c` is NUL-terminated; both context pointers are NULL.
@@ -285,8 +317,6 @@ pub fn main(argv: &[String]) -> i32 {
     if mac.is_null() {
         eprintln!("Invalid MAC name {mac_name}");
         eprintln!("{}: Use -help for summary.", opts.prog());
-        // SAFETY: `buf` is the block from `app_malloc`.
-        unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
         return ret;
     }
 
@@ -295,10 +325,8 @@ pub fn main(argv: &[String]) -> i32 {
     // SAFETY: `mac` is live.
     let ctx = unsafe { EVP_MAC_CTX_new(mac) };
     if ctx.is_null() {
-        // SAFETY: `mac` is live; `buf` is the block from `app_malloc`.
+        // SAFETY: `mac` is live.
         unsafe { EVP_MAC_free(mac) };
-        // SAFETY: `mac` is live; `buf` is the block from `app_malloc`.
-        unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
         return ret;
     }
 
@@ -309,12 +337,10 @@ pub fn main(argv: &[String]) -> i32 {
         let paramdefs = unsafe { EVP_MAC_settable_ctx_params(mac) };
         let params = app_params_new_from_opts(&optstack, paramdefs);
         if params.is_null() {
-            // SAFETY: `ctx`/`mac` are live; `buf` is the block from `app_malloc`.
+            // SAFETY: `ctx`/`mac` are live.
             unsafe { EVP_MAC_CTX_free(ctx) };
-            // SAFETY: `ctx`/`mac` are live; `buf` is the block from `app_malloc`.
+            // SAFETY: `ctx`/`mac` are live.
             unsafe { EVP_MAC_free(mac) };
-            // SAFETY: `ctx`/`mac` are live; `buf` is the block from `app_malloc`.
-            unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
             return ret;
         }
         // `if (!EVP_MAC_CTX_set_params(ctx, params)) { BIO_printf(bio_err, "MAC
@@ -324,12 +350,10 @@ pub fn main(argv: &[String]) -> i32 {
         if unsafe { EVP_MAC_CTX_set_params(ctx, params) } == 0 {
             eprintln!("MAC parameter error");
             app_params_free(params);
-            // SAFETY: `ctx`/`mac` are live; `buf` is the block from `app_malloc`.
+            // SAFETY: `ctx`/`mac` are live.
             unsafe { EVP_MAC_CTX_free(ctx) };
-            // SAFETY: `ctx`/`mac` are live; `buf` is the block from `app_malloc`.
+            // SAFETY: `ctx`/`mac` are live.
             unsafe { EVP_MAC_free(mac) };
-            // SAFETY: `ctx`/`mac` are live; `buf` is the block from `app_malloc`.
-            unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
             return ret;
         }
         app_params_free(params);
@@ -339,12 +363,10 @@ pub fn main(argv: &[String]) -> i32 {
     // `apps/mac.c:176-178`.
     let inb = bio_open(infile.as_deref(), false);
     if inb.is_null() {
-        // SAFETY: `ctx`/`mac` are live; `buf` is the block from `app_malloc`.
+        // SAFETY: `ctx`/`mac` are live.
         unsafe { EVP_MAC_CTX_free(ctx) };
-        // SAFETY: `ctx`/`mac` are live; `buf` is the block from `app_malloc`.
+        // SAFETY: `ctx`/`mac` are live.
         unsafe { EVP_MAC_free(mac) };
-        // SAFETY: `ctx`/`mac` are live; `buf` is the block from `app_malloc`.
-        unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
         return ret;
     }
     // `out = bio_open_default(outfile, 'w', out_bin ? FORMAT_BINARY :
@@ -357,8 +379,6 @@ pub fn main(argv: &[String]) -> i32 {
         unsafe { EVP_MAC_CTX_free(ctx) };
         // SAFETY: `inb` is live; `ctx`/`mac` are live.
         unsafe { EVP_MAC_free(mac) };
-        // SAFETY: `inb` is live; `buf` is the block from `app_malloc`.
-        unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
         return ret;
     }
 
@@ -375,8 +395,6 @@ pub fn main(argv: &[String]) -> i32 {
         unsafe { EVP_MAC_CTX_free(ctx) };
         // SAFETY: `inb`/`out`/`ctx`/`mac` are live.
         unsafe { EVP_MAC_free(mac) };
-        // SAFETY: `buf` is the block from `app_malloc`.
-        unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
         return ret;
     }
 
@@ -385,7 +403,7 @@ pub fn main(argv: &[String]) -> i32 {
     // header).
     loop {
         // SAFETY: `inb` is live and `buf` is `BUFSIZE` writable bytes.
-        let i = unsafe { BIO_read(inb, buf.cast(), BUFSIZE as c_int) };
+        let i = unsafe { BIO_read(inb, buf.as_ptr().cast(), BUFSIZE as c_int) };
         if i < 0 {
             // `BIO_printf(bio_err, "Read Error in '%s'\n", infile);
             // ERR_print_errors(bio_err);` — `apps/mac.c:191-194`. Not driven.
@@ -399,7 +417,7 @@ pub fn main(argv: &[String]) -> i32 {
         // `if (!EVP_MAC_update(ctx, buf, i)) { BIO_printf(bio_err, "EVP_MAC_update
         // failed\n"); goto err; }` — `apps/mac.c:198-201`.
         // SAFETY: `ctx` is live and `buf` holds `i` readable bytes.
-        if unsafe { EVP_MAC_update(ctx, buf, i as usize) } == 0 {
+        if unsafe { EVP_MAC_update(ctx, buf.as_ptr(), i as usize) } == 0 {
             eprintln!("EVP_MAC_update failed");
             // SAFETY: `inb`/`out`/`ctx`/`mac` are live.
             unsafe { BIO_free(inb) };
@@ -409,8 +427,6 @@ pub fn main(argv: &[String]) -> i32 {
             unsafe { EVP_MAC_CTX_free(ctx) };
             // SAFETY: `inb`/`out`/`ctx`/`mac` are live.
             unsafe { EVP_MAC_free(mac) };
-            // SAFETY: `buf` is the block from `app_malloc`.
-            unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
             return ret;
         }
     }
@@ -429,8 +445,6 @@ pub fn main(argv: &[String]) -> i32 {
         unsafe { EVP_MAC_CTX_free(ctx) };
         // SAFETY: `inb`/`out`/`ctx`/`mac` are live.
         unsafe { EVP_MAC_free(mac) };
-        // SAFETY: `buf` is the block from `app_malloc`.
-        unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
         return ret;
     }
     if len > BUFSIZE {
@@ -443,13 +457,11 @@ pub fn main(argv: &[String]) -> i32 {
         unsafe { EVP_MAC_CTX_free(ctx) };
         // SAFETY: `inb`/`out`/`ctx`/`mac` are live.
         unsafe { EVP_MAC_free(mac) };
-        // SAFETY: `buf` is the block from `app_malloc`.
-        unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
         return ret;
     }
     // `if (!EVP_MAC_final(ctx, buf, &len, BUFSIZE)) { ... }` — `apps/mac.c:213-216`.
     // SAFETY: `ctx` is live and `buf` is `BUFSIZE` writable bytes.
-    if unsafe { EVP_MAC_final(ctx, buf, &mut len, BUFSIZE) } == 0 {
+    if unsafe { EVP_MAC_final(ctx, buf.as_ptr(), &mut len, BUFSIZE) } == 0 {
         eprintln!("EVP_MAC_final failed");
         // SAFETY: `inb`/`out`/`ctx`/`mac` are live.
         unsafe { BIO_free(inb) };
@@ -459,21 +471,19 @@ pub fn main(argv: &[String]) -> i32 {
         unsafe { EVP_MAC_CTX_free(ctx) };
         // SAFETY: `inb`/`out`/`ctx`/`mac` are live.
         unsafe { EVP_MAC_free(mac) };
-        // SAFETY: `buf` is the block from `app_malloc`.
-        unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
         return ret;
     }
 
     if out_bin {
         // `BIO_write(out, buf, (int)len);` — `apps/mac.c:219`.
         // SAFETY: `out` is live and `buf` holds `len` readable bytes.
-        unsafe { crate::runtime::bio::iolib::BIO_write(out, buf.cast(), len as c_int) };
+        unsafe { crate::runtime::bio::iolib::BIO_write(out, buf.as_ptr().cast(), len as c_int) };
     } else {
         // `for (i = 0; i < (int)len; ++i) BIO_printf(out, "%02X", buf[i]); if
         // (outfile == NULL) BIO_printf(out, "\n");` — `apps/mac.c:221-224`.
-        // SAFETY: `buf` is the block from `app_malloc` and `len <= BUFSIZE`, so the
+        // SAFETY: `buf` is the seam-owned block and `len <= BUFSIZE`, so the
         // slice is inside the allocation for its whole use here.
-        for &byte in unsafe { core::slice::from_raw_parts(buf, len) } {
+        for &byte in unsafe { core::slice::from_raw_parts(buf.as_ptr(), len) } {
             // SAFETY: `out` is live and the format is static.
             unsafe { BIO_printf(out, c"%02X".as_ptr(), c_int::from(byte)) };
         }
@@ -497,7 +507,5 @@ pub fn main(argv: &[String]) -> i32 {
     unsafe { EVP_MAC_CTX_free(ctx) };
     // SAFETY: `mac` is live and not freed again.
     unsafe { EVP_MAC_free(mac) };
-    // SAFETY: `buf` is the block from `app_malloc`.
-    unsafe { CRYPTO_free(buf.cast(), c"apps/mac.c".as_ptr(), 231) };
     ret
 }
