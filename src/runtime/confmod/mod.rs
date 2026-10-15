@@ -95,7 +95,7 @@
 // different symbol.
 #![allow(non_snake_case)]
 
-use core::ffi::{c_char, c_int, c_long, c_ulong, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 use core::ptr;
 use core::sync::atomic::{AtomicI32, AtomicPtr, Ordering};
 
@@ -161,6 +161,85 @@ const L_MODULE_FREE: c_int = 566;
 /// `OPENSSL_free(imod->name)`, `OPENSSL_free(imod->value)`, `OPENSSL_free(imod)` in
 /// `module_finish` and in `module_init`'s `memerr` arm.
 const L_IMODULE_FREE: c_int = 616;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a heap block
+// ---------------------------------------------------------------------------------------------
+
+/// An owned heap block allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc`/`CRYPTO_zalloc` at the authority's exact size/`file`/`line` --
+/// a Rust `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_zeroed`
+/// allocate it, [`Self::adopt`] takes in a block the crate allocated (a `CRYPTO_strdup`, or a
+/// record a shared destructor releases), `Drop` is its single release, and [`Self::into_raw`] hands
+/// it to a consumer that takes it over (the registry's list, or the null-lock leak path that the
+/// authority leaves allocated). A NULL pointer is a valid, empty block whose release is the
+/// authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_zalloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// Adopt a block this crate allocated -- a `CRYPTO_strdup`, or a record a shared destructor
+    /// releases -- for release by `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
+    /// or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, file, line }
+    }
+
+    /// The start of the block.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
 
 /// `ERR_MAX_DATA_SIZE`, from `crypto/err/err_local.h`.
 ///
@@ -371,8 +450,8 @@ unsafe fn module_free(md: *mut ConfModule) {
     // take. `DSO_free` accepts NULL and both frees do.
     unsafe {
         DSO_free((*md).dso);
-        CRYPTO_free((*md).name.cast(), FILE, L_MODULE_FREE);
-        CRYPTO_free(md.cast(), FILE, L_MODULE_FREE);
+        drop(OwnedBuf::adopt((*md).name.cast(), FILE, L_MODULE_FREE));
+        drop(OwnedBuf::adopt(md.cast(), FILE, L_MODULE_FREE));
     }
 }
 
@@ -403,9 +482,9 @@ unsafe fn module_finish(imod: *mut ConfImodule) {
             finish(imod);
         }
         (*pmod).links -= 1;
-        CRYPTO_free((*imod).name.cast(), FILE, L_IMODULE_FREE);
-        CRYPTO_free((*imod).value.cast(), FILE, L_IMODULE_FREE);
-        CRYPTO_free(imod.cast(), FILE, L_IMODULE_FREE);
+        drop(OwnedBuf::adopt((*imod).name.cast(), FILE, L_IMODULE_FREE));
+        drop(OwnedBuf::adopt((*imod).value.cast(), FILE, L_IMODULE_FREE));
+        drop(OwnedBuf::adopt(imod.cast(), FILE, L_IMODULE_FREE));
     }
 }
 
@@ -835,9 +914,11 @@ unsafe fn module_add(
         return ptr::null_mut();
     }
 
-    let tmod =
-        CRYPTO_zalloc(core::mem::size_of::<ConfModule>(), FILE, L_MODULE_NEW).cast::<ConfModule>();
-    if tmod.is_null() {
+    // The entry block is this frame's own; its handle's `Drop` is the single release of every
+    // failure path below. Ownership passes to the registry only on a successful push.
+    let Some(tmod_buf) =
+        OwnedBuf::new_zeroed(core::mem::size_of::<ConfModule>(), FILE, L_MODULE_NEW)
+    else {
         // SAFETY: the local list is this thread's own and is discarded here; the write lock is
         // held by this thread.
         unsafe {
@@ -845,7 +926,8 @@ unsafe fn module_add(
             OPENSSL_sk_free(new_modules);
         }
         return ptr::null_mut();
-    }
+    };
+    let tmod = tmod_buf.as_ptr().cast::<ConfModule>();
 
     // SAFETY: `tmod` is a fresh zeroed block, so every write below is unaliased; `name` is
     // NUL-terminated per the contract, and `CRYPTO_strdup` is what the authority's
@@ -861,7 +943,7 @@ unsafe fn module_add(
         // SAFETY: as above; the entry and the local list are this thread's own.
         unsafe {
             ossl_rcu_write_unlock(lock);
-            CRYPTO_free(tmod.cast(), FILE, L_MODULE_FREE_ERR);
+            drop(tmod_buf);
             OPENSSL_sk_free(new_modules);
         }
         return ptr::null_mut();
@@ -872,8 +954,12 @@ unsafe fn module_add(
         // SAFETY: as above; the name was allocated above and is released here.
         unsafe {
             ossl_rcu_write_unlock(lock);
-            CRYPTO_free((*tmod).name.cast(), FILE, L_MODULE_FREE_ERR);
-            CRYPTO_free(tmod.cast(), FILE, L_MODULE_FREE_ERR);
+            drop(OwnedBuf::adopt(
+                (*tmod).name.cast(),
+                FILE,
+                L_MODULE_FREE_ERR,
+            ));
+            drop(tmod_buf);
             OPENSSL_sk_free(new_modules);
         }
         return ptr::null_mut();
@@ -889,7 +975,8 @@ unsafe fn module_add(
         // reader can still be walking it — which the synchronize above established.
         OPENSSL_sk_free(old_modules);
     }
-    tmod
+    // Ownership moves to the registry.
+    tmod_buf.into_raw().cast::<ConfModule>()
 }
 
 /// `strncmp(a, b, n)` — the C library's, written out because this crate has no wrapper for it.
@@ -1008,11 +1095,13 @@ unsafe fn module_init(
 ) -> c_int {
     let mut ret: c_int = 1;
 
-    let imod = CRYPTO_malloc(core::mem::size_of::<ConfImodule>(), FILE, L_IMODULE_NEW)
-        .cast::<ConfImodule>();
-    if imod.is_null() {
+    // The record block is this frame's own; its handle's `Drop` is the single release of every
+    // failure path below. Ownership passes to the registry only on a successful publish.
+    let Some(imod_buf) = OwnedBuf::new(core::mem::size_of::<ConfImodule>(), FILE, L_IMODULE_NEW)
+    else {
         return -1;
-    }
+    };
+    let imod = imod_buf.as_ptr().cast::<ConfImodule>();
 
     // SAFETY: `imod` is a fresh block, so every write below is unaliased. The two duplicates are
     // the authority's `OPENSSL_strdup` expansions at `:445` and `:446`. `CONF_IMODULE` has no
@@ -1031,9 +1120,9 @@ unsafe fn module_init(
         // SAFETY: the contract's `memerr` arm: release the record and answer -1. `imod` has not
         // been published anywhere.
         unsafe {
-            CRYPTO_free((*imod).name.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free((*imod).value.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free(imod.cast(), FILE, L_IMODULE_FREE);
+            drop(OwnedBuf::adopt((*imod).name.cast(), FILE, L_IMODULE_FREE));
+            drop(OwnedBuf::adopt((*imod).value.cast(), FILE, L_IMODULE_FREE));
+            drop(imod_buf);
         }
         return -1;
     }
@@ -1050,9 +1139,9 @@ unsafe fn module_init(
                 if let Some(finish) = (*pmod).finish {
                     finish(imod);
                 }
-                CRYPTO_free((*imod).name.cast(), FILE, L_IMODULE_FREE);
-                CRYPTO_free((*imod).value.cast(), FILE, L_IMODULE_FREE);
-                CRYPTO_free(imod.cast(), FILE, L_IMODULE_FREE);
+                drop(OwnedBuf::adopt((*imod).name.cast(), FILE, L_IMODULE_FREE));
+                drop(OwnedBuf::adopt((*imod).value.cast(), FILE, L_IMODULE_FREE));
+                drop(imod_buf);
             }
             return -1;
         }
@@ -1069,14 +1158,17 @@ unsafe fn module_init(
                     finish(imod);
                 }
             }
-            CRYPTO_free((*imod).name.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free((*imod).value.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free(imod.cast(), FILE, L_IMODULE_FREE);
+            drop(OwnedBuf::adopt((*imod).name.cast(), FILE, L_IMODULE_FREE));
+            drop(OwnedBuf::adopt((*imod).value.cast(), FILE, L_IMODULE_FREE));
+            drop(imod_buf);
         }
         return -1;
     }
     let lock = module_list_lock();
     if lock.is_null() {
+        // The authority returns here with the record -- and both its strings -- still allocated;
+        // `into_raw` gives up the handle so the block is left as the authority leaves it.
+        let _ = imod_buf.into_raw();
         return -1;
     }
     // SAFETY: `lock` is the live lock.
@@ -1102,9 +1194,9 @@ unsafe fn module_init(
                     finish(imod);
                 }
             }
-            CRYPTO_free((*imod).name.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free((*imod).value.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free(imod.cast(), FILE, L_IMODULE_FREE);
+            drop(OwnedBuf::adopt((*imod).name.cast(), FILE, L_IMODULE_FREE));
+            drop(OwnedBuf::adopt((*imod).value.cast(), FILE, L_IMODULE_FREE));
+            drop(imod_buf);
         }
         return -1;
     }
@@ -1121,9 +1213,9 @@ unsafe fn module_init(
                     finish(imod);
                 }
             }
-            CRYPTO_free((*imod).name.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free((*imod).value.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free(imod.cast(), FILE, L_IMODULE_FREE);
+            drop(OwnedBuf::adopt((*imod).name.cast(), FILE, L_IMODULE_FREE));
+            drop(OwnedBuf::adopt((*imod).value.cast(), FILE, L_IMODULE_FREE));
+            drop(imod_buf);
         }
         return -1;
     }
@@ -1137,6 +1229,8 @@ unsafe fn module_init(
         ossl_synchronize_rcu(lock);
         OPENSSL_sk_free(old_modules);
     }
+    // Ownership moves to the registry.
+    let _ = imod_buf.into_raw();
     ret
 }
 
@@ -1499,7 +1593,7 @@ pub unsafe extern "C" fn CONF_modules_load_file_ex(
         // The authority frees the filename only when it allocated it.
         if filename.is_null() {
             // SAFETY: `owned` is NULL or this call's own allocation.
-            unsafe { CRYPTO_free(owned.cast(), FILE, 0) };
+            unsafe { drop(OwnedBuf::adopt(owned.cast(), FILE, 0)) };
         }
         // SAFETY: `conf` is NULL or this call's own configuration; `NCONF_free` accepts NULL.
         unsafe { NCONF_free(conf) };
