@@ -948,6 +948,10 @@ mod tests {
     /// `EVP_set_pw_prompt(NULL)` clears, and the empty buffer answers NULL rather than "".
     #[test]
     fn the_prompt_starts_empty_and_a_null_clears_it() {
+        // `PROMPT_STRING` is a process-global static and the sibling test below writes it too;
+        // the crate-wide lock keeps the two from racing under the parallel-safety gate, exactly
+        // as `docs/CONCURRENCY_MODEL.md` section 7 requires for a global-touching test.
+        let _guard = crate::test_support::lock_global_state();
         // SAFETY: the prompt is this module's own static and these calls only touch it.
         unsafe {
             EVP_set_pw_prompt(ptr::null());
@@ -963,6 +967,8 @@ mod tests {
     /// A prompt longer than 79 bytes is truncated and NUL-terminated at 79.
     #[test]
     fn a_long_prompt_is_truncated_at_seventy_nine() {
+        // Shares the process-global `PROMPT_STRING` with the sibling test above; see there.
+        let _guard = crate::test_support::lock_global_state();
         let long: [c_char; 100] = {
             let mut b = [b'x' as c_char; 100];
             b[99] = 0;
