@@ -30,6 +30,23 @@
 //! sentence as their record (the same treatment `evp_cnf.rs`/`rand_lib.rs` give their traces); no
 //! runtime behaviour differs.
 //!
+//! ## Ownership
+//!
+//! The graph's own blocks are owned Rust handles. `tree_init` builds an [`OwnedTree`] and an
+//! [`OwnedLevels`] through the crate's allocator seam and publishes the header's address as
+//! `*ptree`; `X509_policy_tree_free` reclaims that owner, and [`OwnedTree`]'s `Drop` is the whole
+//! graph destructor — the sets, every level's certificate ref, node set and anyPolicy, the extra
+//! data, the level array and the header. Each node is an [`OwnedNode`](crate::x509::pcy_node) and
+//! each datum a `Box` (`pcy_data.rs`). No hand-written `CRYPTO_free` for a graph member remains.
+//!
+//! The header, level array and node blocks stay `CRYPTO_*` allocations at the authority's exact
+//! sizes rather than Rust `Box`es, and that is deliberate: the differential's caller-installed hook
+//! observes the graph's own 24-byte (node) and 64-byte (tree, level array) blocks and the
+//! failure-injection refuses the first 24-byte request to prove `add_node` propagates NULL, while
+//! the crate's Rust global allocator is invisible to the hook. Moving these blocks off the seam
+//! would change an observable, so ownership is expressed above the seam and the seam is the
+//! residual raw boundary the freeze records.
+//!
 //! ## No raise
 //!
 //! The landed unit raises nothing of its own, so it is not an entry in
@@ -41,6 +58,7 @@
 #![allow(non_snake_case)]
 
 use core::ffi::{c_int, c_uint, c_void, CStr};
+use core::ptr::NonNull;
 
 use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::obj::{Asn1Object, NID_any_policy, OBJ_nid2obj, OBJ_obj2nid};
@@ -133,7 +151,7 @@ unsafe fn exnode_free(node: *mut X509PolicyNode) {
     // SAFETY: `node` is live per the contract.
     unsafe {
         if !(*node).data.is_null() && ((*(*node).data).flags & POLICY_DATA_FLAG_EXTRA_NODE) != 0 {
-            CRYPTO_free(node.cast(), FILE.as_ptr(), 0);
+            ossl_policy_node_free(node);
         }
     }
 }
@@ -156,6 +174,137 @@ unsafe extern "C" fn exnode_free_void(n: *mut c_void) {
 unsafe extern "C" fn policy_node_free_void(n: *mut c_void) {
     // SAFETY: `n` is NULL or owned per the contract.
     unsafe { ossl_policy_node_free(n.cast()) };
+}
+
+/// An owned policy-level array — the owner of the graph's [`X509PolicyLevel`] blocks.
+///
+/// The levels stay one contiguous `CRYPTO_calloc` allocation of `nlevel` `#[repr(C)]`
+/// `X509PolicyLevel`s, because a `get0` accessor hands out level `i` by arithmetic
+/// (`levels.add(i)`) and every level must keep a stable address for the tree's lifetime. Ownership
+/// is nevertheless this type's: `new` allocates the block through the crate's allocator seam and
+/// `Drop` is its single release. The seam block is kept (rather than a Rust `Box<[..]>`) so the
+/// graph-block census of the differential — the 64-byte tree/levels blocks — is conserved.
+struct OwnedLevels {
+    ptr: NonNull<X509PolicyLevel>,
+}
+
+impl OwnedLevels {
+    /// Allocate a zeroed array of `nlevel` levels through the installed allocator, or `None` if it
+    /// answers NULL.
+    fn new(nlevel: usize) -> Option<OwnedLevels> {
+        // `CRYPTO_calloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `nlevel * size_of::<X509PolicyLevel>()` bytes.
+        let raw = CRYPTO_calloc(
+            nlevel,
+            core::mem::size_of::<X509PolicyLevel>(),
+            FILE.as_ptr(),
+            0,
+        )
+        .cast::<X509PolicyLevel>();
+        NonNull::new(raw).map(|ptr| OwnedLevels { ptr })
+    }
+
+    /// The stable address of the first level, for the accessor and the traversal arithmetic.
+    fn as_ptr(&self) -> *mut X509PolicyLevel {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the array to the tree that links it.
+    fn into_raw(self) -> *mut X509PolicyLevel {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim the array the tree links, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` must be NULL or a live array a previous `into_raw` gave up.
+    unsafe fn from_raw(ptr: *mut X509PolicyLevel) -> Option<OwnedLevels> {
+        NonNull::new(ptr).map(|ptr| OwnedLevels { ptr })
+    }
+}
+
+impl Drop for OwnedLevels {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed), and this is its
+        // single release; `Drop` runs once.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast(), FILE.as_ptr(), 0) };
+    }
+}
+
+/// An owned policy-tree header — the owner of the graph.
+///
+/// The header keeps the authority's `#[repr(C)]` layout (the `get0` accessors read it), but its
+/// ownership is this type: `new` allocates the 64-byte block through the crate's allocator seam and
+/// `Drop` is the whole graph's destructor. The block stays on the seam (not a `Box`) so the
+/// differential's 64-byte tree census is conserved.
+struct OwnedTree {
+    ptr: NonNull<X509PolicyTree>,
+}
+
+impl OwnedTree {
+    /// Allocate a zeroed header through the installed allocator, or `None` if it answers NULL.
+    fn new() -> Option<OwnedTree> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // the header's size, which is exactly `X509PolicyTree`'s layout (every field NULL/0, the
+        // authority's `OPENSSL_zalloc`).
+        let raw = CRYPTO_zalloc(core::mem::size_of::<X509PolicyTree>(), FILE.as_ptr(), 0)
+            .cast::<X509PolicyTree>();
+        NonNull::new(raw).map(|ptr| OwnedTree { ptr })
+    }
+
+    /// The stable address the C ABI hands out and takes back.
+    fn as_ptr(&self) -> *mut X509PolicyTree {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the header to the C caller's `*ptree`.
+    fn into_raw(self) -> *mut X509PolicyTree {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a header a previous `into_raw` published, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` must be NULL or a live header a previous `into_raw` gave up and `Drop` has not yet
+    /// released.
+    unsafe fn from_raw(ptr: *mut X509PolicyTree) -> Option<OwnedTree> {
+        NonNull::new(ptr).map(|ptr| OwnedTree { ptr })
+    }
+}
+
+impl Drop for OwnedTree {
+    /// The graph destructor: the release `X509_policy_tree_free` performed by hand, now the tree's
+    /// own. It frees exactly the authority's set — the authority- and user-constrained policy sets,
+    /// each level's borrowed certificate ref, node set and anyPolicy node, the extra data, the level
+    /// array, and the header — through the same allocator seam.
+    fn drop(&mut self) {
+        // SAFETY: the header and everything it points at are owned by this tree and live; each
+        // member is NULL or owned here, and each release below is the one the authority performs.
+        unsafe {
+            let tree = self.ptr.as_ptr();
+            OPENSSL_sk_free((*tree).auth_policies);
+            OPENSSL_sk_pop_free((*tree).user_policies, Some(exnode_free_void));
+
+            let mut curr: *mut X509PolicyLevel = (*tree).levels;
+            for _ in 0..(*tree).nlevel {
+                X509_free((*curr).cert);
+                OPENSSL_sk_pop_free((*curr).nodes, Some(policy_node_free_void));
+                ossl_policy_node_free((*curr).anyPolicy);
+                curr = curr.add(1);
+            }
+
+            OPENSSL_sk_pop_free((*tree).extra_data, Some(policy_data_free_void));
+            // The level array is this tree's own block; `OwnedLevels`'s `Drop` releases it.
+            drop(OwnedLevels::from_raw((*tree).levels));
+            CRYPTO_free(tree.cast(), FILE.as_ptr(), 0);
+        }
+    }
 }
 
 /// `static int tree_init(X509_POLICY_TREE **ptree, STACK_OF(X509) *certs, unsigned int flags)` —
@@ -250,52 +399,42 @@ unsafe fn tree_init(
         return ret;
     }
 
-    // If we get this far, initialize the tree.
-    // A fresh, zeroed block of the tree's own size.
-    let tree = CRYPTO_zalloc(core::mem::size_of::<X509PolicyTree>(), FILE.as_ptr(), 0)
-        .cast::<X509PolicyTree>();
-    if tree.is_null() {
+    // If we get this far, initialize the tree. The header and the level array are owned handles
+    // until the tree is published; every error path below drops the tree, whose `Drop` releases
+    // whatever was linked.
+    let Some(tree) = OwnedTree::new() else {
         return X509_PCY_TREE_INTERNAL;
-    }
+    };
     // Limit the growth of the tree to mitigate CVE-2023-0464.
     // SAFETY: `tree` is live and writable.
-    unsafe { (*tree).node_maximum = OPENSSL_POLICY_TREE_NODES_MAX };
+    unsafe { (*tree.as_ptr()).node_maximum = OPENSSL_POLICY_TREE_NODES_MAX };
 
-    // A fresh, zeroed array of `n + 1` levels.
-    let levels = CRYPTO_calloc(
-        (n + 1) as usize,
-        core::mem::size_of::<X509PolicyLevel>(),
-        FILE.as_ptr(),
-        0,
-    )
-    .cast::<X509PolicyLevel>();
-    if levels.is_null() {
-        // SAFETY: `tree` is owned here.
-        unsafe { CRYPTO_free(tree.cast(), FILE.as_ptr(), 0) };
+    // A fresh, zeroed array of `n + 1` levels, owned until the tree links it.
+    let Some(levels) = OwnedLevels::new((n + 1) as usize) else {
+        // `tree` drops here, releasing the header.
         return X509_PCY_TREE_INTERNAL;
-    }
+    };
     // SAFETY: `tree` is live and writable.
     unsafe {
-        (*tree).levels = levels;
-        (*tree).nlevel = n + 1;
+        (*tree.as_ptr()).levels = levels.as_ptr();
+        (*tree.as_ptr()).nlevel = n + 1;
     }
-    let mut level = levels;
+    // The tree now owns the level array; its own `Drop` reclaims it.
+    let mut level = levels.into_raw();
     // SAFETY: `OBJ_nid2obj(NID_any_policy)` is a static object.
     let data =
         unsafe { ossl_policy_data_new(core::ptr::null_mut(), OBJ_nid2obj(NID_any_policy), 0) };
     if data.is_null() {
-        // SAFETY: `tree` is owned here.
-        unsafe { X509_policy_tree_free(tree) };
+        // `tree` drops here, releasing the header and the level array.
         return X509_PCY_TREE_INTERNAL;
     }
     // SAFETY: `level`, `data` and `tree` are live.
-    if unsafe { ossl_policy_level_add_node(level, data, core::ptr::null_mut(), tree, 1) }.is_null()
+    if unsafe { ossl_policy_level_add_node(level, data, core::ptr::null_mut(), tree.as_ptr(), 1) }
+        .is_null()
     {
-        // SAFETY: `data` is owned here; `tree` is owned here.
-        unsafe {
-            ossl_policy_data_free(data);
-            X509_policy_tree_free(tree);
-        }
+        // SAFETY: `data` is owned here.
+        unsafe { ossl_policy_data_free(data) };
+        // `tree` drops here, releasing whatever was linked.
         return X509_PCY_TREE_INTERNAL;
     }
 
@@ -310,8 +449,7 @@ unsafe fn tree_init(
 
         // SAFETY: `x` is live.
         if unsafe { X509_up_ref(x) } == 0 {
-            // SAFETY: `tree` is owned here.
-            unsafe { X509_policy_tree_free(tree) };
+            // `tree` drops here, releasing the graph built so far.
             return X509_PCY_TREE_INTERNAL;
         }
 
@@ -359,8 +497,8 @@ unsafe fn tree_init(
         i -= 1;
     }
 
-    // SAFETY: `ptree` is writable per the contract.
-    unsafe { *ptree = tree };
+    // SAFETY: `ptree` is writable per the contract; ownership of the header moves to the caller.
+    unsafe { *ptree = tree.into_raw() };
     ret
 }
 
@@ -583,7 +721,7 @@ unsafe fn tree_prune(tree: *mut X509PolicyTree, mut curr: *mut X509PolicyLevel) 
                 // SAFETY: `node` is live; its parent is live.
                 unsafe {
                     (*(*node).parent).nchild -= 1;
-                    CRYPTO_free(node.cast(), FILE.as_ptr(), 0);
+                    ossl_policy_node_free(node);
                     OPENSSL_sk_delete(nodes, i);
                 }
             }
@@ -606,7 +744,7 @@ unsafe fn tree_prune(tree: *mut X509PolicyTree, mut curr: *mut X509PolicyLevel) 
                 // SAFETY: `node` is live; its parent is live.
                 unsafe {
                     (*(*node).parent).nchild -= 1;
-                    CRYPTO_free(node.cast(), FILE.as_ptr(), 0);
+                    ossl_policy_node_free(node);
                     OPENSSL_sk_delete(nodes, i);
                 }
             }
@@ -619,9 +757,9 @@ unsafe fn tree_prune(tree: *mut X509PolicyTree, mut curr: *mut X509PolicyLevel) 
                 // SAFETY: the anyPolicy's parent is live.
                 unsafe { (*(*(*curr).anyPolicy).parent).nchild -= 1 };
             }
-            // SAFETY: the anyPolicy node is owned here.
+            // SAFETY: the anyPolicy node is owned here; `ossl_policy_node_free` releases it.
             unsafe {
-                CRYPTO_free((*curr).anyPolicy.cast(), FILE.as_ptr(), 0);
+                ossl_policy_node_free((*curr).anyPolicy);
                 (*curr).anyPolicy = core::ptr::null_mut();
             }
         }
@@ -858,34 +996,17 @@ unsafe fn tree_evaluate(tree: *mut X509PolicyTree) -> c_int {
 /// certificate, node set and anyPolicy node, then the extra data, the level array and the tree.
 /// A NULL tree is a no-op, matching the authority's first guard.
 ///
+/// The body is now the tree's own release: [`OwnedTree`]'s `Drop`, reached by reclaiming the header
+/// this function was handed. There is no hand-written `CRYPTO_free` for the graph here.
+///
 /// # Safety
 ///
 /// `tree` must be NULL or a live tree not already freed.
 #[no_mangle]
 pub unsafe extern "C" fn X509_policy_tree_free(tree: *mut X509PolicyTree) {
-    if tree.is_null() {
-        return;
-    }
-    // SAFETY: `tree` is live per the contract; each pointer member is NULL or owned by it.
-    unsafe {
-        OPENSSL_sk_free((*tree).auth_policies);
-        OPENSSL_sk_pop_free((*tree).user_policies, Some(exnode_free_void));
-
-        let mut curr: *mut X509PolicyLevel = (*tree).levels;
-        for _ in 0..(*tree).nlevel {
-            // SAFETY: `curr` walks the live `levels` array.
-            X509_free((*curr).cert);
-            // SAFETY: the same contract.
-            OPENSSL_sk_pop_free((*curr).nodes, Some(policy_node_free_void));
-            // SAFETY: the same contract.
-            ossl_policy_node_free((*curr).anyPolicy);
-            curr = curr.add(1);
-        }
-
-        OPENSSL_sk_pop_free((*tree).extra_data, Some(policy_data_free_void));
-        CRYPTO_free((*tree).levels.cast(), FILE.as_ptr(), 0);
-        CRYPTO_free(tree.cast(), FILE.as_ptr(), 0);
-    }
+    // SAFETY: `tree` is NULL or live per the contract; `from_raw` answers `None` for NULL (the
+    // authority's no-op guard) and a live owner otherwise, whose `Drop` releases the whole graph.
+    drop(unsafe { OwnedTree::from_raw(tree) });
 }
 
 /// `int X509_policy_check(X509_POLICY_TREE **ptree, int *pexplicit_policy, STACK_OF(X509) *certs, STACK_OF(ASN1_OBJECT) *policy_oids, unsigned int flags)`
