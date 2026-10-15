@@ -81,6 +81,7 @@ pub mod dump;
 pub mod iolib;
 pub mod legacy_host;
 pub mod method;
+pub(crate) mod owned;
 pub mod print;
 pub mod print_engine;
 pub mod retry;

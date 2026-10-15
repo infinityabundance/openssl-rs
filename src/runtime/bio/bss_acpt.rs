@@ -58,7 +58,9 @@ use crate::runtime::err::err_sites::{
     BSS_ACPT_157, BSS_ACPT_203, BSS_ACPT_212, BSS_ACPT_233, BSS_ACPT_236,
 };
 use crate::runtime::err::{raise_site, raise_site_data, raise_site_dynamic_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+
+use super::owned::{CtxDestroy, OwnedBlock, OwnedCtx};
 
 use super::addr::{self, BioAddr};
 use super::addr_info::{
@@ -191,41 +193,50 @@ fn push_cstr(out: &mut Vec<u8>, p: *const c_char) {
 /* ------------------------------------------------------------------------- */
 
 /// `static BIO_ACCEPT *BIO_ACCEPT_new(void)`
-fn accept_new() -> *mut BioAccept {
-    // SAFETY: `CRYPTO_zalloc` returns nulled memory of the requested size.
-    let ret = CRYPTO_zalloc(core::mem::size_of::<BioAccept>(), ptr::null(), 0).cast::<BioAccept>();
-    if ret.is_null() {
-        return ptr::null_mut();
-    }
+fn accept_new() -> Option<OwnedCtx<BioAccept>> {
+    // `OwnedCtx::zalloc` returns nulled memory of the requested size, or `None`.
+    let ctx = OwnedCtx::<BioAccept>::zalloc()?;
+    let ret = ctx.as_ptr();
     // SAFETY: `ret` is a fresh, zeroed allocation.
     unsafe {
         (*ret).accept_family = BIO_FAMILY_IPANY;
         (*ret).accept_sock = INVALID_SOCKET;
     }
-    ret
+    Some(ctx)
 }
 
 /// `static void BIO_ACCEPT_free(BIO_ACCEPT *a)`
 ///
+/// The authority's `BIO_ACCEPT_free` body *minus* the block release [`OwnedCtx`]'s `Drop`
+/// performs: the six duplicated strings, the address chain and the inner BIO chain. The strings
+/// stay plain `#[repr(C)]` members the authority also swaps and frees by hand in `acpt_ctrl`; only
+/// the context block's own ownership moves to the handle.
+///
 /// # Safety
 /// `a` must be NULL or a block from [`accept_new`] that has not been freed.
 unsafe fn accept_free(a: *mut BioAccept) {
-    // SAFETY: `a` is NULL or a block from `accept_new` per the caller's contract;
-    // `as_mut` performs the null check that makes NULL total.
-    let Some(c) = (unsafe { a.as_mut() }) else {
-        return;
-    };
-    // SAFETY: `c` is live; all six strings and the chain are owned.
-    unsafe {
-        CRYPTO_free(c.param_addr.cast(), ptr::null(), 0);
-        CRYPTO_free(c.param_serv.cast(), ptr::null(), 0);
-        BIO_ADDRINFO_free(c.addr_first);
-        CRYPTO_free(c.cache_accepting_name.cast(), ptr::null(), 0);
-        CRYPTO_free(c.cache_accepting_serv.cast(), ptr::null(), 0);
-        CRYPTO_free(c.cache_peer_name.cast(), ptr::null(), 0);
-        CRYPTO_free(c.cache_peer_serv.cast(), ptr::null(), 0);
-        super::BIO_free(c.bio_chain);
-        CRYPTO_free(a.cast(), ptr::null(), 0);
+    // SAFETY: `a` is NULL or the block the constructor handed out; `Drop` runs the authority's own
+    // body before the block release.
+    unsafe { drop(OwnedCtx::<BioAccept>::from_raw(a)) };
+}
+
+impl CtxDestroy for BioAccept {
+    unsafe fn destroy_body(ptr: *mut BioAccept) {
+        // SAFETY: `ptr` is a live context per the trait contract; the six strings are NULL or
+        // owned seam blocks, `addr_first` and `bio_chain` are NULL or owned by the context.
+        unsafe {
+            let Some(c) = ptr.as_mut() else {
+                return;
+            };
+            drop(OwnedBlock::take(c.param_addr.cast()));
+            drop(OwnedBlock::take(c.param_serv.cast()));
+            BIO_ADDRINFO_free(c.addr_first);
+            drop(OwnedBlock::take(c.cache_accepting_name.cast()));
+            drop(OwnedBlock::take(c.cache_accepting_serv.cast()));
+            drop(OwnedBlock::take(c.cache_peer_name.cast()));
+            drop(OwnedBlock::take(c.cache_peer_serv.cast()));
+            super::BIO_free(c.bio_chain);
+        }
     }
 }
 
@@ -249,16 +260,18 @@ unsafe extern "C" fn acpt_new(bi: *mut Bio) -> c_int {
         (*bi).num = INVALID_SOCKET;
         (*bi).flags = 0;
     }
-    let ba = accept_new();
-    if ba.is_null() {
+    let Some(ba) = accept_new() else {
         return 0;
-    }
-    // SAFETY: `bi` and `ba` are live.
+    };
+    let p = ba.as_ptr();
+    // SAFETY: `bi` and `p` are live.
     unsafe {
-        (*bi).ptr = ba.cast();
-        (*ba).state = ACPT_S_BEFORE;
+        (*bi).ptr = p.cast();
+        (*p).state = ACPT_S_BEFORE;
         (*bi).shutdown = 1;
     }
+    // The context is now the BIO's; `acpt_free` reclaims it through `OwnedCtx::from_raw`.
+    let _ = ba.into_raw();
     1
 }
 

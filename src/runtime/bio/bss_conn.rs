@@ -70,7 +70,9 @@ use crate::runtime::err::err_sites::{
     BSS_CONN_775, BSS_CONN_810, BSS_CONN_825, BSS_CONN_841, BSS_CONN_856,
 };
 use crate::runtime::err::{raise_site, raise_site_data, raise_site_dynamic_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+
+use super::owned::{CtxDestroy, OwnedBlock, OwnedCtx};
 
 use super::addr::{self, BioAddr};
 use super::addr_info::{
@@ -202,38 +204,46 @@ fn fmt_two(prefix: &str, sep: &str, suffix: &str, a: *const c_char, b: *const c_
 /* ------------------------------------------------------------------------- */
 
 /// `static BIO_CONNECT *BIO_CONNECT_new(void)`
-fn connect_new() -> *mut BioConnect {
-    // SAFETY: `CRYPTO_zalloc` returns nulled memory of the requested size.
-    let ret =
-        CRYPTO_zalloc(core::mem::size_of::<BioConnect>(), ptr::null(), 0).cast::<BioConnect>();
-    if ret.is_null() {
-        return ptr::null_mut();
-    }
+fn connect_new() -> Option<OwnedCtx<BioConnect>> {
+    // `OwnedCtx::zalloc` returns nulled memory of the requested size, or `None`.
+    let ctx = OwnedCtx::<BioConnect>::zalloc()?;
+    let ret = ctx.as_ptr();
     // SAFETY: `ret` is a fresh, zeroed allocation.
     unsafe {
         (*ret).state = BIO_CONN_S_BEFORE;
         (*ret).connect_family = BIO_FAMILY_IPANY;
         (*ret).connect_sock_type = sys::SOCK_STREAM;
     }
-    ret
+    Some(ctx)
 }
 
 /// `static void BIO_CONNECT_free(BIO_CONNECT *a)`
 ///
+/// The authority's `BIO_CONNECT_free` body *minus* the block release [`OwnedCtx`]'s `Drop`
+/// performs: the two duplicated strings and the address chain. Both strings are plain `#[repr(C)]`
+/// members the authority also swaps and frees by hand in `conn_ctrl`; only the context block's own
+/// ownership moves to the handle.
+///
 /// # Safety
 /// `a` must be NULL or a block from [`connect_new`] that has not been freed.
 unsafe fn connect_free(a: *mut BioConnect) {
-    // SAFETY: `a` is NULL or a block from `connect_new` per the caller's contract;
-    // `as_mut` performs the null check that makes NULL total.
-    let Some(c) = (unsafe { a.as_mut() }) else {
-        return;
-    };
-    // SAFETY: `c` is live and the two strings are owned.
-    unsafe {
-        CRYPTO_free(c.param_hostname.cast(), ptr::null(), 0);
-        CRYPTO_free(c.param_service.cast(), ptr::null(), 0);
-        BIO_ADDRINFO_free(c.addr_first);
-        CRYPTO_free(a.cast(), ptr::null(), 0);
+    // SAFETY: `a` is NULL or the block the constructor handed out; `Drop` runs the authority's own
+    // body before the block release.
+    unsafe { drop(OwnedCtx::<BioConnect>::from_raw(a)) };
+}
+
+impl CtxDestroy for BioConnect {
+    unsafe fn destroy_body(ptr: *mut BioConnect) {
+        // SAFETY: `ptr` is a live context per the trait contract; `param_hostname`/`param_service`
+        // are NULL or owned seam blocks and `addr_first` is NULL or an owned address chain.
+        unsafe {
+            let Some(c) = ptr.as_mut() else {
+                return;
+            };
+            drop(OwnedBlock::take(c.param_hostname.cast()));
+            drop(OwnedBlock::take(c.param_service.cast()));
+            BIO_ADDRINFO_free(c.addr_first);
+        }
     }
 }
 
@@ -254,13 +264,12 @@ unsafe extern "C" fn conn_new(bi: *mut Bio) -> c_int {
         (*bi).num = INVALID_SOCKET;
         (*bi).flags = 0;
     }
-    let data = connect_new();
-    if data.is_null() {
+    let Some(data) = connect_new() else {
         return 0;
-    }
+    };
     // SAFETY: `bi` is live and `data` is a fresh allocation.
     unsafe {
-        (*bi).ptr = data.cast();
+        (*bi).ptr = data.into_raw().cast();
     }
     1
 }

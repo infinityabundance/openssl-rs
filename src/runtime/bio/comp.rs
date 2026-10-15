@@ -35,6 +35,7 @@ use core::ptr;
 
 use crate::ffi::guard_ffi;
 
+use super::owned::{CtxDestroy, OwnedCtx};
 use super::BioMethod;
 
 /// `const BIO_METHOD *BIO_f_zlib(void)`
@@ -156,6 +157,25 @@ pub struct CompCtx {
     pub data: *mut c_void,
 }
 
+/// The authority's `COMP_CTX_free` body *minus* the block release [`OwnedCtx`]'s `Drop` performs:
+/// the method's `finish` hook runs on the still-live context, exactly as `comp_lib.c` runs it
+/// before its own `OPENSSL_free(ctx)`. A method-less context has no hook to run.
+impl CtxDestroy for CompCtx {
+    unsafe fn destroy_body(ptr: *mut CompCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        let meth = unsafe { (*ptr).meth };
+        if !meth.is_null() {
+            // SAFETY: `meth` is the method the context was built with and is live for as long as
+            // the context is.
+            if let Some(finish) = unsafe { (*meth).finish } {
+                // SAFETY: `ptr` is live and about to be released; the hook's contract is the
+                // authority's.
+                unsafe { finish(ptr) };
+            }
+        }
+    }
+}
+
 /// The six factories. Each body is `meth = NULL; #ifndef OPENSSL_NO_<LIB> ... `,
 /// so under this profile every one of them is the initialiser and nothing else.
 ///
@@ -249,17 +269,12 @@ pub unsafe extern "C" fn COMP_CTX_new(meth: *mut CompMethod) -> *mut CompCtx {
         if meth.is_null() {
             return core::ptr::null_mut();
         }
-        // SAFETY: `CRYPTO_zalloc` initialises every byte, so the returned context
-        // is a valid `CompCtx` before any field is written.
-        let ret = crate::runtime::mem::CRYPTO_zalloc(
-            core::mem::size_of::<CompCtx>(),
-            core::ptr::null(),
-            0,
-        )
-        .cast::<CompCtx>();
-        if ret.is_null() {
+        // SAFETY: `OwnedCtx::zalloc` initialises every byte, so the returned context is a valid
+        // `CompCtx` before any field is written, or NULL when the allocator refuses.
+        let Some(ctx) = OwnedCtx::<CompCtx>::zalloc() else {
             return core::ptr::null_mut();
-        }
+        };
+        let ret = ctx.as_ptr();
         // SAFETY: `ret` is a fresh, zeroed, uniquely-owned `CompCtx`.
         unsafe { (*ret).meth = meth };
         // SAFETY: `meth` is live per the caller's contract.
@@ -267,12 +282,11 @@ pub unsafe extern "C" fn COMP_CTX_new(meth: *mut CompMethod) -> *mut CompCtx {
             // SAFETY: `ret` is live and uniquely owned; the hook's contract is the
             // authority's (it receives the context it is initialising).
             if unsafe { init(ret) } == 0 {
-                // SAFETY: as above; the context never escaped.
-                unsafe { crate::runtime::mem::CRYPTO_free(ret.cast(), core::ptr::null(), 0) };
+                // The context never escaped; the handle's `Drop` is its single release.
                 return core::ptr::null_mut();
             }
         }
-        ret
+        ctx.into_raw()
     })
 }
 
@@ -323,22 +337,9 @@ pub unsafe extern "C" fn COMP_CTX_get_type(ctx: *const CompCtx) -> c_int {
 /// freed.
 #[no_mangle]
 pub unsafe extern "C" fn COMP_CTX_free(ctx: *mut CompCtx) {
-    if ctx.is_null() {
-        return;
-    }
-    // SAFETY: `ctx` is live per the caller's contract.
-    let meth = unsafe { (*ctx).meth };
-    if !meth.is_null() {
-        // SAFETY: `meth` is the method the context was built with and is live for
-        // as long as the context is.
-        if let Some(finish) = unsafe { (*meth).finish } {
-            // SAFETY: `ctx` is live and about to be released; the hook's contract
-            // is the authority's.
-            unsafe { finish(ctx) };
-        }
-    }
-    // SAFETY: `ctx` came from `CRYPTO_zalloc` and has not been freed.
-    unsafe { crate::runtime::mem::CRYPTO_free(ctx.cast(), core::ptr::null(), 0) };
+    // SAFETY: `ctx` is NULL or a context from [`COMP_CTX_new`]; `from_raw` maps NULL to `None`,
+    // and `Drop` runs the authority's own `finish` body before the block release.
+    unsafe { drop(OwnedCtx::<CompCtx>::from_raw(ctx)) };
 }
 
 /// `int COMP_compress_block(COMP_CTX *ctx, unsigned char *out, int olen,
