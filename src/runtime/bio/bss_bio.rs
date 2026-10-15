@@ -35,9 +35,10 @@ use crate::runtime::err::err_sites::{
     BSS_BIO_286, BSS_BIO_361, BSS_BIO_426, BSS_BIO_429, BSS_BIO_617,
 };
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 
 use super::method::{bread_conv, bwrite_conv};
+use super::owned::{CtxDestroy, OwnedBlock, OwnedCtx};
 use super::{
     Bio, BioMethod, BIO_CTRL_DUP, BIO_CTRL_EOF, BIO_CTRL_FLUSH, BIO_CTRL_GET_CLOSE,
     BIO_CTRL_PENDING, BIO_CTRL_RESET, BIO_CTRL_SET_CLOSE, BIO_CTRL_WPENDING,
@@ -73,6 +74,18 @@ pub struct BioBioSt {
     pub buf: *mut c_char,
     /// Bytes the peer last asked for and did not get.
     pub request: usize,
+}
+
+/// The authority's `bio_free` body *minus* the block release [`OwnedCtx`]'s `Drop` performs: the
+/// ring buffer `buf`, when it has been allocated, is released exactly as `bio_free` releases it.
+/// `buf` stays a plain `#[repr(C)]` member the authority owns and resizes by hand in `bio_ctrl`;
+/// only the context block's own ownership moves to the handle.
+impl CtxDestroy for BioBioSt {
+    unsafe fn destroy_body(ptr: *mut BioBioSt) {
+        // SAFETY: `ptr` is a live context per the trait contract; `buf` is NULL or an owned seam
+        // block whose single release is the block handle's `Drop`.
+        unsafe { drop(OwnedBlock::take((*ptr).buf.cast())) };
+    }
 }
 
 /// A compiled-in method table. `BIO_s_bio()` returns its address.
@@ -128,16 +141,18 @@ unsafe fn peer_ctx(b: *mut BioBioSt) -> *mut BioBioSt {
 /// `bio` must be a live BIO. Note this sets the capacity but **not** `init`, so
 /// an unpaired endpoint reads as uninitialised until it is paired.
 unsafe extern "C" fn bio_new(bio: *mut Bio) -> c_int {
-    // SAFETY: `CRYPTO_zalloc` returns nulled memory of the requested size.
-    let b: *mut BioBioSt = CRYPTO_zalloc(core::mem::size_of::<BioBioSt>(), ptr::null(), 0).cast();
-    if b.is_null() {
+    // SAFETY: `OwnedCtx::zalloc` returns nulled memory of the requested size, or NULL.
+    let Some(ctx) = OwnedCtx::<BioBioSt>::zalloc() else {
         return 0;
-    }
+    };
+    let b = ctx.as_ptr();
     // SAFETY: `b` is a fresh allocation and `bio` is live.
     unsafe {
         (*b).size = DEFAULT_PAIR_SIZE;
         (*bio).ptr = b.cast();
     }
+    // The context is now the BIO's; `bio_free` reclaims it through `OwnedCtx::from_raw`.
+    let _ = ctx.into_raw();
     1
 }
 
@@ -159,11 +174,8 @@ unsafe extern "C" fn bio_free(bio: *mut Bio) -> c_int {
         // SAFETY: `bio` is live and paired.
         unsafe { bio_destroy_pair(bio) };
     }
-    // SAFETY: `buf` is NULL or owned here.
-    unsafe {
-        CRYPTO_free((*b).buf.cast(), ptr::null(), 0);
-        CRYPTO_free(b.cast(), ptr::null(), 0);
-    }
+    // SAFETY: the block is the BIO's own; `Drop` frees the ring buffer it owns and then the block.
+    unsafe { drop(OwnedCtx::<BioBioSt>::from_raw(b)) };
     1
 }
 

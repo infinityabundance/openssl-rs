@@ -32,9 +32,10 @@ use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
 
 use crate::ffi::guard_ffi;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 
 use super::method::{bread_conv, bwrite_conv};
+use super::owned::{CtxDestroy, OwnedBlock, OwnedCtx};
 use super::{
     Bio, BioMethod, BIO_CTRL_DUP, BIO_CTRL_EOF, BIO_CTRL_FLUSH, BIO_CTRL_INFO, BIO_CTRL_PEEK,
     BIO_CTRL_PENDING, BIO_CTRL_RESET, BIO_CTRL_WPENDING, BIO_C_DO_STATE_MACHINE,
@@ -68,6 +69,24 @@ pub(crate) struct BioBufferCtx {
     pub obuf_len: c_int,
     /// Write offset into the output buffer.
     pub obuf_off: c_int,
+}
+
+/// The authority's `buffer_free` body *minus* the block release [`OwnedCtx`]'s `Drop` performs.
+///
+/// `BIO_f_readbuffer` shares this layout but allocates only its input buffer, so its `obuf` stays a
+/// NULL `#[repr(C)]` member; `CRYPTO_free(NULL)` is the authority's own no-op, which is why the
+/// one destructor serves both filters. The two buffers stay plain `#[repr(C)]` members the
+/// authority owns and resizes by hand in `buffer_ctrl`; only the context block's ownership moves
+/// to the handle.
+impl CtxDestroy for BioBufferCtx {
+    unsafe fn destroy_body(ptr: *mut BioBufferCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; both members are NULL or owned
+        // seam blocks whose single release is the block handle's `Drop`.
+        unsafe {
+            drop(OwnedBlock::take((*ptr).ibuf.cast()));
+            drop(OwnedBlock::take((*ptr).obuf.cast()));
+        }
+    }
 }
 
 /// The method name the authority reports for this filter.
@@ -112,31 +131,31 @@ unsafe fn ctx(b: *mut Bio) -> *mut BioBufferCtx {
 /// # Safety
 /// `bi` must be a live BIO.
 unsafe extern "C" fn buffer_new(bi: *mut Bio) -> c_int {
-    // SAFETY: `CRYPTO_zalloc` returns nulled memory of the requested size.
-    let c: *mut BioBufferCtx =
-        CRYPTO_zalloc(core::mem::size_of::<BioBufferCtx>(), ptr::null(), 0).cast();
-    if c.is_null() {
+    // SAFETY: `OwnedCtx::zalloc` returns nulled memory of the requested size, or NULL.
+    let Some(ctx) = OwnedCtx::<BioBufferCtx>::zalloc() else {
         return 0;
-    }
+    };
+    let c = ctx.as_ptr();
     // SAFETY: `c` is a fresh allocation.
     unsafe {
         (*c).ibuf_size = DEFAULT_BUFFER_SIZE;
         (*c).ibuf = CRYPTO_malloc(DEFAULT_BUFFER_SIZE as usize, ptr::null(), 0).cast();
         if (*c).ibuf.is_null() {
-            CRYPTO_free(c.cast(), ptr::null(), 0);
+            // The context never escaped; the handle's `Drop` releases it (and the NULL members).
             return 0;
         }
         (*c).obuf_size = DEFAULT_BUFFER_SIZE;
         (*c).obuf = CRYPTO_malloc(DEFAULT_BUFFER_SIZE as usize, ptr::null(), 0).cast();
         if (*c).obuf.is_null() {
-            CRYPTO_free((*c).ibuf.cast(), ptr::null(), 0);
-            CRYPTO_free(c.cast(), ptr::null(), 0);
+            // As above: the context, and the input buffer it now owns, are released by `Drop`.
             return 0;
         }
         (*bi).init = 1;
         (*bi).ptr = c.cast();
         (*bi).flags = 0;
     }
+    // The context is now the BIO's; `buffer_free` reclaims it through `OwnedCtx::from_raw`.
+    let _ = ctx.into_raw();
     1
 }
 
@@ -151,11 +170,10 @@ unsafe extern "C" fn buffer_free(a: *mut Bio) -> c_int {
     // SAFETY: `a` is live and holds a `BioBufferCtx`.
     let c = unsafe { ctx(a) };
     if !c.is_null() {
-        // SAFETY: the two buffers were allocated by `buffer_new`.
+        // SAFETY: the context is the BIO's own; `Drop` frees the two buffers it owns and then the
+        // block, exactly as `buffer_free` frees them by hand.
         unsafe {
-            CRYPTO_free((*c).ibuf.cast(), ptr::null(), 0);
-            CRYPTO_free((*c).obuf.cast(), ptr::null(), 0);
-            CRYPTO_free(c.cast(), ptr::null(), 0);
+            drop(OwnedCtx::<BioBufferCtx>::from_raw(c));
             (*a).ptr = ptr::null_mut();
             (*a).init = 0;
             (*a).flags = 0;
