@@ -846,9 +846,11 @@ mod tests {
             );
             // The exact DER length depends on the two ephemeral coordinates' leading zeroes, so
             // the random encryption's own length is bounded rather than pinned; the size query's 127
-            // is the authority's own over-estimate (asserted above).
+            // is the authority's own over-estimate (asserted above). Each of the two INTEGER
+            // coordinates can independently shed a leading zero byte, so the ciphertext can be up
+            // to two bytes shorter than the published annex (which pinned both coordinates).
             assert!(ctext_len <= ct_size);
-            assert!(ctext_len + 1 >= expected_len);
+            assert!(ctext_len + 2 >= expected_len);
 
             let mut out = vec![0u8; ANNEX_C_MSG.len()];
             let mut out_len = out.len();
