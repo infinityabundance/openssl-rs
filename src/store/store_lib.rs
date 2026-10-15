@@ -44,6 +44,23 @@
 //! `store_result.c`'s `ossl_store_handle_load_result`, landed in [`super::store_result`];
 //! the row that resolves is exactly the loader this function consumes.
 //!
+//! # Ownership: the three objects are owned Rust, the two plain blocks with them
+//!
+//! Every `OSSL_STORE_CTX`, `OSSL_STORE_INFO` and `OSSL_STORE_SEARCH` this unit allocates for
+//! itself is an [`OwnedCtx`]: it stays a `CRYPTO_zalloc` at the authority's own size on the
+//! crate's allocator seam (`__FILE__`/`__LINE__` NULL/0, as the authority writes them), so a
+//! caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its release, and
+//! `Drop` is the only release. A constructor returns through [`OwnedCtx::into_raw`] rather than a
+//! bare pointer, a refusal path returns rather than freeing what it half-built, and
+//! `OSSL_STORE_close`/`OSSL_STORE_INFO_free`/`OSSL_STORE_SEARCH_free` reclaim through
+//! [`OwnedCtx::from_raw`] so [`CtxDestroy::destroy_body`] runs the authority's own free body
+//! before the block release. `OSSL_STORE_SEARCH`'s destructor body is empty; the other two are not.
+//!
+//! The name buffer `i2d_X509_NAME` fills in `OSSL_STORE_find` and the `CRYPTO_strdup` property
+//! copy `OSSL_STORE_open_ex` keeps are [`OwnedBlock`]s: `Drop` releases them at the authority's
+//! own (NULL, 0) site, and the property copy is handed to the context with
+//! [`OwnedBlock::into_raw`] at the moment its `properties` member takes it over.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 #![allow(unreachable_pub)]
@@ -104,6 +121,165 @@ extern "C" {
     /// `OSSL_STORE_vctrl` is the only reader; it needs the caller's `int *`, and a
     /// `va_arg` walk cannot be written in stable Rust.
     fn openssl_rs_va_gp(ap: *mut c_void) -> u64;
+}
+
+// ---------------------------------------------------------------------------
+// Ownership of the three objects and the two plain blocks
+// ---------------------------------------------------------------------------
+
+/// The authority's `*_free` body for one of the file's `#[repr(C)]` objects, without the block's
+/// own release, which [`OwnedCtx`]'s `Drop` performs. One impl per object, so the owner runs the
+/// right destructor without a `CRYPTO_free` written at a call site.
+trait CtxDestroy: Sized {
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live object this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned `#[repr(C)]` object block.
+///
+/// The block keeps the authority's layout and its stable address (the exported ABI hands it out
+/// and takes it back), but its *ownership* is this type: [`Self::new`] allocates it through the
+/// crate's allocator seam and `Drop` is its single release. It stays a `CRYPTO_zalloc` at
+/// `size_of::<T>()` rather than a Rust `Box`, so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
+/// the authority's, which a Rust global allocation would hide.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None`
+    /// when it answers NULL.
+    fn new() -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
+        // of `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), ptr::null(), 0).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// The stable address the exported ABI hands out and takes back.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block this file owns, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The object destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`])
+    /// followed by the block release, through the same allocator seam the block was allocated on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is
+        // its single release; `Drop` runs once, and `destroy_body` is the authority's own free
+        // body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), ptr::null(), 0);
+        }
+    }
+}
+
+/// An owned seam block that is not one of the file's objects.
+///
+/// It stays a `CRYPTO_*`-seam block (here the `CRYPTO_strdup` property copy and the
+/// `i2d_X509_NAME` name buffer), released by `Drop` at the authority's own (NULL, 0) site, so a
+/// caller-installed `CRYPTO_set_mem_functions` hook observes it. [`Self::into_raw`] hands the
+/// property copy to the context `properties` member that takes it over.
+struct OwnedBlock {
+    ptr: *mut c_void,
+}
+
+impl OwnedBlock {
+    /// Adopt a block the seam answered, or `None` for NULL.
+    fn take(ptr: *mut c_void) -> Option<OwnedBlock> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBlock { ptr })
+        }
+    }
+
+    /// Give up ownership of the block to the member that takes it over.
+    fn into_raw(self) -> *mut c_void {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBlock {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this seam allocated and has not handed out; its single
+        // release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr, ptr::null(), 0) };
+    }
+}
+
+// The three object destructors: each is exactly what its unit's `*_free` performed by hand, minus
+// the block release `OwnedCtx`'s `Drop` now owns.
+
+impl CtxDestroy for OsslStoreCtx {
+    /// Empty: `OSSL_STORE_CTX` has no destructor body beyond `ossl_store_close_it`, which
+    /// `OSSL_STORE_close` runs explicitly to return its answer, so the block release is the only
+    /// work `Drop` has left here.
+    unsafe fn destroy_body(_ptr: *mut OsslStoreCtx) {}
+}
+
+impl CtxDestroy for OsslStoreSearch {
+    /// Empty: `OSSL_STORE_SEARCH_free` is a bare block free.
+    unsafe fn destroy_body(_ptr: *mut OsslStoreSearch) {}
+}
+
+impl CtxDestroy for OsslStoreInfo {
+    unsafe fn destroy_body(ptr: *mut OsslStoreInfo) {
+        // SAFETY: `ptr` is a live object per the trait contract.
+        unsafe {
+            match (*ptr).type_ {
+                OSSL_STORE_INFO_NAME => {
+                    // SAFETY: the type is NAME, so `name`/`desc` are live and owned.
+                    CRYPTO_free((*ptr).data.name.name.cast::<c_void>(), ptr::null(), 0);
+                    CRYPTO_free((*ptr).data.name.desc.cast::<c_void>(), ptr::null(), 0);
+                }
+                OSSL_STORE_INFO_PARAMS => {
+                    // SAFETY: the type is PARAMS, so `params` is live and owned.
+                    EVP_PKEY_free((*ptr).data.params);
+                }
+                OSSL_STORE_INFO_PUBKEY => {
+                    // SAFETY: the type is PUBKEY, so `pubkey` is live and owned.
+                    EVP_PKEY_free((*ptr).data.pubkey);
+                }
+                OSSL_STORE_INFO_PKEY => {
+                    // SAFETY: the type is PKEY, so `pkey` is live and owned.
+                    EVP_PKEY_free((*ptr).data.pkey);
+                }
+                OSSL_STORE_INFO_CERT => {
+                    // SAFETY: the type is CERT, so `x509` is live and owned as an `X509`.
+                    X509_free((*ptr).data.x509.cast::<X509>());
+                }
+                OSSL_STORE_INFO_CRL => {
+                    // SAFETY: the type is CRL, so `crl` is live and owned as an `X509_CRL`.
+                    X509_CRL_free((*ptr).data.crl.cast::<X509Crl>());
+                }
+                _ => {}
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -609,8 +785,6 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
     let mut loader: *const OsslStoreLoader = ptr::null();
     let mut fetched_loader: *mut OsslStoreLoader = ptr::null_mut();
     let mut loader_ctx: *mut OsslStoreLoaderCtx = ptr::null_mut();
-    let mut ctx: *mut OsslStoreCtx = ptr::null_mut();
-    let mut propq_copy: *mut c_char = ptr::null_mut();
     let mut no_loader_found: c_int = 1;
     let mut scheme_copy = [0 as c_char; 256];
     let mut schemes: [*const c_char; 2] = [ptr::null(); 2];
@@ -669,6 +843,10 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
     ERR_set_mark();
 
     'err: {
+        // The property-query copy this attempt keeps, owned until it is handed to the context's
+        // `properties` member below or released by `Drop` on a refusal.
+        let mut propq_copy: Option<OwnedBlock> = None;
+
         if !ui_method.is_null()
             // SAFETY: `pwdata` is live; the two calls set and enable caching.
             && (unsafe { ossl_pw_set_ui_method(&mut pwdata, ui_method, ui_data) } == 0
@@ -786,28 +964,32 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
         }
 
         if !propq.is_null() {
-            // SAFETY: `propq` is NUL-terminated.
-            propq_copy = unsafe { CRYPTO_strdup(propq, ptr::null(), 0) };
-            if propq_copy.is_null() {
+            // SAFETY: `propq` is NUL-terminated. The copy is owned until `Drop` releases it or the
+            // context's `properties` member takes it over.
+            propq_copy =
+                OwnedBlock::take(unsafe { CRYPTO_strdup(propq, ptr::null(), 0) }.cast::<c_void>());
+            if propq_copy.is_none() {
                 break 'err;
             }
         }
-        // SAFETY: `size_of::<OsslStoreCtx>()` is the context the authority allocates.
-        ctx = CRYPTO_zalloc(core::mem::size_of::<OsslStoreCtx>(), ptr::null(), 0)
-            .cast::<OsslStoreCtx>();
-        if ctx.is_null() {
+        // The context block, allocated through the crate's allocator seam; `Drop` is its single
+        // release on every refusal below and `into_raw` hands it out on success.
+        let Some(ctx) = OwnedCtx::<OsslStoreCtx>::new() else {
             break 'err;
-        }
+        };
 
         // SAFETY: `ctx` is a fresh zeroed allocation and every pointer stored is live.
         unsafe {
-            (*ctx).properties = propq_copy;
-            (*ctx).fetched_loader = fetched_loader;
-            (*ctx).loader = loader;
-            (*ctx).loader_ctx = loader_ctx;
-            (*ctx).post_process = post_process;
-            (*ctx).post_process_data = post_process_data;
-            ptr::write(&mut (*ctx).pwdata, pwdata);
+            (*ctx.as_ptr()).properties = propq_copy
+                .take()
+                .map_or(ptr::null_mut(), OwnedBlock::into_raw)
+                .cast::<c_char>();
+            (*ctx.as_ptr()).fetched_loader = fetched_loader;
+            (*ctx.as_ptr()).loader = loader;
+            (*ctx.as_ptr()).loader_ctx = loader_ctx;
+            (*ctx.as_ptr()).post_process = post_process;
+            (*ctx.as_ptr()).post_process_data = post_process_data;
+            ptr::write(&mut (*ctx.as_ptr()).pwdata, pwdata);
         }
 
         /*
@@ -818,7 +1000,7 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
         // SAFETY: a mark was set at entry.
         ERR_pop_to_mark();
 
-        return ctx;
+        return ctx.into_raw();
     }
 
     // err:
@@ -841,14 +1023,7 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
     // SAFETY: `fetched_loader` is NULL or a freed-by-the-line-above loader, matching the
     // authority's own double release on this unreachable-in-candidate path.
     unsafe { OSSL_STORE_LOADER_free(fetched_loader) };
-    if !propq_copy.is_null() {
-        // SAFETY: `propq_copy` is the `CRYPTO_strdup` this function owns.
-        unsafe { CRYPTO_free(propq_copy.cast::<c_void>(), ptr::null(), 0) };
-    }
-    if !ctx.is_null() {
-        // SAFETY: `ctx` is the `CRYPTO_zalloc` this function owns.
-        unsafe { CRYPTO_free(ctx.cast::<c_void>(), ptr::null(), 0) };
-    }
+    // `propq_copy` and `ctx` were scoped to the block above and released by their `Drop` there.
     ptr::null_mut()
 }
 
@@ -1091,12 +1266,12 @@ pub unsafe extern "C" fn OSSL_STORE_find(
         }
         // SAFETY: `bld` is live and non-NULL.
         unsafe { OSSL_PARAM_BLD_free(bld) };
-        // SAFETY: `name_der` is NULL or the buffer `i2d_X509_NAME` allocated; `number` is NULL or
-        // the BIGNUM `ASN1_INTEGER_to_BN` allocated.
-        unsafe {
-            CRYPTO_free(name_der, ptr::null(), 0);
-            BN_free(number);
-        }
+        // The `name_der` buffer `i2d_X509_NAME` filled is adopted by an owner whose `Drop` is its
+        // release; `number` is NULL or the BIGNUM `ASN1_INTEGER_to_BN` allocated, released by
+        // `BN_free`.
+        let _name_der = OwnedBlock::take(name_der);
+        // SAFETY: `number` is NULL or the BIGNUM `ASN1_INTEGER_to_BN` allocated.
+        unsafe { BN_free(number) };
     } else {
         /* legacy loader section */
         // SAFETY: the enclosing function's `# Safety` contract makes every pointer used here valid.
@@ -1404,8 +1579,11 @@ pub unsafe extern "C" fn OSSL_STORE_close(ctx: *mut OsslStoreCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the contract.
     let ret = unsafe { ossl_store_close_it(ctx) };
 
-    // SAFETY: `ctx` is the context this call owns.
-    unsafe { CRYPTO_free(ctx.cast::<c_void>(), ptr::null(), 0) };
+    // The block is this call's own (NULL is a no-op); `OwnedCtx`'s `Drop` is its single release.
+    // `OSSL_STORE_CTX`'s destructor body is empty because `ossl_store_close_it` above is it, run
+    // here to return its answer.
+    // SAFETY: `ctx` is NULL or the context this call owns and has not released.
+    unsafe { drop(OwnedCtx::<OsslStoreCtx>::from_raw(ctx)) };
     ret
 }
 
@@ -1596,33 +1774,31 @@ pub unsafe extern "C" fn OSSL_STORE_attach(
         return ptr::null_mut();
     }
 
-    // SAFETY: `size_of::<OsslStoreCtx>()` is the context the authority allocates.
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<OsslStoreCtx>(), ptr::null(), 0).cast::<OsslStoreCtx>();
-    if ctx.is_null() {
+    // The context block, allocated through the crate's allocator seam; `Drop` is its single
+    // release on the refusal below and `into_raw` hands it out on success.
+    let Some(ctx) = OwnedCtx::<OsslStoreCtx>::new() else {
         // SAFETY: the mark was set above.
         ERR_clear_last_mark();
         return ptr::null_mut();
-    }
+    };
 
     if !ui_method.is_null()
         // SAFETY: `ctx` is a fresh zeroed allocation; `pwdata` is live.
-        && unsafe { ossl_pw_set_ui_method(&mut (*ctx).pwdata, ui_method, ui_data) } == 0
+        && unsafe { ossl_pw_set_ui_method(&mut (*ctx.as_ptr()).pwdata, ui_method, ui_data) } == 0
     {
         // SAFETY: the mark was set above.
         ERR_clear_last_mark();
-        // SAFETY: `ctx` is the allocation just made.
-        unsafe { CRYPTO_free(ctx.cast::<c_void>(), ptr::null(), 0) };
+        // `ctx` is released by its `Drop` as this frame returns.
         return ptr::null_mut();
     }
 
     // SAFETY: `ctx` is live and every pointer stored is live.
     unsafe {
-        (*ctx).fetched_loader = fetched_loader;
-        (*ctx).loader = loader;
-        (*ctx).loader_ctx = loader_ctx;
-        (*ctx).post_process = post_process;
-        (*ctx).post_process_data = post_process_data;
+        (*ctx.as_ptr()).fetched_loader = fetched_loader;
+        (*ctx.as_ptr()).loader = loader;
+        (*ctx.as_ptr()).loader_ctx = loader_ctx;
+        (*ctx.as_ptr()).post_process = post_process;
+        (*ctx.as_ptr()).post_process_data = post_process_data;
     }
 
     /*
@@ -1633,7 +1809,7 @@ pub unsafe extern "C" fn OSSL_STORE_attach(
     // SAFETY: the mark was set above.
     ERR_pop_to_mark();
 
-    ctx
+    ctx.into_raw()
 }
 
 // ---------------------------------------------------------------------------
@@ -1711,20 +1887,17 @@ pub unsafe extern "C" fn OSSL_STORE_INFO_new(
     type_: c_int,
     data: *mut c_void,
 ) -> *mut OsslStoreInfo {
-    // SAFETY: `size_of::<OsslStoreInfo>()` is the allocation the authority makes.
-    let info = CRYPTO_zalloc(core::mem::size_of::<OsslStoreInfo>(), ptr::null(), 0)
-        .cast::<OsslStoreInfo>();
-
-    if info.is_null() {
+    // The object block, allocated through the crate's allocator seam; `into_raw` hands it out.
+    let Some(info) = OwnedCtx::<OsslStoreInfo>::new() else {
         return ptr::null_mut();
-    }
+    };
 
     // SAFETY: `info` is a fresh zeroed allocation.
     unsafe {
-        (*info).type_ = type_;
-        (*info).data.data = data;
+        (*info.as_ptr()).type_ = type_;
+        (*info.as_ptr()).data.data = data;
     }
-    info
+    info.into_raw()
 }
 
 /// `OSSL_STORE_INFO *OSSL_STORE_INFO_new_NAME(char *name)` — `store_lib.c:626-639`.
@@ -2154,43 +2327,9 @@ pub unsafe extern "C" fn OSSL_STORE_INFO_get1_CRL(info: *const OsslStoreInfo) ->
 /// `info` must be NULL or a live object not already freed.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_INFO_free(info: *mut OsslStoreInfo) {
-    if info.is_null() {
-        return;
-    }
-
-    // SAFETY: `info` is live per the contract.
-    match unsafe { (*info).type_ } {
-        OSSL_STORE_INFO_NAME => {
-            // SAFETY: the type is NAME, so `name`/`desc` are live and owned.
-            unsafe {
-                CRYPTO_free((*info).data.name.name.cast::<c_void>(), ptr::null(), 0);
-                CRYPTO_free((*info).data.name.desc.cast::<c_void>(), ptr::null(), 0);
-            }
-        }
-        OSSL_STORE_INFO_PARAMS => {
-            // SAFETY: the type is PARAMS, so `params` is live and owned.
-            unsafe { EVP_PKEY_free((*info).data.params) };
-        }
-        OSSL_STORE_INFO_PUBKEY => {
-            // SAFETY: the type is PUBKEY, so `pubkey` is live and owned.
-            unsafe { EVP_PKEY_free((*info).data.pubkey) };
-        }
-        OSSL_STORE_INFO_PKEY => {
-            // SAFETY: the type is PKEY, so `pkey` is live and owned.
-            unsafe { EVP_PKEY_free((*info).data.pkey) };
-        }
-        OSSL_STORE_INFO_CERT => {
-            // SAFETY: the type is CERT, so `x509` is live and owned as an `X509`.
-            unsafe { X509_free((*info).data.x509.cast::<X509>()) };
-        }
-        OSSL_STORE_INFO_CRL => {
-            // SAFETY: the type is CRL, so `crl` is live and owned as an `X509_CRL`.
-            unsafe { X509_CRL_free((*info).data.crl.cast::<X509Crl>()) };
-        }
-        _ => {}
-    }
-    // SAFETY: `info` is the allocation `OSSL_STORE_INFO_new` made.
-    unsafe { CRYPTO_free(info.cast::<c_void>(), ptr::null(), 0) };
+    // SAFETY: `info` is NULL or a live object not already freed; `from_raw` reclaims it (NULL is
+    // a no-op) and `Drop` runs the authority's own union-member releases and the block release.
+    unsafe { drop(OwnedCtx::<OsslStoreInfo>::from_raw(info)) };
 }
 
 // ---------------------------------------------------------------------------
@@ -2204,20 +2343,17 @@ pub unsafe extern "C" fn OSSL_STORE_INFO_free(info: *mut OsslStoreInfo) {
 /// `name` is borrowed; the caller must keep it alive for the search's lifetime.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_name(name: *mut c_void) -> *mut OsslStoreSearch {
-    // SAFETY: `size_of::<OsslStoreSearch>()` is the allocation the authority makes.
-    let search = CRYPTO_zalloc(core::mem::size_of::<OsslStoreSearch>(), ptr::null(), 0)
-        .cast::<OsslStoreSearch>();
-
-    if search.is_null() {
+    // The object block, allocated through the crate's allocator seam; `into_raw` hands it out.
+    let Some(search) = OwnedCtx::<OsslStoreSearch>::new() else {
         return ptr::null_mut();
-    }
+    };
 
     // SAFETY: `search` is a fresh zeroed allocation.
     unsafe {
-        (*search).search_type = OSSL_STORE_SEARCH_BY_NAME;
-        (*search).name = name;
+        (*search.as_ptr()).search_type = OSSL_STORE_SEARCH_BY_NAME;
+        (*search.as_ptr()).name = name;
     }
-    search
+    search.into_raw()
 }
 
 /// `OSSL_STORE_SEARCH *OSSL_STORE_SEARCH_by_issuer_serial(X509_NAME *name,
@@ -2230,21 +2366,18 @@ pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_issuer_serial(
     name: *mut c_void,
     serial: *const c_void,
 ) -> *mut OsslStoreSearch {
-    // SAFETY: `size_of::<OsslStoreSearch>()` is the allocation the authority makes.
-    let search = CRYPTO_zalloc(core::mem::size_of::<OsslStoreSearch>(), ptr::null(), 0)
-        .cast::<OsslStoreSearch>();
-
-    if search.is_null() {
+    // The object block, allocated through the crate's allocator seam; `into_raw` hands it out.
+    let Some(search) = OwnedCtx::<OsslStoreSearch>::new() else {
         return ptr::null_mut();
-    }
+    };
 
     // SAFETY: `search` is a fresh zeroed allocation.
     unsafe {
-        (*search).search_type = OSSL_STORE_SEARCH_BY_ISSUER_SERIAL;
-        (*search).name = name;
-        (*search).serial = serial;
+        (*search.as_ptr()).search_type = OSSL_STORE_SEARCH_BY_ISSUER_SERIAL;
+        (*search.as_ptr()).name = name;
+        (*search.as_ptr()).serial = serial;
     }
-    search
+    search.into_raw()
 }
 
 /// `OSSL_STORE_SEARCH *OSSL_STORE_SEARCH_by_key_fingerprint(const EVP_MD *digest,
@@ -2258,19 +2391,16 @@ pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_key_fingerprint(
     bytes: *const c_uchar,
     len: usize,
 ) -> *mut OsslStoreSearch {
-    // SAFETY: `size_of::<OsslStoreSearch>()` is the allocation the authority makes.
-    let search = CRYPTO_zalloc(core::mem::size_of::<OsslStoreSearch>(), ptr::null(), 0)
-        .cast::<OsslStoreSearch>();
-
-    if search.is_null() {
+    // The object block, allocated through the crate's allocator seam; `Drop` releases it on the
+    // two refusals below and `into_raw` hands it out on success.
+    let Some(search) = OwnedCtx::<OsslStoreSearch>::new() else {
         return ptr::null_mut();
-    }
+    };
 
     // SAFETY: `digest` is NULL or live; a NULL is the authority's own refusal.
     let md_size = unsafe { EVP_MD_get_size(digest) };
     if md_size <= 0 {
-        // SAFETY: `search` is the allocation just made.
-        unsafe { CRYPTO_free(search.cast::<c_void>(), ptr::null(), 0) };
+        // `search` is released by its `Drop` as this frame returns.
         return ptr::null_mut();
     }
 
@@ -2291,19 +2421,18 @@ pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_key_fingerprint(
         }
         // SAFETY: `msg` is a NUL-terminated stack buffer.
         unsafe { raise_site_data(&STORE_LIB_959, msg.as_ptr()) };
-        // SAFETY: `search` is the allocation just made.
-        unsafe { CRYPTO_free(search.cast::<c_void>(), ptr::null(), 0) };
+        // `search` is released by its `Drop` as this frame returns.
         return ptr::null_mut();
     }
 
     // SAFETY: `search` is a fresh zeroed allocation.
     unsafe {
-        (*search).search_type = OSSL_STORE_SEARCH_BY_KEY_FINGERPRINT;
-        (*search).digest = digest;
-        (*search).string = bytes;
-        (*search).stringlength = len;
+        (*search.as_ptr()).search_type = OSSL_STORE_SEARCH_BY_KEY_FINGERPRINT;
+        (*search.as_ptr()).digest = digest;
+        (*search.as_ptr()).string = bytes;
+        (*search.as_ptr()).stringlength = len;
     }
-    search
+    search.into_raw()
 }
 
 /// `OSSL_STORE_SEARCH *OSSL_STORE_SEARCH_by_alias(const char *alias)` —
@@ -2313,23 +2442,20 @@ pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_key_fingerprint(
 /// `alias` must be NUL-terminated and outlive the search.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_alias(alias: *const c_char) -> *mut OsslStoreSearch {
-    // SAFETY: `size_of::<OsslStoreSearch>()` is the allocation the authority makes.
-    let search = CRYPTO_zalloc(core::mem::size_of::<OsslStoreSearch>(), ptr::null(), 0)
-        .cast::<OsslStoreSearch>();
-
-    if search.is_null() {
+    // The object block, allocated through the crate's allocator seam; `into_raw` hands it out.
+    let Some(search) = OwnedCtx::<OsslStoreSearch>::new() else {
         return ptr::null_mut();
-    }
+    };
 
     // SAFETY: `alias` is NUL-terminated per the contract.
     let len = unsafe { c_strlen(alias) };
     // SAFETY: `search` is a fresh zeroed allocation.
     unsafe {
-        (*search).search_type = OSSL_STORE_SEARCH_BY_ALIAS;
-        (*search).string = alias.cast::<c_uchar>();
-        (*search).stringlength = len;
+        (*search.as_ptr()).search_type = OSSL_STORE_SEARCH_BY_ALIAS;
+        (*search.as_ptr()).string = alias.cast::<c_uchar>();
+        (*search.as_ptr()).stringlength = len;
     }
-    search
+    search.into_raw()
 }
 
 /// `void OSSL_STORE_SEARCH_free(OSSL_STORE_SEARCH *search)` — `store_lib.c:988-991`.
@@ -2338,8 +2464,9 @@ pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_alias(alias: *const c_char) -> *mu
 /// `search` must be NULL or an object from one of the constructors, not already freed.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_SEARCH_free(search: *mut OsslStoreSearch) {
-    // SAFETY: `search` is NULL or the allocation a constructor made.
-    unsafe { CRYPTO_free(search.cast::<c_void>(), ptr::null(), 0) };
+    // SAFETY: `search` is NULL or the allocation a constructor made; it is reclaimed (NULL is a
+    // no-op) and its `Drop` runs the bare block release `OSSL_STORE_SEARCH_free` performed.
+    unsafe { drop(OwnedCtx::<OsslStoreSearch>::from_raw(search)) };
 }
 
 /// `int OSSL_STORE_SEARCH_get_type(const OSSL_STORE_SEARCH *criterion)` —
