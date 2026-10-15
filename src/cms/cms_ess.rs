@@ -16,7 +16,7 @@
 #![allow(dead_code, non_snake_case)]
 #![allow(unused_assignments)]
 
-use core::ffi::{c_int, c_uchar, c_uint, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
 
 use crate::asn1::a_digest::ossl_asn1_item_digest_ex;
@@ -31,6 +31,7 @@ use crate::asn1::new::ASN1_item_new;
 use crate::asn1::string::{ASN1_STRING_cmp, ASN1_STRING_set, ASN1_STRING_set0};
 use crate::evp::legacy_evp::EVP_get_digestbyname;
 use crate::rand::rand_lib::RAND_bytes_ex;
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::obj::{
     Asn1Object, NID_id_smime_aa_msgSigDigest, NID_id_smime_aa_receiptRequest,
     NID_id_smime_aa_signingCertificate, NID_id_smime_aa_signingCertificateV2,
@@ -47,6 +48,102 @@ use super::cms_lib::{
 
 /// `EVP_MAX_MD_SIZE` — `include/openssl/evp.h:43`.
 const EVP_MAX_MD_SIZE: usize = 64;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
+/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_cleansed`
+/// allocate it, `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that
+/// takes it over (`ec->key`). [`Self::adopt`] takes in a block the crate allocated inside a helper
+/// (`i2d_CMS_ReceiptRequest`) so the failure paths that follow release what they built. A NULL
+/// pointer is a valid, empty buffer whose release is the authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+/// How the authority releases a scratch buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`rrder`).
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `OPENSSL_clear_free(ptr, num)`, which zeroes `num` bytes first.
+    Cleansed { num: usize },
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// `CRYPTO_malloc(len, file, line)` for a block whose release is the cleansing
+    /// `OPENSSL_clear_free(ptr, len)`, or `None` when the allocator answers NULL.
+    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Cleansed { num: len },
+        })
+    }
+
+    /// Adopt a plain block this crate allocated inside a helper, for release by `Drop` at the
+    /// authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
+    /// is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf {
+            ptr,
+            release: BufRelease::Plain { file, line },
+        }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Cleansed { num } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `OPENSSL_clear_free` zeroes then releases it and accepts NULL.
+                unsafe { super::cms_asn1::OPENSSL_clear_free(self.ptr, num) };
+            }
+        }
+    }
+}
 
 // The ESS surface `ossl_cms_check_signing_certs` reaches. It is Phase 12.7's (`crypto/ess/`); the
 // shell scaffolds the exports, so this unit declares them as the authority's prototypes spell them
@@ -370,34 +467,36 @@ pub(crate) unsafe extern "C" fn CMS_add1_ReceiptRequest(
 
     // SAFETY: `rr` is live; `rrder` is this frame's slot.
     let rrderlen = unsafe { i2d_CMS_ReceiptRequest(rr, &mut rrder) };
+    // The encoded blob is the helper's block; its release is the authority's plain `CRYPTO_free`,
+    // run by `Drop`.
+    // SAFETY: `rrder` is NULL or a live block the helper allocated and no one else owns.
+    let rrder_owned = unsafe { OwnedBuf::adopt(rrder, c"cms_ess.c".as_ptr(), 187) };
     if rrderlen < 0 {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_cms(174, c"CMS_add1_ReceiptRequest", ERR_R_CMS_LIB) };
-        // SAFETY: `rrder` is NULL or owned here.
-        unsafe { crate::runtime::mem::CRYPTO_free(rrder.cast(), c"cms_ess.c".as_ptr(), 187) };
+        drop(rrder_owned);
         return 0;
     }
 
-    // SAFETY: `si`/`rrder` are live.
+    // SAFETY: `si` is live; `rrder_owned` is `rrderlen` readable bytes.
     if unsafe {
         CMS_signed_add1_attr_by_NID(
             si,
             NID_id_smime_aa_receiptRequest,
             V_ASN1_SEQUENCE,
-            rrder.cast(),
+            rrder_owned.as_ptr().cast(),
             rrderlen,
         )
     } == 0
     {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_cms(180, c"CMS_add1_ReceiptRequest", ERR_R_CMS_LIB) };
-        // SAFETY: `rrder` is owned here.
-        unsafe { crate::runtime::mem::CRYPTO_free(rrder.cast(), c"cms_ess.c".as_ptr(), 187) };
+        drop(rrder_owned);
         return 0;
     }
 
-    // SAFETY: `rrder` is owned here.
-    unsafe { crate::runtime::mem::CRYPTO_free(rrder.cast(), c"cms_ess.c".as_ptr(), 187) };
+    // The attribute helper copied the blob; release our handle.
+    drop(rrder_owned);
     1
 }
 
