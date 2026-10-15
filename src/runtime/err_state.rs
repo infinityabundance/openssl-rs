@@ -45,18 +45,10 @@
 //!   more than once. A slot whose `ERR_FLAG_CLEAR` bit is set is skipped, which is
 //!   how a lazy clear is honoured across the boundary.
 
-use core::ffi::c_void;
-
 use crate::runtime::err::{
-    with_state, ErrState, ERR_FLAG_CLEAR_FLAG, ERR_STATE_SLOTS, ERR_TXT_MALLOCED_FLAG,
+    with_state, ErrState, OwnedErrState, OwnedSlotBuf, ERR_FLAG_CLEAR_FLAG, ERR_STATE_SLOTS,
+    ERR_TXT_MALLOCED_FLAG,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
-
-/// The `file`/`line` the authority's `OSSL_ERR_STATE_free` passes to `CRYPTO_free`.
-/// They are 0 and NULL in the authority's own source for this allocate/free pair,
-/// because it uses the allocator directly rather than the `OPENSSL_free` macro.
-const NO_FILE: *const core::ffi::c_char = core::ptr::null();
-const NO_LINE: core::ffi::c_int = 0;
 
 /// `ERR_STATE *OSSL_ERR_STATE_new(void)`
 ///
@@ -67,7 +59,12 @@ const NO_LINE: core::ffi::c_int = 0;
 /// shape and is reproduced rather than tidied.
 #[no_mangle]
 pub extern "C" fn OSSL_ERR_STATE_new() -> *mut ErrState {
-    CRYPTO_zalloc(core::mem::size_of::<ErrState>(), NO_FILE, NO_LINE).cast::<ErrState>()
+    // The owned handle allocates the block through the seam and gives it up to the C caller;
+    // the matching `OSSL_ERR_STATE_free` reclaims it and its `Drop` is the release.
+    match OwnedErrState::new() {
+        Some(state) => state.into_raw(),
+        None => core::ptr::null_mut(),
+    }
 }
 
 /// `void OSSL_ERR_STATE_free(ERR_STATE *es)`
@@ -80,14 +77,11 @@ pub extern "C" fn OSSL_ERR_STATE_new() -> *mut ErrState {
 /// already been freed.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_ERR_STATE_free(es: *mut ErrState) {
-    if es.is_null() {
-        return;
-    }
-    // SAFETY: `es` is a live state per the caller's contract, and this function is
-    // the only place that frees it, so the reference cannot outlive the call.
-    unsafe { (*es).clear_all(true) };
-    // SAFETY: as above; the pointer came from `CRYPTO_zalloc`.
-    unsafe { CRYPTO_free(es.cast::<c_void>(), NO_FILE, NO_LINE) };
+    // NULL is a no-op; otherwise `from_raw` reclaims the block and `Drop` runs the authority's
+    // own free body (`clear_all(true)` then the block release), so this is its single release.
+    // SAFETY: `es` is NULL or a live state from `OSSL_ERR_STATE_new` that `Drop` has not
+    // released.
+    unsafe { drop(OwnedErrState::from_raw(es)) };
 }
 
 /// `void OSSL_ERR_STATE_save(ERR_STATE *es)`
@@ -235,20 +229,22 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_restore(es: *const ErrState) {
 
             if !src.err_data[from].is_null() && src.err_data_size[from] != 0 {
                 let size = src.err_data_size[from];
-                let copy = crate::runtime::mem::CRYPTO_malloc(size, NO_FILE, NO_LINE);
-                if !copy.is_null() {
-                    // SAFETY: `copy` is a fresh allocation of `size` bytes and the
-                    // source holds at least that many, per its own size field.
+                // The copy is a fresh seam allocation handed to the slot raw; its release is the
+                // slot's `Drop` path. A refused allocation skips the copy, as the authority's own
+                // NULL `CRYPTO_malloc` does.
+                if let Some(copy) = OwnedSlotBuf::alloc(size) {
+                    // SAFETY: `copy` is `size` fresh bytes and the source holds at least that
+                    // many, per its own size field.
                     unsafe {
                         core::ptr::copy_nonoverlapping(
                             src.err_data[from].cast::<u8>(),
-                            copy.cast::<u8>(),
+                            copy.as_ptr().cast::<u8>(),
                             size,
                         )
                     };
                     thread_es.set_data(
                         top,
-                        copy.cast(),
+                        copy.into_raw(),
                         size,
                         src.err_data_flags[from] | ERR_TXT_MALLOCED_FLAG,
                     );
