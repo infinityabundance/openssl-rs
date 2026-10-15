@@ -94,6 +94,104 @@ const INT_MAX: c_int = c_int::MAX;
 /// `OSSL_PKEY_PARAM_CMS_RI_TYPE` — `core_names.h:369`.
 const OSSL_PKEY_PARAM_CMS_RI_TYPE: *const c_char = c"ri-type".as_ptr();
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size -- a Rust `Box`/`Vec` would
+/// hide both the allocation and its release from a caller-installed `CRYPTO_set_mem_functions`
+/// hook -- and only its *ownership* is this type: `new`/`new_cleansed` allocate it, `Drop` is its
+/// single release, and [`Self::into_raw`] hands it to a consumer that takes it over
+/// (`ASN1_STRING_set0`, or the recipient's `ec.key`). [`Self::adopt`] takes in a block the crate
+/// allocated inside a helper (`ASN1_item_i2d`, `evp_pkey_decrypt_alloc`) so the failure paths that
+/// follow release what they built. A NULL pointer is a valid, empty buffer whose release is the
+/// authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+/// How the authority releases a scratch buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`ek`, `wkey`, `aad`, `tag`).
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `OPENSSL_clear_free(ptr, num)`, which zeroes `num` bytes first
+    /// (`ukey`).
+    Cleansed { num: usize },
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// `CRYPTO_malloc(len, file, line)` for a block whose release is the cleansing
+    /// `OPENSSL_clear_free(ptr, len)` (`ukey`), or `None` when the allocator answers NULL.
+    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Cleansed { num: len },
+        })
+    }
+
+    /// Adopt a plain block this crate allocated inside a helper, for release by `Drop` at the
+    /// authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
+    /// is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf {
+            ptr,
+            release: BufRelease::Plain { file, line },
+        }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Cleansed { num } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `OPENSSL_clear_free` zeroes then releases it and accepts NULL.
+                unsafe { OPENSSL_clear_free(self.ptr, num) };
+            }
+        }
+    }
+}
+
 /// `BIO_get_cipher_ctx(BIO *, EVP_CIPHER_CTX **)` — `BIO_ctrl(b, BIO_C_GET_CIPHER_CTX, 0, pctx)`.
 ///
 /// # Safety
@@ -1045,7 +1143,6 @@ unsafe fn cms_RecipientInfo_ktri_encrypt(
     ri: *mut CmsRecipientInfo,
 ) -> c_int {
     let mut pctx;
-    let mut ek: *mut c_uchar = ptr::null_mut();
     let mut eklen: usize = 0;
     // SAFETY: `cms` is live.
     let ctx = unsafe { ossl_cms_get0_cmsctx(cms) };
@@ -1078,8 +1175,6 @@ unsafe fn cms_RecipientInfo_ktri_encrypt(
             unsafe { EVP_PKEY_CTX_free(pctx) };
             // SAFETY: `ktri` is live.
             unsafe { (*ktri).pctx = ptr::null_mut() };
-            // SAFETY: each is NULL or owned.
-            unsafe { CRYPTO_free(ek.cast(), c"cms_env.c".as_ptr(), 583) };
             return ret;
         }
     } else {
@@ -1098,8 +1193,6 @@ unsafe fn cms_RecipientInfo_ktri_encrypt(
         if unsafe { EVP_PKEY_encrypt_init(pctx) } <= 0 {
             // SAFETY: `pctx` is live.
             unsafe { EVP_PKEY_CTX_free(pctx) };
-            // SAFETY: each is NULL or owned.
-            unsafe { CRYPTO_free(ek.cast(), c"cms_env.c".as_ptr(), 583) };
             return ret;
         }
     }
@@ -1107,46 +1200,36 @@ unsafe fn cms_RecipientInfo_ktri_encrypt(
     // SAFETY: `pctx`/`ec` are live.
     if unsafe { EVP_PKEY_encrypt(pctx, ptr::null_mut(), &mut eklen, (*ec).key, (*ec).keylen) } <= 0
     {
-        // SAFETY: each pointer is NULL or owned here.
-        unsafe {
-            EVP_PKEY_CTX_free(pctx);
-            CRYPTO_free(ek.cast(), c"cms_env.c".as_ptr(), 583);
-        }
+        // SAFETY: `pctx` is live.
+        unsafe { EVP_PKEY_CTX_free(pctx) };
         return ret;
     }
 
+    // The encrypted key is this frame's scratch, allocated through the crate's allocator seam at
+    // `eklen` and owned by `ek` -- the failure paths below release what they built on drop.
     // SAFETY: `eklen > 0`.
-    ek = CRYPTO_malloc(eklen, c"cms_env.c".as_ptr(), 568).cast::<c_uchar>();
-    if ek.is_null() {
-        // SAFETY: each pointer is NULL or owned here.
-        unsafe {
-            EVP_PKEY_CTX_free(pctx);
-            CRYPTO_free(ek.cast(), c"cms_env.c".as_ptr(), 583);
-        }
+    let Some(ek) = OwnedBuf::new(eklen, c"cms_env.c".as_ptr(), 568) else {
+        // SAFETY: `pctx` is live.
+        unsafe { EVP_PKEY_CTX_free(pctx) };
+        return ret;
+    };
+
+    // SAFETY: `pctx`/`ec` are live; `ek` is `eklen` writable bytes.
+    if unsafe { EVP_PKEY_encrypt(pctx, ek.as_ptr(), &mut eklen, (*ec).key, (*ec).keylen) } <= 0 {
+        // SAFETY: `pctx` is live; `ek` releases its own block on drop.
+        unsafe { EVP_PKEY_CTX_free(pctx) };
         return ret;
     }
 
-    // SAFETY: `pctx`/`ec` are live; `ek` is writable.
-    if unsafe { EVP_PKEY_encrypt(pctx, ek, &mut eklen, (*ec).key, (*ec).keylen) } <= 0 {
-        // SAFETY: each pointer is NULL or owned here.
-        unsafe {
-            EVP_PKEY_CTX_free(pctx);
-            CRYPTO_free(ek.cast(), c"cms_env.c".as_ptr(), 583);
-        }
-        return ret;
-    }
-
-    // SAFETY: `ktri`/`ek` are live; ownership transfers.
-    unsafe { ASN1_STRING_set0((*ktri).encrypted_key, ek.cast(), eklen as c_int) };
-    ek = ptr::null_mut();
+    // SAFETY: `ktri` is live; ownership of the block transfers to the `ASN1_STRING`.
+    unsafe { ASN1_STRING_set0((*ktri).encrypted_key, ek.into_raw().cast(), eklen as c_int) };
 
     ret = 1;
 
-    // SAFETY: `pctx` is live; each pointer is NULL or owned.
+    // SAFETY: `pctx` is live.
     unsafe {
         EVP_PKEY_CTX_free(pctx);
         (*ktri).pctx = ptr::null_mut();
-        CRYPTO_free(ek.cast(), c"cms_env.c".as_ptr(), 583);
     }
     ret
 }
@@ -1296,21 +1379,25 @@ unsafe fn cms_RecipientInfo_ktri_decrypt(
         )
     } <= 0
     {
-        // SAFETY: `ktri` is live; `ek` is NULL or owned.
+        // SAFETY: `ktri` is live.
         unsafe {
             EVP_PKEY_CTX_free((*ktri).pctx.cast());
             (*ktri).pctx = ptr::null_mut();
-            CRYPTO_free(ek.cast(), c"cms_env.c".as_ptr(), 663);
         }
         return ret;
     }
 
+    // The decrypted key is the helper's own `CRYPTO_malloc` block; `ek_owned` adopts it, so the
+    // success path hands it to `ec.key` and any later exit releases what it built.
+    // SAFETY: `ek` is a live block `evp_pkey_decrypt_alloc` allocated and no one else owns.
+    let ek_owned = unsafe { OwnedBuf::adopt(ek, c"cms_env.c".as_ptr(), 663) };
+
     ret = 1;
 
-    // SAFETY: `ec`/`ktri` are live.
+    // SAFETY: `ec`/`ktri` are live; ownership of the block transfers to `ec.key`.
     unsafe {
         super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen);
-        (*ec).key = ek;
+        (*ec).key = ek_owned.into_raw();
         (*ec).keylen = eklen;
     }
 
@@ -1638,7 +1725,6 @@ unsafe fn cms_RecipientInfo_kekri_encrypt(
     cms: *const CmsContentInfo,
     ri: *mut CmsRecipientInfo,
 ) -> c_int {
-    let mut wkey: *mut c_uchar = ptr::null_mut();
     let mut wkeylen: c_int = 0;
     let mut r = 0;
     let mut cipher: *mut EvpCipher = ptr::null_mut();
@@ -1686,26 +1772,27 @@ unsafe fn cms_RecipientInfo_kekri_encrypt(
     // 8 byte prefix for AES wrap ciphers.
     // SAFETY: `ec` is live.
     let alloc = unsafe { (*ec).keylen } + 8;
+    // The wrapped key is this frame's scratch, allocated through the crate's allocator seam at
+    // `alloc` bytes and owned by `wkey` -- the failure paths below release what they built on
+    // drop.
     // SAFETY: `alloc > 0`.
-    wkey = CRYPTO_malloc(alloc, c"cms_env.c".as_ptr(), 912).cast::<c_uchar>();
-    if wkey.is_null() {
+    let Some(wkey) = OwnedBuf::new(alloc, c"cms_env.c".as_ptr(), 912) else {
         // SAFETY: `cipher`/`ctx` are NULL or owned.
         unsafe {
             EVP_CIPHER_free(cipher);
             crate::evp::cipher_ctx::EVP_CIPHER_CTX_free(ctx);
         }
         return r;
-    }
+    };
 
     // SAFETY: the allocator answers a fresh context.
     ctx = EVP_CIPHER_CTX_new();
     if ctx.is_null() {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_cms(918, c"cms_RecipientInfo_kekri_encrypt", ERR_R_EVP_LIB) };
-        // SAFETY: each is NULL or owned.
+        // SAFETY: `cipher` is owned here; `wkey` releases its own block on drop.
         unsafe {
             EVP_CIPHER_free(cipher);
-            CRYPTO_free(wkey.cast(), c"cms_env.c".as_ptr(), 942);
             crate::evp::cipher_ctx::EVP_CIPHER_CTX_free(ctx);
         }
         return r;
@@ -1719,10 +1806,10 @@ unsafe fn cms_RecipientInfo_kekri_encrypt(
     } != 0
         // SAFETY: as above.
         && unsafe {
-            EVP_EncryptUpdate(ctx, wkey, &mut wkeylen, (*ec).key, (*ec).keylen as c_int)
+            EVP_EncryptUpdate(ctx, wkey.as_ptr(), &mut wkeylen, (*ec).key, (*ec).keylen as c_int)
         } != 0
         // SAFETY: as above.
-        && unsafe { EVP_EncryptFinal_ex(ctx, wkey.add(wkeylen as usize), &mut outlen) } != 0;
+        && unsafe { EVP_EncryptFinal_ex(ctx, wkey.as_ptr().add(wkeylen as usize), &mut outlen) } != 0;
     if !ok {
         // SAFETY: the site is a compile-time constant.
         unsafe {
@@ -1732,10 +1819,9 @@ unsafe fn cms_RecipientInfo_kekri_encrypt(
                 crate::runtime::err::err_reasons::CMS_R_WRAP_ERROR,
             )
         };
-        // SAFETY: each is NULL or owned.
+        // SAFETY: `cipher` is owned here; `wkey` releases its own block on drop.
         unsafe {
             EVP_CIPHER_free(cipher);
-            CRYPTO_free(wkey.cast(), c"cms_env.c".as_ptr(), 942);
             crate::evp::cipher_ctx::EVP_CIPHER_CTX_free(ctx);
         }
         return r;
@@ -1751,27 +1837,22 @@ unsafe fn cms_RecipientInfo_kekri_encrypt(
                 crate::runtime::err::err_reasons::CMS_R_WRAP_ERROR,
             )
         };
-        // SAFETY: each pointer is NULL or owned here.
+        // SAFETY: `cipher` is owned here; `wkey` releases its own block on drop.
         unsafe {
             EVP_CIPHER_free(cipher);
-            CRYPTO_free(wkey.cast(), c"cms_env.c".as_ptr(), 942);
             crate::evp::cipher_ctx::EVP_CIPHER_CTX_free(ctx);
         }
         return r;
     }
 
-    // SAFETY: `kekri`/`wkey` are live; ownership transfers.
-    unsafe { ASN1_STRING_set0((*kekri).encrypted_key, wkey.cast(), wkeylen) };
-    wkey = ptr::null_mut();
+    // SAFETY: `kekri` is live; ownership of the block transfers to the `ASN1_STRING`.
+    unsafe { ASN1_STRING_set0((*kekri).encrypted_key, wkey.into_raw().cast(), wkeylen) };
 
     r = 1;
 
-    // SAFETY: each is NULL or owned.
+    // SAFETY: `cipher` is owned here.
     unsafe {
         EVP_CIPHER_free(cipher);
-        if r == 0 {
-            CRYPTO_free(wkey.cast(), c"cms_env.c".as_ptr(), 942);
-        }
         crate::evp::cipher_ctx::EVP_CIPHER_CTX_free(ctx);
     }
 
@@ -1787,7 +1868,6 @@ unsafe fn cms_RecipientInfo_kekri_decrypt(
     cms: *mut CmsContentInfo,
     ri: *mut CmsRecipientInfo,
 ) -> c_int {
-    let mut ukey: *mut c_uchar = ptr::null_mut();
     let mut ukey_alloc_len: usize = 0;
     let mut ukeylen: c_int = 0;
     let mut r = 0;
@@ -1865,23 +1945,24 @@ unsafe fn cms_RecipientInfo_kekri_decrypt(
 
     // SAFETY: `kekri` is live.
     ukey_alloc_len = unsafe { (*(*kekri).encrypted_key).length } as usize - 8;
+    // The unwrapped key is this frame's scratch, allocated through the crate's allocator seam at
+    // `ukey_alloc_len` bytes and owned by `ukey`; its release is the authority's cleansing
+    // `OPENSSL_clear_free`, run by `Drop`.
     // SAFETY: `ukey_alloc_len >= 8`.
-    ukey = CRYPTO_malloc(ukey_alloc_len, c"cms_env.c".as_ptr(), 995).cast::<c_uchar>();
-    if ukey.is_null() {
+    let Some(ukey) = OwnedBuf::new_cleansed(ukey_alloc_len, c"cms_env.c".as_ptr(), 995) else {
         // SAFETY: `cipher` is owned here.
         unsafe { EVP_CIPHER_free(cipher) };
         return r;
-    }
+    };
 
     // SAFETY: the allocator answers a fresh context.
     ctx = EVP_CIPHER_CTX_new();
     if ctx.is_null() {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_cms(1001, c"cms_RecipientInfo_kekri_decrypt", ERR_R_EVP_LIB) };
-        // SAFETY: each is NULL or owned.
+        // SAFETY: `cipher` is owned here; `ukey` clears and releases its own block on drop.
         unsafe {
             EVP_CIPHER_free(cipher);
-            super::cms_asn1::OPENSSL_clear_free(ukey, ukey_alloc_len);
             crate::evp::cipher_ctx::EVP_CIPHER_CTX_free(ctx);
         }
         return r;
@@ -1895,14 +1976,14 @@ unsafe fn cms_RecipientInfo_kekri_decrypt(
         && unsafe {
             EVP_DecryptUpdate(
                 ctx,
-                ukey,
+                ukey.as_ptr(),
                 &mut ukeylen,
                 (*(*kekri).encrypted_key).data,
                 (*(*kekri).encrypted_key).length,
             )
         } != 0
         // SAFETY: as above.
-        && unsafe { EVP_DecryptFinal_ex(ctx, ukey.add(ukeylen as usize), &mut outlen) } != 0;
+        && unsafe { EVP_DecryptFinal_ex(ctx, ukey.as_ptr().add(ukeylen as usize), &mut outlen) } != 0;
     if !ok {
         // SAFETY: the site is a compile-time constant.
         unsafe {
@@ -1912,32 +1993,27 @@ unsafe fn cms_RecipientInfo_kekri_decrypt(
                 crate::runtime::err::err_reasons::CMS_R_UNWRAP_ERROR,
             )
         };
-        // SAFETY: each is NULL or owned.
+        // SAFETY: `cipher` is owned here; `ukey` clears and releases its own block on drop.
         unsafe {
             EVP_CIPHER_free(cipher);
-            super::cms_asn1::OPENSSL_clear_free(ukey, ukey_alloc_len);
             crate::evp::cipher_ctx::EVP_CIPHER_CTX_free(ctx);
         }
         return r;
     }
     ukeylen += outlen;
 
-    // SAFETY: `ec` is live.
+    // SAFETY: `ec` is live; ownership of the block transfers to `ec.key`.
     unsafe {
         super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen);
-        (*ec).key = ukey;
+        (*ec).key = ukey.into_raw();
         (*ec).keylen = ukeylen as usize;
     }
-    ukey = ptr::null_mut();
 
     r = 1;
 
-    // SAFETY: each is NULL or owned.
+    // SAFETY: `cipher` is owned here.
     unsafe {
         EVP_CIPHER_free(cipher);
-        if r == 0 {
-            super::cms_asn1::OPENSSL_clear_free(ukey, ukey_alloc_len);
-        }
         crate::evp::cipher_ctx::EVP_CIPHER_CTX_free(ctx);
     }
 
@@ -2287,27 +2363,31 @@ unsafe fn cms_AuthEnvelopedData_set_aad(b: *mut Bio, auth_attrs: *mut OpenSslSta
     };
     // SAFETY: `auth_attrs` is live; `aad` is this frame's slot.
     aadlen = unsafe { crate::asn1::i2d::ASN1_item_i2d(auth_attrs.cast(), &mut aad, item) };
-    if aadlen <= 0 || aad.is_null() {
+    // The encoded attributes are `ASN1_item_i2d`'s own `CRYPTO_malloc` block; `aad` adopts it, so
+    // every exit below releases what it built.
+    // SAFETY: `aad` is NULL or a live block the helper allocated and no one else owns.
+    let aad = unsafe { OwnedBuf::adopt(aad, c"cms_env.c".as_ptr(), 1266) };
+    if aadlen <= 0 || aad.as_ptr().is_null() {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_cms(1257, c"cms_AuthEnvelopedData_set_aad", ERR_R_ASN1_LIB) };
-        // SAFETY: `aad` is NULL or owned.
-        unsafe { CRYPTO_free(aad.cast(), c"cms_env.c".as_ptr(), 1266) };
         return ok;
     }
     // SAFETY: `ctx` is live; `aad` is readable for `aadlen`.
     if unsafe {
-        crate::evp::cipher_ctx::EVP_CipherUpdate(ctx, ptr::null_mut(), &mut outl, aad, aadlen)
+        crate::evp::cipher_ctx::EVP_CipherUpdate(
+            ctx,
+            ptr::null_mut(),
+            &mut outl,
+            aad.as_ptr(),
+            aadlen,
+        )
     } <= 0
     {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_cms(1261, c"cms_AuthEnvelopedData_set_aad", ERR_R_CMS_LIB) };
-        // SAFETY: `aad` is owned here.
-        unsafe { CRYPTO_free(aad.cast(), c"cms_env.c".as_ptr(), 1266) };
         return ok;
     }
     ok = 1;
-    // SAFETY: `aad` is owned here.
-    unsafe { CRYPTO_free(aad.cast(), c"cms_env.c".as_ptr(), 1266) };
     ok
 }
 
@@ -2471,7 +2551,6 @@ pub(crate) unsafe extern "C" fn ossl_cms_AuthEnvelopedData_final(
     cmsbio: *mut Bio,
 ) -> c_int {
     let mut ctx: *mut EvpCipherCtx = ptr::null_mut();
-    let mut tag: *mut c_uchar = ptr::null_mut();
     let mut taglen = 0;
     let mut ok = 0;
 
@@ -2486,14 +2565,25 @@ pub(crate) unsafe extern "C" fn ossl_cms_AuthEnvelopedData_final(
 
     // SAFETY: `ctx` is live.
     taglen = unsafe { EVP_CIPHER_CTX_get_tag_length(ctx) };
+    // The AEAD tag is this frame's scratch, allocated through the crate's allocator seam at
+    // `taglen` bytes and owned by `tag`.
     // SAFETY: `taglen > 0`.
-    tag = CRYPTO_malloc(taglen as usize, c"cms_env.c".as_ptr(), 1379).cast::<c_uchar>();
+    let Some(tag) = OwnedBuf::new(taglen as usize, c"cms_env.c".as_ptr(), 1379) else {
+        // SAFETY: the site is a compile-time constant.
+        unsafe {
+            raise_cms(
+                1383,
+                c"ossl_cms_AuthEnvelopedData_final",
+                crate::runtime::err::err_reasons::CMS_R_CIPHER_GET_TAG,
+            )
+        };
+        return ok;
+    };
     // SAFETY: `ctx` is live; `tag` is writable.
     if taglen <= 0
-        || tag.is_null()
         // SAFETY: the context and cipher are live.
         || unsafe {
-            EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, taglen, tag.cast())
+            EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, taglen, tag.as_ptr().cast())
         } <= 0
     {
         // SAFETY: the site is a compile-time constant.
@@ -2504,8 +2594,6 @@ pub(crate) unsafe extern "C" fn ossl_cms_AuthEnvelopedData_final(
                 crate::runtime::err::err_reasons::CMS_R_CIPHER_GET_TAG,
             )
         };
-        // SAFETY: `tag` is NULL or owned.
-        unsafe { CRYPTO_free(tag.cast(), c"cms_env.c".as_ptr(), 1392) };
         return ok;
     }
 
@@ -2513,19 +2601,15 @@ pub(crate) unsafe extern "C" fn ossl_cms_AuthEnvelopedData_final(
     if unsafe {
         crate::asn1::string::ASN1_OCTET_STRING_set(
             (*(*cms).d.cast::<CmsAuthEnvelopedData>()).mac,
-            tag,
+            tag.as_ptr(),
             taglen,
         )
     } == 0
     {
-        // SAFETY: `tag` is owned here.
-        unsafe { CRYPTO_free(tag.cast(), c"cms_env.c".as_ptr(), 1392) };
         return ok;
     }
 
     ok = 1;
-    // SAFETY: `tag` is owned here.
-    unsafe { CRYPTO_free(tag.cast(), c"cms_env.c".as_ptr(), 1392) };
     ok
 }
 
