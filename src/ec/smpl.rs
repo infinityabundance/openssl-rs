@@ -11,9 +11,22 @@
 //! `src/runtime/err_sites.rs`; adding the row and regenerating is owed by the commit that lands
 //! this module, and the reference here is the coordinate rather than a value.
 //!
+//! ## Ownership: the `prod_z` array owns itself
+//!
+//! `ossl_ec_GFp_simple_points_make_affine`'s `prod_z` array is the unit's only
+//! `CRYPTO_malloc_array` block, and it owns itself: [`OwnedBlock`] adopts it at the authority's own
+//! size, file and line and its `Drop` is the single release, so the function's tail no longer writes
+//! the `CRYPTO_free` by hand. The block stays a `CRYPTO_malloc_array` on the crate's allocator seam,
+//! so a caller-installed `CRYPTO_set_mem_functions` hook observes the same allocation and release.
+//!
+//! **The `BIGNUM`s the array holds stay raw and are the documented boundary.** Each is
+//! `bn/bignum.rs`'s object with its own `BN_clear_free` body, released here in the authority's own
+//! element loop; adopting them would move another unit's destructor into this one, so only the array
+//! block is owned and the elements keep the authority's own release.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::c_int;
+use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
 use crate::bn::arith::{
@@ -57,6 +70,40 @@ use crate::runtime::err::raise_site;
 use crate::runtime::err::{ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc_array};
 use crate::runtime::obj::NID_X9_62_prime_field;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `prod_z` array block
+// ---------------------------------------------------------------------------------------------
+
+/// An owned array block: the authority's own `CRYPTO_malloc_array` allocation whose single release
+/// is `Drop`, so no call site writes the `CRYPTO_free` by hand.
+///
+/// The block stays a `CRYPTO_malloc_array` at the authority's own size, file and line, so a
+/// caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly
+/// as it observes the authority's; only its *ownership* is this type. [`Self::adopt`] adopts the
+/// block the seam answered (NULL is the empty block whose release is a no-op), and the block's
+/// address stays the stable one the function walks.
+struct OwnedBlock {
+    ptr: *mut c_void,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBlock {
+    /// Adopt a block the seam answered, or NULL as the empty block whose release is a no-op. Used
+    /// where the authority keeps and later frees the block unconditionally.
+    fn adopt(ptr: *mut c_void, file: *const c_char, line: c_int) -> OwnedBlock {
+        OwnedBlock { ptr, file, line }
+    }
+}
+
+impl Drop for OwnedBlock {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
+        // released before; its single release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr, self.file, self.line) };
+    }
+}
 
 /// The translation-unit coordinate the two `OPENSSL_malloc_array`/`OPENSSL_free` pairs in
 /// `ossl_ec_GFp_simple_points_make_affine` are attributed to, as the allocator reports them.
@@ -1824,6 +1871,9 @@ pub(crate) unsafe extern "C" fn ossl_ec_GFp_simple_points_make_affine(
             return ret;
         }
 
+        // The `prod_z` array block this call owns; its `Drop` is the single release, at the
+        // authority's own line 1357.
+        let prod_z_owner;
         'err: {
             prod_z = CRYPTO_malloc_array(
                 num,
@@ -1832,6 +1882,7 @@ pub(crate) unsafe extern "C" fn ossl_ec_GFp_simple_points_make_affine(
                 1229,
             )
             .cast::<*mut BigNum>();
+            prod_z_owner = OwnedBlock::adopt(prod_z.cast::<c_void>(), FILE.as_ptr(), 1357);
             if prod_z.is_null() {
                 break 'err;
             }
@@ -2018,7 +2069,9 @@ pub(crate) unsafe extern "C" fn ossl_ec_GFp_simple_points_make_affine(
                 BN_clear_free(*prod_z.add(i));
                 i += 1;
             }
-            CRYPTO_free(prod_z.cast(), FILE.as_ptr(), 1357);
+            // The array block is released by `prod_z_owner`'s `Drop`, at the authority's own line
+            // 1357, as this frame returns.
+            drop(prod_z_owner);
         }
     }
     ret
