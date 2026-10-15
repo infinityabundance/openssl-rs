@@ -43,6 +43,26 @@
 //! `configuration.h` has it. `EVP_MD_CTX_create`/`_destroy` are the authority's macros for
 //! `EVP_MD_CTX_new`/`_free`.
 //!
+//! ## Ownership
+//!
+//! Each KDF unit's context block is an owned [`OwnedCtx`]: `*_new` allocates it through the
+//! crate's allocator seam and hands out its address as `*mut c_void`, and the matching `*_free`
+//! reclaims the owner, whose `Drop` runs the unit's `KdfDestroy::destroy_body` (the authority's
+//! own `*_free` body) and then releases the block. No `*_free` writes a `CRYPTO_free` for its
+//! context any more, and the error paths of every `*_dup` release through the same `Drop`.
+//!
+//! A handful of self-contained scratch buffers (KBKDF's `k_i`, SCRYPT's `B`, PBKDF1's `skey`,
+//! Argon2's threaded-fill arrays and TLS1-PRF's second-half block) are owned [`OwnedBuf`]s whose
+//! `Drop` is the authority's `CRYPTO_free`/`CRYPTO_clear_free`; their tail and error-path frees
+//! were hand-written and are now the handle's.
+//!
+//! The blocks stay `CRYPTO_*` allocations at the authority's exact sizes rather than Rust `Box`es
+//! -- a caller-installed `CRYPTO_set_mem_functions` hook observes them exactly as it observes the
+//! authority's -- so ownership is expressed *above* the seam and the seam is the residual raw
+//! boundary. Each `#[repr(C)]` context keeps its layout and its `unsigned char *`/`size_t` member
+//! pairs unchanged; the member buffers themselves are still released by the context's (relocated)
+//! free body, and making *them* owned is the following unit.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CStr};
@@ -295,6 +315,280 @@ fn fail_at(site: &err_sites::ErrSite) -> c_int {
     // `'static`; no caller state is touched.
     unsafe { raise_site(site) };
     0
+}
+
+/// The `__FILE__` a KDF unit's allocations name, and its whole context destructor.
+///
+/// `destroy_body` is the authority's `*_free` body *minus* the block release -- the member releases
+/// (digest/MAC/cipher teardown and the clear-frees of the key material) and the struct clear -- and
+/// `FILE` is the `__FILE__` the block's own release records. Implementing the trait on each
+/// `#[repr(C)]` context lets [`OwnedCtx`] run the right destructor from `Drop` without a
+/// `CRYPTO_free` written at any call site.
+trait KdfDestroy: Sized {
+    /// `__FILE__` for this unit's `CRYPTO_*` calls.
+    const FILE: *const c_char;
+
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live context this unit allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned KDF context block.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the C ABI hands it
+/// out as `*mut c_void` and takes it back in `*_free`), but its *ownership* is this type: `new`
+/// allocates it through the crate's allocator seam and `Drop` is its single release. The block
+/// stays a `CRYPTO_zalloc` at `size_of::<T>()` rather than a Rust `Box` on purpose -- a
+/// caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its size exactly as
+/// it observes the authority's, which a Rust global allocation would hide.
+struct OwnedCtx<T: KdfDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: KdfDestroy> OwnedCtx<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
+    /// it answers NULL (the authority's refused `CRYPTO_zalloc`).
+    fn new() -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, LINE).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// The stable address the C ABI hands out and takes back.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's context pointer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+}
+
+impl<T: KdfDestroy> Drop for OwnedCtx<T> {
+    /// The context destructor: the authority's `*_free` body ([`Self::destroy_body`]) followed by
+    /// the block release, through the same allocator seam the block was allocated on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
+        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, LINE);
+        }
+    }
+}
+
+/// An owned seam byte buffer for a self-contained allocation.
+///
+/// `Drop` is the single release -- a `CRYPTO_clear_free` over `len` bytes when `clear`, otherwise a
+/// plain `CRYPTO_free` -- through the same allocator seam the block came from. Unlike [`OwnedCtx`]
+/// this handle is a function-local (never a `#[repr(C)]` field), so it may carry its own `__FILE__`
+/// and clearing flag without changing any layout. It replaces a scratch allocation whose manual
+/// frees -- both the tail free and every error-path free -- were written by hand.
+struct OwnedBuf {
+    ptr: *mut u8,
+    len: usize,
+    file: *const c_char,
+    clear: bool,
+}
+
+impl OwnedBuf {
+    /// Adopt a block `CRYPTO_malloc`/`CRYPTO_zalloc`/`CRYPTO_calloc` answered, or `None` for NULL.
+    fn take(ptr: *mut u8, len: usize, file: *const c_char, clear: bool) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBuf {
+                ptr,
+                len,
+                file,
+                clear,
+            })
+        }
+    }
+
+    /// The buffer's address, for the raw C calls the derivation makes.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block from this allocator (or NULL, a no-op) that `Drop` has not
+        // released before, and `self.len` is the length it was allocated with; `clear` selects the
+        // authority's cleanse-then-free.
+        unsafe {
+            if self.clear {
+                CRYPTO_clear_free(self.ptr.cast(), self.len, self.file, LINE);
+            } else {
+                CRYPTO_free(self.ptr.cast(), self.file, LINE);
+            }
+        }
+    }
+}
+
+// The per-context destructors: each is exactly what its unit's `*_free` performed by hand, minus
+// the block release `OwnedCtx`'s `Drop` now owns. The member releases stay the authority's own
+// `CRYPTO_free`/`CRYPTO_clear_free`/`EVP_*_free` calls, relocated to the context's `Drop`.
+
+impl KdfDestroy for KdfSskdf {
+    const FILE: *const c_char = FILE_SSKDF;
+    unsafe fn destroy_body(ptr: *mut KdfSskdf) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { sskdf_reset(ptr.cast()) };
+    }
+}
+
+impl KdfDestroy for KdfX942 {
+    const FILE: *const c_char = FILE_X942;
+    unsafe fn destroy_body(ptr: *mut KdfX942) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { x942kdf_reset(ptr.cast()) };
+    }
+}
+
+impl KdfDestroy for KdfPkcs12 {
+    const FILE: *const c_char = FILE_PKCS12KDF;
+    unsafe fn destroy_body(ptr: *mut KdfPkcs12) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { pkcs12kdf_cleanup(ptr) };
+    }
+}
+
+impl KdfDestroy for KdfSshkdf {
+    const FILE: *const c_char = FILE_SSHKDF;
+    unsafe fn destroy_body(ptr: *mut KdfSshkdf) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { sshkdf_reset(ptr.cast()) };
+    }
+}
+
+impl KdfDestroy for KdfPbkdf2 {
+    const FILE: *const c_char = FILE_PBKDF2;
+    unsafe fn destroy_body(ptr: *mut KdfPbkdf2) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { pbkdf2_cleanup(ptr) };
+    }
+}
+
+impl KdfDestroy for KdfHkdf {
+    const FILE: *const c_char = FILE_HKDF;
+    unsafe fn destroy_body(ptr: *mut KdfHkdf) {
+        // SAFETY: `ptr` is a live context per the trait contract; `on_free` is 1, as `hkdf_free`
+        // passes it.
+        unsafe { hkdf_reset_ex(ptr.cast(), 1) };
+    }
+}
+
+impl KdfDestroy for Tls1Prf {
+    const FILE: *const c_char = FILE_TLS1_PRF;
+    unsafe fn destroy_body(ptr: *mut Tls1Prf) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { tls1_prf_reset(ptr.cast()) };
+    }
+}
+
+impl KdfDestroy for Kbkdf {
+    const FILE: *const c_char = FILE_KBKDF;
+    unsafe fn destroy_body(ptr: *mut Kbkdf) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { kbkdf_reset(ptr.cast()) };
+    }
+}
+
+impl KdfDestroy for KdfScrypt {
+    const FILE: *const c_char = FILE_SCRYPT;
+    unsafe fn destroy_body(ptr: *mut KdfScrypt) {
+        // SAFETY: `ptr` is a live context per the trait contract; the property query and the copied
+        // digest are released before the reset body, exactly as `kdf_scrypt_free` has them.
+        unsafe {
+            CRYPTO_free((*ptr).propq.cast(), FILE_SCRYPT, LINE);
+            EVP_MD_free((*ptr).sha256);
+            kdf_scrypt_reset(ptr.cast());
+        }
+    }
+}
+
+impl KdfDestroy for Krb5kdfCtx {
+    const FILE: *const c_char = FILE_KRB5KDF;
+    unsafe fn destroy_body(ptr: *mut Krb5kdfCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { krb5kdf_reset(ptr.cast()) };
+    }
+}
+
+impl KdfDestroy for KdfHmacDrbg {
+    const FILE: *const c_char = FILE_HMACDRBG_KDF;
+    unsafe fn destroy_body(ptr: *mut KdfHmacDrbg) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { hmac_drbg_kdf_reset(ptr.cast()) };
+    }
+}
+
+impl KdfDestroy for KdfArgon2 {
+    const FILE: *const c_char = FILE_ARGON2;
+    unsafe fn destroy_body(ptr: *mut KdfArgon2) {
+        // SAFETY: `ptr` is a live context per the trait contract; the four buffers are the
+        // authority's `kdf_argon2_free` releases, each a clear-free over its own length.
+        unsafe {
+            if !(*ptr).pwd.is_null() {
+                CRYPTO_clear_free((*ptr).pwd.cast(), (*ptr).pwdlen as usize, FILE_ARGON2, LINE);
+            }
+            if !(*ptr).salt.is_null() {
+                CRYPTO_clear_free(
+                    (*ptr).salt.cast(),
+                    (*ptr).saltlen as usize,
+                    FILE_ARGON2,
+                    LINE,
+                );
+            }
+            if !(*ptr).secret.is_null() {
+                CRYPTO_clear_free(
+                    (*ptr).secret.cast(),
+                    (*ptr).secretlen as usize,
+                    FILE_ARGON2,
+                    LINE,
+                );
+            }
+            if !(*ptr).ad.is_null() {
+                CRYPTO_clear_free((*ptr).ad.cast(), (*ptr).adlen as usize, FILE_ARGON2, LINE);
+            }
+            EVP_MD_free((*ptr).md);
+            EVP_MAC_free((*ptr).mac);
+            CRYPTO_free((*ptr).propq.cast(), FILE_ARGON2, LINE);
+            ptr::write_bytes(ptr.cast::<u8>(), 0, core::mem::size_of::<KdfArgon2>());
+        }
+    }
+}
+
+impl KdfDestroy for KdfPbkdf1 {
+    const FILE: *const c_char = FILE_PBKDF1;
+    unsafe fn destroy_body(ptr: *mut KdfPbkdf1) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { pbkdf1_cleanup(ptr) };
+    }
+}
+
+impl KdfDestroy for KdfPvk {
+    const FILE: *const c_char = FILE_PVKKDF;
+    unsafe fn destroy_body(ptr: *mut KdfPvk) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { pvk_cleanup(ptr) };
+    }
 }
 
 /// `struct sskdf_all_set_ctx_params_st` — `sskdf.c:540-554`, without its two FIPS fields.
@@ -820,12 +1114,13 @@ unsafe extern "C" fn sskdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfSskdf>(), FILE_SSKDF, LINE).cast::<KdfSskdf>();
-        if !ctx.is_null() {
-            (*ctx).provctx = provctx;
-        }
-        ctx.cast()
+        // The context block, allocated through the crate's allocator seam and owned by `ctx` until
+        // it is handed to the caller below.
+        let Some(ctx) = OwnedCtx::<KdfSskdf>::new() else {
+            return ptr::null_mut();
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -856,13 +1151,8 @@ unsafe fn sskdf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn sskdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            sskdf_reset(vctx);
-            CRYPTO_free(vctx, FILE_SSKDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfSskdf>::from_raw(vctx.cast())) };
 }
 
 /// `static void *sskdf_dup(void *vctx)` — `sskdf.c:337-366`.
@@ -1918,13 +2208,12 @@ unsafe extern "C" fn x942kdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<KdfX942>(), FILE_X942, LINE).cast::<KdfX942>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfX942>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        (*ctx).use_keybits = 1;
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        (*ctx.as_ptr()).use_keybits = 1;
+        ctx.into_raw().cast()
     }
 }
 
@@ -1976,13 +2265,8 @@ unsafe fn x942kdf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn x942kdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            x942kdf_reset(vctx);
-            CRYPTO_free(vctx, FILE_X942, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfX942>::from_raw(vctx.cast())) };
 }
 
 /// `static void *x942kdf_dup(void *vctx)` — `x942kdf.c:383-417`.
@@ -2603,13 +2887,11 @@ unsafe extern "C" fn pkcs12kdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<KdfPkcs12>(), FILE_PKCS12KDF, LINE)
-            .cast::<KdfPkcs12>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfPkcs12>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -2632,13 +2914,8 @@ unsafe fn pkcs12kdf_cleanup(ctx: *mut KdfPkcs12) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn pkcs12kdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            pkcs12kdf_cleanup(vctx.cast::<KdfPkcs12>());
-            CRYPTO_free(vctx, FILE_PKCS12KDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfPkcs12>::from_raw(vctx.cast())) };
 }
 
 /// `static void kdf_pkcs12_reset(void *vctx)` — `pkcs12kdf.c:175-182`. The `provctx` is saved
@@ -3100,12 +3377,11 @@ unsafe extern "C" fn sshkdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfSshkdf>(), FILE_SSHKDF, LINE).cast::<KdfSshkdf>();
-        if !ctx.is_null() {
-            (*ctx).provctx = provctx;
-        }
-        ctx.cast()
+        let Some(ctx) = OwnedCtx::<KdfSshkdf>::new() else {
+            return ptr::null_mut();
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -3139,13 +3415,8 @@ unsafe fn sshkdf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn sshkdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            sshkdf_reset(vctx);
-            CRYPTO_free(vctx, FILE_SSHKDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfSshkdf>::from_raw(vctx.cast())) };
 }
 
 /// `static void *kdf_sshkdf_dup(void *vctx)` — `sshkdf.c:96-119`.
@@ -3705,13 +3976,11 @@ unsafe extern "C" fn pbkdf2_new_no_init(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfPbkdf2>(), FILE_PBKDF2, LINE).cast::<KdfPbkdf2>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfPbkdf2>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -3750,13 +4019,8 @@ unsafe fn pbkdf2_cleanup(ctx: *mut KdfPbkdf2) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn pbkdf2_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            pbkdf2_cleanup(vctx.cast::<KdfPbkdf2>());
-            CRYPTO_free(vctx, FILE_PBKDF2, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfPbkdf2>::from_raw(vctx.cast())) };
 }
 
 /// `static void kdf_pbkdf2_reset(void *vctx)` — `pbkdf2.c:119-127`.
@@ -4681,11 +4945,11 @@ unsafe extern "C" fn hkdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<KdfHkdf>(), FILE_HKDF, LINE).cast::<KdfHkdf>();
-        if !ctx.is_null() {
-            (*ctx).provctx = provctx;
-        }
-        ctx.cast()
+        let Some(ctx) = OwnedCtx::<KdfHkdf>::new() else {
+            return ptr::null_mut();
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -4744,13 +5008,8 @@ unsafe extern "C" fn hkdf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn hkdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            hkdf_reset_ex(vctx, 1);
-            CRYPTO_free(vctx, FILE_HKDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfHkdf>::from_raw(vctx.cast())) };
 }
 
 /// `static void *kdf_hkdf_dup(void *vctx)` — `hkdf.c:160-190`.
@@ -5814,10 +6073,14 @@ unsafe fn tls1_prf_alg(
                 return 0;
             }
 
-            let tmp = CRYPTO_malloc(olen, FILE_TLS1_PRF, LINE).cast::<u8>();
-            if tmp.is_null() {
+            let Some(tmp) = OwnedBuf::take(
+                CRYPTO_malloc(olen, FILE_TLS1_PRF, LINE).cast::<u8>(),
+                olen,
+                FILE_TLS1_PRF,
+                true,
+            ) else {
                 return 0;
-            }
+            };
 
             if tls1_prf_p_hash(
                 sha1ctx,
@@ -5825,17 +6088,15 @@ unsafe fn tls1_prf_alg(
                 l_s2,
                 seed,
                 seed_len,
-                tmp,
+                tmp.as_ptr(),
                 olen,
             ) == 0
             {
-                CRYPTO_clear_free(tmp.cast(), olen, FILE_TLS1_PRF, LINE);
                 return 0;
             }
             for i in 0..olen {
-                *out.add(i) ^= *tmp.add(i);
+                *out.add(i) ^= *tmp.as_ptr().add(i);
             }
-            CRYPTO_clear_free(tmp.cast(), olen, FILE_TLS1_PRF, LINE);
             return 1;
         }
 
@@ -5858,12 +6119,11 @@ unsafe extern "C" fn tls1_prf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<Tls1Prf>(), FILE_TLS1_PRF, LINE).cast::<Tls1Prf>();
-        if !ctx.is_null() {
-            (*ctx).provctx = provctx;
-        }
-        ctx.cast()
+        let Some(ctx) = OwnedCtx::<Tls1Prf>::new() else {
+            return ptr::null_mut();
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -5892,13 +6152,8 @@ unsafe fn tls1_prf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn tls1_prf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            tls1_prf_reset(vctx);
-            CRYPTO_free(vctx, FILE_TLS1_PRF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<Tls1Prf>::from_raw(vctx.cast())) };
 }
 
 /// `static void *kdf_tls1_prf_dup(void *vctx)` — `tls1_prf.c:158-183`. Each MAC context is
@@ -6571,13 +6826,12 @@ unsafe extern "C" fn kbkdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<Kbkdf>(), FILE_KBKDF, LINE).cast::<Kbkdf>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<Kbkdf>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        kbkdf_init(ctx);
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        kbkdf_init(ctx.as_ptr());
+        ctx.into_raw().cast()
     }
 }
 
@@ -6608,13 +6862,8 @@ unsafe fn kbkdf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn kbkdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            kbkdf_reset(vctx);
-            CRYPTO_free(vctx, FILE_KBKDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<Kbkdf>::from_raw(vctx.cast())) };
 }
 
 /// `static void *kbkdf_dup(void *vctx)` — `kbkdf.c:163-193`. `EVP_MAC_CTX_dup` is called
@@ -6713,9 +6962,6 @@ unsafe extern "C" fn kbkdf_ctx_derive(
     unsafe {
         let ctx = vctx.cast::<Kbkdf>();
         let mut ret: c_int = 0;
-        let mut k_i: *mut u8 = ptr::null_mut();
-        let mut l: u32 = 0;
-        let mut h: usize = 0;
 
         if is_running() == 0 || kbkdf_set_ctx_params(vctx, params) == 0 {
             return 0;
@@ -6748,7 +6994,7 @@ unsafe extern "C" fn kbkdf_ctx_derive(
                 break 'done;
             }
 
-            h = EVP_MAC_CTX_get_mac_size((*ctx).ctx_init);
+            let h = EVP_MAC_CTX_get_mac_size((*ctx).ctx_init);
             if h == 0 {
                 break 'done;
             }
@@ -6767,14 +7013,20 @@ unsafe extern "C" fn kbkdf_ctx_derive(
                 }
             }
 
+            let mut l: u32 = 0;
             if (*ctx).use_l != 0 {
                 l = be32(keylen.wrapping_mul(8) as u32);
             }
 
-            k_i = CRYPTO_zalloc(h, FILE_KBKDF, LINE).cast::<u8>();
-            if k_i.is_null() {
+            // The per-block output, owned by `k_i`; its `Drop` is the authority's clear-free.
+            let Some(k_i) = OwnedBuf::take(
+                CRYPTO_zalloc(h, FILE_KBKDF, LINE).cast::<u8>(),
+                h,
+                FILE_KBKDF,
+                true,
+            ) else {
                 break 'done;
-            }
+            };
 
             ret = kbkdf_derive_inner(
                 (*ctx).ctx_init,
@@ -6785,7 +7037,7 @@ unsafe extern "C" fn kbkdf_ctx_derive(
                 (*ctx).label_len,
                 (*ctx).context,
                 (*ctx).context_len,
-                k_i,
+                k_i.as_ptr(),
                 h,
                 l,
                 (*ctx).use_separator,
@@ -6797,7 +7049,6 @@ unsafe extern "C" fn kbkdf_ctx_derive(
         if ret != 1 {
             cleanse(key, keylen);
         }
-        CRYPTO_clear_free(k_i.cast(), h, FILE_KBKDF, LINE);
         ret
     }
 }
@@ -7368,10 +7619,15 @@ unsafe fn scrypt_alg(
             return 1;
         }
 
-        let b: *mut u8 = CRYPTO_malloc((blen + vlen) as usize, FILE_SCRYPT, LINE).cast::<u8>();
-        if b.is_null() {
+        let Some(b_owner) = OwnedBuf::take(
+            CRYPTO_malloc((blen + vlen) as usize, FILE_SCRYPT, LINE).cast::<u8>(),
+            (blen + vlen) as usize,
+            FILE_SCRYPT,
+            true,
+        ) else {
             return 0;
-        }
+        };
+        let b: *mut u8 = b_owner.as_ptr();
         let x: *mut u32 = b.add(blen as usize).cast::<u32>();
         let t: *mut u32 = x.add((32 * r) as usize);
         let v: *mut u32 = t.add((32 * r) as usize);
@@ -7419,7 +7675,6 @@ unsafe fn scrypt_alg(
             raise_site(&err_sites::PROV_SCRYPT_699);
         }
 
-        CRYPTO_clear_free(b.cast(), (blen + vlen) as usize, FILE_SCRYPT, LINE);
         rv
     }
 }
@@ -7453,14 +7708,12 @@ unsafe fn kdf_scrypt_new_inner(libctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfScrypt>(), FILE_SCRYPT, LINE).cast::<KdfScrypt>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfScrypt>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).libctx = libctx;
-        kdf_scrypt_init(ctx);
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).libctx = libctx;
+        kdf_scrypt_init(ctx.as_ptr());
+        ctx.into_raw().cast()
     }
 }
 
@@ -7497,16 +7750,8 @@ unsafe fn kdf_scrypt_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn kdf_scrypt_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            let ctx = vctx.cast::<KdfScrypt>();
-            CRYPTO_free((*ctx).propq.cast(), FILE_SCRYPT, LINE);
-            EVP_MD_free((*ctx).sha256);
-            kdf_scrypt_reset(vctx);
-            CRYPTO_free(vctx, FILE_SCRYPT, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfScrypt>::from_raw(vctx.cast())) };
 }
 
 /// `static void *kdf_scrypt_dup(void *vctx)` — `scrypt.c:107-137`.
@@ -8215,13 +8460,11 @@ unsafe extern "C" fn krb5kdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<Krb5kdfCtx>(), FILE_KRB5KDF, LINE)
-            .cast::<Krb5kdfCtx>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<Krb5kdfCtx>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -8254,13 +8497,8 @@ unsafe fn krb5kdf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn krb5kdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            krb5kdf_reset(vctx);
-            CRYPTO_free(vctx, FILE_KRB5KDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<Krb5kdfCtx>::from_raw(vctx.cast())) };
 }
 
 /// `static int krb5kdf_set_membuf(unsigned char **dst, size_t *dst_len, const OSSL_PARAM *p)` —
@@ -8625,14 +8863,14 @@ unsafe extern "C" fn hmac_drbg_kdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<KdfHmacDrbg>(), FILE_HMACDRBG_KDF, LINE)
-            .cast::<KdfHmacDrbg>();
-        if ctx.is_null() {
+        // The one unit in this module whose allocation failure is itself an error record: a refused
+        // `CRYPTO_zalloc` raises the authority's site and answers NULL.
+        let Some(ctx) = OwnedCtx::<KdfHmacDrbg>::new() else {
             raise_site(&err_sites::PROV_HMACDRBG_KDF_53);
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -8671,13 +8909,8 @@ unsafe fn hmac_drbg_kdf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn hmac_drbg_kdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            hmac_drbg_kdf_reset(vctx);
-            CRYPTO_free(vctx, FILE_HMACDRBG_KDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfHmacDrbg>::from_raw(vctx.cast())) };
 }
 
 /// `static int ossl_drbg_hmac_dup(PROV_DRBG_HMAC *dst, const PROV_DRBG_HMAC *src)` —
@@ -9843,30 +10076,35 @@ unsafe fn fill_mem_blocks_mt(ctx: *mut KdfArgon2) -> c_int {
         let lanes = (*ctx).lanes;
         let threads = (*ctx).threads;
 
-        let t = CRYPTO_calloc(
-            lanes as usize,
-            core::mem::size_of::<*mut c_void>(),
+        let t_owner = OwnedBuf::take(
+            CRYPTO_calloc(
+                lanes as usize,
+                core::mem::size_of::<*mut c_void>(),
+                FILE_ARGON2,
+                LINE,
+            )
+            .cast::<u8>(),
+            lanes as usize * core::mem::size_of::<*mut c_void>(),
             FILE_ARGON2,
-            LINE,
-        )
-        .cast::<*mut c_void>();
-        let t_data = CRYPTO_calloc(
-            lanes as usize,
-            core::mem::size_of::<Argon2ThreadData>(),
+            false,
+        );
+        let t_data_owner = OwnedBuf::take(
+            CRYPTO_calloc(
+                lanes as usize,
+                core::mem::size_of::<Argon2ThreadData>(),
+                FILE_ARGON2,
+                LINE,
+            )
+            .cast::<u8>(),
+            lanes as usize * core::mem::size_of::<Argon2ThreadData>(),
             FILE_ARGON2,
-            LINE,
-        )
-        .cast::<Argon2ThreadData>();
-
-        if t.is_null() || t_data.is_null() {
-            if !t_data.is_null() {
-                CRYPTO_free(t_data.cast(), FILE_ARGON2, LINE);
-            }
-            if !t.is_null() {
-                CRYPTO_free(t.cast(), FILE_ARGON2, LINE);
-            }
+            false,
+        );
+        let (Some(t_owner), Some(t_data_owner)) = (t_owner, t_data_owner) else {
             return 0;
-        }
+        };
+        let t = t_owner.as_ptr().cast::<*mut c_void>();
+        let t_data = t_data_owner.as_ptr().cast::<Argon2ThreadData>();
 
         let mut ok = true;
         'fill: for r in 0..(*ctx).passes {
@@ -9938,9 +10176,6 @@ unsafe fn fill_mem_blocks_mt(ctx: *mut KdfArgon2) -> c_int {
                 }
             }
         }
-
-        CRYPTO_free(t_data.cast(), FILE_ARGON2, LINE);
-        CRYPTO_free(t.cast(), FILE_ARGON2, LINE);
 
         c_int::from(ok)
     }
@@ -10469,16 +10704,14 @@ unsafe extern "C" fn kdf_argon2d_new(provctx: *mut c_void) -> *mut c_void {
             return ptr::null_mut();
         }
 
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfArgon2>(), FILE_ARGON2, LINE).cast::<KdfArgon2>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfArgon2>::new() else {
             raise_site(&err_sites::PROV_ARGON2_938);
             return ptr::null_mut();
-        }
+        };
 
-        (*ctx).libctx = prov_libctx_of(provctx);
-        kdf_argon2_init(ctx, ARGON2_D);
-        ctx.cast()
+        (*ctx.as_ptr()).libctx = prov_libctx_of(provctx);
+        kdf_argon2_init(ctx.as_ptr(), ARGON2_D);
+        ctx.into_raw().cast()
     }
 }
 
@@ -10493,16 +10726,14 @@ unsafe extern "C" fn kdf_argon2i_new(provctx: *mut c_void) -> *mut c_void {
             return ptr::null_mut();
         }
 
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfArgon2>(), FILE_ARGON2, LINE).cast::<KdfArgon2>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfArgon2>::new() else {
             raise_site(&err_sites::PROV_ARGON2_957);
             return ptr::null_mut();
-        }
+        };
 
-        (*ctx).libctx = prov_libctx_of(provctx);
-        kdf_argon2_init(ctx, ARGON2_I);
-        ctx.cast()
+        (*ctx.as_ptr()).libctx = prov_libctx_of(provctx);
+        kdf_argon2_init(ctx.as_ptr(), ARGON2_I);
+        ctx.into_raw().cast()
     }
 }
 
@@ -10517,16 +10748,14 @@ unsafe extern "C" fn kdf_argon2id_new(provctx: *mut c_void) -> *mut c_void {
             return ptr::null_mut();
         }
 
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfArgon2>(), FILE_ARGON2, LINE).cast::<KdfArgon2>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfArgon2>::new() else {
             raise_site(&err_sites::PROV_ARGON2_976);
             return ptr::null_mut();
-        }
+        };
 
-        (*ctx).libctx = prov_libctx_of(provctx);
-        kdf_argon2_init(ctx, ARGON2_ID);
-        ctx.cast()
+        (*ctx.as_ptr()).libctx = prov_libctx_of(provctx);
+        kdf_argon2_init(ctx.as_ptr(), ARGON2_ID);
+        ctx.into_raw().cast()
     }
 }
 
@@ -10535,44 +10764,10 @@ unsafe extern "C" fn kdf_argon2id_new(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn kdf_argon2_free(vctx: *mut c_void) {
-    let ctx = vctx.cast::<KdfArgon2>();
-
-    // SAFETY: `ctx` is NULL or live per the contract.
-    unsafe {
-        if ctx.is_null() {
-            return;
-        }
-
-        if !(*ctx).pwd.is_null() {
-            CRYPTO_clear_free((*ctx).pwd.cast(), (*ctx).pwdlen as usize, FILE_ARGON2, LINE);
-        }
-        if !(*ctx).salt.is_null() {
-            CRYPTO_clear_free(
-                (*ctx).salt.cast(),
-                (*ctx).saltlen as usize,
-                FILE_ARGON2,
-                LINE,
-            );
-        }
-        if !(*ctx).secret.is_null() {
-            CRYPTO_clear_free(
-                (*ctx).secret.cast(),
-                (*ctx).secretlen as usize,
-                FILE_ARGON2,
-                LINE,
-            );
-        }
-        if !(*ctx).ad.is_null() {
-            CRYPTO_clear_free((*ctx).ad.cast(), (*ctx).adlen as usize, FILE_ARGON2, LINE);
-        }
-
-        EVP_MD_free((*ctx).md);
-        EVP_MAC_free((*ctx).mac);
-        CRYPTO_free((*ctx).propq.cast(), FILE_ARGON2, LINE);
-
-        ptr::write_bytes(vctx.cast::<u8>(), 0, core::mem::size_of::<KdfArgon2>());
-        CRYPTO_free(vctx, FILE_ARGON2, LINE);
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it, and `Drop` performs the
+    // authority's `kdf_argon2_free` body -- the four clear-frees, the digest/MAC/property-query
+    // releases and the struct clear -- then releases the block.
+    unsafe { drop(OwnedCtx::<KdfArgon2>::from_raw(vctx.cast())) };
 }
 
 /// `static int kdf_argon2_derive(void *vctx, unsigned char *out, size_t outlen, const OSSL_PARAM
@@ -11777,13 +11972,11 @@ unsafe extern "C" fn pbkdf1_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfPbkdf1>(), FILE_PBKDF1, LINE).cast::<KdfPbkdf1>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfPbkdf1>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -11806,13 +11999,8 @@ unsafe fn pbkdf1_cleanup(ctx: *mut KdfPbkdf1) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn pbkdf1_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            pbkdf1_cleanup(vctx.cast::<KdfPbkdf1>());
-            CRYPTO_free(vctx, FILE_PBKDF1, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfPbkdf1>::from_raw(vctx.cast())) };
 }
 
 /// `static void kdf_pbkdf1_reset(void *vctx)` — `pbkdf1.c:139-146`.
@@ -12132,24 +12320,28 @@ unsafe extern "C" fn pbkdf1_derive_skey(
         if keylen == 0 {
             return ptr::null_mut();
         }
-        let key = CRYPTO_zalloc(keylen, FILE_PBKDF1, LINE).cast::<u8>();
-        if key.is_null() {
+        let Some(key) = OwnedBuf::take(
+            CRYPTO_zalloc(keylen, FILE_PBKDF1, LINE).cast::<u8>(),
+            keylen,
+            FILE_PBKDF1,
+            false,
+        ) else {
             return ptr::null_mut();
-        }
-        if pbkdf1_derive(vctx, key, keylen, params) == 0 {
-            CRYPTO_free(key.cast(), FILE_PBKDF1, LINE);
+        };
+        if pbkdf1_derive(vctx, key.as_ptr(), keylen, params) == 0 {
             return ptr::null_mut();
         }
         let mut import_params = [END, END];
-        import_params[0] =
-            OSSL_PARAM_construct_octet_string(OSSL_SKEY_PARAM_RAW_BYTES, key.cast(), keylen);
-        let ret = import(
+        import_params[0] = OSSL_PARAM_construct_octet_string(
+            OSSL_SKEY_PARAM_RAW_BYTES,
+            key.as_ptr().cast(),
+            keylen,
+        );
+        import(
             provctx,
             OSSL_SKEYMGMT_SELECT_SECRET_KEY,
             import_params.as_ptr(),
-        );
-        CRYPTO_free(key.cast(), FILE_PBKDF1, LINE);
-        ret
+        )
     }
 }
 
@@ -12259,13 +12451,12 @@ unsafe extern "C" fn pvk_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<KdfPvk>(), FILE_PVKKDF, LINE).cast::<KdfPvk>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfPvk>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        pvk_init(ctx);
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        pvk_init(ctx.as_ptr());
+        ctx.into_raw().cast()
     }
 }
 
@@ -12288,13 +12479,8 @@ unsafe fn pvk_cleanup(ctx: *mut KdfPvk) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn pvk_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            pvk_cleanup(vctx.cast::<KdfPvk>());
-            CRYPTO_free(vctx, FILE_PVKKDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfPvk>::from_raw(vctx.cast())) };
 }
 
 /// `static void *kdf_pvk_dup(void *vctx)` — `pvkkdf.c:81-99`.
