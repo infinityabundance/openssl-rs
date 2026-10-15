@@ -100,6 +100,23 @@
 //! An `impl` argument that is **not** NULL is a caller holding an ENGINE, which no caller can
 //! obtain here, and is refused at the authority's own raise site (`DIGEST_311`).
 //!
+//! ## Ownership: the method, the context and the legacy `md_data` block own themselves
+//!
+//! The `EVP_MD` block `evp_md_new` builds, the `EVP_MD_CTX` block `EVP_MD_CTX_new` builds and the
+//! legacy `md_data` buffer the init and copy paths allocate are owned here, on the crate's allocator
+//! seam at the authority's own size, file and line, so a caller-installed `CRYPTO_set_mem_functions`
+//! hook observes the allocation and its release. Each is an [`OwnedCtx`]/[`OwnedBlock`] whose `Drop`
+//! is the *single* release: the two exported releasers and `cleanup_old_md_data` reclaim the block
+//! instead of releasing it by hand, and the constructors hand it out with `into_raw`, so the exported
+//! ABI's stable address and its borrowed-until-free lifetime are unchanged.
+//!
+//! **What stays on the seam and what stays raw.** The blocks remain `CRYPTO_zalloc`/`CRYPTO_malloc`
+//! allocations; only their *ownership* moved above the seam. The `#[repr(C)]` `EvpMd`/`EvpMdCtx`
+//! layouts, their field offsets and the `EVP_MD_free`/`EVP_MD_meth_free` refusals are untouched, and
+//! `md_data`'s `Drop` is the authority's own cleanse-then-free. The method's provider half and
+//! `algctx` are the provider's own blocks (released through the method's `freectx`), and the
+//! `type_name`/`description` strings keep the authority's own release, so those stay raw.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CStr};
@@ -191,6 +208,160 @@ const LINE_ZALLOC_MD: c_int = 944;
 const LINE_FREE_TYPE_NAME: c_int = 863;
 /// `evp_md_free_int`'s `OPENSSL_free(md)` (line 867), in the same file.
 const LINE_FREE_MD: c_int = 867;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the method and context blocks, and of the legacy `md_data` buffer
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `*_free` body for one of the file's `#[repr(C)]` objects, without the block's own
+/// release, which [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live object this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned method or context block.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
+/// hands it out and takes it back), but its *ownership* is this type: [`Self::new`] allocates it
+/// through the crate's allocator seam at the authority's own `(file, alloc_line)` and `Drop`
+/// releases it at the authority's own `(file, line)`. It stays a `CRYPTO_zalloc` at
+/// `size_of::<T>()` rather than a Rust `Box` on purpose -- a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
+/// the authority's, which a Rust global allocation would hide.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
+    /// it answers NULL. `alloc_line` is the authority's allocation site and `line` its release site.
+    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// Give up ownership of the block to the C caller's out-pointer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The object destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`]) followed
+    /// by the block release, through the same allocator seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
+        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+/// An owned legacy `md_data` buffer: the authority's own `CRYPTO_zalloc`/`CRYPTO_malloc` block whose
+/// single release is `Drop`, so no call site writes the release by hand.
+///
+/// [`Self::take`] adopts a block a seam answered and [`Self::from_raw`] reclaims one a previous
+/// `into_raw` stored in a context, so a caller-installed `CRYPTO_set_mem_functions` hook observes
+/// the allocation and its release exactly as it observes the authority's. `clear` selects the
+/// authority's cleansing release (`CRYPTO_clear_free` over `len` bytes for `info`) versus the plain
+/// `CRYPTO_free`.
+struct OwnedBlock {
+    ptr: *mut c_void,
+    len: usize,
+    clear: bool,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBlock {
+    /// Adopt a block the seam answered, or `None` for NULL. `len` is the length a clearing release
+    /// needs; it is ignored by the plain form.
+    fn take(
+        ptr: *mut c_void,
+        len: usize,
+        clear: bool,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBlock> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBlock {
+                ptr,
+                len,
+                clear,
+                file,
+                line,
+            })
+        }
+    }
+
+    /// Reclaim a block a previous [`Self::into_raw`] stored in a context, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` stored and `Drop` has not released.
+    unsafe fn from_raw(
+        ptr: *mut c_void,
+        len: usize,
+        clear: bool,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBlock> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBlock {
+                ptr,
+                len,
+                clear,
+                file,
+                line,
+            })
+        }
+    }
+
+    /// Give up ownership of the block to a context member that takes it over.
+    fn into_raw(self) -> *mut c_void {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBlock {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
+        // released before; `self.len` is its allocation length and `clear` selects the authority's
+        // cleanse-then-free. Both accept NULL.
+        unsafe {
+            if self.clear {
+                CRYPTO_clear_free(self.ptr, self.len, self.file, self.line);
+            } else {
+                CRYPTO_free(self.ptr, self.file, self.line);
+            }
+        }
+    }
+}
 
 // ---------------------------------------------------------------------------------------------
 // The dispatch ids and the fifteen function-pointer types.
@@ -400,12 +571,14 @@ unsafe impl Sync for StaticMd {}
 /// fills only the provider half, so a fetched `EVP_MD` is `EVP_ORIG_DYNAMIC` with a `type` of
 /// `NID_undef` until `evp_md_from_algorithm` says otherwise.
 pub(crate) fn evp_md_new() -> *mut EvpMd {
-    let md = CRYPTO_zalloc(core::mem::size_of::<EvpMd>(), FILE, LINE_ZALLOC_MD).cast::<EvpMd>();
-    if !md.is_null() {
-        // SAFETY: `md` is a fresh zeroed block this call owns.
-        unsafe { (*md).refcnt = AtomicI32::new(1) };
-    }
-    md
+    // The method block, allocated through the crate's allocator seam; `Drop` is its single release
+    // on every refusal at a caller and `into_raw` hands it out on success.
+    let Some(md) = OwnedCtx::<EvpMd>::new(FILE, LINE_ZALLOC_MD, LINE_FREE_MD) else {
+        return ptr::null_mut();
+    };
+    // SAFETY: `md` is a fresh zeroed block this call owns.
+    unsafe { (*md.ptr.as_ptr()).refcnt = AtomicI32::new(1) };
+    md.into_raw()
 }
 
 /// `static void set_legacy_nid(const char *name, void *vlegacy_nid)`.
@@ -747,11 +920,21 @@ unsafe extern "C" fn evp_md_free(md: *mut c_void) {
 /// # Safety
 /// `md` must be a live `EvpMd` with no references left.
 unsafe fn evp_md_free_int(md: *mut EvpMd) {
-    // SAFETY: `md` is live per the contract.
-    unsafe {
-        CRYPTO_free((*md).type_name.cast::<c_void>(), FILE, LINE_FREE_TYPE_NAME);
-        ossl_provider_free((*md).prov);
-        CRYPTO_free(md.cast::<c_void>(), FILE, LINE_FREE_MD);
+    // SAFETY: `md` is a live method this crate allocated and has not released; `from_raw` reclaims
+    // it and `Drop` runs the authority's own body ([`CtxDestroy::destroy_body`]) followed by the
+    // block release.
+    unsafe { drop(OwnedCtx::<EvpMd>::from_raw(md, FILE, LINE_FREE_MD)) };
+}
+
+/// The authority's `evp_md_free_int` body, without the block release [`OwnedCtx`]'s `Drop` performs:
+/// the type name and the provider reference.
+impl CtxDestroy for EvpMd {
+    unsafe fn destroy_body(ptr: *mut EvpMd) {
+        // SAFETY: `ptr` is live per the trait contract.
+        unsafe {
+            CRYPTO_free((*ptr).type_name.cast::<c_void>(), FILE, LINE_FREE_TYPE_NAME);
+            ossl_provider_free((*ptr).prov);
+        }
     }
 }
 
@@ -1669,10 +1852,18 @@ unsafe fn cleanup_old_md_data(ctx: *mut EvpMdCtx, force: c_int) {
     let reuse = (unsafe { EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_REUSE) }) != 0;
     if !md_data.is_null() && ctx_size > 0 && (!reuse || force != 0) {
         // SAFETY: `md_data` is the block this context allocated for `digest`, which is
-        // `ctx_size` bytes as that field said when it was allocated.
-        unsafe { CRYPTO_clear_free(md_data, ctx_size as usize, FILE, LINE_CLEAR_MD_DATA) };
-        // SAFETY: `ctx` is live.
-        unsafe { (*ctx).md_data = ptr::null_mut() };
+        // `ctx_size` bytes as that field said when it was allocated; `from_raw` reclaims it and
+        // `Drop` is its single cleansing release. `ctx` is live.
+        unsafe {
+            drop(OwnedBlock::from_raw(
+                md_data,
+                ctx_size as usize,
+                true,
+                FILE,
+                LINE_CLEAR_MD_DATA,
+            ));
+            (*ctx).md_data = ptr::null_mut();
+        }
     }
 }
 
@@ -1794,7 +1985,10 @@ pub unsafe extern "C" fn EVP_MD_CTX_reset(ctx: *mut EvpMdCtx) -> c_int {
 /// invisible until the context has been used once.
 #[no_mangle]
 pub extern "C" fn EVP_MD_CTX_new() -> *mut EvpMdCtx {
-    CRYPTO_zalloc(core::mem::size_of::<EvpMdCtx>(), FILE, LINE_ZALLOC_CTX).cast::<EvpMdCtx>()
+    // The context block, allocated through the crate's allocator seam; `into_raw` hands it to the C
+    // caller and `EVP_MD_CTX_free`'s `from_raw` reclaims it.
+    OwnedCtx::<EvpMdCtx>::new(FILE, LINE_ZALLOC_CTX, LINE_FREE_CTX)
+        .map_or(ptr::null_mut(), |ctx| ctx.into_raw())
 }
 
 /// `EVP_MD_CTX *evp_md_ctx_new_ex(EVP_PKEY *pkey, const ASN1_OCTET_STRING *id,
@@ -1860,14 +2054,19 @@ pub(crate) unsafe fn evp_md_ctx_new_ex(
 /// `ctx` must be NULL or a live context this crate allocated.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_MD_CTX_free(ctx: *mut EvpMdCtx) {
-    if ctx.is_null() {
-        return;
+    // SAFETY: `ctx` came from this crate's allocator; `from_raw` reclaims it (NULL is a no-op) and
+    // `Drop` runs the authority's own body ([`CtxDestroy::destroy_body`]) followed by the block
+    // release, so this is its last use.
+    unsafe { drop(OwnedCtx::<EvpMdCtx>::from_raw(ctx, FILE, LINE_FREE_CTX)) };
+}
+
+/// The authority's `EVP_MD_CTX_free` body, without the block release [`OwnedCtx`]'s `Drop`
+/// performs: the reset that releases everything the context holds.
+impl CtxDestroy for EvpMdCtx {
+    unsafe fn destroy_body(ptr: *mut EvpMdCtx) {
+        // SAFETY: `ptr` is live per the trait contract.
+        unsafe { EVP_MD_CTX_reset(ptr) };
     }
-    // SAFETY: `ctx` is live per the contract.
-    unsafe { EVP_MD_CTX_reset(ctx) };
-    // SAFETY: `ctx` came from this crate's allocator and has just been released of everything it
-    // held, so this is its last use.
-    unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE_CTX) };
 }
 
 /// `int evp_md_ctx_free_algctx(EVP_MD_CTX *ctx)`.
@@ -2179,12 +2378,19 @@ unsafe fn evp_md_init_legacy(ctx: *mut EvpMdCtx, type_: *const EvpMd) -> c_int {
             let update = unsafe { (*type_).update };
             // SAFETY: `ctx` is live.
             unsafe { (*ctx).update = update };
-            let block = CRYPTO_zalloc(ctx_size as usize, FILE, LINE_ZALLOC_MD_DATA);
-            if block.is_null() {
+            // The legacy block, allocated through the crate's allocator seam; `into_raw` stores it
+            // in the context, which owns it until `cleanup_old_md_data` reclaims it at line 38.
+            let Some(block) = OwnedBlock::take(
+                CRYPTO_zalloc(ctx_size as usize, FILE, LINE_ZALLOC_MD_DATA),
+                ctx_size as usize,
+                true,
+                FILE,
+                LINE_CLEAR_MD_DATA,
+            ) else {
                 return 0;
-            }
+            };
             // SAFETY: `ctx` is live and `block` is this context's own allocation.
-            unsafe { (*ctx).md_data = block };
+            unsafe { (*ctx).md_data = block.into_raw() };
         }
     }
 
@@ -2936,11 +3142,19 @@ unsafe fn evp_md_ctx_copy_legacy(out: *mut EvpMdCtx, in_: *const EvpMdCtx) -> c_
         let block = if !tmp_buf.is_null() {
             tmp_buf
         } else {
-            let fresh = CRYPTO_malloc(ctx_size as usize, FILE, LINE_COPY_MD_DATA);
-            if fresh.is_null() {
+            // The fresh block, allocated through the crate's allocator seam; `into_raw` stores it
+            // in the destination context, which owns it until `cleanup_old_md_data` reclaims it at
+            // line 38.
+            let Some(fresh) = OwnedBlock::take(
+                CRYPTO_malloc(ctx_size as usize, FILE, LINE_COPY_MD_DATA),
+                ctx_size as usize,
+                false,
+                FILE,
+                LINE_CLEAR_MD_DATA,
+            ) else {
                 return 0;
-            }
-            fresh
+            };
+            fresh.into_raw()
         };
         // SAFETY: `block` is at least `ctx_size` bytes -- either the destination's own old block
         // for this very method, or a fresh allocation of exactly that size -- and `in_md_data` is
