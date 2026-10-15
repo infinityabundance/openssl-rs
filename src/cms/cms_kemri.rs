@@ -43,6 +43,104 @@ const OSSL_MAX_NAME_SIZE: usize = 50;
 /// `ERR_R_PASSED_INVALID_ARGUMENT` — `err.h:360`, `262 | ERR_RFLAG_COMMON`.
 const ERR_R_PASSED_INVALID_ARGUMENT: c_int = 524550;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
+/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_cleansed`
+/// allocate it, `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that
+/// takes it over (`ASN1_STRING_set0`, or a `*pout` slot). [`Self::adopt`] takes in a block the
+/// crate allocated inside a helper (`CMS_CMSORIforKEMOtherInfo_encode`) so the failure paths that
+/// follow release what they built. A NULL pointer is a valid, empty buffer whose release is the
+/// authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+/// How the authority releases a scratch buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`kem_ct`, `infoder`).
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `OPENSSL_clear_free(ptr, num)`, which zeroes `num` bytes first
+    /// (`kem_secret`, `out`).
+    Cleansed { num: usize },
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// `CRYPTO_malloc(len, file, line)` for a block whose release is the cleansing
+    /// `OPENSSL_clear_free(ptr, len)`, or `None` when the allocator answers NULL.
+    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Cleansed { num: len },
+        })
+    }
+
+    /// Adopt a plain block this crate allocated inside a helper, for release by `Drop` at the
+    /// authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
+    /// is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf {
+            ptr,
+            release: BufRelease::Plain { file, line },
+        }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Cleansed { num } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `OPENSSL_clear_free` zeroes then releases it and accepts NULL.
+                unsafe { super::cms_asn1::OPENSSL_clear_free(self.ptr, num) };
+            }
+        }
+    }
+}
+
 /// `int ossl_cms_RecipientInfo_kemri_get0_alg(CMS_RecipientInfo *ri, uint32_t **pkekLength,`
 /// `X509_ALGOR **pwrap)` — `cms_kemri.c:23-36`. Internal.
 ///
@@ -454,12 +552,14 @@ unsafe fn kdf_derive(
     if infolen <= 0 {
         return rv;
     }
+    // The encoded other-info is the helper's own `CRYPTO_malloc` block; `infoder` adopts it so the
+    // failure paths below release what they built at the authority's own site.
+    // SAFETY: `infoder` is NULL or a live block the helper allocated and no one else owns.
+    let infoder = unsafe { OwnedBuf::adopt(infoder, c"cms_kemri.c".as_ptr(), 243) };
 
     // SAFETY: `kemri` is live.
     kctx = unsafe { create_kdf_ctx(kemri) };
     if kctx.is_null() {
-        // SAFETY: `infoder` is owned here.
-        unsafe { CRYPTO_free(infoder.cast(), c"cms_kemri.c".as_ptr(), 243) };
         return rv;
     }
 
@@ -473,7 +573,11 @@ unsafe fn kdf_derive(
         unsafe { OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_KEY, ss as *mut c_void, sslen) };
     // SAFETY: the constructor writes a descriptor into the caller's slot.
     params[1] = unsafe {
-        OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_INFO, infoder.cast(), infolen as usize)
+        OSSL_PARAM_construct_octet_string(
+            OSSL_KDF_PARAM_INFO,
+            infoder.as_ptr().cast(),
+            infolen as usize,
+        )
     };
 
     // SAFETY: `kctx` is live; `kek` is writable for `keklen`.
@@ -482,11 +586,8 @@ unsafe fn kdf_derive(
     } else {
         rv = 1;
     }
-    // SAFETY: `infoder`/`kctx` are owned here.
-    unsafe {
-        CRYPTO_free(infoder.cast(), c"cms_kemri.c".as_ptr(), 243);
-        EVP_KDF_CTX_free(kctx);
-    }
+    // SAFETY: `kctx` is owned here; `infoder` releases its own block on drop.
+    unsafe { EVP_KDF_CTX_free(kctx) };
 
     rv
 }
@@ -511,7 +612,6 @@ unsafe fn cms_kek_cipher(
     let mut kek = [0u8; EVP_MAX_KEY_LENGTH];
     // SAFETY: `kemri` is live.
     let keklen = unsafe { (*kemri).kek_length } as usize;
-    let mut out: *mut c_uchar = ptr::null_mut();
     let mut outlen: c_int = 0;
     let mut rv = 0;
     let mut outsize = 0usize;
@@ -585,9 +685,10 @@ unsafe fn cms_kek_cipher(
     } else {
         outlen as usize
     };
+    // The ciphered key is this frame's scratch, allocated through the crate's allocator seam at
+    // `outsize`; its release is the authority's cleansing `OPENSSL_clear_free`, run by `Drop`.
     // SAFETY: `outsize > 0`.
-    out = CRYPTO_malloc(outsize, c"cms_kemri.c".as_ptr(), 290).cast::<c_uchar>();
-    if out.is_null() {
+    let Some(out) = OwnedBuf::new_cleansed(outsize, c"cms_kemri.c".as_ptr(), 290) else {
         // SAFETY: the context and key are live.
         unsafe {
             OPENSSL_cleanse(kek.as_mut_ptr().cast(), kek.len());
@@ -596,13 +697,20 @@ unsafe fn cms_kek_cipher(
             (*kemri).pctx = ptr::null_mut();
         }
         return rv;
-    }
+    };
     // SAFETY: `kemri` is live; `out` is writable.
-    if unsafe { EVP_CipherUpdate((*kemri).ctx.cast(), out, &mut outlen, input, inlen as c_int) }
-        == 0
+    if unsafe {
+        EVP_CipherUpdate(
+            (*kemri).ctx.cast(),
+            out.as_ptr(),
+            &mut outlen,
+            input,
+            inlen as c_int,
+        )
+    } == 0
     {
-        // SAFETY: `out` is owned here.
-        unsafe { super::cms_asn1::OPENSSL_clear_free(out, outsize) };
+        // `out` clears and releases its own block, at the authority's own site.
+        drop(out);
         // SAFETY: the context and key are live.
         unsafe {
             OPENSSL_cleanse(kek.as_mut_ptr().cast(), kek.len());
@@ -612,17 +720,15 @@ unsafe fn cms_kek_cipher(
         }
         return rv;
     }
-    // SAFETY: the out-slots are writable.
+    // SAFETY: the out-slots are writable; ownership of the block transfers to the caller.
     unsafe {
-        *pout = out;
+        *pout = out.into_raw();
         *poutlen = outlen as usize;
     }
-    out = ptr::null_mut();
 
     rv = 1;
-    // SAFETY: each is NULL or owned; the contexts are live.
+    // SAFETY: the context and key are live.
     unsafe {
-        CRYPTO_free(out.cast(), c"cms_kemri.c".as_ptr(), 301);
         OPENSSL_cleanse(kek.as_mut_ptr().cast(), kek.len());
         EVP_CIPHER_CTX_reset((*kemri).ctx.cast());
         EVP_PKEY_CTX_free((*kemri).pctx.cast());
@@ -640,9 +746,7 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_kemri_encrypt(
     cms: *const CmsContentInfo,
     ri: *mut CmsRecipientInfo,
 ) -> c_int {
-    let mut kem_ct: *mut c_uchar = ptr::null_mut();
     let mut kem_ct_len: usize = 0;
-    let mut kem_secret: *mut c_uchar = ptr::null_mut();
     let mut kem_secret_len: usize = 0;
     let mut rv = 0;
 
@@ -693,42 +797,39 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_kemri_encrypt(
     {
         return 0;
     }
+    // The encapsulated ciphertext and the shared secret are this frame's scratch, allocated
+    // through the crate's allocator seam; `kem_ct` is released by the authority's plain
+    // `CRYPTO_free` and `kem_secret` by its cleansing `OPENSSL_clear_free`, both run by `Drop`.
     // SAFETY: both lengths are positive.
-    kem_ct = CRYPTO_malloc(kem_ct_len, c"cms_kemri.c".as_ptr(), 342).cast::<c_uchar>();
-    kem_secret =
-         // SAFETY: the length is non-zero.
-         CRYPTO_malloc(kem_secret_len, c"cms_kemri.c".as_ptr(), 343).cast::<c_uchar>();
-    if kem_ct.is_null() || kem_secret.is_null() {
-        // SAFETY: each is NULL or owned.
-        unsafe {
-            CRYPTO_free(kem_ct.cast(), c"cms_kemri.c".as_ptr(), 360);
-            super::cms_asn1::OPENSSL_clear_free(kem_secret, kem_secret_len);
-        }
+    let kem_ct = OwnedBuf::new(kem_ct_len, c"cms_kemri.c".as_ptr(), 342);
+    // SAFETY: the length is non-zero.
+    let kem_secret = OwnedBuf::new_cleansed(kem_secret_len, c"cms_kemri.c".as_ptr(), 343);
+    let (Some(kem_ct), Some(kem_secret)) = (kem_ct, kem_secret) else {
         return rv;
-    }
+    };
 
     // SAFETY: `kemri` is live; the buffers are sized by the previous call.
     if unsafe {
         EVP_PKEY_encapsulate(
             (*kemri).pctx.cast(),
-            kem_ct,
+            kem_ct.as_ptr(),
             &mut kem_ct_len,
-            kem_secret,
+            kem_secret.as_ptr(),
             &mut kem_secret_len,
         )
     } <= 0
     {
-        // SAFETY: each pointer is NULL or owned here.
-        unsafe {
-            CRYPTO_free(kem_ct.cast(), c"cms_kemri.c".as_ptr(), 360);
-            super::cms_asn1::OPENSSL_clear_free(kem_secret, kem_secret_len);
-        }
         return rv;
     }
 
-    // SAFETY: `kemri`/`kem_ct` are live; ownership transfers.
-    unsafe { ASN1_STRING_set0((*kemri).kemct, kem_ct.cast(), kem_ct_len as c_int) };
-    kem_ct = ptr::null_mut();
+    // SAFETY: `kemri` is live; ownership of the block transfers to the `ASN1_STRING`.
+    unsafe {
+        ASN1_STRING_set0(
+            (*kemri).kemct,
+            kem_ct.into_raw().cast(),
+            kem_ct_len as c_int,
+        )
+    };
 
     let mut enckey: *mut c_uchar = ptr::null_mut();
     let mut enckeylen: usize = 0;
@@ -737,7 +838,7 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_kemri_encrypt(
         cms_kek_cipher(
             &mut enckey,
             &mut enckeylen,
-            kem_secret,
+            kem_secret.as_ptr(),
             kem_secret_len,
             (*ec).key,
             (*ec).keylen,
@@ -746,22 +847,12 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_kemri_encrypt(
         )
     } == 0
     {
-        // SAFETY: each pointer is NULL or owned here.
-        unsafe {
-            CRYPTO_free(kem_ct.cast(), c"cms_kemri.c".as_ptr(), 360);
-            super::cms_asn1::OPENSSL_clear_free(kem_secret, kem_secret_len);
-        }
         return rv;
     }
     // SAFETY: `kemri`/`enckey` are live; ownership transfers.
     unsafe { ASN1_STRING_set0((*kemri).encrypted_key, enckey.cast(), enckeylen as c_int) };
 
     rv = 1;
-    // SAFETY: each is NULL or owned.
-    unsafe {
-        CRYPTO_free(kem_ct.cast(), c"cms_kemri.c".as_ptr(), 360);
-        super::cms_asn1::OPENSSL_clear_free(kem_secret, kem_secret_len);
-    }
     rv
 }
 
@@ -774,7 +865,6 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_kemri_decrypt(
     cms: *const CmsContentInfo,
     ri: *mut CmsRecipientInfo,
 ) -> c_int {
-    let mut kem_secret: *mut c_uchar = ptr::null_mut();
     let mut kem_secret_len: usize = 0;
     let mut ret = 0;
 
@@ -835,25 +925,25 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_kemri_decrypt(
     {
         return 0;
     }
+    // The shared secret is this frame's scratch, allocated through the crate's allocator seam;
+    // its release is the authority's cleansing `OPENSSL_clear_free`, run by `Drop`.
     // SAFETY: `kem_secret_len > 0`.
-    kem_secret = CRYPTO_malloc(kem_secret_len, c"cms_kemri.c".as_ptr(), 404).cast::<c_uchar>();
-    if kem_secret.is_null() {
+    let Some(kem_secret) = OwnedBuf::new_cleansed(kem_secret_len, c"cms_kemri.c".as_ptr(), 404)
+    else {
         return ret;
-    }
+    };
 
     // SAFETY: `kemri` is live; `kem_secret` is writable.
     if unsafe {
         EVP_PKEY_decapsulate(
             (*kemri).pctx.cast(),
-            kem_secret,
+            kem_secret.as_ptr(),
             &mut kem_secret_len,
             kem_ct,
             kem_ct_len,
         )
     } <= 0
     {
-        // SAFETY: `kem_secret` is owned here.
-        unsafe { super::cms_asn1::OPENSSL_clear_free(kem_secret, kem_secret_len) };
         return ret;
     }
 
@@ -869,7 +959,7 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_kemri_decrypt(
         cms_kek_cipher(
             &mut cek,
             &mut ceklen,
-            kem_secret,
+            kem_secret.as_ptr(),
             kem_secret_len,
             enckey,
             enckeylen,
@@ -878,8 +968,6 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_kemri_decrypt(
         )
     } == 0
     {
-        // SAFETY: `kem_secret` is owned here.
-        unsafe { super::cms_asn1::OPENSSL_clear_free(kem_secret, kem_secret_len) };
         return ret;
     }
     // SAFETY: `cms` is live.
@@ -894,8 +982,6 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_kemri_decrypt(
     }
 
     ret = 1;
-    // SAFETY: `kem_secret` is owned here.
-    unsafe { super::cms_asn1::OPENSSL_clear_free(kem_secret, kem_secret_len) };
     ret
 }
 
