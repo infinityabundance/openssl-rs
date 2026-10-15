@@ -54,6 +54,24 @@
 //! `openssl_rs_err_add_data` with the authority's NULL-becomes-`<NULL>` rule.
 //!
 //! SPDX-License-Identifier: Apache-2.0
+//!
+//! ## Ownership: the value/string copies and the `CONF_VALUE` block own themselves
+//!
+//! Every `CRYPTO_strdup`/`CRYPTO_strndup` copy, every `i2d_*`/`ASN1_STRING_to_UTF8`/`BN_bn2hex`
+//! intermediate buffer and the `CONF_VALUE` block `x509v3_add_len_value` builds are owned here, on
+//! the crate's allocator seam at the authority's own size and file, so a caller-installed
+//! `CRYPTO_set_mem_functions` hook observes the allocation and its release; `Drop` is the only
+//! release, at the authority's own `__LINE__` for the path the block is released on, so the refusal
+//! paths that used to free what they built just return. The strings and buffers are [`OwnedBlock`]s
+//! and the `CONF_VALUE` block is an [`OwnedCtx`] whose `Drop` runs `X509V3_conf_free`'s own body.
+//!
+//! **The blocks that are not the unit's own stay raw and are the documented boundary.**
+//! `bignum_to_string`'s `ret` and `ossl_ipaddr_to_asc`'s result are handed to the caller, so the
+//! caller's `CRYPTO_free` releases them; [`X509_email_free`]'s `str_free` is the stack's own
+//! `OPENSSL_sk_pop_free` freefunc, so it must keep the stack's `void (*)(void *)` signature; and the
+//! unit test's own releases of `ossl_ipaddr_to_asc` are the caller's release of an out-pointer. The
+//! `#[repr(C)]` `CONF_VALUE`'s three member strings stay the object's own releases, as in the
+//! authority.
 
 #![allow(non_snake_case)]
 
@@ -107,6 +125,111 @@ use crate::x509::x_exten::{X509Extension, X509_EXTENSION_free};
 use crate::x509::x_name::X509Name;
 use crate::x509::x_x509::X509;
 
+// ---------------------------------------------------------------------------
+// Ownership of a string or byte block, and of the `CONF_VALUE` object
+// ---------------------------------------------------------------------------
+
+/// The authority's `*_free` body for one of the file's `#[repr(C)]` objects, without the block's own
+/// release, which [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live object this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned `#[repr(C)]` object block, reclaimed from the object's own destructor.
+///
+/// The block keeps the authority's layout and its stable address; its *ownership* is this type,
+/// reclaimed by [`Self::from_raw`] and released by `Drop` (the authority's own free body, then the
+/// block release at `(file, line)`).
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Reclaim a block the object's destructor is about to release.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this file allocated and has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The object destructor: the authority's `*_free` body, then the block release.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `from_raw` reclaimed and this is its single release;
+        // `Drop` runs once, and `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+/// An owned string or byte block allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_strdup`/`CRYPTO_strndup`/`CRYPTO_malloc`, or a block a helper allocated
+/// with `CRYPTO_malloc`, at the authority's own size and file, so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the allocation and its release; only its *ownership* is
+/// this type: `take`/`adopt` take it in and `Drop` is its single release, at the authority's own
+/// `__LINE__`. [`Self::into_raw`] hands it to a consumer that takes it over (a stack push), and
+/// [`Self::set_release_line`] re-points the release at the authority's second site for the block on
+/// the path that reaches it (a refusal-free that the authority writes at a different line).
+struct OwnedBlock {
+    ptr: *mut c_void,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBlock {
+    /// Adopt a block the seam answered, or `None` for NULL.
+    fn take(ptr: *mut c_void, file: *const c_char, line: c_int) -> Option<OwnedBlock> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBlock { ptr, file, line })
+        }
+    }
+
+    /// Adopt a block a helper allocated, or NULL as an empty block whose release is a no-op. Used
+    /// where the authority keeps and later frees the block unconditionally.
+    fn adopt(ptr: *mut c_void, file: *const c_char, line: c_int) -> OwnedBlock {
+        OwnedBlock { ptr, file, line }
+    }
+
+    /// The block's address, typed for the calls that read it.
+    fn as_ptr<T>(&self) -> *mut T {
+        self.ptr.cast::<T>()
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_void {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+
+    /// Re-point the release at the authority's second site for this block, on the path that
+    /// reaches it.
+    fn set_release_line(&mut self, line: c_int) {
+        self.line = line;
+    }
+}
+
+impl Drop for OwnedBlock {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
+        // released before; its single release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr, self.file, self.line) };
+    }
+}
+
 /// `OPENSSL_FILE` for this unit's allocation expansions — `crypto/x509/v3_utl.c`.
 const FILE: &CStr = c"crypto/x509/v3_utl.c";
 
@@ -141,38 +264,50 @@ unsafe fn x509v3_add_len_value(
     vallen: usize,
     extlist: *mut *mut OpenSslStack,
 ) -> c_int {
-    let mut vtmp: *mut ConfValue = ptr::null_mut();
-    let mut tname: *mut c_char = ptr::null_mut();
-    let mut tvalue: *mut c_char = ptr::null_mut();
+    // The `CONF_VALUE` block and the two string copies this call builds, owned here so a refusal
+    // returns and lets `Drop` release what it built (at the authority's own `err:` line for each).
+    let mut tname: Option<OwnedBlock> = None;
+    let mut tvalue: Option<OwnedBlock> = None;
     // SAFETY: `extlist` is writable per the contract.
     let sk_allocated = unsafe { (*extlist).is_null() };
 
     if !name.is_null() {
         // SAFETY: `name` is NUL-terminated per the contract; the allocation site is constant.
-        tname = unsafe { CRYPTO_strdup(name, FILE.as_ptr(), 47) };
-        if tname.is_null() {
+        tname = OwnedBlock::take(
+            unsafe { CRYPTO_strdup(name, FILE.as_ptr(), 47) }.cast::<c_void>(),
+            FILE.as_ptr(),
+            75,
+        );
+        if tname.is_none() {
             // SAFETY: the error tail's contract is this function's.
-            return unsafe { add_len_value_err(extlist, sk_allocated, vtmp, tname, tvalue) };
+            return unsafe { add_len_value_err(extlist, sk_allocated) };
         }
     }
     if !value.is_null() {
         // SAFETY: `value` is readable for `vallen` bytes per the contract.
         if !unsafe { memchr(value.cast::<c_void>(), 0, vallen) }.is_null() {
             // SAFETY: as above.
-            return unsafe { add_len_value_err(extlist, sk_allocated, vtmp, tname, tvalue) };
+            return unsafe { add_len_value_err(extlist, sk_allocated) };
         }
         // SAFETY: `value` is readable for `vallen` bytes per the contract.
-        tvalue = unsafe { CRYPTO_strndup(value, vallen, FILE.as_ptr(), 53) };
-        if tvalue.is_null() {
+        tvalue = OwnedBlock::take(
+            unsafe { CRYPTO_strndup(value, vallen, FILE.as_ptr(), 53) }.cast::<c_void>(),
+            FILE.as_ptr(),
+            76,
+        );
+        if tvalue.is_none() {
             // SAFETY: as above.
-            return unsafe { add_len_value_err(extlist, sk_allocated, vtmp, tname, tvalue) };
+            return unsafe { add_len_value_err(extlist, sk_allocated) };
         }
     }
-    vtmp = CRYPTO_malloc(core::mem::size_of::<ConfValue>(), FILE.as_ptr(), 57).cast::<ConfValue>();
-    if vtmp.is_null() {
+    let Some(vtmp) = OwnedBlock::take(
+        CRYPTO_malloc(core::mem::size_of::<ConfValue>(), FILE.as_ptr(), 57),
+        FILE.as_ptr(),
+        74,
+    ) else {
         // SAFETY: as above.
-        return unsafe { add_len_value_err(extlist, sk_allocated, vtmp, tname, tvalue) };
-    }
+        return unsafe { add_len_value_err(extlist, sk_allocated) };
+    };
     if sk_allocated {
         // SAFETY: no preconditions.
         let fresh = OPENSSL_sk_new_null();
@@ -182,49 +317,49 @@ unsafe fn x509v3_add_len_value(
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&err_sites::V3_UTL_60) };
             // SAFETY: as above.
-            return unsafe { add_len_value_err(extlist, sk_allocated, vtmp, tname, tvalue) };
+            return unsafe { add_len_value_err(extlist, sk_allocated) };
         }
     }
-    // SAFETY: `vtmp` is this call's own, freshly allocated `CONF_VALUE`.
+    // SAFETY: `vtmp` is this call's own, freshly allocated `CONF_VALUE`; the two string copies are
+    // still owned here and are handed to the stack only by the `into_raw`s after the push succeeds.
     unsafe {
-        (*vtmp).section = ptr::null_mut();
-        (*vtmp).name = tname;
-        (*vtmp).value = tvalue;
+        let v = vtmp.as_ptr::<ConfValue>();
+        (*v).section = ptr::null_mut();
+        (*v).name = tname
+            .as_ref()
+            .map_or(ptr::null_mut(), |b| b.as_ptr::<c_char>());
+        (*v).value = tvalue
+            .as_ref()
+            .map_or(ptr::null_mut(), |b| b.as_ptr::<c_char>());
     }
     // SAFETY: `*extlist` is live (freshly built or the caller's) and `vtmp` is this call's own.
-    if unsafe { OPENSSL_sk_push(*extlist, vtmp.cast::<c_void>()) } == 0 {
+    if unsafe { OPENSSL_sk_push(*extlist, vtmp.as_ptr::<c_void>()) } == 0 {
         // SAFETY: as above.
-        return unsafe { add_len_value_err(extlist, sk_allocated, vtmp, tname, tvalue) };
+        return unsafe { add_len_value_err(extlist, sk_allocated) };
     }
+    // The stack now owns the `CONF_VALUE` and the two strings inside it, so the handles give up
+    // ownership rather than releasing at the end of the frame.
+    let _ = tname.map(OwnedBlock::into_raw);
+    let _ = tvalue.map(OwnedBlock::into_raw);
+    let _ = vtmp.into_raw();
     1
 }
 
 /// `crypto/x509/v3_utl.c:69-77`'s `err:` label of [`x509v3_add_len_value`].
 ///
-/// Frees the caller-visible stack only when this call built it, and the three allocations this
-/// call owns. A failed push has not taken ownership of `vtmp`/`tname`/`tvalue`.
+/// Frees the caller-visible stack only when this call built it. The three allocations this call
+/// owns are released by their own handles' `Drop` as the calling frame returns -- a failed push has
+/// not taken ownership of them -- so this tail no longer frees them by hand.
 ///
 /// # Safety
 ///
-/// `extlist` must be writable; each pointer must be NULL or this call's own.
-unsafe fn add_len_value_err(
-    extlist: *mut *mut OpenSslStack,
-    sk_allocated: bool,
-    vtmp: *mut ConfValue,
-    tname: *mut c_char,
-    tvalue: *mut c_char,
-) -> c_int {
+/// `extlist` must be writable.
+unsafe fn add_len_value_err(extlist: *mut *mut OpenSslStack, sk_allocated: bool) -> c_int {
     if sk_allocated {
         // SAFETY: `*extlist` is this call's own stack or NULL.
         unsafe { OPENSSL_sk_free(*extlist) };
         // SAFETY: `extlist` is writable per the contract.
         unsafe { *extlist = ptr::null_mut() };
-    }
-    // SAFETY: each is NULL or this call's own allocation.
-    unsafe {
-        CRYPTO_free(vtmp.cast::<c_void>(), FILE.as_ptr(), 74);
-        CRYPTO_free(tname.cast::<c_void>(), FILE.as_ptr(), 75);
-        CRYPTO_free(tvalue.cast::<c_void>(), FILE.as_ptr(), 76);
     }
     0
 }
@@ -297,15 +432,21 @@ pub unsafe extern "C" fn x509v3_add_len_value_uchar(
 /// `conf` must be NULL or a live, uniquely-owned `CONF_VALUE`.
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_conf_free(conf: *mut ConfValue) {
-    if conf.is_null() {
-        return;
-    }
-    // SAFETY: `conf` is live per the contract; each field is NULL or this structure's own.
-    unsafe {
-        CRYPTO_free((*conf).name.cast::<c_void>(), FILE.as_ptr(), 108);
-        CRYPTO_free((*conf).value.cast::<c_void>(), FILE.as_ptr(), 109);
-        CRYPTO_free((*conf).section.cast::<c_void>(), FILE.as_ptr(), 110);
-        CRYPTO_free(conf.cast::<c_void>(), FILE.as_ptr(), 111);
+    // SAFETY: `conf` is NULL or a live, uniquely-owned `CONF_VALUE`; `from_raw` reclaims it (NULL is
+    // a no-op) and `Drop` runs the authority's own member releases followed by the block release.
+    unsafe { drop(OwnedCtx::<ConfValue>::from_raw(conf, FILE.as_ptr(), 111)) };
+}
+
+/// The authority's `X509V3_conf_free` body, without the block release [`OwnedCtx`]'s `Drop`
+/// performs: the three member strings.
+impl CtxDestroy for ConfValue {
+    unsafe fn destroy_body(ptr: *mut ConfValue) {
+        // SAFETY: `ptr` is live per the trait contract; each field is NULL or this structure's own.
+        unsafe {
+            CRYPTO_free((*ptr).name.cast::<c_void>(), FILE.as_ptr(), 108);
+            CRYPTO_free((*ptr).value.cast::<c_void>(), FILE.as_ptr(), 109);
+            CRYPTO_free((*ptr).section.cast::<c_void>(), FILE.as_ptr(), 110);
+        }
     }
 }
 
@@ -382,29 +523,32 @@ unsafe fn bignum_to_string(bn: *const BigNum) -> *mut c_char {
         // SAFETY: `bn` is live per the contract.
         return unsafe { BN_bn2dec(bn) };
     }
+    // The hex copy `BN_bn2hex` made is owned here; `Drop` is its release at the authority's own site
+    // for the path that reaches it (line 162 on success, line 150 on the refusal below). The
+    // returned `0x` string stays raw: the caller's `CRYPTO_free` releases it.
     // SAFETY: `bn` is live per the contract.
-    let tmp = unsafe { BN_bn2hex(bn) };
-    if tmp.is_null() {
+    let raw = unsafe { BN_bn2hex(bn) };
+    let Some(mut tmp) = OwnedBlock::take(raw.cast::<c_void>(), FILE.as_ptr(), 162) else {
         return ptr::null_mut();
-    }
+    };
     // SAFETY: `tmp` is a NUL-terminated allocation.
-    let len = unsafe { strlen(tmp) } + 3;
+    let len = unsafe { strlen(tmp.as_ptr::<c_char>()) } + 3;
     let ret = CRYPTO_malloc(len, FILE.as_ptr(), 148).cast::<c_char>();
     if ret.is_null() {
-        // SAFETY: `tmp` is this call's own.
-        unsafe { CRYPTO_free(tmp.cast::<c_void>(), FILE.as_ptr(), 150) };
+        // The authority frees `tmp` at its own line 150 on this refusal.
+        tmp.set_release_line(150);
         return ptr::null_mut();
     }
     // SAFETY: `tmp` is NUL-terminated; `ret` is `len` writable bytes.
     unsafe {
-        if *tmp == b'-' as c_char {
+        let t = tmp.as_ptr::<c_char>();
+        if *t == b'-' as c_char {
             OPENSSL_strlcpy(ret, c"-0x".as_ptr(), len);
-            OPENSSL_strlcat(ret, tmp.add(1), len);
+            OPENSSL_strlcat(ret, t.add(1), len);
         } else {
             OPENSSL_strlcpy(ret, c"0x".as_ptr(), len);
-            OPENSSL_strlcat(ret, tmp, len);
+            OPENSSL_strlcat(ret, t, len);
         }
-        CRYPTO_free(tmp.cast::<c_void>(), FILE.as_ptr(), 162);
     }
     ret
 }
@@ -580,16 +724,14 @@ pub unsafe extern "C" fn X509V3_add_value_int(
     if aint.is_null() {
         return 1;
     }
+    // The integer's string form is owned here; `Drop` is its release at the authority's own site.
     // SAFETY: `aint` is live per the contract.
-    let strtmp = unsafe { i2s_ASN1_INTEGER(ptr::null_mut(), aint) };
-    if strtmp.is_null() {
+    let raw = unsafe { i2s_ASN1_INTEGER(ptr::null_mut(), aint) };
+    let Some(strtmp) = OwnedBlock::take(raw.cast::<c_void>(), FILE.as_ptr(), 262) else {
         return 0;
-    }
+    };
     // SAFETY: the caller's contract is `X509V3_add_value`'s.
-    let ret = unsafe { X509V3_add_value(name, strtmp, extlist) };
-    // SAFETY: `strtmp` is this call's own.
-    unsafe { CRYPTO_free(strtmp.cast::<c_void>(), FILE.as_ptr(), 262) };
-    ret
+    unsafe { X509V3_add_value(name, strtmp.as_ptr::<c_char>(), extlist) }
 }
 
 /// `void X509V3_conf_add_error_name_value(CONF_VALUE *val)` — the `x509_local.h:12` macro's
@@ -720,16 +862,19 @@ pub unsafe extern "C" fn X509V3_get_value_int(
 /// `line` must be NUL-terminated.
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_parse_list(line: *const c_char) -> *mut OpenSslStack {
+    // The writable copy this call modifies in place is owned here; `Drop` is its release at the
+    // authority's own site for the path that reaches it (line 395 on success, line 399 on the
+    // `err:` label below).
     // SAFETY: `line` is NUL-terminated per the contract.
-    let linebuf = unsafe { CRYPTO_strdup(line, FILE.as_ptr(), 324) };
-    if linebuf.is_null() {
+    let copy = unsafe { CRYPTO_strdup(line, FILE.as_ptr(), 324) };
+    let Some(linebuf) = OwnedBlock::take(copy.cast::<c_void>(), FILE.as_ptr(), 395) else {
         return ptr::null_mut();
-    }
+    };
     let mut values: *mut OpenSslStack = ptr::null_mut();
     let mut state = HDR_NAME;
     let mut ntmp: *mut c_char = ptr::null_mut();
-    let mut p = linebuf;
-    let mut q = linebuf;
+    let mut p = linebuf.as_ptr::<c_char>();
+    let mut q = linebuf.as_ptr::<c_char>();
     loop {
         // SAFETY: `p` walks a NUL-terminated buffer and stops at the terminator below.
         let c = unsafe { *p };
@@ -824,19 +969,20 @@ pub unsafe extern "C" fn X509V3_parse_list(line: *const c_char) -> *mut OpenSslS
             return unsafe { parse_list_err(linebuf, values) };
         }
     }
-    // SAFETY: `linebuf` is this call's own copy.
-    unsafe { CRYPTO_free(linebuf.cast::<c_void>(), FILE.as_ptr(), 395) };
+    // `linebuf` is released by its `Drop` at the authority's own line 395.
     values
 }
 
 /// `crypto/x509/v3_utl.c:398-401`'s `err:` label of [`X509V3_parse_list`].
 ///
+/// Releases the copy at the authority's own `err:` site (line 399) and the caller-visible stack.
+///
 /// # Safety
 ///
 /// `linebuf` must be this call's own copy; `values` NULL or a live stack this call built.
-unsafe fn parse_list_err(linebuf: *mut c_char, values: *mut OpenSslStack) -> *mut OpenSslStack {
-    // SAFETY: `linebuf` is this call's own.
-    unsafe { CRYPTO_free(linebuf.cast::<c_void>(), FILE.as_ptr(), 399) };
+unsafe fn parse_list_err(mut linebuf: OwnedBlock, values: *mut OpenSslStack) -> *mut OpenSslStack {
+    // The copy is released at the authority's own `err:` line 399.
+    linebuf.set_release_line(399);
     // SAFETY: `values` is NULL or this call's own stack of `CONF_VALUE` pointers.
     unsafe { OPENSSL_sk_pop_free(values, Some(conf_value_free_thunk)) };
     ptr::null_mut()
@@ -1324,50 +1470,54 @@ pub unsafe extern "C" fn a2i_IPADDRESS(ipasc: *const c_char) -> *mut Asn1String 
 #[no_mangle]
 pub unsafe extern "C" fn a2i_IPADDRESS_NC(ipasc: *const c_char) -> *mut Asn1String {
     let mut ipout = [0 as c_uchar; 32];
-    let mut iptmp: *mut c_char;
     // SAFETY: `ipasc` is NUL-terminated per the contract.
     let slash = unsafe { strchr(ipasc, b'/' as c_int) };
     if slash.is_null() {
         return ptr::null_mut();
     }
+    // The copy of `ipasc` this call splits in place is owned here; `Drop` is its release at the
+    // authority's own site (line 1143 on the success path, line 1158 on the `err:` label below).
     // SAFETY: `ipasc` is NUL-terminated per the contract.
-    iptmp = unsafe { CRYPTO_strdup(ipasc, FILE.as_ptr(), 1130) };
-    if iptmp.is_null() {
+    let copy = unsafe { CRYPTO_strdup(ipasc, FILE.as_ptr(), 1130) };
+    let Some(iptmp) = OwnedBlock::take(copy.cast::<c_void>(), FILE.as_ptr(), 1143) else {
         return ptr::null_mut();
-    }
+    };
     // SAFETY: `slash` is within `ipasc`'s buffer.
-    let mut p = unsafe { iptmp.add(slash.offset_from(ipasc) as usize) };
+    let mut p = unsafe {
+        iptmp
+            .as_ptr::<c_char>()
+            .add(slash.offset_from(ipasc) as usize)
+    };
     // SAFETY: `p` points at the '/' within the copy.
     unsafe { *p = 0 };
     // SAFETY: `p` pointed at the '/' and `ipasc` is NUL-terminated, so `p + 1` is in bounds.
     p = unsafe { p.add(1) };
 
     // SAFETY: `ipout` is 32 writable bytes; `iptmp` is the first half, NUL-terminated.
-    let iplen1 = unsafe { ossl_a2i_ipadd(ipout.as_mut_ptr(), iptmp) };
+    let iplen1 = unsafe { ossl_a2i_ipadd(ipout.as_mut_ptr(), iptmp.as_ptr::<c_char>()) };
     if iplen1 == 0 {
         // SAFETY: the error tail's contract is this function's; `iptmp` is this call's own copy.
-        return unsafe { ipaddress_nc_err(iptmp, ptr::null_mut()) };
+        return unsafe { ipaddress_nc_err(Some(iptmp), ptr::null_mut()) };
     }
     // SAFETY: `p` is the second half, NUL-terminated; `ipout` has 32 bytes.
     let iplen2 = unsafe { ossl_a2i_ipadd(ipout.as_mut_ptr().add(iplen1 as usize), p) };
-    // SAFETY: `iptmp` is this call's own.
-    unsafe { CRYPTO_free(iptmp.cast::<c_void>(), FILE.as_ptr(), 1143) };
-    iptmp = ptr::null_mut();
+    // The copy is released at the authority's own line 1143.
+    drop(iptmp);
 
     if iplen2 == 0 || iplen1 != iplen2 {
         // SAFETY: the error tail's contract is this function's.
-        return unsafe { ipaddress_nc_err(iptmp, ptr::null_mut()) };
+        return unsafe { ipaddress_nc_err(None, ptr::null_mut()) };
     }
     // SAFETY: no preconditions.
     let ret = ASN1_OCTET_STRING_new();
     if ret.is_null() {
         // SAFETY: the error tail's contract is this function's.
-        return unsafe { ipaddress_nc_err(iptmp, ret) };
+        return unsafe { ipaddress_nc_err(None, ret) };
     }
     // SAFETY: `ret` is live and this call's own; `ipout` is readable for `iplen1 + iplen2`.
     if unsafe { ASN1_OCTET_STRING_set(ret, ipout.as_ptr(), iplen1 + iplen2) } == 0 {
         // SAFETY: the error tail's contract is this function's.
-        return unsafe { ipaddress_nc_err(iptmp, ret) };
+        return unsafe { ipaddress_nc_err(None, ret) };
     }
     ret
 }
@@ -1376,10 +1526,12 @@ pub unsafe extern "C" fn a2i_IPADDRESS_NC(ipasc: *const c_char) -> *mut Asn1Stri
 ///
 /// # Safety
 ///
-/// `iptmp` must be this call's own or NULL; `ret` NULL or this call's own.
-unsafe fn ipaddress_nc_err(iptmp: *mut c_char, ret: *mut Asn1String) -> *mut Asn1String {
-    // SAFETY: `iptmp` is NULL or this call's own; the site is constant.
-    unsafe { CRYPTO_free(iptmp.cast::<c_void>(), FILE.as_ptr(), 1158) };
+/// `iptmp` must be `None` or this call's own copy; `ret` NULL or this call's own.
+unsafe fn ipaddress_nc_err(iptmp: Option<OwnedBlock>, ret: *mut Asn1String) -> *mut Asn1String {
+    // The copy, when this call still owns it, is released at the authority's own `err:` line 1158.
+    if let Some(mut t) = iptmp {
+        t.set_release_line(1158);
+    }
     // SAFETY: `ret` is NULL or this call's own.
     unsafe { ASN1_OCTET_STRING_free(ret) };
     ptr::null_mut()
@@ -1523,15 +1675,15 @@ pub unsafe extern "C" fn ossl_bio_print_hex(out: *mut Bio, buf: *mut c_uchar, le
     if len == 0 {
         return 1;
     }
+    // The hex string `OPENSSL_buf2hexstr` allocated is owned here; `Drop` is its release at the
+    // authority's own site.
     // SAFETY: `buf` is readable for `len` bytes per the contract.
-    let hexbuf = unsafe { OPENSSL_buf2hexstr(buf, len as c_long) };
-    if hexbuf.is_null() {
+    let raw = unsafe { OPENSSL_buf2hexstr(buf, len as c_long) };
+    let Some(hexbuf) = OwnedBlock::take(raw.cast::<c_void>(), FILE.as_ptr(), 1447) else {
         return 0;
-    }
+    };
     // SAFETY: `out` is a live BIO and `hexbuf` is NUL-terminated.
-    let result = unsafe { BIO_puts(out, hexbuf) } > 0;
-    // SAFETY: `hexbuf` is this call's own allocation.
-    unsafe { CRYPTO_free(hexbuf.cast::<c_void>(), FILE.as_ptr(), 1447) };
+    let result = unsafe { BIO_puts(out, hexbuf.as_ptr::<c_char>()) } > 0;
     c_int::from(result)
 }
 
@@ -1590,32 +1742,36 @@ unsafe fn append_ia5(sk: *mut *mut OpenSslStack, email: *const Asn1String) -> c_
     if unsafe { *sk }.is_null() {
         return 0;
     }
+    // The duplicate-free copy this call appends is owned here; `Drop` is its release at the
+    // authority's own site for the path that reaches it (line 556 when the stack already holds it,
+    // line 560 when the push fails), and a successful push takes it over.
     // SAFETY: `data` is `length` readable bytes per the contract.
-    let emtmp =
-        unsafe { CRYPTO_strndup(data.cast::<c_char>(), length as usize, FILE.as_ptr(), 547) };
-    if emtmp.is_null() {
+    let raw = unsafe { CRYPTO_strndup(data.cast::<c_char>(), length as usize, FILE.as_ptr(), 547) };
+    let Some(mut emtmp) = OwnedBlock::take(raw.cast::<c_void>(), FILE.as_ptr(), 560) else {
         // SAFETY: `*sk` is the live stack this call built or the caller's own.
         unsafe { X509_email_free(*sk) };
         // SAFETY: `sk` is writable per the contract.
         unsafe { *sk = ptr::null_mut() };
         return 0;
-    }
+    };
     // SAFETY: `*sk` is live; `emtmp` is this call's own NUL-terminated string.
-    if unsafe { OPENSSL_sk_find(*sk, emtmp.cast::<c_void>()) } != -1 {
-        // SAFETY: `emtmp` is this call's own.
-        unsafe { CRYPTO_free(emtmp.cast::<c_void>(), FILE.as_ptr(), 556) };
+    if unsafe { OPENSSL_sk_find(*sk, emtmp.as_ptr::<c_void>()) } != -1 {
+        // The authority releases the copy at its own line 556 here.
+        emtmp.set_release_line(556);
         return 1;
     }
     // SAFETY: `*sk` is live; `emtmp` is this call's own string.
-    if unsafe { OPENSSL_sk_push(*sk, emtmp.cast::<c_void>()) } == 0 {
-        // SAFETY: `emtmp` is this call's own (the failed push did not take it).
-        unsafe { CRYPTO_free(emtmp.cast::<c_void>(), FILE.as_ptr(), 560) };
+    if unsafe { OPENSSL_sk_push(*sk, emtmp.as_ptr::<c_void>()) } == 0 {
+        // `emtmp` is released by its `Drop` at the authority's own line 560; the failed push did
+        // not take it.
         // SAFETY: `*sk` is the live stack this call built or the caller's own.
         unsafe { X509_email_free(*sk) };
         // SAFETY: `sk` is writable per the contract.
         unsafe { *sk = ptr::null_mut() };
         return 0;
     }
+    // The stack now owns the string.
+    let _ = emtmp.into_raw();
     1
 }
 
@@ -2204,29 +2360,44 @@ unsafe fn do_check_string(
             }
         }
     } else {
-        let mut astr: *mut c_uchar = ptr::null_mut();
-        // SAFETY: `a` is live; `astr` is a writable slot.
-        let astrlen = unsafe { ASN1_STRING_to_UTF8(&raw mut astr, a) };
+        let mut astr_slot: *mut c_uchar = ptr::null_mut();
+        // SAFETY: `a` is live; `astr_slot` is a writable slot.
+        let astrlen = unsafe { ASN1_STRING_to_UTF8(&raw mut astr_slot, a) };
         if astrlen < 0 {
             return -1;
         }
+        // The UTF-8 copy `ASN1_STRING_to_UTF8` made is owned here; `Drop` is its release at the
+        // authority's own site for the path that reaches it (line 860 on the refusal below, line
+        // 864 on success).
+        let mut astr = OwnedBlock::adopt(astr_slot.cast::<c_void>(), FILE.as_ptr(), 864);
         // SAFETY: `astr` is `astrlen` and `b` is `blen` readable bytes.
-        rv = unsafe { equal(astr, astrlen as usize, b.cast::<c_uchar>(), blen, flags) };
+        rv = unsafe {
+            equal(
+                astr.as_ptr::<c_uchar>(),
+                astrlen as usize,
+                b.cast::<c_uchar>(),
+                blen,
+                flags,
+            )
+        };
         if rv > 0 && !peername.is_null() {
             // SAFETY: `astr` is `astrlen` readable bytes.
             let dup = unsafe {
-                CRYPTO_strndup(astr.cast::<c_char>(), astrlen as usize, FILE.as_ptr(), 858)
+                CRYPTO_strndup(
+                    astr.as_ptr::<c_char>(),
+                    astrlen as usize,
+                    FILE.as_ptr(),
+                    858,
+                )
             };
             // SAFETY: `peername` is writable per the contract.
             unsafe { *peername = dup };
             if dup.is_null() {
-                // SAFETY: `astr` is this call's own.
-                unsafe { CRYPTO_free(astr.cast::<c_void>(), FILE.as_ptr(), 860) };
+                // The authority releases the copy at its own line 860 on this refusal.
+                astr.set_release_line(860);
                 return -1;
             }
         }
-        // SAFETY: `astr` is this call's own.
-        unsafe { CRYPTO_free(astr.cast::<c_void>(), FILE.as_ptr(), 864) };
     }
     rv
 }

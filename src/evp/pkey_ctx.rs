@@ -50,6 +50,30 @@
 //! clears the two allocations it guards. A transcription that dropped the bit would replay a
 //! distinguishing identifier of length zero on every init.
 //!
+//! ## Ownership: the context and method blocks are owned Rust, the frame buffers with them
+//!
+//! Every `EVP_PKEY_CTX` this unit allocates for itself is an [`OwnedCtx`]: it is a `CRYPTO_zalloc`
+//! at `size_of::<EvpPkeyCtx>()` on the crate's allocator seam (the authority's own `__FILE__` and
+//! `__LINE__`, so a caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its
+//! release), its *ownership* is the handle, and `Drop` runs the authority's `EVP_PKEY_CTX_free` body
+//! before releasing the block. `int_ctx_new`'s half-built context, `EVP_PKEY_CTX_dup`'s copy and
+//! `EVP_PKEY_meth_new`'s method use the same handle: a refusal returns and lets `Drop` release what
+//! it built, and a constructor that succeeds hands the block out through [`OwnedCtx::into_raw`], so
+//! the ABI's stable address and its caller-owned lifetime are unchanged.
+//!
+//! The four frame buffers this unit allocates for itself -- `evp_pkey_ctx_add1_octet_string`'s
+//! `info`, `EVP_PKEY_CTX_hex2ctrl`'s decoded `bin`, and `EVP_PKEY_CTX_set_algor_params`' and
+//! `EVP_PKEY_CTX_get_algor_params`' `der` -- are [`OwnedBlock`]s whose `Drop` is the release, at the
+//! authority's own site (`clear` selects the cleansing `CRYPTO_clear_free` for `info`).
+//!
+//! **The `EVP_PKEY_CTX` member pointers stay raw, and so does the translation context's BIGNUM
+//! buffer.** `propquery`, `cached_parameters`' two members and the `#[repr(C)]` `XlatCtx`'s
+//! `allocated_buf` are members of ABI structures: the first two are released by the object's own
+//! destructor (now [`CtxDestroy::destroy_body`]), and `allocated_buf` is handed across the
+//! `fixup_args` function-pointer table and freed by `cleanup_translation_ctx`, so owning it would
+//! change a `#[repr(C)]` layout that crosses a C-ABI function pointer. They are the documented
+//! boundary this slice leaves for the member-buffer and accessor units.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_uchar, c_void, CStr};
@@ -218,6 +242,139 @@ const LINE_STRDUP_DIST_ID: c_int = 1499;
 const LINE_MEMDUP_DIST_ID: c_int = 1504;
 /// `EVP_PKEY_CTX_hex2ctrl`'s `OPENSSL_free(bin)` (line 1605).
 const LINE_FREE_HEXCTRL: c_int = 1605;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the context and method blocks, and of the frame buffers
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `*_free` body for one of the file's `#[repr(C)]` objects, without the block's own
+/// release, which [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live object this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned context or method block.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
+/// hands it out and takes it back), but its *ownership* is this type: [`Self::new`] allocates it
+/// through the crate's allocator seam at the authority's own `(file, alloc_line)` and `Drop`
+/// releases it at the authority's own `(file, line)`. It stays a `CRYPTO_zalloc` at
+/// `size_of::<T>()` rather than a Rust `Box` on purpose -- a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
+/// the authority's, which a Rust global allocation would hide.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
+    /// it answers NULL. `alloc_line` is the authority's allocation site and `line` its release site.
+    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// The stable address the exported ABI hands out and takes back.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's out-pointer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The object destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`]) followed
+    /// by the block release, through the same allocator seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
+        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+/// An owned frame byte buffer: the authority's own `CRYPTO_*` block whose release is this type, so
+/// its single release is `Drop` and no call site writes a `CRYPTO_free` by hand.
+///
+/// [`Self::take`] adopts a block the frame allocated through the crate's allocator seam at the
+/// authority's own size, so a caller-installed `CRYPTO_set_mem_functions` hook observes the
+/// allocation and its release exactly as it observes the authority's. `clear` selects the
+/// authority's cleansing release (`CRYPTO_clear_free` over `len` bytes for `info`) versus the plain
+/// `CRYPTO_free`.
+struct OwnedBlock {
+    ptr: *mut c_void,
+    len: usize,
+    clear: bool,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBlock {
+    /// Adopt a block the frame's seam answered, or `None` for NULL. `len` is the length a clearing
+    /// release needs; it is ignored by the plain form.
+    fn take(
+        ptr: *mut c_void,
+        len: usize,
+        clear: bool,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBlock> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBlock {
+                ptr,
+                len,
+                clear,
+                file,
+                line,
+            })
+        }
+    }
+
+    /// The buffer's address, for the raw calls the frame makes over it.
+    fn as_ptr<T>(&self) -> *mut T {
+        self.ptr.cast::<T>()
+    }
+}
+
+impl Drop for OwnedBlock {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
+        // released before; `self.len` is its allocation length and `clear` selects the authority's
+        // cleanse-then-free. Both accept NULL.
+        unsafe {
+            if self.clear {
+                CRYPTO_clear_free(self.ptr, self.len, self.file, self.line);
+            } else {
+                CRYPTO_free(self.ptr, self.file, self.line);
+            }
+        }
+    }
+}
 
 /// `struct evp_pkey_ctx_st`'s `cached_parameters` member.
 #[repr(C)]
@@ -585,50 +742,47 @@ unsafe fn int_ctx_new(
         return ptr::null_mut();
     }
 
-    /* SAFETY: this allocates a fresh object and reads nothing. */
-    let ret = CRYPTO_zalloc(core::mem::size_of::<EvpPkeyCtx>(), FILE, LINE_ZALLOC_CTX)
-        .cast::<EvpPkeyCtx>();
-    if ret.is_null() {
+    // The context block, allocated through the crate's allocator seam; `Drop` is its single release
+    // on every refusal below and `into_raw` hands it out on success.
+    let Some(ret) = OwnedCtx::<EvpPkeyCtx>::new(FILE, LINE_ZALLOC_CTX, LINE_FREE_CTX) else {
         // SAFETY: `keymgmt` is live and holds the reference taken above.
         unsafe { EVP_KEYMGMT_free(keymgmt) };
         return ptr::null_mut();
-    }
+    };
     if !propquery.is_null() {
-        // SAFETY: `propquery` is NUL-terminated.
         // SAFETY: `propquery` is NUL-terminated.
         let dup = unsafe { CRYPTO_strdup(propquery, FILE, LINE_FREE_CTX) };
         if dup.is_null() {
-            // SAFETY: `ret` is this call's own allocation.
-            unsafe { CRYPTO_free(ret.cast(), FILE, LINE_FREE_CTX) };
+            // `ret` is released by its `Drop` as this frame returns; `keymgmt` by the authority's
+            // own free.
             // SAFETY: `keymgmt` is live and holds the reference taken above.
             unsafe { EVP_KEYMGMT_free(keymgmt) };
             return ptr::null_mut();
         }
         // SAFETY: `ret` is live.
-        unsafe { (*ret).propquery = dup };
+        unsafe { (*ret.as_ptr()).propquery = dup };
     }
     // SAFETY: `ret` is this call's own object and every field is private to it.
     unsafe {
-        (*ret).libctx = libctx;
-        (*ret).keytype = keytype;
-        (*ret).keymgmt = keymgmt;
-        (*ret).legacy_keytype = id;
-        (*ret).operation = EVP_PKEY_OP_UNDEFINED;
+        (*ret.as_ptr()).libctx = libctx;
+        (*ret.as_ptr()).keytype = keytype;
+        (*ret.as_ptr()).keymgmt = keymgmt;
+        (*ret.as_ptr()).legacy_keytype = id;
+        (*ret.as_ptr()).operation = EVP_PKEY_OP_UNDEFINED;
     }
 
     if !pkey.is_null() {
         // SAFETY: `pkey` is live.
         if unsafe { EVP_PKEY_up_ref(pkey) } == 0 {
-            // SAFETY: `ret` is this call's own object.
-            unsafe { EVP_PKEY_CTX_free(ret) };
+            // `ret` is released by its `Drop` as this frame returns.
             return ptr::null_mut();
         }
         // SAFETY: `ret` is live.
-        unsafe { (*ret).pkey = pkey };
+        unsafe { (*ret.as_ptr()).pkey = pkey };
     }
 
     /* `if (pmeth != NULL && pmeth->init != NULL)` is 7.4l's: `pmeth` is always NULL here. */
-    ret
+    ret.into_raw()
 }
 
 /// `EVP_PKEY_CTX *EVP_PKEY_CTX_new(EVP_PKEY *pkey, ENGINE *e)` —
@@ -934,38 +1088,46 @@ pub(crate) unsafe fn evp_pkey_ctx_use_cached_data(ctx: *mut EvpPkeyCtx) -> c_int
 /// `ctx` must be NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_CTX_free(ctx: *mut EvpPkeyCtx) {
-    if ctx.is_null() {
-        return;
+    // SAFETY: `ctx` is NULL or a live context; `from_raw` reclaims it (NULL is a no-op) and `Drop`
+    // runs the authority's own body ([`CtxDestroy::destroy_body`]) followed by the block release.
+    unsafe { drop(OwnedCtx::<EvpPkeyCtx>::from_raw(ctx, FILE, LINE_FREE_CTX)) };
+}
+
+/// The authority's `EVP_PKEY_CTX_free` body, without the block release [`OwnedCtx`]'s `Drop`
+/// performs: the operation release, the cached data, the method reference, the property query, the
+/// two keys and the deprecated public exponent.
+impl CtxDestroy for EvpPkeyCtx {
+    unsafe fn destroy_body(ptr: *mut EvpPkeyCtx) {
+        // SAFETY: `ptr` is live per the trait contract.
+        unsafe { evp_pkey_ctx_free_old_ops(ptr) };
+        // SAFETY: `ptr` is live.
+        unsafe { evp_pkey_ctx_free_all_cached_data(ptr) };
+        // SAFETY: `ptr` is live.
+        let (keymgmt, propquery, pkey, peerkey) = unsafe {
+            (
+                (*ptr).keymgmt,
+                (*ptr).propquery,
+                (*ptr).pkey,
+                (*ptr).peerkey,
+            )
+        };
+        // SAFETY: `keymgmt` is NULL or a method holding this context's reference.
+        unsafe { EVP_KEYMGMT_free(keymgmt) };
+        // SAFETY: `propquery` is NULL or an allocation this context owns.
+        unsafe { CRYPTO_free(propquery.cast(), FILE, LINE_FREE_CTX) };
+        // SAFETY: both keys are NULL or hold a reference taken by `int_ctx_new` or by the peer
+        // setter.
+        unsafe {
+            EVP_PKEY_free(pkey);
+            EVP_PKEY_free(peerkey);
+        }
+        /* The authority's `BN_free(ctx->rsa_pubexp)`: the deprecated
+         * `EVP_PKEY_CTX_set_rsa_keygen_pubexp` hands the caller's `BIGNUM` to the context on
+         * success, so the context releases it. NULL for every context that never saw that control.
+         */
+        // SAFETY: `rsa_pubexp` is NULL or a `BIGNUM` this context owns.
+        unsafe { BN_free((*ptr).rsa_pubexp) };
     }
-    // SAFETY: `ctx` is live per the contract.
-    unsafe { evp_pkey_ctx_free_old_ops(ctx) };
-    // SAFETY: `ctx` is live.
-    unsafe { evp_pkey_ctx_free_all_cached_data(ctx) };
-    // SAFETY: `ctx` is live.
-    let (keymgmt, propquery, pkey, peerkey) = unsafe {
-        (
-            (*ctx).keymgmt,
-            (*ctx).propquery,
-            (*ctx).pkey,
-            (*ctx).peerkey,
-        )
-    };
-    // SAFETY: `keymgmt` is NULL or a method holding this context's reference.
-    unsafe { EVP_KEYMGMT_free(keymgmt) };
-    // SAFETY: `propquery` is NULL or an allocation this context owns.
-    unsafe { CRYPTO_free(propquery.cast(), FILE, LINE_FREE_CTX) };
-    // SAFETY: both keys are NULL or hold a reference taken by `int_ctx_new` or by the peer setter.
-    unsafe {
-        EVP_PKEY_free(pkey);
-        EVP_PKEY_free(peerkey);
-    }
-    /* The authority's `BN_free(ctx->rsa_pubexp)`: the deprecated
-     * `EVP_PKEY_CTX_set_rsa_keygen_pubexp` hands the caller's `BIGNUM` to the context on success, so
-     * the context releases it. NULL for every context that never saw that control. */
-    // SAFETY: `rsa_pubexp` is NULL or a `BIGNUM` this context owns.
-    unsafe { BN_free((*ctx).rsa_pubexp) };
-    // SAFETY: `ctx` is this object's own allocation.
-    unsafe { CRYPTO_free(ctx.cast(), FILE, LINE_FREE_CTX) };
 }
 
 /// `EVP_PKEY_CTX *EVP_PKEY_CTX_dup(const EVP_PKEY_CTX *pctx)`.
@@ -996,63 +1158,58 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_dup(pctx: *const EvpPkeyCtx) -> *mut EvpPk
     // SAFETY: `pctx` is live per the contract.
     let src = unsafe { &*pctx };
 
-    // SAFETY: this allocates a fresh object and reads nothing.
-    let rctx = CRYPTO_zalloc(core::mem::size_of::<EvpPkeyCtx>(), FILE, LINE_ZALLOC_CTX)
-        .cast::<EvpPkeyCtx>();
-    if rctx.is_null() {
+    // The copy's context block, allocated through the crate's allocator seam; `Drop` is its single
+    // release on every refusal below and `into_raw` hands it out on success.
+    let Some(rctx) = OwnedCtx::<EvpPkeyCtx>::new(FILE, LINE_ZALLOC_CTX, LINE_FREE_CTX) else {
         return ptr::null_mut();
-    }
+    };
 
     if !src.pkey.is_null() {
         // SAFETY: `pkey` is live.
         if unsafe { EVP_PKEY_up_ref(src.pkey) } == 0 {
-            // SAFETY: `rctx` is this call's own object.
-            unsafe { EVP_PKEY_CTX_free(rctx) };
+            // `rctx` is released by its `Drop` as this frame returns.
             return ptr::null_mut();
         }
     }
 
     // SAFETY: `rctx` is this call's own object.
     unsafe {
-        (*rctx).pkey = src.pkey;
-        (*rctx).operation = src.operation;
-        (*rctx).libctx = src.libctx;
-        (*rctx).keytype = src.keytype;
-        (*rctx).legacy_keytype = src.legacy_keytype;
+        (*rctx.as_ptr()).pkey = src.pkey;
+        (*rctx.as_ptr()).operation = src.operation;
+        (*rctx.as_ptr()).libctx = src.libctx;
+        (*rctx.as_ptr()).keytype = src.keytype;
+        (*rctx.as_ptr()).legacy_keytype = src.legacy_keytype;
     }
     if !src.propquery.is_null() {
         // SAFETY: `propquery` is NUL-terminated.
         // SAFETY: `propquery` is NUL-terminated.
         let dup = unsafe { CRYPTO_strdup(src.propquery, FILE, LINE_FREE_CTX) };
         if dup.is_null() {
-            // SAFETY: `rctx` is this call's own object.
-            unsafe { EVP_PKEY_CTX_free(rctx) };
+            // `rctx` is released by its `Drop` as this frame returns.
             return ptr::null_mut();
         }
         // SAFETY: `rctx` is live.
-        unsafe { (*rctx).propquery = dup };
+        unsafe { (*rctx.as_ptr()).propquery = dup };
     }
 
     if !src.keymgmt.is_null() {
         // SAFETY: `keymgmt` is live.
         if unsafe { crate::evp::keymgmt::EVP_KEYMGMT_up_ref(src.keymgmt) } == 0 {
-            // SAFETY: `rctx` is this call's own object.
-            unsafe { EVP_PKEY_CTX_free(rctx) };
+            // `rctx` is released by its `Drop` as this frame returns.
             return ptr::null_mut();
         }
         // SAFETY: `rctx` is live.
-        unsafe { (*rctx).keymgmt = src.keymgmt };
+        unsafe { (*rctx.as_ptr()).keymgmt = src.keymgmt };
     }
 
     if src.is_derive_op() {
-        // SAFETY: `rctx` is this call's own object.
-        let r = unsafe { &mut *rctx };
+        // SAFETY: `rctx` is this call's own object and `Drop` has not released it.
+        let r = unsafe { &mut *rctx.as_ptr() };
         if !src.op_kex_exchange.is_null() {
             r.op_kex_exchange = src.op_kex_exchange;
             // SAFETY: `op_kex_exchange` is live.
             if unsafe { crate::evp::exchange::EVP_KEYEXCH_up_ref(r.op_kex_exchange) } == 0 {
-                // SAFETY: `rctx` is this call's own object.
-                unsafe { EVP_PKEY_CTX_free(rctx) };
+                // `rctx` is released by its `Drop` as this frame returns.
                 return ptr::null_mut();
             }
         }
@@ -1061,8 +1218,7 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_dup(pctx: *const EvpPkeyCtx) -> *mut EvpPk
              * so the authority refuses here -- `goto err` -- and never reaches the duplicator. The
              * crate refuses at the same point, with the same result (`docs/DECISIONS.md` D167). */
             if src.op_kex_exchange.is_null() {
-                // SAFETY: `rctx` is this call's own object.
-                unsafe { EVP_PKEY_CTX_free(rctx) };
+                // `rctx` is released by its `Drop` as this frame returns.
                 return ptr::null_mut();
             }
             // SAFETY: both are live and the duplicator is the provider's own.
@@ -1071,28 +1227,25 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_dup(pctx: *const EvpPkeyCtx) -> *mut EvpPk
                 // SAFETY: `r.op_kex_exchange` is live and holds the reference taken above.
                 unsafe { crate::evp::exchange::EVP_KEYEXCH_free(r.op_kex_exchange) };
                 r.op_kex_exchange = ptr::null_mut();
-                // SAFETY: `rctx` is this call's own object.
-                unsafe { EVP_PKEY_CTX_free(rctx) };
+                // `rctx` is released by its `Drop` as this frame returns.
                 return ptr::null_mut();
             }
-            return rctx;
+            return rctx.into_raw();
         }
     } else if src.is_signature_op() {
-        // SAFETY: `rctx` is this call's own object.
-        let r = unsafe { &mut *rctx };
+        // SAFETY: `rctx` is this call's own object and `Drop` has not released it.
+        let r = unsafe { &mut *rctx.as_ptr() };
         if !src.op_sig_signature.is_null() {
             r.op_sig_signature = src.op_sig_signature;
             // SAFETY: `op_sig_signature` is live.
             if unsafe { crate::evp::signature::EVP_SIGNATURE_up_ref(r.op_sig_signature) } == 0 {
-                // SAFETY: `rctx` is this call's own object.
-                unsafe { EVP_PKEY_CTX_free(rctx) };
+                // `rctx` is released by its `Drop` as this frame returns.
                 return ptr::null_mut();
             }
         }
         if !src.op_sig_algctx.is_null() {
             if src.op_sig_signature.is_null() {
-                // SAFETY: `rctx` is this call's own object.
-                unsafe { EVP_PKEY_CTX_free(rctx) };
+                // `rctx` is released by its `Drop` as this frame returns.
                 return ptr::null_mut();
             }
             // SAFETY: both are live and the duplicator is the provider's own.
@@ -1101,28 +1254,25 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_dup(pctx: *const EvpPkeyCtx) -> *mut EvpPk
                 // SAFETY: `r.op_sig_signature` is live and holds the reference taken above.
                 unsafe { crate::evp::signature::EVP_SIGNATURE_free(r.op_sig_signature) };
                 r.op_sig_signature = ptr::null_mut();
-                // SAFETY: `rctx` is this call's own object.
-                unsafe { EVP_PKEY_CTX_free(rctx) };
+                // `rctx` is released by its `Drop` as this frame returns.
                 return ptr::null_mut();
             }
-            return rctx;
+            return rctx.into_raw();
         }
     } else if src.is_asym_cipher_op() {
-        // SAFETY: `rctx` is this call's own object.
-        let r = unsafe { &mut *rctx };
+        // SAFETY: `rctx` is this call's own object and `Drop` has not released it.
+        let r = unsafe { &mut *rctx.as_ptr() };
         if !src.op_ciph_cipher.is_null() {
             r.op_ciph_cipher = src.op_ciph_cipher;
             // SAFETY: `op_ciph_cipher` is live.
             if unsafe { crate::evp::asymcipher::EVP_ASYM_CIPHER_up_ref(r.op_ciph_cipher) } == 0 {
-                // SAFETY: `rctx` is this call's own object.
-                unsafe { EVP_PKEY_CTX_free(rctx) };
+                // `rctx` is released by its `Drop` as this frame returns.
                 return ptr::null_mut();
             }
         }
         if !src.op_ciph_algctx.is_null() {
             if src.op_ciph_cipher.is_null() {
-                // SAFETY: `rctx` is this call's own object.
-                unsafe { EVP_PKEY_CTX_free(rctx) };
+                // `rctx` is released by its `Drop` as this frame returns.
                 return ptr::null_mut();
             }
             // SAFETY: both are live and the duplicator is the provider's own.
@@ -1132,28 +1282,25 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_dup(pctx: *const EvpPkeyCtx) -> *mut EvpPk
                 // SAFETY: `r.op_ciph_cipher` is live and holds the reference taken above.
                 unsafe { crate::evp::asymcipher::EVP_ASYM_CIPHER_free(r.op_ciph_cipher) };
                 r.op_ciph_cipher = ptr::null_mut();
-                // SAFETY: `rctx` is this call's own object.
-                unsafe { EVP_PKEY_CTX_free(rctx) };
+                // `rctx` is released by its `Drop` as this frame returns.
                 return ptr::null_mut();
             }
-            return rctx;
+            return rctx.into_raw();
         }
     } else if src.is_kem_op() {
-        // SAFETY: `rctx` is this call's own object.
-        let r = unsafe { &mut *rctx };
+        // SAFETY: `rctx` is this call's own object and `Drop` has not released it.
+        let r = unsafe { &mut *rctx.as_ptr() };
         if !src.op_encap_kem.is_null() {
             r.op_encap_kem = src.op_encap_kem;
             // SAFETY: `op_encap_kem` is live.
             if unsafe { crate::evp::kem::EVP_KEM_up_ref(r.op_encap_kem) } == 0 {
-                // SAFETY: `rctx` is this call's own object.
-                unsafe { EVP_PKEY_CTX_free(rctx) };
+                // `rctx` is released by its `Drop` as this frame returns.
                 return ptr::null_mut();
             }
         }
         if !src.op_encap_algctx.is_null() {
             if src.op_encap_kem.is_null() {
-                // SAFETY: `rctx` is this call's own object.
-                unsafe { EVP_PKEY_CTX_free(rctx) };
+                // `rctx` is released by its `Drop` as this frame returns.
                 return ptr::null_mut();
             }
             // SAFETY: both are live and the duplicator is the provider's own.
@@ -1162,29 +1309,26 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_dup(pctx: *const EvpPkeyCtx) -> *mut EvpPk
                 // SAFETY: `r.op_encap_kem` is live and holds the reference taken above.
                 unsafe { crate::evp::kem::EVP_KEM_free(r.op_encap_kem) };
                 r.op_encap_kem = ptr::null_mut();
-                // SAFETY: `rctx` is this call's own object.
-                unsafe { EVP_PKEY_CTX_free(rctx) };
+                // `rctx` is released by its `Drop` as this frame returns.
                 return ptr::null_mut();
             }
-            return rctx;
+            return rctx.into_raw();
         }
     } else if src.is_gen_op() {
         /* "Not supported - This would need a gen_dupctx() to work." */
-        // SAFETY: `rctx` is this call's own object.
-        unsafe { EVP_PKEY_CTX_free(rctx) };
+        // `rctx` is released by its `Drop` as this frame returns.
         return ptr::null_mut();
     }
 
     if !src.peerkey.is_null() {
         // SAFETY: `peerkey` is live.
         if unsafe { EVP_PKEY_up_ref(src.peerkey) } == 0 {
-            // SAFETY: `rctx` is this call's own object.
-            unsafe { EVP_PKEY_CTX_free(rctx) };
+            // `rctx` is released by its `Drop` as this frame returns.
             return ptr::null_mut();
         }
     }
     // SAFETY: `rctx` is this call's own object.
-    unsafe { (*rctx).peerkey = src.peerkey };
+    unsafe { (*rctx.as_ptr()).peerkey = src.peerkey };
 
     if src.operation == EVP_PKEY_OP_UNDEFINED && !src.pkey.is_null() {
         let mut tmp_keymgmt = src.keymgmt;
@@ -1198,32 +1342,29 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_dup(pctx: *const EvpPkeyCtx) -> *mut EvpPk
             )
         };
         if provkey.is_null() {
-            // SAFETY: `rctx` is this call's own object.
-            unsafe { EVP_PKEY_CTX_free(rctx) };
+            // `rctx` is released by its `Drop` as this frame returns.
             return ptr::null_mut();
         }
         // SAFETY: `tmp_keymgmt` is live.
         if unsafe { crate::evp::keymgmt::EVP_KEYMGMT_up_ref(tmp_keymgmt) } == 0 {
-            // SAFETY: `rctx` is this call's own object.
-            unsafe { EVP_PKEY_CTX_free(rctx) };
+            // `rctx` is released by its `Drop` as this frame returns.
             return ptr::null_mut();
         }
         // SAFETY: `rctx` is live.
-        let previous = unsafe { (*rctx).keymgmt };
+        let previous = unsafe { (*rctx.as_ptr()).keymgmt };
         // SAFETY: `previous` is NULL or holds the reference taken above.
         unsafe { EVP_KEYMGMT_free(previous) };
         // SAFETY: `rctx` is live.
-        unsafe { (*rctx).keymgmt = tmp_keymgmt };
-        return rctx;
+        unsafe { (*rctx.as_ptr()).keymgmt = tmp_keymgmt };
+        return rctx.into_raw();
     }
     if !src.pkey.is_null() && src.operation == EVP_PKEY_OP_UNDEFINED {
-        return rctx;
+        return rctx.into_raw();
     }
 
     /* `pctx->pmeth->copy(rctx, pctx)` is 7.4l's. With no `pmeth`, the authority reaches `err:` only
      * through a legacy context, which this crate cannot construct. */
-    // SAFETY: `rctx` is this call's own object.
-    unsafe { EVP_PKEY_CTX_free(rctx) };
+    // `rctx` is released by its `Drop` as this frame returns.
     ptr::null_mut()
 }
 
@@ -2039,23 +2180,23 @@ pub unsafe extern "C" fn EVP_PKEY_meth_get0(idx: usize) -> *const EvpPkeyMethod 
 /// Nothing: both arguments are integers.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_meth_new(id: c_int, flags: c_int) -> *mut EvpPkeyMethod {
-    /* `CRYPTO_zalloc` is one of the safe entry points of this crate: it validates its own argument
-     * and answers NULL rather than reading anything of the caller's. */
-    let pmeth = CRYPTO_zalloc(
-        core::mem::size_of::<EvpPkeyMethod>(),
-        FILE,
-        LINE_ZALLOC_PMETH,
-    )
-    .cast::<EvpPkeyMethod>();
-    if pmeth.is_null() {
+    // The method block, allocated through the crate's allocator seam; `into_raw` hands it out.
+    let Some(pmeth) = OwnedCtx::<EvpPkeyMethod>::new(FILE, LINE_ZALLOC_PMETH, LINE_FREE_PMETH)
+    else {
         return ptr::null_mut();
-    }
+    };
     // SAFETY: `pmeth` is this call's own allocation.
     unsafe {
-        (*pmeth).pkey_id = id;
-        (*pmeth).flags = flags | EVP_PKEY_FLAG_DYNAMIC;
+        (*pmeth.as_ptr()).pkey_id = id;
+        (*pmeth.as_ptr()).flags = flags | EVP_PKEY_FLAG_DYNAMIC;
     }
-    pmeth
+    pmeth.into_raw()
+}
+
+/// `struct evp_pkey_method_st` has no owned members, so its destructor body is empty and
+/// [`OwnedCtx`]'s `Drop` is the whole of `EVP_PKEY_meth_free`'s release.
+impl CtxDestroy for EvpPkeyMethod {
+    unsafe fn destroy_body(_ptr: *mut EvpPkeyMethod) {}
 }
 
 /// `void EVP_PKEY_meth_free(EVP_PKEY_METHOD *pmeth)` — `crypto/evp/pmeth_lib.c:436`.
@@ -2075,8 +2216,16 @@ pub unsafe extern "C" fn EVP_PKEY_meth_free(pmeth: *mut EvpPkeyMethod) {
     if (unsafe { (*pmeth).flags } & EVP_PKEY_FLAG_DYNAMIC) == 0 {
         return;
     }
+    // The block is this call's own and `DYNAMIC` is set, so `from_raw` reclaims it (NULL is a
+    // no-op) and `Drop` runs the authority's own block release.
     // SAFETY: `pmeth` is live and `DYNAMIC` is set, so this object is this module's own.
-    unsafe { CRYPTO_free(pmeth.cast::<c_void>(), FILE, LINE_FREE_PMETH) };
+    unsafe {
+        drop(OwnedCtx::<EvpPkeyMethod>::from_raw(
+            pmeth,
+            FILE,
+            LINE_FREE_PMETH,
+        ))
+    };
 }
 
 /// `void EVP_PKEY_meth_copy(EVP_PKEY_METHOD *dst, const EVP_PKEY_METHOD *src)` —
@@ -9791,24 +9940,31 @@ unsafe extern "C" fn evp_pkey_ctx_add1_octet_string(
         return 0;
     }
     /* The allocation size is the sum of two non-negative values and the guard above keeps it
-     * non-zero; `CRYPTO_zalloc` is this crate's own allocator and is not `unsafe`. */
-    let info = CRYPTO_zalloc(info_alloc, FILE, LINE_ZALLOC_XLAT_BN_BUF).cast::<u8>();
-    if info.is_null() {
+     * non-zero. The block is owned here, on the crate's allocator seam, with the authority's own
+     * clearing release as its `Drop`, so a caller-installed `CRYPTO_set_mem_functions` hook
+     * observes it. */
+    let Some(info) = OwnedBlock::take(
+        CRYPTO_zalloc(info_alloc, FILE, LINE_ZALLOC_XLAT_BN_BUF),
+        info_alloc,
+        true,
+        FILE,
+        LINE_FREE_XLAT_ADD1,
+    ) else {
         return 0;
-    }
+    };
     let info_len = os_params[0].return_size;
 
     // SAFETY: `info` is `info_alloc` writable bytes, which the parameter records.
     unsafe {
-        os_params[0] = OSSL_PARAM_construct_octet_string(param, info.cast(), info_alloc);
+        os_params[0] =
+            OSSL_PARAM_construct_octet_string(param, info.as_ptr::<c_void>(), info_alloc);
     }
 
     /* If there is data, go get it. */
     if info_len > 0 {
         // SAFETY: `ctx` is live and `os_params` is this frame's terminated array.
         if unsafe { EVP_PKEY_CTX_get_params(ctx, os_params.as_mut_ptr()) } == 0 {
-            // SAFETY: `info` is this call's own `info_alloc`-byte block.
-            unsafe { CRYPTO_clear_free(info.cast(), info_alloc, FILE, LINE_FREE_XLAT_ADD1) };
+            // `info` is released by its `Drop` as this frame returns.
             return ret;
         }
     }
@@ -9816,15 +9972,14 @@ unsafe extern "C" fn evp_pkey_ctx_add1_octet_string(
     // SAFETY: `info` is `info_alloc` writable bytes, `info_len + datalen <= info_alloc`, and
     // `datalen` bytes are readable at `data`.
     unsafe {
-        ptr::copy_nonoverlapping(data, info.add(info_len), datalen as usize);
+        ptr::copy_nonoverlapping(data, info.as_ptr::<u8>().add(info_len), datalen as usize);
     }
 
     // SAFETY: `ctx` is live and `os_params` is this frame's terminated array.
     ret = unsafe { EVP_PKEY_CTX_set_params(ctx, os_params.as_ptr()) };
 
-    // SAFETY: `info` is this call's own `info_alloc`-byte block; the clearing is what the authority's
-    // `OPENSSL_clear_free` is for.
-    unsafe { CRYPTO_clear_free(info.cast(), info_alloc, FILE, LINE_FREE_XLAT_ADD1) };
+    // `info` is released by its `Drop` (the authority's `OPENSSL_clear_free`) as this frame
+    // returns.
     ret
 }
 
@@ -10808,13 +10963,13 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_hex2ctrl(
     let mut binlen: c_long = 0;
     // SAFETY: `hex` is NUL-terminated per the contract and `binlen` is this frame's own local.
     let bin = unsafe { OPENSSL_hexstr2buf(hex, ptr::addr_of_mut!(binlen)) };
-    if bin.is_null() {
+    // The decoded block `OPENSSL_hexstr2buf` allocated is owned here; `Drop` is its release at the
+    // authority's own site, and the `ctx->pmeth->ctrl(...)`-absent path below releases it either
+    // way.
+    let Some(_bin) = OwnedBlock::take(bin.cast::<c_void>(), 0, false, FILE, LINE_FREE_HEXCTRL)
+    else {
         return 0;
-    }
-    /* `ctx->pmeth->ctrl(...)` is absent; see `EVP_PKEY_CTX_str2ctrl`'s note. The buffer is this
-     * call's own and must be released either way. */
-    // SAFETY: `bin` is the block `OPENSSL_hexstr2buf` allocated with `CRYPTO_malloc`.
-    unsafe { CRYPTO_free(bin.cast(), FILE, LINE_FREE_HEXCTRL) };
+    };
     let _ = ctx;
     -1
 }
@@ -11072,8 +11227,15 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set_algor_params(
         // SAFETY: `ctx` is live and `params` is this frame's terminated array.
         ret = unsafe { EVP_PKEY_CTX_set_params(ctx, params.as_ptr()) };
     }
-    // SAFETY: `der` is NULL or the block `i2d_ASN1_TYPE` allocated for this call.
-    unsafe { CRYPTO_free(der.cast::<c_void>(), FILE_EVP_LIB, LINE_FREE_ALGOR_SET) };
+    // The block `i2d_ASN1_TYPE` allocated for this call is adopted by an owner whose `Drop` is its
+    // release at the authority's own site.
+    let _der = OwnedBlock::take(
+        der.cast::<c_void>(),
+        0,
+        false,
+        FILE_EVP_LIB,
+        LINE_FREE_ALGOR_SET,
+    );
     ret
 }
 
@@ -11099,7 +11261,6 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_algor_params(
 ) -> c_int {
     let mut ret = -1;
     let mut params = [OSSL_PARAM_construct_end(); 2];
-    let mut der: *mut c_uchar = ptr::null_mut();
 
     // SAFETY: the constructor writes one entry of this frame's array.
     unsafe {
@@ -11128,16 +11289,22 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_algor_params(
         && derl != 0
         && derl <= c_long::MAX as usize
     {
-        // This allocates `derl` bytes, which is the authority's `OPENSSL_malloc`.
-        der = CRYPTO_malloc(derl, FILE_EVP_LIB, LINE_MALLOC_ALGOR_GET).cast::<c_uchar>();
-        if !der.is_null() {
-            let mut derp: *const c_uchar = der;
+        // `derl` bytes as the authority's `OPENSSL_malloc`; owned here, so `Drop` is its release.
+        let der = OwnedBlock::take(
+            CRYPTO_malloc(derl, FILE_EVP_LIB, LINE_MALLOC_ALGOR_GET),
+            0,
+            false,
+            FILE_EVP_LIB,
+            LINE_FREE_ALGOR_GET,
+        );
+        if let Some(der) = der.as_ref() {
+            let mut derp: *const c_uchar = der.as_ptr::<c_uchar>();
             // SAFETY: the constructor writes one entry of this frame's array, and `der` holds
             // `derl` bytes.
             unsafe {
                 params[0] = OSSL_PARAM_construct_octet_string(
                     OSSL_PKEY_PARAM_ALGORITHM_ID_PARAMS,
-                    der.cast::<c_void>(),
+                    der.as_ptr::<c_void>(),
                     derl,
                 );
             }
@@ -11155,8 +11322,6 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_algor_params(
             }
         }
     }
-    // SAFETY: `der` is NULL or the block allocated above, released exactly once.
-    unsafe { CRYPTO_free(der.cast::<c_void>(), FILE_EVP_LIB, LINE_FREE_ALGOR_GET) };
     ret
 }
 
