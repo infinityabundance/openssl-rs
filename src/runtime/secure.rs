@@ -123,7 +123,7 @@ use std::sync::Mutex;
 
 use crate::ffi::guard_ffi;
 use crate::runtime::err::{openssl_rs_err_set_error, ERR_new, ERR_set_debug};
-use crate::runtime::mem::{cleanse, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 
 // --- Linux syscall surface -------------------------------------------------
 //
@@ -145,11 +145,6 @@ extern "C" {
     fn mlock(addr: *mut c_void, len: usize) -> c_int;
     fn madvise(addr: *mut c_void, len: usize, advice: c_int) -> c_int;
     fn getpagesize() -> c_int;
-    /// The plain C allocator, used for the non-secure-pointer release path. The
-    /// authority routes that to `CRYPTO_free`, which in the default profile is
-    /// `free`; `CRYPTO_free` is not defined by this crate yet, so the equivalent
-    /// libc call is made directly (same observable behaviour).
-    fn free(ptr: *mut c_void);
 }
 
 const PROT_NONE: c_int = 0;
@@ -661,16 +656,19 @@ pub unsafe extern "C" fn CRYPTO_secure_calloc(
 /// allocation owned by the caller, and must not be used again afterwards. Because
 /// this call is idempotent on NULL, all four combinations below are valid.
 #[no_mangle]
-pub unsafe extern "C" fn CRYPTO_secure_free(ptr: *mut c_void, _file: *const c_char, _line: c_int) {
+pub unsafe extern "C" fn CRYPTO_secure_free(ptr: *mut c_void, file: *const c_char, line: c_int) {
     guard_ffi((), || {
         if ptr.is_null() {
             return;
         }
         let owned_by_heap = with_heap(|slot| slot.as_mut().is_some_and(|h| h.free(ptr.cast())));
         if !owned_by_heap {
-            // SAFETY: S4 — a non-secure pointer the caller owns; released once.
+            // SAFETY: S4 — a non-secure pointer the caller owns; released once. The release
+            // is the seam's own `CRYPTO_free` with the caller's `file`/`line`, exactly as the
+            // authority routes it, so a caller-installed `CRYPTO_set_mem_functions` hook
+            // observes it (a bare libc `free` would not).
             unsafe {
-                free(ptr);
+                CRYPTO_free(ptr, file, line);
             }
         }
     })
@@ -690,8 +688,8 @@ pub unsafe extern "C" fn CRYPTO_secure_free(ptr: *mut c_void, _file: *const c_ch
 pub unsafe extern "C" fn CRYPTO_secure_clear_free(
     ptr: *mut c_void,
     num: usize,
-    _file: *const c_char,
-    _line: c_int,
+    file: *const c_char,
+    line: c_int,
 ) {
     guard_ffi((), || {
         if ptr.is_null() {
@@ -699,11 +697,13 @@ pub unsafe extern "C" fn CRYPTO_secure_clear_free(
         }
         let owned_by_heap = with_heap(|slot| slot.as_mut().is_some_and(|h| h.free(ptr.cast())));
         if !owned_by_heap {
-            // SAFETY: S4 — plain allocation, readable for `num` bytes, released
-            // once.
+            // SAFETY: S4 — plain allocation, readable for `num` bytes, released once. The
+            // release is the seam's own `CRYPTO_free` with the caller's `file`/`line`, as the
+            // authority routes it, so a caller-installed `CRYPTO_set_mem_functions` hook
+            // observes it.
             unsafe {
                 cleanse(ptr.cast::<u8>(), num);
-                free(ptr);
+                CRYPTO_free(ptr, file, line);
             }
         }
     })
