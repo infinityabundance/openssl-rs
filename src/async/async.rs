@@ -28,7 +28,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::mem::size_of;
 use core::ptr::{self, null_mut};
 
@@ -69,6 +69,85 @@ const LINE_JOB_ARGS: c_int = 260;
 const LINE_POOL: c_int = 361;
 /// `ASYNC_init_thread`'s failure free and `async_delete_thread_state`'s (`:368`, `:401`, `:413`).
 const LINE_POOL_FREE: c_int = 401;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a heap block
+// ---------------------------------------------------------------------------------------------
+
+/// An owned heap block allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc`/`CRYPTO_zalloc` at the authority's exact size/`file`/`line` --
+/// a Rust `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_zeroed`
+/// allocate it, [`Self::adopt`] takes in a block the crate allocated (a job's `funcargs`, or a
+/// context/job/pool a shared destructor releases), `Drop` is its single release, and
+/// [`Self::into_raw`] hands it to a consumer that takes it over (the caller, a thread-local slot,
+/// or the job's `funcargs`). A NULL pointer is a valid, empty block whose release is the
+/// authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_zalloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// Adopt a block this crate allocated -- a job's `funcargs`, or a context/job/pool a shared
+    /// destructor releases -- for release by `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
+    /// or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, file, line }
+    }
+
+    /// The start of the block.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
 
 /// `#define ASYNC_JOB_RUNNING 0` — `async.c:26`.
 const ASYNC_JOB_RUNNING: c_int = 0;
@@ -144,18 +223,19 @@ unsafe fn async_ctx_new() -> *mut AsyncCtx {
         return null_mut();
     }
 
-    let nctx = CRYPTO_malloc(size_of::<AsyncCtx>(), FILE, LINE_CTX).cast::<AsyncCtx>();
-    if nctx.is_null() {
+    // The context block is this frame's own; its handle's `Drop` is the single release of every
+    // failure path below. Ownership moves to the caller on success.
+    let Some(nctx_buf) = OwnedBuf::new(size_of::<AsyncCtx>(), FILE, LINE_CTX) else {
         return null_mut();
-    }
+    };
+    let nctx = nctx_buf.as_ptr().cast::<AsyncCtx>();
     // `async_fibre_init_dispatcher(&nctx->dispatcher)` is a no-op on this platform, but the
     // dispatcher storage still has to exist because `swapcontext` writes the calling thread's
     // context into it on the first switch.
     // SAFETY: no preconditions; the returned block is this call's own.
     let dispatcher = unsafe { async_fibre_alloc() };
     if dispatcher.is_null() {
-        // SAFETY: `nctx` is this call's own allocation.
-        unsafe { CRYPTO_free(nctx.cast::<c_void>(), FILE, LINE_CTX_FREE) };
+        // SAFETY: `nctx` is this call's own allocation; the handle releases it on drop.
         return null_mut();
     }
     // SAFETY: `nctx` and `dispatcher` are this call's own allocations.
@@ -173,14 +253,14 @@ unsafe fn async_ctx_new() -> *mut AsyncCtx {
         )
     } == 0
     {
-        // SAFETY: both blocks are this call's own.
+        // SAFETY: the dispatcher's storage is this call's own; the handle releases the context.
         unsafe {
             async_fibre_storage_free(dispatcher);
-            CRYPTO_free(nctx.cast::<c_void>(), FILE, LINE_CTX_FREE);
         }
         return null_mut();
     }
-    nctx
+    // Ownership moves to the caller.
+    nctx_buf.into_raw().cast::<AsyncCtx>()
 }
 
 /// `async_ctx *async_get_ctx(void)` — `async.c:58-62`.
@@ -218,7 +298,7 @@ unsafe fn async_ctx_free() -> c_int {
         // and is not released, only the opaque storage.
         unsafe {
             async_fibre_storage_free((*ctx).dispatcher);
-            CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_CTX_FREE);
+            drop(OwnedBuf::adopt(ctx.cast(), FILE, LINE_CTX_FREE));
         }
     }
     1
@@ -229,15 +309,16 @@ unsafe fn async_ctx_free() -> c_int {
 /// # Safety
 /// None; the result is owned by the caller if non-NULL.
 unsafe fn async_job_new() -> *mut AsyncJob {
-    let job = CRYPTO_zalloc(size_of::<AsyncJob>(), FILE, LINE_JOB_NEW).cast::<AsyncJob>();
-    if job.is_null() {
+    // The job block is this frame's own; its handle's `Drop` is the single release of the failure
+    // path below. Ownership moves to the caller on success.
+    let Some(job_buf) = OwnedBuf::new_zeroed(size_of::<AsyncJob>(), FILE, LINE_JOB_NEW) else {
         return null_mut();
-    }
+    };
+    let job = job_buf.as_ptr().cast::<AsyncJob>();
     // SAFETY: no preconditions; the returned block is this call's own.
     let fibre = unsafe { async_fibre_alloc() };
     if fibre.is_null() {
-        // SAFETY: `job` is this call's own allocation.
-        unsafe { CRYPTO_free(job.cast::<c_void>(), FILE, LINE_JOB_FREE) };
+        // SAFETY: `job` is this call's own allocation; the handle releases it on drop.
         return null_mut();
     }
     // SAFETY: `job` and `fibre` are this call's own.
@@ -245,7 +326,8 @@ unsafe fn async_job_new() -> *mut AsyncJob {
         (*job).fibre = fibre;
         (*job).status = ASYNC_JOB_RUNNING;
     }
-    job
+    // Ownership moves to the caller.
+    job_buf.into_raw().cast::<AsyncJob>()
 }
 
 /// `static void async_job_free(ASYNC_JOB *job)` — `async.c:92-99`.
@@ -258,9 +340,13 @@ unsafe fn async_job_free(job: *mut AsyncJob) {
     }
     // SAFETY: `job` is live per the contract, and its two buffers are its own.
     unsafe {
-        CRYPTO_free((*job).funcargs, FILE, LINE_JOB_FREEARGS);
+        drop(OwnedBuf::adopt(
+            (*job).funcargs.cast(),
+            FILE,
+            LINE_JOB_FREEARGS,
+        ));
         async_fibre_release((*job).fibre);
-        CRYPTO_free(job.cast::<c_void>(), FILE, LINE_JOB_FREE);
+        drop(OwnedBuf::adopt(job.cast(), FILE, LINE_JOB_FREE));
     }
 }
 
@@ -327,7 +413,11 @@ unsafe fn async_release_job(job: *mut AsyncJob) {
     }
     // SAFETY: `job` is live per the contract and `pool` is this thread's.
     unsafe {
-        CRYPTO_free((*job).funcargs, FILE, LINE_JOB_FREEARGS);
+        drop(OwnedBuf::adopt(
+            (*job).funcargs.cast(),
+            FILE,
+            LINE_JOB_FREEARGS,
+        ));
         (*job).funcargs = null_mut();
         OPENSSL_sk_push((*pool).jobs, job.cast::<c_void>());
     }
@@ -497,17 +587,18 @@ pub unsafe extern "C" fn ASYNC_start_job(
                 return ASYNC_NO_JOBS;
             }
             if !args.is_null() && size > 0 {
-                let funcargs = CRYPTO_malloc(size, FILE, LINE_JOB_ARGS);
-                // SAFETY: `fresh` is this call's own job.
-                unsafe { (*fresh).funcargs = funcargs };
-                if funcargs.is_null() {
+                // The copied argument block is the job's own; `into_raw` hands it to `funcargs`.
+                let Some(funcargs) = OwnedBuf::new(size, FILE, LINE_JOB_ARGS) else {
                     // SAFETY: `fresh` and `ctx` are live.
                     unsafe {
                         async_release_job(fresh);
                         (*ctx).currjob = null_mut();
                     }
                     return ASYNC_ERR;
-                }
+                };
+                let funcargs = funcargs.into_raw().cast::<c_void>();
+                // SAFETY: `fresh` is this call's own job.
+                unsafe { (*fresh).funcargs = funcargs };
                 // SAFETY: `args` is `size` bytes per the contract and `funcargs` is a fresh
                 // block of `size`; the two do not overlap.
                 unsafe { ptr::copy_nonoverlapping(args.cast::<u8>(), funcargs.cast::<u8>(), size) };
@@ -628,10 +719,12 @@ pub unsafe extern "C" fn ASYNC_init_thread(max_size: usize, init_size: usize) ->
         {
             return 0;
         }
-        let pool = CRYPTO_zalloc(size_of::<AsyncPool>(), FILE, LINE_POOL).cast::<AsyncPool>();
-        if pool.is_null() {
+        // The pool block is this frame's own; its handle's `Drop` is the single release of every
+        // failure path below. Ownership moves to this thread's local store on success.
+        let Some(pool_buf) = OwnedBuf::new_zeroed(size_of::<AsyncPool>(), FILE, LINE_POOL) else {
             return 0;
-        }
+        };
+        let pool = pool_buf.as_ptr().cast::<AsyncPool>();
         // SAFETY: `pool` is fresh storage and `init_size` was checked against `INT_MAX`.
         unsafe {
             (*pool).jobs = OPENSSL_sk_new_reserve(None, init_size as c_int);
@@ -640,8 +733,7 @@ pub unsafe extern "C" fn ASYNC_init_thread(max_size: usize, init_size: usize) ->
         if unsafe { (*pool).jobs }.is_null() {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::ASYNC_367) };
-            // SAFETY: `pool` is this call's own allocation.
-            unsafe { CRYPTO_free(pool.cast::<c_void>(), FILE, LINE_POOL_FREE) };
+            // SAFETY: `pool` is this call's own allocation; the handle releases it on drop.
             return 0;
         }
         // SAFETY: `pool` is live.
@@ -678,14 +770,16 @@ pub unsafe extern "C" fn ASYNC_init_thread(max_size: usize, init_size: usize) ->
         {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::ASYNC_393) };
-            // SAFETY: `pool` is this call's own.
+            // SAFETY: `pool` is this call's own; its list and the jobs behind it are released
+            // first, then the handle releases the block.
             unsafe {
                 async_empty_pool(pool);
                 OPENSSL_sk_free((*pool).jobs);
-                CRYPTO_free(pool.cast::<c_void>(), FILE, LINE_POOL_FREE);
             }
             return 0;
         }
+        // Ownership moves to this thread's local store.
+        let _ = pool_buf.into_raw();
         1
     })
 }
@@ -705,7 +799,7 @@ extern "C" fn async_delete_thread_state(_arg: *mut c_void) {
         unsafe {
             async_empty_pool(pool);
             OPENSSL_sk_free((*pool).jobs);
-            CRYPTO_free(pool.cast::<c_void>(), FILE, LINE_POOL_FREE);
+            drop(OwnedBuf::adopt(pool.cast(), FILE, LINE_POOL_FREE));
             CRYPTO_THREAD_set_local_ex(
                 CRYPTO_THREAD_LOCAL_ASYNC_POOL_KEY,
                 CRYPTO_THREAD_NO_CONTEXT,
