@@ -28,9 +28,9 @@ use core::ptr;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites::{BIO_LIB_1002, BIO_SOCK_248};
 use crate::runtime::err::{raise_site_dynamic, raise_site_dynamic_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 use super::method::{bread_conv, bwrite_conv};
+use super::owned::{CtxDestroy, OwnedCtx};
 use super::sys;
 use super::{Bio, BioMethod, BIO_TYPE_SOCKET};
 
@@ -375,6 +375,13 @@ struct BssSockData {
     tfo_peer: [u8; 28],
 }
 
+/// The authority's `sock_free` body for the context block. `bss_sock.c`'s `sock_free` only closes
+/// the descriptor and resets the BIO's own fields -- the context block has no destructor body of
+/// its own, so the whole of its ownership is [`OwnedCtx`]'s `Drop`.
+impl CtxDestroy for BssSockData {
+    unsafe fn destroy_body(_ptr: *mut BssSockData) {}
+}
+
 /// `static int sock_new(BIO *bi)`
 ///
 /// Measured: the created BIO has `init == 0`. That is not an oversight in the
@@ -389,13 +396,12 @@ unsafe extern "C" fn sock_new(bi: *mut Bio) -> c_int {
         (*bi).init = 0;
         (*bi).num = 0;
         (*bi).flags = 0;
-        // SAFETY: a plain zeroed allocation request.
-        let data = CRYPTO_zalloc(core::mem::size_of::<BssSockData>(), ptr::null(), 0)
-            .cast::<BssSockData>();
-        if data.is_null() {
+        // SAFETY: a plain zeroed allocation request; `OwnedCtx::zalloc` answers NULL or a fresh
+        // block of exactly this type.
+        let Some(data) = OwnedCtx::<BssSockData>::zalloc() else {
             return 0;
-        }
-        (*bi).ptr = data.cast();
+        };
+        (*bi).ptr = data.into_raw().cast();
     }
     1
 }
@@ -421,7 +427,9 @@ unsafe extern "C" fn sock_free(a: *mut Bio) -> c_int {
             (*a).init = 0;
             (*a).flags = 0;
         }
-        CRYPTO_free((*a).ptr, ptr::null(), 0);
+        // SAFETY: `bss_sock.c` releases the private block unconditionally; `from_raw` maps a NULL
+        // pointer to `None` and `Drop` is the block's single release.
+        drop(OwnedCtx::<BssSockData>::from_raw((*a).ptr.cast()));
         (*a).ptr = ptr::null_mut();
     }
     1

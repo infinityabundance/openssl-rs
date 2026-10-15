@@ -63,10 +63,10 @@ use crate::context::dispatch::{
     OSSL_FUNC_BIO_READ_EX, OSSL_FUNC_BIO_UP_REF, OSSL_FUNC_BIO_WRITE_EX,
 };
 use crate::context::{lib_ctx_get_data, OSSL_LIB_CTX_BIO_CORE_INDEX};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::{
     BIO_free, BIO_get_data, BIO_new_ex, BIO_set_data, BIO_set_init, Bio, BioMethod,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 /// The authority's translation unit and coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/bio/bss_core.c".as_ptr();
@@ -82,6 +82,13 @@ const BIO_TYPE_CORE_TO_PROV: c_int = 25 | 0x0400;
 /// function pointer's null value is a valid niche: an `OPENSSL_zalloc`ed block is
 /// therefore a valid, empty `BioCoreGlobals` with no initialisation step, which is
 /// what the authority's `OPENSSL_zalloc(sizeof(BIO_CORE_GLOBALS))` also produces.
+///
+/// The block itself is owned by the lib-context slot machinery: the constructor below hands it out
+/// through [`OwnedCtx::into_raw`] and the slot's free callback reclaims it through
+/// [`OwnedCtx::from_raw`], so [`OwnedCtx`]'s `Drop` is its single release. The destructor body is
+/// empty — `ossl_bio_core_globals_free` is a bare block free — and the block stays a
+/// `CRYPTO_zalloc` at the authority's own file and line, so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the allocation and its release.
 #[repr(C)]
 pub(crate) struct BioCoreGlobals {
     read_ex: Option<OsslFuncBioReadEx>,
@@ -93,12 +100,21 @@ pub(crate) struct BioCoreGlobals {
     free: Option<OsslFuncBioFree>,
 }
 
+impl CtxDestroy for BioCoreGlobals {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC;
+    const LINE_FREE: c_int = LINE_FREE;
+
+    unsafe fn destroy_body(_ptr: *mut BioCoreGlobals) {}
+}
+
 /// `void *ossl_bio_core_globals_new(OSSL_LIB_CTX *ctx)` — the slot constructor.
 ///
 /// The `ctx` argument is accepted and unused, as in the authority.
 pub(crate) fn ossl_bio_core_globals_new(_ctx: *mut c_void) -> *mut BioCoreGlobals {
-    CRYPTO_zalloc(core::mem::size_of::<BioCoreGlobals>(), FILE, LINE_ZALLOC)
-        .cast::<BioCoreGlobals>()
+    // `OwnedCtx::zalloc` answers NULL when the allocator refuses, which the slot machinery reads as
+    // a construction failure; a fresh block is handed to the slot with `into_raw`.
+    OwnedCtx::<BioCoreGlobals>::zalloc().map_or(ptr::null_mut(), OwnedCtx::into_raw)
 }
 
 /// `void ossl_bio_core_globals_free(void *vbcg)`
@@ -107,12 +123,9 @@ pub(crate) fn ossl_bio_core_globals_new(_ctx: *mut c_void) -> *mut BioCoreGlobal
 /// `vbcg` must be NULL or a pointer returned by [`ossl_bio_core_globals_new`] and
 /// not already released.
 pub(crate) unsafe fn ossl_bio_core_globals_free(vbcg: *mut BioCoreGlobals) {
-    if vbcg.is_null() {
-        return;
-    }
-    // SAFETY: the block came from `CRYPTO_zalloc` in the constructor and is
-    // released exactly once here.
-    unsafe { CRYPTO_free(vbcg.cast::<c_void>(), FILE, LINE_FREE) };
+    // SAFETY: `vbcg` is NULL or the block the constructor handed out and the slot has not released;
+    // `from_raw` maps NULL to `None`, and `Drop` is the block's single release.
+    unsafe { drop(OwnedCtx::<BioCoreGlobals>::from_raw(vbcg)) };
 }
 
 /// `static BIO_CORE_GLOBALS *get_globals(OSSL_LIB_CTX *libctx)`

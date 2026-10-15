@@ -25,6 +25,7 @@ use crate::ffi::guard_ffi;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 
 use super::method::{bread_conv, bwrite_conv};
+use super::owned::{CtxDestroy, OwnedBlock, OwnedCtx};
 use super::{
     Bio, BioMethod, BIO_CTRL_DUP, BIO_CTRL_FLUSH, BIO_CTRL_INFO, BIO_CTRL_RESET, BIO_CTRL_WPENDING,
     BIO_C_DO_STATE_MACHINE, BIO_C_SET_BUFF_SIZE, BIO_FLAGS_RWS, BIO_FLAGS_SHOULD_RETRY,
@@ -43,6 +44,18 @@ struct BioLineBufferCtx {
     obuf_size: c_int,
     /// Retained bytes.
     obuf_len: c_int,
+}
+
+/// The authority's `linebuffer_free` body *minus* the block release [`OwnedCtx`]'s `Drop` performs:
+/// the output buffer `linebuffer_new` allocated. The buffer stays a plain `#[repr(C)]` member the
+/// authority owns and resizes by hand in `linebuffer_ctrl`; only the context block's ownership
+/// moves to the handle.
+impl CtxDestroy for BioLineBufferCtx {
+    unsafe fn destroy_body(ptr: *mut BioLineBufferCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `obuf` is NULL or an owned seam
+        // block whose single release is the block handle's `Drop`.
+        unsafe { drop(OwnedBlock::take((*ptr).obuf.cast())) };
+    }
 }
 
 /// The method name the authority reports for this filter.
@@ -86,17 +99,16 @@ unsafe fn ctx(b: *mut Bio) -> *mut BioLineBufferCtx {
 /// # Safety
 /// `bi` must be a live BIO.
 unsafe extern "C" fn linebuffer_new(bi: *mut Bio) -> c_int {
-    // SAFETY: `CRYPTO_malloc` returns a fresh allocation of the requested size.
-    let c = CRYPTO_malloc(core::mem::size_of::<BioLineBufferCtx>(), ptr::null(), 0)
-        .cast::<BioLineBufferCtx>();
-    if c.is_null() {
+    // SAFETY: `OwnedCtx::malloc` returns a fresh allocation of the requested size, or NULL.
+    let Some(ctx) = OwnedCtx::<BioLineBufferCtx>::malloc() else {
         return 0;
-    }
+    };
+    let c = ctx.as_ptr();
     // SAFETY: `c` is a fresh allocation.
     unsafe {
         (*c).obuf = CRYPTO_malloc(DEFAULT_LINEBUFFER_SIZE as usize, ptr::null(), 0).cast();
         if (*c).obuf.is_null() {
-            CRYPTO_free(c.cast(), ptr::null(), 0);
+            // The context never escaped; the handle's `Drop` releases it (and the NULL member).
             return 0;
         }
         (*c).obuf_size = DEFAULT_LINEBUFFER_SIZE;
@@ -105,6 +117,8 @@ unsafe extern "C" fn linebuffer_new(bi: *mut Bio) -> c_int {
         (*bi).ptr = c.cast();
         (*bi).flags = 0;
     }
+    // The context is now the BIO's; `linebuffer_free` reclaims it through `OwnedCtx::from_raw`.
+    let _ = ctx.into_raw();
     1
 }
 
@@ -119,10 +133,10 @@ unsafe extern "C" fn linebuffer_free(a: *mut Bio) -> c_int {
     // SAFETY: `a` is live and holds a `BioLineBufferCtx`.
     let c = unsafe { ctx(a) };
     if !c.is_null() {
-        // SAFETY: the buffer was allocated by `linebuffer_new`.
+        // SAFETY: the context is the BIO's own; `Drop` frees the output buffer it owns and then the
+        // block, exactly as `linebuffer_free` frees them by hand.
         unsafe {
-            CRYPTO_free((*c).obuf.cast(), ptr::null(), 0);
-            CRYPTO_free(c.cast(), ptr::null(), 0);
+            drop(OwnedCtx::<BioLineBufferCtx>::from_raw(c));
             (*a).ptr = ptr::null_mut();
             (*a).init = 0;
             (*a).flags = 0;

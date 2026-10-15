@@ -23,10 +23,11 @@ use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
 
 use crate::ffi::guard_ffi;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_realloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_realloc, CRYPTO_zalloc};
 
 use super::bf_buff::{BioBufferCtx, DEFAULT_BUFFER_SIZE};
 use super::method::{bread_conv, bwrite_conv};
+use super::owned::OwnedCtx;
 use super::{
     Bio, BioMethod, BIO_CTRL_DUP, BIO_CTRL_EOF, BIO_CTRL_FLUSH, BIO_CTRL_INFO, BIO_CTRL_PENDING,
     BIO_CTRL_RESET, BIO_C_FILE_SEEK, BIO_C_FILE_TELL, BIO_FLAGS_RWS, BIO_FLAGS_SHOULD_RETRY,
@@ -78,24 +79,25 @@ unsafe fn ctx(b: *mut Bio) -> *mut BioBufferCtx {
 /// # Safety
 /// `bi` must be a live BIO.
 unsafe extern "C" fn readbuffer_new(bi: *mut Bio) -> c_int {
-    // SAFETY: `CRYPTO_zalloc` returns nulled memory of the requested size.
-    let c: *mut BioBufferCtx =
-        CRYPTO_zalloc(core::mem::size_of::<BioBufferCtx>(), ptr::null(), 0).cast();
-    if c.is_null() {
+    // SAFETY: `OwnedCtx::zalloc` returns nulled memory of the requested size, or NULL.
+    let Some(ctx) = OwnedCtx::<BioBufferCtx>::zalloc() else {
         return 0;
-    }
+    };
+    let c = ctx.as_ptr();
     // SAFETY: `c` is a fresh allocation.
     unsafe {
         (*c).ibuf_size = DEFAULT_BUFFER_SIZE;
         (*c).ibuf = CRYPTO_zalloc(DEFAULT_BUFFER_SIZE as usize, ptr::null(), 0).cast();
         if (*c).ibuf.is_null() {
-            CRYPTO_free(c.cast(), ptr::null(), 0);
+            // The context never escaped; the handle's `Drop` releases it (and the NULL members).
             return 0;
         }
         (*bi).init = 1;
         (*bi).ptr = c.cast();
         (*bi).flags = 0;
     }
+    // The context is now the BIO's; `readbuffer_free` reclaims it through `OwnedCtx::from_raw`.
+    let _ = ctx.into_raw();
     1
 }
 
@@ -110,10 +112,10 @@ unsafe extern "C" fn readbuffer_free(a: *mut Bio) -> c_int {
     // SAFETY: `a` is live and holds a `BioBufferCtx`.
     let c = unsafe { ctx(a) };
     if !c.is_null() {
-        // SAFETY: the buffer was allocated by `readbuffer_new`.
+        // SAFETY: the context is the BIO's own; `Drop` frees the input buffer it owns and then the
+        // block, exactly as `readbuffer_free` frees them by hand.
         unsafe {
-            CRYPTO_free((*c).ibuf.cast(), ptr::null(), 0);
-            CRYPTO_free(c.cast(), ptr::null(), 0);
+            drop(OwnedCtx::<BioBufferCtx>::from_raw(c));
             (*a).ptr = ptr::null_mut();
             (*a).init = 0;
             (*a).flags = 0;
