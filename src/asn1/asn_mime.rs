@@ -57,7 +57,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_void, CStr};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_void, CStr};
 use core::ptr;
 
 use crate::asn1::a_d2i_fp::ASN1_item_d2i_bio_ex;
@@ -166,6 +166,80 @@ const LINE_PARAM_FREE_NAME: c_int = 1019;
 const LINE_PARAM_FREE_VALUE: c_int = 1020;
 /// `mime_param_free`'s free of `param` (`:1021`).
 const LINE_PARAM_FREE_PARAM: c_int = 1021;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a heap block
+// ---------------------------------------------------------------------------------------------
+
+/// An owned heap block allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc`/`CRYPTO_strdup` at the authority's exact size/`file`/`line` --
+/// a Rust `Box`/`String` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type. `new` allocates a
+/// header or parameter block at its build-site `__LINE__`, [`Self::adopt`] takes in a `strdup`
+/// duplicate or a structure field a shared destructor releases at a site of its own, `Drop` is the
+/// block's single release at the authority's `mime_hdr_*` release line (which is *not* its
+/// allocation line -- the authority's build path and its shared error tail each carry their own),
+/// and [`Self::into_raw`] hands the block to the structure that takes it over. A NULL pointer is a
+/// valid, empty block whose release is the authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, alloc_file, alloc_line)`, whose `Drop` releases it at
+    /// `release_file`/`release_line`.
+    fn new(
+        len: usize,
+        alloc_file: *const c_char,
+        alloc_line: c_int,
+        release_file: *const c_char,
+        release_line: c_int,
+    ) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, alloc_file, alloc_line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file: release_file,
+            line: release_line,
+        })
+    }
+
+    /// Adopt a block this crate allocated -- a `CRYPTO_strdup` duplicate, or a structure field a
+    /// shared destructor releases -- for release by `Drop` at `file`/`line`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
+    /// or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, file, line }
+    }
+
+    /// The start of the block.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
 
 /// `MIME_INVALID` — `asn_mime.c:715`. The parser's state machine starts at
 /// `MIME_START` and never enters this state, but the constant is the authority's own
@@ -604,9 +678,9 @@ unsafe fn asn1_write_micalg(out: *mut Bio, mdalgs: *mut OpenSslStack) -> c_int {
                         rv = unsafe { BIO_puts(out, micstr) };
                         // SAFETY: `micstr` is the allocation the ctrl made and the
                         // authority frees it here (`crypto/asn1/asn_mime.c:189`).
-                        unsafe {
-                            CRYPTO_free(micstr.cast::<c_void>(), FILE.as_ptr(), LINE_MICALG_FREE)
-                        };
+                        drop(unsafe {
+                            OwnedBuf::adopt(micstr.cast(), FILE.as_ptr(), LINE_MICALG_FREE)
+                        });
                         if rv < 0 {
                             break 'err;
                         }
@@ -1697,18 +1771,22 @@ unsafe fn strip_end(name: *mut c_char) -> *mut c_char {
 ///
 /// `name` and `value` must each be null or NUL-terminated.
 unsafe fn mime_hdr_new(name: *const c_char, value: *const c_char) -> *mut MimeHeader {
-    let mut tmpname: *mut c_char = ptr::null_mut();
-    let mut tmpval: *mut c_char = ptr::null_mut();
-    let mut mhdr: *mut MimeHeader = ptr::null_mut();
+    let mut tmpname: Option<OwnedBuf> = None;
+    let mut tmpval: Option<OwnedBuf> = None;
+    let mut mhdr_buf: Option<OwnedBuf> = None;
 
     'build: {
         if !name.is_null() {
             // SAFETY: `name` is NUL-terminated per the contract.
-            tmpname = unsafe { CRYPTO_strdup(name, FILE.as_ptr(), LINE_HDR_NEW_STRDUP_NAME) };
-            if tmpname.is_null() {
+            let raw = unsafe { CRYPTO_strdup(name, FILE.as_ptr(), LINE_HDR_NEW_STRDUP_NAME) };
+            if raw.is_null() {
                 break 'build;
             }
-            let mut p = tmpname;
+            // SAFETY: `raw` is a live duplicate no one else owns.
+            let dup = unsafe {
+                OwnedBuf::adopt(raw.cast::<c_uchar>(), FILE.as_ptr(), LINE_HDR_NEW_FREE_NAME)
+            };
+            let mut p = dup.as_ptr().cast::<c_char>();
             // SAFETY: `p` walks the string just duplicated.
             while unsafe { *p } != 0 {
                 // SAFETY: `p` is inside the duplicate.
@@ -1718,14 +1796,23 @@ unsafe fn mime_hdr_new(name: *const c_char, value: *const c_char) -> *mut MimeHe
                 // SAFETY: `*p` was non-NUL.
                 p = unsafe { p.add(1) };
             }
+            tmpname = Some(dup);
         }
         if !value.is_null() {
             // SAFETY: `value` is NUL-terminated per the contract.
-            tmpval = unsafe { CRYPTO_strdup(value, FILE.as_ptr(), LINE_HDR_NEW_STRDUP_VALUE) };
-            if tmpval.is_null() {
+            let raw = unsafe { CRYPTO_strdup(value, FILE.as_ptr(), LINE_HDR_NEW_STRDUP_VALUE) };
+            if raw.is_null() {
                 break 'build;
             }
-            let mut p = tmpval;
+            // SAFETY: `raw` is a live duplicate no one else owns.
+            let dup = unsafe {
+                OwnedBuf::adopt(
+                    raw.cast::<c_uchar>(),
+                    FILE.as_ptr(),
+                    LINE_HDR_NEW_FREE_VALUE,
+                )
+            };
+            let mut p = dup.as_ptr().cast::<c_char>();
             // SAFETY: `p` walks the string just duplicated.
             while unsafe { *p } != 0 {
                 // SAFETY: `p` is inside the duplicate.
@@ -1735,46 +1822,64 @@ unsafe fn mime_hdr_new(name: *const c_char, value: *const c_char) -> *mut MimeHe
                 // SAFETY: `*p` was non-NUL.
                 p = unsafe { p.add(1) };
             }
+            tmpval = Some(dup);
         }
-        // SAFETY: this allocates one `MimeHeader`.
-        mhdr = CRYPTO_malloc(
+        mhdr_buf = OwnedBuf::new(
             core::mem::size_of::<MimeHeader>(),
             FILE.as_ptr(),
             LINE_HDR_NEW_MALLOC,
-        )
-        .cast::<MimeHeader>();
-        if mhdr.is_null() {
+            FILE.as_ptr(),
+            LINE_HDR_NEW_FREE_HDR,
+        );
+        let Some(hdr) = mhdr_buf.as_ref() else {
             break 'build;
-        }
-        // SAFETY: `mhdr` is a fresh `MimeHeader`.
-        unsafe {
-            (*mhdr).name = tmpname;
-            (*mhdr).value = tmpval;
-        }
+        };
+        let mhdr = hdr.as_ptr().cast::<MimeHeader>();
         // `OPENSSL_sk_new` takes the typed-stack comparator.
         let params = OPENSSL_sk_new(Some(mime_param_cmp));
-        // SAFETY: `mhdr` is live.
-        unsafe { (*mhdr).params = params };
         if params.is_null() {
             break 'build;
+        }
+        // Commit: the header takes the name, value and parameter stack; `mime_hdr_free` (or the
+        // `sk_MIME_HEADER_pop_free`) releases them from here.
+        // SAFETY: `mhdr` is a fresh `MimeHeader`.
+        unsafe {
+            (*mhdr).name = tmpname
+                .take()
+                .map_or(ptr::null_mut(), |b| b.into_raw().cast::<c_char>());
+            (*mhdr).value = tmpval
+                .take()
+                .map_or(ptr::null_mut(), |b| b.into_raw().cast::<c_char>());
+            (*mhdr).params = params;
+        }
+        // Ownership of the header block passes to the caller with the returned pointer.
+        if let Some(block) = mhdr_buf.take() {
+            let _ = block.into_raw();
         }
         return mhdr;
     }
 
-    // err:
-    // SAFETY: each pointer is null or this frame's allocation.
+    // err: the authority's shared error tail frees all three slots unconditionally, NULL included,
+    // each at its own line (name, value, header). Each handle gives its block up so the adopting
+    // handle -- which frees even a NULL, as the authority's `OPENSSL_free` does -- runs the call.
+    // SAFETY: each slot is NULL or this frame's own block, given up by its handle above and not
+    // owned elsewhere.
     unsafe {
-        CRYPTO_free(
-            tmpname.cast::<c_void>(),
+        drop(OwnedBuf::adopt(
+            tmpname.map_or(ptr::null_mut(), OwnedBuf::into_raw).cast(),
             FILE.as_ptr(),
             LINE_HDR_NEW_FREE_NAME,
-        );
-        CRYPTO_free(
-            tmpval.cast::<c_void>(),
+        ));
+        drop(OwnedBuf::adopt(
+            tmpval.map_or(ptr::null_mut(), OwnedBuf::into_raw).cast(),
             FILE.as_ptr(),
             LINE_HDR_NEW_FREE_VALUE,
-        );
-        CRYPTO_free(mhdr.cast::<c_void>(), FILE.as_ptr(), LINE_HDR_NEW_FREE_HDR);
+        ));
+        drop(OwnedBuf::adopt(
+            mhdr_buf.map_or(ptr::null_mut(), OwnedBuf::into_raw).cast(),
+            FILE.as_ptr(),
+            LINE_HDR_NEW_FREE_HDR,
+        ));
     }
     ptr::null_mut()
 }
@@ -1793,18 +1898,26 @@ unsafe fn mime_hdr_addparam(
     name: *const c_char,
     value: *const c_char,
 ) -> c_int {
-    let mut tmpname: *mut c_char = ptr::null_mut();
-    let mut tmpval: *mut c_char = ptr::null_mut();
-    let mut mparam: *mut MimeParam = ptr::null_mut();
+    let mut tmpname: Option<OwnedBuf> = None;
+    let mut tmpval: Option<OwnedBuf> = None;
+    let mut mparam_buf: Option<OwnedBuf> = None;
 
     'build: {
         if !name.is_null() {
             // SAFETY: `name` is NUL-terminated per the contract.
-            tmpname = unsafe { CRYPTO_strdup(name, FILE.as_ptr(), LINE_ADDPARAM_STRDUP_NAME) };
-            if tmpname.is_null() {
+            let raw = unsafe { CRYPTO_strdup(name, FILE.as_ptr(), LINE_ADDPARAM_STRDUP_NAME) };
+            if raw.is_null() {
                 break 'build;
             }
-            let mut p = tmpname;
+            // SAFETY: `raw` is a live duplicate no one else owns.
+            let dup = unsafe {
+                OwnedBuf::adopt(
+                    raw.cast::<c_uchar>(),
+                    FILE.as_ptr(),
+                    LINE_ADDPARAM_FREE_NAME,
+                )
+            };
+            let mut p = dup.as_ptr().cast::<c_char>();
             // SAFETY: `p` walks the string just duplicated.
             while unsafe { *p } != 0 {
                 // SAFETY: `p` is inside the duplicate.
@@ -1814,56 +1927,83 @@ unsafe fn mime_hdr_addparam(
                 // SAFETY: `*p` was non-NUL.
                 p = unsafe { p.add(1) };
             }
+            tmpname = Some(dup);
         }
         if !value.is_null() {
             // SAFETY: `value` is NUL-terminated per the contract.
-            tmpval = unsafe { CRYPTO_strdup(value, FILE.as_ptr(), LINE_ADDPARAM_STRDUP_VALUE) };
-            if tmpval.is_null() {
+            let raw = unsafe { CRYPTO_strdup(value, FILE.as_ptr(), LINE_ADDPARAM_STRDUP_VALUE) };
+            if raw.is_null() {
                 break 'build;
             }
+            // SAFETY: `raw` is a live duplicate no one else owns.
+            let dup = unsafe {
+                OwnedBuf::adopt(
+                    raw.cast::<c_uchar>(),
+                    FILE.as_ptr(),
+                    LINE_ADDPARAM_FREE_VALUE,
+                )
+            };
+            tmpval = Some(dup);
         }
         // Parameter values are case sensitive so leave as is.
-        // SAFETY: this allocates one `MimeParam`.
-        mparam = CRYPTO_malloc(
+        mparam_buf = OwnedBuf::new(
             core::mem::size_of::<MimeParam>(),
             FILE.as_ptr(),
             LINE_ADDPARAM_MALLOC,
-        )
-        .cast::<MimeParam>();
-        if mparam.is_null() {
+            FILE.as_ptr(),
+            LINE_ADDPARAM_FREE_PARAM,
+        );
+        let Some(param) = mparam_buf.as_ref() else {
             break 'build;
-        }
-        // SAFETY: `mparam` is a fresh `MimeParam`.
-        unsafe {
-            (*mparam).param_name = tmpname;
-            (*mparam).param_value = tmpval;
-        }
-        // SAFETY: `mhdr` is live, its `params` stack is live and `mparam` is this
-        // frame's allocation.
+        };
+        let mparam = param.as_ptr().cast::<MimeParam>();
+        // SAFETY: `mhdr` is live, its `params` stack is live and `mparam` is this frame's
+        // allocation.
         if unsafe { OPENSSL_sk_push((*mhdr).params, mparam.cast::<c_void>()) } == 0 {
             break 'build;
+        }
+        // Commit: the parameter stack owns the parameter, which owns its two strings; the
+        // stack's `mime_param_free` releases them.
+        // SAFETY: `mparam` is a fresh `MimeParam`.
+        unsafe {
+            (*mparam).param_name = tmpname
+                .take()
+                .map_or(ptr::null_mut(), |b| b.into_raw().cast::<c_char>());
+            (*mparam).param_value = tmpval
+                .take()
+                .map_or(ptr::null_mut(), |b| b.into_raw().cast::<c_char>());
+        }
+        // Ownership of the parameter block passes to the stack.
+        if let Some(block) = mparam_buf.take() {
+            let _ = block.into_raw();
         }
         return 1;
     }
 
-    // err:
-    // SAFETY: each pointer is null or this frame's allocation.
+    // err: the authority's shared error tail frees all three slots unconditionally, NULL included,
+    // each at its own line (name, value, parameter). Each handle gives its block up so the
+    // adopting handle -- which frees even a NULL, as the authority's `OPENSSL_free` does -- runs
+    // the call.
+    // SAFETY: each slot is NULL or this frame's own block, given up by its handle above and not
+    // owned elsewhere.
     unsafe {
-        CRYPTO_free(
-            tmpname.cast::<c_void>(),
+        drop(OwnedBuf::adopt(
+            tmpname.map_or(ptr::null_mut(), OwnedBuf::into_raw).cast(),
             FILE.as_ptr(),
             LINE_ADDPARAM_FREE_NAME,
-        );
-        CRYPTO_free(
-            tmpval.cast::<c_void>(),
+        ));
+        drop(OwnedBuf::adopt(
+            tmpval.map_or(ptr::null_mut(), OwnedBuf::into_raw).cast(),
             FILE.as_ptr(),
             LINE_ADDPARAM_FREE_VALUE,
-        );
-        CRYPTO_free(
-            mparam.cast::<c_void>(),
+        ));
+        drop(OwnedBuf::adopt(
+            mparam_buf
+                .map_or(ptr::null_mut(), OwnedBuf::into_raw)
+                .cast(),
             FILE.as_ptr(),
             LINE_ADDPARAM_FREE_PARAM,
-        );
+        ));
     }
     0
 }
@@ -1960,20 +2100,24 @@ unsafe fn mime_hdr_free(hdr: *mut MimeHeader) {
     }
     // SAFETY: the three slots are this header's own, allocated by `mime_hdr_new`.
     unsafe {
-        CRYPTO_free(
-            (*hdr).name.cast::<c_void>(),
+        drop(OwnedBuf::adopt(
+            (*hdr).name.cast(),
             FILE.as_ptr(),
             LINE_HDR_FREE_NAME,
-        );
-        CRYPTO_free(
-            (*hdr).value.cast::<c_void>(),
+        ));
+        drop(OwnedBuf::adopt(
+            (*hdr).value.cast(),
             FILE.as_ptr(),
             LINE_HDR_FREE_VALUE,
-        );
+        ));
         if !(*hdr).params.is_null() {
             OPENSSL_sk_pop_free((*hdr).params, Some(mime_param_free_thunk));
         }
-        CRYPTO_free(hdr.cast::<c_void>(), FILE.as_ptr(), LINE_HDR_FREE_HDR);
+        drop(OwnedBuf::adopt(
+            hdr.cast(),
+            FILE.as_ptr(),
+            LINE_HDR_FREE_HDR,
+        ));
     }
 }
 
@@ -1985,17 +2129,21 @@ unsafe fn mime_hdr_free(hdr: *mut MimeHeader) {
 unsafe fn mime_param_free(param: *mut MimeParam) {
     // SAFETY: the two slots are this parameter's own, allocated by `mime_hdr_addparam`.
     unsafe {
-        CRYPTO_free(
-            (*param).param_name.cast::<c_void>(),
+        drop(OwnedBuf::adopt(
+            (*param).param_name.cast(),
             FILE.as_ptr(),
             LINE_PARAM_FREE_NAME,
-        );
-        CRYPTO_free(
-            (*param).param_value.cast::<c_void>(),
+        ));
+        drop(OwnedBuf::adopt(
+            (*param).param_value.cast(),
             FILE.as_ptr(),
             LINE_PARAM_FREE_VALUE,
-        );
-        CRYPTO_free(param.cast::<c_void>(), FILE.as_ptr(), LINE_PARAM_FREE_PARAM);
+        ));
+        drop(OwnedBuf::adopt(
+            param.cast(),
+            FILE.as_ptr(),
+            LINE_PARAM_FREE_PARAM,
+        ));
     }
 }
 
