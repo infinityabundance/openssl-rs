@@ -100,6 +100,117 @@ const EVP_MAX_IV_LENGTH: usize = 16;
 /// `X509_PURPOSE_SMIME_SIGN` — `include/openssl/x509v3.h:769`.
 const X509_PURPOSE_SMIME_SIGN: c_int = 4;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
+/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_cleansed`
+/// allocate it, `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that
+/// takes it over (`ASN1_STRING_set0`). [`Self::adopt`]/[`Self::adopt_cleansed`] take in a block
+/// the crate allocated inside a helper (`ASN1_item_i2d`, `evp_pkey_decrypt_alloc`) so the failure
+/// paths that follow release what they built. A NULL pointer is a valid, empty buffer whose
+/// release is the authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+/// How the authority releases a scratch buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`abuf`).
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, ...)`, which zeroes `num` bytes
+    /// first (`ek`, `tkey`).
+    Cleansed { num: usize },
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// `CRYPTO_malloc(len, file, line)` for a block whose release is the cleansing
+    /// `CRYPTO_clear_free(ptr, len, ...)`, or `None` when the allocator answers NULL.
+    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Cleansed { num: len },
+        })
+    }
+
+    /// Adopt a plain block this crate allocated inside a helper, for release by `Drop` at the
+    /// authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
+    /// is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf {
+            ptr,
+            release: BufRelease::Plain { file, line },
+        }
+    }
+
+    /// Adopt a block this crate allocated inside a helper whose release is the cleansing
+    /// `CRYPTO_clear_free(ptr, num, ...)`, for release by `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns and that is
+    /// readable for `num` bytes.
+    unsafe fn adopt_cleansed(ptr: *mut c_uchar, num: usize) -> OwnedBuf {
+        OwnedBuf {
+            ptr,
+            release: BufRelease::Cleansed { num },
+        }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Cleansed { num } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
+                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, ptr::null(), 0) };
+            }
+        }
+    }
+}
+
 extern "C" {
     /// `int memcmp(const void *, const void *, size_t)`.
     fn memcmp(a: *const c_void, b: *const c_void, n: usize) -> c_int;
@@ -395,24 +506,23 @@ unsafe fn pkcs7_encode_rinfo(ri: *mut Pkcs7RecipInfo, key: *mut u8, keylen: c_in
         unsafe { EVP_PKEY_CTX_free(pctx) };
         return 0;
     }
-    // SAFETY: no preconditions.
-    let ek = CRYPTO_malloc(eklen, FILE.as_ptr(), 170).cast::<u8>();
-    if ek.is_null() {
+    // `ek` -- this frame's scratch, allocated through the crate's allocator seam at `eklen` and
+    // owned by `ek`: the success path hands the block to the `ASN1_STRING`, and the failure path
+    // below releases what it built on drop.
+    // SAFETY: `eklen > 0`.
+    let Some(ek) = OwnedBuf::new(eklen, FILE.as_ptr(), 170) else {
         // SAFETY: `pctx` is live and owned here.
         unsafe { EVP_PKEY_CTX_free(pctx) };
         return 0;
-    }
+    };
     // SAFETY: `pctx`/`ek`/`key` are live; the out-pointer is writable.
-    if unsafe { EVP_PKEY_encrypt(pctx, ek, &mut eklen, key, keylen as usize) } <= 0 {
-        // SAFETY: `ek` is live and owned here; `pctx` is live.
-        unsafe {
-            CRYPTO_free(ek.cast(), FILE.as_ptr(), 174);
-            EVP_PKEY_CTX_free(pctx);
-        }
+    if unsafe { EVP_PKEY_encrypt(pctx, ek.as_ptr(), &mut eklen, key, keylen as usize) } <= 0 {
+        // SAFETY: `pctx` is live; `ek` releases its own block on drop.
+        unsafe { EVP_PKEY_CTX_free(pctx) };
         return 0;
     }
-    // SAFETY: `ri` is live and its `enc_key` is live.
-    unsafe { ASN1_STRING_set0((*ri).enc_key, ek.cast(), eklen as c_int) };
+    // SAFETY: `ri` is live and its `enc_key` is live; ownership of the block transfers.
+    unsafe { ASN1_STRING_set0((*ri).enc_key, ek.into_raw().cast(), eklen as c_int) };
     // SAFETY: `pctx` is live and owned here.
     unsafe { EVP_PKEY_CTX_free(pctx) };
     1
@@ -424,8 +534,8 @@ unsafe fn pkcs7_encode_rinfo(ri: *mut Pkcs7RecipInfo, key: *mut u8, keylen: c_in
 /// # Safety
 /// `pek`/`peklen` are writable; `ri` and `pkey` are live.
 unsafe fn pkcs7_decrypt_rinfo(
-    pek: *mut *mut u8,
-    peklen: *mut c_int,
+    pek: &mut Option<OwnedBuf>,
+    peklen: &mut c_int,
     ri: *mut Pkcs7RecipInfo,
     pkey: *mut EvpPkey,
     fixlen: usize,
@@ -474,13 +584,15 @@ unsafe fn pkcs7_decrypt_rinfo(
         }
         return -1;
     }
-    // SAFETY: `pek`/`peklen` are writable; the old buffer is the caller's.
-    unsafe {
-        CRYPTO_clear_free((*pek).cast(), *peklen as usize, FILE.as_ptr(), 213);
-        *pek = ek;
-        *peklen = eklen as c_int;
-        EVP_PKEY_CTX_free(pctx);
-    }
+    // The decrypted key is the helper's own block; adopting it first releases the caller's
+    // previous key buffer (its own `CRYPTO_clear_free`, run by `Drop`) and hands the new block to
+    // the caller's `ek`, whose `Drop` is its single release.
+    // SAFETY: `ek` is a live block `evp_pkey_decrypt_alloc` allocated and no one else owns,
+    // readable for `eklen` bytes.
+    *pek = Some(unsafe { OwnedBuf::adopt_cleansed(ek, eklen) });
+    *peklen = eklen as c_int;
+    // SAFETY: `pctx` is live and owned here.
+    unsafe { EVP_PKEY_CTX_free(pctx) };
     1
 }
 
@@ -863,8 +975,8 @@ pub unsafe extern "C" fn PKCS7_dataDecode(
     let mut enc_alg: *mut crate::asn1::x_algor::X509Algor = ptr::null_mut();
     let mut md_sk: *mut OpenSslStack = ptr::null_mut();
     let mut rsk: *mut OpenSslStack = ptr::null_mut();
-    let mut ek: *mut u8 = ptr::null_mut();
-    let mut tkey: *mut u8;
+    let mut ek: Option<OwnedBuf> = None;
+    let mut tkey: Option<OwnedBuf>;
     let mut eklen: c_int = 0;
     let tkeylen: c_int;
     let mut name = [0 as c_char; OSSL_MAX_NAME_SIZE];
@@ -1093,9 +1205,9 @@ pub unsafe extern "C" fn PKCS7_dataDecode(
                     )
                 };
                 if r < 0 {
-                    // SAFETY: `ek`/`evp_cipher`/`out`/`etmp` are owned here.
+                    // SAFETY: `evp_cipher`/`out`/`etmp` are owned here; `ek` releases its own
+                    // block on drop.
                     unsafe {
-                        CRYPTO_clear_free(ek.cast(), eklen as usize, FILE.as_ptr(), 620);
                         EVP_CIPHER_free(evp_cipher);
                         BIO_free_all(out);
                         BIO_free_all(etmp);
@@ -1111,9 +1223,9 @@ pub unsafe extern "C" fn PKCS7_dataDecode(
             // SAFETY: `rmatch`/`pkey` are live.
             let r = unsafe { pkcs7_decrypt_rinfo(&mut ek, &mut eklen, rmatch, pkey, 0) };
             if r < 0 {
-                // SAFETY: `ek`/`evp_cipher`/`out`/`etmp` are owned here.
+                // SAFETY: `evp_cipher`/`out`/`etmp` are owned here; `ek` releases its own block
+                // on drop.
                 unsafe {
-                    CRYPTO_clear_free(ek.cast(), eklen as usize, FILE.as_ptr(), 627);
                     EVP_CIPHER_free(evp_cipher);
                     BIO_free_all(out);
                     BIO_free_all(etmp);
@@ -1138,9 +1250,9 @@ pub unsafe extern "C" fn PKCS7_dataDecode(
             )
         } <= 0
         {
-            // SAFETY: `ek`/`evp_cipher`/`out`/`etmp` are owned here.
+            // SAFETY: `evp_cipher`/`out`/`etmp` are owned here; `ek` releases its own block on
+            // drop.
             unsafe {
-                CRYPTO_clear_free(ek.cast(), eklen as usize, FILE.as_ptr(), 633);
                 EVP_CIPHER_free(evp_cipher);
                 BIO_free_all(out);
                 BIO_free_all(etmp);
@@ -1149,9 +1261,9 @@ pub unsafe extern "C" fn PKCS7_dataDecode(
         }
         // SAFETY: `evp_ctx`/`enc_alg` are live.
         if unsafe { EVP_CIPHER_asn1_to_param(evp_ctx, (*enc_alg).parameter) } <= 0 {
-            // SAFETY: `ek`/`evp_cipher`/`out`/`etmp` are owned here.
+            // SAFETY: `evp_cipher`/`out`/`etmp` are owned here; `ek` releases its own block on
+            // drop.
             unsafe {
-                CRYPTO_clear_free(ek.cast(), eklen as usize, FILE.as_ptr(), 635);
                 EVP_CIPHER_free(evp_cipher);
                 BIO_free_all(out);
                 BIO_free_all(etmp);
@@ -1161,9 +1273,9 @@ pub unsafe extern "C" fn PKCS7_dataDecode(
         // SAFETY: `evp_ctx` is live.
         let len = unsafe { EVP_CIPHER_CTX_get_key_length(evp_ctx) };
         if len <= 0 {
-            // SAFETY: `ek`/`evp_cipher`/`out`/`etmp` are owned here.
+            // SAFETY: `evp_cipher`/`out`/`etmp` are owned here; `ek` releases its own block on
+            // drop.
             unsafe {
-                CRYPTO_clear_free(ek.cast(), eklen as usize, FILE.as_ptr(), 639);
                 EVP_CIPHER_free(evp_cipher);
                 BIO_free_all(out);
                 BIO_free_all(etmp);
@@ -1171,34 +1283,40 @@ pub unsafe extern "C" fn PKCS7_dataDecode(
             return ptr::null_mut();
         }
         tkeylen = len;
-        // SAFETY: no preconditions.
-        tkey = CRYPTO_malloc(tkeylen as usize, FILE.as_ptr(), 642).cast::<u8>();
-        if tkey.is_null() {
-            // SAFETY: `ek`/`evp_cipher`/`out`/`etmp` are owned here.
+        // `tkey` -- this frame's scratch key, allocated through the crate's allocator seam at
+        // `tkeylen` and owned by `tkey`: every exit below releases what it built on drop.
+        // SAFETY: `tkeylen > 0`.
+        tkey = OwnedBuf::new_cleansed(tkeylen as usize, FILE.as_ptr(), 642);
+        if tkey.is_none() {
+            // SAFETY: `evp_cipher`/`out`/`etmp` are owned here; `ek` releases its own block on
+            // drop.
             unsafe {
-                CRYPTO_clear_free(ek.cast(), eklen as usize, FILE.as_ptr(), 643);
                 EVP_CIPHER_free(evp_cipher);
                 BIO_free_all(out);
                 BIO_free_all(etmp);
             }
             return ptr::null_mut();
         }
-        // SAFETY: `evp_ctx`/`tkey` are live.
-        if unsafe { EVP_CIPHER_CTX_rand_key(evp_ctx, tkey) } <= 0 {
-            // SAFETY: `ek`/`tkey`/`evp_cipher`/`out`/`etmp` are owned here.
+        // SAFETY: `evp_ctx` is live; `tkey` is `tkeylen` writable bytes.
+        if unsafe {
+            EVP_CIPHER_CTX_rand_key(
+                evp_ctx,
+                tkey.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr),
+            )
+        } <= 0
+        {
+            // SAFETY: `evp_cipher`/`out`/`etmp` are owned here; `ek`/`tkey` release their own
+            // blocks on drop.
             unsafe {
-                CRYPTO_clear_free(ek.cast(), eklen as usize, FILE.as_ptr(), 645);
-                CRYPTO_clear_free(tkey.cast(), tkeylen as usize, FILE.as_ptr(), 645);
                 EVP_CIPHER_free(evp_cipher);
                 BIO_free_all(out);
                 BIO_free_all(etmp);
             }
             return ptr::null_mut();
         }
-        if ek.is_null() {
-            ek = tkey;
+        if ek.is_none() {
+            ek = tkey.take();
             eklen = tkeylen;
-            tkey = ptr::null_mut();
         }
 
         // SAFETY: `evp_ctx` is live.
@@ -1206,36 +1324,29 @@ pub unsafe extern "C" fn PKCS7_dataDecode(
         if eklen != cur_key_len {
             // SAFETY: `evp_ctx` is live.
             if unsafe { EVP_CIPHER_CTX_set_key_length(evp_ctx, eklen) } <= 0 {
-                // SAFETY: `ek` is owned here; `tkey` is owned here.
-                unsafe {
-                    CRYPTO_clear_free(ek.cast(), eklen as usize, FILE.as_ptr(), 661);
-                    ek = tkey;
-                    eklen = tkeylen;
-                    tkey = ptr::null_mut();
-                }
+                // The previous key is released on assignment; `tkey` moves into `ek`.
+                ek = tkey.take();
             }
         }
         crate::runtime::err::ERR_clear_error();
-        // SAFETY: `evp_ctx`/`ek` are live.
-        if unsafe { EVP_CipherInit_ex(evp_ctx, ptr::null(), ptr::null_mut(), ek, ptr::null(), 0) }
+        // The key to install; `ek` is the frame's owned buffer.
+        let key = ek.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
+        // SAFETY: `evp_ctx` is live; `key` is the key.
+        if unsafe { EVP_CipherInit_ex(evp_ctx, ptr::null(), ptr::null_mut(), key, ptr::null(), 0) }
             <= 0
         {
-            // SAFETY: `ek`/`tkey`/`evp_cipher`/`out`/`etmp` are owned here.
+            // SAFETY: `evp_cipher`/`out`/`etmp` are owned here; `ek`/`tkey` release their own
+            // blocks on drop.
             unsafe {
-                CRYPTO_clear_free(ek.cast(), eklen as usize, FILE.as_ptr(), 669);
-                CRYPTO_clear_free(tkey.cast(), tkeylen as usize, FILE.as_ptr(), 669);
                 EVP_CIPHER_free(evp_cipher);
                 BIO_free_all(out);
                 BIO_free_all(etmp);
             }
             return ptr::null_mut();
         }
-        // SAFETY: `ek`/`tkey` are owned here.
-        unsafe {
-            CRYPTO_clear_free(ek.cast(), eklen as usize, FILE.as_ptr(), 672);
-            ek = ptr::null_mut();
-            CRYPTO_clear_free(tkey.cast(), tkeylen as usize, FILE.as_ptr(), 674);
-        }
+        // The keys are released here, at the authority's own site; `ek`/`tkey` are owned here.
+        drop(ek.take());
+        drop(tkey.take());
 
         if out.is_null() {
             out = etmp;
@@ -1256,9 +1367,8 @@ pub unsafe extern "C" fn PKCS7_dataDecode(
             // SAFETY: no preconditions.
             bio = unsafe { BIO_new(BIO_s_mem()) };
             if bio.is_null() {
-                // SAFETY: `ek`/`evp_cipher`/`out` are owned here.
+                // SAFETY: `evp_cipher`/`out` are owned here.
                 unsafe {
-                    CRYPTO_clear_free(ek.cast(), eklen as usize, FILE.as_ptr(), 691);
                     EVP_CIPHER_free(evp_cipher);
                     BIO_free_all(out);
                 }
@@ -1268,9 +1378,8 @@ pub unsafe extern "C" fn PKCS7_dataDecode(
             unsafe { bio_set_mem_eof_return(bio, 0) };
         }
         if bio.is_null() {
-            // SAFETY: `ek`/`evp_cipher`/`out` are owned here.
+            // SAFETY: `evp_cipher`/`out` are owned here.
             unsafe {
-                CRYPTO_clear_free(ek.cast(), eklen as usize, FILE.as_ptr(), 694);
                 EVP_CIPHER_free(evp_cipher);
                 BIO_free_all(out);
             }
@@ -1512,18 +1621,20 @@ pub unsafe extern "C" fn PKCS7_dataFinal(p7: *mut Pkcs7, bio: *mut Bio) -> c_int
                     return 0;
                 }
                 let mut abuflen: c_uint = abuflen0 as c_uint;
-                // SAFETY: no preconditions.
-                let abuf = CRYPTO_malloc(abuflen as usize, FILE.as_ptr(), 893).cast::<c_uchar>();
-                if abuf.is_null() {
+                // The signature buffer is this frame's scratch, allocated through the crate's
+                // allocator seam at `abuflen` and owned by `abuf`: the failure path below releases
+                // what it built on drop and the success path hands the block to the `ASN1_STRING`.
+                // SAFETY: `abuflen > 0`.
+                let Some(abuf) = OwnedBuf::new(abuflen as usize, FILE.as_ptr(), 893) else {
                     // SAFETY: `ctx_tmp` is live and owned here.
                     unsafe { EVP_MD_CTX_free(ctx_tmp) };
                     return 0;
-                }
+                };
                 // SAFETY: `ctx_tmp`/`abuf`/`si` are live.
                 let ok = unsafe {
                     EVP_SignFinal_ex(
                         ctx_tmp,
-                        abuf,
+                        abuf.as_ptr(),
                         &mut abuflen,
                         (*si).pkey,
                         ossl_pkcs7_ctx_get0_libctx(p7_ctx),
@@ -1531,16 +1642,18 @@ pub unsafe extern "C" fn PKCS7_dataFinal(p7: *mut Pkcs7, bio: *mut Bio) -> c_int
                     )
                 };
                 if ok == 0 {
-                    // SAFETY: `abuf`/`ctx_tmp` are owned here.
+                    // SAFETY: a compile-time-constant site; `ctx_tmp` is owned here and `abuf`
+                    // releases its own block on drop.
                     unsafe {
-                        CRYPTO_free(abuf.cast(), FILE.as_ptr(), 900);
                         raise_site(&err_sites::PKCS7_DOIT_900);
                         EVP_MD_CTX_free(ctx_tmp);
                     }
                     return 0;
                 }
-                // SAFETY: `si` is live; `abuf` is the signature.
-                unsafe { ASN1_STRING_set0((*si).enc_digest, abuf.cast(), abuflen as c_int) };
+                // SAFETY: `si` is live; ownership of the block transfers to the `ASN1_STRING`.
+                unsafe {
+                    ASN1_STRING_set0((*si).enc_digest, abuf.into_raw().cast(), abuflen as c_int)
+                };
             }
             k += 1;
         }
@@ -1653,22 +1766,23 @@ pub unsafe extern "C" fn PKCS7_SIGNER_INFO_sign(si: *mut Pkcs7SignerInfo) -> c_i
     let mut abuf: *mut c_uchar = ptr::null_mut();
     // SAFETY: `si` is live; `abuf` is an out-cursor.
     let alen = unsafe { ASN1_item_i2d((*si).auth_attr.cast(), &mut abuf, PKCS7_ATTR_SIGN_it()) };
-    if alen < 0 || abuf.is_null() {
+    // The encoded auth attrs are the helper's own block; `abuf` adopts it so every exit below
+    // releases what it built at the authority's own site.
+    // SAFETY: `abuf` is NULL or a live block `ASN1_item_i2d` allocated and no one else owns.
+    let abuf = unsafe { OwnedBuf::adopt(abuf, FILE.as_ptr(), 982) };
+    if alen < 0 || abuf.as_ptr().is_null() {
         // SAFETY: `mctx` is live and owned here.
         unsafe { EVP_MD_CTX_free(mctx) };
         return 0;
     }
-    // SAFETY: `mctx`/`abuf` are live.
-    if unsafe { EVP_DigestSignUpdate(mctx, abuf.cast(), alen as usize) } <= 0 {
-        // SAFETY: `abuf`/`mctx` are owned here.
-        unsafe {
-            CRYPTO_free(abuf.cast(), FILE.as_ptr(), 982);
-            EVP_MD_CTX_free(mctx);
-        }
+    // SAFETY: `mctx` is live; `abuf` is `alen` readable bytes.
+    if unsafe { EVP_DigestSignUpdate(mctx, abuf.as_ptr().cast(), alen as usize) } <= 0 {
+        // SAFETY: `mctx` is live; `abuf` releases its own block on drop.
+        unsafe { EVP_MD_CTX_free(mctx) };
         return 0;
     }
-    // SAFETY: `abuf` is owned here.
-    unsafe { CRYPTO_free(abuf.cast(), FILE.as_ptr(), 982) };
+    // `abuf` releases its block here, before the signature buffer is allocated.
+    drop(abuf);
     let mut siglen: usize = 0;
     // SAFETY: `mctx` is live; the out-pointer is writable.
     if unsafe { EVP_DigestSignFinal(mctx, ptr::null_mut(), &mut siglen) } <= 0 {
@@ -1676,26 +1790,25 @@ pub unsafe extern "C" fn PKCS7_SIGNER_INFO_sign(si: *mut Pkcs7SignerInfo) -> c_i
         unsafe { EVP_MD_CTX_free(mctx) };
         return 0;
     }
-    // SAFETY: no preconditions.
-    abuf = CRYPTO_malloc(siglen, FILE.as_ptr(), 986).cast::<c_uchar>();
-    if abuf.is_null() {
+    // The signature buffer is this frame's scratch, allocated through the crate's allocator seam
+    // at `siglen` and owned by `abuf`: every exit below releases what it built on drop and the
+    // success path hands the block to the `ASN1_STRING`.
+    // SAFETY: `siglen > 0`.
+    let Some(abuf) = OwnedBuf::new(siglen, FILE.as_ptr(), 986) else {
         // SAFETY: `mctx` is live and owned here.
         unsafe { EVP_MD_CTX_free(mctx) };
         return 0;
-    }
-    // SAFETY: `mctx`/`abuf` are live.
-    if unsafe { EVP_DigestSignFinal(mctx, abuf, &mut siglen) } <= 0 {
-        // SAFETY: `abuf`/`mctx` are owned here.
-        unsafe {
-            CRYPTO_free(abuf.cast(), FILE.as_ptr(), 999);
-            EVP_MD_CTX_free(mctx);
-        }
+    };
+    // SAFETY: `mctx` is live; `abuf` is `siglen` writable bytes.
+    if unsafe { EVP_DigestSignFinal(mctx, abuf.as_ptr(), &mut siglen) } <= 0 {
+        // SAFETY: `mctx` is live; `abuf` releases its own block on drop.
+        unsafe { EVP_MD_CTX_free(mctx) };
         return 0;
     }
     // SAFETY: `mctx` is live and owned here.
     unsafe { EVP_MD_CTX_free(mctx) };
-    // SAFETY: `si` is live; `abuf` is the signature.
-    unsafe { ASN1_STRING_set0((*si).enc_digest, abuf.cast(), siglen as c_int) };
+    // SAFETY: `si` is live; ownership of the block transfers to the `ASN1_STRING`.
+    unsafe { ASN1_STRING_set0((*si).enc_digest, abuf.into_raw().cast(), siglen as c_int) };
     1
 }
 
@@ -1920,7 +2033,11 @@ pub unsafe extern "C" fn PKCS7_signatureVerify(
         let mut abuf: *mut c_uchar = ptr::null_mut();
         // SAFETY: `sk` is live; `abuf` is an out-cursor.
         let alen = unsafe { ASN1_item_i2d(sk.cast(), &mut abuf, PKCS7_ATTR_VERIFY_it()) };
-        if alen <= 0 || abuf.is_null() {
+        // The encoded auth attrs are the helper's own block; `abuf` adopts it so every exit below
+        // releases what it built at the authority's own site.
+        // SAFETY: `abuf` is NULL or a live block `ASN1_item_i2d` allocated and no one else owns.
+        let abuf = unsafe { OwnedBuf::adopt(abuf, FILE.as_ptr(), 1164) };
+        if alen <= 0 || abuf.as_ptr().is_null() {
             // SAFETY: `fetched_md`/`mdc_tmp` are owned here.
             unsafe {
                 raise_site(&err_sites::PKCS7_DOIT_1160);
@@ -1929,18 +2046,17 @@ pub unsafe extern "C" fn PKCS7_signatureVerify(
             }
             return -1;
         }
-        // SAFETY: `mdc_tmp`/`abuf` are live.
-        if unsafe { EVP_DigestUpdate(mdc_tmp, abuf.cast(), alen as usize) } == 0 {
-            // SAFETY: `abuf`/`fetched_md`/`mdc_tmp` are owned here.
+        // SAFETY: `mdc_tmp` is live; `abuf` is `alen` readable bytes.
+        if unsafe { EVP_DigestUpdate(mdc_tmp, abuf.as_ptr().cast(), alen as usize) } == 0 {
+            // SAFETY: `fetched_md`/`mdc_tmp` are owned here; `abuf` releases its own block on drop.
             unsafe {
-                CRYPTO_free(abuf.cast(), FILE.as_ptr(), 1164);
                 EVP_MD_free(fetched_md);
                 EVP_MD_CTX_free(mdc_tmp);
             }
             return 0;
         }
-        // SAFETY: `abuf` is owned here.
-        unsafe { CRYPTO_free(abuf.cast(), FILE.as_ptr(), 1164) };
+        // `abuf` releases its block here, at the authority's own site.
+        drop(abuf);
         // SAFETY: `fetched_md` is null or owned here.
         unsafe { EVP_MD_free(fetched_md) };
     }
