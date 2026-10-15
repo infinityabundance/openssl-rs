@@ -81,6 +81,44 @@ const DTLS1_VERSION_MAJOR: i32 = 0xFE;
 /// `DTLS1_BAD_VER` — `prov_ssl.h:30`.
 const DTLS1_BAD_VER: i32 = 0x0100;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a helper-allocated block
+// ---------------------------------------------------------------------------------------------
+
+/// An owned block this crate allocated inside a helper.
+///
+/// The block stays a plain `CRYPTO_malloc` (`i2d_PUBKEY`'s DER buffer) at the authority's own size
+/// -- a Rust `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::adopt`] takes
+/// it in and `Drop` is its single release. A NULL pointer is a valid, empty block whose release is
+/// the authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// Adopt a plain block this crate allocated inside a helper, for release by `Drop` at the
+    /// authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
+    /// is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, file, line }
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// `struct SSL_SESSION_ASN1` — `ssl_asn1.c:18-49`, the whole record.
 #[repr(C)]
 struct SslSessionAsn1 {
@@ -647,8 +685,10 @@ pub unsafe extern "C" fn i2d_SSL_SESSION(input: *const SslSession, pp: *mut *mut
                 &SSL_SESSION_ASN1_ITEM,
             )
         };
+        // Release the DER block `i2d_PUBKEY` built through the seam's owner, at the authority's own
+        // site.
         // SAFETY: `peer_rpk.data` is the allocation `i2d_PUBKEY` produced, NULL or owned.
-        unsafe { CRYPTO_free(peer_rpk.data.cast(), FILE, 0) };
+        drop(unsafe { OwnedBuf::adopt(peer_rpk.data, FILE, 0) });
         ret
     })
 }
