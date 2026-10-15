@@ -38,7 +38,7 @@
 //! that `;` is punctuation in the default table. `RT-CONF` drives each one
 //! against the authority rather than assuming.
 
-use core::ffi::{c_char, c_int, c_long, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
 
 use crate::runtime::bio::bss_file::BIO_new_file;
@@ -149,6 +149,85 @@ const CONFBUFSIZE: usize = 512;
 /// `BIO_R_NO_SUCH_FILE`, which `def_load` compares the BIO layer's last error
 /// against in order to choose between two raises.
 const BIO_R_NO_SUCH_FILE: c_int = 128;
+
+/* ------------------------------------------------------------------------- */
+/* Ownership of a heap block.                                                 */
+/* ------------------------------------------------------------------------- */
+
+/// An owned heap block allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc`/`CRYPTO_zalloc` at the authority's exact size -- a Rust
+/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_zeroed`
+/// allocate it, [`Self::adopt`] takes in a block the crate allocated (a `CRYPTO_strdup`, a helper's,
+/// or a slot the shared error path releases), `Drop` is its single release, and [`Self::into_raw`]
+/// hands it to a consumer that takes it over (`_CONF_add_string`, or the `include_path` that leaves
+/// the block for `dirpath`). A NULL pointer is a valid, empty block whose release is the
+/// authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_zalloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// Adopt a block this crate allocated -- a `CRYPTO_strdup`, a helper's, or a slot the shared
+    /// error path releases -- for release by `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
+    /// or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, file, line }
+    }
+
+    /// The start of the block.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
 
 /* ------------------------------------------------------------------------- */
 /* The character-class predicates.                                            */
@@ -717,10 +796,10 @@ unsafe fn str_copy(
     // installed, which is what lets a caller pass the field it is replacing.
     unsafe {
         (*buf).data.add(to).write(0);
-        CRYPTO_free((*pto).cast::<c_void>(), ptr::null(), 0);
+        drop(OwnedBuf::adopt((*pto).cast(), ptr::null(), 0));
         *pto = (*buf).data;
         // Only the `BufMem` header is released: `data` now belongs to `*pto`.
-        CRYPTO_free(buf.cast::<c_void>(), ptr::null(), 0);
+        drop(OwnedBuf::adopt(buf.cast(), ptr::null(), 0));
     }
     1
 }
@@ -821,24 +900,26 @@ pub extern "C" fn NCONF_WIN32() -> *mut ConfMethod {
 /// # Safety
 /// `meth` must be a live method table whose `init` is set.
 unsafe extern "C" fn def_create(meth: *mut ConfMethod) -> *mut Conf {
-    let ret = CRYPTO_malloc(core::mem::size_of::<Conf>(), ptr::null(), 0).cast::<Conf>();
-    if ret.is_null() {
+    // The `CONF` block is this frame's own; its handle's `Drop` is the single release of the
+    // failure path below.
+    let Some(ret) = OwnedBuf::new(core::mem::size_of::<Conf>(), ptr::null(), 0) else {
         return ptr::null_mut();
-    }
+    };
+    let conf = ret.as_ptr().cast::<Conf>();
     // SAFETY: `meth` is live per the caller's contract, and `init` is set for
     // both tables this module publishes.
     let ok = match unsafe { (*meth).init } {
-        // SAFETY: `init` is the live method's own initialiser and `ret` is the
+        // SAFETY: `init` is the live method's own initialiser and `conf` is the
         // freshly allocated `CONF` storage it initialises.
-        Some(init) => unsafe { init(ret) },
+        Some(init) => unsafe { init(conf) },
         None => 0,
     };
     if ok == 0 {
-        // SAFETY: `ret` came from `CRYPTO_malloc` above.
-        unsafe { CRYPTO_free(ret.cast::<c_void>(), ptr::null(), 0) };
+        // `ret`'s handle releases the block on drop.
         return ptr::null_mut();
     }
-    ret
+    // Ownership moves to the caller.
+    ret.into_raw().cast::<Conf>()
 }
 
 /// `static int def_init_default(CONF *conf)`
@@ -895,8 +976,8 @@ unsafe extern "C" fn def_destroy_data(conf: *mut Conf) -> c_int {
 unsafe extern "C" fn def_destroy(conf: *mut Conf) -> c_int {
     // SAFETY: `conf` is live per the caller's contract.
     if unsafe { def_destroy_data(conf) } != 0 {
-        // SAFETY: `conf` came from `def_create`'s `CRYPTO_malloc`.
-        unsafe { CRYPTO_free(conf.cast::<c_void>(), ptr::null(), 0) };
+        // SAFETY: `conf` came from `def_create`'s seam allocation and no one else owns it.
+        unsafe { drop(OwnedBuf::adopt(conf.cast(), ptr::null(), 0)) };
         return 1;
     }
     0
@@ -1075,7 +1156,7 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
                         }
                         // SAFETY: `dirpath` was allocated for the include path
                         // and `get_next_file` has closed the context.
-                        unsafe { CRYPTO_free(dirpath.cast::<c_void>(), ptr::null(), 0) };
+                        unsafe { drop(OwnedBuf::adopt(dirpath.cast(), ptr::null(), 0)) };
                         dirpath = ptr::null_mut();
                     }
                     // SAFETY: `biosk` is a live stack of BIOs, or NULL.
@@ -1285,7 +1366,7 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
                 } else if is_includedir {
                     // SAFETY: `includedir` is NULL or a previous duplicate.
                     unsafe {
-                        CRYPTO_free((*conf).includedir.cast::<c_void>(), ptr::null(), 0);
+                        drop(OwnedBuf::adopt((*conf).includedir.cast(), ptr::null(), 0));
                         (*conf).includedir = CRYPTO_strdup(pval, ptr::null(), 0);
                     }
                     // SAFETY: `conf` is live.
@@ -1336,23 +1417,25 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
                     if !include_dir.is_null() && unsafe { ossl_is_absolute_path(include) } == 0 {
                         // SAFETY: both are NUL-terminated paths.
                         let newlen = unsafe { sys::strlen(include_dir) + sys::strlen(include) + 2 };
-                        let joined = CRYPTO_malloc(newlen, ptr::null(), 0).cast::<c_char>();
-                        if joined.is_null() {
+                        // The joined path is this frame's own until `into_raw` hands it to
+                        // `include_path`; the handle's `Drop` is its release on the error below.
+                        let Some(joined) = OwnedBuf::new(newlen, ptr::null(), 0) else {
                             // SAFETY: `include` is a `str_copy` buffer owned here.
-                            unsafe { CRYPTO_free(include.cast::<c_void>(), ptr::null(), 0) };
+                            unsafe { drop(OwnedBuf::adopt(include.cast(), ptr::null(), 0)) };
                             failed = true;
                             break 'outer;
-                        }
+                        };
+                        let joined_ptr = joined.as_ptr().cast::<c_char>();
                         // SAFETY: `joined` has `newlen` bytes, which both copies fit.
                         unsafe {
-                            OPENSSL_strlcpy(joined, include_dir, newlen);
-                            if ossl_ends_with_dirsep(joined) == 0 {
-                                OPENSSL_strlcat(joined, c"/".as_ptr(), newlen);
+                            OPENSSL_strlcpy(joined_ptr, include_dir, newlen);
+                            if ossl_ends_with_dirsep(joined_ptr) == 0 {
+                                OPENSSL_strlcat(joined_ptr, c"/".as_ptr(), newlen);
                             }
-                            OPENSSL_strlcat(joined, include, newlen);
-                            CRYPTO_free(include.cast::<c_void>(), ptr::null(), 0);
+                            OPENSSL_strlcat(joined_ptr, include, newlen);
+                            drop(OwnedBuf::adopt(include.cast(), ptr::null(), 0));
                         }
-                        joined
+                        joined.into_raw().cast::<c_char>()
                     } else {
                         include
                     };
@@ -1366,7 +1449,7 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
                     // `raise_site`'s only precondition.
                     unsafe { raise_site(&CONF_DEF_488) };
                     // SAFETY: `include_path` is NUL-terminated and owned here.
-                    unsafe { CRYPTO_free(include_path.cast::<c_void>(), ptr::null(), 0) };
+                    unsafe { drop(OwnedBuf::adopt(include_path.cast(), ptr::null(), 0)) };
                     failed = true;
                     break 'outer;
                 }
@@ -1376,7 +1459,7 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
                 if include_path != dirpath {
                     // A directory include hands ownership to `dirpath`.
                     // SAFETY: `include_path` is NUL-terminated and owned here.
-                    unsafe { CRYPTO_free(include_path.cast::<c_void>(), ptr::null(), 0) };
+                    unsafe { drop(OwnedBuf::adopt(include_path.cast(), ptr::null(), 0)) };
                 }
 
                 if !next.is_null() {
@@ -1434,13 +1517,15 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
             // SAFETY: `start` points into the line.
             unsafe { trim_ws(conf, start) };
 
-            let fresh = CRYPTO_malloc(core::mem::size_of::<ConfValue>(), ptr::null(), 0)
-                .cast::<ConfValue>();
-            if fresh.is_null() {
+            // The entry block is this frame's own until `_CONF_add_string` takes it over; the
+            // error path (`finish_with_error`) releases it through the seam. `into_raw` hands it
+            // to `v`.
+            let Some(fresh) = OwnedBuf::new(core::mem::size_of::<ConfValue>(), ptr::null(), 0)
+            else {
                 failed = true;
                 break 'outer;
-            }
-            v = fresh;
+            };
+            v = fresh.into_raw().cast::<ConfValue>();
             // SAFETY: `v` is a fresh entry and `pname` is NUL-terminated.
             unsafe {
                 (*v).name = CRYPTO_strdup(pname, ptr::null(), 0);
@@ -1495,7 +1580,7 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
         // stack at this point, since reaching here means the stack was drained.
         unsafe {
             BUF_MEM_free(buff);
-            CRYPTO_free(section.cast::<c_void>(), ptr::null(), 0);
+            drop(OwnedBuf::adopt(section.cast(), ptr::null(), 0));
             OPENSSL_sk_free(biosk);
         }
         return 1;
@@ -1554,7 +1639,7 @@ unsafe fn finish_with_error(
     // NULL. Both are released unconditionally, as the authority does.
     unsafe {
         BUF_MEM_free(buff);
-        CRYPTO_free(section.cast::<c_void>(), ptr::null(), 0);
+        drop(OwnedBuf::adopt(section.cast(), ptr::null(), 0));
         // The first element of the stack is the caller's BIO, so it is popped and
         // walked past rather than freed.
         while OPENSSL_sk_num(biosk) > 0 {
@@ -1563,7 +1648,7 @@ unsafe fn finish_with_error(
             *in_ = popped;
         }
         OPENSSL_sk_free(biosk);
-        CRYPTO_free(dirpath.cast::<c_void>(), ptr::null(), 0);
+        drop(OwnedBuf::adopt(dirpath.cast(), ptr::null(), 0));
         if !(*dirctx).is_null() {
             OPENSSL_DIR_end(dirctx);
         }
@@ -1584,9 +1669,9 @@ unsafe fn finish_with_error(
             (*conf).data = ptr::null_mut();
         }
         if !v.is_null() {
-            CRYPTO_free((*v).name.cast::<c_void>(), ptr::null(), 0);
-            CRYPTO_free((*v).value.cast::<c_void>(), ptr::null(), 0);
-            CRYPTO_free(v.cast::<c_void>(), ptr::null(), 0);
+            drop(OwnedBuf::adopt((*v).name.cast(), ptr::null(), 0));
+            drop(OwnedBuf::adopt((*v).value.cast(), ptr::null(), 0));
+            drop(OwnedBuf::adopt(v.cast(), ptr::null(), 0));
         }
     }
     0
@@ -1736,21 +1821,21 @@ unsafe fn get_next_file(path: *const c_char, dirctx: *mut *mut OpenSslDirCtx) ->
         }
         let newlen = pathlen + namelen + 2;
         // SAFETY: `newlen` zeroed bytes.
-        let newpath = CRYPTO_zalloc(newlen, ptr::null(), 0).cast::<c_char>();
-        if newpath.is_null() {
+        let Some(newpath) = OwnedBuf::new_zeroed(newlen, ptr::null(), 0) else {
             break;
-        }
+        };
+        let newpath_ptr = newpath.as_ptr().cast::<c_char>();
         // SAFETY: `newpath` holds `newlen` bytes and both sources are
         // NUL-terminated, so each copy fits.
         unsafe {
-            OPENSSL_strlcpy(newpath, path, newlen);
-            OPENSSL_strlcat(newpath, c"/".as_ptr(), newlen);
-            OPENSSL_strlcat(newpath, filename, newlen);
+            OPENSSL_strlcpy(newpath_ptr, path, newlen);
+            OPENSSL_strlcat(newpath_ptr, c"/".as_ptr(), newlen);
+            OPENSSL_strlcat(newpath_ptr, filename, newlen);
         }
         // SAFETY: `newpath` is NUL-terminated.
-        let bio = unsafe { BIO_new_file(newpath, c"r".as_ptr()) };
-        // SAFETY: `newpath` came from `CRYPTO_zalloc` above.
-        unsafe { CRYPTO_free(newpath.cast::<c_void>(), ptr::null(), 0) };
+        let bio = unsafe { BIO_new_file(newpath_ptr, c"r".as_ptr()) };
+        // The handle's `Drop` is `newpath`'s single release.
+        drop(newpath);
         // Errors when opening files are non-fatal.
         if !bio.is_null() {
             return bio;
