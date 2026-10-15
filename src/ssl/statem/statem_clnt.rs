@@ -51,7 +51,7 @@
 // collapsing an arm into a match guard would obscure the correspondence.
 #![allow(clippy::collapsible_match)]
 
-use core::ffi::c_int;
+use core::ffi::{c_char, c_int, c_void};
 
 use crate::packet::{
     WPACKET_close, WPACKET_get_length, WPACKET_put_bytes_u16, WPACKET_put_bytes_u8,
@@ -166,6 +166,127 @@ const FINISHED_MAX_LENGTH: usize = 64;
 const ENCRYPTED_EXTENSIONS_MAX_LENGTH: usize = 20000;
 const KEY_UPDATE_MAX_LENGTH: usize = 1;
 const SSL3_RT_MAX_PLAIN_LENGTH: usize = 16384;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership reclaimed from the hand-written releases in this file
+// ---------------------------------------------------------------------------------------------
+
+/// A foreign object this frame created (a `*_new`) whose single release is the object's own
+/// `*_free`. [`OwnedCtx`]'s `Drop` runs it, so the frame never writes the free by hand; the
+/// authority's free function remains the object's authority and the handle only records that this
+/// frame owns one reference to it.
+trait FreeOnDrop: Sized {
+    /// The authority's own `*_free` for this object.
+    ///
+    /// # Safety
+    /// `ptr` is a live object of this type, owned here and not yet released.
+    unsafe fn free_on_drop(ptr: *mut Self);
+}
+
+/// An owned foreign object: a `*_new` this frame called whose `Drop` runs the object's own
+/// `*_free`. The object keeps its layout and its stable address; only its *ownership* is this
+/// handle, so the constructor's refusal and every early return release what they built instead of
+/// calling the free function by hand.
+struct OwnedCtx<T: FreeOnDrop> {
+    ptr: core::ptr::NonNull<T>,
+}
+
+impl<T: FreeOnDrop> OwnedCtx<T> {
+    /// Own a `*_new` answer, or `None` when it answered NULL.
+    fn new(ptr: *mut T) -> Option<OwnedCtx<T>> {
+        core::ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// The object's stable address, for the raw calls the frame makes over it.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Hand the object to a stable slot (the authority's field assignment), giving up ownership so
+    /// the slot's own release is the only one.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl<T: FreeOnDrop> Drop for OwnedCtx<T> {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a live object this frame created and has not released; `Drop` runs
+        // once, so `free_on_drop` is its single release.
+        unsafe { T::free_on_drop(self.ptr.as_ptr()) }
+    }
+}
+
+/// `EVP_MD_CTX_free` is the `EVP_MD_CTX` block's own release.
+impl FreeOnDrop for crate::evp::digest::EvpMdCtx {
+    /// # Safety
+    /// `ptr` is a live `EVP_MD_CTX` this frame owns and has not released.
+    unsafe fn free_on_drop(ptr: *mut Self) {
+        // SAFETY: `ptr` is live per the contract and `EVP_MD_CTX_free` is its release.
+        unsafe { crate::evp::digest::EVP_MD_CTX_free(ptr) }
+    }
+}
+
+/// `SSL_SESSION_free` is the `SSL_SESSION` block's own release.
+impl FreeOnDrop for crate::ssl::ssl_lib::SslSession {
+    /// # Safety
+    /// `ptr` is a live `SSL_SESSION` this frame owns and has not released.
+    unsafe fn free_on_drop(ptr: *mut Self) {
+        // SAFETY: `ptr` is live per the contract and `SSL_SESSION_free` is its release.
+        unsafe { crate::ssl::ssl_sess::SSL_SESSION_free(ptr) }
+    }
+}
+
+/// `EVP_PKEY_free` is the `EVP_PKEY` block's own release.
+impl FreeOnDrop for crate::evp::pkey::EvpPkey {
+    /// # Safety
+    /// `ptr` is a live `EVP_PKEY` this frame owns and has not released.
+    unsafe fn free_on_drop(ptr: *mut Self) {
+        // SAFETY: `ptr` is live per the contract and `EVP_PKEY_free` is its release.
+        unsafe { crate::evp::pkey::EVP_PKEY_free(ptr) }
+    }
+}
+
+/// An owned frame byte buffer: a `CRYPTO_*` block this frame allocated (or a `get1` out-pointer it
+/// took back), whose single release is `Drop`'s `CRYPTO_free` at the authority's own `(file, line)`,
+/// so no call site writes a `CRYPTO_free` by hand. The block stays an allocation on the crate's
+/// allocator seam, so a caller-installed `CRYPTO_set_mem_functions` hook observes it and its release
+/// exactly as it observes the authority's.
+struct OwnedBlock {
+    ptr: *mut c_void,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBlock {
+    /// Reclaim a live block this frame already holds (a `get1` out-pointer) so its single release
+    /// is `Drop`'s `CRYPTO_free` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this frame owns and has not released.
+    unsafe fn from_raw(ptr: *mut c_void, file: *const c_char, line: c_int) -> Option<OwnedBlock> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBlock { ptr, file, line })
+        }
+    }
+
+    /// The buffer's address, for the raw calls the frame makes over it.
+    fn as_ptr<T>(&self) -> *mut T {
+        self.ptr.cast::<T>()
+    }
+}
+
+impl Drop for OwnedBlock {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this frame took back (a NULL is a no-op) that `Drop` has not
+        // released before; `CRYPTO_free` accepts NULL and this is the authority's own release site.
+        unsafe { crate::runtime::mem::CRYPTO_free(self.ptr, self.file, self.line) }
+    }
+}
 
 #[inline]
 fn is_tls13(s: *const Ssl) -> bool {
@@ -1652,9 +1773,7 @@ pub(crate) unsafe fn tls13_process_peer_certificate(
 /// # Safety
 /// `s` is live; `msg` is the full handshake message.
 pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server: bool) -> c_int {
-    use crate::evp::digest::{
-        EVP_DigestVerify, EVP_DigestVerifyInit, EVP_MD_CTX_free, EVP_MD_CTX_new,
-    };
+    use crate::evp::digest::{EVP_DigestVerify, EVP_DigestVerifyInit, EVP_MD_CTX_new};
     use crate::evp::legacy_sha::EVP_sha256;
     use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
     use crate::rsa::ctrl::{
@@ -1727,10 +1846,12 @@ pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server:
     pos += hash_len;
 
     // SAFETY: no preconditions.
-    let mctx = EVP_MD_CTX_new();
-    if mctx.is_null() {
+    let Some(mctx_owner) = OwnedCtx::<crate::evp::digest::EvpMdCtx>::new(EVP_MD_CTX_new()) else {
         return 0;
-    }
+    };
+    // The owned `EVP_MD_CTX`'s stable address, for the raw calls below; its single release is the
+    // handle's `Drop` at the end of the frame.
+    let mctx = mctx_owner.as_ptr();
     let md = EVP_sha256();
     let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
     let mut ok = false;
@@ -1747,7 +1868,6 @@ pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server:
         {
             ok = true;
         }
-        EVP_MD_CTX_free(mctx);
     }
     if !ok {
         return 0;
@@ -1863,19 +1983,23 @@ pub(crate) unsafe fn tls13_process_server_finished(s: *mut Ssl, msg: &[u8]) -> c
 /// # Safety
 /// `s` is live.
 unsafe fn tls13_client_create_session(s: *mut Ssl) -> c_int {
-    use crate::ssl::ssl_sess::{ssl_session_calculate_timeout, SSL_SESSION_free, SSL_SESSION_new};
+    use crate::ssl::ssl_sess::{ssl_session_calculate_timeout, SSL_SESSION_new};
     // SAFETY: `s` is live.
     unsafe {
         if !(*s).session.is_null() {
             return 1;
         }
-        let ss = SSL_SESSION_new();
-        if ss.is_null() {
+        // The fresh session is owned here: its single release is the handle's `Drop` running
+        // `SSL_SESSION_free`, so the RNG refusal releases it and success hands it to the field with
+        // `into_raw`, whose own release is then the only one.
+        let Some(ss_owner) = OwnedCtx::<crate::ssl::ssl_lib::SslSession>::new(SSL_SESSION_new())
+        else {
             return 0;
-        }
+        };
+        let ss = ss_owner.as_ptr();
         let mut id = [0u8; crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH];
         if crate::rand::rand_lib::RAND_bytes(id.as_mut_ptr(), id.len() as c_int) <= 0 {
-            SSL_SESSION_free(ss);
+            // The refusal releases the session it built: returning drops `ss_owner`.
             return 0;
         }
         (*ss).session_id_length = id.len();
@@ -1888,7 +2012,9 @@ unsafe fn tls13_client_create_session(s: *mut Ssl) -> c_int {
             (*(*s).pending_cipher).id as core::ffi::c_ulong
         };
         ssl_session_calculate_timeout(ss);
-        (*s).session = ss;
+        // Success hands the session to the field; the borrow ends and the field's release is the
+        // session's only one.
+        (*s).session = ss_owner.into_raw();
     }
     1
 }
@@ -2451,31 +2577,39 @@ pub(crate) unsafe fn tls12_process_cert_verify(s: *mut Ssl, msg: &[u8], _is_serv
 /// # Safety
 /// `s` is live.
 unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
-    use crate::evp::pkey::{evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key};
-    use crate::runtime::mem::CRYPTO_free;
+    use crate::evp::pkey::{
+        evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key, EvpPkey,
+    };
     use crate::ssl::tls13_enc::write_handshake_message;
     // SAFETY: `s` is live.
     let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
     let mut params = [crate::params::END; 1];
     // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated.
-    let pkey = unsafe { evp_pkey_keygen(libctx, c"X25519".as_ptr(), propq, params.as_mut_ptr()) };
-    if pkey.is_null() {
+    let Some(pkey) = OwnedCtx::<EvpPkey>::new(unsafe {
+        evp_pkey_keygen(libctx, c"X25519".as_ptr(), propq, params.as_mut_ptr())
+    }) else {
         return 0;
-    }
+    };
     let mut pub_ = core::ptr::null_mut::<u8>();
     // SAFETY: `pkey` is live; `pub_` is this frame's writable slot.
-    let publen = unsafe { EVP_PKEY_get1_encoded_public_key(pkey, &mut pub_) };
+    let publen = unsafe { EVP_PKEY_get1_encoded_public_key(pkey.as_ptr(), &mut pub_) };
     if publen == 0 || publen > 255 {
-        // SAFETY: `pkey` is live and this call owns it.
-        unsafe { EVP_PKEY_free(pkey) };
+        // The refusal releases the key it built: returning drops `pkey`. `pub_` stays as the
+        // authority leaves it (the failed `get1` does not hand one back).
         return 0;
     }
-    // SAFETY: `s` is live.
+    // The `get1` out-pointer is this frame's now: its single release is the handle's `Drop`, so the
+    // frame no longer writes a `CRYPTO_free` by hand.
+    // SAFETY: `pub_` is the block `get1` allocated above and has not been released.
+    let Some(pub_) = (unsafe { OwnedBlock::from_raw(pub_.cast(), core::ptr::null(), 0) }) else {
+        return 0;
+    };
+    // SAFETY: `s` is live; the old `pkey` slot is NULL or owned by the field.
     unsafe {
         if !(*s).pkey.is_null() {
             EVP_PKEY_free((*s).pkey.cast());
         }
-        (*s).pkey = pkey.cast();
+        (*s).pkey = pkey.into_raw().cast();
     }
     // Derive the pre-master secret and the key schedule (`ssl_derive`, `s3_lib.c:5474`).
     let mut pms = [0u8; 64];
@@ -2492,28 +2626,24 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
         )
     } == 0
     {
-        // SAFETY: `pub_` is the block `get1` allocated.
-        unsafe { CRYPTO_free(pub_.cast(), core::ptr::null(), 0) };
         return 0;
     }
     // SAFETY: `s` is live; `pms[..pmslen]` is the shared secret.
     if unsafe { crate::ssl::t1_enc::tls12_derive_master_secret(s, pms.as_ptr(), pmslen) } == 0 {
-        // SAFETY: `pub_` is the block `get1` allocated.
-        unsafe { CRYPTO_free(pub_.cast(), core::ptr::null(), 0) };
         return 0;
     }
     // SAFETY: `s` is live.
     if unsafe { crate::ssl::t1_enc::tls12_derive_key_block(s) } == 0 {
-        // SAFETY: `pub_` is the block `get1` allocated.
-        unsafe { CRYPTO_free(pub_.cast(), core::ptr::null(), 0) };
         return 0;
     }
     let mut body = [0u8; 256];
     body[0] = publen as u8;
     // SAFETY: `pub_` is `publen` readable bytes; `body` has room.
-    unsafe { core::ptr::copy_nonoverlapping(pub_, body.as_mut_ptr().add(1), publen) };
-    // SAFETY: `pub_` is the block `get1` allocated.
-    unsafe { CRYPTO_free(pub_.cast(), core::ptr::null(), 0) };
+    unsafe {
+        core::ptr::copy_nonoverlapping(pub_.as_ptr::<u8>(), body.as_mut_ptr().add(1), publen)
+    };
+    // The `get1` block's single release is this drop, at the authority's own release point.
+    drop(pub_);
     // SAFETY: `s` is live; `body` is `1 + publen` initialised bytes.
     unsafe {
         write_handshake_message(
