@@ -114,6 +114,21 @@ use crate::runtime::str::{OPENSSL_strcasecmp, OPENSSL_strlcpy};
 /// build tree and the compiler records the bare path (D235's finding).
 const FILE: *const c_char = c"providers/implementations/signature/rsa_sig.c".as_ptr();
 
+/// `OPENSSL_zalloc(sizeof(PROV_RSA_CTX))` in `rsa_newctx`.
+const LINE_ALLOC_CTX: c_int = 238;
+/// `OPENSSL_strdup(propq)` in `rsa_newctx`.
+const LINE_STRDUP_PROPQ: c_int = 240;
+/// `OPENSSL_free(prsactx)` on `rsa_newctx`'s `OPENSSL_strdup` failure arm.
+const LINE_FREE_ABANDONED: c_int = 241;
+/// `OPENSSL_free(prsactx->sig)` in `rsa_freectx`.
+const LINE_FREE_SIG: c_int = 1347;
+/// `OPENSSL_free(prsactx->propq)` in `rsa_freectx`.
+const LINE_FREE_PROPQ: c_int = 1348;
+/// `OPENSSL_clear_free(prsactx, sizeof(PROV_RSA_CTX))` in `rsa_freectx`.
+const LINE_FREE_CTX: c_int = 1352;
+/// `OPENSSL_zalloc(sizeof(PROV_RSA_CTX))` in `rsa_dupctx`.
+const LINE_ALLOC_DUP: c_int = 1363;
+
 /// `OSSL_MAX_NAME_SIZE` — `include/internal/sizes.h:18`.
 const OSSL_MAX_NAME_SIZE: usize = 50;
 
@@ -330,6 +345,111 @@ struct ProvRsaCtx {
     tbuf: *mut u8,
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the context block
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `PROV_RSA_CTX` block.
+///
+/// `rsa_newctx` and `rsa_dupctx` allocate the block through the crate's allocator seam at the
+/// authority's own lines and `rsa_freectx` reclaims it; its *ownership* is this type, and `Drop`
+/// runs the authority's own `rsa_freectx` body followed by the block's cleansing release. The block
+/// stays a `CRYPTO_zalloc` at `size_of::<ProvRsaCtx>()` released with `CRYPTO_clear_free` at the
+/// authority's own size and line, so a caller-installed `CRYPTO_set_mem_functions` hook observes the
+/// allocation, its size and its cleansing release exactly as it observes the authority's -- which a
+/// Rust `Box` would hide.
+///
+/// The member buffers (`propq`, `sig`, `tbuf`) are `#[repr(C)]` members whose addresses the unit's
+/// own calls hold across public ABI calls; they stay raw, released by [`Self::drop`]'s destructor
+/// body at the authority's own lines rather than by a Rust allocation.
+struct OwnedRsaCtx {
+    ptr: ptr::NonNull<ProvRsaCtx>,
+}
+
+impl OwnedRsaCtx {
+    /// Allocate a fresh zeroed block of `size_of::<ProvRsaCtx>()` at `FILE`/`alloc_line`, or `None`
+    /// when the seam answers NULL (the authority's refused `CRYPTO_zalloc`).
+    fn alloc(alloc_line: c_int) -> Option<OwnedRsaCtx> {
+        // `CRYPTO_zalloc` answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<ProvRsaCtx>()` bytes, which is exactly `ProvRsaCtx`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<ProvRsaCtx>(), FILE, alloc_line)
+            .cast::<ProvRsaCtx>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedRsaCtx { ptr })
+    }
+
+    /// The block's stable address (the dispatch hands it out as `*mut c_void`).
+    fn as_ptr(&self) -> *mut ProvRsaCtx {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's context pointer.
+    fn into_raw(self) -> *mut ProvRsaCtx {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut ProvRsaCtx) -> Option<OwnedRsaCtx> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedRsaCtx { ptr })
+    }
+
+    /// Release the block the way `rsa_newctx`'s `OPENSSL_strdup` failure arm does: the authority's
+    /// **plain** `CRYPTO_free` at the arm's own line, for a context it allocated but never
+    /// published, so the destructor body does not run and the block is not cleansed. It answers the
+    /// NULL the arm returns.
+    fn abandon(self) -> *mut c_void {
+        let ptr = self.ptr.as_ptr().cast::<c_void>();
+        core::mem::forget(self);
+        // SAFETY: `ptr` is the block `alloc` allocated and this is its single release; the
+        // authority's refusal arm writes its own bare `CRYPTO_free` before anything is stored.
+        unsafe { CRYPTO_free(ptr, FILE, LINE_FREE_ABANDONED) };
+        ptr::null_mut()
+    }
+}
+
+impl Drop for OwnedRsaCtx {
+    /// `rsa_freectx`'s destructor: the authority's own member releases ([`freectx_body`]) followed
+    /// by the block's cleansing release, through the same allocator seam the block was allocated on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `alloc` allocated (or `from_raw` reclaimed) and this is its
+        // single release; `Drop` runs once, and `freectx_body` is the authority's own `rsa_freectx`
+        // body.
+        unsafe {
+            freectx_body(self.ptr.as_ptr());
+            CRYPTO_clear_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                core::mem::size_of::<ProvRsaCtx>(),
+                FILE,
+                LINE_FREE_CTX,
+            );
+        }
+    }
+}
+
+/// The authority's `rsa_freectx` body, minus the block release [`OwnedRsaCtx`]'s `Drop` performs:
+/// the `EVP_MD_CTX`, the two `EVP_MD` objects, the verification `sig`, the duplicated `propq`, the
+/// working buffer and the borrowed `RSA`. Each release stays the authority's own call at its own
+/// line, relocated to the context's `Drop`.
+///
+/// # Safety
+/// `ptr` is a live context this unit allocated and has not released.
+unsafe fn freectx_body(ptr: *mut ProvRsaCtx) {
+    // SAFETY: `ptr` is a live context per the contract.
+    unsafe {
+        EVP_MD_CTX_free((*ptr).mdctx);
+        EVP_MD_free((*ptr).md);
+        EVP_MD_free((*ptr).mgf1_md);
+        CRYPTO_free((*ptr).sig.cast(), FILE, LINE_FREE_SIG);
+        CRYPTO_free((*ptr).propq.cast(), FILE, LINE_FREE_PROPQ);
+        free_tbuf(ptr);
+        RSA_free((*ptr).rsa);
+    }
+}
+
 /// `OSSL_FUNC_signature_set_ctx_params_fn` — the callback `rsa_signverify_init` and
 /// `rsa_sigalg_signverify_init` take.
 type SetCtxParamsFn = unsafe extern "C" fn(*mut c_void, *const OsslParam) -> c_int;
@@ -440,32 +560,33 @@ unsafe extern "C" fn rsa_newctx(provctx: *mut c_void, propq: *const c_char) -> *
         return ptr::null_mut();
     }
 
-    // SAFETY: a fresh zeroed allocation of this call's own context.
-    let prsactx = CRYPTO_zalloc(core::mem::size_of::<ProvRsaCtx>(), FILE, 238).cast::<ProvRsaCtx>();
-    if prsactx.is_null() {
+    // The context block, allocated through the crate's allocator seam at the authority's own line
+    // and owned by `prsactx` until it is handed to the caller below.
+    let Some(prsactx) = OwnedRsaCtx::alloc(LINE_ALLOC_CTX) else {
         return ptr::null_mut();
-    }
+    };
 
-    // SAFETY: `prsactx` is this call's own allocation; `propq` is NULL or NUL-terminated.
+    // SAFETY: `prsactx` is this call's own block; `propq` is NULL or NUL-terminated.
     unsafe {
+        let p = prsactx.as_ptr();
         let mut propq_copy: *mut c_char = ptr::null_mut();
         if !propq.is_null() {
-            propq_copy = CRYPTO_strdup(propq, FILE, 240);
+            propq_copy = CRYPTO_strdup(propq, FILE, LINE_STRDUP_PROPQ);
             if propq_copy.is_null() {
-                CRYPTO_free(prsactx.cast(), FILE, 241);
-                return ptr::null_mut();
+                // The refusal releases the block it built through the owner's own plain release.
+                return prsactx.abandon();
             }
         }
 
-        (*prsactx).libctx = prov_libctx_of(provctx);
-        (*prsactx).flags = FLAG_ALLOW_MD;
-        (*prsactx).propq = propq_copy;
+        (*p).libctx = prov_libctx_of(provctx);
+        (*p).flags = FLAG_ALLOW_MD;
+        (*p).propq = propq_copy;
         /* Maximum up to digest length for sign, auto for verify */
-        (*prsactx).saltlen = RSA_PSS_SALTLEN_AUTO_DIGEST_MAX;
-        (*prsactx).min_saltlen = -1;
+        (*p).saltlen = RSA_PSS_SALTLEN_AUTO_DIGEST_MAX;
+        (*p).min_saltlen = -1;
     }
 
-    prsactx.cast()
+    prsactx.into_raw().cast()
 }
 
 /// `static int rsa_pss_compute_saltlen(PROV_RSA_CTX *ctx)` — `rsa_sig.c.in:260-311`.
@@ -2036,29 +2157,9 @@ pub(crate) unsafe fn rsa_digest_verify_final(
 /// # Safety
 /// The signature `freectx` dispatch contract.
 unsafe extern "C" fn rsa_freectx(vprsactx: *mut c_void) {
-    let prsactx = vprsactx.cast::<ProvRsaCtx>();
-
-    if prsactx.is_null() {
-        return;
-    }
-
-    // SAFETY: `prsactx` is this call's context.
-    unsafe {
-        EVP_MD_CTX_free((*prsactx).mdctx);
-        EVP_MD_free((*prsactx).md);
-        EVP_MD_free((*prsactx).mgf1_md);
-        CRYPTO_free((*prsactx).sig.cast(), FILE, 1347);
-        CRYPTO_free((*prsactx).propq.cast(), FILE, 1348);
-        free_tbuf(prsactx);
-        RSA_free((*prsactx).rsa);
-
-        CRYPTO_clear_free(
-            prsactx.cast(),
-            core::mem::size_of::<ProvRsaCtx>(),
-            FILE,
-            1352,
-        );
-    }
+    // SAFETY: `vprsactx` is NULL or a live context; `from_raw` reclaims it (NULL is a no-op) and
+    // `Drop` runs the authority's own `rsa_freectx` body followed by the block's cleansing release.
+    unsafe { drop(OwnedRsaCtx::from_raw(vprsactx.cast())) };
 }
 
 /// `static void *rsa_dupctx(void *vprsactx)` — `rsa_sig.c.in:1357-1413`.
@@ -2072,72 +2173,67 @@ unsafe extern "C" fn rsa_dupctx(vprsactx: *mut c_void) -> *mut c_void {
         return ptr::null_mut();
     }
 
-    // SAFETY: `srcctx` is the caller's context.
+    // The copy, allocated through the crate's allocator seam at the authority's own line and owned
+    // here; every refusal below releases it through the owner's `Drop` (the authority's own
+    // `rsa_freectx` body and cleansing block release), and success hands it to the caller.
+    let Some(dstctx) = OwnedRsaCtx::alloc(LINE_ALLOC_DUP) else {
+        return ptr::null_mut();
+    };
+
+    // SAFETY: `srcctx` is the caller's context; `dstctx` is this call's own block.
     unsafe {
-        let dstctx =
-            CRYPTO_zalloc(core::mem::size_of::<ProvRsaCtx>(), FILE, 1363).cast::<ProvRsaCtx>();
-        if dstctx.is_null() {
-            return ptr::null_mut();
-        }
+        let d = dstctx.as_ptr();
 
         // The authority's `*dstctx = *srcctx` is a whole-struct assignment; the pointer copy is
         // that assignment, and the fields below then NULL the borrowed members as the authority
         // does before it re-acquires each one.
-        core::ptr::copy_nonoverlapping(srcctx, dstctx, 1);
-        (*dstctx).rsa = ptr::null_mut();
-        (*dstctx).md = ptr::null_mut();
-        (*dstctx).mgf1_md = ptr::null_mut();
-        (*dstctx).mdctx = ptr::null_mut();
-        (*dstctx).tbuf = ptr::null_mut();
-        (*dstctx).propq = ptr::null_mut();
-        (*dstctx).sig = ptr::null_mut();
+        core::ptr::copy_nonoverlapping(srcctx, d, 1);
+        (*d).rsa = ptr::null_mut();
+        (*d).md = ptr::null_mut();
+        (*d).mgf1_md = ptr::null_mut();
+        (*d).mdctx = ptr::null_mut();
+        (*d).tbuf = ptr::null_mut();
+        (*d).propq = ptr::null_mut();
+        (*d).sig = ptr::null_mut();
 
         if !(*srcctx).rsa.is_null() && RSA_up_ref((*srcctx).rsa) == 0 {
-            rsa_freectx(dstctx.cast());
             return ptr::null_mut();
         }
-        (*dstctx).rsa = (*srcctx).rsa;
+        (*d).rsa = (*srcctx).rsa;
 
         if !(*srcctx).md.is_null() && EVP_MD_up_ref((*srcctx).md) == 0 {
-            rsa_freectx(dstctx.cast());
             return ptr::null_mut();
         }
-        (*dstctx).md = (*srcctx).md;
+        (*d).md = (*srcctx).md;
 
         if !(*srcctx).mgf1_md.is_null() && EVP_MD_up_ref((*srcctx).mgf1_md) == 0 {
-            rsa_freectx(dstctx.cast());
             return ptr::null_mut();
         }
-        (*dstctx).mgf1_md = (*srcctx).mgf1_md;
+        (*d).mgf1_md = (*srcctx).mgf1_md;
 
         if !(*srcctx).mdctx.is_null() {
-            (*dstctx).mdctx = EVP_MD_CTX_new();
-            if (*dstctx).mdctx.is_null()
-                || EVP_MD_CTX_copy_ex((*dstctx).mdctx, (*srcctx).mdctx) == 0
-            {
-                rsa_freectx(dstctx.cast());
+            (*d).mdctx = EVP_MD_CTX_new();
+            if (*d).mdctx.is_null() || EVP_MD_CTX_copy_ex((*d).mdctx, (*srcctx).mdctx) == 0 {
                 return ptr::null_mut();
             }
         }
 
         if !(*srcctx).propq.is_null() {
-            (*dstctx).propq = CRYPTO_strdup((*srcctx).propq, FILE, 1396);
-            if (*dstctx).propq.is_null() {
-                rsa_freectx(dstctx.cast());
+            (*d).propq = CRYPTO_strdup((*srcctx).propq, FILE, 1396);
+            if (*d).propq.is_null() {
                 return ptr::null_mut();
             }
         }
 
         if !(*srcctx).sig.is_null() {
-            (*dstctx).sig =
+            (*d).sig =
                 CRYPTO_memdup((*srcctx).sig.cast(), (*srcctx).siglen, FILE, 1402).cast::<u8>();
-            if (*dstctx).sig.is_null() {
-                rsa_freectx(dstctx.cast());
+            if (*d).sig.is_null() {
                 return ptr::null_mut();
             }
         }
 
-        dstctx.cast()
+        dstctx.into_raw().cast()
     }
 }
 
