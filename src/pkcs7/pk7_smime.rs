@@ -21,7 +21,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
 
 use crate::asn1::asn_mime::SMIME_crlf_copy;
@@ -115,6 +115,52 @@ const PKCS7_NO_DUAL_CONTENT: c_int = 0x10000;
 const PKCS7_OP_SET_DETACHED_SIGNATURE: c_int = 1;
 /// `PKCS7_OP_GET_DETACHED_SIGNATURE` — `pkcs7.h.in:184`.
 const PKCS7_OP_GET_DETACHED_SIGNATURE: c_int = 2;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
+/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new` allocates it
+/// and `Drop` is its single release. A NULL pointer is a valid, empty buffer whose release is the
+/// authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
 
 extern "C" {
     /// `int SMIME_text(BIO *in, BIO *out)` — `crypto/asn1/asn_mime.c`, 12.9's.
@@ -632,9 +678,10 @@ pub unsafe extern "C" fn PKCS7_verify(
         unsafe { bio_set_mem_eof_return(tmpout, 0) };
     }
 
-    // SAFETY: no preconditions.
-    let buf = CRYPTO_malloc(BUFFERSIZE as usize, FILE.as_ptr(), 320).cast::<c_char>();
-    if buf.is_null() {
+    // The copy buffer is this frame's scratch, allocated through the crate's allocator seam at
+    // `BUFFERSIZE` and owned by `buf`: every exit below releases it on drop.
+    // SAFETY: `BUFFERSIZE > 0`.
+    let Some(buf) = OwnedBuf::new(BUFFERSIZE as usize, FILE.as_ptr(), 320) else {
         // SAFETY: owned here.
         unsafe {
             if text {
@@ -646,16 +693,16 @@ pub unsafe extern "C" fn PKCS7_verify(
             OPENSSL_sk_free(signers);
         }
         return 0;
-    }
+    };
     loop {
-        // SAFETY: `p7bio`/`buf` are live.
-        let i = unsafe { BIO_read(p7bio, buf.cast(), BUFFERSIZE) };
+        // SAFETY: `p7bio` is live; `buf` is `BUFFERSIZE` writable bytes.
+        let i = unsafe { BIO_read(p7bio, buf.as_ptr().cast(), BUFFERSIZE) };
         if i <= 0 {
             break;
         }
         if !tmpout.is_null() {
-            // SAFETY: `tmpout`/`buf` are live.
-            unsafe { BIO_write(tmpout, buf.cast(), i) };
+            // SAFETY: `tmpout` is live; `buf` is `i` readable bytes.
+            unsafe { BIO_write(tmpout, buf.as_ptr().cast(), i) };
         }
     }
 
@@ -666,7 +713,6 @@ pub unsafe extern "C" fn PKCS7_verify(
             unsafe {
                 raise_site(&err_sites::PKCS7_SMIME_332);
                 BIO_free(tmpout);
-                CRYPTO_free(buf.cast(), FILE.as_ptr(), 355);
                 BIO_free_all(p7bio);
                 X509_STORE_CTX_free(cert_ctx);
                 OPENSSL_sk_free(untrusted);
@@ -694,7 +740,6 @@ pub unsafe extern "C" fn PKCS7_verify(
                     if text {
                         BIO_free(tmpout);
                     }
-                    CRYPTO_free(buf.cast(), FILE.as_ptr(), 355);
                     BIO_free_all(p7bio);
                     X509_STORE_CTX_free(cert_ctx);
                     OPENSSL_sk_free(untrusted);
@@ -712,7 +757,6 @@ pub unsafe extern "C" fn PKCS7_verify(
         if text {
             BIO_free(tmpout);
         }
-        CRYPTO_free(buf.cast(), FILE.as_ptr(), 355);
         X509_STORE_CTX_free(cert_ctx);
     }
     // SAFETY: unwind the BIO chain back to the caller's `indata`.
@@ -958,17 +1002,18 @@ pub unsafe extern "C" fn PKCS7_decrypt(
         unsafe { BIO_free_all(bread) };
         return ret;
     }
-    // SAFETY: no preconditions.
-    let buf = CRYPTO_malloc(BUFFERSIZE as usize, FILE.as_ptr(), 525).cast::<c_char>();
-    if buf.is_null() {
+    // The copy buffer is this frame's scratch, allocated through the crate's allocator seam at
+    // `BUFFERSIZE` and owned by `buf`: every exit below releases it on drop.
+    // SAFETY: `BUFFERSIZE > 0`.
+    let Some(buf) = OwnedBuf::new(BUFFERSIZE as usize, FILE.as_ptr(), 525) else {
         // SAFETY: `tmpmem` is live and owned here.
         unsafe { BIO_free_all(tmpmem) };
         return 0;
-    }
+    };
     let mut ret = 0;
     loop {
-        // SAFETY: `tmpmem`/`buf` are live.
-        let i = unsafe { BIO_read(tmpmem, buf.cast(), BUFFERSIZE) };
+        // SAFETY: `tmpmem` is live; `buf` is `BUFFERSIZE` writable bytes.
+        let i = unsafe { BIO_read(tmpmem, buf.as_ptr().cast(), BUFFERSIZE) };
         if i <= 0 {
             ret = 1;
             // SAFETY: `tmpmem` is live.
@@ -980,15 +1025,12 @@ pub unsafe extern "C" fn PKCS7_decrypt(
             }
             break;
         }
-        // SAFETY: `data`/`buf` are live.
-        if unsafe { BIO_write(data, buf.cast(), i) } != i {
+        // SAFETY: `data` is live; `buf` is `i` readable bytes.
+        if unsafe { BIO_write(data, buf.as_ptr().cast(), i) } != i {
             break;
         }
     }
-    // SAFETY: `buf`/`tmpmem` are owned here.
-    unsafe {
-        CRYPTO_free(buf.cast(), FILE.as_ptr(), 543);
-        BIO_free_all(tmpmem);
-    }
+    // SAFETY: `tmpmem` is owned here; `buf` releases its own block on drop.
+    unsafe { BIO_free_all(tmpmem) };
     ret
 }
