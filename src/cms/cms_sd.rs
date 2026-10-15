@@ -110,6 +110,103 @@ const SN_SHA1: &core::ffi::CStr = c"SHA1";
 /// `X509_ADD_FLAG_DEFAULT` — `include/openssl/x509.h:996`.
 const X509_ADD_FLAG_DEFAULT: c_int = 0;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
+/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_cleansed`
+/// allocate it, `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that
+/// takes it over (`ASN1_STRING_set0`). [`Self::adopt`] takes in a block the crate allocated inside
+/// a helper (`ASN1_item_i2d`, `i2d_X509_ALGORS`) so the failure paths that follow release what they
+/// built. A NULL pointer is a valid, empty buffer whose release is the authority's own no-op
+/// `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+/// How the authority releases a scratch buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`pp`, `sig`, `abuf`, `smder`).
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `OPENSSL_clear_free(ptr, num)`, which zeroes `num` bytes first.
+    Cleansed { num: usize },
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// `CRYPTO_malloc(len, file, line)` for a block whose release is the cleansing
+    /// `OPENSSL_clear_free(ptr, len)`, or `None` when the allocator answers NULL.
+    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Cleansed { num: len },
+        })
+    }
+
+    /// Adopt a plain block this crate allocated inside a helper, for release by `Drop` at the
+    /// authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
+    /// is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf {
+            ptr,
+            release: BufRelease::Plain { file, line },
+        }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Cleansed { num } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `OPENSSL_clear_free` zeroes then releases it and accepts NULL.
+                unsafe { super::cms_asn1::OPENSSL_clear_free(self.ptr, num) };
+            }
+        }
+    }
+}
+
 // The ESS surface `cms_sd.c` reaches for `CMS_CADES`. It is Phase 12.7's (`crypto/ess/`), landed
 // by that subphase; the shell scaffolds the exports, so this unit declares them exactly as the
 // authority's prototypes spell them and the `CMS_CADES` arm is the only caller.
@@ -549,29 +646,25 @@ unsafe fn ossl_cms_add1_signing_cert(si: *mut CmsSignerInfo, sc: *const c_void) 
     if len <= 0 {
         return 0;
     }
+    // The DER scratch is this frame's block, allocated through the crate's allocator seam; its
+    // release is the authority's plain `CRYPTO_free`, run by `Drop`.
     // SAFETY: `len > 0`.
-    let pp = CRYPTO_malloc(len as usize, c"cms_sd.c".as_ptr(), 302).cast::<c_uchar>();
-    if pp.is_null() {
+    let Some(pp) = OwnedBuf::new(len as usize, c"cms_sd.c".as_ptr(), 302) else {
         return 0;
-    }
-    let mut p = pp;
+    };
+    let mut p = pp.as_ptr();
     // SAFETY: `sc` is live; `p` is writable for `len`.
     unsafe { i2d_ESS_SIGNING_CERT(sc, &mut p) };
     // SAFETY: the allocator answers a fresh string.
     let seq = ASN1_STRING_new();
     if seq.is_null()
         // SAFETY: `seq` is live; `pp`/`len` describe the content.
-        || unsafe { ASN1_STRING_set(seq, pp.cast(), len) } == 0
+        || unsafe { ASN1_STRING_set(seq, pp.as_ptr().cast(), len) } == 0
     {
-        // SAFETY: each is NULL or owned.
-        unsafe {
-            ASN1_STRING_free(seq);
-            CRYPTO_free(pp.cast(), c"cms_sd.c".as_ptr(), 309);
-        }
+        // SAFETY: `seq` is NULL or owned here; `pp` releases its own block on drop.
+        unsafe { ASN1_STRING_free(seq) };
         return 0;
     }
-    // SAFETY: `pp` is owned here.
-    unsafe { CRYPTO_free(pp.cast(), c"cms_sd.c".as_ptr(), 312) };
     // SAFETY: `si`/`seq` are live.
     let ret = unsafe {
         CMS_signed_add1_attr_by_NID(
@@ -598,29 +691,25 @@ unsafe fn ossl_cms_add1_signing_cert_v2(si: *mut CmsSignerInfo, sc: *const c_voi
     if len <= 0 {
         return 0;
     }
+    // The DER scratch is this frame's block, allocated through the crate's allocator seam; its
+    // release is the authority's plain `CRYPTO_free`, run by `Drop`.
     // SAFETY: `len > 0`.
-    let pp = CRYPTO_malloc(len as usize, c"cms_sd.c".as_ptr(), 327).cast::<c_uchar>();
-    if pp.is_null() {
+    let Some(pp) = OwnedBuf::new(len as usize, c"cms_sd.c".as_ptr(), 327) else {
         return 0;
-    }
-    let mut p = pp;
+    };
+    let mut p = pp.as_ptr();
     // SAFETY: `sc` is live; `p` is writable for `len`.
     unsafe { i2d_ESS_SIGNING_CERT_V2(sc, &mut p) };
     // SAFETY: the allocator answers a fresh string.
     let seq = ASN1_STRING_new();
     if seq.is_null()
         // SAFETY: `seq` is live; `pp`/`len` describe the content.
-        || unsafe { ASN1_STRING_set(seq, pp.cast(), len) } == 0
+        || unsafe { ASN1_STRING_set(seq, pp.as_ptr().cast(), len) } == 0
     {
-        // SAFETY: each is NULL or owned.
-        unsafe {
-            ASN1_STRING_free(seq);
-            CRYPTO_free(pp.cast(), c"cms_sd.c".as_ptr(), 334);
-        }
+        // SAFETY: `seq` is NULL or owned here; `pp` releases its own block on drop.
+        unsafe { ASN1_STRING_free(seq) };
         return 0;
     }
-    // SAFETY: `pp` is owned here.
-    unsafe { CRYPTO_free(pp.cast(), c"cms_sd.c".as_ptr(), 337) };
     // SAFETY: `si`/`seq` are live.
     let ret = unsafe {
         CMS_signed_add1_attr_by_NID(
@@ -1354,20 +1443,19 @@ unsafe fn cms_SignerInfo_content_sign(
             if siglen == 0 {
                 break 'body;
             }
-            let sig = CRYPTO_malloc(siglen, c"cms_sd.c".as_ptr(), 796).cast::<c_uchar>();
-            if sig.is_null() {
+            // The signature scratch is this frame's block, allocated through the crate's allocator
+            // seam; its release is the authority's plain `CRYPTO_free`, run by `Drop`.
+            let Some(sig) = OwnedBuf::new(siglen, c"cms_sd.c".as_ptr(), 796) else {
                 break 'body;
-            }
+            };
             // SAFETY: `pctx`/`sig`/`md` are live.
-            if unsafe { EVP_PKEY_sign(pctx, sig, &mut siglen, md, mdlen as usize) } <= 0 {
-                // SAFETY: `sig` is owned here.
-                unsafe { CRYPTO_free(sig.cast(), c"cms_sd.c".as_ptr(), 799) };
+            if unsafe { EVP_PKEY_sign(pctx, sig.as_ptr(), &mut siglen, md, mdlen as usize) } <= 0 {
                 break 'body;
             }
             // SAFETY: `si` is live.
             let _ = ctx;
-            // SAFETY: `si`/`sig` are live.
-            unsafe { ASN1_STRING_set0((*si).signature, sig.cast(), siglen as c_int) };
+            // SAFETY: `si` is live; ownership of the block transfers to the `ASN1_STRING`.
+            unsafe { ASN1_STRING_set0((*si).signature, sig.into_raw().cast(), siglen as c_int) };
         } else {
             let mut siglen: c_uint;
             if !md.is_null() {
@@ -1386,15 +1474,16 @@ unsafe fn cms_SignerInfo_content_sign(
             if siglen == 0 {
                 break 'body;
             }
-            let sig = CRYPTO_malloc(siglen as usize, c"cms_sd.c".as_ptr(), 812).cast::<c_uchar>();
-            if sig.is_null() {
+            // The signature scratch is this frame's block, allocated through the crate's allocator
+            // seam; its release is the authority's plain `CRYPTO_free`, run by `Drop`.
+            let Some(sig) = OwnedBuf::new(siglen as usize, c"cms_sd.c".as_ptr(), 812) else {
                 break 'body;
-            }
+            };
             // SAFETY: `mctx`/`sig`/`si` are live.
             if unsafe {
                 EVP_SignFinal_ex(
                     mctx,
-                    sig,
+                    sig.as_ptr(),
                     &mut siglen,
                     (*si).pkey,
                     ossl_cms_ctx_get0_libctx(ctx),
@@ -1410,12 +1499,10 @@ unsafe fn cms_SignerInfo_content_sign(
                         crate::runtime::err::err_reasons::CMS_R_SIGNFINAL_ERROR,
                     )
                 };
-                // SAFETY: `sig` is owned here.
-                unsafe { CRYPTO_free(sig.cast(), c"cms_sd.c".as_ptr(), 818) };
                 break 'body;
             }
-            // SAFETY: `si` is live.
-            unsafe { ASN1_STRING_set0((*si).signature, sig.cast(), siglen as c_int) };
+            // SAFETY: `si` is live; ownership of the block transfers to the `ASN1_STRING`.
+            unsafe { ASN1_STRING_set0((*si).signature, sig.into_raw().cast(), siglen as c_int) };
         }
         r = 1;
     }
@@ -1464,7 +1551,6 @@ pub(crate) unsafe extern "C" fn CMS_SignerInfo_sign(si: *mut CmsSignerInfo) -> c
     // SAFETY: `si` is live.
     let mctx = unsafe { (*si).mctx.cast::<EvpMdCtx>() };
     let mut pctx: *mut EvpPkeyCtx = ptr::null_mut();
-    let mut abuf: *mut c_uchar = ptr::null_mut();
     // SAFETY: `si` is live.
     let ctx = unsafe { (*si).cms_ctx };
     let mut md_name_buf = [0 as c_char; OSSL_MAX_NAME_SIZE];
@@ -1551,49 +1637,58 @@ pub(crate) unsafe extern "C" fn CMS_SignerInfo_sign(si: *mut CmsSignerInfo) -> c
         return 1;
     }
     // SAFETY: `si` is live.
+    let mut abuf_raw: *mut c_uchar = ptr::null_mut();
+    // SAFETY: `si` is live; `abuf_raw` is this frame's slot.
     let alen = unsafe {
         ASN1_item_i2d(
             (*si).signed_attrs.cast(),
-            &mut abuf,
+            &mut abuf_raw,
             cms_attributes_sign_it(),
         )
     };
+    // The attributes encoding is the helper's own `CRYPTO_malloc` block; it is adopted so the
+    // failure paths below release what it built at the authority's own site.
+    // SAFETY: `abuf_raw` is NULL or a live block the helper allocated and no one else owns.
+    let mut abuf = unsafe { OwnedBuf::adopt(abuf_raw, c"cms_sd.c".as_ptr(), 920) };
     let mut siglen: usize = 0;
     'body: {
-        if alen < 0 || abuf.is_null() {
+        if alen < 0 || abuf.as_ptr().is_null() {
             break 'body;
         }
         // SAFETY: `mctx`/`abuf` are live.
-        if unsafe { EVP_DigestSignUpdate(mctx, abuf.cast(), alen as usize) } <= 0 {
+        if unsafe { EVP_DigestSignUpdate(mctx, abuf.as_ptr().cast(), alen as usize) } <= 0 {
             break 'body;
         }
         // SAFETY: `mctx` is live.
         if unsafe { EVP_DigestSignFinal(mctx, ptr::null_mut(), &mut siglen) } <= 0 {
             break 'body;
         }
-        // SAFETY: `abuf` is owned here.
-        unsafe { CRYPTO_free(abuf.cast(), c"cms_sd.c".as_ptr(), 906) };
-        abuf = CRYPTO_malloc(siglen, c"cms_sd.c".as_ptr(), 907).cast::<c_uchar>();
-        if abuf.is_null() {
+        // The signature buffer is this frame's block, allocated through the crate's allocator seam;
+        // its release is the authority's plain `CRYPTO_free`, run by `Drop`.
+        let Some(sig) = OwnedBuf::new(siglen, c"cms_sd.c".as_ptr(), 907) else {
             // SAFETY: `mctx` is live.
             unsafe { EVP_MD_CTX_reset(mctx) };
             return 0;
-        }
+        };
+        // The attributes encoding was only the probe's scratch; it releases at the authority's own
+        // site now, and `sig` takes its place.
+        drop(abuf);
+        abuf = sig;
         // SAFETY: `mctx`/`abuf` are live.
-        if unsafe { EVP_DigestSignFinal(mctx, abuf, &mut siglen) } <= 0 {
+        if unsafe { EVP_DigestSignFinal(mctx, abuf.as_ptr(), &mut siglen) } <= 0 {
             break 'body;
         }
         // SAFETY: `mctx` is live.
         unsafe { EVP_MD_CTX_reset(mctx) };
-        // SAFETY: `si` is live.
-        unsafe { ASN1_STRING_set0((*si).signature, abuf.cast(), siglen as c_int) };
+        // SAFETY: `si` is live; ownership of the block transfers to the `ASN1_STRING`.
+        unsafe { ASN1_STRING_set0((*si).signature, abuf.into_raw().cast(), siglen as c_int) };
         return 1;
     }
-    // SAFETY: `abuf` is NULL or owned.
-    unsafe {
-        CRYPTO_free(abuf.cast(), c"cms_sd.c".as_ptr(), 920);
-        EVP_MD_CTX_reset(mctx);
-    }
+    // `abuf` still holds its block only when it was not moved into the `ASN1_STRING`; its release
+    // is the authority's plain `CRYPTO_free`, run by `Drop`.
+    drop(abuf);
+    // SAFETY: `mctx` is live.
+    unsafe { EVP_MD_CTX_reset(mctx) };
     0
 }
 
@@ -1605,7 +1700,6 @@ pub(crate) unsafe extern "C" fn CMS_SignerInfo_sign(si: *mut CmsSignerInfo) -> c
 pub(crate) unsafe extern "C" fn CMS_SignerInfo_verify(si: *mut CmsSignerInfo) -> c_int {
     // SAFETY: `si` is live.
     let mut mctx: *mut EvpMdCtx = ptr::null_mut();
-    let mut abuf: *mut c_uchar = ptr::null_mut();
     let mut r = -1;
     // SAFETY: `si` is live.
     let ctx = unsafe { (*si).cms_ctx };
@@ -1740,21 +1834,26 @@ pub(crate) unsafe extern "C" fn CMS_SignerInfo_verify(si: *mut CmsSignerInfo) ->
             break 'body;
         }
         // SAFETY: `si` is live.
+        let mut abuf_raw: *mut c_uchar = ptr::null_mut();
+        // SAFETY: `si` is live; `abuf_raw` is this frame's slot.
         let alen = unsafe {
             ASN1_item_i2d(
                 (*si).signed_attrs.cast(),
-                &mut abuf,
+                &mut abuf_raw,
                 cms_attributes_verify_it(),
             )
         };
-        if abuf.is_null() || alen < 0 {
+        // The attributes encoding is the helper's own `CRYPTO_malloc` block; it is adopted so the
+        // failure paths below release what it built at the authority's own site.
+        // SAFETY: `abuf_raw` is NULL or a live block the helper allocated and no one else owns.
+        let abuf = unsafe { OwnedBuf::adopt(abuf_raw, c"cms_sd.c".as_ptr(), 996) };
+        if abuf.as_ptr().is_null() || alen < 0 {
             break 'body;
         }
         // SAFETY: `mctx`/`abuf` are live.
-        r = unsafe { EVP_DigestVerifyUpdate(mctx, abuf.cast(), alen as usize) };
-        // SAFETY: `abuf` is owned here.
-        unsafe { CRYPTO_free(abuf.cast(), c"cms_sd.c".as_ptr(), 996) };
-        abuf = ptr::null_mut();
+        r = unsafe { EVP_DigestVerifyUpdate(mctx, abuf.as_ptr().cast(), alen as usize) };
+        // The encoding releases its own block at the authority's own site now.
+        drop(abuf);
         if r <= 0 {
             r = -1;
             break 'body;
@@ -2066,24 +2165,28 @@ pub(crate) unsafe extern "C" fn CMS_add_smimecap(
     algs: *mut OpenSslStack,
 ) -> c_int {
     // SAFETY: `algs` is NULL or live.
-    let mut smder: *mut c_uchar = ptr::null_mut();
+    let mut smder_raw: *mut c_uchar = ptr::null_mut();
     // SAFETY: the caller's contract.
-    let smderlen = unsafe { crate::asn1::x_algor::i2d_X509_ALGORS(algs, &mut smder) };
+    let smderlen = unsafe { crate::asn1::x_algor::i2d_X509_ALGORS(algs, &mut smder_raw) };
     if smderlen <= 0 {
         return 0;
     }
+    // The encoded algorithms are the helper's own `CRYPTO_malloc` block; it is adopted so the
+    // release below runs at the authority's own site.
+    // SAFETY: `smder_raw` is NULL or a live block the helper allocated and no one else owns.
+    let smder = unsafe { OwnedBuf::adopt(smder_raw, c"cms_sd.c".as_ptr(), 1172) };
     // SAFETY: `si`/`smder` are live.
     let r = unsafe {
         CMS_signed_add1_attr_by_NID(
             si,
             NID_SMIMECapabilities,
             V_ASN1_SEQUENCE,
-            smder.cast(),
+            smder.as_ptr().cast(),
             smderlen,
         )
     };
-    // SAFETY: `smder` is owned here.
-    unsafe { CRYPTO_free(smder.cast(), c"cms_sd.c".as_ptr(), 1172) };
+    // `smder` releases its own block at the authority's own site on drop.
+    drop(smder);
     r
 }
 
