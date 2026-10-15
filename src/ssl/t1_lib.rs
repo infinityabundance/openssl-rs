@@ -47,7 +47,7 @@
 
 #![allow(non_upper_case_globals)] // the constants are the authority's own C macro spellings
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free};
@@ -87,6 +87,70 @@ const TLSEXT_max_fragment_length_UNSPECIFIED: u8 = 255;
 /// `IS_MAX_FRAGMENT_LENGTH_EXT_VALID(value)` — `ssl_local.h:293-294`.
 fn is_max_fragment_length_ext_valid(value: u8) -> bool {
     (TLSEXT_max_fragment_length_512..=TLSEXT_max_fragment_length_4096).contains(&value)
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
+/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new` allocates it,
+/// `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that takes it over
+/// (the `SSL_get1_builtin_sigalgs` return, or the `*grpext` slot). [`Self::adopt`] takes in a block
+/// this crate allocated so the replacement releases what it replaces. A NULL pointer is a valid,
+/// empty buffer whose release is the authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// Adopt a plain block this crate allocated, for release by `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
+    /// is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, file, line }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
 }
 
 /// `SIGALG_LOOKUP` — `ssl_local.h:1186-1212`, reduced to the three fields `SSL_get1_builtin_sigalgs`
@@ -540,20 +604,18 @@ pub unsafe extern "C" fn SSL_get1_builtin_sigalgs(libctx: *mut c_void) -> *mut c
     unsafe { EVP_PKEY_free(tmpkey) };
 
     // `OPENSSL_malloc`-equivalent: a `CRYPTO_malloc` block the caller frees with `OPENSSL_free`,
-    // exactly as the authority's `OPENSSL_malloc`/`OPENSSL_realloc` buffer is.
+    // exactly as the authority's `OPENSSL_malloc`/`OPENSSL_realloc` buffer is. `OwnedBuf::new`
+    // allocates it at the authority's own size/file/line, and `into_raw` hands it to the caller.
     let bytes = out.as_bytes();
-    // `CRYPTO_malloc` answers NULL on failure, which is checked; `FILE` is a static NUL-terminated
-    // string. It is a safe entry point in this crate.
-    let ret = CRYPTO_malloc(bytes.len() + 1, FILE, 2298).cast::<u8>();
-    if ret.is_null() {
+    let Some(ret) = OwnedBuf::new(bytes.len() + 1, FILE, 2298) else {
         return ptr::null_mut();
-    }
+    };
     // SAFETY: `ret` is a fresh block of at least `bytes.len() + 1` bytes.
     unsafe {
-        ptr::copy_nonoverlapping(bytes.as_ptr(), ret, bytes.len());
-        *ret.add(bytes.len()) = 0;
+        ptr::copy_nonoverlapping(bytes.as_ptr(), ret.as_ptr().cast::<u8>(), bytes.len());
+        *ret.as_ptr().cast::<u8>().add(bytes.len()) = 0;
     }
-    ret.cast()
+    ret.into_raw().cast()
 }
 
 // -------------------------------------------------------------------------------------------
@@ -780,19 +842,18 @@ pub(crate) unsafe fn tls1_set_groups(
         }
         list[i] = id;
     }
-    // SAFETY: `grpext`/`grpextlen` are writable per the contract.
-    let mem = CRYPTO_malloc(ngroups * core::mem::size_of::<u16>(), FILE, 0);
-    if mem.is_null() {
+    let Some(mem) = OwnedBuf::new(ngroups * core::mem::size_of::<u16>(), FILE, 0) else {
         return 0;
-    }
+    };
     for (i, g) in list[..ngroups].iter().enumerate() {
         // SAFETY: `mem` is a fresh `ngroups`-element allocation.
-        unsafe { *mem.cast::<u16>().add(i) = *g };
+        unsafe { *mem.as_ptr().cast::<u16>().add(i) = *g };
     }
-    // SAFETY: the writable pointers belong to a live context.
+    // SAFETY: `grpext`/`grpextlen` are writable per the contract, and the previous `*grpext` is a
+    // plain block this crate allocated that no one else owns.
     unsafe {
-        CRYPTO_free((*grpext).cast(), FILE, 0);
-        *grpext = mem.cast();
+        drop(OwnedBuf::adopt((*grpext).cast(), FILE, 0));
+        *grpext = mem.into_raw().cast();
         *grpextlen = ngroups;
     }
     1
