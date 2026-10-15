@@ -264,6 +264,20 @@ impl OwnedTree {
         self.ptr.as_ptr()
     }
 
+    /// The header as a shared borrow — `self.ptr` is this owner's live, uniquely-owned block.
+    fn header(&self) -> &X509PolicyTree {
+        // SAFETY: `self.ptr` is the live, uniquely-owned header `new` allocated (or `from_raw`
+        // reclaimed), and the borrow does not outlive the owner.
+        unsafe { &*self.ptr.as_ptr() }
+    }
+
+    /// The header as a mutable borrow — `self.ptr` is this owner's live, uniquely-owned block.
+    fn header_mut(&mut self) -> &mut X509PolicyTree {
+        // SAFETY: `self.ptr` is the live, uniquely-owned header `new` allocated (or `from_raw`
+        // reclaimed), and `&mut self` rules out any other borrow for its use.
+        unsafe { &mut *self.ptr.as_ptr() }
+    }
+
     /// Give up ownership of the header to the C caller's `*ptree`.
     fn into_raw(self) -> *mut X509PolicyTree {
         let p = self.ptr.as_ptr();
@@ -292,8 +306,18 @@ impl Drop for OwnedTree {
         // member is NULL or owned here, and each release below is the one the authority performs.
         unsafe {
             let tree = self.ptr.as_ptr();
-            OPENSSL_sk_free((*tree).auth_policies);
-            OPENSSL_sk_pop_free((*tree).user_policies, Some(exnode_free_void));
+            // The header is read through the owner's own borrow, not a raw dereference.
+            let (auth_policies, user_policies, extra_data, levels) = {
+                let header = self.header();
+                (
+                    header.auth_policies,
+                    header.user_policies,
+                    header.extra_data,
+                    header.levels,
+                )
+            };
+            OPENSSL_sk_free(auth_policies);
+            OPENSSL_sk_pop_free(user_policies, Some(exnode_free_void));
 
             // The level array as a checked slice: every level is reached by iterating it, not by
             // stepping a raw level pointer.
@@ -303,9 +327,9 @@ impl Drop for OwnedTree {
                 ossl_policy_node_free(level.anyPolicy);
             }
 
-            OPENSSL_sk_pop_free((*tree).extra_data, Some(policy_data_free_void));
+            OPENSSL_sk_pop_free(extra_data, Some(policy_data_free_void));
             // The level array is this tree's own block; `OwnedLevels`'s `Drop` releases it.
-            drop(OwnedLevels::from_raw((*tree).levels));
+            drop(OwnedLevels::from_raw(levels));
             CRYPTO_free(tree.cast(), FILE.as_ptr(), 0);
         }
     }
@@ -406,22 +430,22 @@ unsafe fn tree_init(
     // If we get this far, initialize the tree. The header and the level array are owned handles
     // until the tree is published; every error path below drops the tree, whose `Drop` releases
     // whatever was linked.
-    let Some(tree) = OwnedTree::new() else {
+    let Some(mut tree) = OwnedTree::new() else {
         return X509_PCY_TREE_INTERNAL;
     };
-    // Limit the growth of the tree to mitigate CVE-2023-0464.
-    // SAFETY: `tree` is live and writable.
-    unsafe { (*tree.as_ptr()).node_maximum = OPENSSL_POLICY_TREE_NODES_MAX };
+    // Limit the growth of the tree to mitigate CVE-2023-0464. The header is written through the
+    // owner's own borrow, not a raw dereference.
+    tree.header_mut().node_maximum = OPENSSL_POLICY_TREE_NODES_MAX;
 
     // A fresh, zeroed array of `n + 1` levels, owned until the tree links it.
     let Some(levels_owner) = OwnedLevels::new((n + 1) as usize) else {
         // `tree` drops here, releasing the header.
         return X509_PCY_TREE_INTERNAL;
     };
-    // SAFETY: `tree` is live and writable.
-    unsafe {
-        (*tree.as_ptr()).levels = levels_owner.as_ptr();
-        (*tree.as_ptr()).nlevel = n + 1;
+    {
+        let header = tree.header_mut();
+        header.levels = levels_owner.as_ptr();
+        header.nlevel = n + 1;
     }
     // The tree now owns the level array; its own `Drop` reclaims it.
     levels_owner.into_raw();

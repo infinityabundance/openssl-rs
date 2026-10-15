@@ -41,6 +41,7 @@ use core::ffi::{c_int, c_long, c_uint};
 
 use crate::runtime::obj::Asn1Object;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
+use crate::x509::pcy_node::Node;
 use crate::x509::x_x509::X509;
 
 /// `#define POLICY_FLAG_ANY_POLICY 0x2` — `pcy_local.h`.
@@ -191,12 +192,14 @@ const _: () = {
 /// `tree` is a live policy tree, and no other borrow of its level array is live for the returned
 /// slice's use.
 pub(crate) unsafe fn tree_levels<'a>(tree: *const X509PolicyTree) -> &'a mut [X509PolicyLevel] {
-    if tree.is_null() {
+    // SAFETY: `tree` is NULL or live per the contract; the borrow reads only the header's plain
+    // `levels`/`nlevel` members.
+    let Some(tree) = (unsafe { tree.as_ref() }) else {
         return &mut [];
-    }
-    // SAFETY: `tree` is live per the contract; `levels`/`nlevel` describe the block `OwnedLevels`
-    // allocated and `tree_init` linked — `nlevel` contiguous `X509PolicyLevel`s.
-    let (base, nlevel) = unsafe { ((*tree).levels, (*tree).nlevel) };
+    };
+    // `levels`/`nlevel` describe the block `OwnedLevels` allocated and `tree_init` linked —
+    // `nlevel` contiguous `X509PolicyLevel`s.
+    let (base, nlevel) = (tree.levels, tree.nlevel);
     if base.is_null() || nlevel <= 0 {
         return &mut [];
     }
@@ -215,11 +218,15 @@ pub(crate) unsafe fn tree_levels<'a>(tree: *const X509PolicyTree) -> &'a mut [X5
 ///
 /// `tree` is NULL or a live policy tree.
 pub(crate) unsafe fn level_ptr(tree: *const X509PolicyTree, i: c_int) -> *mut X509PolicyLevel {
-    if tree.is_null() || i < 0 {
+    if i < 0 {
         return core::ptr::null_mut();
     }
-    // SAFETY: `tree` is live per the contract.
-    let (base, nlevel) = unsafe { ((*tree).levels, (*tree).nlevel) };
+    // SAFETY: `tree` is NULL or live per the contract; the borrow reads only the header's plain
+    // `levels`/`nlevel` members.
+    let Some(tree) = (unsafe { tree.as_ref() }) else {
+        return core::ptr::null_mut();
+    };
+    let (base, nlevel) = (tree.levels, tree.nlevel);
     if base.is_null() || i >= nlevel {
         return core::ptr::null_mut();
     }
@@ -240,11 +247,12 @@ pub(crate) unsafe fn level_ptr(tree: *const X509PolicyTree, i: c_int) -> *mut X5
 /// `tree` is NULL or a live tree.
 #[no_mangle]
 pub unsafe extern "C" fn X509_policy_tree_level_count(tree: *const X509PolicyTree) -> c_int {
-    if tree.is_null() {
-        return 0;
+    // SAFETY: `tree` is NULL or a live tree per the contract; the borrow reads the header's plain
+    // `nlevel` member, and a NULL tree answers the authority's 0.
+    match unsafe { tree.as_ref() } {
+        Some(tree) => tree.nlevel,
+        None => 0,
     }
-    // SAFETY: `tree` is live per the contract.
-    unsafe { (*tree).nlevel }
 }
 
 /// `X509_POLICY_LEVEL *X509_policy_tree_get0_level(const X509_POLICY_TREE *tree, int i)` —
@@ -272,11 +280,12 @@ pub unsafe extern "C" fn X509_policy_tree_get0_level(
 pub unsafe extern "C" fn X509_policy_tree_get0_policies(
     tree: *const X509PolicyTree,
 ) -> *mut OpenSslStack {
-    if tree.is_null() {
-        return core::ptr::null_mut();
+    // SAFETY: `tree` is NULL or a live tree per the contract; the borrow reads the header's plain
+    // `auth_policies` member — the borrowed set the accessor returns.
+    match unsafe { tree.as_ref() } {
+        Some(tree) => tree.auth_policies,
+        None => core::ptr::null_mut(),
     }
-    // SAFETY: `tree` is live per the contract.
-    unsafe { (*tree).auth_policies }
 }
 
 /// `STACK_OF(X509_POLICY_NODE) *X509_policy_tree_get0_user_policies(const X509_POLICY_TREE *tree)`
@@ -289,16 +298,14 @@ pub unsafe extern "C" fn X509_policy_tree_get0_policies(
 pub unsafe extern "C" fn X509_policy_tree_get0_user_policies(
     tree: *const X509PolicyTree,
 ) -> *mut OpenSslStack {
-    // SAFETY: `tree` is NULL or live per the contract.
-    unsafe {
-        if tree.is_null() {
-            return core::ptr::null_mut();
-        }
-        if (*tree).flags & POLICY_FLAG_ANY_POLICY != 0 {
-            (*tree).auth_policies
-        } else {
-            (*tree).user_policies
-        }
+    // SAFETY: `tree` is NULL or a live tree per the contract.
+    let Some(tree) = (unsafe { tree.as_ref() }) else {
+        return core::ptr::null_mut();
+    };
+    if tree.flags & POLICY_FLAG_ANY_POLICY != 0 {
+        tree.auth_policies
+    } else {
+        tree.user_policies
     }
 }
 
@@ -372,11 +379,13 @@ pub unsafe extern "C" fn X509_policy_level_get0_node(
 pub unsafe extern "C" fn X509_policy_node_get0_policy(
     node: *const X509PolicyNode,
 ) -> *const Asn1Object {
-    if node.is_null() {
+    // SAFETY: `node` is NULL or live per the contract; [`Node::of`] is this module's recorded raw
+    // boundary — the one place the node pointer becomes a borrow — and the borrow does not outlive
+    // the call. A NULL node answers the authority's NULL.
+    let Some(node) = (unsafe { Node::of(node.cast_mut()) }) else {
         return core::ptr::null();
-    }
-    // SAFETY: `node` is live per the contract.
-    unsafe { (*(*node).data).valid_policy }
+    };
+    node.data.valid_policy
 }
 
 /// `STACK_OF(POLICYQUALINFO) *X509_policy_node_get0_qualifiers(const X509_POLICY_NODE *node)` —
@@ -389,11 +398,12 @@ pub unsafe extern "C" fn X509_policy_node_get0_policy(
 pub unsafe extern "C" fn X509_policy_node_get0_qualifiers(
     node: *const X509PolicyNode,
 ) -> *mut OpenSslStack {
-    if node.is_null() {
+    // SAFETY: `node` is NULL or live per the contract; [`Node::of`] borrows the node and its datum
+    // once, and the borrow does not outlive the call.
+    let Some(node) = (unsafe { Node::of(node.cast_mut()) }) else {
         return core::ptr::null_mut();
-    }
-    // SAFETY: `node` is live per the contract.
-    unsafe { (*(*node).data).qualifier_set }
+    };
+    node.data.qualifier_set
 }
 
 /// `const X509_POLICY_NODE *X509_policy_node_get0_parent(const X509_POLICY_NODE *node)` —
@@ -406,9 +416,10 @@ pub unsafe extern "C" fn X509_policy_node_get0_qualifiers(
 pub unsafe extern "C" fn X509_policy_node_get0_parent(
     node: *const X509PolicyNode,
 ) -> *const X509PolicyNode {
-    if node.is_null() {
+    // SAFETY: `node` is NULL or live per the contract; the borrow reads the node's plain `parent`
+    // member (it needs no datum), so a NULL node answers the authority's NULL.
+    let Some(node) = (unsafe { node.as_ref() }) else {
         return core::ptr::null();
-    }
-    // SAFETY: `node` is live per the contract.
-    unsafe { (*node).parent }
+    };
+    node.parent
 }
