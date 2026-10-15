@@ -44,6 +44,24 @@
 //! * **`SSL_CTX_sess_set_new_cb`'s callback is stored and invoked** by `ssl_update_cache` once a
 //!   handshake completes (Phase 17).
 //!
+//! ## Ownership: the session block is an [`OwnedCtx`] whose `Drop` is `SSL_SESSION_free`'s body
+//!
+//! The `SSL_SESSION` blocks this unit allocates ([`SSL_SESSION_new`] and `ssl_session_dup_intern`)
+//! are owned here: each stays a `CRYPTO_zalloc` at `size_of::<SslSession>()` on the crate's
+//! allocator seam and its release stays a `CRYPTO_free` at the authority's own line, so a
+//! caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly
+//! as it observes the authority's; only the *ownership* is the handle. `Drop` runs the authority's
+//! own `SSL_SESSION_free` body ([`CtxDestroy::destroy_body`]) followed by the block release, so the
+//! constructor, the duplicate's `goto err` ladder and [`SSL_SESSION_free`] no longer walk a release
+//! by hand. The block itself is the session's stable address, handed out and taken back by the
+//! exported ABI.
+//!
+//! **The session's `#[repr(C)]` member buffers stay raw and are the documented boundary.**
+//! `ext_hostname`/`ext_tick`/`psk_identity_hint`/`psk_identity`/`srp_username`/`ext_alpn_selected`/
+//! `ticket_appdata` and the variable-sized `session_ticket` block are fields of `SSL_SESSION` /
+//! `SSL` (defined in `ssl_lib.rs`), so their setter frees and the `SSL_SESSION_free` body's frees
+//! remain the object's own releases, as in the authority.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void};
@@ -145,6 +163,79 @@ unsafe fn session_new_ex_data(ss: *mut SslSession) -> c_int {
     unsafe { CRYPTO_new_ex_data(CRYPTO_EX_INDEX_SSL_SESSION, ss.cast(), &mut (*ss).ex_data) }
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the session block, reclaimed from `SSL_SESSION_free`'s own body
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `SSL_SESSION_free` body for the session object, without the block's own release,
+/// which [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live object this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned `SSL_SESSION` block.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
+/// hands it out and takes it back), but its *ownership* is this type: [`Self::new`] allocates it
+/// through the crate's allocator seam at the authority's own `(file, alloc_line)` and `Drop`
+/// releases it at the authority's own `(file, line)`. It stays a `CRYPTO_zalloc` at
+/// `size_of::<SslSession>()` rather than a Rust `Box`, so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
+/// the authority's.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
+    /// it answers NULL. `alloc_line` is the authority's allocation site and `line` its release site.
+    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` answers NULL or a fresh, zeroed, writable block of `size_of::<T>()`
+        // bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// The stable address the exported ABI hands out and takes back.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's out-pointer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The object destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`]) followed
+    /// by the block release, through the same allocator seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
+        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
 /// `void ssl_session_calculate_timeout(SSL_SESSION *ss)` — `ssl/ssl_sess.c:48-51`.
 ///
 /// # Safety
@@ -194,11 +285,13 @@ pub unsafe extern "C" fn SSL_SESSION_new() -> *mut SslSession {
         if unsafe { OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, ptr::null()) } == 0 {
             return ptr::null_mut();
         }
-        // SAFETY: `CRYPTO_zalloc` is this crate's own allocator and returns a zeroed block or NULL.
-        let ss = CRYPTO_zalloc(core::mem::size_of::<SslSession>(), FILE, 109).cast::<SslSession>();
-        if ss.is_null() {
+        // The session block, allocated through the crate's allocator seam; `Drop` is its single
+        // release on the refusal below and `into_raw` hands it out on success. `ss` is the block's
+        // stable address.
+        let Some(ss_owner) = OwnedCtx::<SslSession>::new(FILE, 109, 930) else {
             return ptr::null_mut();
-        }
+        };
+        let ss = ss_owner.as_ptr();
         // SAFETY: `ss` is a fresh zeroed allocation.
         unsafe {
             (*ss).max_fragment_len_mode = TLSEXT_MAX_FRAGMENT_LENGTH_UNSPECIFIED;
@@ -210,11 +303,12 @@ pub unsafe extern "C" fn SSL_SESSION_new() -> *mut SslSession {
         }
         // SAFETY: `ss` is live and its `ex_data` is zeroed.
         if unsafe { session_new_ex_data(ss) } == 0 {
-            // SAFETY: `ss` is live and owned here.
-            unsafe { CRYPTO_free(ss.cast(), FILE, 121) };
+            // The refusal releases the block it built: returning drops `ss_owner`. (`CRYPTO_new_ex_data`
+            // answers 1 for this valid class, so the authority's bare block release at
+            // `ssl_sess.c:121`, which is not the destructor, is unreachable here.)
             return ptr::null_mut();
         }
-        ss
+        ss_owner.into_raw()
     })
 }
 
@@ -234,11 +328,14 @@ pub(crate) fn time_now_secs() -> u64 {
 unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut SslSession {
     // SAFETY: `src` is live per the contract.
     let s = unsafe { &*src };
-    // SAFETY: `CRYPTO_zalloc` is this crate's own allocator and returns a zeroed block or NULL.
-    let dest = CRYPTO_zalloc(core::mem::size_of::<SslSession>(), FILE, 140).cast::<SslSession>();
-    if dest.is_null() {
+    // The session block, allocated through the crate's allocator seam; `Drop` is its single release
+    // on every refusal below and `into_raw` hands it out on success. `dest` is the block's stable
+    // address, and the authority's `goto err` ladder reaches its destructor (`SSL_SESSION_free`),
+    // which is `OwnedCtx`'s `Drop`.
+    let Some(dest_owner) = OwnedCtx::<SslSession>::new(FILE, 140, 930) else {
         return ptr::null_mut();
-    }
+    };
+    let dest = dest_owner.as_ptr();
     // SAFETY: `dest` is a fresh zeroed allocation; copy the value fields, leave every pointer NULL
     // until it is successfully re-created below (the authority's `memcpy` up to `prev`).
     unsafe {
@@ -268,16 +365,18 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
     }
     // SAFETY: `dest` is live with a zeroed `ex_data`.
     if unsafe { session_new_ex_data(dest) } == 0 {
-        // SAFETY: `dest` is owned here.
-        unsafe { CRYPTO_free(dest.cast(), FILE, 181) };
+        // The refusal releases the block it built: returning drops `dest_owner`. (`CRYPTO_new_ex_data`
+        // answers 1 for this valid class, so the authority's bare block release at `ssl_sess.c:181`
+        // is unreachable here.)
         return ptr::null_mut();
     }
 
-    // SAFETY: every step mirrors the authority's `goto err` ladder.
+    // SAFETY: every step mirrors the authority's `goto err` ladder. Each refusal returns and lets
+    // `dest_owner`'s `Drop` run the authority's own `SSL_SESSION_free` body, release what the
+    // ladder built, and release the block -- exactly the `err:` the authority's ladder reaches.
     unsafe {
         if !s.peer.is_null() {
             if X509_up_ref(s.peer) == 0 {
-                SSL_SESSION_free(dest);
                 return ptr::null_mut();
             }
             (*dest).peer = s.peer;
@@ -285,13 +384,11 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
         if !s.peer_chain.is_null() {
             (*dest).peer_chain = crate::x509::x509_cmp::X509_chain_up_ref(s.peer_chain);
             if (*dest).peer_chain.is_null() {
-                SSL_SESSION_free(dest);
                 return ptr::null_mut();
             }
         }
         if !s.peer_rpk.is_null() {
             if EVP_PKEY_up_ref(s.peer_rpk.cast::<crate::evp::pkey::EvpPkey>()) == 0 {
-                SSL_SESSION_free(dest);
                 return ptr::null_mut();
             }
             (*dest).peer_rpk = s.peer_rpk;
@@ -299,14 +396,12 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
         if !s.psk_identity_hint.is_null() {
             (*dest).psk_identity_hint = CRYPTO_strdup(s.psk_identity_hint, FILE, 210);
             if (*dest).psk_identity_hint.is_null() {
-                SSL_SESSION_free(dest);
                 return ptr::null_mut();
             }
         }
         if !s.psk_identity.is_null() {
             (*dest).psk_identity = CRYPTO_strdup(s.psk_identity, FILE, 215);
             if (*dest).psk_identity.is_null() {
-                SSL_SESSION_free(dest);
                 return ptr::null_mut();
             }
         }
@@ -316,20 +411,17 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
             &s.ex_data as *const _ as *mut _,
         ) == 0
         {
-            SSL_SESSION_free(dest);
             return ptr::null_mut();
         }
         if !s.ext_hostname.is_null() {
             (*dest).ext_hostname = CRYPTO_strdup(s.ext_hostname, FILE, 227);
             if (*dest).ext_hostname.is_null() {
-                SSL_SESSION_free(dest);
                 return ptr::null_mut();
             }
         }
         if ticket != 0 && !s.ext_tick.is_null() {
             (*dest).ext_tick = CRYPTO_memdup(s.ext_tick.cast(), s.ext_ticklen, FILE, 233).cast();
             if (*dest).ext_tick.is_null() {
-                SSL_SESSION_free(dest);
                 return ptr::null_mut();
             }
             (*dest).ext_ticklen = s.ext_ticklen;
@@ -346,7 +438,6 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
             )
             .cast();
             if (*dest).ext_alpn_selected.is_null() {
-                SSL_SESSION_free(dest);
                 return ptr::null_mut();
             }
             (*dest).ext_alpn_selected_len = s.ext_alpn_selected_len;
@@ -354,7 +445,6 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
         if !s.srp_username.is_null() {
             (*dest).srp_username = CRYPTO_strdup(s.srp_username, FILE, 250);
             if (*dest).srp_username.is_null() {
-                SSL_SESSION_free(dest);
                 return ptr::null_mut();
             }
         }
@@ -362,13 +452,13 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
             (*dest).ticket_appdata =
                 CRYPTO_memdup(s.ticket_appdata.cast(), s.ticket_appdata_len, FILE, 257).cast();
             if (*dest).ticket_appdata.is_null() {
-                SSL_SESSION_free(dest);
                 return ptr::null_mut();
             }
             (*dest).ticket_appdata_len = s.ticket_appdata_len;
         }
     }
-    dest
+    // The block and the fields it holds are the caller's now.
+    dest_owner.into_raw()
 }
 
 /// `SSL_SESSION *SSL_SESSION_dup(const SSL_SESSION *src)` — `ssl/ssl_sess.c:268-271`.
@@ -416,33 +506,48 @@ pub unsafe extern "C" fn SSL_SESSION_free(ss: *mut SslSession) {
         if i > 0 {
             return;
         }
-        // SAFETY: the count reached zero, so `ss` is owned here.
+        // SAFETY: the count reached zero, so `ss` is owned here; `from_raw` reclaims it (NULL is a
+        // no-op) and `Drop` runs the authority's own `SSL_SESSION_free` body followed by the block
+        // release, so the body below no longer walks a release by hand.
+        unsafe { drop(OwnedCtx::<SslSession>::from_raw(ss, FILE, 930)) };
+    })
+}
+
+/// The authority's `SSL_SESSION_free` body, without the block release [`OwnedCtx`]'s `Drop`
+/// performs.
+impl CtxDestroy for SslSession {
+    /// # Safety
+    /// `ptr` is a live session whose reference count has reached zero and which this file owns.
+    unsafe fn destroy_body(ptr: *mut SslSession) {
+        // SAFETY: `ptr` is live per the contract; each field is NULL or owned, exactly as the
+        // authority's `SSL_SESSION_free` walks it.
         unsafe {
-            CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL_SESSION, ss.cast(), &mut (*ss).ex_data);
+            CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL_SESSION, ptr.cast(), &mut (*ptr).ex_data);
             // `OPENSSL_cleanse` of the master key and session id.
             ptr::write_bytes(
-                (*ss).master_key.as_mut_ptr(),
+                (*ptr).master_key.as_mut_ptr(),
                 0,
                 TLS13_MAX_RESUMPTION_PSK_LENGTH,
             );
             ptr::write_bytes(
-                (*ss).session_id.as_mut_ptr(),
+                (*ptr).session_id.as_mut_ptr(),
                 0,
                 SSL_MAX_SSL_SESSION_ID_LENGTH,
             );
-            X509_free((*ss).peer);
-            crate::evp::pkey::EVP_PKEY_free((*ss).peer_rpk.cast());
-            OSSL_STACK_OF_X509_free((*ss).peer_chain);
-            CRYPTO_free((*ss).ext_hostname.cast(), FILE, 918);
-            CRYPTO_free((*ss).ext_tick.cast(), FILE, 919);
-            CRYPTO_free((*ss).psk_identity_hint.cast(), FILE, 921);
-            CRYPTO_free((*ss).psk_identity.cast(), FILE, 922);
-            CRYPTO_free((*ss).srp_username.cast(), FILE, 925);
-            CRYPTO_free((*ss).ext_alpn_selected.cast(), FILE, 927);
-            CRYPTO_free((*ss).ticket_appdata.cast(), FILE, 928);
-            CRYPTO_free(ss.cast(), FILE, 930);
+            X509_free((*ptr).peer);
+            crate::evp::pkey::EVP_PKEY_free((*ptr).peer_rpk.cast());
+            OSSL_STACK_OF_X509_free((*ptr).peer_chain);
+            // The session's `#[repr(C)]` member buffers: these stay the object's own releases, as
+            // in the authority, not owned handles.
+            CRYPTO_free((*ptr).ext_hostname.cast(), FILE, 918);
+            CRYPTO_free((*ptr).ext_tick.cast(), FILE, 919);
+            CRYPTO_free((*ptr).psk_identity_hint.cast(), FILE, 921);
+            CRYPTO_free((*ptr).psk_identity.cast(), FILE, 922);
+            CRYPTO_free((*ptr).srp_username.cast(), FILE, 925);
+            CRYPTO_free((*ptr).ext_alpn_selected.cast(), FILE, 927);
+            CRYPTO_free((*ptr).ticket_appdata.cast(), FILE, 928);
         }
-    })
+    }
 }
 
 /// `int SSL_SESSION_up_ref(SSL_SESSION *ss)` — `ssl/ssl_sess.c:933-943`.
