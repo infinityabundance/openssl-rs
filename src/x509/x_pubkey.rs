@@ -190,6 +190,51 @@ const LINE_FREE_TMPBUF: c_int = 237;
 /// `X509_PUBKEY_set`'s `OPENSSL_free(der)` (`:363`).
 const LINE_FREE_DER: c_int = 363;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_memdup` (or a helper's own `CRYPTO_malloc`) at the authority's exact
+/// size/`file`/`line` -- a Rust `Box`/`Vec` would hide both the allocation and its release from a
+/// caller-installed `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type:
+/// [`Self::adopt`] takes in a block the crate allocated inside a helper (`CRYPTO_memdup`, or
+/// `OSSL_ENCODER_to_data`), and `Drop` is its single release at the authority's own `file`/`line`.
+/// A NULL pointer is a valid, empty buffer whose release is the authority's own no-op
+/// `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// Adopt a block this crate allocated inside a helper, for release by `Drop` at the
+    /// authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
+    /// or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, file, line }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// `struct X509_pubkey_st` — `X509_PUBKEY`, from `crypto/x509/x_pubkey.c:31-43`.
 ///
 /// The file's own definition, not a header's, so its fields are crate-private. The `ASN1_ITEM`
@@ -508,7 +553,7 @@ unsafe extern "C" fn x509_pubkey_ex_d2i_ex(
     let in_saved = unsafe { *in_ };
     let mut ret: c_int;
     let mut dctx: *mut OsslDecoderCtx = ptr::null_mut();
-    let mut tmpbuf: *mut c_uchar = ptr::null_mut();
+    let mut tmpbuf: Option<OwnedBuf> = None;
 
     // SAFETY: `pval` is a live slot per the contract.
     if unsafe { *pval }.is_null()
@@ -581,7 +626,7 @@ unsafe extern "C" fn x509_pubkey_ex_d2i_ex(
             if aclass != V_ASN1_UNIVERSAL {
                 // SAFETY: `in_saved` is readable for `publen` bytes; the allocator takes the
                 // file/line for its mdbg record only.
-                tmpbuf = unsafe {
+                let raw = unsafe {
                     CRYPTO_memdup(
                         in_saved.cast::<c_void>(),
                         publen,
@@ -590,12 +635,16 @@ unsafe extern "C" fn x509_pubkey_ex_d2i_ex(
                     )
                 }
                 .cast::<c_uchar>();
-                if tmpbuf.is_null() {
+                if raw.is_null() {
                     return 0;
                 }
-                in_data = tmpbuf;
-                // SAFETY: `tmpbuf` owns `publen` bytes, so the first is writable.
-                unsafe { *tmpbuf = (V_ASN1_CONSTRUCTED | V_ASN1_SEQUENCE) as u8 };
+                // The block is `CRYPTO_memdup`'s own; the handle is its single release.
+                // SAFETY: `raw` is a live block the crate allocated and no one else owns.
+                let buf = unsafe { OwnedBuf::adopt(raw, FILE.as_ptr(), LINE_FREE_TMPBUF) };
+                // SAFETY: `buf` owns `publen` bytes, so the first is writable.
+                unsafe { *buf.as_ptr() = (V_ASN1_CONSTRUCTED | V_ASN1_SEQUENCE) as u8 };
+                in_data = buf.as_ptr();
+                tmpbuf = Some(buf);
             }
 
             let mut txtoidname = [0 as c_char; OSSL_MAX_NAME_SIZE];
@@ -646,11 +695,11 @@ unsafe extern "C" fn x509_pubkey_ex_d2i_ex(
         ret = 1;
     }
 
-    // SAFETY: `dctx` is NULL or a live context; `tmpbuf` is NULL or this call's own buffer.
-    unsafe {
-        OSSL_DECODER_CTX_free(dctx);
-        CRYPTO_free(tmpbuf.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_TMPBUF);
-    }
+    // SAFETY: `dctx` is NULL or a live context.
+    unsafe { OSSL_DECODER_CTX_free(dctx) };
+    // `tmpbuf`'s handle, if any, releases the `CRYPTO_memdup` block here; the authority frees the
+    // decoder context first, then the scratch buffer.
+    drop(tmpbuf);
     ret
 }
 
@@ -977,18 +1026,21 @@ pub unsafe extern "C" fn X509_PUBKEY_set(x: *mut *mut X509Pubkey, pkey: *mut Evp
         };
 
         // SAFETY: `ectx` is NULL or live; the two locals are writable.
-        if unsafe { OSSL_ENCODER_to_data(ectx, &raw mut der, &raw mut derlen) } != 0 {
+        let encoded = unsafe { OSSL_ENCODER_to_data(ectx, &raw mut der, &raw mut derlen) } != 0;
+        // The block is the encoder's own; the handle is its single release at the authority's
+        // line, when this arm returns.
+        // SAFETY: `der` is NULL or the block `OSSL_ENCODER_to_data` allocated and no one else
+        // owns.
+        let der = unsafe { OwnedBuf::adopt(der.cast::<c_uchar>(), FILE.as_ptr(), LINE_FREE_DER) };
+        if encoded {
             // SAFETY: `der` owns `derlen` bytes.
-            let mut pder: *const c_uchar = der;
+            let mut pder: *const c_uchar = der.as_ptr();
             // SAFETY: `pder` is a readable cursor for `derlen` bytes.
             pk = unsafe { d2i_X509_PUBKEY(ptr::null_mut(), &raw mut pder, derlen as c_long) };
         }
 
-        // SAFETY: `ectx` is NULL or live; `der` is NULL or this call's own.
-        unsafe {
-            OSSL_ENCODER_CTX_free(ectx);
-            CRYPTO_free(der.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_DER);
-        }
+        // SAFETY: `ectx` is NULL or live.
+        unsafe { OSSL_ENCODER_CTX_free(ectx) };
     }
 
     if pk.is_null() {
