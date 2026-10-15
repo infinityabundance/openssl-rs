@@ -36,6 +36,18 @@
 //! observed contract is the authority's behaviour; the asymmetry with `b2i_RSA_PVK_bio_ex` (which
 //! forwards them) is a property of the pinned source.
 //!
+//! ## Ownership: the frame byte buffers are owned Rust, the cursor out-parameters are the ABI
+//!
+//! Every raw `CRYPTO_malloc` byte buffer this unit allocates for itself -- the blob body, the
+//! decrypted PVK body, the unencrypted PVK body and the encoded-key buffers -- is an owned
+//! [`OwnedBuf`]: it stays a `CRYPTO_malloc` at the authority's own size on the crate's allocator
+//! seam (`__FILE__`/`__LINE__` NULL/0, as the authority writes them), a caller-installed
+//! `CRYPTO_set_mem_functions` hook observes the allocation and its release, and `Drop` is the only
+//! release, so the error paths that used to free what they built now just return. `do_i2b`'s and
+//! `i2b_PVK`'s `out` cursors are the different case and stay raw: the block they may allocate is
+//! handed to the caller through the cursor and is the caller's to release, which is why the two
+//! `*_bio` wrappers adopt the block their helper filled.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 #![allow(clippy::too_many_arguments)] // every signature mirrors the authority's
@@ -110,6 +122,71 @@ const OSSL_KDF_PARAM_DIGEST: *const c_char = c"digest".as_ptr();
 const OSSL_KDF_PARAM_PROPERTIES: *const c_char = c"properties".as_ptr();
 /// `SN_sha1` — `obj_mac.h`, the short name the PVKKDF is asked to use.
 const SN_SHA1: *const c_char = c"SHA1".as_ptr();
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a frame's byte buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned seam byte buffer: the authority's `CRYPTO_malloc` block whose *ownership* is this
+/// type, so its single release is `Drop` and no call site writes a `CRYPTO_free` by hand.
+///
+/// [`Self::take`] adopts a block the frame allocated through the crate's allocator seam at the
+/// authority's size, so a caller-installed `CRYPTO_set_mem_functions` hook observes the allocation
+/// and its release exactly as it observes the authority's, which a Rust `Vec`/`Box` would hide.
+/// `clear` selects the authority's cleansing release (`CRYPTO_clear_free` over `len` bytes, for the
+/// PVK body / PVK header buffers) versus the plain `CRYPTO_free` (for the blob and encoded-key
+/// buffers). The `__FILE__`/`__LINE__` the whole unit records is the authority's own (NULL, 0), so
+/// neither is carried in the handle.
+///
+/// The PVK frame's **exported** out-parameters (`do_i2b`'s and `i2b_PVK`'s `out` cursor) are a
+/// different case and stay raw: the block is handed to the caller through the cursor, whose release
+/// is the caller's, so it is not this frame's to own. Where such a cursor is filled with a fresh
+/// block and then immediately released (`do_i2b_bio`, `i2b_PVK_bio_ex`) the *call site* adopts it
+/// here, and the allocation inside the cursor filler is left as that documented boundary.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    len: usize,
+    clear: bool,
+}
+
+impl OwnedBuf {
+    /// Adopt a block the frame's seam answered, or `None` for NULL. `len` is the length a clearing
+    /// release needs; it is ignored by the plain form.
+    fn take(ptr: *mut c_uchar, len: usize, clear: bool) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBuf { ptr, len, clear })
+        }
+    }
+
+    /// The buffer's address, for the raw codec calls the frame makes over it.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the C caller's cursor.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
+        // released before; `self.len` is its allocation length and `clear` selects the authority's
+        // cleanse-then-free. Both accept NULL.
+        unsafe {
+            if self.clear {
+                CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, ptr::null(), 0);
+            } else {
+                CRYPTO_free(self.ptr.cast::<c_void>(), ptr::null(), 0);
+            }
+        }
+    }
+}
 
 /// `BN_num_bytes(a)` — `include/openssl/bn.h`, `(BN_num_bits(a)+7)/8`.
 ///
@@ -489,18 +566,19 @@ pub(crate) unsafe fn ossl_b2i_bio(in_: *mut Bio, ispub: *mut c_int) -> *mut EvpP
         unsafe { raise_site(&err_sites::PVKFMT_344) };
         return ptr::null_mut();
     }
-    // SAFETY: `length` bytes as a raw allocation.
-    let buf = CRYPTO_malloc(length as usize, ptr::null(), 0).cast::<c_uchar>();
-    if buf.is_null() {
+    // SAFETY: `length` bytes as a raw allocation; owned by `buf` until this frame returns.
+    let Some(buf) = OwnedBuf::take(
+        CRYPTO_malloc(length as usize, ptr::null(), 0).cast::<c_uchar>(),
+        length as usize,
+        false,
+    ) else {
         return ptr::null_mut();
-    }
-    p = buf;
+    };
+    p = buf.as_ptr();
     // SAFETY: `buf` holds `length` bytes and `in` is live.
-    if unsafe { BIO_read(in_, buf.cast::<c_void>(), length as c_int) } != length as c_int {
+    if unsafe { BIO_read(in_, buf.as_ptr().cast::<c_void>(), length as c_int) } != length as c_int {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PVKFMT_352) };
-        // SAFETY: `buf` is this frame's allocation.
-        unsafe { CRYPTO_free(buf.cast::<c_void>(), ptr::null(), 0) };
         return ptr::null_mut();
     }
 
@@ -522,8 +600,7 @@ pub(crate) unsafe fn ossl_b2i_bio(in_: *mut Bio, ispub: *mut c_int) -> *mut EvpP
         // SAFETY: `key` is the low-level key just decoded.
         unsafe { evp_pkey_new0_key(key, isdss_to_evp_type(isdss)) }
     };
-    // SAFETY: `buf` is this frame's allocation.
-    unsafe { CRYPTO_free(buf.cast::<c_void>(), ptr::null(), 0) };
+    // `buf` is released by its `Drop` as this frame returns.
     pkey
 }
 
@@ -937,7 +1014,9 @@ unsafe fn do_i2b(out: *mut *mut c_uchar, pk: *const EvpPkey, ispub: c_int) -> c_
         // SAFETY: `*out` is the caller's buffer.
         p = unsafe { *out };
     } else {
-        // SAFETY: `outlen` bytes as a raw allocation.
+        // SAFETY: `outlen` bytes as a raw allocation. This block is handed out through the
+        // caller's `out` cursor, so its release is the caller's, not this frame's: it stays a raw
+        // allocation on the seam (a documented boundary, like `i2b_PVK`'s `start`).
         p = CRYPTO_malloc(outlen as usize, ptr::null(), 0).cast::<c_uchar>();
         if p.is_null() {
             return -1;
@@ -996,10 +1075,13 @@ unsafe fn do_i2b_bio(out: *mut Bio, pk: *const EvpPkey, ispub: c_int) -> c_int {
     if outlen < 0 {
         return -1;
     }
+    // `do_i2b` filled the cursor with either the caller's buffer or, on the NULL cursor this call
+    // passes, a fresh block; this frame adopts it (or NULL) so `Drop` is its release.
+    let Some(tmp) = OwnedBuf::take(tmp, outlen as usize, false) else {
+        return -1;
+    };
     // SAFETY: `out` is live and `tmp` holds `outlen` bytes.
-    let wrlen = unsafe { BIO_write(out, tmp.cast::<c_void>(), outlen) };
-    // SAFETY: `tmp` is this frame's allocation.
-    unsafe { CRYPTO_free(tmp.cast::<c_void>(), ptr::null(), 0) };
+    let wrlen = unsafe { BIO_write(out, tmp.as_ptr().cast::<c_void>(), outlen) };
     if wrlen == outlen {
         return outlen;
     }
@@ -1389,7 +1471,8 @@ unsafe fn do_PVK_body_key(
 ) -> *mut c_void {
     // SAFETY: `in` is the caller's readable cursor.
     let mut p = unsafe { *in_ };
-    let mut enctmp: *mut c_uchar = ptr::null_mut();
+    // The decrypted blob buffer, owned until this frame returns; `Drop` is its only release.
+    let mut enctmp: Option<OwnedBuf> = None;
     let mut keybuf = [0 as c_uchar; 20];
 
     // SAFETY: no preconditions.
@@ -1417,13 +1500,19 @@ unsafe fn do_PVK_body_key(
             unsafe { EVP_CIPHER_CTX_free(cctx) };
             return ptr::null_mut();
         }
-        // SAFETY: `keylen + 8` bytes as a raw allocation.
-        enctmp = CRYPTO_malloc(keylen as usize + 8, ptr::null(), 0).cast::<c_uchar>();
-        if enctmp.is_null() {
+        // SAFETY: `keylen + 8` bytes as a raw allocation; adopted by `enctmp`.
+        let Some(buf) = OwnedBuf::take(
+            CRYPTO_malloc(keylen as usize + 8, ptr::null(), 0).cast::<c_uchar>(),
+            keylen as usize + 8,
+            false,
+        ) else {
             // SAFETY: `cctx` is this frame's own.
             unsafe { EVP_CIPHER_CTX_free(cctx) };
             return ptr::null_mut();
-        }
+        };
+        enctmp = Some(buf);
+        // The readable/writable start of the decrypted buffer; `enctmp` keeps its ownership.
+        let enc = enctmp.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
         // SAFETY: every argument is this frame's.
         if unsafe {
             derive_pvk_key(
@@ -1438,10 +1527,9 @@ unsafe fn do_PVK_body_key(
             )
         } == 0
         {
-            // SAFETY: the two allocations and the context are this frame's own.
+            // SAFETY: the context is this frame's own; `enctmp` is released by its `Drop`.
             unsafe {
                 OPENSSL_cleanse(keybuf.as_mut_ptr().cast::<c_void>(), keybuf.len());
-                CRYPTO_free(enctmp.cast::<c_void>(), ptr::null(), 0);
                 EVP_CIPHER_CTX_free(cctx);
             }
             return ptr::null_mut();
@@ -1451,29 +1539,27 @@ unsafe fn do_PVK_body_key(
         if keylen < 8 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::PVKFMT_897) };
-            // SAFETY: the two allocations and the context are this frame's own.
+            // SAFETY: the context is this frame's own; `enctmp` is released by its `Drop`.
             unsafe {
                 OPENSSL_cleanse(keybuf.as_mut_ptr().cast::<c_void>(), keybuf.len());
-                CRYPTO_free(enctmp.cast::<c_void>(), ptr::null(), 0);
                 EVP_CIPHER_CTX_free(cctx);
             }
             return ptr::null_mut();
         }
         /* Copy BLOBHEADER across, decrypt rest */
-        // SAFETY: `p` has 8 readable bytes and `enctmp` has 8 writable.
-        unsafe { ptr::copy_nonoverlapping(p, enctmp, 8) };
+        // SAFETY: `p` has 8 readable bytes and `enc` has 8 writable.
+        unsafe { ptr::copy_nonoverlapping(p, enc, 8) };
         // SAFETY: the cursor advances past the copied header.
         unsafe { p = p.add(8) };
         let inlen2 = keylen as c_int - 8;
-        // SAFETY: `enctmp` has `keylen+8` bytes; `q` starts after the header.
-        let mut q = unsafe { enctmp.add(8) };
+        // SAFETY: `enc` has `keylen+8` bytes; `q` starts after the header.
+        let mut q = unsafe { enc.add(8) };
         // SAFETY: the two strings are the caller's.
         rc4 = unsafe { EVP_CIPHER_fetch(libctx, c"RC4".as_ptr(), propq) };
         if rc4.is_null() {
-            // SAFETY: the two allocations and the context are this frame's own.
+            // SAFETY: the context is this frame's own; `enctmp` is released by its `Drop`.
             unsafe {
                 OPENSSL_cleanse(keybuf.as_mut_ptr().cast::<c_void>(), keybuf.len());
-                CRYPTO_free(enctmp.cast::<c_void>(), ptr::null(), 0);
                 EVP_CIPHER_CTX_free(cctx);
             }
             return ptr::null_mut();
@@ -1488,10 +1574,9 @@ unsafe fn do_PVK_body_key(
             || unsafe { EVP_DecryptFinal_ex(cctx, q.add(enctmplen as usize), &raw mut enctmplen) }
                 == 0
         {
-            // SAFETY: the two allocations and the context are this frame's own.
+            // SAFETY: the context is this frame's own; `enctmp` is released by its `Drop`.
             unsafe {
                 OPENSSL_cleanse(keybuf.as_mut_ptr().cast::<c_void>(), keybuf.len());
-                CRYPTO_free(enctmp.cast::<c_void>(), ptr::null(), 0);
                 EVP_CIPHER_CTX_free(cctx);
                 crate::evp::cipher::EVP_CIPHER_free(rc4);
             }
@@ -1502,8 +1587,8 @@ unsafe fn do_PVK_body_key(
         // SAFETY: `cursor` is a readable cursor for four bytes.
         let mut magic = unsafe { read_ledword(&raw mut cursor) };
         if magic != MS_RSA2MAGIC && magic != MS_DSS2MAGIC {
-            // SAFETY: `enctmp` has `keylen+8` bytes; the retry restarts at the header.
-            q = unsafe { enctmp.add(8) };
+            // SAFETY: `enc` has `keylen+8` bytes; the retry restarts at the header.
+            q = unsafe { enc.add(8) };
             // SAFETY: `keybuf` has 20 bytes and the authority clears the 11 after the 5th.
             unsafe { ptr::write_bytes(keybuf.as_mut_ptr().add(5), 0, 11) };
             // SAFETY: every argument is live and this frame's.
@@ -1517,10 +1602,9 @@ unsafe fn do_PVK_body_key(
                     EVP_DecryptFinal_ex(cctx, q.add(enctmplen as usize), &raw mut enctmplen)
                 } == 0
             {
-                // SAFETY: the two allocations and the context are this frame's own.
+                // SAFETY: the context is this frame's own; `enctmp` is released by its `Drop`.
                 unsafe {
                     OPENSSL_cleanse(keybuf.as_mut_ptr().cast::<c_void>(), keybuf.len());
-                    CRYPTO_free(enctmp.cast::<c_void>(), ptr::null(), 0);
                     EVP_CIPHER_CTX_free(cctx);
                     crate::evp::cipher::EVP_CIPHER_free(rc4);
                 }
@@ -1533,17 +1617,16 @@ unsafe fn do_PVK_body_key(
             if magic != MS_RSA2MAGIC && magic != MS_DSS2MAGIC {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::PVKFMT_925) };
-                // SAFETY: the two allocations and the context are this frame's own.
+                // SAFETY: the context is this frame's own; `enctmp` is released by its `Drop`.
                 unsafe {
                     OPENSSL_cleanse(keybuf.as_mut_ptr().cast::<c_void>(), keybuf.len());
-                    CRYPTO_free(enctmp.cast::<c_void>(), ptr::null(), 0);
                     EVP_CIPHER_CTX_free(cctx);
                     crate::evp::cipher::EVP_CIPHER_free(rc4);
                 }
                 return ptr::null_mut();
             }
         }
-        p = enctmp;
+        p = enc;
     }
 
     // SAFETY: `p` is the blob body cursor and `keylen` its length.
@@ -1552,12 +1635,9 @@ unsafe fn do_PVK_body_key(
     unsafe { EVP_CIPHER_CTX_free(cctx) };
     // SAFETY: `rc4` is NULL or this frame's own.
     unsafe { crate::evp::cipher::EVP_CIPHER_free(rc4) };
-    if !enctmp.is_null() {
-        // SAFETY: the key buffer and the allocation are this frame's own.
-        unsafe {
-            OPENSSL_cleanse(keybuf.as_mut_ptr().cast::<c_void>(), keybuf.len());
-            CRYPTO_free(enctmp.cast::<c_void>(), ptr::null(), 0);
-        }
+    if enctmp.is_some() {
+        // SAFETY: the key buffer is this frame's own; `enctmp` is released by its `Drop`.
+        unsafe { OPENSSL_cleanse(keybuf.as_mut_ptr().cast::<c_void>(), keybuf.len()) };
     }
     key
 }
@@ -1596,18 +1676,19 @@ unsafe fn do_PVK_key_bio(
         return ptr::null_mut();
     }
     let buflen = keylen + saltlen;
-    // SAFETY: `buflen` bytes as a raw allocation.
-    let buf = CRYPTO_malloc(buflen as usize, ptr::null(), 0).cast::<c_uchar>();
-    if buf.is_null() {
+    // SAFETY: `buflen` bytes as a raw allocation; owned by `buf` until this frame returns.
+    let Some(buf) = OwnedBuf::take(
+        CRYPTO_malloc(buflen as usize, ptr::null(), 0).cast::<c_uchar>(),
+        buflen as usize,
+        true,
+    ) else {
         return ptr::null_mut();
-    }
-    p = buf;
+    };
+    p = buf.as_ptr();
     // SAFETY: `buf` holds `buflen` bytes and `in` is live.
-    if unsafe { BIO_read(in_, buf.cast::<c_void>(), buflen as c_int) } != buflen as c_int {
+    if unsafe { BIO_read(in_, buf.as_ptr().cast::<c_void>(), buflen as c_int) } != buflen as c_int {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PVKFMT_973) };
-        // SAFETY: `buf` is this frame's allocation.
-        unsafe { CRYPTO_clear_free(buf.cast::<c_void>(), buflen as usize, ptr::null(), 0) };
         return ptr::null_mut();
     }
     // SAFETY: every pointer is this frame's.
@@ -1616,8 +1697,7 @@ unsafe fn do_PVK_key_bio(
             &raw mut p, saltlen, keylen, cb, u, isdss, ispub, libctx, propq,
         )
     };
-    // SAFETY: `buf` is this frame's allocation.
-    unsafe { CRYPTO_clear_free(buf.cast::<c_void>(), buflen as usize, ptr::null(), 0) };
+    // `buf` is released by its `Drop` as this frame returns.
     key
 }
 
@@ -1727,7 +1807,7 @@ unsafe fn i2b_PVK(
     propq: *const c_char,
 ) -> c_int {
     let mut outlen: c_int = 24;
-    let mut start: *mut c_uchar = ptr::null_mut();
+    let mut start: Option<OwnedBuf> = None;
     let mut salt: *mut c_uchar = ptr::null_mut();
     let mut rc4: *mut EvpCipher = ptr::null_mut();
 
@@ -1749,22 +1829,22 @@ unsafe fn i2b_PVK(
         // SAFETY: `out` is the caller's cursor slot and the branch read it as non-NULL.
         p = unsafe { *out };
     } else {
-        // SAFETY: `outlen` bytes as a raw allocation.
-        start = CRYPTO_malloc(outlen as usize, ptr::null(), 0).cast::<c_uchar>();
-        if start.is_null() {
+        // SAFETY: `outlen` bytes as a raw allocation. Owned by `start` until it is either handed
+        // to the caller's cursor at the tail or released by `start`'s `Drop` on an error return.
+        start = OwnedBuf::take(
+            CRYPTO_malloc(outlen as usize, ptr::null(), 0).cast::<c_uchar>(),
+            outlen as usize,
+            false,
+        );
+        let Some(buf) = start.as_ref() else {
             return -1;
-        }
-        p = start;
+        };
+        p = buf.as_ptr();
     }
 
     // SAFETY: no preconditions.
     let cctx = EVP_CIPHER_CTX_new();
     if cctx.is_null() {
-        // SAFETY: `out` is the caller's cursor slot.
-        if unsafe { *out }.is_null() {
-            // SAFETY: `start` is this frame's allocation.
-            unsafe { CRYPTO_free(start.cast::<c_void>(), ptr::null(), 0) };
-        }
         return -1;
     }
 
@@ -1790,13 +1870,8 @@ unsafe fn i2b_PVK(
     if enclevel != 0 {
         // SAFETY: `libctx` is the caller's and `p` has PVK_SALTLEN writable bytes.
         if unsafe { RAND_bytes_ex(libctx, p, PVK_SALTLEN as usize, 0) } <= 0 {
-            // SAFETY: the context and allocation are this frame's own.
-            unsafe {
-                EVP_CIPHER_CTX_free(cctx);
-                if (*out).is_null() {
-                    CRYPTO_free(start.cast::<c_void>(), ptr::null(), 0);
-                }
-            }
+            // SAFETY: the context is this frame's own; `start` is released by its `Drop`.
+            unsafe { EVP_CIPHER_CTX_free(cctx) };
             return -1;
         }
         salt = p;
@@ -1818,13 +1893,8 @@ unsafe fn i2b_PVK(
         if inlen <= 0 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::PVKFMT_1091) };
-            // SAFETY: the context and allocation are this frame's own.
-            unsafe {
-                EVP_CIPHER_CTX_free(cctx);
-                if (*out).is_null() {
-                    CRYPTO_free(start.cast::<c_void>(), ptr::null(), 0);
-                }
-            }
+            // SAFETY: the context is this frame's own; `start` is released by its `Drop`.
+            unsafe { EVP_CIPHER_CTX_free(cctx) };
             return -1;
         }
         // SAFETY: every argument is this frame's.
@@ -1841,26 +1911,20 @@ unsafe fn i2b_PVK(
             )
         } == 0
         {
-            // SAFETY: the context and allocation are this frame's own.
+            // SAFETY: the context is this frame's own; `start` is released by its `Drop`.
             unsafe {
                 OPENSSL_cleanse(keybuf.as_mut_ptr().cast::<c_void>(), keybuf.len());
                 EVP_CIPHER_CTX_free(cctx);
-                if (*out).is_null() {
-                    CRYPTO_free(start.cast::<c_void>(), ptr::null(), 0);
-                }
             }
             return -1;
         }
         // SAFETY: the two strings are the caller's.
         rc4 = unsafe { EVP_CIPHER_fetch(libctx, c"RC4".as_ptr(), propq) };
         if rc4.is_null() {
-            // SAFETY: the context and allocation are this frame's own.
+            // SAFETY: the context is this frame's own; `start` is released by its `Drop`.
             unsafe {
                 OPENSSL_cleanse(keybuf.as_mut_ptr().cast::<c_void>(), keybuf.len());
                 EVP_CIPHER_CTX_free(cctx);
-                if (*out).is_null() {
-                    CRYPTO_free(start.cast::<c_void>(), ptr::null(), 0);
-                }
             }
             return -1;
         }
@@ -1875,14 +1939,12 @@ unsafe fn i2b_PVK(
         if unsafe { EVP_EncryptInit_ex(cctx, rc4, ptr::null_mut(), keybuf.as_ptr(), ptr::null()) }
             == 0
         {
-            // SAFETY: the context, cipher and allocation are this frame's own.
+            // SAFETY: the context and cipher are this frame's own; `start` is released by its
+            // `Drop`.
             unsafe {
                 OPENSSL_cleanse(keybuf.as_mut_ptr().cast::<c_void>(), keybuf.len());
                 EVP_CIPHER_CTX_free(cctx);
                 crate::evp::cipher::EVP_CIPHER_free(rc4);
-                if (*out).is_null() {
-                    CRYPTO_free(start.cast::<c_void>(), ptr::null(), 0);
-                }
             }
             return -1;
         }
@@ -1894,32 +1956,27 @@ unsafe fn i2b_PVK(
             || unsafe { EVP_EncryptFinal_ex(cctx, q.add(enctmplen as usize), &raw mut enctmplen) }
                 == 0
         {
-            // SAFETY: the context, cipher and allocation are this frame's own.
+            // SAFETY: the context and cipher are this frame's own; `start` is released by its
+            // `Drop`.
             unsafe {
                 EVP_CIPHER_CTX_free(cctx);
                 crate::evp::cipher::EVP_CIPHER_free(rc4);
-                if (*out).is_null() {
-                    CRYPTO_free(start.cast::<c_void>(), ptr::null(), 0);
-                }
             }
             return -1;
         }
     }
 
-    // SAFETY: `out` is the caller's cursor slot.
+    // SAFETY: `out` is the caller's cursor slot. When this frame allocated `start` (`*out` was
+    // NULL at entry and still is), ownership of the fresh block is handed to the caller's cursor;
+    // otherwise the caller supplied its own buffer and there is nothing to hand over.
     if unsafe { *out }.is_null() {
         // SAFETY: `out` is the caller's writable slot.
-        unsafe { *out = start };
+        unsafe { *out = start.take().map_or(ptr::null_mut(), OwnedBuf::into_raw) };
     }
     // SAFETY: the context and cipher are this frame's own.
     unsafe {
         EVP_CIPHER_CTX_free(cctx);
         crate::evp::cipher::EVP_CIPHER_free(rc4);
-    }
-    // SAFETY: `out` is the caller's cursor slot.
-    if unsafe { *out }.is_null() {
-        // SAFETY: `start` is this frame's allocation.
-        unsafe { CRYPTO_free(start.cast::<c_void>(), ptr::null(), 0) };
     }
     outlen
 }
@@ -1945,10 +2002,19 @@ pub unsafe extern "C" fn i2b_PVK_bio_ex(
     if outlen < 0 {
         return -1;
     }
-    // SAFETY: `out` is live and `tmp` holds `outlen` bytes.
-    let wrlen = unsafe { BIO_write(out, tmp.cast::<c_void>(), outlen) };
-    // SAFETY: `tmp` is this frame's allocation.
-    unsafe { CRYPTO_free(tmp.cast::<c_void>(), ptr::null(), 0) };
+    // `i2b_PVK` filled the NULL cursor this call passed with a fresh block; this frame adopts it
+    // (or NULL) so `Drop` is its release.
+    let tmp = OwnedBuf::take(tmp, outlen as usize, false);
+    // SAFETY: `out` is live and `tmp` holds `outlen` bytes (or is the NULL `i2b_PVK` answered).
+    let wrlen = unsafe {
+        BIO_write(
+            out,
+            tmp.as_ref()
+                .map_or(ptr::null_mut(), OwnedBuf::as_ptr)
+                .cast::<c_void>(),
+            outlen,
+        )
+    };
     if wrlen == outlen {
         return outlen;
     }
