@@ -296,7 +296,12 @@ struct OwnedBlock {
 impl OwnedBlock {
     /// Adopt a block the seam answered, or `None` for NULL. `len` is the length a clearing release
     /// needs; it is ignored by the plain form.
-    fn take(
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a block the crate's allocator seam produced, is owned by the caller, and
+    /// will not be freed or handed to any other owner -- this handle's `Drop` is its single
+    /// release.
+    unsafe fn take(
         ptr: *mut c_void,
         len: usize,
         clear: bool,
@@ -2380,13 +2385,17 @@ unsafe fn evp_md_init_legacy(ctx: *mut EvpMdCtx, type_: *const EvpMd) -> c_int {
             unsafe { (*ctx).update = update };
             // The legacy block, allocated through the crate's allocator seam; `into_raw` stores it
             // in the context, which owns it until `cleanup_old_md_data` reclaims it at line 38.
-            let Some(block) = OwnedBlock::take(
-                CRYPTO_zalloc(ctx_size as usize, FILE, LINE_ZALLOC_MD_DATA),
-                ctx_size as usize,
-                true,
-                FILE,
-                LINE_CLEAR_MD_DATA,
-            ) else {
+            // SAFETY: `CRYPTO_zalloc` is this crate's allocator seam and the block it answers is
+            // owned by this frame, with no other owner.
+            let Some(block) = (unsafe {
+                OwnedBlock::take(
+                    CRYPTO_zalloc(ctx_size as usize, FILE, LINE_ZALLOC_MD_DATA),
+                    ctx_size as usize,
+                    true,
+                    FILE,
+                    LINE_CLEAR_MD_DATA,
+                )
+            }) else {
                 return 0;
             };
             // SAFETY: `ctx` is live and `block` is this context's own allocation.
@@ -3145,13 +3154,17 @@ unsafe fn evp_md_ctx_copy_legacy(out: *mut EvpMdCtx, in_: *const EvpMdCtx) -> c_
             // The fresh block, allocated through the crate's allocator seam; `into_raw` stores it
             // in the destination context, which owns it until `cleanup_old_md_data` reclaims it at
             // line 38.
-            let Some(fresh) = OwnedBlock::take(
-                CRYPTO_malloc(ctx_size as usize, FILE, LINE_COPY_MD_DATA),
-                ctx_size as usize,
-                false,
-                FILE,
-                LINE_CLEAR_MD_DATA,
-            ) else {
+            // SAFETY: `CRYPTO_malloc` is this crate's allocator seam and the block it answers is
+            // owned by this frame, with no other owner.
+            let Some(fresh) = (unsafe {
+                OwnedBlock::take(
+                    CRYPTO_malloc(ctx_size as usize, FILE, LINE_COPY_MD_DATA),
+                    ctx_size as usize,
+                    false,
+                    FILE,
+                    LINE_CLEAR_MD_DATA,
+                )
+            }) else {
                 return 0;
             };
             fresh.into_raw()

@@ -638,7 +638,14 @@ struct OwnedBlock {
 
 impl OwnedBlock {
     /// Adopt a block the seam answered, or `None` for NULL.
-    fn take(ptr: *mut c_void, file: *const c_char, line: c_int) -> Option<OwnedBlock> {
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the seam's own `CRYPTO_*` call allocated in full (not a
+    /// sub-range), aligned for the type the frame casts it to and initialized for every byte the
+    /// frame reads or writes; this frame exclusively owns it and has not released it, and
+    /// `file`/`line` is the authority's own release site. `Drop`'s `CRYPTO_free` is its only
+    /// release.
+    unsafe fn take(ptr: *mut c_void, file: *const c_char, line: c_int) -> Option<OwnedBlock> {
         if ptr.is_null() {
             None
         } else {
@@ -648,7 +655,13 @@ impl OwnedBlock {
 
     /// Adopt a block a helper allocated, or NULL as an empty block whose release is a no-op. Used
     /// where the authority keeps and later frees the block unconditionally.
-    fn adopt(ptr: *mut c_void, file: *const c_char, line: c_int) -> OwnedBlock {
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a helper allocated in full through the crate's `CRYPTO_*` seam
+    /// (not a sub-range), aligned and initialized for every byte the frame reads or writes; this
+    /// frame exclusively owns it and has not released it, and `file`/`line` is the authority's own
+    /// release site. `Drop`'s `CRYPTO_free` is its only release.
+    unsafe fn adopt(ptr: *mut c_void, file: *const c_char, line: c_int) -> OwnedBlock {
         OwnedBlock { ptr, file, line }
     }
 
@@ -7206,7 +7219,9 @@ pub unsafe extern "C" fn SSL_add1_host(s: *mut Ssl, host: *const c_char) -> c_in
                 // The string `get1_ip_asc` hands over is owned here on the crate's allocator seam
                 // (authority size and file); `Drop` is its single release, at the authority's own
                 // refusal line.
-                let old_ip = OwnedBlock::take(old_ip.cast::<c_void>(), FILE, 1175);
+                // SAFETY: `old_ip` is the live string `X509_VERIFY_PARAM_get1_ip_asc` just handed
+                // over (or NULL), which this frame owns and has not released.
+                let old_ip = unsafe { OwnedBlock::take(old_ip.cast::<c_void>(), FILE, 1175) };
                 if old_ip.is_some() {
                     // SAFETY: a constant site.
                     unsafe { raise_ssl(ERR_R_PASSED_INVALID_ARGUMENT, 1177) };

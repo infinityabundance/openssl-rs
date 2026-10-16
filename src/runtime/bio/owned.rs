@@ -125,7 +125,12 @@ pub(crate) struct OwnedBlock {
 
 impl OwnedBlock {
     /// Adopt a block the seam answered, or `None` for NULL.
-    pub(crate) fn take(ptr: *mut c_void) -> Option<OwnedBlock> {
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a block the crate's allocator seam produced, is owned by the caller, and
+    /// will not be freed or handed to any other owner -- this handle's `Drop` is its single
+    /// release.
+    pub(crate) unsafe fn take(ptr: *mut c_void) -> Option<OwnedBlock> {
         if ptr.is_null() {
             None
         } else {

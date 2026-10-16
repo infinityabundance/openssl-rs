@@ -335,7 +335,12 @@ struct OwnedBlock {
 impl OwnedBlock {
     /// Adopt a block the frame's seam answered, or `None` for NULL. `len` is the length a clearing
     /// release needs; it is ignored by the plain form.
-    fn take(
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a block the crate's allocator seam produced, is owned by the caller, and
+    /// will not be freed or handed to any other owner -- this handle's `Drop` is its single
+    /// release.
+    unsafe fn take(
         ptr: *mut c_void,
         len: usize,
         clear: bool,
@@ -9943,13 +9948,17 @@ unsafe extern "C" fn evp_pkey_ctx_add1_octet_string(
      * non-zero. The block is owned here, on the crate's allocator seam, with the authority's own
      * clearing release as its `Drop`, so a caller-installed `CRYPTO_set_mem_functions` hook
      * observes it. */
-    let Some(info) = OwnedBlock::take(
-        CRYPTO_zalloc(info_alloc, FILE, LINE_ZALLOC_XLAT_BN_BUF),
-        info_alloc,
-        true,
-        FILE,
-        LINE_FREE_XLAT_ADD1,
-    ) else {
+    // SAFETY: `CRYPTO_zalloc` is this crate's allocator seam and the block it answers is owned by
+    // this frame, with no other owner.
+    let Some(info) = (unsafe {
+        OwnedBlock::take(
+            CRYPTO_zalloc(info_alloc, FILE, LINE_ZALLOC_XLAT_BN_BUF),
+            info_alloc,
+            true,
+            FILE,
+            LINE_FREE_XLAT_ADD1,
+        )
+    }) else {
         return 0;
     };
     let info_len = os_params[0].return_size;
@@ -10966,7 +10975,10 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_hex2ctrl(
     // The decoded block `OPENSSL_hexstr2buf` allocated is owned here; `Drop` is its release at the
     // authority's own site, and the `ctx->pmeth->ctrl(...)`-absent path below releases it either
     // way.
-    let Some(_bin) = OwnedBlock::take(bin.cast::<c_void>(), 0, false, FILE, LINE_FREE_HEXCTRL)
+    // SAFETY: `bin` is the block `OPENSSL_hexstr2buf` allocated for this frame and no other owner
+    // holds it.
+    let Some(_bin) =
+        (unsafe { OwnedBlock::take(bin.cast::<c_void>(), 0, false, FILE, LINE_FREE_HEXCTRL) })
     else {
         return 0;
     };
@@ -11229,13 +11241,17 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set_algor_params(
     }
     // The block `i2d_ASN1_TYPE` allocated for this call is adopted by an owner whose `Drop` is its
     // release at the authority's own site.
-    let _der = OwnedBlock::take(
-        der.cast::<c_void>(),
-        0,
-        false,
-        FILE_EVP_LIB,
-        LINE_FREE_ALGOR_SET,
-    );
+    // SAFETY: `der` is the block `i2d_ASN1_TYPE` allocated for this frame and no other owner holds
+    // it.
+    let _der = unsafe {
+        OwnedBlock::take(
+            der.cast::<c_void>(),
+            0,
+            false,
+            FILE_EVP_LIB,
+            LINE_FREE_ALGOR_SET,
+        )
+    };
     ret
 }
 
@@ -11290,13 +11306,17 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_algor_params(
         && derl <= c_long::MAX as usize
     {
         // `derl` bytes as the authority's `OPENSSL_malloc`; owned here, so `Drop` is its release.
-        let der = OwnedBlock::take(
-            CRYPTO_malloc(derl, FILE_EVP_LIB, LINE_MALLOC_ALGOR_GET),
-            0,
-            false,
-            FILE_EVP_LIB,
-            LINE_FREE_ALGOR_GET,
-        );
+        // SAFETY: `CRYPTO_malloc` is this crate's allocator seam and the block it answers is owned
+        // by this frame, with no other owner.
+        let der = unsafe {
+            OwnedBlock::take(
+                CRYPTO_malloc(derl, FILE_EVP_LIB, LINE_MALLOC_ALGOR_GET),
+                0,
+                false,
+                FILE_EVP_LIB,
+                LINE_FREE_ALGOR_GET,
+            )
+        };
         if let Some(der) = der.as_ref() {
             let mut derp: *const c_uchar = der.as_ptr::<c_uchar>();
             // SAFETY: the constructor writes one entry of this frame's array, and `der` holds
