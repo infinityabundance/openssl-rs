@@ -56,15 +56,15 @@
 //! by hand. The block itself is the session's stable address, handed out and taken back by the
 //! exported ABI.
 //!
-//! **The session's object-owned member buffers are mediated by handles.** `ext_hostname` (a
-//! C string) and the `(ptr, len)` blobs `ext_tick`/`ext_ticklen`,
-//! `ext_alpn_selected`/`ext_alpn_selected_len` and `ticket_appdata`/`ticket_appdata_len` are owned
-//! by the session and reached only through [`crate::ssl::ssl_lib::MemberCStrSlot`],
-//! [`crate::ssl::ssl_lib::MemberBufSlot`] and the `SslSession` readers (`ssl_lib.rs`). The fields
-//! are private there, so every read, write and release is compile-time-confinable to one place;
-//! see `MEMBER-BUFFER-MODEL.md`. `psk_identity_hint`, `psk_identity` and `srp_username` (and the
-//! connection's variable-sized `session_ticket` block) remain raw C-string fields outside this
-//! conversion, exactly as in the authority.
+//! **The session's object-owned member buffers are mediated by handles.** The C strings
+//! `ext_hostname`, `psk_identity_hint`, `psk_identity` and `srp_username` and the `(ptr, len)`
+//! blobs `ext_tick`/`ext_ticklen`, `ext_alpn_selected`/`ext_alpn_selected_len` and
+//! `ticket_appdata`/`ticket_appdata_len` are owned by the session and reached only through
+//! [`crate::ssl::ssl_lib::MemberCStrSlot`], [`crate::ssl::ssl_lib::MemberBufSlot`] and the
+//! `SslSession` readers (`ssl_lib.rs`). The fields are private there, so every read, write and
+//! release is compile-time-confinable to one place; see `MEMBER-BUFFER-MODEL.md`. (The connection's
+//! variable-sized `session_ticket` block is a `Ssl` member and remains outside this conversion,
+//! exactly as in the authority.)
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -414,17 +414,24 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
             }
             (*dest).peer_rpk = s.peer_rpk;
         }
-        if !s.psk_identity_hint.is_null() {
-            (*dest).psk_identity_hint = CRYPTO_strdup(s.psk_identity_hint, FILE, 210);
-            if (*dest).psk_identity_hint.is_null() {
+        let hint = s.psk_identity_hint();
+        if !hint.is_null() {
+            let dup = CRYPTO_strdup(hint, FILE, 210);
+            if dup.is_null() {
                 return ptr::null_mut();
             }
+            // SAFETY: `dup` is this call's fresh `CRYPTO_strdup` block; `dest` is freshly zeroed,
+            // so its `psk_identity_hint` member is empty.
+            (*dest).psk_identity_hint_slot().store(dup);
         }
-        if !s.psk_identity.is_null() {
-            (*dest).psk_identity = CRYPTO_strdup(s.psk_identity, FILE, 215);
-            if (*dest).psk_identity.is_null() {
+        let identity = s.psk_identity();
+        if !identity.is_null() {
+            let dup = CRYPTO_strdup(identity, FILE, 215);
+            if dup.is_null() {
                 return ptr::null_mut();
             }
+            // SAFETY: `dup` is this call's fresh block; `dest`'s `psk_identity` member is empty.
+            (*dest).psk_identity_slot().store(dup);
         }
         if CRYPTO_dup_ex_data(
             CRYPTO_EX_INDEX_SSL_SESSION,
@@ -466,11 +473,14 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
             // SAFETY: `dup` is this call's fresh block of `alpn_len` bytes; `dest`'s member is empty.
             (*dest).ext_alpn_selected_slot().store(dup, alpn_len);
         }
-        if !s.srp_username.is_null() {
-            (*dest).srp_username = CRYPTO_strdup(s.srp_username, FILE, 250);
-            if (*dest).srp_username.is_null() {
+        let srp = s.srp_username();
+        if !srp.is_null() {
+            let dup = CRYPTO_strdup(srp, FILE, 250);
+            if dup.is_null() {
                 return ptr::null_mut();
             }
+            // SAFETY: `dup` is this call's fresh block; `dest`'s `srp_username` member is empty.
+            (*dest).srp_username_slot().store(dup);
         }
         let (appdata_ptr, appdata_len) = s.ticket_appdata();
         if !appdata_ptr.is_null() {
@@ -568,15 +578,14 @@ unsafe impl CtxDestroy for SslSession {
             X509_free((*ptr).peer);
             crate::evp::pkey::EVP_PKEY_free((*ptr).peer_rpk.cast());
             OSSL_STACK_OF_X509_free((*ptr).peer_chain);
-            // The session's object-owned member buffers: each is released exactly once here through
-            // its validated handle, at the authority's own `file`/`line`. `psk_identity_hint`,
-            // `psk_identity` and `srp_username` remain raw C-string fields outside this conversion.
-            // A NULL incumbent is `CRYPTO_free`'s own no-op. The release order is the authority's.
+            // The session's object-owned C-string and blob member buffers: each is released exactly
+            // once here through its validated handle, at the authority's own `file`/`line`. A NULL
+            // incumbent is `CRYPTO_free`'s own no-op. The release order is the authority's.
             (*ptr).ext_hostname_slot().clear(FILE, 918);
             (*ptr).ext_tick_slot().clear(FILE, 919);
-            CRYPTO_free((*ptr).psk_identity_hint.cast(), FILE, 921);
-            CRYPTO_free((*ptr).psk_identity.cast(), FILE, 922);
-            CRYPTO_free((*ptr).srp_username.cast(), FILE, 925);
+            (*ptr).psk_identity_hint_slot().clear(FILE, 921);
+            (*ptr).psk_identity_slot().clear(FILE, 922);
+            (*ptr).srp_username_slot().clear(FILE, 925);
             (*ptr).ext_alpn_selected_slot().clear(FILE, 927);
             (*ptr).ticket_appdata_slot().clear(FILE, 928);
         }

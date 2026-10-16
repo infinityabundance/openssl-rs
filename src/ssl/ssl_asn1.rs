@@ -429,31 +429,11 @@ unsafe fn libc_strlen(s: *const c_char) -> usize {
     n
 }
 
-/// `ssl_session_strndup` — `ssl_asn1.c:229-239`.
-///
-/// # Safety
-/// `pdst` must be a live slot; `src` may be NULL.
-unsafe fn ssl_session_strndup(pdst: *mut *mut c_char, src: *mut Asn1String) -> c_int {
-    // SAFETY: `pdst` is the caller's live slot.
-    unsafe {
-        CRYPTO_free((*pdst).cast(), FILE, 0);
-        *pdst = ptr::null_mut();
-        if src.is_null() {
-            return 1;
-        }
-        *pdst = CRYPTO_strndup((*src).data.cast(), (*src).length as usize, FILE, 0).cast();
-        if (*pdst).is_null() {
-            return 0;
-        }
-    }
-    1
-}
-
 /// `ssl_session_strndup` — `ssl_asn1.c:229-239`, over a member-buffer handle.
 ///
-/// The `ext_hostname` counterpart of [`ssl_session_strndup`]: it releases the incumbent through
-/// [`MemberCStrSlot::clear`] and stores the fresh block through [`MemberCStrSlot::store`], so the
-/// free-then-allocate order and the "release exactly once" argument exist in one place.
+/// It releases the incumbent through [`MemberCStrSlot::clear`] and stores the fresh block through
+/// [`MemberCStrSlot::store`], so the free-then-allocate order and the "release exactly once"
+/// argument exist in one place. Every `SSL_SESSION` C-string member now goes through this form.
 ///
 /// # Safety
 /// `dst` is the member handle of a live session whose member obeys the member-buffer invariant;
@@ -661,10 +641,10 @@ pub unsafe extern "C" fn i2d_SSL_SESSION(input: *const SslSession, pp: *mut *mut
             ssl_session_sinit(
                 &mut as_.psk_identity_hint,
                 &mut psk_identity_hint,
-                s.psk_identity_hint,
+                s.psk_identity_hint(),
             );
-            ssl_session_sinit(&mut as_.psk_identity, &mut psk_identity, s.psk_identity);
-            ssl_session_sinit(&mut as_.srp_username, &mut srp_username, s.srp_username);
+            ssl_session_sinit(&mut as_.psk_identity, &mut psk_identity, s.psk_identity());
+            ssl_session_sinit(&mut as_.srp_username, &mut srp_username, s.srp_username());
         }
 
         as_.flags = s.flags as u64;
@@ -877,11 +857,23 @@ pub unsafe extern "C" fn d2i_SSL_SESSION_ex(
                     return d2i_err(as_, ret, a);
                 }
             }
-            if ssl_session_strndup(&mut (*ret).psk_identity_hint, (*as_).psk_identity_hint) == 0 {
-                return d2i_err(as_, ret, a);
+            {
+                // SAFETY: `ret` is live and its `psk_identity_hint` member obeys the member-buffer
+                // invariant.
+                let mut hint = (*ret).psk_identity_hint_slot();
+                // SAFETY: `hint` is the member handle; `(*as_).psk_identity_hint` may be NULL.
+                if ssl_session_strndup_slot(&mut hint, (*as_).psk_identity_hint) == 0 {
+                    return d2i_err(as_, ret, a);
+                }
             }
-            if ssl_session_strndup(&mut (*ret).psk_identity, (*as_).psk_identity) == 0 {
-                return d2i_err(as_, ret, a);
+            {
+                // SAFETY: `ret` is live and its `psk_identity` member obeys the member-buffer
+                // invariant.
+                let mut identity = (*ret).psk_identity_slot();
+                // SAFETY: `identity` is the member handle; `(*as_).psk_identity` may be NULL.
+                if ssl_session_strndup_slot(&mut identity, (*as_).psk_identity) == 0 {
+                    return d2i_err(as_, ret, a);
+                }
             }
 
             (*ret).ext_tick_lifetime_hint = (*as_).tlsext_tick_lifetime_hint as c_ulong;
@@ -913,8 +905,14 @@ pub unsafe extern "C" fn d2i_SSL_SESSION_ex(
                 (*ret).compress_meth = 0;
             }
 
-            if ssl_session_strndup(&mut (*ret).srp_username, (*as_).srp_username) == 0 {
-                return d2i_err(as_, ret, a);
+            {
+                // SAFETY: `ret` is live and its `srp_username` member obeys the member-buffer
+                // invariant.
+                let mut srp = (*ret).srp_username_slot();
+                // SAFETY: `srp` is the member handle; `(*as_).srp_username` may be NULL.
+                if ssl_session_strndup_slot(&mut srp, (*as_).srp_username) == 0 {
+                    return d2i_err(as_, ret, a);
+                }
             }
             (*ret).flags = (*as_).flags as u32;
             (*ret).ext_max_early_data = (*as_).max_early_data;
