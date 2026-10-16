@@ -55,8 +55,15 @@ Local gate for every batch (court container, 8 GB cap):
 | 33 | stage/p25/pmeth | dh/ec/rsa pmeth, dsa/ameth, rsa/ossl | OwnedCtx<CtxDestroy>; rsa/ossl 23→15 |
 | 34 | stage/p25/provider-sigs | legacyprov, dsa_kmgmt, dsa_sig, ecdsa_sig | free 2→1,7→5,6→3,6→3 (decode_der2key deferred) |
 | 35 | stage/p25/tail1 | ct_b64, conf/conf_ssl, runtime/str, evp/exchange, evp/pem_bridge | OwnedStore/PemBuf; free 6→1,5→3,4→3,5→4,4→3 |
+| 36 | stage/p25/tail2 | pkcs12/p12_decr, conf/api, dso/dlfcn, passphrase, decode_der2key | UiScratch; free 6→1,12→7,2→1,5→3 |
+| 37 | stage/p25/tail3 | slh_dsa/key, rand/pool, params/build, ml_dsa_sig, dh/ameth, bio_enc | OwnedStr/OwnedBuf/OwnedDef/OwnedCtx |
+| 38 | stage/p25/tail4 | ts_verify_ctx, ec/mult, ml_dsa/encoders, evp/skeymgmt, decoder_lib, evp/rand | RawCtx window; per-handle-line seams |
+| 39 | stage/p25/tail5 | apps/kdf, mac_legacy_sig, bio/addr, packet, evp/fetch, params/mod | OwnedSub/OwnedAddr; kdf cleansing fix |
+| -- | stage/p25/rawctx | runtime/bio/{owned,bf_lbuf,core_bio}.rs | **soundness**: `RawCtx<T>` (block-only release) + `unsafe assume_init -> OwnedCtx<T>` |
+| -- | stage/p25/zeroval | ssl/ssl_lib.rs | **soundness**: initialise `Cert.custext` (zeroed `Vec`); crate-wide sibling scan clean |
+| -- | integrate (docs/ci) | AGENTS.md, PROGRESS.md, .github/workflows/ci.yml | ledger reconciled; CI split into conversion vs seal modes |
 
-Converted files (union of stage/p25/* files): **~165 files** across 35 conversion batches plus the adoption-soundness and P0-abstraction repairs. Long tail remains (~3 sites/file).
+Converted files (union of stage/p25/* files): **~190 files** across 39 conversion batches; **1810 allocation sites converted, 610 remaining** of the 2420 baseline (frozen-atlas lower bound).
 
 ## Standing conversion standard
 
