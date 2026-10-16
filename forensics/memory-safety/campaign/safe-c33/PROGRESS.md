@@ -72,3 +72,42 @@ provider/{exchange.rs,ml_kem_kmgmt.rs,encode_key2any.rs}, crmf/*, cmp/*, ts/*,
 ct/*, txt_db/*, property/store.rs, rand/rand_lib.rs, engine/eng_dyn.rs,
 ssl/{ssl_rsa.rs,tls_srp.rs,ssl_cert_comp.rs,ssl_ciph.rs,...},
 then the member-buffer unit.
+
+## Progress measurement (five dimensions — see AGENTS.md §19)
+
+Not one percentage; report each axis honestly.
+
+1. **Ownership reconstruction** — 20 conversion batches across ~51 files; the
+   reusable adoption-pattern set (OwnedBuf / OwnedCtx+`CtxDestroy` / partial-
+   construction `Raw*` owners) is now sound (adoption ctors are `unsafe fn`).
+2. **Safe-interior coverage** — *not yet comprehensively measured*; the sparsest
+   structural conversions so far are sparse_array and the X.509 policy tree.
+3. **Discharged safety obligations** — local gate green per batch; full
+   `SAFETY_DISCHARGED` enumeration awaits the seal-point regeneration.
+4. **Cryptographic assurance** — bounded; no new vectors run in this campaign
+   (WycHEproof/ACVP/constant-time remain at their Phase-25 evidence state).
+5. **Safe-compatible consumers** — 0 new families graduated (per AGENTS.md §7 a
+   family needs its whole dependency closure `SAFETY_DISCHARGED`).
+
+Trust-boundary budget: the remaining raw boundaries are the C ABI edge, the
+`CRYPTO_*` seam, `#[repr(C)]` member buffers with object-lifetime owners, and
+structs crossing fn-pointer tables.
+
+## P0/P1 source targets (from the world-class-standard review)
+
+- **P0 done**: `src/runtime/bio/owned.rs` (and 15 sibling files) — safe raw
+  ownership adoption removed; ctors are `unsafe fn` with a real `# Safety`.
+- **P0 open**: `src/asn1/owned.rs` — replace unchecked allocation-size
+  multiplication with `checked_mul` + OpenSSL failure semantics.
+- **P0 open**: `src/x509/pcy_lib.rs` `tree_levels` — tie the mutable level-array
+  borrow to the tree owner, not a caller-chosen lifetime.
+- **P0 open**: `src/x509/pcy_node.rs` `Node::parent_mut` — make exclusive parent
+  access derivable from the graph's mutation model.
+- **P1 open**: `CipherDestroy`/`CtxDestroy` implementer contract (make the trait
+  obligation explicit/`unsafe`); `src/ffi/mod.rs` post-panic state rules;
+  secret-bearing-context classification.
+
+## Receipts
+
+Each landed batch records a receipt (template `RECEIPT.template.md`) so a fresh
+session can resume from Git + the receipt without reconstructing reasoning.
