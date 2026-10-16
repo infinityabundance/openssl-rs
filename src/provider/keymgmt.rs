@@ -421,7 +421,27 @@ struct DhGenCtx {
 
 /// The authority's destructor body for one of the file's heap records, without the block's own
 /// release, which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new_zeroed`]
+/// builds the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (a `KDF_DATA` owns
+///   none -- its `libctx` is borrowed -- while `DH_GEN_CTX` releases its two owned names and its
+///   cleansed seed), every releaser the authority's own and accepting the not-yet-set NULL/zero
+///   state, and it **never** releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new_zeroed`] leans on: it validates a `CRYPTO_zalloc` block with no caller
+///   assertion.
+///
+/// The staged [`RawDhGenCtx`] route is the partial-construction counterpart: it releases the block
+/// alone and **never** runs `destroy_body`, so only a fully built object owned by [`OwnedCtx`]
+/// satisfies the (a) precondition. Breaking (a) lets safe Rust double-release or release the
+/// enclosing block; breaking (b) runs `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -495,13 +515,20 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 
 /// The authority's `ossl_kdf_data_free` body (`kdf_legacy_kmgmt.c:49-62`), without the block
 /// release [`OwnedCtx`]'s `Drop` performs: a `KDF_DATA` owns no member -- its `libctx` is borrowed.
-impl CtxDestroy for KdfData {
+// SAFETY: (a) holds: `destroy_body` is `ossl_kdf_data_free` minus the block -- a `KDF_DATA` owns no
+// member (its `libctx` is borrowed) -- and never the enclosing block. (b) holds: an all-zero record
+// is valid with every release a no-op -- what the safe `OwnedCtx::new_zeroed` leans on.
+unsafe impl CtxDestroy for KdfData {
     unsafe fn destroy_body(_ptr: *mut KdfData) {}
 }
 
 /// The authority's `dh_gen_cleanup` body (`dh_kmgmt.c:818-828`), without the block release
 /// [`OwnedCtx`]'s `Drop` performs: the two owned names and the cleansed FIPS186-4 seed.
-impl CtxDestroy for DhGenCtx {
+// SAFETY: (a) holds: `destroy_body` is `dh_gen_cleanup` minus the block -- it releases exactly the
+// context's two owned names and its cleansed seed (each NULL/zero tolerant) and never the enclosing
+// block. (b) holds: an all-zero context is valid with every release a no-op -- what the safe
+// `OwnedCtx::new_zeroed` leans on.
+unsafe impl CtxDestroy for DhGenCtx {
     unsafe fn destroy_body(ptr: *mut DhGenCtx) {
         // SAFETY: `ptr` is a live context per the trait contract; `mdname`/`mdprops` are NULL or
         // this file's `CRYPTO_strdup` blocks and `seed` is NULL or a `CRYPTO_memdup` block.

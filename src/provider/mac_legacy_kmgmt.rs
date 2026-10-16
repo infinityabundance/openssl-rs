@@ -119,7 +119,24 @@ pub struct MacKey {
 
 /// The authority's `*_free` body for one `#[repr(C)]` object, without the block release
 /// [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::zalloc`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (the secure private
+///   key, the property query and the cipher for a `MAC_KEY`; whatever the generator context owns),
+///   every releaser the authority's own and accepting the not-yet-set NULL/zero state, and it
+///   **never** releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::zalloc`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// `__FILE__` for this unit's `CRYPTO_*` calls.
     const FILE: *const c_char;
     /// `__LINE__` for the block's allocation.
@@ -319,7 +336,11 @@ impl Drop for OwnedBuf {
     }
 }
 
-impl CtxDestroy for MacKey {
+// SAFETY: (a) holds: `destroy_body` is `ossl_mac_key_free` minus the block -- it releases exactly
+// the key's secure private key, property query and cipher (each NULL/zero tolerant) and never the
+// enclosing block. (b) holds: an all-zero key is valid with every release a no-op -- what the safe
+// `OwnedCtx::zalloc` leans on.
+unsafe impl CtxDestroy for MacKey {
     const FILE: *const c_char = FILE;
     const LINE_ALLOC: c_int = 71;
     const LINE_FREE: c_int = 100;
@@ -814,7 +835,10 @@ struct MacGenCtx {
     cipher: ProvCipher,
 }
 
-impl CtxDestroy for MacGenCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// generator's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds:
+// an all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::zalloc` leans on.
+unsafe impl CtxDestroy for MacGenCtx {
     const FILE: *const c_char = FILE;
     const LINE_ALLOC: c_int = 380;
     const LINE_FREE: c_int = 524;

@@ -142,7 +142,25 @@ fn is_running() -> c_int {
 
 /// The authority's `*_free` body for an owned context, without the block release [`OwnedCtx`]'s
 /// `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new_zeroed`]
+/// builds the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `slh_dsa_freectx` member body
+///   **exactly once** for that object; it releases **exactly** the members the object owns (the hash
+///   context and the property query, each releaser the authority's own and accepting the not-yet-set
+///   NULL/zero state, plus the cleansing of the context-owned `add_random` buffer) and **never**
+///   releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new_zeroed`] leans on: it validates a `CRYPTO_zalloc` block with no caller
+///   assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `slh_dsa_freectx` body, without the block release `Drop` performs.
     ///
     /// # Safety
@@ -211,7 +229,11 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 /// The authority's `slh_dsa_freectx` body (`slh_dsa_sig.c:64-72`), without the block release
 /// [`OwnedCtx`]'s `Drop` performs: the hash context, the property query and the malleated
 /// `add_random` buffer.
-impl CtxDestroy for ProvSlhDsaCtx {
+// SAFETY: (a) holds: `destroy_body` is `slh_dsa_freectx` minus the block -- it releases exactly the
+// context's own hash context and property query (each NULL-tolerant) and cleanses its own
+// `add_random` buffer, never the enclosing block. (b) holds: an all-zero context is valid -- with the
+// empty `add_random` cleanse a no-op -- what the safe `OwnedCtx::new_zeroed` leans on.
+unsafe impl CtxDestroy for ProvSlhDsaCtx {
     unsafe fn destroy_body(ptr: *mut ProvSlhDsaCtx) {
         // SAFETY: `ptr` is a live context per the trait contract; `hash_ctx`/`propq` are NULL or this
         // file's own allocations and `add_random` is this context's own buffer.
