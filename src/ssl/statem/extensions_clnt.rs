@@ -520,13 +520,13 @@ unsafe fn tls_construct_ctos_session_ticket(s: *mut Ssl, pkt: *mut Wpacket) -> c
         let sess = (*s).session;
         if (*s).new_session == 0
             && !sess.is_null()
-            && !(*sess).ext_tick.is_null()
-            && (*sess).ext_ticklen > 0
+            && !(*sess).ext_tick().0.is_null()
+            && (*sess).ext_tick().1 > 0
             && (*sess).ssl_version != crate::ssl::ssl_lib::TLS1_3_VERSION
         {
-            ((*sess).ext_tick, (*sess).ext_ticklen)
+            (*sess).ext_tick()
         } else {
-            (core::ptr::null_mut::<u8>(), 0usize)
+            (core::ptr::null::<u8>(), 0usize)
         }
     };
     // SAFETY: `pkt` is live; `tick` names `ticklen` readable bytes (or is NULL).
