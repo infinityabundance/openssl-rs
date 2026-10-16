@@ -25,7 +25,7 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
-use core::ffi::{c_int, c_uchar, c_void, CStr};
+use core::ffi::{c_char, c_int, c_uchar, c_void, CStr};
 use core::ptr;
 
 use crate::ct::ct_log::{CTLOG_STORE_get0_log_by_id, CTLOG_get0_public_key, Ctlog};
@@ -177,19 +177,132 @@ const _: () = {
     assert!(core::mem::offset_of!(Sct, validation_status) == 96);
 };
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `SCT` record and its member blocks
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `SCT_free` body (`crypto/ct/ct_sct.c:34-44`), without the block release
+/// [`OwnedCtx`]'s `Drop` performs: the log id, the extensions, the signature and the cached encoding.
+trait CtxDestroy: Sized {
+    /// The authority's `SCT_free` body, without the block release `Drop` performs.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live record this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned `SCT`.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its exact `CRYPTO_zalloc` size, but its
+/// *ownership* is this type: [`Self::new_zeroed`] allocates it, [`Self::from_raw`] takes back the
+/// block the C ABI hands to `SCT_free`, and `Drop` runs the authority's own free body
+/// ([`CtxDestroy::destroy_body`]) followed by its single block release. A Rust `Box` would hide both
+/// the release and the caller-installed `CRYPTO_set_mem_functions` hook.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// `CRYPTO_zalloc(size_of::<T>(), file, line)`, or `None` when it answers NULL. The zeroed image
+    /// is the authority's own starting state -- every owned member is NULL -- so
+    /// [`CtxDestroy::destroy_body`] on it is the authority's own all-empty free.
+    fn new_zeroed(file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, line).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// The block's address, the C ABI's `SCT *`.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Reclaim the block the C ABI hands to `SCT_free`, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live record this file allocated that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// Give up ownership of the record to the C ABI's answer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The record's destructor: the authority's own `SCT_free` body followed by its single block
+    /// release, through the same allocator seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; `destroy_body` is
+        // the authority's own free body and this is the block's single release.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+impl CtxDestroy for Sct {
+    unsafe fn destroy_body(ptr: *mut Sct) {
+        // SAFETY: `ptr` is a live record per the trait contract; each member is NULL or a block this
+        // file owns.
+        unsafe {
+            CRYPTO_free((*ptr).log_id.cast::<c_void>(), ptr::null(), 0);
+            CRYPTO_free((*ptr).ext.cast::<c_void>(), ptr::null(), 0);
+            CRYPTO_free((*ptr).sig.cast::<c_void>(), ptr::null(), 0);
+            CRYPTO_free((*ptr).sct.cast::<c_void>(), ptr::null(), 0);
+        }
+    }
+}
+
+/// An owned member block (`log_id`/`ext`/`sig`/`sct`): [`CtxDestroy::destroy_body`] releases the
+/// record's members through it, and each setter releases the block it replaces through it.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// Adopt a member block the record holds, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block this file owns that no other owner will release; `file` is NULL
+    /// or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, file, line }
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// `SCT *SCT_new(void)` — `crypto/ct/ct_sct.c:22-32`.
 #[no_mangle]
 pub extern "C" fn SCT_new() -> *mut Sct {
-    let sct = CRYPTO_zalloc(core::mem::size_of::<Sct>(), ptr::null(), 0).cast::<Sct>();
-    if sct.is_null() {
+    let Some(sct) = OwnedCtx::<Sct>::new_zeroed(ptr::null(), 0) else {
         return ptr::null_mut();
-    }
-    // SAFETY: `sct` is a fresh zeroed allocation of exactly `Sct`.
+    };
+    // SAFETY: `sct.as_ptr()` is a fresh zeroed allocation of exactly `Sct`.
     unsafe {
-        (*sct).entry_type = CT_LOG_ENTRY_TYPE_NOT_SET;
-        (*sct).version = SCT_VERSION_NOT_SET;
+        (*sct.as_ptr()).entry_type = CT_LOG_ENTRY_TYPE_NOT_SET;
+        (*sct.as_ptr()).version = SCT_VERSION_NOT_SET;
     }
-    sct
+    sct.into_raw()
 }
 
 /// `void SCT_free(SCT *sct)` — `crypto/ct/ct_sct.c:34-44`.
@@ -199,17 +312,10 @@ pub extern "C" fn SCT_new() -> *mut Sct {
 /// `sct` is NULL or a live `SCT` this crate's item layer owns and that is not used afterwards.
 #[no_mangle]
 pub unsafe extern "C" fn SCT_free(sct: *mut Sct) {
-    if sct.is_null() {
-        return;
-    }
-    // SAFETY: `sct` is live per the contract; each field is NULL or an owned block.
-    unsafe {
-        CRYPTO_free((*sct).log_id.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free((*sct).ext.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free((*sct).sig.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free((*sct).sct.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free(sct.cast::<c_void>(), ptr::null(), 0);
-    }
+    // SAFETY: `sct` is NULL or a live `SCT` this crate's item layer owns and that is not used
+    // afterwards; `from_raw` reclaims it and `Drop` runs the authority's own free body and block
+    // release.
+    drop(unsafe { OwnedCtx::<Sct>::from_raw(sct, ptr::null(), 0) });
 }
 
 /// `void sct_free_void(void *p)` — the `FreeFn` thunk `SCT_LIST_free` installs.
@@ -300,9 +406,10 @@ pub unsafe extern "C" fn SCT_set0_log_id(
         unsafe { raise_site(&CT_SCT_81) };
         return 0;
     }
-    // SAFETY: `sct` is live; its old `log_id` is NULL or an owned block.
+    // SAFETY: `sct` is live; its old `log_id` is NULL or an owned block, released through the seam;
+    // `log_id`'s ownership passes to `sct`.
     unsafe {
-        CRYPTO_free((*sct).log_id.cast::<c_void>(), ptr::null(), 0);
+        drop(OwnedBuf::adopt((*sct).log_id, ptr::null(), 0));
         (*sct).log_id = log_id;
         (*sct).log_id_len = log_id_len;
         (*sct).validation_status = SCT_VALIDATION_STATUS_NOT_SET;
@@ -328,9 +435,9 @@ pub unsafe extern "C" fn SCT_set1_log_id(
         unsafe { raise_site(&CT_SCT_95) };
         return 0;
     }
-    // SAFETY: `sct` is live; its old `log_id` is NULL or an owned block.
+    // SAFETY: `sct` is live; its old `log_id` is NULL or an owned block, released through the seam.
     unsafe {
-        CRYPTO_free((*sct).log_id.cast::<c_void>(), ptr::null(), 0);
+        drop(OwnedBuf::adopt((*sct).log_id, ptr::null(), 0));
         (*sct).log_id = ptr::null_mut();
         (*sct).log_id_len = 0;
         (*sct).validation_status = SCT_VALIDATION_STATUS_NOT_SET;
@@ -407,9 +514,9 @@ pub unsafe extern "C" fn SCT_set_signature_nid(sct: *mut Sct, nid: c_int) -> c_i
 /// `sct` is a live `SCT`; `ext` is NULL or an owned block this call takes over.
 #[no_mangle]
 pub unsafe extern "C" fn SCT_set0_extensions(sct: *mut Sct, ext: *mut c_uchar, ext_len: usize) {
-    // SAFETY: `sct` is live; its old `ext` is NULL or an owned block.
+    // SAFETY: `sct` is live; its old `ext` is NULL or an owned block, released through the seam.
     unsafe {
-        CRYPTO_free((*sct).ext.cast::<c_void>(), ptr::null(), 0);
+        drop(OwnedBuf::adopt((*sct).ext, ptr::null(), 0));
         (*sct).ext = ext;
         (*sct).ext_len = ext_len;
         (*sct).validation_status = SCT_VALIDATION_STATUS_NOT_SET;
@@ -428,9 +535,9 @@ pub unsafe extern "C" fn SCT_set1_extensions(
     ext: *const c_uchar,
     ext_len: usize,
 ) -> c_int {
-    // SAFETY: `sct` is live; its old `ext` is NULL or an owned block.
+    // SAFETY: `sct` is live; its old `ext` is NULL or an owned block, released through the seam.
     unsafe {
-        CRYPTO_free((*sct).ext.cast::<c_void>(), ptr::null(), 0);
+        drop(OwnedBuf::adopt((*sct).ext, ptr::null(), 0));
         (*sct).ext = ptr::null_mut();
         (*sct).ext_len = 0;
         (*sct).validation_status = SCT_VALIDATION_STATUS_NOT_SET;
@@ -459,9 +566,10 @@ pub unsafe extern "C" fn SCT_set1_extensions(
 /// `sct` is a live `SCT`; `sig` is NULL or an owned block this call takes over.
 #[no_mangle]
 pub unsafe extern "C" fn SCT_set0_signature(sct: *mut Sct, sig: *mut c_uchar, sig_len: usize) {
-    // SAFETY: `sct` is live; its old `sig` is NULL or an owned block.
+    // SAFETY: `sct` is live; its old `sig` is NULL or an owned block, released through the seam;
+    // `sig`'s ownership passes to `sct`.
     unsafe {
-        CRYPTO_free((*sct).sig.cast::<c_void>(), ptr::null(), 0);
+        drop(OwnedBuf::adopt((*sct).sig, ptr::null(), 0));
         (*sct).sig = sig;
         (*sct).sig_len = sig_len;
         (*sct).validation_status = SCT_VALIDATION_STATUS_NOT_SET;
@@ -480,9 +588,9 @@ pub unsafe extern "C" fn SCT_set1_signature(
     sig: *const c_uchar,
     sig_len: usize,
 ) -> c_int {
-    // SAFETY: `sct` is live; its old `sig` is NULL or an owned block.
+    // SAFETY: `sct` is live; its old `sig` is NULL or an owned block, released through the seam.
     unsafe {
-        CRYPTO_free((*sct).sig.cast::<c_void>(), ptr::null(), 0);
+        drop(OwnedBuf::adopt((*sct).sig, ptr::null(), 0));
         (*sct).sig = ptr::null_mut();
         (*sct).sig_len = 0;
         (*sct).validation_status = SCT_VALIDATION_STATUS_NOT_SET;
