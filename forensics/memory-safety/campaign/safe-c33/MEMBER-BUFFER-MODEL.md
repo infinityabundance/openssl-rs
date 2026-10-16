@@ -194,5 +194,7 @@ Adopt the model next, in this order:
    by module-local `MemberCStrSlot`/`MemberBufSlot` and the `SslSession` readers; the four fields
    are **private** in `ssl_lib.rs` and every reader/writer across `src/ssl/**` (the codec
    `ssl_asn1.rs`, the printer `ssl_txt.rs`, the handshake `statem_*.rs`) was converted. This is
-   the first application of the §2.6 **blob** variant. `psk_identity_hint`, `psk_identity` and
-   `srp_username` remain raw C-string fields (outside this task).
+   the first application of the §2.6 **blob** variant. The remaining C-string members
+   `psk_identity_hint`, `psk_identity`, `srp_username` were converted in a later batch
+   (all **private**, via `MemberCStrSlot`), as was `Cert.psk_identity_hint` (the
+   `SSL_CTX`/`SSL` cert). Remaining SSL work: the `SslCtx`/`Ssl` **blob** members.
