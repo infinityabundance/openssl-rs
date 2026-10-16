@@ -74,8 +74,9 @@ use crate::property::store::{
 };
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_libctx, ossl_provider_up_ref, OsslProvider};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::stack::{OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack};
 
 /// `#define NAME_SEPARATOR ':'` — `crypto/encode_decode/encoder_meth.c:25`.
@@ -266,17 +267,19 @@ pub struct OsslEncoderCtx {
 /// failure arm's release goes through the public destructor.
 #[allow(dead_code)] // read by the withheld fetch block, next pass
 pub(crate) unsafe fn ossl_encoder_new() -> *mut OsslEncoder {
-    // SAFETY: the constructor only asks for a zeroed block of the object's size.
-    let encoder =
-        CRYPTO_zalloc(core::mem::size_of::<OsslEncoder>(), ptr::null(), 0).cast::<OsslEncoder>();
-    if encoder.is_null() {
+    // The block, allocated through the crate's allocator seam at the authority's own (NULL, 0) site
+    // (`OPENSSL_zalloc(sizeof(*encoder))`). It is a validated `OsslEncoder` immediately: `OsslEncoder`'s
+    // zero-validity obligation (b) holds (see the `CtxDestroy` impl below), so the zeroed block is a
+    // valid object whose destructor body is sound.
+    let Some(encoder) = OwnedCtx::<OsslEncoder>::zalloc() else {
         return ptr::null_mut();
-    }
-    // SAFETY: `encoder` is a fresh, zeroed, uniquely-owned block; this is the field `CRYPTO_NEW_REF`
+    };
+    let ret = encoder.as_ptr();
+    // SAFETY: `ret` is a fresh, zeroed, uniquely-owned block; this is the field `CRYPTO_NEW_REF`
     // initialises to 1. A zeroed `refcnt` would make the release below free an object another
     // reference still holds.
-    unsafe { (*encoder).base.refcnt.store(1, Ordering::Release) };
-    encoder
+    unsafe { (*ret).base.refcnt.store(1, Ordering::Release) };
+    encoder.into_raw()
 }
 
 /// `int OSSL_ENCODER_up_ref(OSSL_ENCODER *encoder)` — `encoder_meth.c:52-58`.
@@ -291,6 +294,29 @@ pub unsafe extern "C" fn OSSL_ENCODER_up_ref(encoder: *mut OsslEncoder) -> c_int
     // SAFETY: `encoder` is live per the contract; the count is a plain atomic field.
     unsafe { (*encoder).base.refcnt.fetch_add(1, Ordering::AcqRel) };
     1
+}
+
+/// [`OSSL_ENCODER_free`]'s member body (`encoder_meth.c:60-75`), without the block release
+/// [`OwnedCtx`]'s `Drop` performs: the name, the parsed properties and the provider reference, in
+/// the authority's own order.
+///
+/// [`OwnedCtx`]: crate::runtime::bio::owned::OwnedCtx
+// SAFETY: (a) `destroy_body` is the authority's `OSSL_ENCODER_free` body for a last reference -- the
+// three releasers tolerate the not-yet-set NULL state (the constructor's `CRYPTO_NEW_REF` failure arm
+// reaches this same body on a zeroed block) -- and it never releases the enclosing block, which
+// `OwnedCtx`'s `Drop` releases; (b) `OsslEncoder` is a `#[repr(C)]` record of raw pointers, an
+// `AtomicI32`, an `int` and `Option<fn>` fields, so an all-zero block is a valid `OsslEncoder` this
+// body is sound on.
+unsafe impl CtxDestroy for OsslEncoder {
+    unsafe fn destroy_body(ptr: *mut OsslEncoder) {
+        // SAFETY: `ptr` is a live object per the trait contract and this is its last reference; each
+        // field is the object's own and every releaser accepts NULL.
+        unsafe {
+            CRYPTO_free((*ptr).base.name.cast(), ptr::null(), 0);
+            crate::property::parse::ossl_property_free((*ptr).base.parsed_propdef);
+            crate::provider::ossl_provider_free((*ptr).base.prov);
+        }
+    }
 }
 
 /// `void OSSL_ENCODER_free(OSSL_ENCODER *encoder)` — `encoder_meth.c:60-75`.
@@ -315,13 +341,10 @@ pub unsafe extern "C" fn OSSL_ENCODER_free(encoder: *mut OsslEncoder) {
         return;
     }
 
-    // SAFETY: `encoder` is live and this is the last reference; each field is this object's own.
-    unsafe {
-        CRYPTO_free((*encoder).base.name.cast(), ptr::null(), 0);
-        crate::property::parse::ossl_property_free((*encoder).base.parsed_propdef);
-        crate::provider::ossl_provider_free((*encoder).base.prov);
-        CRYPTO_free(encoder.cast(), ptr::null(), 0);
-    }
+    // SAFETY: `encoder` is a live object whose last reference this call released; `from_raw`'s
+    // `Drop` runs the authority's own `OSSL_ENCODER_free` member body followed by the block release
+    // at the authority's own (NULL, 0) site.
+    drop(unsafe { OwnedCtx::from_raw(encoder) });
 }
 
 /// `static void *encoder_from_algorithm(int id, const OSSL_ALGORITHM *algodef,
@@ -1209,6 +1232,30 @@ unsafe extern "C" fn encoder_instance_free_thunk(p: *mut c_void) {
     unsafe { ossl_encoder_instance_free(p.cast()) };
 }
 
+/// [`OSSL_ENCODER_CTX_free`]'s member body (`encoder_meth.c:645-654`), without the block release
+/// [`OwnedCtx`]'s `Drop` performs: the instance chain, the constructor data and the embedded
+/// passphrase bridge, in the authority's own order.
+///
+/// [`OwnedCtx`]: crate::runtime::bio::owned::OwnedCtx
+// SAFETY: (a) `destroy_body` is the authority's `OSSL_ENCODER_CTX_free` body -- `OPENSSL_sk_pop_free`
+// tolerates a NULL stack, `CRYPTO_free` a NULL pointer, `ossl_pw_clear_passphrase_data` the zeroed
+// `pwdata` of a fresh context, and it never releases the enclosing block, which `OwnedCtx`'s `Drop`
+// releases; (b) `OsslEncoderCtx` is a `#[repr(C)]` record of raw pointers, `int`s, `Option<fn>` fields
+// and a by-value `OsslPassphraseData` whose zeroed state `ossl_pw_clear_passphrase_data` is sound on,
+// so an all-zero block is a valid `OsslEncoderCtx`.
+unsafe impl CtxDestroy for OsslEncoderCtx {
+    unsafe fn destroy_body(ptr: *mut OsslEncoderCtx) {
+        // SAFETY: `ptr` is a live object per the trait contract; the stack is NULL or the object's own,
+        // the construct data is its own, and `ossl_pw_clear_passphrase_data` handles the embedded
+        // `pwdata`.
+        unsafe {
+            OPENSSL_sk_pop_free((*ptr).encoder_insts, Some(encoder_instance_free_thunk));
+            CRYPTO_free((*ptr).construct_data, ptr::null(), 0);
+            ossl_pw_clear_passphrase_data(ptr::addr_of_mut!((*ptr).pwdata));
+        }
+    }
+}
+
 /// `OSSL_ENCODER_CTX *OSSL_ENCODER_CTX_new(void)` -- `encoder_meth.c:608-614`.
 ///
 /// One zeroed allocation and nothing else: no lock, no reference count, no failure diagnosis. The
@@ -1220,8 +1267,10 @@ unsafe extern "C" fn encoder_instance_free_thunk(p: *mut c_void) {
 /// No preconditions.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_ENCODER_CTX_new() -> *mut OsslEncoderCtx {
-    // SAFETY: the constructor only asks for a zeroed block of the object's size.
-    CRYPTO_zalloc(core::mem::size_of::<OsslEncoderCtx>(), ptr::null(), 0).cast::<OsslEncoderCtx>()
+    // The block, allocated through the crate's allocator seam at the authority's own (NULL, 0) site
+    // (`OPENSSL_zalloc(sizeof(*ctx))`). It is a validated `OsslEncoderCtx` immediately:
+    // `OsslEncoderCtx`'s zero-validity obligation (b) holds (see the `CtxDestroy` impl above).
+    OwnedCtx::<OsslEncoderCtx>::zalloc().map_or(ptr::null_mut(), |ctx| ctx.into_raw())
 }
 
 /// `int OSSL_ENCODER_CTX_set_params(OSSL_ENCODER_CTX *ctx, const OSSL_PARAM params[])` --
@@ -1291,14 +1340,9 @@ pub unsafe extern "C" fn OSSL_ENCODER_CTX_free(ctx: *mut OsslEncoderCtx) {
     if ctx.is_null() {
         return;
     }
-    // SAFETY: `ctx` is live; the stack is NULL or a live stack of instances this crate made, and
-    // the thunk frees each one.
-    unsafe {
-        OPENSSL_sk_pop_free((*ctx).encoder_insts, Some(encoder_instance_free_thunk));
-        CRYPTO_free((*ctx).construct_data, ptr::null(), 0);
-        ossl_pw_clear_passphrase_data(ptr::addr_of_mut!((*ctx).pwdata));
-        CRYPTO_free(ctx.cast(), ptr::null(), 0);
-    }
+    // SAFETY: `ctx` is a live object this crate allocated; `from_raw`'s `Drop` runs the authority's
+    // own `OSSL_ENCODER_CTX_free` member body followed by the block release at (NULL, 0).
+    drop(unsafe { OwnedCtx::from_raw(ctx) });
 }
 
 #[cfg(test)]

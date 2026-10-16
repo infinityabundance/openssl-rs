@@ -51,6 +51,7 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 use core::ptr;
 
+use crate::asn1::owned::OwnedBlock;
 use crate::bn::bignum::{BN_bn2hex, BN_is_negative, BN_is_zero, BN_num_bits, BigNum};
 use crate::bn::intern::bn_get_words;
 use crate::encoder_meth::{
@@ -71,13 +72,14 @@ use crate::runtime::bio::bss_file::BIO_s_file;
 use crate::runtime::bio::bss_mem::BIO_s_mem;
 use crate::runtime::bio::core_bio::{ossl_core_bio_free, ossl_core_bio_new_from_bio, OsslCoreBio};
 use crate::runtime::bio::iolib::BIO_ctrl;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::{BIO_printf, BIO_snprintf};
 use crate::runtime::bio::{
     BIO_free, BIO_new, Bio, BIO_C_GET_BUF_MEM_PTR, BIO_C_SET_FILE_PTR, BIO_NOCLOSE,
 };
 use crate::runtime::buffer::BufMem;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::obj::NID_undef;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value,
@@ -386,19 +388,20 @@ unsafe fn ossl_encoder_instance_new(
         return ptr::null_mut();
     }
 
-    // SAFETY: the constructor only asks for a zeroed block of the object's size.
-    let inst = CRYPTO_zalloc(core::mem::size_of::<OsslEncoderInstance>(), ptr::null(), 0)
-        .cast::<OsslEncoderInstance>();
-    if inst.is_null() {
+    // The instance, allocated through the crate's allocator seam at the authority's own (NULL, 0)
+    // site (`OPENSSL_zalloc(sizeof(*encoder_inst))`). It is a validated `OsslEncoderInstance`
+    // immediately: `OsslEncoderInstance`'s zero-validity obligation (b) holds (see the `CtxDestroy`
+    // impl below), so the zeroed block is a valid object whose destructor body is sound (and is a
+    // no-op while `encoder` is still NULL).
+    let Some(inst) = OwnedCtx::<OsslEncoderInstance>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
 
     // SAFETY: `encoder` is live; the reference is released by `ossl_encoder_instance_free`.
     if unsafe { OSSL_ENCODER_up_ref(encoder) } == 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::ENCODER_LIB_228) };
-        // SAFETY: `inst` is live and owned here.
-        return unsafe { fail_instance(inst) };
+        return fail_instance(inst);
     }
 
     // SAFETY: `encoder` is live.
@@ -420,8 +423,7 @@ unsafe fn ossl_encoder_instance_new(
             );
             raise_site_data(&err_sites::ENCODER_LIB_236, msg.as_ptr());
         }
-        // SAFETY: `inst` is live and owned here.
-        return unsafe { fail_instance(inst) };
+        return fail_instance(inst);
     }
 
     /* The "output" property is mandatory */
@@ -444,8 +446,7 @@ unsafe fn ossl_encoder_instance_new(
             );
             raise_site_data(&err_sites::ENCODER_LIB_246, msg.as_ptr());
         }
-        // SAFETY: `inst` is live and owned here.
-        return unsafe { fail_instance(inst) };
+        return fail_instance(inst);
     }
 
     /* The "structure" property is optional */
@@ -459,22 +460,55 @@ unsafe fn ossl_encoder_instance_new(
 
     // SAFETY: `inst` is live and uniquely owned here.
     unsafe {
-        (*inst).encoder = encoder;
-        (*inst).encoderctx = encoderctx;
-        (*inst).output_type = output_type;
-        (*inst).output_structure = output_structure;
+        let p = inst.as_ptr();
+        (*p).encoder = encoder;
+        (*p).encoderctx = encoderctx;
+        (*p).output_type = output_type;
+        (*p).output_structure = output_structure;
     }
-    inst
+    inst.into_raw()
 }
 
 /// The `err:` label of [`ossl_encoder_instance_new`] -- `encoder_lib.c:263-265`.
 ///
-/// # Safety
-/// `inst` must be a live instance this call allocated.
-unsafe fn fail_instance(inst: *mut OsslEncoderInstance) -> *mut OsslEncoderInstance {
-    // SAFETY: `inst` is live and owned here.
-    unsafe { ossl_encoder_instance_free(inst) };
+/// The authority's `ossl_encoder_instance_free(encoder_inst)` on a half-built instance; the
+/// handle's `Drop` runs that same member body (a no-op while `encoder` is still NULL) and the block
+/// release.
+fn fail_instance(inst: OwnedCtx<OsslEncoderInstance>) -> *mut OsslEncoderInstance {
+    drop(inst);
     ptr::null_mut()
+}
+
+/// [`ossl_encoder_instance_free`]'s member body (`encoder_lib.c:268-278`, as `encoder_lib.c` writes
+/// it), without the block release [`OwnedCtx`]'s `Drop` performs: the provider context through the
+/// encoder's own `freectx` (so the *encoder* must still be live), then the encoder reference, in the
+/// authority's own order. The NULL test on the field is what makes the constructor's `err:` label
+/// safe to reach with a half-built instance.
+///
+/// [`OwnedCtx`]: crate::runtime::bio::owned::OwnedCtx
+// SAFETY: (a) `destroy_body` is the authority's `ossl_encoder_instance_free` body -- the field
+// tests tolerate the not-yet-set NULL state, `OSSL_ENCODER_free` accepts NULL -- and it never
+// releases the enclosing block, which `OwnedCtx`'s `Drop` releases; (b) `OsslEncoderInstance` is a
+// `#[repr(C)]` record of raw pointers, so an all-zero block is a valid `OsslEncoderInstance` this
+// body is sound on.
+unsafe impl CtxDestroy for OsslEncoderInstance {
+    unsafe fn destroy_body(ptr: *mut OsslEncoderInstance) {
+        // SAFETY: `ptr` is a live object per the trait contract.
+        let encoder = unsafe { (*ptr).encoder };
+        if !encoder.is_null() {
+            // SAFETY: `encoder` is live.
+            if let Some(freectx) = unsafe { (*encoder).freectx } {
+                // SAFETY: `freectx` is a live provider callback and `encoderctx` is its context.
+                unsafe { freectx((*ptr).encoderctx) };
+            }
+            // SAFETY: `ptr` is live.
+            unsafe { (*ptr).encoderctx = ptr::null_mut() };
+            // SAFETY: `encoder` is live; this releases the reference `ossl_encoder_instance_new` took.
+            unsafe { OSSL_ENCODER_free(encoder) };
+            // SAFETY: `ptr` is live.
+            unsafe { (*ptr).encoder = ptr::null_mut() };
+        }
+    }
 }
 
 /// `void ossl_encoder_instance_free(OSSL_ENCODER_INSTANCE *encoder_inst)` --
@@ -492,23 +526,10 @@ pub unsafe extern "C" fn ossl_encoder_instance_free(encoder_inst: *mut OsslEncod
     if encoder_inst.is_null() {
         return;
     }
-    // SAFETY: `encoder_inst` is live.
-    let encoder = unsafe { (*encoder_inst).encoder };
-    if !encoder.is_null() {
-        // SAFETY: `encoder` is live.
-        if let Some(freectx) = unsafe { (*encoder).freectx } {
-            // SAFETY: `freectx` is a live provider callback and `encoderctx` is its context.
-            unsafe { freectx((*encoder_inst).encoderctx) };
-        }
-        // SAFETY: `encoder_inst` is live.
-        unsafe { (*encoder_inst).encoderctx = ptr::null_mut() };
-        // SAFETY: `encoder` is live; this releases the reference `ossl_encoder_instance_new` took.
-        unsafe { OSSL_ENCODER_free(encoder) };
-        // SAFETY: `encoder_inst` is live.
-        unsafe { (*encoder_inst).encoder = ptr::null_mut() };
-    }
-    // SAFETY: `encoder_inst` is this call's own allocation.
-    unsafe { CRYPTO_free(encoder_inst.cast(), ptr::null(), 0) };
+    // SAFETY: `encoder_inst` is a live instance this crate allocated; `from_raw`'s `Drop` runs the
+    // authority's own `ossl_encoder_instance_free` member body followed by the block release at the
+    // authority's own (NULL, 0) site.
+    drop(unsafe { OwnedCtx::from_raw(encoder_inst) });
 }
 
 /// `static int ossl_encoder_ctx_add_encoder_inst(OSSL_ENCODER_CTX *ctx,
@@ -1123,8 +1144,10 @@ pub(crate) unsafe fn ossl_bio_print_labeled_bignum(
             }
         }
     };
-    // SAFETY: `hex_str` is the buffer `BN_bn2hex` returned and this call owns it.
-    unsafe { CRYPTO_free(hex_str.cast(), ptr::null(), 0) };
+    // `hex_str` is the block `BN_bn2hex` returned; the handle's `Drop` is the authority's own
+    // `OPENSSL_free(hex_str)` at `(NULL, 0)`.
+    // SAFETY: `hex_str` is this call's own block.
+    drop(unsafe { OwnedBlock::<u8>::from_raw(hex_str.cast(), ptr::null(), 0) });
     ret
 }
 
