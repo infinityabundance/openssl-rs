@@ -152,13 +152,12 @@ unsafe fn tls_construct_ctos_server_name(s: *mut Ssl, pkt: *mut Wpacket) -> c_in
 /// # Safety
 /// `s` must be a live connection and `pkt` a live packet.
 unsafe fn tls_construct_ctos_alpn(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
-    // SAFETY: `s` is live.
-    let alpn = unsafe { (*s).ext_alpn };
+    // SAFETY: `s` is live; `ext_alpn`/`ext_alpn_len` obey the member-buffer invariant.
+    let (alpn, alpn_len) = unsafe { (*s).ext_alpn() };
     if alpn.is_null() {
         return EXT_RETURN_NOT_SENT;
     }
-    // SAFETY: `s` is live; `ext_alpn_len` counts the bytes `ext_alpn` holds.
-    let alpn_len = unsafe { (*s).ext_alpn_len } as usize;
+    let alpn_len = alpn_len as usize;
     // SAFETY: `pkt` is live; `WPACKET_sub_memcpy_u16` is a 2-byte sub-packet around the list.
     unsafe {
         if WPACKET_put_bytes_u16(pkt, TLSEXT_TYPE_ALPN) == 0
