@@ -68,6 +68,54 @@ const LINE_FREE_CS: c_int = 184;
 /// initialiser — `crypto/srp/srp_lib.c:288-296`.
 const KNOWN_GN_NUMBER: usize = 7;
 
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays the authority's own `OPENSSL_malloc`/`OPENSSL_free` at its exact size and
+/// `file`/`line`. Only its *ownership* is this type: [`Self::new`] allocates the scratch and `Drop`
+/// is its single release through the same seam the authority uses. A Rust `Vec` would hide both the
+/// allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line_alloc)`, whose `Drop` releases the block at
+    /// `file`/`line_free` (`srp_Calc_xy` allocates at `:42` and frees at `:51`; `SRP_Calc_x_ex` at
+    /// `:157` and `:184`), or `None` when the allocator answers NULL.
+    fn new(
+        len: usize,
+        file: *const c_char,
+        line_alloc: c_int,
+        line_free: c_int,
+    ) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line_alloc).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line: line_free,
+        })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// `BN_num_bytes(a)` — `include/openssl/bn.h`'s macro `((BN_num_bits(a) + 7) / 8)`, written
 /// as its body because a macro has no symbol.
 ///
@@ -101,7 +149,7 @@ unsafe fn srp_Calc_xy(
     }
     // SAFETY: `N` is NULL or live per the contract.
     let numN = unsafe { bn_num_bytes(N) };
-    let mut tmp: *mut c_uchar = ptr::null_mut();
+    let mut tmp: Option<OwnedBuf> = None;
     'done: {
         // `x != N` is the authority's pointer comparison: a straddling `x` is already
         // reduced modulo `N`.
@@ -118,17 +166,23 @@ unsafe fn srp_Calc_xy(
             break 'done;
         }
         // The allocation is `numN * 2` bytes, the authority's `OPENSSL_malloc_array`.
-        tmp = CRYPTO_malloc((numN as usize) * 2, FILE.as_ptr(), LINE_MALLOC_TMP).cast::<c_uchar>();
-        if tmp.is_null() {
+        let Some(buf) = OwnedBuf::new(
+            (numN as usize) * 2,
+            FILE.as_ptr(),
+            LINE_MALLOC_TMP,
+            LINE_FREE_TMP,
+        ) else {
             break 'done;
-        }
-        // SAFETY: `x`/`y` are NULL or live; `tmp` is a live buffer of `numN * 2` bytes; the
+        };
+        let tmp_ptr = buf.as_ptr();
+        tmp = Some(buf);
+        // SAFETY: `x`/`y` are NULL or live; `tmp_ptr` is a live buffer of `numN * 2` bytes; the
         // digest buffer is `SHA_DIGEST_LENGTH` bytes and `sha1` is the fetched method.
         let ok = unsafe {
-            BN_bn2binpad(x, tmp, numN) >= 0
-                && BN_bn2binpad(y, tmp.add(numN as usize), numN) >= 0
+            BN_bn2binpad(x, tmp_ptr, numN) >= 0
+                && BN_bn2binpad(y, tmp_ptr.add(numN as usize), numN) >= 0
                 && EVP_Digest(
-                    tmp.cast(),
+                    tmp_ptr.cast(),
                     (numN as usize) * 2,
                     digest.as_mut_ptr(),
                     ptr::null_mut(),
@@ -142,11 +196,12 @@ unsafe fn srp_Calc_xy(
         // SAFETY: the digest buffer is live and `SHA_DIGEST_LENGTH` bytes long.
         res = unsafe { BN_bin2bn(digest.as_ptr(), SHA_DIGEST_LENGTH, ptr::null_mut()) };
     }
-    // SAFETY: `sha1` came from `EVP_MD_fetch`; `tmp` from `CRYPTO_malloc` (or is NULL).
+    // SAFETY: `sha1` came from `EVP_MD_fetch`.
     unsafe {
         EVP_MD_free(sha1);
-        CRYPTO_free(tmp.cast(), FILE.as_ptr(), LINE_FREE_TMP);
     }
+    // The scratch handle releases `tmp` at the authority's own site.
+    drop(tmp);
     res
 }
 
@@ -367,7 +422,7 @@ pub unsafe extern "C" fn SRP_Calc_x_ex(
     }
 
     let mut dig = [0u8; SHA_DIGEST_LENGTH as usize];
-    let mut cs: *mut c_uchar = ptr::null_mut();
+    let mut cs: Option<OwnedBuf> = None;
     let mut res: *mut BigNum = ptr::null_mut();
     let mut sha1: *mut EvpMd = ptr::null_mut();
 
@@ -379,11 +434,16 @@ pub unsafe extern "C" fn SRP_Calc_x_ex(
 
     'done: {
         // SAFETY: `s` is NULL or live; the allocation is `BN_num_bytes(s)` bytes.
-        cs = unsafe { CRYPTO_malloc(bn_num_bytes(s) as usize, FILE.as_ptr(), LINE_MALLOC_CS) }
-            .cast::<c_uchar>();
-        if cs.is_null() {
+        let Some(buf) = OwnedBuf::new(
+            unsafe { bn_num_bytes(s) } as usize,
+            FILE.as_ptr(),
+            LINE_MALLOC_CS,
+            LINE_FREE_CS,
+        ) else {
             break 'done;
-        }
+        };
+        let cs_ptr = buf.as_ptr();
+        cs = Some(buf);
 
         // SAFETY: the arguments are forwarded under this function's contract.
         sha1 = unsafe { EVP_MD_fetch(libctx, c"SHA1".as_ptr(), propq) };
@@ -404,13 +464,13 @@ pub unsafe extern "C" fn SRP_Calc_x_ex(
         if !ok {
             break 'done;
         }
-        // SAFETY: `s` is live and `cs` is `BN_num_bytes(s)` bytes.
-        ok = unsafe { BN_bn2bin(s, cs) } >= 0;
+        // SAFETY: `s` is live and `cs_ptr` is `BN_num_bytes(s)` bytes.
+        ok = unsafe { BN_bn2bin(s, cs_ptr) } >= 0;
         if !ok {
             break 'done;
         }
-        // SAFETY: `s` is live; `cs` holds `BN_num_bytes(s)` bytes.
-        ok = unsafe { EVP_DigestUpdate(ctxt, cs.cast(), bn_num_bytes(s) as usize) } != 0;
+        // SAFETY: `s` is live; `cs_ptr` holds `BN_num_bytes(s)` bytes.
+        ok = unsafe { EVP_DigestUpdate(ctxt, cs_ptr.cast(), bn_num_bytes(s) as usize) } != 0;
         if ok {
             // SAFETY: `dig` is live and `SHA_DIGEST_LENGTH` bytes.
             ok = unsafe {
@@ -425,13 +485,13 @@ pub unsafe extern "C" fn SRP_Calc_x_ex(
         res = unsafe { BN_bin2bn(dig.as_ptr(), SHA_DIGEST_LENGTH, ptr::null_mut()) };
     }
 
-    // SAFETY: `sha1` came from `EVP_MD_fetch`; `cs` from `CRYPTO_malloc` (or NULL); `ctxt`
-    // came from `EVP_MD_CTX_new`.
+    // SAFETY: `sha1` came from `EVP_MD_fetch`; `ctxt` came from `EVP_MD_CTX_new`.
     unsafe {
         EVP_MD_free(sha1);
-        CRYPTO_free(cs.cast(), FILE.as_ptr(), LINE_FREE_CS);
         EVP_MD_CTX_free(ctxt);
     }
+    // The scratch handle releases `cs` at the authority's own site.
+    drop(cs);
     res
 }
 
