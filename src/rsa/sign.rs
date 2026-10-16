@@ -32,7 +32,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 
 use crate::asn1::layout::Asn1String;
 use crate::asn1::string::ASN1_OCTET_STRING_free;
@@ -64,6 +64,62 @@ const FILE_SIGN: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
+/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new_cleansed`
+/// allocates it and `Drop` is its single release, the authority's own cleansing
+/// `OPENSSL_clear_free`. `len` is the allocation's length, which that release zeroes before the
+/// block is freed; it stays a secret-bearing block, so every arm of this unit keeps the cleansing
+/// release rather than a plain one.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    len: usize,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)` for a block the authority releases with the cleansing
+    /// `OPENSSL_clear_free(ptr, len)`, or `None` when the allocator answers NULL.
+    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            len,
+            file,
+            line,
+        })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// The allocation's length, which the cleansing release covers.
+    fn len(&self) -> usize {
+        self.len
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, the authority's own `OPENSSL_clear_free`.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new_cleansed` allocated and has not released, readable
+        // for `self.len` bytes; `CRYPTO_clear_free` zeroes then releases it.
+        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, self.file, self.line) };
+    }
+}
 
 /// `MD2_DIGEST_LENGTH` — `include/openssl/md2.h:27`. Declared here rather than imported because
 /// **the crate has no MD2 unit at all**: `crypto/md2/` is not one of 8.1's labels, and the object
@@ -358,48 +414,41 @@ fn digest_sz_from_nid(nid: c_int) -> c_int {
 /// are different reasons because `NID_undef` is a caller passing no algorithm at all while an
 /// unknown nonzero NID is a caller passing one this build cannot encode.
 ///
+/// The transcription returns the buffer as an owned [`OwnedBuf`] rather than through the
+/// authority's `out`/`out_len` pair, so the allocation's length and its cleansing release travel
+/// with it instead of being re-derived by each caller; `None` is the authority's refusal, which
+/// leaves the caller nothing to release.
+///
 /// **`NID_undef` is tested before the table is consulted**, so `ossl_rsa_digestinfo_encoding`'s NULL
 /// answer and the `type == NID_undef` case do not share a reason: the first is
 /// `RSA_R_THE_ASN1_OBJECT_IDENTIFIER_IS_NOT_KNOWN_FOR_THIS_MD` and the second is
 /// `RSA_R_UNKNOWN_ALGORITHM_TYPE`.
 ///
 /// # Safety
-/// `out` and `out_len` are live; `m` is readable for `m_len` bytes. On success `*out` is a caller
-/// allocation of `*out_len` bytes and on failure it is left untouched.
-unsafe fn encode_pkcs1(
-    out: *mut *mut c_uchar,
-    out_len: *mut usize,
-    type_: c_int,
-    m: *const c_uchar,
-    m_len: usize,
-) -> c_int {
+/// `m` is readable for `m_len` bytes.
+unsafe fn encode_pkcs1(type_: c_int, m: *const c_uchar, m_len: usize) -> Option<OwnedBuf> {
     // SAFETY: the caller's contract.
     unsafe {
         let mut di_prefix_len: usize = 0;
 
         if type_ == NID_undef {
             raise_site(&err_sites::RSA_SIGN_265);
-            return 0;
+            return None;
         }
         // SAFETY: `di_prefix_len` is a live local.
         let di_prefix = ossl_rsa_digestinfo_encoding(type_, &mut di_prefix_len);
         if di_prefix.is_null() {
             raise_site(&err_sites::RSA_SIGN_270);
-            return 0;
+            return None;
         }
         let dig_info_len = di_prefix_len + m_len;
-        let dig_info = CRYPTO_malloc(dig_info_len, FILE_SIGN, LINE).cast::<c_uchar>();
-        if dig_info.is_null() {
-            return 0;
-        }
+        // SAFETY: `dig_info_len > 0` because `di_prefix_len >= 1`.
+        let dig_info = OwnedBuf::new_cleansed(dig_info_len, FILE_SIGN, LINE)?;
         // SAFETY: `dig_info` is writable for `dig_info_len` bytes, `di_prefix` is readable for
         // `di_prefix_len` and `m` for `m_len`.
-        core::ptr::copy_nonoverlapping(di_prefix, dig_info, di_prefix_len);
-        core::ptr::copy_nonoverlapping(m, dig_info.add(di_prefix_len), m_len);
-
-        *out = dig_info;
-        *out_len = dig_info_len;
-        1
+        core::ptr::copy_nonoverlapping(di_prefix, dig_info.as_ptr(), di_prefix_len);
+        core::ptr::copy_nonoverlapping(m, dig_info.as_ptr().add(di_prefix_len), m_len);
+        Some(dig_info)
     }
 }
 
@@ -441,8 +490,10 @@ pub unsafe extern "C" fn RSA_sign(
     // SAFETY: the caller's contract.
     unsafe {
         let mut ret: c_int = 0;
-        let mut encoded_len: usize = 0;
-        let mut tmps: *mut c_uchar = core::ptr::null_mut();
+        // The `encode_pkcs1` allocation, owned for the rest of the call so its cleansing release is
+        // `Drop` and never runs while `encoded` still points into it; `None` on the `NID_md5_sha1`
+        // arm, which uses the caller's `m` directly.
+        let encoded_owned: Option<OwnedBuf>;
         let encoded: *const c_uchar;
 
         // The authority's `#ifndef FIPS_MODULE` arm, which is this build's only arm.
@@ -459,17 +510,20 @@ pub unsafe extern "C" fn RSA_sign(
                 raise_site(&err_sites::RSA_SIGN_307);
                 return 0;
             }
-            encoded_len = SSL_SIG_LENGTH;
             encoded = m;
+            encoded_owned = None;
         } else {
-            // SAFETY: `tmps` and `encoded_len` are live locals.
-            if encode_pkcs1(&mut tmps, &mut encoded_len, type_, m, m_len as usize) == 0 {
-                // SAFETY: `tmps` is NULL here, which the release tolerates.
-                CRYPTO_clear_free(tmps.cast(), encoded_len, FILE_SIGN, LINE);
-                return ret;
+            match encode_pkcs1(type_, m, m_len as usize) {
+                Some(buf) => {
+                    encoded = buf.as_ptr();
+                    encoded_owned = Some(buf);
+                }
+                None => return ret,
             }
-            encoded = tmps;
         }
+        // `SSL_SIG_LENGTH` is the arm with no `encode_pkcs1` buffer; otherwise the buffer's own
+        // length.
+        let encoded_len = encoded_owned.as_ref().map_or(SSL_SIG_LENGTH, OwnedBuf::len);
 
         // SAFETY: `rsa` is live.
         if encoded_len + RSA_PKCS1_PADDING_SIZE as usize > RSA_size(rsa) as usize {
@@ -489,8 +543,7 @@ pub unsafe extern "C" fn RSA_sign(
             }
         }
 
-        // SAFETY: `tmps` is this call's own allocation, `encoded_len` its length.
-        CRYPTO_clear_free(tmps.cast(), encoded_len, FILE_SIGN, LINE);
+        // `encoded_owned` drops here, the authority's own cleansing `OPENSSL_clear_free`.
         ret
     }
 }
@@ -532,12 +585,6 @@ pub(crate) unsafe fn ossl_rsa_verify(
     // SAFETY: the caller's contract.
     unsafe {
         let mut ret: c_int = 0;
-        let mut encoded_len: usize = 0;
-        /* Declared without an initialiser: the allocation is the first statement of the block below,
-         * so every `break 'body` follows it and Rust's definite-assignment analysis is satisfied
-         * -- and the cleanup after the block reads it on the allocation-failure path too. */
-        let decrypt_buf: *mut c_uchar;
-        let mut encoded: *mut c_uchar = core::ptr::null_mut();
 
         // SAFETY: `rsa` is live.
         if siglen != RSA_size(rsa) as usize {
@@ -545,16 +592,26 @@ pub(crate) unsafe fn ossl_rsa_verify(
             return 0;
         }
 
+        // The decode buffer the authority's `err:` label releases, owned so that label is `Drop`.
+        // It is declared before the body, so its release is the last of the call -- after the
+        // `encode_pkcs1` buffer's -- which is the authority's own order.
+        // SAFETY: `siglen == RSA_size(rsa)`, which is positive.
+        let decrypt_buf = OwnedBuf::new_cleansed(siglen, FILE_SIGN, LINE);
+
         'body: {
-            // Recover the encoded digest.
-            decrypt_buf = CRYPTO_malloc(siglen, FILE_SIGN, LINE).cast::<c_uchar>();
-            if decrypt_buf.is_null() {
+            // Recover the encoded digest. A NULL allocation is the authority's first `goto err`.
+            let Some(decrypt_buf) = decrypt_buf.as_ref() else {
                 break 'body;
-            }
+            };
 
             // SAFETY: `decrypt_buf` is writable for `siglen` bytes.
-            let len =
-                RSA_public_decrypt(siglen as c_int, sigbuf, decrypt_buf, rsa, RSA_PKCS1_PADDING);
+            let len = RSA_public_decrypt(
+                siglen as c_int,
+                sigbuf,
+                decrypt_buf.as_ptr(),
+                rsa,
+                RSA_PKCS1_PADDING,
+            );
             if len <= 0 {
                 break 'body;
             }
@@ -570,7 +627,7 @@ pub(crate) unsafe fn ossl_rsa_verify(
                 if !rm.is_null() {
                     // SAFETY: `rm` is writable for the digest and `decrypt_buf` is readable for
                     // `SSL_SIG_LENGTH`.
-                    core::ptr::copy_nonoverlapping(decrypt_buf, rm, SSL_SIG_LENGTH);
+                    core::ptr::copy_nonoverlapping(decrypt_buf.as_ptr(), rm, SSL_SIG_LENGTH);
                     *prm_len = SSL_SIG_LENGTH;
                 } else {
                     if m_len as usize != SSL_SIG_LENGTH {
@@ -578,7 +635,7 @@ pub(crate) unsafe fn ossl_rsa_verify(
                         break 'body;
                     }
                     // SAFETY: `m` is readable for `m_len` bytes and `decrypt_buf` for the same.
-                    if core::slice::from_raw_parts(decrypt_buf, SSL_SIG_LENGTH)
+                    if core::slice::from_raw_parts(decrypt_buf.as_ptr(), SSL_SIG_LENGTH)
                         != core::slice::from_raw_parts(m, SSL_SIG_LENGTH)
                     {
                         raise_site(&err_sites::RSA_SIGN_390);
@@ -587,15 +644,15 @@ pub(crate) unsafe fn ossl_rsa_verify(
                 }
             } else if type_ == NID_mdc2
                 && decrypt_len == 2 + 16
-                && *decrypt_buf == 0x04
-                && *decrypt_buf.add(1) == 0x10
+                && *decrypt_buf.as_ptr() == 0x04
+                && *decrypt_buf.as_ptr().add(1) == 0x10
             {
                 // Oddball MDC2 case: signature can be OCTET STRING. Check for correct tag and
                 // length octets.
                 if !rm.is_null() {
                     // SAFETY: `rm` is writable for sixteen octets and `decrypt_buf + 2` is
                     // readable for the same.
-                    core::ptr::copy_nonoverlapping(decrypt_buf.add(2), rm, 16);
+                    core::ptr::copy_nonoverlapping(decrypt_buf.as_ptr().add(2), rm, 16);
                     *prm_len = 16;
                 } else {
                     if m_len != 16 {
@@ -604,7 +661,7 @@ pub(crate) unsafe fn ossl_rsa_verify(
                     }
                     // SAFETY: `m` is readable for `m_len` bytes and `decrypt_buf + 2` for sixteen.
                     if core::slice::from_raw_parts(m, 16)
-                        != core::slice::from_raw_parts(decrypt_buf.add(2), 16)
+                        != core::slice::from_raw_parts(decrypt_buf.as_ptr().add(2), 16)
                     {
                         raise_site(&err_sites::RSA_SIGN_410);
                         break 'body;
@@ -625,20 +682,20 @@ pub(crate) unsafe fn ossl_rsa_verify(
                         break 'body;
                     }
                     // SAFETY: `decrypt_len >= m_len`, so the offset is inside `decrypt_buf`.
-                    m = decrypt_buf.add(decrypt_len - m_len as usize);
+                    m = decrypt_buf.as_ptr().add(decrypt_len - m_len as usize);
                 }
 
                 // Construct the encoded digest and ensure it matches.
-                // SAFETY: `encoded` and `encoded_len` are live locals.
-                if encode_pkcs1(&mut encoded, &mut encoded_len, type_, m, m_len as usize) == 0 {
+                // SAFETY: `m` is readable for `m_len` bytes.
+                let Some(buf) = encode_pkcs1(type_, m, m_len as usize) else {
                     break 'body;
-                }
+                };
 
-                // SAFETY: `encoded` is readable for `encoded_len` bytes and `decrypt_buf` for
-                // `decrypt_len`.
-                if encoded_len != decrypt_len
-                    || core::slice::from_raw_parts(encoded, encoded_len)
-                        != core::slice::from_raw_parts(decrypt_buf, encoded_len)
+                // SAFETY: `buf` is readable for `buf.len()` bytes and `decrypt_buf` for
+                // `decrypt_len`, and `RSA_sign`'s `encode_pkcs1` always produces `buf.len() > 0`.
+                if buf.len() != decrypt_len
+                    || core::slice::from_raw_parts(buf.as_ptr(), buf.len())
+                        != core::slice::from_raw_parts(decrypt_buf.as_ptr(), buf.len())
                 {
                     raise_site(&err_sites::RSA_SIGN_441);
                     break 'body;
@@ -650,16 +707,14 @@ pub(crate) unsafe fn ossl_rsa_verify(
                     core::ptr::copy_nonoverlapping(m, rm, m_len as usize);
                     *prm_len = m_len as usize;
                 }
+                // `buf` drops at the end of this arm, before `decrypt_buf` after `'body` -- the
+                // authority's own `err:` order.
             }
 
             ret = 1;
         }
 
-        // The authority's `err:` label. Both pointers are NULL when the first `goto err` is taken,
-        // which `OPENSSL_clear_free` tolerates.
-        // SAFETY: both are NULL or this call's own allocations of the stated lengths.
-        CRYPTO_clear_free(encoded.cast(), encoded_len, FILE_SIGN, LINE);
-        CRYPTO_clear_free(decrypt_buf.cast(), siglen, FILE_SIGN, LINE);
+        // `decrypt_buf` drops here, the authority's `err:` cleansing release.
         ret
     }
 }
@@ -743,7 +798,6 @@ pub unsafe extern "C" fn RSA_sign_ASN1_OCTET_STRING(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
-        let mut ret: c_int = 1;
         let sig = Asn1String {
             length: m_len as c_int,
             type_: crate::asn1::layout::V_ASN1_OCTET_STRING,
@@ -760,25 +814,24 @@ pub unsafe extern "C" fn RSA_sign_ASN1_OCTET_STRING(
             raise_site(&err_sites::RSA_SAOS_39);
             return 0;
         }
-        // SAFETY: a compile-time-constant site.
-        let s = CRYPTO_malloc((j as usize) + 1, FILE_SIGN, LINE).cast::<c_uchar>();
-        if s.is_null() {
+        // SAFETY: `j > RSA_PKCS1_PADDING_SIZE` was checked above, so `j + 1 > 0`.
+        let Some(s) = OwnedBuf::new_cleansed((j as usize) + 1, FILE_SIGN, LINE) else {
             return 0;
-        }
-        let mut p = s;
+        };
+        let mut p = s.as_ptr();
         // SAFETY: `sig` is live and `p` points at the `j + 1` bytes just allocated, which the
         // length query above proved enough.
         i2d_ASN1_OCTET_STRING(&sig, &mut p);
         // SAFETY: `s` holds the encoding `i` octets long and `sigret` is writable for `RSA_size`.
-        let i = RSA_private_encrypt(i, s, sigret, rsa, RSA_PKCS1_PADDING);
-        if i <= 0 {
-            ret = 0;
+        let i = RSA_private_encrypt(i, s.as_ptr(), sigret, rsa, RSA_PKCS1_PADDING);
+        let ret = if i <= 0 {
+            0
         } else {
             *siglen = i as c_uint;
-        }
+            1
+        };
 
-        // SAFETY: `s` is this call's own allocation of `j + 1` bytes.
-        CRYPTO_clear_free(s.cast(), (j as usize) + 1, FILE_SIGN, LINE);
+        // `s` drops here, the authority's own cleansing `OPENSSL_clear_free(s, j + 1)`.
         ret
     }
 }
@@ -801,7 +854,7 @@ pub unsafe extern "C" fn RSA_sign_ASN1_OCTET_STRING(
 /// **`s` is uninitialised before its allocation, and the only path that reaches the release label
 /// with it unset is the allocation failure itself.** The authority's early return for the wrong
 /// signature length happens *before* `s` exists, so `OPENSSL_clear_free(s, siglen)` is never
-/// reached with an indeterminate pointer; the transcription's `s` starts NULL and is set by the
+/// reached with an indeterminate pointer; the transcription's `s` starts `None` and is set by the
 /// allocation, which is the same set of reachable states.
 ///
 /// # Safety
@@ -819,8 +872,10 @@ pub unsafe extern "C" fn RSA_verify_ASN1_OCTET_STRING(
     // SAFETY: the caller's contract.
     unsafe {
         let mut ret: c_int = 0;
-        let s: *mut c_uchar;
         let mut sig: *mut Asn1String = core::ptr::null_mut();
+        // The decode buffer, owned for the call: the authority releases the decoded `sig` and then
+        // this buffer at its `err:` label, so `s` outlives `sig` here too.
+        let mut s: Option<OwnedBuf> = None;
 
         // SAFETY: `rsa` is live.
         if siglen != RSA_size(rsa) as c_uint {
@@ -829,18 +884,20 @@ pub unsafe extern "C" fn RSA_verify_ASN1_OCTET_STRING(
         }
 
         'body: {
-            s = CRYPTO_malloc(siglen as usize, FILE_SIGN, LINE).cast::<c_uchar>();
-            if s.is_null() {
+            // SAFETY: `siglen == RSA_size(rsa)`, which is positive.
+            let Some(buf) = OwnedBuf::new_cleansed(siglen as usize, FILE_SIGN, LINE) else {
                 break 'body;
-            }
-            // SAFETY: `s` is writable for `siglen` bytes.
-            let i = RSA_public_decrypt(siglen as c_int, sigbuf, s, rsa, RSA_PKCS1_PADDING);
+            };
+            let s_ptr = buf.as_ptr();
+            s = Some(buf);
+            // SAFETY: `s_ptr` is writable for `siglen` bytes.
+            let i = RSA_public_decrypt(siglen as c_int, sigbuf, s_ptr, rsa, RSA_PKCS1_PADDING);
 
             if i <= 0 {
                 break 'body;
             }
 
-            let mut p: *const c_uchar = s;
+            let mut p: *const c_uchar = s_ptr;
             // SAFETY: `p` points at `i` readable octets and `i` is positive.
             sig = d2i_ASN1_OCTET_STRING(core::ptr::null_mut(), &mut p, i as c_long);
             if sig.is_null() {
@@ -858,10 +915,11 @@ pub unsafe extern "C" fn RSA_verify_ASN1_OCTET_STRING(
             }
         }
 
-        // SAFETY: `sig` is NULL or this call's own decoded object; `s` is NULL or this call's own
-        // allocation of `siglen` bytes.
+        // SAFETY: `sig` is NULL or this call's own decoded object. The authority releases it
+        // first, then the buffer.
         ASN1_OCTET_STRING_free(sig);
-        CRYPTO_clear_free(s.cast(), siglen as usize, FILE_SIGN, LINE);
+        // `s` drops here, the authority's own cleansing `OPENSSL_clear_free(s, siglen)`.
+        drop(s);
         ret
     }
 }
@@ -944,34 +1002,31 @@ mod tests {
     #[test]
     fn encode_pkcs1_refuses_undef_and_an_unknown_algorithm_differently() {
         let m = [0u8; 32];
-        let mut out: *mut c_uchar = core::ptr::null_mut();
-        let mut out_len: usize = 0;
 
         crate::runtime::err::ERR_clear_error();
-        // SAFETY: `out` and `out_len` are live locals; `m` is readable for 32 bytes.
-        let ret = unsafe { encode_pkcs1(&mut out, &mut out_len, NID_undef, m.as_ptr(), m.len()) };
-        assert_eq!(ret, 0);
-        assert!(out.is_null(), "a refusal allocates nothing");
+        // SAFETY: `m` is readable for 32 bytes.
+        let out = unsafe { encode_pkcs1(NID_undef, m.as_ptr(), m.len()) };
+        assert!(out.is_none(), "a refusal allocates nothing");
         assert_ne!(crate::runtime::err::ERR_peek_error(), 0);
 
         crate::runtime::err::ERR_clear_error();
         // SAFETY: as above, with a NID the table does not have.
-        let ret = unsafe { encode_pkcs1(&mut out, &mut out_len, 0x3fff, m.as_ptr(), m.len()) };
-        assert_eq!(ret, 0);
+        let out = unsafe { encode_pkcs1(0x3fff, m.as_ptr(), m.len()) };
+        assert!(out.is_none());
         assert_ne!(crate::runtime::err::ERR_peek_error(), 0);
 
         // And one success, whose answer is the prefix plus the digest.
         crate::runtime::err::ERR_clear_error();
         // SAFETY: as above, with a NID the table has.
-        let ret = unsafe { encode_pkcs1(&mut out, &mut out_len, NID_sha256, m.as_ptr(), m.len()) };
-        assert_eq!(ret, 1);
-        assert_eq!(out_len, 19 + 32);
-        // SAFETY: `out` is the allocation the callee made, `out_len` its length.
-        let encoded = unsafe { core::slice::from_raw_parts(out, out_len) };
+        let out = unsafe { encode_pkcs1(NID_sha256, m.as_ptr(), m.len()) };
+        assert!(out.is_some(), "the table has SHA-256");
+        let Some(out) = out else { return };
+        assert_eq!(out.len(), 19 + 32);
+        // SAFETY: `out` is the callee's own allocation of `out.len()` bytes.
+        let encoded = unsafe { core::slice::from_raw_parts(out.as_ptr(), out.len()) };
         assert_eq!(encoded[0], ASN1_SEQUENCE);
         assert_eq!(encoded[19..], m[..]);
-        // SAFETY: `out` is this test's own allocation from the callee.
-        unsafe { crate::runtime::mem::CRYPTO_clear_free(out.cast(), out_len, FILE_SIGN, LINE) };
+        // `out` drops here, the callee's own cleansing `OPENSSL_clear_free`.
         crate::runtime::err::ERR_clear_error();
     }
 }
