@@ -47,6 +47,58 @@ use crate::runtime::bio::sys;
 /// `DEFAULT_SEPARATOR` — the `:` the two convenience entry points separate with.
 const DEFAULT_SEPARATOR: c_char = b':' as c_char;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size -- a Rust `Box`/`Vec` would hide
+/// both the allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook --
+/// and only its *ownership* is this type: [`Self::new`] allocates it, `Drop` is its single release,
+/// and [`Self::into_raw`] hands it to a consumer that takes it over (the caller's out-parameter).
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// `ossl_tolower(c)` from `crypto/ctype.c`.
 ///
 /// `ossl_toascii` is the identity on a non-EBCDIC platform, so this reduces to
@@ -367,26 +419,23 @@ unsafe fn ossl_hexstr2buf_sep(
         return core::ptr::null_mut();
     }
     buf_n /= 2;
-    // SAFETY: a plain allocation of `buf_n` bytes.
-    let buf = CRYPTO_malloc(buf_n, core::ptr::null(), 0).cast::<c_uchar>();
-    if buf.is_null() {
+    let Some(buf) = OwnedBuf::new(buf_n, core::ptr::null(), 0) else {
         return core::ptr::null_mut();
-    }
+    };
     if !buflen.is_null() {
         // SAFETY: `buflen` is writable per the caller's contract.
         unsafe { *buflen = 0 };
     }
     let mut tmp_buflen = 0usize;
     // SAFETY: `buf` is writable for `buf_n` bytes; `str_` is NUL-terminated.
-    if unsafe { hexstr2buf_sep(buf, buf_n, &mut tmp_buflen, str_, sep) } != 0 {
+    if unsafe { hexstr2buf_sep(buf.as_ptr(), buf_n, &mut tmp_buflen, str_, sep) } != 0 {
         if !buflen.is_null() {
             // SAFETY: `buflen` is writable per the caller's contract.
             unsafe { *buflen = tmp_buflen as c_long };
         }
-        return buf;
+        return buf.into_raw();
     }
-    // SAFETY: `buf` came from `CRYPTO_malloc` above.
-    unsafe { CRYPTO_free(buf.cast::<c_void>(), core::ptr::null(), 0) };
+    // `buf`'s `Drop` is the authority's own `CRYPTO_free` on this failure tail.
     core::ptr::null_mut()
 }
 
@@ -532,18 +581,25 @@ unsafe fn ossl_buf2hexstr_sep(buf: *const c_uchar, buflen: c_long, sep: c_char) 
     }
 
     let tmp_n = if has_sep { wide * 3 } else { 1 + wide * 2 };
-    // SAFETY: a plain allocation of `tmp_n` bytes.
-    let tmp = CRYPTO_malloc(tmp_n, core::ptr::null(), 0).cast::<c_char>();
-    if tmp.is_null() {
+    let Some(tmp) = OwnedBuf::new(tmp_n, core::ptr::null(), 0) else {
         return core::ptr::null_mut();
-    }
+    };
 
     // SAFETY: `tmp` is writable for `tmp_n` bytes; `buf` is readable for `wide`.
-    if unsafe { buf2hexstr_sep(tmp, tmp_n, core::ptr::null_mut(), buf, wide, sep) } != 0 {
-        return tmp;
+    if unsafe {
+        buf2hexstr_sep(
+            tmp.as_ptr().cast::<c_char>(),
+            tmp_n,
+            core::ptr::null_mut(),
+            buf,
+            wide,
+            sep,
+        )
+    } != 0
+    {
+        return tmp.into_raw().cast::<c_char>();
     }
-    // SAFETY: `tmp` came from `CRYPTO_malloc` above.
-    unsafe { CRYPTO_free(tmp.cast::<c_void>(), core::ptr::null(), 0) };
+    // `tmp`'s `Drop` is the authority's own `CRYPTO_free` on this failure tail.
     core::ptr::null_mut()
 }
 

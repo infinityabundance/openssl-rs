@@ -225,6 +225,131 @@ pub(crate) unsafe fn pem_free(
     }
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the scratch buffers
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer from the `PEM_MALLOC`/`PEM_FREE` seam ([`pem_malloc`]/[`pem_free`]).
+///
+/// The block's allocation and its release both go through the flag-dispatched seam, so the owner
+/// carries the `flags` and `num` the release needs; `Drop` is its single [`pem_free`] at the
+/// authority's recorded site. A NULL pointer never becomes a `PemBuf`: [`Self::new`] answers `None`.
+struct PemBuf {
+    ptr: *mut c_void,
+    flags: c_uint,
+    num: usize,
+    line: c_int,
+}
+
+impl PemBuf {
+    /// `pem_malloc(num, flags, FILE, alloc_line)`, or `None` when the seam answers NULL.
+    fn new(num: usize, flags: c_uint, alloc_line: c_int, release_line: c_int) -> Option<PemBuf> {
+        // SAFETY: the seam validates its own arguments; `file`/`line` are diagnostics only.
+        let ptr = unsafe { pem_malloc(num, flags, FILE_PEM_LIB, alloc_line) };
+        if ptr.is_null() {
+            return None;
+        }
+        Some(PemBuf {
+            ptr,
+            flags,
+            num,
+            line: release_line,
+        })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut c_void {
+        self.ptr
+    }
+}
+
+impl Drop for PemBuf {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `pem_malloc` answered and has not handed out; `pem_free`
+        // dispatches on the recorded flags and accepts NULL.
+        unsafe { pem_free(self.ptr, self.flags, self.num, FILE_PEM_LIB, self.line) };
+    }
+}
+
+/// An owned scratch buffer from this unit's direct `CRYPTO_malloc`/`CRYPTO_malloc_array` seam.
+///
+/// The release is plain for `PEM_SignFinal`'s signature buffer ([`Self::new`]) and cleansing for
+/// `PEM_write_bio`'s line buffer ([`Self::new_array`]); `Drop` performs the arm the constructor
+/// recorded, at the authority's own site.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    /// The byte count `CRYPTO_clear_free` is told; unused by a plain release.
+    len: usize,
+    file: *const c_char,
+    line: c_int,
+    cleanse: bool,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, alloc_line)`, released by a plain `CRYPTO_free` at `release_line`.
+    fn new(
+        len: usize,
+        file: *const c_char,
+        alloc_line: c_int,
+        release_line: c_int,
+    ) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, alloc_line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            len,
+            file,
+            line: release_line,
+            cleanse: false,
+        })
+    }
+
+    /// `CRYPTO_malloc_array(num, size, file, alloc_line)`, released by
+    /// `CRYPTO_clear_free(ptr, num * size, file, release_line)`.
+    fn new_array(
+        num: usize,
+        size: usize,
+        file: *const c_char,
+        alloc_line: c_int,
+        release_line: c_int,
+    ) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc_array(num, size, file, alloc_line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            len: num * size,
+            file,
+            line: release_line,
+            cleanse: true,
+        })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the arm the constructor recorded.
+    fn drop(&mut self) {
+        if self.cleanse {
+            // SAFETY: `self.ptr` is this frame's own block of `self.len` bytes; the authority's own
+            // `OPENSSL_clear_free` accepts NULL.
+            unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, self.file, self.line) };
+        } else {
+            // SAFETY: `self.ptr` is this frame's own block; the authority's own `CRYPTO_free`
+            // accepts NULL.
+            unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+        }
+    }
+}
+
 /// `HAS_PREFIX(str, pre)` — `include/internal/common.h:58`:
 /// `strncmp(str, pre "", sizeof(pre) - 1) == 0`.
 ///
@@ -619,13 +744,12 @@ unsafe fn get_name(bp: *mut Bio, name: *mut *mut c_char, flags: c_uint) -> c_int
     let mut first_call = 1;
 
     // Need to hold the trailing NUL (accounted for by `BIO_gets`) and the newline that will be
-    // added by `sanitize_line` (the extra `1`).
-    // SAFETY: `flags` is a real flag word.
-    let linebuf =
-        unsafe { pem_malloc((LINESIZE + 1) as usize, flags, FILE_PEM_LIB, 786) }.cast::<c_char>();
-    if linebuf.is_null() {
+    // added by `sanitize_line` (the extra `1`). `PemBuf`'s `Drop` is the authority's own
+    // `PEM_FREE(linebuf, flags, LINESIZE + 1)` at `:815` on every exit below.
+    let Some(linebuf_owner) = PemBuf::new((LINESIZE + 1) as usize, flags, 786, 815) else {
         return 0;
-    }
+    };
+    let linebuf = linebuf_owner.as_ptr().cast::<c_char>();
 
     let mut len;
     loop {
@@ -634,16 +758,7 @@ unsafe fn get_name(bp: *mut Bio, name: *mut *mut c_char, flags: c_uint) -> c_int
         if len <= 0 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::PEM_LIB_794) };
-            // SAFETY: this frame's own buffer, freed exactly once on this path.
-            unsafe {
-                pem_free(
-                    linebuf.cast(),
-                    flags,
-                    (LINESIZE + 1) as usize,
-                    FILE_PEM_LIB,
-                    815,
-                )
-            };
+            // `linebuf_owner`'s `Drop` releases the buffer on this path.
             return 0;
         }
         // Strip trailing garbage and standardise the ending. `ONLY_B64` is masked out here and only
@@ -672,16 +787,7 @@ unsafe fn get_name(bp: *mut Bio, name: *mut *mut c_char, flags: c_uint) -> c_int
     // SAFETY: `name` is the caller's out-parameter; `flags` is a real flag word.
     let nm = unsafe { pem_malloc(len as usize, flags, FILE_PEM_LIB, 808) }.cast::<c_char>();
     if nm.is_null() {
-        // SAFETY: this frame's own buffer, freed exactly once on this path.
-        unsafe {
-            pem_free(
-                linebuf.cast(),
-                flags,
-                (LINESIZE + 1) as usize,
-                FILE_PEM_LIB,
-                815,
-            )
-        };
+        // `linebuf_owner`'s `Drop` releases the buffer on this path.
         return 0;
     }
     // SAFETY: `nm` is writable for `len` bytes and the source is inside `linebuf`.
@@ -689,17 +795,9 @@ unsafe fn get_name(bp: *mut Bio, name: *mut *mut c_char, flags: c_uint) -> c_int
         ptr::copy_nonoverlapping(linebuf.add(BEGINSTR.len()), nm, len as usize);
         *name = nm;
     }
-    // SAFETY: as above. The authority reaches this through `ret = 1; goto err`, so the free below
-    // is the same statement the two early returns above perform.
-    unsafe {
-        pem_free(
-            linebuf.cast(),
-            flags,
-            (LINESIZE + 1) as usize,
-            FILE_PEM_LIB,
-            815,
-        )
-    };
+    // SAFETY: as above. The authority reaches this through `ret = 1; goto err`, and
+    // `linebuf_owner`'s `Drop` is the same `PEM_FREE(linebuf, flags, LINESIZE + 1)` the two early
+    // returns above perform.
     1
 }
 
@@ -743,12 +841,12 @@ unsafe fn get_header_and_data(
     let mut tmp = unsafe { *header };
     let mut end = 0;
     let mut prev_partial_line_read = 0;
-    // SAFETY: `flags` is a real flag word.
-    let linebuf =
-        unsafe { pem_malloc((LINESIZE + 1) as usize, flags, FILE_PEM_LIB, 850) }.cast::<c_char>();
-    if linebuf.is_null() {
+    // The line buffer is `PemBuf`'s; its `Drop` is the authority's own
+    // `PEM_FREE(linebuf, flags, LINESIZE + 1)` at `:934` on every exit below.
+    let Some(linebuf_owner) = PemBuf::new((LINESIZE + 1) as usize, flags, 850, 934) else {
         return 0;
-    }
+    };
+    let linebuf = linebuf_owner.as_ptr().cast::<c_char>();
     // 0 if not seen (yet), 1 if reading header, 2 if finished header.
     let mut got_header = HeaderStatus::MaybeHeader;
 
@@ -759,16 +857,7 @@ unsafe fn get_header_and_data(
         if len <= 0 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::PEM_LIB_858) };
-            // SAFETY: this frame's own buffer, freed exactly once on this path.
-            unsafe {
-                pem_free(
-                    linebuf.cast(),
-                    flags,
-                    (LINESIZE + 1) as usize,
-                    FILE_PEM_LIB,
-                    934,
-                )
-            };
+            // `linebuf_owner`'s `Drop` releases the buffer on this path.
             return 0;
         }
 
@@ -807,16 +896,7 @@ unsafe fn get_header_and_data(
                     // Another blank line is an error.
                     // SAFETY: a compile-time-constant site.
                     unsafe { raise_site(&err_sites::PEM_LIB_887) };
-                    // SAFETY: this frame's own buffer.
-                    unsafe {
-                        pem_free(
-                            linebuf.cast(),
-                            flags,
-                            (LINESIZE + 1) as usize,
-                            FILE_PEM_LIB,
-                            934,
-                        )
-                    };
+                    // `linebuf_owner`'s `Drop` releases the buffer on this path.
                     return 0;
                 }
                 got_header = HeaderStatus::PostHeader;
@@ -847,16 +927,7 @@ unsafe fn get_header_and_data(
             if !tail_ok {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::PEM_LIB_901) };
-                // SAFETY: this frame's own buffer.
-                unsafe {
-                    pem_free(
-                        linebuf.cast(),
-                        flags,
-                        (LINESIZE + 1) as usize,
-                        FILE_PEM_LIB,
-                        934,
-                    )
-                };
+                // `linebuf_owner`'s `Drop` releases the buffer on this path.
                 return 0;
             }
             if got_header == HeaderStatus::MaybeHeader {
@@ -871,48 +942,21 @@ unsafe fn get_header_and_data(
             // Malformed input; short line not at end of data.
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::PEM_LIB_911) };
-            // SAFETY: this frame's own buffer.
-            unsafe {
-                pem_free(
-                    linebuf.cast(),
-                    flags,
-                    (LINESIZE + 1) as usize,
-                    FILE_PEM_LIB,
-                    934,
-                )
-            };
+            // `linebuf_owner`'s `Drop` releases the buffer on this path.
             return 0;
         }
         // Else, a line of text -- could be header or data; we don't know yet. Just pass it
         // through.
         // SAFETY: `tmp` is a live memory BIO and `linebuf` is NUL-terminated.
         if unsafe { BIO_puts(tmp, linebuf) } < 0 {
-            // SAFETY: this frame's own buffer.
-            unsafe {
-                pem_free(
-                    linebuf.cast(),
-                    flags,
-                    (LINESIZE + 1) as usize,
-                    FILE_PEM_LIB,
-                    934,
-                )
-            };
+            // `linebuf_owner`'s `Drop` releases the buffer on this path.
             return 0;
         }
         // Only encrypted files need the line length check applied.
         if got_header == HeaderStatus::PostHeader {
             // 65 includes the trailing newline.
             if len > 65 {
-                // SAFETY: this frame's own buffer.
-                unsafe {
-                    pem_free(
-                        linebuf.cast(),
-                        flags,
-                        (LINESIZE + 1) as usize,
-                        FILE_PEM_LIB,
-                        934,
-                    )
-                };
+                // `linebuf_owner`'s `Drop` releases the buffer on this path.
                 return 0;
             }
             if len < 65 {
@@ -921,17 +965,8 @@ unsafe fn get_header_and_data(
         }
     }
 
-    // SAFETY: as above. The authority reaches this through `ret = 1; goto err`, so the free below
-    // is the same statement the six early returns above perform.
-    unsafe {
-        pem_free(
-            linebuf.cast(),
-            flags,
-            (LINESIZE + 1) as usize,
-            FILE_PEM_LIB,
-            934,
-        )
-    };
+    // The authority reaches this through `ret = 1; goto err`, and `linebuf_owner`'s `Drop` is the
+    // same `PEM_FREE(linebuf, flags, LINESIZE + 1)` the six early returns above perform.
     1
 }
 
@@ -1256,26 +1291,21 @@ pub unsafe extern "C" fn PEM_write(
     ret
 }
 
-/// `err:` in [`PEM_write_bio`] — raise once, then release the context and the line buffer.
+/// `err:` in [`PEM_write_bio`] — raise once, then release the context.
+///
+/// The line buffer this frame allocated is [`OwnedBuf`]'s, released by its `Drop`; this function
+/// only reports and releases the context.
 ///
 /// # Safety
-/// `ctx` must be this frame's own context or NULL; `buf` its own line buffer or NULL.
-unsafe fn pem_write_bio_err(
-    ctx: *mut EvpEncodeCtx,
-    buf: *mut c_uchar,
-    reason: c_int,
-    retval: c_int,
-) {
+/// `ctx` must be this frame's own context or NULL.
+unsafe fn pem_write_bio_err(ctx: *mut EvpEncodeCtx, reason: c_int, retval: c_int) {
     if retval == 0 && reason != 0 {
         // SAFETY: the reason is this frame's runtime choice, which is why the generator marked
         // `PEM_LIB_697` `dynamic_reason`.
         unsafe { raise_site_dynamic(&err_sites::PEM_LIB_697, reason) };
     }
-    // SAFETY: this frame's own context and buffer; NULL is accepted by both.
-    unsafe {
-        EVP_ENCODE_CTX_free(ctx);
-        CRYPTO_clear_free(buf.cast(), (PEM_BUFSIZE * 8) as usize, FILE_PEM_LIB, 699);
-    }
+    // SAFETY: this frame's own context; NULL is accepted.
+    unsafe { EVP_ENCODE_CTX_free(ctx) };
 }
 
 /// `int PEM_write_bio(BIO *bp, const char *name, const char *header, const unsigned char *data, long len)`
@@ -1302,12 +1332,11 @@ pub unsafe extern "C" fn PEM_write_bio(
     let ctx = EVP_ENCODE_CTX_new();
     let mut reason: c_int = 0;
     let mut retval: c_int = 0;
-    let mut buf: *mut c_uchar = ptr::null_mut();
 
     if ctx.is_null() {
         reason = ERR_R_EVP_LIB;
-        // SAFETY: this frame's own context and buffer.
-        unsafe { pem_write_bio_err(ctx, buf, reason, retval) };
+        // SAFETY: this frame's own context.
+        unsafe { pem_write_bio_err(ctx, reason, retval) };
         return retval;
     }
 
@@ -1324,8 +1353,8 @@ pub unsafe extern "C" fn PEM_write_bio(
     };
     if !wrote_head {
         reason = ERR_R_BIO_LIB;
-        // SAFETY: this frame's own context and buffer.
-        unsafe { pem_write_bio_err(ctx, buf, reason, retval) };
+        // SAFETY: this frame's own context.
+        unsafe { pem_write_bio_err(ctx, reason, retval) };
         return retval;
     }
 
@@ -1342,19 +1371,21 @@ pub unsafe extern "C" fn PEM_write_bio(
         };
         if !wrote_header {
             reason = ERR_R_BIO_LIB;
-            // SAFETY: this frame's own context and buffer.
-            unsafe { pem_write_bio_err(ctx, buf, reason, retval) };
+            // SAFETY: this frame's own context.
+            unsafe { pem_write_bio_err(ctx, reason, retval) };
             return retval;
         }
     }
 
-    // `OPENSSL_malloc_array(PEM_BUFSIZE, 8)`.
-    buf = CRYPTO_malloc_array(PEM_BUFSIZE as usize, 8, FILE_PEM_LIB, 665).cast::<c_uchar>();
-    if buf.is_null() {
-        // SAFETY: this frame's own context and buffer.
-        unsafe { pem_write_bio_err(ctx, buf, reason, retval) };
+    // `OPENSSL_malloc_array(PEM_BUFSIZE, 8)` — this frame's own line buffer, released by its `Drop`
+    // on every exit below through the authority's own `OPENSSL_clear_free`.
+    let Some(buf_owner) = OwnedBuf::new_array(PEM_BUFSIZE as usize, 8, FILE_PEM_LIB, 665, 699)
+    else {
+        // SAFETY: this frame's own context.
+        unsafe { pem_write_bio_err(ctx, reason, retval) };
         return retval;
-    }
+    };
+    let buf = buf_owner.as_ptr();
 
     let mut j: c_long = 0;
     let mut len = len;
@@ -1373,16 +1404,16 @@ pub unsafe extern "C" fn PEM_write_bio(
         let ok = unsafe { EVP_EncodeUpdate(ctx, buf, &mut outl, data.offset(j as isize), n) };
         if ok == 0 {
             reason = ERR_R_EVP_LIB;
-            // SAFETY: this frame's own context and buffer.
-            unsafe { pem_write_bio_err(ctx, buf, reason, retval) };
+            // SAFETY: this frame's own context.
+            unsafe { pem_write_bio_err(ctx, reason, retval) };
             return retval;
         }
         if outl != 0 {
             // SAFETY: `bp` is live and `buf` holds `outl` bytes.
             if unsafe { BIO_write(bp, buf.cast(), outl) } != outl {
                 reason = ERR_R_BIO_LIB;
-                // SAFETY: this frame's own context and buffer.
-                unsafe { pem_write_bio_err(ctx, buf, reason, retval) };
+                // SAFETY: this frame's own context.
+                unsafe { pem_write_bio_err(ctx, reason, retval) };
                 return retval;
             }
         }
@@ -1396,8 +1427,8 @@ pub unsafe extern "C" fn PEM_write_bio(
         // SAFETY: `bp` is live and `buf` holds `outl` bytes.
         if unsafe { BIO_write(bp, buf.cast(), outl) } != outl {
             reason = ERR_R_BIO_LIB;
-            // SAFETY: this frame's own context and buffer.
-            unsafe { pem_write_bio_err(ctx, buf, reason, retval) };
+            // SAFETY: this frame's own context.
+            unsafe { pem_write_bio_err(ctx, reason, retval) };
             return retval;
         }
     }
@@ -1409,14 +1440,14 @@ pub unsafe extern "C" fn PEM_write_bio(
     };
     if !wrote_tail {
         reason = ERR_R_BIO_LIB;
-        // SAFETY: this frame's own context and buffer.
-        unsafe { pem_write_bio_err(ctx, buf, reason, retval) };
+        // SAFETY: this frame's own context.
+        unsafe { pem_write_bio_err(ctx, reason, retval) };
         return retval;
     }
     retval = i + outl;
 
-    // SAFETY: this frame's own context and buffer.
-    unsafe { pem_write_bio_err(ctx, buf, reason, retval) };
+    // SAFETY: this frame's own context; the line buffer is released by `buf_owner`'s `Drop`.
+    unsafe { pem_write_bio_err(ctx, reason, retval) };
     retval
 }
 
@@ -1478,17 +1509,16 @@ pub unsafe extern "C" fn PEM_SignFinal(
     // SAFETY: `pkey` is live per the contract.
     let size = unsafe { EVP_PKEY_get_size(pkey) };
     // SAFETY: the allocation validates its own argument; `size` is the key's signature length.
-    let m = CRYPTO_malloc(size as usize, FILE_PEM_SIGN, 35).cast::<c_uchar>();
-    if m.is_null() {
+    let Some(m_owner) = OwnedBuf::new(size as usize, FILE_PEM_SIGN, 35, 47) else {
         return ret;
-    }
+    };
+    let m = m_owner.as_ptr();
 
     let mut m_len: c_uint = 0;
     // SAFETY: `ctx` and `pkey` are live and `m` is writable for `size`.
     let signed = unsafe { EVP_SignFinal(ctx, m, &mut m_len, pkey) };
     if signed <= 0 {
-        // SAFETY: `m` is this frame's own block.
-        unsafe { CRYPTO_free(m.cast(), FILE_PEM_SIGN, 47) };
+        // `m_owner`'s `Drop` is the authority's own `OPENSSL_free` on this failure tail.
         return ret;
     }
 
@@ -1497,9 +1527,7 @@ pub unsafe extern "C" fn PEM_SignFinal(
     // SAFETY: `siglen` is the caller's out-parameter.
     unsafe { *siglen = i as c_uint };
     ret = 1;
-    // `ctx` has been zeroed by `EVP_SignFinal()`.
-    // SAFETY: `m` is this frame's own block.
-    unsafe { CRYPTO_free(m.cast(), FILE_PEM_SIGN, 47) };
+    // `ctx` has been zeroed by `EVP_SignFinal()`; `m_owner`'s `Drop` releases the signature buffer.
     ret
 }
 

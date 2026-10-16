@@ -91,6 +91,142 @@ const LINE_FREE_DERIVE_SKEY_ON_LENGTH: c_int = 618;
 const LINE_CLEAR_FREE_DERIVE_SKEY: c_int = 627;
 
 // ---------------------------------------------------------------------------------------------
+// Ownership of the fetched method object and of the derive buffer
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's destructor body for one of this file's heap records, without the block's own
+/// release, which [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live record this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned one of this file's heap records.
+///
+/// The block keeps the authority's layout and its exact `CRYPTO_zalloc` size/`file`/`line`, but its
+/// *ownership* is this type: [`Self::from_raw`] takes back the record whose last reference
+/// `EVP_KEYEXCH_free` released, and `Drop` runs the authority's own destructor body
+/// ([`CtxDestroy::destroy_body`]) followed by its single block release at the authority's own site.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Reclaim a record for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live record this file allocated that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The record's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
+    /// followed by its single block release, through the same allocator seam and the authority's own
+    /// site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `from_raw` reclaimed and this is its single release;
+        // `Drop` runs once, and `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+/// The `EVP_KEYEXCH_free` destructor body, without the block release [`OwnedCtx`]'s `Drop` performs:
+/// the method's owned `type_name` and the provider reference it holds.
+impl CtxDestroy for EvpKeyExch {
+    unsafe fn destroy_body(ptr: *mut EvpKeyExch) {
+        // SAFETY: `ptr` is a live record per the trait contract; `type_name` is NULL or this file's
+        // own `CRYPTO_malloc` block and `prov` holds the reference `evp_keyexch_new` took. The two
+        // releases are the authority's own order.
+        unsafe {
+            CRYPTO_free((*ptr).type_name.cast::<c_void>(), FILE, LINE_FREE_TYPE_NAME);
+            ossl_provider_free((*ptr).prov);
+        }
+    }
+}
+
+/// How `EVP_PKEY_derive_SKEY` releases its raw key buffer, matching the authority's own arm.
+enum KeyRelease {
+    /// `CRYPTO_free(key, FILE, line)` — the provider-failed and length-mismatch arms.
+    Plain { line: c_int },
+    /// `CRYPTO_clear_free(key, keylen, FILE, line)` — the success arm, after the secret's last use.
+    Cleansed { line: c_int },
+}
+
+/// `EVP_PKEY_derive_SKEY`'s raw key buffer, allocated by `CRYPTO_zalloc` at `:605` and owned until
+/// whichever of the function's three release arms runs.
+///
+/// The buffer is the derived secret's only copy outside the caller, so the release arm is carried
+/// explicitly: [`Self::release_plain`] for the two provider-failure tails the authority releases
+/// plainly, and [`Self::release_cleansed`] for the success arm, which the authority zeroes first.
+/// `Drop` performs the chosen arm.
+struct OwnedKey {
+    ptr: *mut u8,
+    len: usize,
+    release: KeyRelease,
+}
+
+impl OwnedKey {
+    /// `CRYPTO_zalloc(keylen, FILE, 605)`, or `None` when the allocator answers NULL.
+    fn new_zeroed(len: usize) -> Option<OwnedKey> {
+        let raw = CRYPTO_zalloc(len, FILE, LINE_ZALLOC_DERIVE_SKEY).cast::<u8>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedKey {
+            ptr: raw,
+            len,
+            release: KeyRelease::Plain {
+                line: LINE_FREE_DERIVE_SKEY_ON_DERIVE,
+            },
+        })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+
+    /// Consume the buffer, releasing it at the authority's provider-failure arm `line`.
+    fn release_plain(mut self, line: c_int) {
+        self.release = KeyRelease::Plain { line };
+    }
+
+    /// Consume the buffer, releasing it cleansed at the authority's success arm `line`.
+    fn release_cleansed(mut self, line: c_int) {
+        self.release = KeyRelease::Cleansed { line };
+    }
+}
+
+impl Drop for OwnedKey {
+    /// The buffer's single release, through the arm the authority's own path chose.
+    fn drop(&mut self) {
+        match self.release {
+            KeyRelease::Plain { line } => {
+                // SAFETY: `self.ptr` is this call's own block and has not been released.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, line) };
+            }
+            KeyRelease::Cleansed { line } => {
+                // SAFETY: `self.ptr` is this call's own block of `self.len` bytes; the authority's
+                // own `OPENSSL_clear_free` zeroes it before releasing it.
+                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, FILE, line) };
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // The dispatch ids and the eleven function-pointer types.
 //
 // `OSSL_FUNC_KEYEXCH_*`, dense from 1 to 11 — and note that the two `ctx_params` pairs are
@@ -390,14 +526,9 @@ pub unsafe extern "C" fn EVP_KEYEXCH_free(exchange: *mut EvpKeyExch) {
     if last > 1 {
         return;
     }
-    // SAFETY: `exchange` is live and this was the last reference.
-    let (type_name, prov) = unsafe { ((*exchange).type_name, (*exchange).prov) };
-    // SAFETY: `type_name` was allocated for this object.
-    unsafe { CRYPTO_free(type_name.cast(), FILE, LINE_FREE_TYPE_NAME) };
-    // SAFETY: `prov` is live and holds the reference `evp_keyexch_new` took.
-    unsafe { ossl_provider_free(prov) };
-    // SAFETY: `exchange` is this object's own allocation.
-    unsafe { CRYPTO_free(exchange.cast(), FILE, LINE_FREE_KEYEXCH) };
+    // SAFETY: `exchange` is live and this decrement was the last reference; the object's `Drop`
+    // releases its `type_name`, its provider reference and the block, at the authority's own sites.
+    drop(unsafe { OwnedCtx::from_raw(exchange, FILE, LINE_FREE_KEYEXCH) });
 }
 
 /// `int EVP_KEYEXCH_up_ref(EVP_KEYEXCH *exchange)`.
@@ -1193,8 +1324,7 @@ pub unsafe extern "C" fn EVP_PKEY_derive_SKEY(
 
         // SAFETY: `ctx` is live.
         let libctx = unsafe { (*ctx).libctx };
-        let key = CRYPTO_zalloc(keylen, FILE, LINE_ZALLOC_DERIVE_SKEY).cast::<u8>();
-        if key.is_null() {
+        let Some(key) = OwnedKey::new_zeroed(keylen) else {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::EXCHANGE_607) };
             if mgmt != skeymgmt {
@@ -1202,14 +1332,14 @@ pub unsafe extern "C" fn EVP_PKEY_derive_SKEY(
                 unsafe { EVP_SKEYMGMT_free(skeymgmt) };
             }
             return ptr::null_mut();
-        }
+        };
 
         let mut tmplen = keylen;
         // SAFETY: `derive` is the provider's own callback, `algctx` is its context, `key` is this
         // call's own block of `keylen` bytes and the authority passes the length as `outlen`.
-        if unsafe { derive(algctx, key, ptr::addr_of_mut!(tmplen), tmplen) } == 0 {
-            // SAFETY: `key` is this call's own block.
-            unsafe { CRYPTO_free(key.cast::<c_void>(), FILE, LINE_FREE_DERIVE_SKEY_ON_DERIVE) };
+        if unsafe { derive(algctx, key.as_ptr(), ptr::addr_of_mut!(tmplen), tmplen) } == 0 {
+            // The authority's provider-failure arm releases the buffer plainly.
+            key.release_plain(LINE_FREE_DERIVE_SKEY_ON_DERIVE);
             if mgmt != skeymgmt {
                 // SAFETY: `skeymgmt` is live and this is this call's own reference.
                 unsafe { EVP_SKEYMGMT_free(skeymgmt) };
@@ -1218,8 +1348,8 @@ pub unsafe extern "C" fn EVP_PKEY_derive_SKEY(
         }
 
         if keylen != tmplen {
-            // SAFETY: `key` is this call's own block and it holds part of a secret.
-            unsafe { CRYPTO_free(key.cast::<c_void>(), FILE, LINE_FREE_DERIVE_SKEY_ON_LENGTH) };
+            // The authority's length-mismatch arm releases the buffer plainly too.
+            key.release_plain(LINE_FREE_DERIVE_SKEY_ON_LENGTH);
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::EXCHANGE_619) };
             if mgmt != skeymgmt {
@@ -1234,7 +1364,7 @@ pub unsafe extern "C" fn EVP_PKEY_derive_SKEY(
         import_params[0] = unsafe {
             OSSL_PARAM_construct_octet_string(
                 OSSL_SKEY_PARAM_RAW_BYTES,
-                key.cast::<c_void>(),
+                key.as_ptr().cast::<c_void>(),
                 keylen,
             )
         };
@@ -1252,15 +1382,7 @@ pub unsafe extern "C" fn EVP_PKEY_derive_SKEY(
             unsafe { EVP_SKEYMGMT_free(skeymgmt) };
         }
         /* Cleared before it is released: this buffer is the secret's only copy outside the caller. */
-        // SAFETY: `key` is this call's own block of `keylen` bytes and is not used again.
-        unsafe {
-            CRYPTO_clear_free(
-                key.cast::<c_void>(),
-                keylen,
-                FILE,
-                LINE_CLEAR_FREE_DERIVE_SKEY,
-            )
-        };
+        key.release_cleansed(LINE_CLEAR_FREE_DERIVE_SKEY);
         return ret;
     }
 
