@@ -55,6 +55,58 @@ const LINE_MALLOC_AID_PKEY: c_int = 1479;
 /// Its `OPENSSL_free(aid)` (`evp_lib.c:1487`).
 const LINE_FREE_AID_PKEY: c_int = 1487;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of an `aid` scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `aid_len`-byte scratch buffer the two `get_algor` hand-offs decode from.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size, and only its *ownership* is this
+/// type: [`Self::new`] allocates it at the authority's allocation site and `Drop` is its single
+/// release at the authority's own free site, so no path below writes a `CRYPTO_free` by hand. A Rust
+/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook, which is why only ownership moves.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line_alloc)`, or `None` when the allocator answers NULL.
+    /// `line_free` is the authority's release site, kept distinct because the pair allocate and free
+    /// at different lines.
+    fn new(
+        len: usize,
+        file: *const c_char,
+        line_alloc: c_int,
+        line_free: c_int,
+    ) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line_alloc).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line: line_free,
+        })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// `int EVP_CIPHER_CTX_get_algor(EVP_CIPHER_CTX *ctx, X509_ALGOR **alg)` —
 /// `crypto/evp/evp_lib.c:1337-1373`.
 ///
@@ -97,19 +149,21 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_get_algor(
         return -2;
     }
     if !alg.is_null() && aid_len <= c_long::MAX as usize {
-        // SAFETY: this allocates a fresh block of `aid_len` bytes.
-        let aid = CRYPTO_malloc(aid_len, FILE, LINE_MALLOC_AID_CIPHER).cast::<c_uchar>();
-        if !aid.is_null() {
+        // The block is owned here: its `Drop` is its single release at the authority's own site, so
+        // no path below writes a `CRYPTO_free` by hand.
+        if let Some(aid) =
+            OwnedBuf::new(aid_len, FILE, LINE_MALLOC_AID_CIPHER, LINE_FREE_AID_CIPHER)
+        {
             // SAFETY: the constructor writes one entry of this frame's array, and `aid` holds
             // `aid_len` writable bytes.
             unsafe {
                 params[0] = OSSL_PARAM_construct_octet_string(
                     OSSL_SIGNATURE_PARAM_ALGORITHM_ID,
-                    aid.cast::<c_void>(),
+                    aid.as_ptr().cast::<c_void>(),
                     aid_len,
                 )
             };
-            let mut pp: *const c_uchar = aid;
+            let mut pp: *const c_uchar = aid.as_ptr();
             // SAFETY: `ctx` is live, `params` is this frame's array, `pp` is this frame's slot, and
             // `alg` is the caller's out-parameter.
             unsafe {
@@ -121,8 +175,6 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_get_algor(
                 }
             }
         }
-        // SAFETY: `aid` is NULL or the block allocated above, released exactly once.
-        unsafe { CRYPTO_free(aid.cast::<c_void>(), FILE, LINE_FREE_AID_CIPHER) };
     }
     ret
 }
@@ -170,19 +222,19 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_algor(
         return -2;
     }
     if !alg.is_null() && aid_len <= c_long::MAX as usize {
-        // SAFETY: this allocates a fresh block of `aid_len` bytes.
-        let aid = CRYPTO_malloc(aid_len, FILE, LINE_MALLOC_AID_PKEY).cast::<c_uchar>();
-        if !aid.is_null() {
+        // The block is owned here: its `Drop` is its single release at the authority's own site, so
+        // no path below writes a `CRYPTO_free` by hand.
+        if let Some(aid) = OwnedBuf::new(aid_len, FILE, LINE_MALLOC_AID_PKEY, LINE_FREE_AID_PKEY) {
             // SAFETY: the constructor writes one entry of this frame's array, and `aid` holds
             // `aid_len` writable bytes.
             unsafe {
                 params[0] = OSSL_PARAM_construct_octet_string(
                     OSSL_SIGNATURE_PARAM_ALGORITHM_ID,
-                    aid.cast::<c_void>(),
+                    aid.as_ptr().cast::<c_void>(),
                     aid_len,
                 )
             };
-            let mut pp: *const c_uchar = aid;
+            let mut pp: *const c_uchar = aid.as_ptr();
             // SAFETY: `ctx` is live, `params` is this frame's array, `pp` is this frame's slot, and
             // `alg` is the caller's out-parameter.
             unsafe {
@@ -194,8 +246,6 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_algor(
                 }
             }
         }
-        // SAFETY: `aid` is NULL or the block allocated above, released exactly once.
-        unsafe { CRYPTO_free(aid.cast::<c_void>(), FILE, LINE_FREE_AID_PKEY) };
     }
     ret
 }

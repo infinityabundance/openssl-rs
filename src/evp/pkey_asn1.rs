@@ -90,10 +90,11 @@ use crate::asn1::layout::{Asn1Item, Asn1Pctx, Asn1String};
 use crate::evp::digest::EvpMdCtx;
 use crate::evp::keymgmt::KeymgmtImportFn;
 use crate::evp::pkey::EvpPkey;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::sys::strlen;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
 use crate::runtime::stack::{
     OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_sort,
     OPENSSL_sk_value, OpenSslStack,
@@ -551,6 +552,32 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_get0_info(
     1
 }
 
+/// [`EVP_PKEY_asn1_free`]'s member body (`ameth_lib.c:274`), without the block release
+/// [`OwnedCtx`]'s `Drop` performs: the method's two owned strings, in the authority's own order.
+///
+/// [`EVP_PKEY_asn1_free`] gates this body on `ASN1_PKEY_DYNAMIC` -- a *static* method the caller owns
+/// must survive the call -- whereas the constructor's owner reaches it only for the object it just
+/// built, whose flags it has already set, which is why the body carries no gate of its own.
+// SAFETY: (a) `destroy_body` is the authority's `EVP_PKEY_asn1_free` member body for a `DYNAMIC`
+// method, releasing exactly this object's own `pem_str` and `info` once (each NULL or this object's
+// own `CRYPTO_strdup` block) and never the enclosing block, which `OwnedCtx` releases; (b)
+// `EvpPkeyAsn1Method` is a `#[repr(C)]` record of integers, raw pointers and function pointers, so an
+// all-zero block is a valid `EvpPkeyAsn1Method` the body is sound on.
+unsafe impl CtxDestroy for EvpPkeyAsn1Method {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_AMETH;
+    const LINE_FREE: c_int = LINE_ZALLOC_AMETH;
+
+    unsafe fn destroy_body(ptr: *mut EvpPkeyAsn1Method) {
+        // SAFETY: `ptr` is a live record per the trait contract; both strings are NULL or this
+        // record's own `CRYPTO_strdup` blocks.
+        unsafe {
+            CRYPTO_free((*ptr).pem_str.cast::<c_void>(), FILE, LINE_ZALLOC_AMETH);
+            CRYPTO_free((*ptr).info.cast::<c_void>(), FILE, LINE_ZALLOC_AMETH);
+        }
+    }
+}
+
 /// `EVP_PKEY_ASN1_METHOD *EVP_PKEY_asn1_new(int id, int flags, const char *pem_str,
 /// const char *info)` — `crypto/asn1/ameth_lib.c:224`.
 ///
@@ -568,49 +595,44 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_new(
     pem_str: *const c_char,
     info: *const c_char,
 ) -> *mut EvpPkeyAsn1Method {
-    /* SAFETY: `CRYPTO_zalloc` is a safe entry point of this crate. */
-    let ameth = CRYPTO_zalloc(
-        core::mem::size_of::<EvpPkeyAsn1Method>(),
-        FILE,
-        LINE_ZALLOC_AMETH,
-    )
-    .cast::<EvpPkeyAsn1Method>();
-    if ameth.is_null() {
+    // The object is allocated through the crate's allocator seam at the authority's own line and
+    // owned by `ameth` until it is handed to the caller below.
+    // SAFETY: `EvpPkeyAsn1Method`'s zero-validity obligation (b) holds (see the `CtxDestroy` impl
+    // above).
+    let Some(ameth) = OwnedCtx::<EvpPkeyAsn1Method>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
 
     // SAFETY: `ameth` is this call's own object.
     unsafe {
-        (*ameth).pkey_id = id;
-        (*ameth).pkey_base_id = id;
-        (*ameth).pkey_flags = (flags as c_long) | ASN1_PKEY_DYNAMIC;
+        (*ameth.as_ptr()).pkey_id = id;
+        (*ameth.as_ptr()).pkey_base_id = id;
+        (*ameth.as_ptr()).pkey_flags = (flags as c_long) | ASN1_PKEY_DYNAMIC;
     }
 
     if !info.is_null() {
         /* SAFETY: `info` is NUL-terminated per the contract. */
         let dup = unsafe { CRYPTO_strdup(info, FILE, LINE_DUP_INFO) };
         if dup.is_null() {
-            // SAFETY: `ameth` is this call's own object and has not been returned.
-            unsafe { EVP_PKEY_asn1_free(ameth) };
+            // `ameth`'s `Drop` runs the authority's own free body and its single block release.
             return ptr::null_mut();
         }
         // SAFETY: `ameth` is this call's own object.
-        unsafe { (*ameth).info = dup };
+        unsafe { (*ameth.as_ptr()).info = dup };
     }
 
     if !pem_str.is_null() {
         // SAFETY: `pem_str` is NUL-terminated per the contract.
         let dup = unsafe { CRYPTO_strdup(pem_str, FILE, LINE_DUP_PEM_STR) };
         if dup.is_null() {
-            // SAFETY: `ameth` is this call's own object and has not been returned.
-            unsafe { EVP_PKEY_asn1_free(ameth) };
+            // `ameth`'s `Drop` runs the authority's own free body and its single block release.
             return ptr::null_mut();
         }
         // SAFETY: `ameth` is this call's own object.
-        unsafe { (*ameth).pem_str = dup };
+        unsafe { (*ameth.as_ptr()).pem_str = dup };
     }
 
-    ameth
+    ameth.into_raw()
 }
 
 /// `void EVP_PKEY_asn1_copy(EVP_PKEY_ASN1_METHOD *dst, const EVP_PKEY_ASN1_METHOD *src)` —
@@ -669,10 +691,11 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_free(ameth: *mut EvpPkeyAsn1Method) {
     if (unsafe { (*ameth).pkey_flags } & ASN1_PKEY_DYNAMIC) == 0 {
         return;
     }
-    // SAFETY: `ameth` is live, `DYNAMIC` is set, so the two strings are this object's own.
+    // SAFETY: `ameth` is live, `DYNAMIC` is set, so the two strings are this object's own; the
+    // destructor body releases them and this single `CRYPTO_free` is the block release, both at the
+    // authority's own site.
     unsafe {
-        CRYPTO_free((*ameth).pem_str.cast::<c_void>(), FILE, LINE_ZALLOC_AMETH);
-        CRYPTO_free((*ameth).info.cast::<c_void>(), FILE, LINE_ZALLOC_AMETH);
+        <EvpPkeyAsn1Method as CtxDestroy>::destroy_body(ameth);
         CRYPTO_free(ameth.cast::<c_void>(), FILE, LINE_ZALLOC_AMETH);
     }
 }

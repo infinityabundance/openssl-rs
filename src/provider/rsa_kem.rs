@@ -50,6 +50,7 @@ use crate::rsa::object::{
     RSA_public_encrypt, RSA_size, RSA_up_ref,
 };
 use crate::rsa::Rsa;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_reasons::{RSA_R_DATA_TOO_LARGE_FOR_MODULUS, RSA_R_DATA_TOO_SMALL};
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc, OPENSSL_cleanse};
@@ -72,6 +73,15 @@ const KEM_OP_RSASVE: c_int = 0;
 /// accepts.
 const OSSL_KEM_PARAM_OPERATION_RSASVE: *const c_char = c"RSASVE".as_ptr();
 
+/// `rsa_kem.c:97`, `rsakem_newctx`'s `OPENSSL_zalloc(sizeof(*prsactx))`.
+const LINE_NEWCTX_ZALLOC: c_int = 97;
+/// `rsa_kem.c:112`, `rsakem_freectx`'s `OPENSSL_free(prsactx)`.
+const LINE_FREECTX_FREE: c_int = 112;
+/// `rsa_kem.c:123`, `rsakem_dupctx`'s `OPENSSL_zalloc(sizeof(*dstctx))`.
+const LINE_DUPCTX_ZALLOC: c_int = 123;
+/// `rsa_kem.c:129`, `rsakem_dupctx`'s `OPENSSL_free(dstctx)` failure path.
+const LINE_DUPCTX_FREE: c_int = 129;
+
 /// `PROV_RSA_CTX` — `rsa_kem.c:60-65`. The `OSSL_FIPS_IND_DECLARE` at the foot is empty on this
 /// profile.
 #[repr(C)]
@@ -82,6 +92,24 @@ struct ProvRsaCtx {
     rsa: *mut Rsa,
     /// `int op` — one of `KEM_OP_*`.
     op: c_int,
+}
+
+/// [`rsakem_freectx`]'s member body (`rsa_kem.c:107-113`), without the block release
+/// [`OwnedCtx`]'s `Drop` performs: the context's own `rsa` reference.
+// SAFETY: (a) `destroy_body` is the authority's `rsakem_freectx` member body, releasing exactly this
+// context's own `rsa` reference once (`RSA_free` accepts the unset NULL) and never the enclosing
+// block, which `OwnedCtx` releases; (b) `ProvRsaCtx` is a `#[repr(C)]` record of two raw pointers and
+// an `int`, so an all-zero block is a valid `ProvRsaCtx` the body is sound on.
+unsafe impl CtxDestroy for ProvRsaCtx {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_NEWCTX_ZALLOC;
+    const LINE_FREE: c_int = LINE_FREECTX_FREE;
+
+    unsafe fn destroy_body(ptr: *mut ProvRsaCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `rsa` is NULL or this context's
+        // own reference.
+        unsafe { RSA_free((*ptr).rsa) };
+    }
 }
 
 /// `ossl_prov_is_running()` — the literal 1 on this build.
@@ -146,17 +174,18 @@ unsafe extern "C" fn rsakem_newctx(provctx: *mut c_void) -> *mut c_void {
     if is_running() == 0 {
         return ptr::null_mut();
     }
-    // SAFETY: a fresh zeroed allocation of this call's own context.
-    let prsactx = CRYPTO_zalloc(core::mem::size_of::<ProvRsaCtx>(), FILE, 97).cast::<ProvRsaCtx>();
-    if prsactx.is_null() {
+    // The context is allocated through the crate's allocator seam at the authority's own line and
+    // owned by `prsactx` until it is handed to the caller below.
+    // SAFETY: `ProvRsaCtx`'s zero-validity obligation (b) holds (see the `CtxDestroy` impl above).
+    let Some(prsactx) = OwnedCtx::<ProvRsaCtx>::zalloc() else {
         return ptr::null_mut();
-    }
-    // SAFETY: `prsactx` is this call's own allocation.
+    };
+    // SAFETY: `prsactx` is this call's own fresh context.
     unsafe {
-        (*prsactx).libctx = prov_libctx_of(provctx);
-        (*prsactx).op = KEM_OP_RSASVE;
+        (*prsactx.as_ptr()).libctx = prov_libctx_of(provctx);
+        (*prsactx.as_ptr()).op = KEM_OP_RSASVE;
     }
-    prsactx.cast()
+    prsactx.into_raw().cast()
 }
 
 /// `static void rsakem_freectx(void *vprsactx)` — `rsa_kem.c:107-113`.
@@ -164,13 +193,10 @@ unsafe extern "C" fn rsakem_newctx(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The kem `freectx` dispatch contract.
 unsafe extern "C" fn rsakem_freectx(vprsactx: *mut c_void) {
-    let prsactx = vprsactx.cast::<ProvRsaCtx>();
-
-    // SAFETY: `prsactx` is this call's context.
-    unsafe {
-        RSA_free((*prsactx).rsa);
-        CRYPTO_free(prsactx.cast(), FILE, 112);
-    }
+    // SAFETY: the `freectx` dispatch contract; `vprsactx` is NULL or a live context this file
+    // allocated and `Drop` is its single release, running the authority's own free body (release the
+    // `rsa` reference) before the block release at the authority's own line.
+    drop(unsafe { OwnedCtx::<ProvRsaCtx>::from_raw(vprsactx.cast()) });
 }
 
 /// `static void *rsakem_dupctx(void *vprsactx)` — `rsa_kem.c:115-133`.
@@ -186,8 +212,13 @@ unsafe extern "C" fn rsakem_dupctx(vprsactx: *mut c_void) -> *mut c_void {
 
     // SAFETY: `srcctx` is the caller's context.
     unsafe {
-        let dstctx =
-            CRYPTO_zalloc(core::mem::size_of::<ProvRsaCtx>(), FILE, 123).cast::<ProvRsaCtx>();
+        // The duplicate's own allocation and the failure release below are kept on the raw seam: the
+        // copy allocates at its own line (123) and its failure frees the block **alone** (129),
+        // without running the destructor body, so neither is expressible by the single-coordinate
+        // [`OwnedCtx`]. The block the success path returns is owned by the caller and released by
+        // [`rsakem_freectx`] at line 112, whatever its allocation site.
+        let dstctx = CRYPTO_zalloc(core::mem::size_of::<ProvRsaCtx>(), FILE, LINE_DUPCTX_ZALLOC)
+            .cast::<ProvRsaCtx>();
         if dstctx.is_null() {
             return ptr::null_mut();
         }
@@ -196,7 +227,7 @@ unsafe extern "C" fn rsakem_dupctx(vprsactx: *mut c_void) -> *mut c_void {
         // that assignment, and the borrowed `rsa` is then up-ref'd in place.
         core::ptr::copy_nonoverlapping(srcctx, dstctx, 1);
         if !(*dstctx).rsa.is_null() && RSA_up_ref((*dstctx).rsa) == 0 {
-            CRYPTO_free(dstctx.cast(), FILE, 129);
+            CRYPTO_free(dstctx.cast(), FILE, LINE_DUPCTX_FREE);
             return ptr::null_mut();
         }
         dstctx.cast()
