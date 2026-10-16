@@ -165,6 +165,154 @@ pub(crate) unsafe fn _CONF_get_section_values(
     unsafe { (*v).value as *mut OpenSslStack }
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the table's heap records and their strings
+// ---------------------------------------------------------------------------------------------
+
+/// How the authority releases one `CONF_VALUE` record, so that [`OwnedValue`]'s `Drop` can perform
+/// the exact release the site that owns it spells.
+///
+/// A single per-type destructor body cannot express this file's records: `_CONF_add_string`
+/// unlinks a *replaced* pair and frees its `name` before its `value`, the section walk frees a
+/// *stacked* pair's `value` before its `name`, and a *section* record frees neither member string
+/// but its `STACK_OF(CONF_VALUE)` and its own `section` name. Reproducing each order (and the
+/// allocator-hook event sequence it produces) is why the arm is a runtime choice here.
+enum ValueRelease {
+    /// A block whose members are not yet set: the block alone, the authority's `err:`-label free.
+    BlockOnly,
+    /// A *named* pair as the section walk releases it: `value`, `name`, then the block.
+    StackedPair,
+    /// The replaced pair `_CONF_add_string` unlinks: `name`, `value`, then the block.
+    ReplacedPair,
+    /// A *section* record: its stack, its `section` name, then the block.
+    Section,
+}
+
+/// An owned `CONF_VALUE` block -- either one this file is still building or one the table holds.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size (the allocator's `mdbg` record
+/// and any caller-installed `CRYPTO_set_mem_functions` hook see it) and its member strings stay
+/// plain `CRYPTO_free`s; only its *ownership* is this type. [`Self::new_block`] allocates a record
+/// under construction, [`Self::adopt`] reclaims a record the table hands over, `Drop` runs the
+/// authority's own release ([`ValueRelease`]), and [`Self::finish`] hands the record to the table.
+struct OwnedValue {
+    ptr: ptr::NonNull<ConfValue>,
+    release: ValueRelease,
+}
+
+impl OwnedValue {
+    /// `CRYPTO_malloc(sizeof(*v), NULL, 0)`, or `None` when it answers NULL.
+    fn new_block() -> Option<OwnedValue> {
+        let raw =
+            CRYPTO_malloc(core::mem::size_of::<ConfValue>(), ptr::null(), 0).cast::<ConfValue>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedValue {
+            ptr,
+            release: ValueRelease::BlockOnly,
+        })
+    }
+
+    /// Reclaim a record the table holds, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live record this file allocated that no one else will release, and
+    /// `release` is the arm the site that hands it over spells.
+    unsafe fn adopt(ptr: *mut ConfValue, release: ValueRelease) -> Option<OwnedValue> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedValue { ptr, release })
+    }
+
+    /// The record's address, for the table that takes it over.
+    fn as_ptr(&self) -> *mut ConfValue {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the record to the table.
+    fn finish(self) -> *mut ConfValue {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedValue {
+    /// The record's single release, through the same seam and the same order the authority's site
+    /// spells.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; every member
+        // string is NULL or this file's own `CRYPTO_malloc` block and `CRYPTO_free` accepts NULL.
+        unsafe {
+            let v = self.ptr.as_ptr();
+            match self.release {
+                ValueRelease::BlockOnly => {}
+                ValueRelease::StackedPair => {
+                    CRYPTO_free((*v).value.cast::<c_void>(), ptr::null(), 0);
+                    CRYPTO_free((*v).name.cast::<c_void>(), ptr::null(), 0);
+                }
+                ValueRelease::ReplacedPair => {
+                    CRYPTO_free((*v).name.cast::<c_void>(), ptr::null(), 0);
+                    CRYPTO_free((*v).value.cast::<c_void>(), ptr::null(), 0);
+                }
+                ValueRelease::Section => {
+                    OPENSSL_sk_free((*v).value as *mut OpenSslStack);
+                    CRYPTO_free((*v).section.cast::<c_void>(), ptr::null(), 0);
+                }
+            }
+            CRYPTO_free(v.cast::<c_void>(), ptr::null(), 0);
+        }
+    }
+}
+
+/// An owned `char *` allocated through the crate's allocator seam (a section's name string).
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size; only its *ownership* is this
+/// type: [`Self::new`] allocates it, [`Self::take`] reclaims one the configuration hands back,
+/// `Drop` is its single release, and [`Self::into_raw`] installs it in the record that takes it
+/// over. A NULL pointer is a valid, empty string whose release is the authority's own no-op
+/// `free(NULL)`.
+struct OwnedStr {
+    ptr: *mut c_char,
+}
+
+impl OwnedStr {
+    /// `CRYPTO_malloc(len, NULL, 0)`, or `None` when the allocator answers NULL.
+    fn new(len: usize) -> Option<OwnedStr> {
+        let raw = CRYPTO_malloc(len, ptr::null(), 0).cast::<c_char>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedStr { ptr: ptr.as_ptr() })
+    }
+
+    /// Adopt a string this file allocated, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this file allocated that no one else owns.
+    unsafe fn take(ptr: *mut c_char) -> Option<OwnedStr> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedStr { ptr })
+        }
+    }
+
+    /// The writable start of the string.
+    fn as_ptr(&self) -> *mut c_char {
+        self.ptr
+    }
+
+    /// Give up ownership of the string to the record that takes it over.
+    fn into_raw(self) -> *mut c_char {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The string's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), ptr::null(), 0) };
+    }
+}
+
 /// `int _CONF_add_string(CONF *conf, CONF_VALUE *section, CONF_VALUE *value)`
 ///
 /// Pushes the entry onto the section's stack and inserts it into the hash. When
@@ -196,13 +344,11 @@ pub(crate) unsafe fn _CONF_add_string(
     if !old.is_null() {
         // SAFETY: the returned entry is the one that was in the table, and it is
         // also on the section's stack because a previous insert put it there.
-        unsafe {
-            OPENSSL_sk_delete_ptr(ts, old);
-            let old = old as *mut ConfValue;
-            CRYPTO_free((*old).name.cast::<c_void>(), ptr::null(), 0);
-            CRYPTO_free((*old).value.cast::<c_void>(), ptr::null(), 0);
-            CRYPTO_free(old.cast::<c_void>(), ptr::null(), 0);
-        }
+        unsafe { OPENSSL_sk_delete_ptr(ts, old) };
+        // The replaced entry's `Drop` releases its `name`, its `value` and the block, in the
+        // authority's own order.
+        // SAFETY: `old` is the live replaced entry the hash returned and no one else will release.
+        drop(unsafe { OwnedValue::adopt(old.cast::<ConfValue>(), ValueRelease::ReplacedPair) });
     }
     1
 }
@@ -298,17 +444,15 @@ unsafe extern "C" fn value_free_stack_doall(a: *mut c_void) {
     }
     // SAFETY: a NULL `name` makes `value` the section's stack.
     let sk = unsafe { (*a).value as *mut OpenSslStack };
-    // SAFETY: `sk` is a live stack of `ConfValue`s.
+    // SAFETY: `sk` is a live stack of `ConfValue`s; each stacked pair is the walk's own, and the
+    // section record owns its stack, its `section` name and the block. The pairs are released
+    // while the stack is still live, then the stack, the name and the block with it.
     unsafe {
         for i in (0..OPENSSL_sk_num(sk)).rev() {
             let vv = OPENSSL_sk_value(sk, i) as *mut ConfValue;
-            CRYPTO_free((*vv).value.cast::<c_void>(), ptr::null(), 0);
-            CRYPTO_free((*vv).name.cast::<c_void>(), ptr::null(), 0);
-            CRYPTO_free(vv.cast::<c_void>(), ptr::null(), 0);
+            drop(OwnedValue::adopt(vv, ValueRelease::StackedPair));
         }
-        OPENSSL_sk_free(sk);
-        CRYPTO_free((*a).section.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free(a.cast::<c_void>(), ptr::null(), 0);
+        drop(OwnedValue::adopt(a, ValueRelease::Section));
     }
 }
 
@@ -382,9 +526,7 @@ pub(crate) unsafe fn _CONF_free_data(conf: *mut Conf) {
         return;
     }
     // SAFETY: `conf` is live; `includedir` is NULL or a `CRYPTO_malloc` buffer.
-    unsafe {
-        CRYPTO_free((*conf).includedir.cast::<c_void>(), ptr::null(), 0);
-    }
+    drop(unsafe { OwnedStr::take((*conf).includedir) });
     // SAFETY: `conf` is live.
     let data = unsafe { (*conf).data };
     if data.is_null() {
@@ -422,47 +564,47 @@ pub(crate) unsafe fn _CONF_new_section(conf: *mut Conf, section: *const c_char) 
     if sk.is_null() {
         return ptr::null_mut();
     }
-    let v = CRYPTO_malloc(core::mem::size_of::<ConfValue>(), ptr::null(), 0).cast::<ConfValue>();
-    if v.is_null() {
+    let Some(v) = OwnedValue::new_block() else {
         // SAFETY: `sk` is a live, empty stack.
         unsafe { OPENSSL_sk_free(sk) };
         return ptr::null_mut();
-    }
+    };
     // SAFETY: `section` is NUL-terminated per the caller's contract.
     let len = unsafe { sys::strlen(section) } + 1;
-    let name = CRYPTO_malloc(len, ptr::null(), 0).cast::<c_char>();
-    if name.is_null() {
-        // SAFETY: `sk` is a live empty stack and `v` a live allocation. The
-        // authority's path would free the *uninitialised* `v->section` here; not
-        // doing so is the recorded safer divergence.
-        unsafe {
-            OPENSSL_sk_free(sk);
-            CRYPTO_free(v.cast::<c_void>(), ptr::null(), 0);
-        }
+    let Some(name) = OwnedStr::new(len) else {
+        // SAFETY: `sk` is a live empty stack. The authority's path would free the
+        // *uninitialised* `v->section` here; not doing so is the recorded safer divergence.
+        // `v`'s `Drop` is the authority's own `err:`-label release of the block alone.
+        unsafe { OPENSSL_sk_free(sk) };
         return ptr::null_mut();
-    }
+    };
     // SAFETY: `name` is `len` bytes and `section` has `len` bytes including its
     // terminator.
     unsafe {
-        sys::memcpy(name.cast::<c_void>(), section.cast::<c_void>(), len);
-        (*v).section = name;
-        (*v).name = ptr::null_mut();
-        (*v).value = sk.cast::<c_char>();
+        sys::memcpy(
+            name.as_ptr().cast::<c_void>(),
+            section.cast::<c_void>(),
+            len,
+        );
+        (*v.as_ptr()).section = name.as_ptr();
+        (*v.as_ptr()).name = ptr::null_mut();
+        (*v.as_ptr()).value = sk.cast::<c_char>();
     }
     // SAFETY: `conf` and `v` are live, and `v` is a valid section entry.
-    let vv = unsafe { OPENSSL_LH_insert((*conf).data, v.cast::<c_void>()) };
+    let vv = unsafe { OPENSSL_LH_insert((*conf).data, v.as_ptr().cast::<c_void>()) };
     // SAFETY: `conf` is live; `data` is a live table.
     if !vv.is_null() || unsafe { OPENSSL_LH_error((*conf).data) } > 0 {
         // SAFETY: see the function doc — the authority frees `v->section` here,
-        // which we do only because it *is* initialised on this path.
-        unsafe {
-            OPENSSL_sk_free(sk);
-            CRYPTO_free((*v).section.cast::<c_void>(), ptr::null(), 0);
-            CRYPTO_free(v.cast::<c_void>(), ptr::null(), 0);
-        }
+        // which we do only because it *is* initialised on this path. `name`'s `Drop` is that
+        // `CRYPTO_free` of `v->section`; `v`'s `Drop` is the block alone.
+        unsafe { OPENSSL_sk_free(sk) };
+        drop(name);
+        drop(v);
         return ptr::null_mut();
     }
-    v
+    // The section's name and block are installed in the table; `Drop` no longer owns them.
+    let _ = name.into_raw();
+    v.finish()
 }
 
 /// `long _CONF_get_number(const CONF *conf, const char *section, const char *name)`

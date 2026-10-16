@@ -486,6 +486,102 @@ fn der2key_check_selection(selection: c_int, desc: &KeytypeDesc) -> c_int {
     0
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the decoder's scratch DER blob and the SLH-DSA bare-public-key record
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch DER blob allocated through the crate's allocator seam.
+///
+/// The block stays an `ossl_read_der` `CRYPTO_malloc` at the authority's own `(NULL, 0)` site -- a
+/// Rust `Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::adopt`] takes
+/// the block the read leaves for this frame and `Drop` is its single release. A NULL pointer is a
+/// valid, empty block whose release is the authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+}
+
+impl OwnedBuf {
+    /// Adopt the block `ossl_read_der` left for this frame.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns.
+    unsafe fn adopt(ptr: *mut c_uchar) -> OwnedBuf {
+        OwnedBuf { ptr }
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), ptr::null(), 0) };
+    }
+}
+
+/// The authority's `err:`-label cleanup body for a `BARE_PUBKEY`, without the block's own release,
+/// which [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// `slh_dsa_d2i_PUBKEY`'s `err:` body minus the block release: the algorithm OID and the bit
+    /// string.
+    ///
+    /// # Safety
+    /// `ptr` is a live record this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned one of the file's heap records.
+///
+/// The block keeps its authority size and `(NULL, 0)` site; only its *ownership* is this type:
+/// [`Self::new_zeroed`] allocates it, `Drop` runs the authority's own `err:`-label body
+/// ([`CtxDestroy::destroy_body`]) followed by the block release, and [`Self::as_ptr`] is the
+/// address the item machinery parses into.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// `CRYPTO_zalloc(size_of::<T>(), NULL, 0)`, or `None` when it answers NULL. The zeroed image
+    /// is the authority's own starting state -- every owned member is NULL -- so
+    /// [`CtxDestroy::destroy_body`] on it is the authority's own all-empty cleanup.
+    fn new_zeroed() -> Option<OwnedCtx<T>> {
+        let raw = CRYPTO_zalloc(size_of::<T>(), ptr::null(), 0).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// The block's address.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The record's destructor: the authority's own `err:`-label body
+    /// ([`CtxDestroy::destroy_body`]) followed by its single block release.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new_zeroed` allocated and this is its single release;
+        // `Drop` runs once and the body is the authority's own.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), ptr::null(), 0);
+        }
+    }
+}
+
+/// The authority's `err:`-label cleanup body for a `BARE_PUBKEY`, minus the block release: the
+/// algorithm OID and the bit string.
+impl CtxDestroy for BarePubkey {
+    unsafe fn destroy_body(ptr: *mut BarePubkey) {
+        // SAFETY: `ptr` is a live record per the trait contract; both members are NULL or the item
+        // machinery's own and each `*_free` accepts NULL.
+        unsafe {
+            ASN1_OBJECT_free((*ptr).algor.oid);
+            ASN1_BIT_STRING_free((*ptr).pubkey);
+        }
+    }
+}
+
 /// Raise `msg` through `site`, the `ERR_raise_data` form of a site whose text interpolates a name.
 ///
 /// # Safety
@@ -514,7 +610,7 @@ unsafe extern "C" fn der2key_decode(
     _pw_cbarg: *mut c_void,
 ) -> c_int {
     let ctx = vctx.cast::<Der2keyCtx>();
-    let mut der: *mut c_uchar = ptr::null_mut();
+    let mut der_raw: *mut c_uchar = ptr::null_mut();
     let mut der_len: c_long = 0;
     let mut key: *mut c_void = ptr::null_mut();
     let mut ok: c_int = 0;
@@ -537,7 +633,7 @@ unsafe extern "C" fn der2key_decode(
 
     'flow: {
         // SAFETY: `ctx`'s provctx is live and `cin` is the core BIO this decode owns.
-        ok = unsafe { ossl_read_der((*ctx).provctx, cin, &mut der, &mut der_len) };
+        ok = unsafe { ossl_read_der((*ctx).provctx, cin, &mut der_raw, &mut der_len) };
         if ok == 0 {
             break 'flow; // `next:`
         }
@@ -546,7 +642,7 @@ unsafe extern "C" fn der2key_decode(
 
         ERR_set_mark();
         if (selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0 {
-            let mut derp = der as *const c_uchar;
+            let mut derp = der_raw as *const c_uchar;
             if let Some(f) = desc.d2i_pkcs8 {
                 // SAFETY: `f` is the row's d2i; `derp`/`der_len`/`ctx` are this frame's.
                 key = unsafe { f(&mut derp, der_len, ctx) };
@@ -566,7 +662,7 @@ unsafe extern "C" fn der2key_decode(
             }
         }
         if key.is_null() && (selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY) != 0 {
-            let mut derp = der as *const c_uchar;
+            let mut derp = der_raw as *const c_uchar;
             if let Some(f) = desc.d2i_pubkey {
                 // SAFETY: `f` is the row's d2i and the arguments are this frame's.
                 key = unsafe { f(&mut derp, der_len, ctx) };
@@ -580,7 +676,7 @@ unsafe extern "C" fn der2key_decode(
             }
         }
         if key.is_null() && (selection & OSSL_KEYMGMT_SELECT_ALL_PARAMETERS) != 0 {
-            let mut derp = der as *const c_uchar;
+            let mut derp = der_raw as *const c_uchar;
             if let Some(f) = desc.d2i_key_params {
                 // SAFETY: `f` is the row's d2i and the arguments are this frame's.
                 key = unsafe { f(ptr::null_mut(), &mut derp, der_len) };
@@ -617,22 +713,23 @@ unsafe extern "C" fn der2key_decode(
         }
     }
 
+    // The read's block is this frame's from here on; `Drop` is its single release on every tail.
+    // SAFETY: `der_raw` is NULL or the live block `ossl_read_der` allocated and handed over here.
+    let der = unsafe { OwnedBuf::adopt(der_raw) };
     if fatal {
         if let Some(fr) = desc.free_key {
             // SAFETY: `key` is NULL or live and the row's own free owns it.
             unsafe { fr(key) };
         }
-        // SAFETY: `der` is NULL or the buffer `ossl_read_der` allocated.
-        unsafe { CRYPTO_free(der.cast::<c_void>(), ptr::null(), 0) };
+        // `der`'s `Drop` is the authority's own `CRYPTO_free`, after the key release.
         return ok;
     }
 
     // `next:` — "empty handed" is not an error.
     ok = 1;
 
-    // SAFETY: `der` is NULL or the buffer the read allocated and this call owns it.
-    unsafe { CRYPTO_free(der.cast::<c_void>(), ptr::null(), 0) };
-    der = ptr::null_mut();
+    // The authority's `next:` releases the read block here, before the object callback.
+    drop(der);
 
     if !key.is_null() {
         let mut params: [OsslParam; 4] = [END; 4];
@@ -676,8 +773,6 @@ unsafe extern "C" fn der2key_decode(
         // SAFETY: `key` is NULL or live and the row's own free owns it.
         unsafe { fr(key) };
     }
-    // SAFETY: `der` is NULL after `next:` and this call owns whatever is left.
-    unsafe { CRYPTO_free(der.cast::<c_void>(), ptr::null(), 0) };
 
     ok
 }
@@ -1032,27 +1127,11 @@ unsafe fn slh_dsa_d2i_pkcs8(
     ret.cast::<c_void>()
 }
 
-/// Free a `BARE_PUBKEY` and its owned fields, the authority's `err:` cleanup.
-///
-/// # Safety
-/// `spki` is NULL or the frame's own zalloc'd structure.
-unsafe fn free_bare_pubkey(spki: *mut BarePubkey) {
-    // SAFETY: `spki` is NULL or this frame's own; its fields are the item machinery's.
-    unsafe {
-        if !spki.is_null() {
-            ASN1_OBJECT_free((*spki).algor.oid);
-            ASN1_BIT_STRING_free((*spki).pubkey);
-            CRYPTO_free(spki.cast::<c_void>(), ptr::null(), 0);
-        }
-    }
-}
-
 /// `static ossl_inline void *slh_dsa_d2i_PUBKEY(const uint8_t **der, long der_len, struct
 /// der2key_ctx_st *ctx)` — `:690-772`.
 ///
 /// # Safety
 /// `der` is the caller's readable cursor; `ctx` is the caller's.
-#[allow(unused_assignments)] // `spki` is cleared to NULL, then written by the decode below
 unsafe fn slh_dsa_d2i_pubkey(
     der: *mut *const c_uchar,
     der_len: c_long,
@@ -1068,7 +1147,6 @@ unsafe fn slh_dsa_d2i_pubkey(
     }
     // SAFETY: `ret` is live.
     let len = unsafe { ossl_slh_dsa_key_get_pub_len(ret) };
-    let mut spki: *mut BarePubkey = ptr::null_mut();
     // SAFETY: `der` is the caller's readable cursor.
     let mut end: *const c_uchar = unsafe { *der };
 
@@ -1091,18 +1169,20 @@ unsafe fn slh_dsa_d2i_pubkey(
         return ptr::null_mut();
     }
 
-    // SAFETY: the allocator takes the file/line for its mdbg record only.
-    spki = CRYPTO_zalloc(size_of::<BarePubkey>(), ptr::null(), 0).cast::<BarePubkey>();
-    if spki.is_null() {
+    // The record is this frame's from here on; `Drop` runs the authority's own `err:`-label
+    // cleanup (the OID, the bit string and the block) on every failure tail below.
+    let Some(spki) = OwnedCtx::<BarePubkey>::new_zeroed() else {
         // SAFETY: `ret` is live and this call owns it.
         unsafe { ossl_slh_dsa_key_free(ret) };
         return ptr::null_mut();
-    }
+    };
 
-    // SAFETY: `spki` is a fresh zalloc'd structure; `end` is this frame's cursor.
+    // The item machinery parses into the block this handle owns; `end` is this frame's cursor.
+    let mut spki_slot = spki.as_ptr();
+    // SAFETY: `spki_slot` is the fresh zalloc'd structure; `end` is this frame's cursor.
     let parsed = unsafe {
         ASN1_item_d2i_ex(
-            (&mut spki as *mut *mut BarePubkey).cast(),
+            (&mut spki_slot as *mut *mut BarePubkey).cast(),
             &mut end,
             der_len,
             &BARE_PUBKEY_ITEM,
@@ -1120,16 +1200,15 @@ unsafe fn slh_dsa_d2i_pubkey(
                 format!("malformed {name} public key ASN.1 encoding"),
             )
         };
-        // SAFETY: `spki` is this frame's own and `ret` is live; both are freed here.
-        unsafe {
-            free_bare_pubkey(spki);
-            ossl_slh_dsa_key_free(ret);
-        };
+        // `spki`'s `Drop` runs the authority's own cleanup and `ret` is freed after it.
+        drop(spki);
+        // SAFETY: `ret` is live and this call owns it.
+        unsafe { ossl_slh_dsa_key_free(ret) };
         return ptr::null_mut();
     }
 
     // SAFETY: `spki` is live and its `pubkey` is the item's own; `end`/`der` are this frame's.
-    let pubkey = unsafe { (*spki).pubkey };
+    let pubkey = unsafe { (*spki.as_ptr()).pubkey };
     // SAFETY: `pubkey` is the item's own and `end`/`der` are this frame's pointers.
     let bad = unsafe {
         pubkey.is_null() || ((*pubkey).flags & 0x7) != 0 || end != (*der).add(der_len as usize)
@@ -1144,16 +1223,21 @@ unsafe fn slh_dsa_d2i_pubkey(
                 format!("malformed {name} public key ASN.1 encoding"),
             )
         };
-        // SAFETY: `spki` is this frame's own and `ret` is live; both are freed here.
-        unsafe {
-            free_bare_pubkey(spki);
-            ossl_slh_dsa_key_free(ret);
-        };
+        // `spki`'s `Drop` runs the authority's own cleanup and `ret` is freed after it.
+        drop(spki);
+        // SAFETY: `ret` is live and this call owns it.
+        unsafe { ossl_slh_dsa_key_free(ret) };
         return ptr::null_mut();
     }
 
     // SAFETY: `spki`/`ret` are live; `ctx`'s evp_type is the row's own.
-    if unsafe { OBJ_cmp(OBJ_nid2obj((*ctx).desc.evp_type), (*spki).algor.oid) } != 0 {
+    if unsafe {
+        OBJ_cmp(
+            OBJ_nid2obj((*ctx).desc.evp_type),
+            (*spki.as_ptr()).algor.oid,
+        )
+    } != 0
+    {
         // SAFETY: `ret`'s name is NUL-terminated.
         let name = unsafe { CStr::from_ptr(ossl_slh_dsa_key_get_name(ret)) }.to_string_lossy();
         // SAFETY: the message is NUL-terminated by `raise_msg`.
@@ -1163,11 +1247,10 @@ unsafe fn slh_dsa_d2i_pubkey(
                 format!("unexpected algorithm OID for an {name} public key"),
             )
         };
-        // SAFETY: `spki` is this frame's own and `ret` is live; both are freed here.
-        unsafe {
-            free_bare_pubkey(spki);
-            ossl_slh_dsa_key_free(ret);
-        };
+        // `spki`'s `Drop` runs the authority's own cleanup and `ret` is freed after it.
+        drop(spki);
+        // SAFETY: `ret` is live and this call owns it.
+        unsafe { ossl_slh_dsa_key_free(ret) };
         return ptr::null_mut();
     }
 
@@ -1182,16 +1265,15 @@ unsafe fn slh_dsa_d2i_pubkey(
                 format!("failed to parse {name} public key from the input data"),
             )
         };
-        // SAFETY: `spki` is this frame's own and `ret` is live; both are freed here.
-        unsafe {
-            free_bare_pubkey(spki);
-            ossl_slh_dsa_key_free(ret);
-        };
+        // `spki`'s `Drop` runs the authority's own cleanup and `ret` is freed after it.
+        drop(spki);
+        // SAFETY: `ret` is live and this call owns it.
+        unsafe { ossl_slh_dsa_key_free(ret) };
         return ptr::null_mut();
     }
 
-    // SAFETY: `spki` is this frame's own.
-    unsafe { free_bare_pubkey(spki) };
+    // `spki`'s `Drop` runs the authority's own cleanup.
+    drop(spki);
     ret.cast::<c_void>()
 }
 

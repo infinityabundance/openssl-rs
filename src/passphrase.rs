@@ -421,6 +421,64 @@ pub unsafe extern "C" fn ossl_pw_disable_passphrase_caching(
     1
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the UI processor's scratch and its four releases
+// ---------------------------------------------------------------------------------------------
+
+/// The owned scratch of [`do_ui_passphrase`] — the authority's `end:` label, as a value.
+///
+/// `do_ui_passphrase` builds a prompt, its input buffer and (when verifying) a second one, and
+/// registers the buffers with the `UI`; the authority reaches its `end:` label from eight places to
+/// release all four in one order. This holds them instead: each field is NULL or this frame's own
+/// allocation, and `Drop` runs that same order — the two passphrase buffers cleansed, then the
+/// prompt, then the `UI` — on **every** return, including the failure tails, so no path can leak a
+/// passphrase buffer or release one twice.
+struct UiScratch {
+    /// The `UI`, released last.
+    ui: *mut Ui,
+    /// `UI_construct_prompt`'s string, or NULL before it is built.
+    prompt: *mut c_char,
+    /// The input buffer of `pass_size + 1` bytes, or NULL before it is built.
+    ipass: *mut c_char,
+    /// The verify buffer of `pass_size + 1` bytes, or NULL when not verifying.
+    vpass: *mut c_char,
+    /// The byte count both buffers were allocated with, `pass_size + 1`.
+    pass_size: usize,
+}
+
+impl UiScratch {
+    /// Take ownership of the `UI` just built and the size its buffers will be.
+    ///
+    /// # Safety
+    /// `ui` is this frame's own live `UI`; `pass_size + 1` is the size `ipass`/`vpass` are
+    /// allocated with.
+    unsafe fn new(ui: *mut Ui, pass_size: usize) -> UiScratch {
+        UiScratch {
+            ui,
+            prompt: ptr::null_mut(),
+            ipass: ptr::null_mut(),
+            vpass: ptr::null_mut(),
+            pass_size,
+        }
+    }
+}
+
+impl Drop for UiScratch {
+    /// The authority's `end:` label: the verify buffer, the input buffer, the prompt, the `UI`.
+    fn drop(&mut self) {
+        // SAFETY: each field is NULL or this frame's own allocation; the two buffers are
+        // `pass_size + 1` bytes as allocated above, and `UI_free` releases `ui` exactly once.
+        unsafe {
+            CRYPTO_clear_free(self.vpass.cast(), self.pass_size + 1, ptr::null(), 0);
+            CRYPTO_clear_free(self.ipass.cast(), self.pass_size + 1, ptr::null(), 0);
+            if !self.prompt.is_null() {
+                CRYPTO_free(self.prompt.cast(), ptr::null(), 0);
+            }
+            UI_free(self.ui);
+        }
+    }
+}
+
 /// `static int do_ui_passphrase(char *pass, size_t pass_size, size_t *pass_len,
 /// const char *prompt_info, int verify, const UI_METHOD *ui_method, void *ui_data)` —
 /// `crypto/passphrase.c:114-201`.
@@ -444,10 +502,6 @@ unsafe fn do_ui_passphrase(
     ui_method: *const UiMethod,
     ui_data: *mut c_void,
 ) -> c_int {
-    // `ipass` and `vpass` are declared before `prompt` because the authority's `end:` label
-    // frees them on the `UI_construct_prompt` failure path, where they are still NULL.
-    let mut ipass: *mut c_char = ptr::null_mut();
-    let mut vpass: *mut c_char = ptr::null_mut();
     let mut ret: c_int = 0;
 
     if pass.is_null() || pass_size == 0 || pass_len.is_null() {
@@ -463,6 +517,10 @@ unsafe fn do_ui_passphrase(
         unsafe { raise_site(&err_sites::PASSPHRASE_129) };
         return 0;
     }
+    // The `UI` and everything built under it is this frame's from here on; `Drop` is the
+    // authority's own `end:`-label release on every path below.
+    // SAFETY: `ui` is this frame's live `UI` and `pass_size + 1` is the size its buffers get.
+    let mut scratch = unsafe { UiScratch::new(ui, pass_size) };
 
     if !ui_method.is_null() {
         // SAFETY: `ui` is live and `ui_method` is non-NULL per the contract.
@@ -479,17 +537,19 @@ unsafe fn do_ui_passphrase(
     if prompt.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PASSPHRASE_142) };
-        // SAFETY: the `end` label's contract, with its four pointers the locals above.
-        return unsafe { end(ui, prompt, ipass, vpass, pass_size, ret) };
+        // `scratch`'s `Drop` releases the `UI` on this failure tail.
+        return 0;
     }
+    scratch.prompt = prompt;
 
     // SAFETY: `CRYPTO_zalloc` takes a size and answers NULL or a zeroed block; a positive
     // `pass_size + 1` is a valid size and `pass_size`'s range is the caller's contract.
-    ipass = CRYPTO_zalloc(pass_size + 1, ptr::null(), 0).cast();
+    let ipass: *mut c_char = CRYPTO_zalloc(pass_size + 1, ptr::null(), 0).cast();
     if ipass.is_null() {
-        // SAFETY: the `end` label's contract, with its four pointers the locals above.
-        return unsafe { end(ui, prompt, ipass, vpass, pass_size, ret) };
+        // `scratch`'s `Drop` releases the prompt and the `UI` on this failure tail.
+        return 0;
     }
+    scratch.ipass = ipass;
 
     // SAFETY: `ui`, `prompt` and `ipass` are live; `ipass` is writable for `pass_size` bytes and
     // `prompt` is NUL-terminated, both per the constructor's contract.
@@ -506,17 +566,18 @@ unsafe fn do_ui_passphrase(
     if prompt_idx < 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PASSPHRASE_156) };
-        // SAFETY: the `end` label's contract, with its four pointers the locals above.
-        return unsafe { end(ui, prompt, ipass, vpass, pass_size, ret) };
+        // `scratch`'s `Drop` releases the buffers, the prompt and the `UI`.
+        return 0;
     }
 
     if verify != 0 {
         // SAFETY: as for `ipass`.
-        vpass = CRYPTO_zalloc(pass_size + 1, ptr::null(), 0).cast();
+        let vpass: *mut c_char = CRYPTO_zalloc(pass_size + 1, ptr::null(), 0).cast();
         if vpass.is_null() {
-            // SAFETY: the `end` label's contract, with its four pointers the locals above.
-            return unsafe { end(ui, prompt, ipass, vpass, pass_size, ret) };
+            // `scratch`'s `Drop` releases the input buffer, the prompt and the `UI`.
+            return 0;
         }
+        scratch.vpass = vpass;
         // SAFETY: `ui` and `prompt` are live; `vpass` is writable and `ipass` is the test buffer
         // `UI_process` compares against.
         let verify_idx = unsafe {
@@ -533,8 +594,8 @@ unsafe fn do_ui_passphrase(
         if verify_idx < 0 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::PASSPHRASE_171) };
-            // SAFETY: the `end` label's contract, with its four pointers the locals above.
-            return unsafe { end(ui, prompt, ipass, vpass, pass_size, ret) };
+            // `scratch`'s `Drop` releases the buffers, the prompt and the `UI`.
+            return 0;
         }
     }
 
@@ -566,36 +627,8 @@ unsafe fn do_ui_passphrase(
         }
     }
 
-    // SAFETY: the `end` label's contract, with its four pointers the locals above.
-    unsafe { end(ui, prompt, ipass, vpass, pass_size, ret) }
-}
-
-/// The authority's `end:` label of [`do_ui_passphrase`] — `crypto/passphrase.c:195-200`.
-///
-/// Split out because the label has eight incoming jumps in the authority and Rust has no `goto`;
-/// a call is the same thing with the same arguments.
-///
-/// # Safety
-/// `ui`, `prompt`, `ipass` and `vpass` must each be NULL or a pointer this function's caller
-/// owns, `pass_size + 1` must be the size `ipass`/`vpass` were allocated with.
-unsafe fn end(
-    ui: *mut Ui,
-    prompt: *mut c_char,
-    ipass: *mut c_char,
-    vpass: *mut c_char,
-    pass_size: usize,
-    ret: c_int,
-) -> c_int {
-    // SAFETY: each pointer is NULL or owned by the caller, and the two buffers are `pass_size + 1`
-    // bytes as allocated above.
-    unsafe {
-        CRYPTO_clear_free(vpass.cast(), pass_size + 1, ptr::null(), 0);
-        CRYPTO_clear_free(ipass.cast(), pass_size + 1, ptr::null(), 0);
-        if !prompt.is_null() {
-            CRYPTO_free(prompt.cast(), ptr::null(), 0);
-        }
-        UI_free(ui);
-    }
+    // `scratch`'s `Drop` is the authority's `end:` label: both buffers cleansed, the prompt and
+    // the `UI` released, in the authority's own order.
     ret
 }
 

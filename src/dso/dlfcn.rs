@@ -113,6 +113,51 @@ const RTLD_LAZY: c_int = 1;
 // path — a leftover of the `dlopen`-flag "hack" its own comment describes. There is
 // nothing to reproduce, and this note is the record of that rather than a silent gap.
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a converted filename
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `char *` allocated through the crate's allocator seam.
+///
+/// `DSO_convert_filename` answers a fresh `CRYPTO_strdup` block; only its *ownership* is this type.
+/// [`Self::adopt`] takes that block, `Drop` is its single release at the authority's own
+/// `dlfcn_load` error-path site, and [`Self::into_raw`] hands it to `dso->loaded_filename`. A NULL
+/// pointer is a valid, empty buffer whose release is the authority's own no-op `free(NULL)`.
+struct OwnedStr {
+    ptr: *mut c_char,
+}
+
+impl OwnedStr {
+    /// Adopt the block `DSO_convert_filename` left for this frame.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns.
+    unsafe fn adopt(ptr: *mut c_char) -> OwnedStr {
+        OwnedStr { ptr }
+    }
+
+    /// The string's address.
+    fn as_ptr(&self) -> *mut c_char {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to `dso->loaded_filename`.
+    fn into_raw(self) -> *mut c_char {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The block's single release, through the same seam and at the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, LINE_FREE_TRANSLATED) };
+    }
+}
+
 /// `static int dlfcn_load(DSO *dso)`
 ///
 /// # Safety
@@ -130,18 +175,22 @@ unsafe extern "C" fn dlfcn_load(dso: *mut Dso) -> c_int {
         unsafe { raise_site(&err_sites::DSO_DLFCN_102) };
         return 0;
     }
+    // The converter's block is this frame's from here on; `Drop` is its single release at the
+    // authority's own error-path site.
+    // SAFETY: `filename` is NULL or the live `CRYPTO_strdup` block the converter allocated and no
+    // one else owns.
+    let filename = unsafe { OwnedStr::adopt(filename) };
     // SAFETY: `dso` is live.
     if unsafe { (*dso).flags } & DSO_FLAG_GLOBAL_SYMBOLS != 0 {
         flags |= RTLD_GLOBAL;
     }
     // SAFETY: `filename` is NUL-terminated by the converter.
-    let ptr_ = unsafe { dlopen(filename, flags) };
+    let ptr_ = unsafe { dlopen(filename.as_ptr(), flags) };
     if ptr_.is_null() {
         // SAFETY: the site is constant and `filename` is NUL-terminated; the message
         // carries `dlerror()`'s text.
-        unsafe { raise_data_load_failed(&err_sites::DSO_DLFCN_115, filename) };
-        // SAFETY: `filename` came from `CRYPTO_strdup` inside the converter.
-        unsafe { CRYPTO_free(filename.cast::<c_void>(), FILE, LINE_FREE_TRANSLATED) };
+        unsafe { raise_data_load_failed(&err_sites::DSO_DLFCN_115, filename.as_ptr()) };
+        // `filename`'s `Drop` is the authority's own `CRYPTO_free` on this error tail.
         return 0;
     }
     // SAFETY: writing `errno` is the authority's `set_sys_error`.
@@ -150,17 +199,17 @@ unsafe extern "C" fn dlfcn_load(dso: *mut Dso) -> c_int {
     if unsafe { meth_data_push(dso, ptr_) } <= 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DSO_DLFCN_125) };
-        // SAFETY: `filename` is still owned here, and the handle was not pushed.
-        unsafe {
-            CRYPTO_free(filename.cast::<c_void>(), FILE, LINE_FREE_TRANSLATED);
-            dlclose(ptr_);
-        }
+        // `filename`'s `Drop` is the authority's own `CRYPTO_free`, in the authority's own order
+        // before the handle is closed.
+        drop(filename);
+        // SAFETY: the handle was not pushed, so it is this frame's to close.
+        unsafe { dlclose(ptr_) };
         return 0;
     }
     // `dso->loaded_filename = filename` — the object takes ownership of the translated
-    // name, which is why the success path frees nothing.
-    // SAFETY: `dso` is live and `filename` is the allocation just made.
-    unsafe { (*dso).loaded_filename = filename };
+    // name, which is why the success path hands the block over rather than releasing it.
+    // SAFETY: `dso` is live and `filename` is the allocation just made and handed over.
+    unsafe { (*dso).loaded_filename = filename.into_raw() };
     1
 }
 
