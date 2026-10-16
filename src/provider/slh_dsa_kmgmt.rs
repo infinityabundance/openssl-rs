@@ -159,7 +159,12 @@ impl Drop for OwnedStr {
 /// `slh_dsa_gen_cleanup`'s body (`slh_dsa_kmgmt.c.in:450-452`), without the block release
 /// [`OwnedCtx`]'s `Drop` performs: cleanse the entropy, then release the `propq` duplicate, in the
 /// authority's own order.
-impl CtxDestroy for SlhDsaGenCtx {
+// SAFETY: (a) `destroy_body` is the authority's `slh_dsa_gen_cleanup` member body, cleansing the
+// entropy array and releasing exactly this context's own property query once (the `OwnedStr::adopt`
+// accepts the unset NULL) and never the enclosing block, which `OwnedCtx` releases; (b)
+// `SlhDsaGenCtx` is a `#[repr(C)]` record of raw pointers, a fixed byte array and a `usize`, so an
+// all-zero block is a valid `SlhDsaGenCtx` the body is sound on.
+unsafe impl CtxDestroy for SlhDsaGenCtx {
     const FILE: *const c_char = FILE;
     const LINE_ALLOC: c_int = LINE_ZALLOC_GCTX;
     const LINE_FREE: c_int = LINE_FREE_GCTX;

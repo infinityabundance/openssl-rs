@@ -95,7 +95,11 @@ pub(crate) struct OsslCoreBio {
 /// `OSSL_STORE_CTX`'s destructor takes. `FILE`/`LINE_*` are the authority's own coordinates for
 /// this translation unit (lines 25 and 50 of `ossl_core_bio.c`).
 #[allow(dead_code)] // unreachable until 6.8b-i publishes the core dispatch table
-impl CtxDestroy for OsslCoreBio {
+                    // SAFETY: (a) `ossl_core_bio_free` runs `BIO_free(cb->bio)` explicitly on the freeing path, so
+                    // `destroy_body` is the empty body here and never releases the enclosing block, which `OwnedCtx`
+                    // releases; (b) `OsslCoreBio` is a `#[repr(C)]` record of an `AtomicI32` and a raw pointer, so an
+                    // all-zero block is a valid `OsslCoreBio` the empty body is trivially sound on.
+unsafe impl CtxDestroy for OsslCoreBio {
     const FILE: *const c_char = FILE;
     const LINE_ALLOC: c_int = L_CORE_BIO_NEW;
     const LINE_FREE: c_int = L_CORE_BIO_FREE;

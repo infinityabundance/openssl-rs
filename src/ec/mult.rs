@@ -61,7 +61,12 @@ pub(crate) struct EcPreCompSt {
     pub(crate) references: AtomicI32,
 }
 
-impl CtxDestroy for EcPreCompSt {
+// SAFETY: (a) `destroy_body` is the authority's `EC_ec_pre_comp_free` member body, releasing
+// exactly this precomputation's own points array and the points it holds once (the NULL pivot and
+// each release accept the unset state) and never the enclosing block, which `OwnedCtx` releases;
+// (b) `EcPreCompSt` is a `#[repr(C)]` record of raw pointers, `usize`s and an `AtomicI32`, so an
+// all-zero block is a valid `EcPreCompSt` the body is sound on.
+unsafe impl CtxDestroy for EcPreCompSt {
     const FILE: *const c_char = FILE.as_ptr();
     const LINE_ALLOC: c_int = 57;
     const LINE_FREE: c_int = 101;
