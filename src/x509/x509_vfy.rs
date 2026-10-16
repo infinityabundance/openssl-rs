@@ -1456,7 +1456,7 @@ pub unsafe extern "C" fn X509_CRL_diff(
 
     // Create new CRL.
     // SAFETY: `base` is live.
-    let crl = unsafe { X509_CRL_new_ex((*base).libctx, (*base).propq) };
+    let crl = unsafe { X509_CRL_new_ex((*base).libctx, (*base).propq()) };
     let mut failed = false;
     'body: {
         // SAFETY: `crl` is NULL or a fresh object; `newer` is live.
