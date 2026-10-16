@@ -7,7 +7,8 @@
 //! The two base64 functions allocate through `OPENSSL_malloc`/`OPENSSL_malloc_array`, which are
 //! the macros `CRYPTO_malloc(n, __FILE__, __LINE__)`/`CRYPTO_malloc_array(n, m, __FILE__, __LINE__)`
 //! (`include/openssl/crypto.h`); the transcription calls the `CRYPTO_*` spellings with this
-//! file's coordinates.
+//! file's coordinates. The three scratch blocks those calls produce are owned by [`OwnedBuf`],
+//! whose `Drop` is the authority's own single `OPENSSL_free` on every path.
 //!
 //! One `ERR_raise` site: `NETSCAPE_SPKI_b64_decode`'s base64 refusal (`:42`,
 //! `ERR_LIB_X509`/`X509_R_BASE64_DECODE_ERROR`). Its coordinate is the generated
@@ -33,6 +34,68 @@ const FILE_NAME: &CStr = c"crypto/x509/x509spki.c";
 /// The line the allocation-tracking record carries. Zero, as every landed allocator call site
 /// uses: the number is unobservable and only the file's identity is contract.
 const LINE: c_int = 0;
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// Each base64 pass keeps its temporary block a `CRYPTO_malloc`/`CRYPTO_malloc_array` at the
+/// authority's exact `file`/`line` -- a Rust `Box`/`Vec` would hide both the allocation and its
+/// release from a caller-installed `CRYPTO_set_mem_functions` hook -- and only its *ownership* is
+/// this type: [`Self::new`]/[`Self::new_array`] allocate it, `Drop` is its single release at the
+/// authority's own site, and [`Self::into_raw`] hands the base64 text to the C caller.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// `CRYPTO_malloc_array(count, size, file, line)`, or `None` when the allocator answers NULL.
+    fn new_array(count: usize, size: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc_array(count, size, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the C caller.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
 
 /// `int NETSCAPE_SPKI_set_pubkey(NETSCAPE_SPKI *x, EVP_PKEY *pkey)` —
 /// `crypto/x509/x509spki.c:14-19`.
@@ -98,26 +161,22 @@ pub unsafe extern "C" fn NETSCAPE_SPKI_b64_decode(
     } else {
         len
     };
-    // SAFETY: `str_` is readable for `len` bytes per the contract.
-    let spki_der = CRYPTO_malloc(len as usize + 1, FILE_NAME.as_ptr(), LINE).cast::<c_uchar>();
-    if spki_der.is_null() {
-        return ptr::null_mut();
-    }
+    // `spki_der` owns the fresh `len + 1`-byte scratch block; every exit below drops it, which is
+    // the authority's own `OPENSSL_free` at this unit's line.
+    let spki_der = match OwnedBuf::new(len as usize + 1, FILE_NAME.as_ptr(), LINE) {
+        Some(buf) => buf,
+        None => return ptr::null_mut(),
+    };
     // SAFETY: `spki_der` has room for `len + 1` bytes and `str_` is readable for `len`.
-    let spki_len = unsafe { EVP_DecodeBlock(spki_der, str_.cast::<c_uchar>(), len) };
+    let spki_len = unsafe { EVP_DecodeBlock(spki_der.as_ptr(), str_.cast::<c_uchar>(), len) };
     if spki_len < 0 {
         // SAFETY: a compile-time-constant site, exactly as `ERR_raise` is.
         unsafe { raise_site(&err_sites::X509_SPKI_42) };
-        // SAFETY: `spki_der` came from this allocator and is not owned elsewhere.
-        unsafe { CRYPTO_free(spki_der.cast::<c_void>(), FILE_NAME.as_ptr(), LINE) };
         return ptr::null_mut();
     }
-    let mut p: *const c_uchar = spki_der;
+    let mut p: *const c_uchar = spki_der.as_ptr();
     // SAFETY: `spki_der` holds `spki_len` bytes and `p` is this frame's cursor.
-    let spki = unsafe { d2i_NETSCAPE_SPKI(ptr::null_mut(), &raw mut p, c_long::from(spki_len)) };
-    // SAFETY: `spki_der` came from this allocator and is not owned elsewhere.
-    unsafe { CRYPTO_free(spki_der.cast::<c_void>(), FILE_NAME.as_ptr(), LINE) };
-    spki
+    unsafe { d2i_NETSCAPE_SPKI(ptr::null_mut(), &raw mut p, c_long::from(spki_len)) }
 }
 
 /// `char *NETSCAPE_SPKI_b64_encode(NETSCAPE_SPKI *spki)` — `crypto/x509/x509spki.c:54-75`.
@@ -136,27 +195,23 @@ pub unsafe extern "C" fn NETSCAPE_SPKI_b64_encode(spki: *mut NetScapeSpki) -> *m
     if der_len <= 0 {
         return ptr::null_mut();
     }
-    // SAFETY: `der_len` bytes, and the doubled buffer for the base64 text.
-    let der_spki = CRYPTO_malloc(der_len as usize, FILE_NAME.as_ptr(), LINE).cast::<c_uchar>();
+    // `der_spki` owns the fresh `der_len`-byte DER scratch block and `b64_str` the doubled base64
+    // block; a failed allocation drops the other, which is the authority's own `OPENSSL_free`.
+    let der_spki = match OwnedBuf::new(der_len as usize, FILE_NAME.as_ptr(), LINE) {
+        Some(buf) => buf,
+        None => return ptr::null_mut(),
+    };
     // SAFETY: the authority allocates `der_len * 2` for the base64 expansion.
-    let b64_str =
-        CRYPTO_malloc_array(der_len as usize, 2, FILE_NAME.as_ptr(), LINE).cast::<c_char>();
-    if der_spki.is_null() || b64_str.is_null() {
-        // SAFETY: both came from this allocator and neither is owned elsewhere.
-        unsafe {
-            CRYPTO_free(der_spki.cast::<c_void>(), FILE_NAME.as_ptr(), LINE);
-            CRYPTO_free(b64_str.cast::<c_void>(), FILE_NAME.as_ptr(), LINE);
-        }
-        return ptr::null_mut();
-    }
-    let mut p = der_spki;
+    let b64_str = match OwnedBuf::new_array(der_len as usize, 2, FILE_NAME.as_ptr(), LINE) {
+        Some(buf) => buf,
+        None => return ptr::null_mut(),
+    };
+    let mut p = der_spki.as_ptr();
     // SAFETY: `der_spki` has room for `der_len` bytes and `p` is this frame's cursor.
     unsafe { i2d_NETSCAPE_SPKI(spki, &raw mut p) };
     // SAFETY: `b64_str` has room for the base64 expansion and `der_spki` is readable for
     // `der_len` bytes.
-    unsafe { EVP_EncodeBlock(b64_str.cast::<c_uchar>(), der_spki, der_len) };
-    // SAFETY: `der_spki` came from this allocator and is not owned elsewhere; `b64_str` is
-    // returned to the caller.
-    unsafe { CRYPTO_free(der_spki.cast::<c_void>(), FILE_NAME.as_ptr(), LINE) };
-    b64_str
+    unsafe { EVP_EncodeBlock(b64_str.as_ptr(), der_spki.as_ptr(), der_len) };
+    // `der_spki` drops here, the authority's own `OPENSSL_free`; `b64_str` is handed to the caller.
+    b64_str.into_raw().cast::<c_char>()
 }
