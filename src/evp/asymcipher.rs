@@ -186,6 +186,146 @@ pub struct EvpAsymCipher {
     pub(crate) settable_ctx_params: Option<AsymCipherSettableCtxParamsFn>,
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `EVP_ASYM_CIPHER` object and the decrypted-output block
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `*_free` body for an owned object, without the block release [`OwnedCtx`]'s
+/// `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `*_free` body, without the block release `Drop` performs.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live object this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned [`EvpAsymCipher`] block.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its exact `CRYPTO_zalloc` size/`file`/`line`,
+/// but its *ownership* is this type: [`Self::new_zeroed`] allocates it, [`Self::from_raw`] takes back
+/// the block the C ABI hands to [`EVP_ASYM_CIPHER_free`], and `Drop` runs the authority's own free
+/// body ([`CtxDestroy::destroy_body`]) followed by its single block release. A Rust `Box` would hide
+/// both the release and a caller-installed `CRYPTO_set_mem_functions` hook.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// `CRYPTO_zalloc(size_of::<T>(), file, line)`, or `None` when it answers NULL. The zeroed image
+    /// is the authority's own starting state -- every owned member is NULL -- so
+    /// [`CtxDestroy::destroy_body`] on it is the authority's own all-empty free.
+    fn new_zeroed(file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, line).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// The object's address, the C ABI's `EVP_ASYM_CIPHER *`.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the object to the C ABI's answer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim the block the C ABI hands to [`EVP_ASYM_CIPHER_free`], for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live object this file allocated that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The object's destructor: the authority's own free body followed by its single block release,
+    /// through the same allocator seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; `destroy_body` is
+        // the authority's own free body and this is the block's single release.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+/// The authority's `EVP_ASYM_CIPHER_free` body, without the block release [`OwnedCtx`]'s `Drop`
+/// performs: the type name and the provider *reference*, in the authority's own order.
+impl CtxDestroy for EvpAsymCipher {
+    unsafe fn destroy_body(ptr: *mut EvpAsymCipher) {
+        // SAFETY: `ptr` is a live object per the trait contract; `type_name` is NULL or this file's
+        // own `ossl_algorithm_get1_first_name` string and `prov` is NULL or a live provider the
+        // constructor took a reference on.
+        unsafe {
+            CRYPTO_free((*ptr).type_name.cast(), FILE, LINE_FREE_TYPE_NAME);
+            ossl_provider_free((*ptr).prov);
+        }
+    }
+}
+
+/// An owned secret-bearing byte buffer: the authority's own `CRYPTO_malloc` block whose release is
+/// this type, so its single release is `Drop` and the cleanse-then-free arm is not written by hand at
+/// the call site.
+///
+/// [`Self::take`] adopts a block the frame allocated through the crate's allocator seam at the
+/// authority's own size/`file`/`line`, so a caller-installed `CRYPTO_set_mem_functions` hook observes
+/// the allocation and its release exactly as it observes the authority's.
+struct OwnedBlock {
+    ptr: *mut c_void,
+    len: usize,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBlock {
+    /// Adopt a block the frame's seam answered, or `None` for NULL. `len` is the length the
+    /// cleansing release covers.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a block the crate's allocator seam produced, is owned by the caller, and
+    /// will not be freed or handed to any other owner -- this handle's `Drop` is its single release.
+    unsafe fn take(
+        ptr: *mut c_void,
+        len: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBlock> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBlock {
+                ptr,
+                len,
+                file,
+                line,
+            })
+        }
+    }
+}
+
+impl Drop for OwnedBlock {
+    /// The buffer's single release: the authority's own `OPENSSL_clear_free`, which cleanses `len`
+    /// bytes and then frees through the same seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
+        // released before; `self.len` is its cleanse length and the authority's own
+        // `CRYPTO_clear_free` accepts NULL.
+        unsafe { CRYPTO_clear_free(self.ptr, self.len, self.file, self.line) };
+    }
+}
+
 /// `static void evp_asym_cipher_free(void *data)` — the shape `evp_generic_fetch` wants.
 ///
 /// # Safety
@@ -210,23 +350,17 @@ unsafe extern "C" fn evp_asym_cipher_up_ref(data: *mut c_void) -> c_int {
 /// # Safety
 /// `prov` must be live.
 unsafe fn evp_asym_cipher_new(prov: *mut OsslProvider) -> *mut EvpAsymCipher {
-    /* `CRYPTO_zalloc` is a safe entry point of this crate: it validates its own argument. */
-    let cipher = CRYPTO_zalloc(
-        core::mem::size_of::<EvpAsymCipher>(),
-        FILE,
-        LINE_ZALLOC_CIPHER,
-    )
-    .cast::<EvpAsymCipher>();
-    if cipher.is_null() {
+    let Some(cipher) = OwnedCtx::<EvpAsymCipher>::new_zeroed(FILE, LINE_ZALLOC_CIPHER) else {
         return ptr::null_mut();
-    }
+    };
     // SAFETY: `cipher` is this call's own object and `prov` is live.
     unsafe {
-        (*cipher).refcnt = AtomicI32::new(1);
-        (*cipher).prov = prov;
+        let p = cipher.as_ptr();
+        (*p).refcnt = AtomicI32::new(1);
+        (*p).prov = prov;
         ossl_provider_up_ref(prov);
     }
-    cipher
+    cipher.into_raw()
 }
 
 /// `static void *evp_asym_cipher_from_algorithm(int name_id, const OSSL_ALGORITHM *algodef,
@@ -376,14 +510,9 @@ pub unsafe extern "C" fn EVP_ASYM_CIPHER_free(cipher: *mut EvpAsymCipher) {
     if last > 1 {
         return;
     }
-    // SAFETY: `cipher` is live and this was the last reference.
-    let (type_name, prov) = unsafe { ((*cipher).type_name, (*cipher).prov) };
-    // SAFETY: `type_name` was allocated for this object.
-    unsafe { CRYPTO_free(type_name.cast(), FILE, LINE_FREE_TYPE_NAME) };
-    // SAFETY: `prov` is live and holds the reference `evp_asym_cipher_new` took.
-    unsafe { ossl_provider_free(prov) };
-    // SAFETY: `cipher` is this object's own allocation.
-    unsafe { CRYPTO_free(cipher.cast(), FILE, LINE_FREE_CIPHER) };
+    // SAFETY: `cipher` is live and this was its last reference, so no other owner will release it;
+    // `Drop` runs the authority's own free body and this is the block's single release.
+    drop(unsafe { OwnedCtx::<EvpAsymCipher>::from_raw(cipher, FILE, LINE_FREE_CIPHER) });
 }
 
 /// `int EVP_ASYM_CIPHER_up_ref(EVP_ASYM_CIPHER *cipher)`.
@@ -1107,10 +1236,16 @@ pub(crate) unsafe fn evp_pkey_decrypt_alloc(
     {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::ASYMCIPHER_342) };
-        // SAFETY: `buffer` is this call's own allocation of `*outlenp` bytes.
+        // SAFETY: `buffer` is this call's own allocation, the second call wrote the produced length
+        // into `outlenp`; `Drop` is the authority's own cleanse-then-release at its `:343` site.
         unsafe {
             let produced = *outlenp;
-            CRYPTO_clear_free(buffer.cast(), produced, FILE, LINE_CLEAR_FREE_DECRYPT_ALLOC);
+            drop(OwnedBlock::take(
+                buffer.cast(),
+                produced,
+                FILE,
+                LINE_CLEAR_FREE_DECRYPT_ALLOC,
+            ));
         }
         // SAFETY: `outp` is writable and its value is this call's own allocation.
         unsafe { *outp = ptr::null_mut() };
