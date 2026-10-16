@@ -12,7 +12,7 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_void};
-use core::ptr::null_mut;
+use core::ptr::{null_mut, NonNull};
 
 use crate::ffi::guard_ffi;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
@@ -75,28 +75,85 @@ pub struct AsyncWaitCtx {
     status: c_int,
 }
 
-/// `ASYNC_WAIT_CTX *ASYNC_WAIT_CTX_new(void)` — `crypto/async/async_wait.c:15-18`.
-#[no_mangle]
-pub extern "C" fn ASYNC_WAIT_CTX_new() -> *mut AsyncWaitCtx {
-    guard_ffi(null_mut(), || {
-        CRYPTO_zalloc(core::mem::size_of::<AsyncWaitCtx>(), FILE, LINE_NEW).cast::<AsyncWaitCtx>()
-    })
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `ASYNC_WAIT_CTX` object and its `fd_lookup_st` nodes
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `*_free` body for an owned context, without the block release [`OwnedCtx`]'s
+/// `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `*_free` body, without the block release `Drop` performs.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live record this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
 }
 
-/// `void ASYNC_WAIT_CTX_free(ASYNC_WAIT_CTX *ctx)` — `crypto/async/async_wait.c:20-42`.
+/// An owned [`AsyncWaitCtx`] block.
 ///
-/// # Safety
-/// `ctx` must be NULL or an object from [`ASYNC_WAIT_CTX_new`] not already released.
-#[no_mangle]
-pub unsafe extern "C" fn ASYNC_WAIT_CTX_free(ctx: *mut AsyncWaitCtx) {
-    guard_ffi((), || {
-        if ctx.is_null() {
-            return;
+/// The block keeps the authority's `#[repr(C)]` layout and its exact `CRYPTO_zalloc` size, but its
+/// *ownership* is this type: [`Self::new_zeroed`] allocates it, [`Self::from_raw`] takes back the
+/// block the C ABI hands to [`ASYNC_WAIT_CTX_free`], and `Drop` runs the authority's own free body
+/// ([`CtxDestroy::destroy_body`]) followed by its single block release. A Rust `Box` would hide both
+/// the release and a caller-installed `CRYPTO_set_mem_functions` hook.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// `CRYPTO_zalloc(size_of::<T>(), file, line)`, or `None` when it answers NULL. The zeroed image
+    /// is the authority's own starting state -- every owned member is NULL -- so
+    /// [`CtxDestroy::destroy_body`] on it is the authority's own all-empty free.
+    fn new_zeroed(file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, line).cast::<T>();
+        NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// Give up ownership of the object to the C ABI's answer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim the block the C ABI hands to [`ASYNC_WAIT_CTX_free`], for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live object this file allocated that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The object's destructor: the authority's own free body followed by its single block release,
+    /// through the same allocator seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; `destroy_body` is
+        // the authority's own free body and this is the block's single release.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
         }
-        // SAFETY: `ctx` is live per the contract.
-        let mut curr = unsafe { (*ctx).fds };
+    }
+}
+
+/// The authority's `ASYNC_WAIT_CTX_free` body (`crypto/async/async_wait.c:20-42`), without the
+/// block release [`OwnedCtx`]'s `Drop` performs: the cleanup callbacks of every live entry and the
+/// release of every node.
+impl CtxDestroy for AsyncWaitCtx {
+    unsafe fn destroy_body(ptr: *mut AsyncWaitCtx) {
+        // SAFETY: `ptr` is a live object per the trait contract; `fds` is NULL or this file's own
+        // list of nodes.
+        let mut curr = unsafe { (*ptr).fds };
         while !curr.is_null() {
-            // SAFETY: `curr` is a live list node.
+            // SAFETY: `curr` is a live node.
             let (del, cleanup, key, fd, custom_data, next) = unsafe {
                 (
                     (*curr).del,
@@ -109,17 +166,91 @@ pub unsafe extern "C" fn ASYNC_WAIT_CTX_free(ctx: *mut AsyncWaitCtx) {
             };
             if del == 0 {
                 if let Some(f) = cleanup {
-                    // SAFETY: `f` is the caller's cleanup callback and `ctx` is the object it
-                    // was installed against; every argument is the entry's own.
-                    unsafe { f(ctx, key, fd, custom_data) };
+                    // SAFETY: `f` is the caller's cleanup callback and `ptr` is the object it was
+                    // installed against; every argument is the entry's own.
+                    unsafe { f(ptr, key, fd, custom_data) };
                 }
             }
-            // SAFETY: `curr` is this function's own node and `next` was read before the free.
-            unsafe { CRYPTO_free(curr.cast::<c_void>(), FILE, LINE_FREE_LOOKUP) };
+            // SAFETY: `curr` is this function's own node and `next` was read before the release.
+            drop(unsafe { OwnedFdLookup::adopt(curr, FILE, LINE_FREE_LOOKUP) });
             curr = next;
         }
-        // SAFETY: `ctx` is this function's own object and the list is released.
-        unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE_CTX) };
+    }
+}
+
+/// An owned `struct fd_lookup_st` node.
+struct OwnedFdLookup {
+    ptr: *mut FdLookup,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedFdLookup {
+    /// `CRYPTO_zalloc(size_of::<FdLookup>(), file, line)`, or `None` when it answers NULL.
+    fn new_zeroed(file: *const c_char, line: c_int) -> Option<OwnedFdLookup> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<FdLookup>()` bytes, which is exactly the node's layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<FdLookup>(), file, line).cast::<FdLookup>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedFdLookup {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// Take up a live node still linked into a context's list, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live node this file allocated that no other owner will release.
+    unsafe fn adopt(ptr: *mut FdLookup, file: *const c_char, line: c_int) -> OwnedFdLookup {
+        OwnedFdLookup { ptr, file, line }
+    }
+
+    /// The node's address, for the context field it is stored in.
+    fn as_ptr(&self) -> *mut FdLookup {
+        self.ptr
+    }
+
+    /// Give up ownership of the node to the context's list.
+    fn into_raw(self) -> *mut FdLookup {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedFdLookup {
+    /// The node's single release, through the same seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
+/// `ASYNC_WAIT_CTX *ASYNC_WAIT_CTX_new(void)` — `crypto/async/async_wait.c:15-18`.
+#[no_mangle]
+pub extern "C" fn ASYNC_WAIT_CTX_new() -> *mut AsyncWaitCtx {
+    guard_ffi(null_mut(), || {
+        OwnedCtx::<AsyncWaitCtx>::new_zeroed(FILE, LINE_NEW)
+            .map_or_else(null_mut, |ctx| ctx.into_raw())
+    })
+}
+
+/// `void ASYNC_WAIT_CTX_free(ASYNC_WAIT_CTX *ctx)` — `crypto/async/async_wait.c:20-42`.
+///
+/// # Safety
+/// `ctx` must be NULL or an object from [`ASYNC_WAIT_CTX_new`] not already released.
+#[no_mangle]
+pub unsafe extern "C" fn ASYNC_WAIT_CTX_free(ctx: *mut AsyncWaitCtx) {
+    guard_ffi((), || {
+        // SAFETY: `ctx` is NULL or a live object this file allocated per the contract; `Drop` runs
+        // the authority's own free body and this is its single block release.
+        drop(unsafe { OwnedCtx::<AsyncWaitCtx>::from_raw(ctx, FILE, LINE_FREE_CTX) });
     })
 }
 
@@ -140,20 +271,19 @@ pub unsafe extern "C" fn ASYNC_WAIT_CTX_set_wait_fd(
     >,
 ) -> c_int {
     guard_ffi(0, || {
-        let fdlookup =
-            CRYPTO_zalloc(core::mem::size_of::<FdLookup>(), FILE, LINE_LOOKUP).cast::<FdLookup>();
-        if fdlookup.is_null() {
+        let Some(fdlookup) = OwnedFdLookup::new_zeroed(FILE, LINE_LOOKUP) else {
             return 0;
-        }
-        // SAFETY: `fdlookup` is fresh storage and `ctx` is live per the contract.
+        };
+        // SAFETY: `fdlookup` is this call's own fresh node and `ctx` is live per the contract.
         unsafe {
-            (*fdlookup).key = key;
-            (*fdlookup).fd = fd;
-            (*fdlookup).custom_data = custom_data;
-            (*fdlookup).cleanup = cleanup;
-            (*fdlookup).add = 1;
-            (*fdlookup).next = (*ctx).fds;
-            (*ctx).fds = fdlookup;
+            let node = fdlookup.as_ptr();
+            (*node).key = key;
+            (*node).fd = fd;
+            (*node).custom_data = custom_data;
+            (*node).cleanup = cleanup;
+            (*node).add = 1;
+            (*node).next = (*ctx).fds;
+            (*ctx).fds = fdlookup.into_raw();
             (*ctx).numadd += 1;
         }
         1
@@ -322,7 +452,7 @@ pub unsafe extern "C" fn ASYNC_WAIT_CTX_clear_fd(
                         } else {
                             (*prev).next = next;
                         }
-                        CRYPTO_free(curr.cast::<c_void>(), FILE, LINE_FREE_CLEARED);
+                        drop(OwnedFdLookup::adopt(curr, FILE, LINE_FREE_CLEARED));
                         (*ctx).numadd -= 1;
                     }
                     return 1;
@@ -450,7 +580,7 @@ pub(crate) unsafe fn async_wait_ctx_reset_counts(ctx: *mut AsyncWaitCtx) {
                 } else {
                     (*prev).next = next;
                 }
-                CRYPTO_free(curr.cast::<c_void>(), FILE, LINE_FREE_RESET);
+                drop(OwnedFdLookup::adopt(curr, FILE, LINE_FREE_RESET));
             }
             curr = next;
             continue;

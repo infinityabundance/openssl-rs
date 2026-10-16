@@ -61,6 +61,63 @@ const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c".as_
 /// the largest user ID whose `ENTL = 8 * id_len` still fits a `uint16_t`.
 const UINT16_MAX: usize = 0xffff;
 
+/// An owned scratch/output block allocated through the crate's `CRYPTO_zalloc` seam (`buf`, `z`) or
+/// left by an encoder (`der`).
+///
+/// The block stays the authority's own allocation, at its exact size and `file`/`line`, because a
+/// Rust `Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook. Only its *ownership* is this type: [`Self::new_zalloc`] allocates
+/// a scratch buffer, [`Self::adopt`] takes up a block an encoder left for this frame, and `Drop` is
+/// its single release.
+struct OwnedBuf {
+    ptr: *mut u8,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new_zalloc(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_zalloc(len, file, line).cast::<u8>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// Take up a plain block the crate allocated inside a helper (an `i2d_ECDSA_SIG`), for release by
+    /// `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file` is
+    /// NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut u8, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf { ptr, file, line })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// `BN_num_bytes(a)` — `include/openssl/bn.h`'s macro `((BN_num_bits(a) + 7) / 8)`. A macro has no
 /// symbol to call, so the expression is written out, the same way `src/ec/depr.rs` writes it.
 ///
@@ -93,7 +150,7 @@ pub(crate) unsafe fn ossl_sm2_compute_z_digest(
     let mut rc: c_int = 0;
     let mut ctx: *mut BnCtx = ptr::null_mut();
     let mut hash: *mut EvpMdCtx = ptr::null_mut();
-    let mut buf: *mut u8 = ptr::null_mut();
+    let mut buf: Option<OwnedBuf> = None;
 
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
     unsafe {
@@ -162,10 +219,11 @@ pub(crate) unsafe fn ossl_sm2_compute_z_digest(
             }
 
             let p_bytes = bn_num_bytes(p);
-            buf = CRYPTO_zalloc(p_bytes as usize, FILE, 114).cast::<u8>();
-            if buf.is_null() {
+            buf = OwnedBuf::new_zalloc(p_bytes as usize, FILE, 114);
+            let Some(buf) = buf.as_ref() else {
                 break 'done;
-            }
+            };
+            let buf = buf.as_ptr();
 
             if BN_bn2binpad(a, buf, p_bytes) < 0
                 || EVP_DigestUpdate(hash, buf.cast::<c_void>(), p_bytes as usize) == 0
@@ -196,7 +254,7 @@ pub(crate) unsafe fn ossl_sm2_compute_z_digest(
             rc = 1;
         }
 
-        CRYPTO_free(buf.cast(), FILE, 144);
+        drop(buf);
         if !ctx.is_null() {
             BN_CTX_end(ctx);
         }
@@ -221,7 +279,7 @@ unsafe fn sm2_compute_msg_hash(
     msg_len: usize,
 ) -> *mut BigNum {
     let mut e: *mut BigNum = ptr::null_mut();
-    let mut z: *mut u8 = ptr::null_mut();
+    let mut z: Option<OwnedBuf> = None;
     let mut fetched_digest: *mut EvpMd = ptr::null_mut();
 
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
@@ -241,10 +299,11 @@ unsafe fn sm2_compute_msg_hash(
                 break 'done;
             }
 
-            z = CRYPTO_zalloc(md_size as usize, FILE, 174).cast::<u8>();
-            if z.is_null() {
+            z = OwnedBuf::new_zalloc(md_size as usize, FILE, 174);
+            let Some(z) = z.as_ref() else {
                 break 'done;
-            }
+            };
+            let z = z.as_ptr();
 
             fetched_digest = EVP_MD_fetch(libctx, EVP_MD_get0_name(digest), propq);
             if fetched_digest.is_null() {
@@ -274,7 +333,7 @@ unsafe fn sm2_compute_msg_hash(
         }
 
         EVP_MD_free(fetched_digest);
-        CRYPTO_free(z.cast(), FILE, 204);
+        drop(z);
         EVP_MD_CTX_free(hash);
     }
     e
@@ -680,7 +739,7 @@ pub(crate) unsafe fn ossl_sm2_internal_verify(
             ret = sm2_sig_verify(eckey, s, e);
         }
 
-        CRYPTO_free(der.cast(), FILE, 539);
+        drop(OwnedBuf::adopt(der, FILE, 539));
         BN_free(e);
         ECDSA_SIG_free(s);
     }
