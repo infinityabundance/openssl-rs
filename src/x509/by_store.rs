@@ -96,8 +96,91 @@ struct CachedStore {
     uri: *mut c_char,
     /// `OSSL_LIB_CTX *libctx` — the library context, borrowed.
     libctx: *mut c_void,
-    /// `char *propq` — the property query, owned when non-NULL.
+    /// `char *propq` — the property query, owned when non-NULL. On an [`OwnedCtx`] record it is
+    /// NULL or a single `CRYPTO_strdup` block the record owns; the two stack-local borrows in this
+    /// module ([`cache_objects`]' `substore`, [`by_store_ctrl_ex`]'s `X509_L_LOAD_STORE`) instead
+    /// hold the caller's borrowed pointer. Reads go through [`CachedStore::propq`]; owned-record
+    /// writes and the release go through [`PropqSlot`].
     propq: *mut c_char,
+}
+
+impl CachedStore {
+    /// The record's property-query string (NULL when unset) — the authoritative read of the
+    /// `propq` member buffer. Reads cannot free or alias, but funnelling them here keeps the
+    /// field's writers enumerable (see [`PropqSlot`]).
+    fn propq(&self) -> *const c_char {
+        self.propq
+    }
+}
+
+/// A validated handle over the object-owned C-string member of an [`OwnedCtx`]'s `CachedStore`.
+///
+/// ## Member-buffer invariant (stated once)
+/// On a heap record this module allocated (`OwnedCtx<CachedStore>`), `CachedStore::propq` is always
+/// either NULL or a single NUL-terminated block produced by the crate's `CRYPTO_strdup` seam and
+/// owned by that record. The record is the block's *only* owner: the block is released **exactly
+/// once**, by [`CtxDestroy::destroy_body`] (`free_store`, `by_store.c:116`) or by the next
+/// [`PropqSlot::clear`]/[`PropqSlot::store`] that replaces it (`by_store_ctrl_ex`). Nothing else
+/// frees or aliases it. The stack-local borrows ([`cache_objects`]' `substore`,
+/// [`by_store_ctrl_ex`]'s `X509_L_LOAD_STORE`) never use this handle.
+///
+/// ## Why the field stays raw
+/// The `#[repr(C)]` layout is the authority's, so the field must remain `*mut c_char` at its exact
+/// offset; a Rust owner type cannot live in the struct. This handle is a transient **borrow** over
+/// the field — the resident-member counterpart of the per-module `OwnedStr`, and the `by_store.c`
+/// analogue of `x_x509.rs`'s `PropqSlot` (see [`MEMBER-BUFFER-MODEL.md`]).
+///
+/// [`MEMBER-BUFFER-MODEL.md`]: ../../forensics/memory-safety/campaign/safe-c33/MEMBER-BUFFER-MODEL.md
+///
+/// `unsafe` appears only at the two proof boundaries: [`PropqSlot::of`] (which asserts the field
+/// currently obeys the invariant) and [`PropqSlot::store`] (which accepts an externally-allocated
+/// block). `clear` is safe because a handle built by [`PropqSlot::of`] guarantees the incumbent is
+/// the record's own single block.
+struct PropqSlot<'a> {
+    /// Borrow of the record's member field; its value obeys the invariant for `'a`.
+    slot: &'a mut *mut c_char,
+}
+
+impl<'a> PropqSlot<'a> {
+    /// Derive the handle from a live owned record.
+    ///
+    /// # Safety
+    ///
+    /// `store` is a live heap record this module allocated and owns; it is borrowed mutably for
+    /// `'a` and its `propq` field currently obeys the member-buffer invariant. A record built by
+    /// [`OwnedCtx::zalloc`] satisfies this because it is zeroed at construction and the member is
+    /// only ever mutated through this handle or released by [`CtxDestroy::destroy_body`].
+    unsafe fn of(store: &'a mut CachedStore) -> PropqSlot<'a> {
+        PropqSlot {
+            slot: &mut store.propq,
+        }
+    }
+
+    /// Release any incumbent value through the authority's own `CRYPTO_free` site, leaving the
+    /// field NULL. This is the authority's `OPENSSL_free(p)` followed by `p = NULL`; NULL is a
+    /// no-op for `CRYPTO_free`, so the release is total.
+    fn clear(&mut self, file: *const c_char, line: c_int) {
+        let old = core::mem::replace(self.slot, ptr::null_mut());
+        // SAFETY: by the member-buffer invariant the incumbent is NULL or the record's own single
+        // `CRYPTO_strdup` block, so this is that block's one release; `CRYPTO_free` ignores NULL.
+        unsafe { CRYPTO_free(old.cast(), file, line) };
+    }
+
+    /// Store a freshly-`CRYPTO_strdup`ed value into the (now empty) field, transferring ownership
+    /// of it to the record.
+    ///
+    /// # Safety
+    ///
+    /// `new` is NULL or a live NUL-terminated block this caller owns exclusively (produced by the
+    /// crate's `CRYPTO_strdup` seam) and no other owner will release it; the field is currently
+    /// unset (NULL).
+    unsafe fn store(&mut self, new: *mut c_char) {
+        debug_assert!(
+            (*self.slot).is_null(),
+            "propq member slot must be empty before store"
+        );
+        *self.slot = new;
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -180,19 +263,18 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 /// record's two owned strings.
 impl CtxDestroy for CachedStore {
     unsafe fn destroy_body(ptr: *mut CachedStore) {
-        // SAFETY: `ptr` is a live record per the trait contract; `uri`/`propq` are NULL or this
-        // file's own `CRYPTO_strdup` blocks (`CRYPTO_free` accepts NULL).
+        // SAFETY: `ptr` is a live record per the trait contract; `uri` is NULL or this file's own
+        // `CRYPTO_strdup` block (`CRYPTO_free` accepts NULL).
         unsafe {
             CRYPTO_free(
                 (*ptr).uri.cast::<c_void>(),
                 FILE.as_ptr(),
                 LINE_FREE_STORE_URI,
             );
-            CRYPTO_free(
-                (*ptr).propq.cast::<c_void>(),
-                FILE.as_ptr(),
-                LINE_FREE_STORE_PROPQ,
-            );
+            // `ptr` is live and its `propq` obeys the member-buffer invariant, so `clear` is that
+            // block's one release at the authority's own `free_store` site (`:116`); a NULL
+            // incumbent makes it a no-op.
+            PropqSlot::of(&mut *ptr).clear(FILE.as_ptr(), LINE_FREE_STORE_PROPQ);
         }
     }
 }
@@ -229,7 +311,7 @@ unsafe fn cache_objects(
         OSSL_STORE_open_ex(
             (*store).uri,
             (*store).libctx,
-            (*store).propq,
+            (*store).propq(),
             ptr::null(),
             ptr::null_mut(),
             ptr::null(),
@@ -272,7 +354,7 @@ unsafe fn cache_objects(
                     CachedStore {
                         uri: OSSL_STORE_INFO_get0_NAME(info).cast_mut(),
                         libctx: (*store).libctx,
-                        propq: (*store).propq,
+                        propq: (*store).propq().cast_mut(),
                     }
                 };
                 // SAFETY: `substore` is a live local for the call, as the authority's stack copy is.
@@ -386,8 +468,10 @@ unsafe extern "C" fn by_store_ctrl_ex(
                     (*store.as_ptr()).uri = CRYPTO_strdup(argp, FILE.as_ptr(), LINE_STRDUP_URI);
                     (*store.as_ptr()).libctx = libctx;
                     if !propq.is_null() {
-                        (*store.as_ptr()).propq =
-                            CRYPTO_strdup(propq, FILE.as_ptr(), LINE_STRDUP_PROPQ);
+                        // `propq` is NUL-terminated per the contract; the record is freshly
+                        // zeroed, so the field is empty and `store` takes ownership of the dup.
+                        let dup = CRYPTO_strdup(propq, FILE.as_ptr(), LINE_STRDUP_PROPQ);
+                        PropqSlot::of(&mut *store.as_ptr()).store(dup);
                     }
                 }
                 // Open this now to check for errors, so they can be reported early.
@@ -408,7 +492,7 @@ unsafe extern "C" fn by_store_ctrl_ex(
                 // SAFETY: `store.as_ptr()` is this call's own record, so its fields are live.
                 let missing = unsafe {
                     (*store.as_ptr()).uri.is_null()
-                        || (!propq.is_null() && (*store.as_ptr()).propq.is_null())
+                        || (!propq.is_null() && (*store.as_ptr()).propq().is_null())
                 };
                 if sctx.is_null() || missing {
                     // SAFETY: `sctx` is NULL or this call's own context; `store` drops on return.

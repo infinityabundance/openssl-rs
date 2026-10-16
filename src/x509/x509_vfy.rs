@@ -158,12 +158,13 @@ use crate::x509::x509_ext::{
     X509_CRL_get_ext_count, X509_get_ext_d2i,
 };
 use crate::x509::x509_lu::{
-    ossl_x509_store_ctx_get_by_subject, X509Store, X509StoreCtx, X509_OBJECT_free, X509_OBJECT_new,
-    X509_STORE_CTX_cert_crl_fn, X509_STORE_CTX_check_crl_fn, X509_STORE_CTX_check_issued_fn,
-    X509_STORE_CTX_check_policy_fn, X509_STORE_CTX_check_revocation_fn, X509_STORE_CTX_cleanup_fn,
-    X509_STORE_CTX_get1_certs, X509_STORE_CTX_get1_crls, X509_STORE_CTX_get_crl_fn,
-    X509_STORE_CTX_get_issuer_fn, X509_STORE_CTX_lookup_certs_fn, X509_STORE_CTX_lookup_crls_fn,
-    X509_STORE_CTX_verify_cb, X509_STORE_CTX_verify_fn, X509_LU_NONE, X509_LU_X509,
+    ossl_x509_store_ctx_get_by_subject, PropqSlot, X509Store, X509StoreCtx, X509_OBJECT_free,
+    X509_OBJECT_new, X509_STORE_CTX_cert_crl_fn, X509_STORE_CTX_check_crl_fn,
+    X509_STORE_CTX_check_issued_fn, X509_STORE_CTX_check_policy_fn,
+    X509_STORE_CTX_check_revocation_fn, X509_STORE_CTX_cleanup_fn, X509_STORE_CTX_get1_certs,
+    X509_STORE_CTX_get1_crls, X509_STORE_CTX_get_crl_fn, X509_STORE_CTX_get_issuer_fn,
+    X509_STORE_CTX_lookup_certs_fn, X509_STORE_CTX_lookup_crls_fn, X509_STORE_CTX_verify_cb,
+    X509_STORE_CTX_verify_fn, X509_LU_NONE, X509_LU_X509,
 };
 use crate::x509::x509_set::{
     X509_get0_extensions, X509_get0_notAfter, X509_get0_notBefore, X509_get_signature_info,
@@ -302,7 +303,10 @@ impl CtxDestroy for X509StoreCtx {
         // SAFETY: `ptr` is live per the trait contract.
         unsafe {
             X509_STORE_CTX_cleanup(ptr);
-            CRYPTO_free((*ptr).propq.cast::<c_void>(), FILE.as_ptr(), 2725);
+            // `ptr` is live and its `propq` obeys the member-buffer invariant, so `clear` is that
+            // block's one release at the authority's own site (`:2725`); a NULL incumbent makes it
+            // a no-op.
+            PropqSlot::of(&mut *ptr).clear(FILE.as_ptr(), 2725);
         }
     }
 }
@@ -1571,8 +1575,11 @@ pub unsafe extern "C" fn X509_STORE_CTX_new_ex(
     unsafe {
         (*ctx.as_ptr()).libctx = libctx;
         if !propq.is_null() {
-            (*ctx.as_ptr()).propq = CRYPTO_strdup(propq, FILE.as_ptr(), 2702);
-            if (*ctx.as_ptr()).propq.is_null() {
+            // `propq` is NUL-terminated per the contract; the block is freshly zeroed, so the
+            // field is empty and `store` transfers ownership of this call's own dup to `ctx`.
+            let dup = CRYPTO_strdup(propq, FILE.as_ptr(), 2702);
+            PropqSlot::of(&mut *ctx.as_ptr()).store(dup);
+            if dup.is_null() {
                 // The authority releases the context at its own line 2704 on this refusal.
                 ctx.set_release_line(2704);
                 return ptr::null_mut();
