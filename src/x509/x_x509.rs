@@ -90,6 +90,66 @@ const LINE_MALLOC_AUX: c_int = 268;
 /// `i2d_X509_AUX`'s error-path `OPENSSL_free(*pp)` (`:275`).
 const LINE_FREE_AUX: c_int = 275;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
+/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::new`]
+/// allocates it, `Drop` is its single release at the authority's own site (re-pointed by
+/// [`Self::set_release_line`] when the authority's free sits on a different line from its
+/// allocation, as `i2d_X509_AUX`'s does), and [`Self::into_raw`] hands it to the C caller.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Re-point the release at the authority's other site for this block, on the path that reaches
+    /// it.
+    fn set_release_line(&mut self, line: c_int) {
+        self.line = line;
+    }
+
+    /// Give up ownership of the block to the C caller's out-pointer.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// `struct x509_cinf_st` — `X509_CINF`, from `include/crypto/x509.h:160-172`.
 ///
 /// `TBSCertificate`'s fields, with `validity` embedded as an [`X509Val`] pair and the trailing
@@ -736,16 +796,21 @@ pub unsafe extern "C" fn i2d_X509_AUX(a: *const X509, pp: *mut *mut c_uchar) -> 
         if length <= 0 {
             return length;
         }
-        let buf = CRYPTO_malloc(length as usize, FILE.as_ptr(), LINE_MALLOC_AUX).cast::<c_uchar>();
-        *pp = buf;
-        let mut tmp = buf;
-        if tmp.is_null() {
-            return -1;
-        }
+        // `buf` owns the fresh `length`-byte block: the error tail below releases it at the
+        // authority's own `:275` site, while a success hands it to `*pp`.
+        let mut buf = match OwnedBuf::new(length as usize, FILE.as_ptr(), LINE_MALLOC_AUX) {
+            Some(b) => b,
+            None => return -1,
+        };
+        buf.set_release_line(LINE_FREE_AUX);
+        *pp = buf.as_ptr();
+        let mut tmp = buf.as_ptr();
         let length = i2d_x509_aux_internal(a, &raw mut tmp);
         if length <= 0 {
-            CRYPTO_free((*pp).cast(), FILE.as_ptr(), LINE_FREE_AUX);
+            drop(buf);
             *pp = ptr::null_mut();
+        } else {
+            let _ = buf.into_raw();
         }
         length
     }
