@@ -46,8 +46,13 @@ Local gate for every batch (court container, 8 GB cap):
 | 25 | stage/p25/cms-final | cms/cms_smime.rs | OwnedChainArray (checked_mul); cms_asn1/lib are member-buffer residuals |
 | 26 | stage/p25/dh-dsa-pkey | dh/mod.rs, dsa/mod.rs, rsa/sign.rs | Raw/OwnedMethod; rsa/sign free 7→1 (cleansed) |
 | -- | stage/p25/p0-abstractions | asn1/owned.rs, x509/{pcy_lib,pcy_node,pcy_tree}.rs | **P0**: `checked_mul` in the alloc helper; owner-derived `tree_levels`; `parent_mut(&mut self)` |
+| 27 | stage/p25/ct-module | ct/ct_sct_ctx, ct_log, ct_sct | OwnedCtx<CtxDestroy>; free 14→10, 8→6, 11→6 |
+| 28 | stage/p25/provider-km | provider/ecdh_exch, ec_kmgmt, cipher_gcm | cleansed OwnedBuf seam; ec_kmgmt free 16→5 |
+| 29 | stage/p25/provider-codecs | decode_msblob2key, mac_legacy_kmgmt, ml_kem_codecs, ecx_kmgmt, file_store | free 6→2, 7→6, 5→1, 7→5, 8→5 |
+| 30 | stage/p25/km-p12-prop | asn1/a_sign, pkcs12/p12_utl, property/parse, provider/keymgmt | free 11→1, 5→3, 9→7; owner-lent slices |
+| 31 | stage/p25/ec-dso-enc | dso/mod.rs, ec/asn1.rs, provider/encode_key2any.rs | free 7→2, 6→2 |
 
-Converted files (union of stage/p25/* files): 128 files touched; **1391 allocation sites converted, 1029 remaining** of the 2420 baseline (frozen-atlas lower bound).
+Converted files (union of stage/p25/* files): **~150 files** across 31 conversion batches plus the adoption-soundness and P0-abstraction repairs.
 
 ## Standing conversion standard
 
