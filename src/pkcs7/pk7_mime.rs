@@ -147,7 +147,7 @@ pub unsafe extern "C" fn SMIME_read_PKCS7_ex(
         // SAFETY: `*p7` is live per the caller's contract.
         unsafe {
             libctx = (**p7).ctx.libctx;
-            propq = (**p7).ctx.propq;
+            propq = (**p7).ctx.propq();
         }
     }
     // SAFETY: the caller's contract; `PKCS7_it()` is a static item.
