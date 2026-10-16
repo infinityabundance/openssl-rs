@@ -56,6 +56,61 @@ pub struct BufMem {
     pub flags: c_ulong,
 }
 
+/// An owned `BUF_MEM` data block: the object's growable storage.
+///
+/// The block stays a `CRYPTO_*`-seam allocation of the authority's own size, and only
+/// its *ownership* is this type. `BufMem::data` is a public ABI field consumers read
+/// directly, so the handle is rebuilt from the field at each release site ([`adopt`]) and
+/// the field is nulled where the authority nulls it. `Drop` runs the authority's own
+/// *cleansing* release -- `CRYPTO_secure_clear_free` when the object is on the secure heap,
+/// else `CRYPTO_clear_free` -- each at the authority's own (NULL, 0) site and with the
+/// authority's own cleanse length (`max` at `BUF_MEM_free`, `length` in
+/// `sec_alloc_realloc`). A `CRYPTO_free` would drop the cleanse, which is a security
+/// property, not a cosmetic one.
+///
+/// [`adopt`]: OwnedData::adopt
+struct OwnedData {
+    ptr: *mut c_char,
+    /// The byte count the authority passes to its clearing release.
+    num: usize,
+    /// True when `flags & BUF_MEM_FLAG_SECURE` routes the release to the secure heap.
+    secure: bool,
+}
+
+impl OwnedData {
+    /// Adopt the `BufMem::data` block the object currently holds, or `None` for NULL
+    /// (`CRYPTO_*clear_free(NULL)` is the authority's own no-op).
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block this object allocated (through `BUF_MEM_grow`/
+    /// `BUF_MEM_grow_clean` or `sec_alloc_realloc`) that no other owner will release --
+    /// this handle's `Drop` is its single release. `num` is the byte count the authority
+    /// passes to that release and is valid for the allocation.
+    unsafe fn adopt(ptr: *mut c_char, num: usize, secure: bool) -> Option<OwnedData> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedData { ptr, num, secure })
+        }
+    }
+}
+
+impl Drop for OwnedData {
+    /// The data block's single *cleansing* release, on the heap the object was flagged for.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; `self.num` is a
+        // valid byte count for it; both clearing releases are the authority's own and accept NULL.
+        unsafe {
+            if self.secure {
+                CRYPTO_secure_clear_free(self.ptr.cast(), self.num, ptr::null(), 0);
+            } else {
+                CRYPTO_clear_free(self.ptr.cast(), self.num, ptr::null(), 0);
+            }
+        }
+    }
+}
+
 /// `BUF_MEM *BUF_MEM_new(void)`
 ///
 /// The authority zero-allocates, so `data` is NULL, `length` and `max` are 0 and
@@ -102,15 +157,10 @@ pub unsafe extern "C" fn BUF_MEM_free(a: *mut BufMem) {
         let Some(m) = (unsafe { a.as_mut() }) else {
             return;
         };
-        if !m.data.is_null() {
-            if m.flags & BUF_MEM_FLAG_SECURE != 0 {
-                // SAFETY: `data` came from the secure heap with capacity `max`.
-                unsafe { CRYPTO_secure_clear_free(m.data.cast(), m.max, ptr::null(), 0) };
-            } else {
-                // SAFETY: `data` came from `CRYPTO_*alloc` with capacity `max`.
-                unsafe { CRYPTO_clear_free(m.data.cast(), m.max, ptr::null(), 0) };
-            }
-        }
+        // The data block is the authority's own cleansing release (`BUF_MEM_free`); the handle's
+        // `Drop` performs the secure/non-secure branch with the authority's cleanse length.
+        // SAFETY: `m.data` is NULL or this object's own block with capacity `m.max`.
+        drop(unsafe { OwnedData::adopt(m.data, m.max, m.flags & BUF_MEM_FLAG_SECURE != 0) });
         // SAFETY: `a` was allocated by `BUF_MEM_new`.
         unsafe { CRYPTO_clear_free(a.cast(), core::mem::size_of::<BufMem>(), ptr::null(), 0) };
     })
@@ -130,7 +180,10 @@ unsafe fn sec_alloc_realloc(m: *mut BufMem, len: usize) -> *mut c_char {
         // bytes, and `length <= len` at every call site.
         unsafe {
             ptr::copy_nonoverlapping((*m).data, ret, (*m).length);
-            CRYPTO_secure_clear_free((*m).data.cast(), (*m).length, ptr::null(), 0);
+            // The old secure block is the authority's own `CRYPTO_secure_clear_free` of
+            // `length` bytes; the handle's `Drop` runs it.
+            // SAFETY: `(*m).data` is this object's own secure block, cleansed for `length` bytes.
+            drop(OwnedData::adopt((*m).data, (*m).length, true));
             (*m).data = ptr::null_mut();
         }
     }
