@@ -63,10 +63,9 @@ use crate::evp::pkey_ctx::{
     OPENSSL_EC_NAMED_CURVE,
 };
 use crate::rand::sys::atoi;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc,
-};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup};
 use crate::runtime::obj::{
     NID_ecdsa_with_SHA1, NID_sha1, NID_sha224, NID_sha256, NID_sha384, NID_sha3_224, NID_sha3_256,
     NID_sha3_384, NID_sha3_512, NID_sha512, NID_sm3, NID_undef, OBJ_ln2nid, OBJ_sn2nid,
@@ -125,6 +124,121 @@ struct EcPkeyCtx {
     kdf_outlen: usize,
 }
 
+/// [`OwnedCtx`]'s destructor body for [`EcPkeyCtx`], without the block's own release.
+///
+/// `pkey_ec_cleanup` is the authority's `EC_PKEY_CTX` destructor: it releases the key/paramgen
+/// group, the duplicated cofactor key and the KDF's shared-info buffer, then the block. `Drop`
+/// performs the block release at the authority's own site, so this body is the first three members
+/// alone -- kept as the authority's own `EC_*_free`/`OPENSSL_free` calls so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the releases at the same sites.
+impl CtxDestroy for EcPkeyCtx {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_DCTX;
+    const LINE_FREE: c_int = LINE_FREE_DCTX;
+
+    /// # Safety
+    ///
+    /// `ptr` is a live context this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut EcPkeyCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `gen_group`/`co_key` are each NULL
+        // or owned objects and `kdf_ukm` is NULL or this context's own block.
+        unsafe {
+            EC_GROUP_free((*ptr).gen_group);
+            EC_KEY_free((*ptr).co_key);
+            CRYPTO_free((*ptr).kdf_ukm.cast::<c_void>(), FILE, LINE_FREE_KDF_UKM);
+        }
+    }
+}
+
+/// An owned buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc`/`CRYPTO_clear_free` at the authority's exact size and
+/// `file`/`line` -- a Rust `Box`/`Vec` would hide both from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: the constructors
+/// allocate or adopt it and `Drop` is its single release. A NULL pointer is a valid, empty buffer
+/// whose release is the authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut u8,
+    release: BufRelease,
+}
+
+/// How the authority releases a buffer [`OwnedBuf`] owns.
+enum BufRelease {
+    /// The authority's plain `OPENSSL_free(ptr)` (`pkey_ec_ctrl`'s replacement, `:341`).
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `OPENSSL_clear_free(ptr, num)` (`pkey_ec_kdf_derive`'s `ktmp`,
+    /// `:242`).
+    Cleansed {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, alloc_line)` for a block whose `Drop` cleanses and releases it at
+    /// `file`/`release_line` (`OPENSSL_clear_free`), or `None` when the allocator answers NULL.
+    fn new_cleansed(
+        len: usize,
+        file: *const c_char,
+        alloc_line: c_int,
+        release_line: c_int,
+    ) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, alloc_line).cast::<u8>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Cleansed {
+                num: len,
+                file,
+                line: release_line,
+            },
+        })
+    }
+
+    /// Adopt the block `ptr` for release by `Drop` at `file`/`release_line`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block the crate's allocator seam produced (or that the caller handed
+    /// to this context for release by the authority's own `OPENSSL_free`) that no other owner will
+    /// release; `file` is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut u8, file: *const c_char, release_line: c_int) -> OwnedBuf {
+        OwnedBuf {
+            ptr,
+            release: BufRelease::Plain {
+                file,
+                line: release_line,
+            },
+        }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own plain `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Cleansed { num, file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
+                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+            }
+        }
+    }
+}
+
 /// `strcmp(s, lit) == 0` in the crate's `CStr` idiom.
 ///
 /// # Safety
@@ -139,17 +253,17 @@ unsafe fn cstr_is(s: *const c_char, lit: &[u8]) -> bool {
 /// # Safety
 /// `ctx` must be live.
 unsafe extern "C" fn pkey_ec_init(ctx: *mut EvpPkeyCtx) -> c_int {
-    /* `CRYPTO_zalloc` is a safe entry point of this crate. */
-    let dctx = CRYPTO_zalloc(core::mem::size_of::<EcPkeyCtx>(), FILE, LINE_ZALLOC_DCTX)
-        .cast::<EcPkeyCtx>();
-    if dctx.is_null() {
+    // A fresh zeroed `EC_PKEY_CTX` is the authority's own starting state, so this is `OPENSSL_zalloc`
+    // at the authority's exact size/`file`/`line`; `Drop` reclaims the block at `pkey_ec_cleanup`'s.
+    let Some(dctx) = OwnedCtx::<EcPkeyCtx>::zalloc() else {
         return 0;
-    }
-    // SAFETY: `dctx` is this call's own allocation and `ctx` is live per the contract.
+    };
+    let p = dctx.as_ptr();
+    // SAFETY: `p` is this call's own fresh zeroed context and `ctx` is live per the contract.
     unsafe {
-        (*dctx).cofactor_mode = -1;
-        (*dctx).kdf_type = EVP_PKEY_ECDH_KDF_NONE as c_char;
-        (*ctx).data = dctx.cast::<c_void>();
+        (*p).cofactor_mode = -1;
+        (*p).kdf_type = EVP_PKEY_ECDH_KDF_NONE as c_char;
+        (*ctx).data = dctx.into_raw().cast::<c_void>();
     }
     1
 }
@@ -231,19 +345,13 @@ unsafe extern "C" fn pkey_ec_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx) 
 /// `ctx` must be live.
 unsafe extern "C" fn pkey_ec_cleanup(ctx: *mut EvpPkeyCtx) {
     // SAFETY: `ctx` is live per the contract.
-    let dctx = unsafe { (*ctx).data }.cast::<EcPkeyCtx>();
-    if dctx.is_null() {
-        return;
-    }
-    // SAFETY: the three fields are NULL or this context's own allocations, and both frees accept
-    // NULL.
-    unsafe {
-        EC_GROUP_free((*dctx).gen_group);
-        EC_KEY_free((*dctx).co_key);
-        CRYPTO_free((*dctx).kdf_ukm.cast::<c_void>(), FILE, LINE_FREE_KDF_UKM);
-        CRYPTO_free(dctx.cast::<c_void>(), FILE, LINE_FREE_DCTX);
-        (*ctx).data = ptr::null_mut();
-    }
+    let data = unsafe { (*ctx).data };
+    // SAFETY: `data` is NULL or the block this method's `init` installed and no other owner has
+    // released; `from_raw` maps NULL to `None` and its `Drop` runs the authority's own cleanup body
+    // and block release.
+    drop(unsafe { OwnedCtx::<EcPkeyCtx>::from_raw(data.cast::<EcPkeyCtx>()) });
+    // SAFETY: `ctx` is live, and the field is cleared exactly as the authority clears it.
+    unsafe { (*ctx).data = ptr::null_mut() };
 }
 
 /// `static int pkey_ec_sign(EVP_PKEY_CTX *ctx, unsigned char *sig, size_t *siglen, const unsigned
@@ -430,15 +538,17 @@ unsafe extern "C" fn pkey_ec_kdf_derive(
     if unsafe { pkey_ec_derive(ctx, ptr::null_mut(), &mut ktmplen) } == 0 {
         return 0;
     }
-    /* `CRYPTO_malloc` is a safe entry point of this crate. */
-    let ktmp = CRYPTO_malloc(ktmplen, FILE, LINE_MALLOC_KTMP).cast::<u8>();
-    if ktmp.is_null() {
+    /* `CRYPTO_malloc` is a safe entry point of this crate; the buffer's single release is the
+     * authority's own cleansing `OPENSSL_clear_free` at `:242`. */
+    let Some(ktmp_buf) =
+        OwnedBuf::new_cleansed(ktmplen, FILE, LINE_MALLOC_KTMP, LINE_CLEAR_FREE_KTMP)
+    else {
         return 0;
-    }
+    };
+    let ktmp = ktmp_buf.as_ptr();
     // SAFETY: `ktmp` is this call's own buffer of `ktmplen` bytes and `ctx` is live.
     if unsafe { pkey_ec_derive(ctx, ktmp, &mut ktmplen) } == 0 {
-        // SAFETY: `ktmp` is this call's own buffer.
-        unsafe { CRYPTO_clear_free(ktmp.cast::<c_void>(), ktmplen, FILE, LINE_CLEAR_FREE_KTMP) };
+        // `ktmp_buf`'s `Drop` performs the authority's own cleansing release at every exit.
         return 0;
     }
     /* The KDF's nine arguments are the caller's buffer, this call's buffer and the context's own
@@ -458,8 +568,7 @@ unsafe extern "C" fn pkey_ec_kdf_derive(
         )
     };
     let rv = if ok != 0 { 1 } else { 0 };
-    // SAFETY: `ktmp` is this call's own buffer.
-    unsafe { CRYPTO_clear_free(ktmp.cast::<c_void>(), ktmplen, FILE, LINE_CLEAR_FREE_KTMP) };
+    // `ktmp_buf`'s `Drop` performs the authority's own cleansing release at every exit.
     rv
 }
 
@@ -617,13 +726,15 @@ unsafe extern "C" fn pkey_ec_ctrl(
             1
         }
         EVP_PKEY_CTRL_EC_KDF_UKM => {
-            // SAFETY: `dctx`'s field is this context's own or NULL, and `CRYPTO_free` accepts NULL.
+            // SAFETY: `dctx`'s field is this context's own block (or NULL) and no other owner
+            // releases it; `Drop` performs its single release at the authority's own replacement
+            // site.
             unsafe {
-                CRYPTO_free(
-                    (*dctx).kdf_ukm.cast::<c_void>(),
+                drop(OwnedBuf::adopt(
+                    (*dctx).kdf_ukm,
                     FILE,
                     LINE_FREE_KDF_UKM_CTRL,
-                );
+                ));
                 (*dctx).kdf_ukm = p2.cast::<u8>();
                 if !p2.is_null() {
                     (*dctx).kdf_ukmlen = p1 as usize;

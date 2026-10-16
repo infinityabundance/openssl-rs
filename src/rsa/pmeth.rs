@@ -79,11 +79,12 @@ use crate::rsa::ossl::RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING;
 use crate::rsa::pss::{RSA_padding_add_PKCS1_PSS_mgf1, RSA_verify_PKCS1_PSS_mgf1};
 use crate::rsa::sign::{ossl_rsa_verify, RSA_sign, RSA_sign_ASN1_OCTET_STRING, RSA_verify};
 use crate::rsa::Rsa;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::constant_time::{
     constant_time_msb_s, constant_time_msb_u32, constant_time_select, constant_time_select_int,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup};
 use crate::runtime::obj::{
     NID_md2, NID_md4, NID_md5, NID_md5_sha1, NID_mdc2, NID_ripemd160, NID_sha1, NID_sha224,
     NID_sha256, NID_sha384, NID_sha3_224, NID_sha3_256, NID_sha3_384, NID_sha3_512, NID_sha512,
@@ -173,6 +174,106 @@ struct RsaPkeyCtx {
     implicit_rejection: c_int,
 }
 
+/// [`OwnedCtx`]'s destructor body for [`RsaPkeyCtx`], without the block's own release.
+///
+/// `pkey_rsa_cleanup` is the authority's `RSA_PKEY_CTX` destructor: it releases the public
+/// exponent, the shared scratch buffer and the OAEP label, then the block. `Drop` performs the
+/// block release at the authority's own site, so this body is the first three members alone -- kept
+/// as the authority's own `BN_free`/`OPENSSL_free` calls so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the releases at the same sites.
+impl CtxDestroy for RsaPkeyCtx {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_RCTX;
+    const LINE_FREE: c_int = LINE_FREE_RCTX;
+
+    /// # Safety
+    ///
+    /// `ptr` is a live context this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut RsaPkeyCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; each field is NULL or this
+        // context's own allocation.
+        unsafe {
+            BN_free((*ptr).pub_exp);
+            CRYPTO_free((*ptr).tbuf.cast::<c_void>(), FILE, LINE_FREE_TBUF);
+            CRYPTO_free(
+                (*ptr).oaep_label.cast::<c_void>(),
+                FILE,
+                LINE_FREE_OAEP_LABEL,
+            );
+        }
+    }
+}
+
+/// An owned buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size and `file`/`line` -- a Rust
+/// `Box`/`Vec` would hide both from a caller-installed `CRYPTO_set_mem_functions` hook -- and only
+/// its *ownership* is this type: the constructors allocate or adopt it and `Drop` is its single
+/// plain `OPENSSL_free`. A NULL pointer is a valid, empty buffer whose release is the authority's
+/// own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut u8,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, alloc_line)` whose `Drop` releases it at `file`/`release_line`
+    /// (`OPENSSL_free`), or `None` when the allocator answers NULL.
+    fn new(
+        len: usize,
+        file: *const c_char,
+        alloc_line: c_int,
+        release_line: c_int,
+    ) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, alloc_line).cast::<u8>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line: release_line,
+        })
+    }
+
+    /// Adopt the block `ptr` for release by `Drop` at `file`/`release_line`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block the crate's allocator seam produced (or that the caller handed
+    /// to this context for release by the authority's own `OPENSSL_free`) that no other owner will
+    /// release; `file` is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut u8, file: *const c_char, release_line: c_int) -> OwnedBuf {
+        OwnedBuf {
+            ptr,
+            file,
+            line: release_line,
+        }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the field that takes it over.
+    fn into_raw(self) -> *mut u8 {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own plain `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// `strcmp(s, lit) == 0` in the crate's `CStr` idiom.
 ///
 /// # Safety
@@ -187,30 +288,31 @@ unsafe fn cstr_is(s: *const c_char, lit: &[u8]) -> bool {
 /// # Safety
 /// `ctx` must be live.
 unsafe extern "C" fn pkey_rsa_init(ctx: *mut EvpPkeyCtx) -> c_int {
-    /* `CRYPTO_zalloc` is a safe entry point of this crate. */
-    let rctx = CRYPTO_zalloc(core::mem::size_of::<RsaPkeyCtx>(), FILE, LINE_ZALLOC_RCTX)
-        .cast::<RsaPkeyCtx>();
-    if rctx.is_null() {
+    // A fresh zeroed `RSA_PKEY_CTX` is the authority's own starting state, so this is
+    // `OPENSSL_zalloc` at the authority's exact size/`file`/`line`; `Drop` reclaims the block at
+    // `pkey_rsa_cleanup`'s.
+    let Some(rctx) = OwnedCtx::<RsaPkeyCtx>::zalloc() else {
         return 0;
-    }
+    };
+    let p = rctx.as_ptr();
     // SAFETY: `ctx` is live per the contract.
     let is_pss = unsafe { pkey_ctx_is_pss(ctx) };
-    // SAFETY: `rctx` is this call's own allocation and `ctx` is live per the contract.
+    // SAFETY: `p` is this call's own fresh zeroed context and `ctx` is live per the contract.
     unsafe {
-        (*rctx).nbits = 2048;
-        (*rctx).primes = RSA_DEFAULT_PRIME_NUM;
-        (*rctx).pad_mode = if is_pss {
+        (*p).nbits = 2048;
+        (*p).primes = RSA_DEFAULT_PRIME_NUM;
+        (*p).pad_mode = if is_pss {
             RSA_PKCS1_PSS_PADDING
         } else {
             RSA_PKCS1_PADDING
         };
         /* Maximum for sign, auto for verify. */
-        (*rctx).saltlen = RSA_PSS_SALTLEN_AUTO;
-        (*rctx).min_saltlen = -1;
-        (*rctx).implicit_rejection = 1;
+        (*p).saltlen = RSA_PSS_SALTLEN_AUTO;
+        (*p).min_saltlen = -1;
+        (*p).implicit_rejection = 1;
 
-        (*ctx).data = rctx.cast::<c_void>();
-        (*ctx).keygen_info = ptr::addr_of_mut!((*rctx).gentmp).cast::<c_int>();
+        (*ctx).data = rctx.into_raw().cast::<c_void>();
+        (*ctx).keygen_info = ptr::addr_of_mut!((*p).gentmp).cast::<c_int>();
         (*ctx).keygen_info_count = 2;
     }
     1
@@ -254,13 +356,14 @@ unsafe extern "C" fn pkey_rsa_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx)
     }
     // SAFETY: `sctx` is live.
     if !unsafe { (*sctx).oaep_label }.is_null() {
-        // SAFETY: the label is this source context's own allocation or NULL.
+        // SAFETY: the field is this context's own block or NULL and no other owner releases it;
+        // `Drop` performs its single release at the authority's own site.
         unsafe {
-            CRYPTO_free(
-                (*dctx).oaep_label.cast::<c_void>(),
+            drop(OwnedBuf::adopt(
+                (*dctx).oaep_label,
                 FILE,
                 LINE_FREE_OAEP_LABEL_COPY,
-            );
+            ));
         }
         // SAFETY: the source buffer is readable for its recorded length.
         let dup = unsafe {
@@ -291,16 +394,22 @@ unsafe fn setup_tbuf(ctx: *mut RsaPkeyCtx, pk: *mut EvpPkeyCtx) -> c_int {
     if !unsafe { (*ctx).tbuf }.is_null() {
         return 1;
     }
-    /* `CRYPTO_malloc` is a safe entry point of this crate. */
     // SAFETY: `pk` is live.
     let size = unsafe { RSA_size(EVP_PKEY_get0_RSA((*pk).pkey)) };
-    let tbuf = CRYPTO_malloc(size as usize, FILE, LINE_MALLOC_TBUF).cast::<u8>();
-    // SAFETY: `ctx` is live.
-    unsafe { (*ctx).tbuf = tbuf };
-    if tbuf.is_null() {
-        return 0;
+    // `CRYPTO_malloc` is a safe entry point of this crate; the field takes the block over and the
+    // authority's own plain `OPENSSL_free` releases it at `:128`.
+    match OwnedBuf::new(size as usize, FILE, LINE_MALLOC_TBUF, LINE_FREE_TBUF) {
+        Some(tbuf) => {
+            // SAFETY: `ctx` is live.
+            unsafe { (*ctx).tbuf = tbuf.into_raw() };
+            1
+        }
+        None => {
+            // SAFETY: `ctx` is live.
+            unsafe { (*ctx).tbuf = ptr::null_mut() };
+            0
+        }
     }
-    1
 }
 
 /// `static void pkey_rsa_cleanup(EVP_PKEY_CTX *ctx)` — `:123`.
@@ -309,21 +418,11 @@ unsafe fn setup_tbuf(ctx: *mut RsaPkeyCtx, pk: *mut EvpPkeyCtx) -> c_int {
 /// `ctx` must be live.
 unsafe extern "C" fn pkey_rsa_cleanup(ctx: *mut EvpPkeyCtx) {
     // SAFETY: `ctx` is live per the contract.
-    let rctx = unsafe { (*ctx).data }.cast::<RsaPkeyCtx>();
-    if rctx.is_null() {
-        return;
-    }
-    // SAFETY: each field is NULL or this context's own allocation, and every free accepts NULL.
-    unsafe {
-        BN_free((*rctx).pub_exp);
-        CRYPTO_free((*rctx).tbuf.cast::<c_void>(), FILE, LINE_FREE_TBUF);
-        CRYPTO_free(
-            (*rctx).oaep_label.cast::<c_void>(),
-            FILE,
-            LINE_FREE_OAEP_LABEL,
-        );
-        CRYPTO_free(rctx.cast::<c_void>(), FILE, LINE_FREE_RCTX);
-    }
+    let data = unsafe { (*ctx).data };
+    // SAFETY: `data` is NULL or the block this method's `init` installed and no other owner has
+    // released; `from_raw` maps NULL to `None` and its `Drop` runs the authority's own cleanup body
+    // and block release.
+    drop(unsafe { OwnedCtx::<RsaPkeyCtx>::from_raw(data.cast::<RsaPkeyCtx>()) });
 }
 
 /// `static int pkey_rsa_sign(EVP_PKEY_CTX *ctx, unsigned char *sig, size_t *siglen, const unsigned
@@ -1092,13 +1191,14 @@ unsafe extern "C" fn pkey_rsa_ctrl(
                 unsafe { raise_site(&err_sites::RSA_PMETH_591) };
                 return -2;
             }
-            // SAFETY: the field is this context's own allocation or NULL.
+            // SAFETY: the field is this context's own block or NULL and no other owner releases it;
+            // `Drop` performs its single release at the authority's own replacement site.
             unsafe {
-                CRYPTO_free(
-                    (*rctx).oaep_label.cast::<c_void>(),
+                drop(OwnedBuf::adopt(
+                    (*rctx).oaep_label,
                     FILE,
                     LINE_FREE_OAEP_LABEL_CTRL,
-                );
+                ));
                 if !p2.is_null() && p1 > 0 {
                     (*rctx).oaep_label = p2.cast::<u8>();
                     (*rctx).oaep_labellen = p1 as usize;
@@ -1310,16 +1410,22 @@ unsafe extern "C" fn pkey_rsa_ctrl_str(
         let mut lablen: c_long = 0;
         // SAFETY: `value` is NUL-terminated per the contract.
         let lab = unsafe { OPENSSL_hexstr2buf(value, &mut lablen) };
-        if lab.is_null() {
+        // SAFETY: `lab` is NULL or the block `OPENSSL_hexstr2buf` allocated through the crate's
+        // seam; this frame owns it and no other owner releases it.
+        let lab = unsafe { OwnedBuf::adopt(lab, FILE, LINE_FREE_LAB) };
+        if lab.as_ptr().is_null() {
             return 0;
         }
         // SAFETY: `ctx` is live, `lab` is this call's own buffer and `lablen` its length.
-        let ret =
-            unsafe { EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, lab.cast::<c_void>(), lablen as c_int) };
+        let ret = unsafe {
+            EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, lab.as_ptr().cast::<c_void>(), lablen as c_int)
+        };
         if ret <= 0 {
-            // SAFETY: `lab` is this call's own buffer, refused by the setter.
-            unsafe { CRYPTO_free(lab.cast::<c_void>(), FILE, LINE_FREE_LAB) };
+            // The setter refused it, so `lab`'s `Drop` performs the authority's own release.
+            return ret;
         }
+        // Ownership moves to the context.
+        let _ = lab.into_raw();
         return ret;
     }
     -2
