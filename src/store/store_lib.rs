@@ -207,7 +207,12 @@ struct OwnedBlock {
 
 impl OwnedBlock {
     /// Adopt a block the seam answered, or `None` for NULL.
-    fn take(ptr: *mut c_void) -> Option<OwnedBlock> {
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a block the crate's allocator seam produced, is owned by the caller, and
+    /// will not be freed or handed to any other owner -- this handle's `Drop` is its single
+    /// release.
+    unsafe fn take(ptr: *mut c_void) -> Option<OwnedBlock> {
         if ptr.is_null() {
             None
         } else {
@@ -964,10 +969,13 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
         }
 
         if !propq.is_null() {
-            // SAFETY: `propq` is NUL-terminated. The copy is owned until `Drop` releases it or the
-            // context's `properties` member takes it over.
-            propq_copy =
-                OwnedBlock::take(unsafe { CRYPTO_strdup(propq, ptr::null(), 0) }.cast::<c_void>());
+            // SAFETY: `propq` is NUL-terminated per the contract, so `CRYPTO_strdup` answers this
+            // crate's own property copy; that block is owned here until `Drop` releases it or the
+            // context's `properties` member takes it over, and no other owner holds it.
+            propq_copy = unsafe {
+                let copy = CRYPTO_strdup(propq, ptr::null(), 0);
+                OwnedBlock::take(copy.cast::<c_void>())
+            };
             if propq_copy.is_none() {
                 break 'err;
             }
@@ -1269,7 +1277,9 @@ pub unsafe extern "C" fn OSSL_STORE_find(
         // The `name_der` buffer `i2d_X509_NAME` filled is adopted by an owner whose `Drop` is its
         // release; `number` is NULL or the BIGNUM `ASN1_INTEGER_to_BN` allocated, released by
         // `BN_free`.
-        let _name_der = OwnedBlock::take(name_der);
+        // SAFETY: `name_der` is NULL or the `i2d_X509_NAME` block this frame allocated on the
+        // crate's allocator seam and owns; no other owner holds it.
+        let _name_der = unsafe { OwnedBlock::take(name_der) };
         // SAFETY: `number` is NULL or the BIGNUM `ASN1_INTEGER_to_BN` allocated.
         unsafe { BN_free(number) };
     } else {
