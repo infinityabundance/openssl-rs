@@ -43,7 +43,7 @@ use crate::runtime::err::raise_with;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strndup};
 use crate::ssl::ssl_ciph::ssl3_get_cipher_by_id;
 use crate::ssl::ssl_lib::{
-    SslSession, SSL3_MAX_SSL_SESSION_ID_LENGTH, SSL_MAX_SID_CTX_LENGTH,
+    MemberCStrSlot, SslSession, SSL3_MAX_SSL_SESSION_ID_LENGTH, SSL_MAX_SID_CTX_LENGTH,
     TLS13_MAX_RESUMPTION_PSK_LENGTH,
 };
 use crate::ssl::ssl_sess::{ssl_session_calculate_timeout, SSL_SESSION_free, SSL_SESSION_new};
@@ -449,6 +449,32 @@ unsafe fn ssl_session_strndup(pdst: *mut *mut c_char, src: *mut Asn1String) -> c
     1
 }
 
+/// `ssl_session_strndup` — `ssl_asn1.c:229-239`, over a member-buffer handle.
+///
+/// The `ext_hostname` counterpart of [`ssl_session_strndup`]: it releases the incumbent through
+/// [`MemberCStrSlot::clear`] and stores the fresh block through [`MemberCStrSlot::store`], so the
+/// free-then-allocate order and the "release exactly once" argument exist in one place.
+///
+/// # Safety
+/// `dst` is the member handle of a live session whose member obeys the member-buffer invariant;
+/// `src` may be NULL.
+unsafe fn ssl_session_strndup_slot(dst: &mut MemberCStrSlot, src: *mut Asn1String) -> c_int {
+    dst.clear(FILE, 0);
+    if src.is_null() {
+        return 1;
+    }
+    // SAFETY: `src` is a live `ASN1_OCTET_STRING` per the caller's contract.
+    let dup = unsafe {
+        CRYPTO_strndup((*src).data.cast(), (*src).length as usize, FILE, 0).cast::<c_char>()
+    };
+    if dup.is_null() {
+        return 0;
+    }
+    // SAFETY: `dup` is this call's fresh block; the member is empty after `clear`.
+    unsafe { dst.store(dup) };
+    1
+}
+
 /// `ssl_session_memcpy` — `ssl_asn1.c:243-255`: copy an octet string out, refusing oversize.
 ///
 /// # Safety
@@ -595,18 +621,14 @@ pub unsafe extern "C" fn i2d_SSL_SESSION(input: *const SslSession, pp: *mut *mut
             ssl_session_sinit(
                 &mut as_.tlsext_hostname,
                 &mut tlsext_hostname,
-                s.ext_hostname,
+                s.ext_hostname(),
             );
         }
-        if !s.ext_tick.is_null() {
-            // SAFETY: live locals; the tick buffer is `ext_ticklen` bytes.
+        let (tick_ptr, tick_len) = s.ext_tick();
+        if !tick_ptr.is_null() {
+            // SAFETY: live locals; the tick buffer is `tick_len` bytes.
             unsafe {
-                ssl_session_oinit(
-                    &mut as_.tlsext_tick,
-                    &mut tlsext_tick,
-                    s.ext_tick,
-                    s.ext_ticklen,
-                );
+                ssl_session_oinit(&mut as_.tlsext_tick, &mut tlsext_tick, tick_ptr, tick_len);
             }
         }
 
@@ -648,7 +670,8 @@ pub unsafe extern "C" fn i2d_SSL_SESSION(input: *const SslSession, pp: *mut *mut
         as_.flags = s.flags as u64;
         as_.max_early_data = s.ext_max_early_data;
 
-        if s.ext_alpn_selected.is_null() {
+        let (alpn_ptr, alpn_len) = s.ext_alpn_selected();
+        if alpn_ptr.is_null() {
             as_.alpn_selected = ptr::null_mut();
         } else {
             // SAFETY: live locals and the session's own buffer.
@@ -656,14 +679,15 @@ pub unsafe extern "C" fn i2d_SSL_SESSION(input: *const SslSession, pp: *mut *mut
                 ssl_session_oinit(
                     &mut as_.alpn_selected,
                     &mut alpn_selected,
-                    s.ext_alpn_selected,
-                    s.ext_alpn_selected_len,
+                    alpn_ptr,
+                    alpn_len,
                 );
             }
         }
         as_.tlsext_max_fragment_len_mode = s.max_fragment_len_mode as u32;
 
-        if s.ticket_appdata.is_null() {
+        let (appdata_ptr, appdata_len) = s.ticket_appdata();
+        if appdata_ptr.is_null() {
             as_.ticket_appdata = ptr::null_mut();
         } else {
             // SAFETY: live locals and the session's own buffer.
@@ -671,8 +695,8 @@ pub unsafe extern "C" fn i2d_SSL_SESSION(input: *const SslSession, pp: *mut *mut
                 ssl_session_oinit(
                     &mut as_.ticket_appdata,
                     &mut ticket_appdata,
-                    s.ticket_appdata,
-                    s.ticket_appdata_len,
+                    appdata_ptr,
+                    appdata_len,
                 );
             }
         }
@@ -844,8 +868,14 @@ pub unsafe extern "C" fn d2i_SSL_SESSION_ex(
             }
             (*ret).verify_result = (*as_).verify_result as c_long;
 
-            if ssl_session_strndup(&mut (*ret).ext_hostname, (*as_).tlsext_hostname) == 0 {
-                return d2i_err(as_, ret, a);
+            {
+                // SAFETY: `ret` is live and its `ext_hostname` member obeys the member-buffer
+                // invariant.
+                let mut host = (*ret).ext_hostname_slot();
+                // SAFETY: `host` is the member handle; `(*as_).tlsext_hostname` may be NULL.
+                if ssl_session_strndup_slot(&mut host, (*as_).tlsext_hostname) == 0 {
+                    return d2i_err(as_, ret, a);
+                }
             }
             if ssl_session_strndup(&mut (*ret).psk_identity_hint, (*as_).psk_identity_hint) == 0 {
                 return d2i_err(as_, ret, a);
@@ -856,13 +886,21 @@ pub unsafe extern "C" fn d2i_SSL_SESSION_ex(
 
             (*ret).ext_tick_lifetime_hint = (*as_).tlsext_tick_lifetime_hint as c_ulong;
             (*ret).ext_tick_age_add = (*as_).tlsext_tick_age_add;
-            CRYPTO_free((*ret).ext_tick.cast(), FILE, 0);
-            if !(*as_).tlsext_tick.is_null() {
-                (*ret).ext_tick = (*(*as_).tlsext_tick).data;
-                (*ret).ext_ticklen = (*(*as_).tlsext_tick).length as usize;
-                (*(*as_).tlsext_tick).data = ptr::null_mut();
-            } else {
-                (*ret).ext_tick = ptr::null_mut();
+            {
+                // SAFETY: `ret` is live and its `ext_tick` pair obeys the blob member-buffer
+                // invariant.
+                let mut tick = (*ret).ext_tick_slot();
+                // Release any incumbent at the authority's own site; a fresh session's member is
+                // unset, so this is `CRYPTO_free`'s no-op.
+                tick.clear(FILE, 0);
+                if !(*as_).tlsext_tick.is_null() {
+                    let data = (*(*as_).tlsext_tick).data;
+                    let len = (*(*as_).tlsext_tick).length as usize;
+                    (*(*as_).tlsext_tick).data = ptr::null_mut();
+                    // SAFETY: `data`/`len` are the octet string's block, whose ownership this call
+                    // adopts; the member is empty after `clear`.
+                    tick.store(data, len);
+                }
             }
 
             if !(*as_).comp_id.is_null() {
@@ -881,26 +919,38 @@ pub unsafe extern "C" fn d2i_SSL_SESSION_ex(
             (*ret).flags = (*as_).flags as u32;
             (*ret).ext_max_early_data = (*as_).max_early_data;
 
-            CRYPTO_free((*ret).ext_alpn_selected.cast(), FILE, 0);
-            if !(*as_).alpn_selected.is_null() {
-                (*ret).ext_alpn_selected = (*(*as_).alpn_selected).data;
-                (*ret).ext_alpn_selected_len = (*(*as_).alpn_selected).length as usize;
-                (*(*as_).alpn_selected).data = ptr::null_mut();
-            } else {
-                (*ret).ext_alpn_selected = ptr::null_mut();
-                (*ret).ext_alpn_selected_len = 0;
+            {
+                // SAFETY: `ret` is live and its `ext_alpn_selected` pair obeys the blob
+                // member-buffer invariant.
+                let mut alpn = (*ret).ext_alpn_selected_slot();
+                // Release any incumbent at the authority's own site; a fresh session's member is
+                // unset, so this is `CRYPTO_free`'s no-op.
+                alpn.clear(FILE, 0);
+                if !(*as_).alpn_selected.is_null() {
+                    let data = (*(*as_).alpn_selected).data;
+                    let len = (*(*as_).alpn_selected).length as usize;
+                    (*(*as_).alpn_selected).data = ptr::null_mut();
+                    // SAFETY: `data`/`len` adopt the octet string's block; the member is empty.
+                    alpn.store(data, len);
+                }
             }
 
             (*ret).max_fragment_len_mode = (*as_).tlsext_max_fragment_len_mode as u8;
 
-            CRYPTO_free((*ret).ticket_appdata.cast(), FILE, 0);
-            if !(*as_).ticket_appdata.is_null() {
-                (*ret).ticket_appdata = (*(*as_).ticket_appdata).data;
-                (*ret).ticket_appdata_len = (*(*as_).ticket_appdata).length as usize;
-                (*(*as_).ticket_appdata).data = ptr::null_mut();
-            } else {
-                (*ret).ticket_appdata = ptr::null_mut();
-                (*ret).ticket_appdata_len = 0;
+            {
+                // SAFETY: `ret` is live and its `ticket_appdata` pair obeys the blob member-buffer
+                // invariant.
+                let mut appdata = (*ret).ticket_appdata_slot();
+                // Release any incumbent at the authority's own site; a fresh session's member is
+                // unset, so this is `CRYPTO_free`'s no-op.
+                appdata.clear(FILE, 0);
+                if !(*as_).ticket_appdata.is_null() {
+                    let data = (*(*as_).ticket_appdata).data;
+                    let len = (*(*as_).ticket_appdata).length as usize;
+                    (*(*as_).ticket_appdata).data = ptr::null_mut();
+                    // SAFETY: `data`/`len` adopt the octet string's block; the member is empty.
+                    appdata.store(data, len);
+                }
             }
 
             asn1_free_as(as_);

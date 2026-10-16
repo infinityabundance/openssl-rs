@@ -2198,30 +2198,39 @@ pub struct SslSession {
     pub kex_group: c_uint,
     /// `CRYPTO_EX_DATA ex_data`.
     pub ex_data: CryptoExData,
-    /// `char *ext.hostname`.
-    pub ext_hostname: *mut c_char,
-    /// `unsigned char *ext.tick`.
-    pub ext_tick: *mut u8,
-    /// `size_t ext.ticklen`.
-    pub ext_ticklen: usize,
+    /// `char *ext.hostname` — an object-owned C-string **member buffer**. Its ownership invariant
+    /// is stated once by [`MemberCStrSlot`] and mediated by [`SslSession::ext_hostname`]/
+    /// [`SslSession::ext_hostname_slot`]; see `MEMBER-BUFFER-MODEL.md`. It stays `*mut c_char` at
+    /// this exact offset so the `#[repr(C)]` layout is the authority's, and it is **private**
+    /// because every read, write and release now goes through this module's handle/reader.
+    ext_hostname: *mut c_char,
+    /// `unsigned char *ext.tick` — an object-owned **blob** member buffer, paired with
+    /// `ext_ticklen`. Its `(ptr, len)` invariant is stated once by [`MemberBufSlot`] and mediated by
+    /// [`SslSession::ext_tick`]/[`SslSession::ext_tick_slot`]; see `MEMBER-BUFFER-MODEL.md`. Private
+    /// for the same reason as `ext_hostname`.
+    ext_tick: *mut u8,
+    /// `size_t ext.ticklen` — the length companion of `ext_tick`.
+    ext_ticklen: usize,
     /// `unsigned long ext.tick_lifetime_hint`.
     pub ext_tick_lifetime_hint: c_ulong,
     /// `uint32_t ext.tick_age_add`.
     pub ext_tick_age_add: u32,
     /// `uint32_t ext.max_early_data`.
     pub ext_max_early_data: u32,
-    /// `unsigned char *ext.alpn_selected`.
-    pub ext_alpn_selected: *mut u8,
-    /// `size_t ext.alpn_selected_len`.
-    pub ext_alpn_selected_len: usize,
+    /// `unsigned char *ext.alpn_selected` — an object-owned **blob** member buffer, paired with
+    /// `ext_alpn_selected_len` (see [`MemberBufSlot`] and `MEMBER-BUFFER-MODEL.md`).
+    ext_alpn_selected: *mut u8,
+    /// `size_t ext.alpn_selected_len` — the length companion of `ext_alpn_selected`.
+    ext_alpn_selected_len: usize,
     /// `uint8_t ext.max_fragment_len_mode` — `SSL_SESSION_get_max_fragment_length` reads it.
     pub max_fragment_len_mode: u8,
     /// `char *srp_username`.
     pub srp_username: *mut c_char,
-    /// `unsigned char *ticket_appdata`.
-    pub ticket_appdata: *mut u8,
-    /// `size_t ticket_appdata_len`.
-    pub ticket_appdata_len: usize,
+    /// `unsigned char *ticket_appdata` — an object-owned **blob** member buffer, paired with
+    /// `ticket_appdata_len` (see [`MemberBufSlot`] and `MEMBER-BUFFER-MODEL.md`).
+    ticket_appdata: *mut u8,
+    /// `size_t ticket_appdata_len` — the length companion of `ticket_appdata`.
+    ticket_appdata_len: usize,
     /// `uint32_t flags`.
     pub flags: u32,
     /// `SSL_CTX *owner` — the cache context the session is linked into.
@@ -2232,6 +2241,215 @@ pub struct SslSession {
     pub next: *mut SslSession,
     /// `CRYPTO_REF_COUNT references`.
     pub references: AtomicI32,
+}
+
+impl SslSession {
+    /// The object-owned SNI hostname (NULL when unset) — the authoritative read of the
+    /// `ext_hostname` member buffer. Reads cannot free or alias, but funnelling them here keeps the
+    /// field's writers enumerable (see [`MemberCStrSlot`]).
+    pub(crate) fn ext_hostname(&self) -> *const c_char {
+        self.ext_hostname
+    }
+
+    /// Derive the [`MemberCStrSlot`] handle over this session's `ext_hostname`.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live session whose `ext_hostname` currently obeys the member-buffer invariant
+    /// (NULL, or a single NUL-terminated `CRYPTO_strdup` block this object owns). Every live
+    /// `SslSession` satisfies this because the block is zeroed at construction and the member is
+    /// only ever mutated through [`MemberCStrSlot`] or released by `ssl_sess.rs`'s `CtxDestroy`
+    /// body.
+    pub(crate) unsafe fn ext_hostname_slot(&mut self) -> MemberCStrSlot<'_> {
+        // SAFETY: `self` is live and its `ext_hostname` obeys the invariant per the contract.
+        unsafe { MemberCStrSlot::of(&mut self.ext_hostname) }
+    }
+
+    /// The object-owned session ticket blob `(ptr, len)` — `(NULL, 0)` when unset — the
+    /// authoritative read of the `ext_tick`/`ext_ticklen` member buffer.
+    pub(crate) fn ext_tick(&self) -> (*const u8, usize) {
+        (self.ext_tick, self.ext_ticklen)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this session's `ext_tick`/`ext_ticklen`.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live session whose `ext_tick` pair currently obeys the blob member-buffer
+    /// invariant (`(NULL, 0)`, or a single owned block of exactly `ext_ticklen` bytes). Every live
+    /// `SslSession` satisfies this because the pair is zeroed at construction and is only ever
+    /// mutated through [`MemberBufSlot`] or released by `ssl_sess.rs`'s `CtxDestroy` body.
+    pub(crate) unsafe fn ext_tick_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `ext_tick` pair obeys the invariant per the contract.
+        unsafe { MemberBufSlot::of(&mut self.ext_tick, &mut self.ext_ticklen) }
+    }
+
+    /// The object-owned negotiated ALPN protocol blob `(ptr, len)` — the authoritative read of the
+    /// `ext_alpn_selected`/`ext_alpn_selected_len` member buffer.
+    pub(crate) fn ext_alpn_selected(&self) -> (*const u8, usize) {
+        (self.ext_alpn_selected, self.ext_alpn_selected_len)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this session's `ext_alpn_selected` pair.
+    ///
+    /// # Safety
+    ///
+    /// As [`SslSession::ext_tick_slot`], for the `ext_alpn_selected` pair.
+    pub(crate) unsafe fn ext_alpn_selected_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `ext_alpn_selected` pair obeys the invariant.
+        unsafe { MemberBufSlot::of(&mut self.ext_alpn_selected, &mut self.ext_alpn_selected_len) }
+    }
+
+    /// The object-owned session ticket application data blob `(ptr, len)` — the authoritative read
+    /// of the `ticket_appdata`/`ticket_appdata_len` member buffer.
+    pub(crate) fn ticket_appdata(&self) -> (*const u8, usize) {
+        (self.ticket_appdata, self.ticket_appdata_len)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this session's `ticket_appdata` pair.
+    ///
+    /// # Safety
+    ///
+    /// As [`SslSession::ext_tick_slot`], for the `ticket_appdata` pair.
+    pub(crate) unsafe fn ticket_appdata_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `ticket_appdata` pair obeys the invariant.
+        unsafe { MemberBufSlot::of(&mut self.ticket_appdata, &mut self.ticket_appdata_len) }
+    }
+}
+
+/// A validated handle over the object-owned C-string member `SSL_SESSION::ext_hostname`.
+///
+/// ## Member-buffer invariant (stated once)
+/// `SSL_SESSION::ext_hostname` is always either NULL or a single NUL-terminated block produced by
+/// the crate's `CRYPTO_strdup`/`CRYPTO_strndup` seam and owned by the enclosing `SSL_SESSION`.
+/// That object is the block's *only* owner: the block is released **exactly once**, by
+/// `ssl_sess.rs`'s `CtxDestroy` body or by the next [`MemberCStrSlot::clear`]/[`MemberCStrSlot::store`]
+/// that replaces it. Nothing else frees or aliases it.
+///
+/// ## Why the field stays raw
+/// The `#[repr(C)]` layout is the authority's, so the field must remain `*mut c_char` at its exact
+/// offset; a Rust owner type cannot live in the struct. This handle is therefore a transient
+/// **borrow** over the field, the only sanctioned way to move the member's ownership in and out of
+/// it — the resident-member counterpart of the per-module `OwnedStr`. It is the `SSL_SESSION`
+/// analogue of `pk7_asn1.rs`'s `PropqSlot` (see `MEMBER-BUFFER-MODEL.md`).
+///
+/// `unsafe` appears only at the two proof boundaries: constructing the handle (which asserts the
+/// field currently obeys the invariant) and `store` (which accepts an externally-allocated block).
+/// `clear` is safe because a handle built by [`MemberCStrSlot::of`] guarantees the incumbent is the
+/// object's own single block.
+pub(crate) struct MemberCStrSlot<'a> {
+    /// Borrow of the object's member field; its value obeys the invariant for `'a`.
+    slot: &'a mut *mut c_char,
+}
+
+impl<'a> MemberCStrSlot<'a> {
+    /// Derive the handle from an object member field.
+    ///
+    /// # Safety
+    ///
+    /// `hostname` is the `ext_hostname` member of a live `SslSession` (or an equivalent
+    /// object-owned C-string member) and currently obeys the member-buffer invariant: it is NULL,
+    /// or a single NUL-terminated `CRYPTO_strdup`/`CRYPTO_strndup` block owned by that object.
+    pub(crate) unsafe fn of(hostname: &'a mut *mut c_char) -> MemberCStrSlot<'a> {
+        MemberCStrSlot { slot: hostname }
+    }
+
+    /// Release any incumbent value through the authority's own `CRYPTO_free` site, leaving the
+    /// field NULL. This is the authority's `if (p) { CRYPTO_free(p); p = NULL; }` — NULL is a
+    /// no-op for `CRYPTO_free`, so the release is total.
+    pub(crate) fn clear(&mut self, file: *const c_char, line: c_int) {
+        let old = core::mem::replace(self.slot, ptr::null_mut());
+        // SAFETY: by the member-buffer invariant the incumbent is NULL or the object's own single
+        // `CRYPTO_strdup` block, so this is that block's one release; `CRYPTO_free` ignores NULL.
+        unsafe { CRYPTO_free(old.cast(), file, line) };
+    }
+
+    /// Store a freshly-`CRYPTO_strdup`ed value into the (now empty) field, transferring ownership
+    /// of it to the enclosing object.
+    ///
+    /// # Safety
+    ///
+    /// `new` is NULL or a live NUL-terminated block this caller owns exclusively (produced by the
+    /// crate's `CRYPTO_strdup`/`CRYPTO_strndup` seam) and no other owner will release it; the field
+    /// is currently unset (NULL).
+    pub(crate) unsafe fn store(&mut self, new: *mut c_char) {
+        debug_assert!(
+            (*self.slot).is_null(),
+            "ext_hostname member slot must be empty before store"
+        );
+        *self.slot = new;
+    }
+}
+
+/// A validated handle over an object-owned `(ptr, len)` **blob** member buffer of `SSL_SESSION`
+/// (`ext_tick`/`ext_ticklen`, `ext_alpn_selected`/`ext_alpn_selected_len`,
+/// `ticket_appdata`/`ticket_appdata_len`).
+///
+/// ## Blob member-buffer invariant (stated once)
+/// The `(ptr, len)` pair is always either `(NULL, 0)` or a single owned block produced by the
+/// crate's allocator seam (`CRYPTO_memdup`/`CRYPTO_malloc`/adopted from the ASN.1 item layer)
+/// whose allocation is exactly `len` bytes and which the enclosing `SSL_SESSION` owns. That object
+/// is the block's *only* owner: the block is released **exactly once**, by `ssl_sess.rs`'s
+/// `CtxDestroy` body or by the next [`MemberBufSlot::clear`]/[`MemberBufSlot::store`] that replaces
+/// it. Nothing else frees or aliases it, and `len` always equals the live allocation (0 when the
+/// pointer is NULL).
+///
+/// ## Why the fields stay raw
+/// The `#[repr(C)]` layout is the authority's, so the two fields must remain `*mut u8`/`usize` at
+/// their exact offsets. This handle is a transient **borrow** over the pair, the only sanctioned
+/// way to move the member's ownership in and out of it. It is the `(ptr, len)` analogue of the
+/// C-string [`MemberCStrSlot`] (see `MEMBER-BUFFER-MODEL.md`).
+///
+/// `unsafe` appears only at the two proof boundaries: constructing the handle (which asserts the
+/// pair currently obeys the invariant) and `store` (which accepts an externally-allocated block).
+/// `clear` is safe because a handle built by [`MemberBufSlot::of`] guarantees the incumbent is the
+/// object's own single block.
+pub(crate) struct MemberBufSlot<'a> {
+    /// Borrow of the object's pointer member; its value obeys the invariant for `'a`.
+    ptr: &'a mut *mut u8,
+    /// Borrow of the object's length companion; its value obeys the invariant for `'a`.
+    len: &'a mut usize,
+}
+
+impl<'a> MemberBufSlot<'a> {
+    /// Derive the handle from an object's `(ptr, len)` member pair.
+    ///
+    /// # Safety
+    ///
+    /// `ptr`/`len` are the two member fields of a live object and currently obey the blob
+    /// member-buffer invariant: `*ptr` is NULL with `*len == 0`, or a single owned block of exactly
+    /// `*len` bytes.
+    pub(crate) unsafe fn of(ptr: &'a mut *mut u8, len: &'a mut usize) -> MemberBufSlot<'a> {
+        MemberBufSlot { ptr, len }
+    }
+
+    /// Release the incumbent (if any) through the authority's own `CRYPTO_free` site, leaving the
+    /// member `(NULL, 0)`. NULL is a no-op for `CRYPTO_free`, so the release is total.
+    pub(crate) fn clear(&mut self, file: *const c_char, line: c_int) {
+        let old = core::mem::replace(self.ptr, ptr::null_mut());
+        *self.len = 0;
+        // SAFETY: by the invariant the incumbent is NULL or the object's own single block, so this
+        // is that block's one release; `CRYPTO_free` ignores NULL.
+        unsafe { CRYPTO_free(old.cast(), file, line) };
+    }
+
+    /// Store a freshly-allocated block of `len` bytes into the (now empty) member, transferring
+    /// ownership of it to the enclosing object.
+    ///
+    /// # Safety
+    ///
+    /// `new` is NULL or a live block this caller owns exclusively whose allocation is exactly `len`
+    /// bytes (produced by the crate's allocator seam, or adopted from a block whose ownership this
+    /// caller gives up) and no other owner will release it; the field is currently unset
+    /// (`(NULL, 0)`).
+    pub(crate) unsafe fn store(&mut self, new: *mut u8, len: usize) {
+        debug_assert!(
+            (*self.ptr).is_null() && *self.len == 0,
+            "blob member slot must be empty before store"
+        );
+        *self.ptr = new;
+        *self.len = len;
+    }
 }
 
 /// `struct timeval` — the two-`long` layout `SSL_get_event_timeout` writes on this platform.
@@ -8151,7 +8369,7 @@ pub unsafe extern "C" fn SSL_get_servername(s: *const Ssl, type_: c_int) -> *con
             // SAFETY: `session` is live per the non-NULL check; its version is readable.
             let session = unsafe { &*sc.session };
             if session.ssl_version != TLS1_3_VERSION {
-                return session.ext_hostname;
+                return session.ext_hostname();
             }
         }
         sc.ext_hostname

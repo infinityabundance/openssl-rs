@@ -160,12 +160,12 @@ pub unsafe extern "C" fn SSL_SESSION_print(bp: *mut Bio, x: *const SslSession) -
             {
                 return 0;
             }
-            if !s.ext_tick.is_null() {
+            let (tick_ptr, tick_len) = s.ext_tick();
+            if !tick_ptr.is_null() {
                 if BIO_puts(bp, c"\n    TLS session ticket:\n".as_ptr()) <= 0 {
                     return 0;
                 }
-                if BIO_dump_indent(bp, s.ext_tick.cast::<c_void>(), s.ext_ticklen as c_int, 4) <= 0
-                {
+                if BIO_dump_indent(bp, tick_ptr.cast::<c_void>(), tick_len as c_int, 4) <= 0 {
                     return 0;
                 }
             }
