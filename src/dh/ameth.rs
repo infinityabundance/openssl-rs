@@ -90,6 +90,89 @@ const DH_FLAG_TYPE_DHX: c_int = 0x1000;
 /// whose authority marks are recorded against it.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c".as_ptr();
 
+/// How the authority releases an `ASN1_item_i2d` out-parameter buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)` — the public half's `penc`.
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)` — the private half's
+    /// `dp`, whose contents are secret.
+    Cleansed {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+}
+
+/// An owned `ASN1_item_i2d` out-parameter buffer.
+///
+/// `dh_pub_encode`/`dh_priv_encode` receive the DER block from an `ASN1_item_i2d` call and either
+/// hand it to the X509/PKCS#8 setter or release it on an error path. This handle owns it for that
+/// release: [`Self::adopt_plain`] takes up the public half's block (the authority's plain
+/// `OPENSSL_free`) and [`Self::adopt_cleansed`] the private half's (its cleansing
+/// `OPENSSL_clear_free`), each at the authority's own `dh_ameth.c` site. The block is held in a raw
+/// local, not a field the ABI exposes, so the handle is formed at the release point.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+impl OwnedBuf {
+    /// Take up a public out-parameter block for release by `Drop` through the authority's plain
+    /// `CRYPTO_free`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated for the out-parameter and no other owner
+    /// will release.
+    unsafe fn adopt_plain(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// Take up a secret out-parameter block for release by `Drop` through the authority's cleansing
+    /// `CRYPTO_clear_free(ptr, num, ...)`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block of `num` bytes the crate allocated for the out-parameter and no
+    /// other owner will release.
+    unsafe fn adopt_cleansed(
+        ptr: *mut c_uchar,
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::Cleansed { num, file, line },
+        })
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own plain `CRYPTO_free`.
+                unsafe { CRYPTO_free(self.ptr.cast(), file, line) };
+            }
+            BufRelease::Cleansed { num, file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns, readable for `num` bytes;
+                // `CRYPTO_clear_free` cleanses then releases it.
+                unsafe { crate::runtime::mem::CRYPTO_clear_free(self.ptr.cast(), num, file, line) };
+            }
+        }
+    }
+}
+
 /// `static DH *d2i_dhp(const EVP_PKEY *pkey, const unsigned char **pp, long length)` —
 /// `crypto/dh/dh_ameth.c:34-46`.
 ///
@@ -264,7 +347,7 @@ unsafe extern "C" fn dh_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) ->
         // goto err
         // SAFETY: `penc` is NULL and `str_` is NULL on this path.
         unsafe {
-            CRYPTO_free(penc.cast(), FILE, 152);
+            drop(OwnedBuf::adopt_plain(penc, FILE, 152));
             ASN1_STRING_free(str_);
         }
         return 0;
@@ -278,7 +361,7 @@ unsafe extern "C" fn dh_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) ->
         // goto err
         // SAFETY: `penc` is the buffer `enc` bytes long and `str_` is live.
         unsafe {
-            CRYPTO_free(penc.cast(), FILE, 152);
+            drop(OwnedBuf::adopt_plain(penc, FILE, 152));
             ASN1_STRING_free(str_);
         }
         return 0;
@@ -291,7 +374,7 @@ unsafe extern "C" fn dh_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) ->
         // goto err
         // SAFETY: both are live.
         unsafe {
-            CRYPTO_free(penc.cast(), FILE, 152);
+            drop(OwnedBuf::adopt_plain(penc, FILE, 152));
             ASN1_STRING_free(str_);
         }
         return 0;
@@ -309,7 +392,7 @@ unsafe extern "C" fn dh_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) ->
         // goto err
         // SAFETY: `penc` is the buffer `enc` bytes long and `str_` is live.
         unsafe {
-            CRYPTO_free(penc.cast(), FILE, 152);
+            drop(OwnedBuf::adopt_plain(penc, FILE, 152));
             ASN1_STRING_free(str_);
         }
         return 0;
@@ -333,7 +416,7 @@ unsafe extern "C" fn dh_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) ->
 
     // SAFETY: no failure arm is reachable past the setter's own refusal.
     unsafe {
-        CRYPTO_free(penc.cast(), FILE, 152);
+        drop(OwnedBuf::adopt_plain(penc, FILE, 152));
         ASN1_STRING_free(str_);
     }
     0
@@ -446,7 +529,7 @@ unsafe extern "C" fn dh_priv_encode(
     } == 0
     {
         // SAFETY: `dp` is the buffer `dplen` long.
-        unsafe { crate::runtime::mem::CRYPTO_clear_free(dp.cast(), dplen as usize, FILE, 217) };
+        drop(unsafe { OwnedBuf::adopt_cleansed(dp, dplen as usize, FILE, 217) });
         // goto err
         // SAFETY: `params` is live.
         unsafe { ASN1_STRING_free(params) };
