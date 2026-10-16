@@ -73,7 +73,7 @@ Local gate for every batch (court container, 8 GB cap):
 | -- | stage/p25/memberbuf-cms | cms/{cms_lib,cms_asn1}.rs, pkcs12/p12_asn.rs, pkcs7/pk7_mime.rs | CmsPropqSlot; **CmsCtx.propq now private** |
 | -- | stage/p25/memberbuf-x509 | x509/{x_x509,x_crl,x509_req,x_pubkey,x_req,x_all,x509_vfy}.rs | X509_CRL/REQ/PUBKEY propq fields **private** |
 
-Converted files (union of stage/p25/* files): **~218 files** across **44 conversion batches** plus the soundness/P0/doc repairs; **1982 of 2420 allocation sites** converted, **438 remaining** (frozen-atlas lower bound). OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
+Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
 
@@ -111,10 +111,12 @@ then the member-buffer unit.
 
 Not one percentage; report each axis honestly.
 
-1. **Ownership reconstruction** — **44 conversion batches** across ~218 files
-   (plus the adoption-soundness, P0-abstraction, and constructor-soundness repairs);
+1. **Ownership reconstruction** — conversion batches plus the soundness,
+   member-buffer, adversarial-test and destructor-trait batches (see the table);
    the reusable adoption-pattern set (OwnedBuf / OwnedCtx+`CtxDestroy` /
-   partial-construction `Raw*` / staged `RawCtx`+`assume_init`) is now sound.
+   partial-construction `Raw*` / staged `RawCtx`+`assume_init` / member-buffer
+   `PropqSlot`/`MemberBufSlot`/`MemberCStrSlot`) is now sound, and **all 46
+   module-local destructor traits are `unsafe trait`** with explicit contracts.
 2. **Safe-interior coverage** — *not yet comprehensively measured*; the sparsest
    structural conversions so far are sparse_array and the X.509 policy tree.
 3. **Discharged safety obligations** — local gate green per batch; three
@@ -188,3 +190,41 @@ differ).
 
 Each landed batch records a receipt (template `RECEIPT.template.md`) so a fresh
 session can resume from Git + the receipt without reconstructing reasoning.
+
+## Canonical next action — Safe-33 continuation
+
+**Branch:** `integrate/safe-c33`
+**Last observed HEAD:** `e1a792488ac977e07778bac8966cf0993cded142`
+**Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
+
+### Resume procedure
+
+1. Check the actual integration-branch HEAD and working-tree state. Read `AGENTS.md`, this ledger, `MEMBER-BUFFER-MODEL.md`. Treat Git and committed evidence as authoritative.
+2. Reconcile the ledger with the landed sweep batches and the adversarial-test unit. The committed atlas may predate the most recent sweeps; regenerate the lightweight atlas (`python3 forensics/memory-safety/campaign/safe-c33/atlas_refresh.py`) against the current candidate before publishing completion numbers. Do **not** run the full Phase-25 seal.
+3. Reproduce the residual-file inventory from current source, recording the exact command and file list. Treat any reported count as a checkpoint, not a newly verified count.
+4. Select the next coherent batch of at most six files, prioritizing Safe-33 dependency closure, ownership risk and reusable improvements. Continue the `stage/p25/sweepN` convention.
+5. Apply the standing conversion contract: preserve ABI/layout, allocator-hook coordinates and event order, initialization validity, failure semantics, and secret-cleansing guarantees. Account for eliminated, relocated, retained and introduced unsafe obligations; `hidden = 0` is mandatory.
+6. Independently verify in the court container, one heavy command at a time:
+   - `cargo fmt --all -- --check`
+   - `cargo clippy --all-targets -- -D warnings`
+   - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
+   The most recent reported library baseline is **1196** tests. Do not accept unexplained test loss. Check available memory before builds.
+7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
+
+### Outstanding targeted work
+
+Complete the retained SSL member-buffer accesses: `SslCtx.propq` readers, `CertKey.serverinfo` reallocation, `Ssl` handshake-state writers, and `supportedgroups`.
+
+Preserve and expand the adversarial allocator-refusal tests as these ownership paths change. The TLS ticket double-free regression must remain covered.
+
+### Non-negotiable evidence distinction
+
+- Ownership reconstruction does not establish memory safety.
+- A successful test run does not discharge every unsafe obligation.
+- `SAFETY_DISCHARGED` requires explicit per-site evidence.
+- `SAFE_COMPATIBLE` remains **0/33** pending dependency-closure discharge and current-candidate functional verification.
+- Miri is unavailable on the pinned toolchain; record this limitation without implying its checks were performed.
+
+**Stop and escalate:** any plausible soundness defect, behavioural divergence, unaccounted unsafe obligation, failing gate, or ambiguous ownership transfer. Do not hide residuals to complete a batch.
+
+**Final handoff:** actual HEAD, changed files, test results, updated Safe-33 file counts, remaining blockers, and the next executable batch.

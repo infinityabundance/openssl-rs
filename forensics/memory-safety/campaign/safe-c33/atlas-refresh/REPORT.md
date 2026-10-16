@@ -1,12 +1,12 @@
 # Safe-33 atlas refresh — candidate-bound ownership-reconstruction status
 
-Generated 2026-10-16T22:39:45Z by `forensics/memory-safety/campaign/safe-c33/atlas_refresh.py` (stdlib only). **Measurement only** — no source conversion, no Phase-25 regeneration, no graduation claimed.
+Generated 2026-10-16T23:51:53Z by `forensics/memory-safety/campaign/safe-c33/atlas_refresh.py` (stdlib only). **Measurement only** — no source conversion, no Phase-25 regeneration, no graduation claimed.
 
 ## Candidate pin
 
-- HEAD `f6e27c32033f8c93ae39ad7053440bb9c3c1aa31` on `integrate/safe-c33`
+- HEAD `e1a792488ac977e07778bac8966cf0993cded142` on `integrate/safe-c33`
 - crate `openssl-rs 0.0.27`
-- `src/**/*.rs`: **865** files, content sha256 `57c53d19a51d570c62313f842d08dcc1fe2eb23277754b57be87dc49888ca8e2`
+- `src/**/*.rs`: **865** files, content sha256 `172c342a6136c6c19d3f5f5f8c13da30a05acaa883138299eea5ddfcf7d608b0`
 - frozen inventory was at `67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34` (base `b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491`); this refresh re-pins the current tree
 
 ## The frozen 33 (authoritative: `state.json#cohort`)
@@ -58,11 +58,11 @@ Generated 2026-10-16T22:39:45Z by `forensics/memory-safety/campaign/safe-c33/atl
 | mechanism | state | families | closure files | seam files | no-seam+raw files | closure raw sites |
 |---|---|---|---|---|---|---|
 | ERR | UNSAFE_OPEN | 33 | 7 | 1 | 1 | 22 |
-| RAND_CMS_STORE_KEYFMT | OWNERSHIP_RECONSTRUCTED | 33 | 83 | 30 | 16 | 432 |
+| RAND_CMS_STORE_KEYFMT | OWNERSHIP_RECONSTRUCTED | 33 | 83 | 32 | 14 | 427 |
 | BIO | UNSAFE_OPEN | 32 | 34 | 16 | 4 | 129 |
-| EVP_PKEY_PROVIDER | OWNERSHIP_RECONSTRUCTED | 32 | 270 | 86 | 74 | 1865 |
-| RUNTIME_ALLOC_OWNERSHIP | UNSAFE_OPEN | 31 | 12 | 3 | 4 | 122 |
-| ASN1_OCSP | UNSAFE_OPEN | 31 | 79 | 12 | 22 | 207 |
+| EVP_PKEY_PROVIDER | OWNERSHIP_RECONSTRUCTED | 32 | 270 | 99 | 61 | 1884 |
+| RUNTIME_ALLOC_OWNERSHIP | UNSAFE_OPEN | 31 | 12 | 4 | 3 | 124 |
+| ASN1_OCSP | UNSAFE_OPEN | 31 | 79 | 15 | 19 | 189 |
 | X509_VERIFY_POLICY | OWNERSHIP_RECONSTRUCTED | 31 | 97 | 28 | 21 | 438 |
 | RUNTIME_CONCURRENCY | OWNERSHIP_RECONSTRUCTED | 25 | 5 | 2 | 2 | 41 |
 | SSL_SESSION | OWNERSHIP_RECONSTRUCTED | 25 | 44 | 11 | 6 | 285 |
@@ -72,9 +72,9 @@ Generated 2026-10-16T22:39:45Z by `forensics/memory-safety/campaign/safe-c33/atl
 | # | metric | value |
 |---|---|---|
 | 1 | unique source files in the union of the nine closures | **628** |
-| 2 | files with reconstructed ownership (seam present) | **187** |
+| 2 | files with reconstructed ownership (seam present) | **206** |
 | 3 | files with fully discharged obligations | **0** |
-| 4 | unresolved interior raw-allocator sites in the closure | **3476** (upper bound; 749 unambiguous) |
+| 4 | unresolved interior raw-allocator sites in the closure | **3474** (upper bound; 613 unambiguous) |
 | 5 | consumers eligible for `SAFE_COMPATIBLE` | **0** |
 
 - **3** is 0 by construction: Obligations are discharged ONLY at the seal point (AGENTS.md §7 SAFETY_DISCHARGED, §18). No per-site validity contract has been proven for any closure file at this candidate, so this is honestly 0. A present seam is OWNERSHIP_RECONSTRUCTED, which is not discharge.
@@ -83,10 +83,10 @@ Generated 2026-10-16T22:39:45Z by `forensics/memory-safety/campaign/safe-c33/atl
 
 ### Whole-tree scan (current candidate)
 
-- files with a seam: **226**
-- files with zero raw allocator sites: **471**
-- files with raw allocator sites remaining: **394**
-- raw allocator sites total (incl. legitimate seam ctors): **4385**
+- files with a seam: **250**
+- files with zero raw allocator sites: **472**
+- files with raw allocator sites remaining: **393**
+- raw allocator sites total (incl. legitimate seam ctors): **4368**
 - allocator-definition files (seam itself, excluded from metric 4): `src/runtime/mem.rs`
 
 Seam tokens counted: `OwnedCtx`, `OwnedBuf`, `OwnedBlock`, `OwnedStr`, `PropqSlot`, `RawCtx`, `OwnedRaw`, `CtxDestroy`, `CipherDestroy`, `impl Drop`.
@@ -144,7 +144,7 @@ Top-level modules outside the nine-mechanism closure (files): `apps`(59), `runti
 - **Unknown coverage** — Mechanism dependence is MEASURED (symbol fingerprint) for 6 families and INFERRED (linkage/surface) for 27; isync and nginx reach L7 with no fingerprint. The join speaks for 6 of 1000. Absence of a fingerprint is unknown coverage, not a pass.
   - mechanisms with linkage-inferred families: ERR (27), RAND_CMS_STORE_KEYFMT (27), BIO (27), EVP_PKEY_PROVIDER (27), RUNTIME_ALLOC_OWNERSHIP (27), ASN1_OCSP (27), X509_VERIFY_POLICY (27), RUNTIME_CONCURRENCY (20), SSL_SESSION (20)
 - **Demonstrated failure** — A closure file with a raw allocator site and NO ownership seam is a known-unconverted interior site in a mechanism a consumer needs. This is the only class this refresh asserts as failure-shaped; it is not a functional regression.
-  - mechanisms with unconverted (no-seam) interior files: ERR (1), RAND_CMS_STORE_KEYFMT (16), BIO (4), EVP_PKEY_PROVIDER (74), RUNTIME_ALLOC_OWNERSHIP (4), ASN1_OCSP (22), X509_VERIFY_POLICY (21), RUNTIME_CONCURRENCY (2), SSL_SESSION (6)
+  - mechanisms with unconverted (no-seam) interior files: ERR (1), RAND_CMS_STORE_KEYFMT (14), BIO (4), EVP_PKEY_PROVIDER (61), RUNTIME_ALLOC_OWNERSHIP (3), ASN1_OCSP (19), X509_VERIFY_POLICY (21), RUNTIME_CONCURRENCY (2), SSL_SESSION (6)
 
 ## Next engineering target (reachability × residual risk)
 
@@ -152,11 +152,11 @@ Top-level modules outside the nine-mechanism closure (files): `apps`(59), `runti
 
 | rank | mechanism | state | families reaching | no-seam interior files | no-seam interior sites | score |
 |---|---|---|---|---|---|---|
-| 1 | EVP_PKEY_PROVIDER | OWNERSHIP_RECONSTRUCTED | 32 | 74 | 402 | 12864 |
-| 2 | ASN1_OCSP | UNSAFE_OPEN | 31 | 22 | 111 | 3441 |
-| 3 | RAND_CMS_STORE_KEYFMT | OWNERSHIP_RECONSTRUCTED | 33 | 16 | 65 | 2145 |
+| 1 | EVP_PKEY_PROVIDER | OWNERSHIP_RECONSTRUCTED | 32 | 61 | 307 | 9824 |
+| 2 | ASN1_OCSP | UNSAFE_OPEN | 31 | 19 | 86 | 2666 |
+| 3 | RAND_CMS_STORE_KEYFMT | OWNERSHIP_RECONSTRUCTED | 33 | 14 | 54 | 1782 |
 | 4 | X509_VERIFY_POLICY | OWNERSHIP_RECONSTRUCTED | 31 | 21 | 45 | 1395 |
-| 5 | RUNTIME_ALLOC_OWNERSHIP | UNSAFE_OPEN | 31 | 4 | 42 | 1302 |
+| 5 | RUNTIME_ALLOC_OWNERSHIP | UNSAFE_OPEN | 31 | 3 | 37 | 1147 |
 | 6 | BIO | UNSAFE_OPEN | 32 | 4 | 30 | 960 |
 | 7 | RUNTIME_CONCURRENCY | OWNERSHIP_RECONSTRUCTED | 25 | 2 | 26 | 650 |
 | 8 | SSL_SESSION | OWNERSHIP_RECONSTRUCTED | 25 | 6 | 24 | 600 |
@@ -164,8 +164,8 @@ Top-level modules outside the nine-mechanism closure (files): `apps`(59), `runti
 
 ## Candidate-binding cross-check vs the frozen census
 
-- closure files matching frozen census hash: 430
-- closure files CHANGED since the frozen census: 195
+- closure files matching frozen census hash: 411
+- closure files CHANGED since the frozen census: 214
 - closure files absent from the frozen census: 3
 - The census is the FROZEN Phase-25 atlas (earlier candidate). A changed file is candidate drift since that freeze, not a defect.
 
