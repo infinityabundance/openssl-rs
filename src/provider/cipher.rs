@@ -528,7 +528,15 @@ struct OwnedRaw<T: CipherDestroy> {
 
 impl<T: CipherDestroy> OwnedRaw<T> {
     /// Adopt a block `CRYPTO_malloc`/`CRYPTO_memdup` answered, or `None` for NULL.
-    fn adopt(raw: *mut T) -> Option<OwnedRaw<T>> {
+    ///
+    /// # Safety
+    /// `raw` is NULL or a live block the crate's `CRYPTO_malloc`/`CRYPTO_memdup` seam allocated in
+    /// full at `size_of::<T>()` (not a sub-range) and aligned for `T`; this frame exclusively owns it
+    /// and has not released it. The block may be a *partially built* copy whose members still alias
+    /// the source's (for instance a failed TLS-MAC `CRYPTO_memdup`), so only its single plain
+    /// `CRYPTO_free` release may run on it -- never `T`'s full destructor -- until the duplicate has
+    /// repaired every member.
+    unsafe fn adopt(raw: *mut T) -> Option<OwnedRaw<T>> {
         ptr::NonNull::new(raw).map(|ptr| OwnedRaw { ptr })
     }
 

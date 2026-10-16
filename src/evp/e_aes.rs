@@ -115,7 +115,16 @@ struct OwnedBlock {
 
 impl OwnedBlock {
     /// Own a block the seam answered, or `None` for NULL.
-    fn take(ptr: *mut c_void, file: *const core::ffi::c_char, line: c_int) -> Option<OwnedBlock> {
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a block this unit allocated through the crate's allocator seam
+    /// (`CRYPTO_malloc`), so it has that provenance; the caller owns it and no other owner will
+    /// release it. `Drop` performs its single `CRYPTO_free`.
+    unsafe fn take(
+        ptr: *mut c_void,
+        file: *const core::ffi::c_char,
+        line: c_int,
+    ) -> Option<OwnedBlock> {
         if ptr.is_null() {
             None
         } else {
