@@ -536,7 +536,21 @@ const _: () = {
 
 /// The authority's `*_free` body for one of the file's `#[repr(C)]` records, without the block's own
 /// release, which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer must guarantee, for a live block this file allocated:
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it frees **exactly** the members the object owns (every releaser is
+///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -719,7 +733,10 @@ impl Drop for RawStore {
 // The three destructor bodies: each is what its unit's `*_free` performed by hand, minus the block
 // release `OwnedCtx`'s `Drop` now owns.
 
-impl CtxDestroy for X509Lookup {
+// SAFETY: (a) holds: `destroy_body` is `X509_LOOKUP_free` -- it runs the method's `free` hook
+// exactly once (or nothing when the method is NULL) and never releases the enclosing block. (b)
+// holds: a zeroed lookup has a NULL method, so `destroy_body` is a no-op and the record is valid.
+unsafe impl CtxDestroy for X509Lookup {
     /// Runs the method's `free` hook (the authority's `X509_LOOKUP_free` body).
     unsafe fn destroy_body(ptr: *mut X509Lookup) {
         // SAFETY: `ptr` is a live lookup per the trait contract; its method may be NULL.
@@ -734,7 +751,11 @@ impl CtxDestroy for X509Lookup {
     }
 }
 
-impl CtxDestroy for X509Object {
+// SAFETY: (a) holds: `destroy_body` is `x509_object_free_internal` -- it releases the object the
+// union names, by tag, and never the enclosing block. (b) holds: a zeroed object is tagged
+// `X509_LU_NONE` (0), for which the body frees nothing -- the obligation the safe
+// `OwnedCtx::<X509Object>::new` in `X509_OBJECT_new` leans on.
+unsafe impl CtxDestroy for X509Object {
     /// Releases the object the union names, by type (the authority's `x509_object_free_internal`).
     unsafe fn destroy_body(ptr: *mut X509Object) {
         // SAFETY: `ptr` is a live object per the trait contract.
@@ -742,7 +763,11 @@ impl CtxDestroy for X509Object {
     }
 }
 
-impl CtxDestroy for X509Store {
+// SAFETY: (a) holds: `destroy_body` is `X509_STORE_free` minus the block -- it shuts down and
+// frees exactly the store's own lookups, cache, extension block, verify parameters and lock, and
+// never the enclosing block. (b) holds: a zeroed store has every member NULL/0, so every release is
+// a NULL-tolerant no-op -- the obligation the safe `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for X509Store {
     /// The authority's `X509_STORE_free` body, without the block release [`OwnedCtx`]'s `Drop`
     /// performs: shuts down and releases each lookup, the object cache, the extension block, the
     /// verify parameters and the lock.

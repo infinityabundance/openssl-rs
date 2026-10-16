@@ -219,7 +219,19 @@ struct ByDir {
 
 /// The authority's destructor body for one of the file's heap records, without the block's own
 /// release, which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer must guarantee, for a live block this file allocated:
+/// * `destroy_body(ptr)` runs the authority's `*_free` member body **exactly once** for that object;
+/// * it frees **exactly** the members the object owns -- every releaser is the authority's own and
+///   accepts the not-yet-set (NULL/zero) state -- and **never** releases the enclosing block, which
+///   [`OwnedCtx`]'s `Drop` releases.
+///
+/// This contract carries **no** zero-validity claim: the trait does not assert that an all-zero
+/// block is a valid `Self`; this file's `OwnedCtx::new` is `CRYPTO_malloc`, and its caller fills the
+/// record before the owner can destroy it.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -345,13 +357,18 @@ impl Drop for RawDir {
 
 /// The authority's `by_dir_hash_free` body: a `BY_DIR_HASH` owns no sub-resources, so only the
 /// block release [`OwnedCtx`]'s `Drop` performs is left.
-impl CtxDestroy for ByDirHash {
+// SAFETY: (a) holds: `destroy_body` is the authority's no-op `by_dir_hash_free` body -- the record
+// owns no releasable members -- and it never releases the enclosing block, which `OwnedCtx`'s
+// `Drop` owns. The trait makes no zero-validity claim.
+unsafe impl CtxDestroy for ByDirHash {
     unsafe fn destroy_body(_ptr: *mut ByDirHash) {}
 }
 
 /// The authority's `by_dir_entry_free` body, without the block release [`OwnedCtx`]'s `Drop`
 /// performs: the owned directory path and the stack of hash records.
-impl CtxDestroy for ByDirEntry {
+// SAFETY: (a) holds: `destroy_body` is `by_dir_entry_free` -- it releases exactly the record's own
+// `dir` string and `hashes` stack (each NULL-tolerant) and never the enclosing block.
+unsafe impl CtxDestroy for ByDirEntry {
     unsafe fn destroy_body(ptr: *mut ByDirEntry) {
         // SAFETY: `ptr` is a live record per the trait contract; `dir` is NULL or this file's
         // `CRYPTO_strndup` block, and `hashes` is NULL or this file's own stack.
@@ -364,7 +381,9 @@ impl CtxDestroy for ByDirEntry {
 
 /// The authority's `free_dir` body, without the block release [`OwnedCtx`]'s `Drop` performs: the
 /// directory list, the scratch buffer and the lock.
-impl CtxDestroy for ByDir {
+// SAFETY: (a) holds: `destroy_body` is `by_dir_free` -- it releases exactly the record's own
+// `dirs` stack, `buffer` and `lock` (each NULL-tolerant) and never the enclosing block.
+unsafe impl CtxDestroy for ByDir {
     unsafe fn destroy_body(ptr: *mut ByDir) {
         // SAFETY: `ptr` is a live record per the trait contract; each member is NULL or owned by it.
         unsafe {
