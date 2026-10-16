@@ -91,7 +91,7 @@ const LINE_FREE_KEY: c_int = 134;
 pub(crate) unsafe fn slh_dsa_key_hash_cleanup(key: *mut SlhDsaKey) {
     // SAFETY: `key` is live per the contract.
     unsafe {
-        CRYPTO_free((*key).propq.cast::<c_void>(), FILE, LINE_FREE_PROPQ);
+        drop(OwnedStr::take((*key).propq));
         if (*key).md_big != (*key).md {
             EVP_MD_free((*key).md_big);
         }
@@ -104,6 +104,51 @@ pub(crate) unsafe fn slh_dsa_key_hash_cleanup(key: *mut SlhDsaKey) {
 
 /// `slh_dsa_key.c:27`, the `OPENSSL_free(key->propq)` in `..._hash_cleanup`.
 const LINE_FREE_PROPQ: c_int = 27;
+
+/// An owned `char *` allocated through the crate's `CRYPTO_strdup` seam — the key's `propq`.
+///
+/// `propq` is a block separate from the `#[repr(C)]` `SLH_DSA_KEY`: the constructors install one and
+/// [`slh_dsa_key_hash_cleanup`] reclaims it. [`Self::take`] adopts a fresh `CRYPTO_strdup` result,
+/// `Drop` performs the authority's own plain `OPENSSL_free(key->propq)` at its `slh_dsa_key.c:27`
+/// site, and [`Self::into_raw`] hands the block to the field the ABI exposes. The key block itself,
+/// whose release is a compound destructor body (hash cleanup, a private-key cleanse, then the
+/// block) and whose address the exported ABI exposes, stays on the raw seam, as in
+/// [`crate::ml_kem::key`].
+struct OwnedStr {
+    ptr: *mut c_char,
+}
+
+impl OwnedStr {
+    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
+    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it. `Drop` performs
+    /// its single plain `CRYPTO_free`.
+    unsafe fn take(ptr: *mut c_char) -> Option<OwnedStr> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedStr { ptr })
+        }
+    }
+
+    /// Give up ownership of the string to the `propq` field that takes it over.
+    fn into_raw(self) -> *mut c_char {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The string's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
+        // single release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, LINE_FREE_PROPQ) };
+    }
+}
 
 /// `static void slh_dsa_key_hash_dup(SLH_DSA_KEY *dst, const SLH_DSA_KEY *src)` —
 /// `slh_dsa_key.c:68-76`.
@@ -169,11 +214,15 @@ pub(crate) unsafe fn ossl_slh_dsa_key_new(
         (*ret).libctx = libctx;
         (*ret).params = params;
         if !propq.is_null() {
-            (*ret).propq = CRYPTO_strdup(propq, FILE, LINE_STRDUP_PROPQ);
-            if (*ret).propq.is_null() {
+            // `CRYPTO_strdup` answers NULL or a plain NUL-terminated copy the crate allocated and
+            // no one else owns; the handle adopts it so a refusal below releases it at the
+            // authority's own site.
+            // SAFETY: `propq` is NULL or a NUL-terminated C string per the contract.
+            let Some(q) = OwnedStr::take(CRYPTO_strdup(propq, FILE, LINE_STRDUP_PROPQ)) else {
                 ossl_slh_dsa_key_free(ret);
                 return ptr::null_mut();
-            }
+            };
+            (*ret).propq = q.into_raw();
         }
         if slh_dsa_key_hash_init(ret) == 0 {
             ossl_slh_dsa_key_free(ret);
@@ -232,11 +281,14 @@ pub(crate) unsafe fn ossl_slh_dsa_key_dup(
         (*ret).has_priv = 0;
         slh_dsa_key_hash_dup(ret, src);
         if !(*src).propq.is_null() {
-            (*ret).propq = CRYPTO_strdup((*src).propq, FILE, LINE_STRDUP_PROPQ);
-            if (*ret).propq.is_null() {
+            // SAFETY: `(*src).propq` is NULL or a NUL-terminated string this file's `_new`/`_dup`
+            // strdup'd and no other owner releases.
+            let Some(q) = OwnedStr::take(CRYPTO_strdup((*src).propq, FILE, LINE_STRDUP_PROPQ))
+            else {
                 ossl_slh_dsa_key_free(ret);
                 return ptr::null_mut();
-            }
+            };
+            (*ret).propq = q.into_raw();
         }
         if (selection & OSSL_KEYMGMT_SELECT_KEYPAIR) != 0 {
             /* The public components are present if the private key is present. */
