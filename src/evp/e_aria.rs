@@ -80,6 +80,84 @@ const FILE: &core::ffi::CStr = c"crypto/evp/e_aria.c";
 const LINE: c_int = 0;
 
 // ---------------------------------------------------------------------------------------------
+// Ownership of the GCM `iv` block this unit allocates
+// ---------------------------------------------------------------------------------------------
+
+/// An owned heap block the GCM context's `iv` field may hold.
+///
+/// The block stays the `CRYPTO_malloc(len, FILE, LINE)` the authority makes, at the authority's own
+/// size and site, because a Rust `Box`/`Vec` would hide the allocation and its release from a
+/// caller-installed `CRYPTO_set_mem_functions` hook. The context's `iv` field stays a raw
+/// `*mut c_uchar` member: it is a field of the `cipher_data` block whose size the exported
+/// `EVP_CIPHER::ctx_size` carries, and the authority's `EVP_CTRL_INIT` aliases it to the
+/// `EVP_CIPHER_CTX`'s own embedded `iv` buffer, so the slot itself cannot carry a `Drop`. Only the
+/// heap block it may hold is owned, handed to the field with [`Self::into_raw`] and reclaimed with
+/// [`Self::from_raw`] at the authority's own release line.
+struct OwnedBlock {
+    ptr: *mut c_void,
+    file: *const core::ffi::c_char,
+    line: c_int,
+}
+
+impl OwnedBlock {
+    /// Own a fresh block the allocator answered, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a block this unit allocated through the crate's allocator seam
+    /// (`CRYPTO_malloc`), so it has that provenance; the caller owns it and no other owner will
+    /// release it. `Drop` performs its single `CRYPTO_free`.
+    unsafe fn take(
+        ptr: *mut c_void,
+        file: *const core::ffi::c_char,
+        line: c_int,
+    ) -> Option<OwnedBlock> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBlock { ptr, file, line })
+        }
+    }
+
+    /// Reclaim a live block the context already holds, so its single release is `Drop`'s
+    /// `CRYPTO_free` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this unit owns and has not released.
+    unsafe fn from_raw(
+        ptr: *mut c_void,
+        file: *const core::ffi::c_char,
+        line: c_int,
+    ) -> Option<OwnedBlock> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBlock { ptr, file, line })
+        }
+    }
+
+    /// The buffer's address, for the raw calls the unit makes over it.
+    fn as_ptr<T>(&self) -> *mut T {
+        self.ptr.cast::<T>()
+    }
+
+    /// Hand the block to a stable slot (the context's `iv` field), giving up ownership so the
+    /// slot's release (the authority's `aria_gcm_cleanup`) is the only one.
+    fn into_raw(self) -> *mut c_void {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBlock {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this unit allocated (a NULL is a no-op) that `Drop` has not
+        // released before; `CRYPTO_free` accepts NULL and this is the authority's own release site.
+        unsafe { CRYPTO_free(self.ptr, self.file, self.line) }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // `EVP_CIPH_*` — `include/openssl/evp.h`
 // ---------------------------------------------------------------------------------------------
 
@@ -694,13 +772,23 @@ unsafe extern "C" fn aria_gcm_ctrl(
             unsafe {
                 if arg > EVP_MAX_IV_LENGTH && arg > (*gctx).ivlen {
                     if (*gctx).iv != (*c).iv.as_mut_ptr() {
-                        CRYPTO_free((*gctx).iv.cast(), FILE.as_ptr(), LINE);
+                        // The previous heap `iv` block, if any: its single release is the handle's
+                        // `Drop`, at the authority's own release line.
+                        // SAFETY: `(*gctx).iv` is a live block this context owns and has not
+                        // released.
+                        drop(OwnedBlock::from_raw((*gctx).iv.cast(), FILE.as_ptr(), LINE));
                     }
-                    let fresh = CRYPTO_malloc(arg as usize, FILE.as_ptr(), LINE).cast::<c_uchar>();
-                    if fresh.is_null() {
+                    // The fresh block, allocated through the crate's allocator seam at the
+                    // authority's own size and site; the context owns it, so the handle is handed
+                    // to the `iv` field with `into_raw` and released by `aria_gcm_cleanup`.
+                    let Some(fresh) = OwnedBlock::take(
+                        CRYPTO_malloc(arg as usize, FILE.as_ptr(), LINE),
+                        FILE.as_ptr(),
+                        LINE,
+                    ) else {
                         return 0;
-                    }
-                    (*gctx).iv = fresh;
+                    };
+                    (*gctx).iv = fresh.into_raw().cast::<c_uchar>();
                 }
                 (*gctx).ivlen = arg;
             }
@@ -856,13 +944,22 @@ unsafe extern "C" fn aria_gcm_ctrl(
                 if (*gctx).iv == (*c).iv.as_mut_ptr() {
                     (*gctx_out).iv = (*out).iv.as_mut_ptr();
                 } else {
-                    let fresh = CRYPTO_malloc((*gctx).ivlen as usize, FILE.as_ptr(), LINE)
-                        .cast::<c_uchar>();
-                    if fresh.is_null() {
+                    // The copy's own `iv` block, allocated through the crate's allocator seam at the
+                    // authority's own size and site; `gctx_out` owns it, so the handle is handed to
+                    // the field with `into_raw` and released by `aria_gcm_cleanup`.
+                    let Some(fresh) = OwnedBlock::take(
+                        CRYPTO_malloc((*gctx).ivlen as usize, FILE.as_ptr(), LINE),
+                        FILE.as_ptr(),
+                        LINE,
+                    ) else {
                         return 0;
-                    }
-                    (*gctx_out).iv = fresh;
-                    ptr::copy_nonoverlapping((*gctx).iv, fresh, (*gctx).ivlen as usize);
+                    };
+                    ptr::copy_nonoverlapping(
+                        (*gctx).iv,
+                        fresh.as_ptr::<c_uchar>(),
+                        (*gctx).ivlen as usize,
+                    );
+                    (*gctx_out).iv = fresh.into_raw().cast::<c_uchar>();
                 }
             }
             1
@@ -885,7 +982,11 @@ unsafe extern "C" fn aria_gcm_cleanup(c: *mut c_void) -> c_int {
     // SAFETY: `gctx` is the context's own block.
     unsafe {
         if (*gctx).iv != (*c).iv.as_mut_ptr() {
-            CRYPTO_free((*gctx).iv.cast(), FILE.as_ptr(), LINE);
+            // The heap `iv` block this context owns, if any: its single release is the handle's
+            // `Drop`, at the authority's own release line.
+            // SAFETY: `(*gctx).iv` is a live block `SET_IVLEN`/`COPY` allocated and has not been
+            // released.
+            drop(OwnedBlock::from_raw((*gctx).iv.cast(), FILE.as_ptr(), LINE));
         }
     }
     1
