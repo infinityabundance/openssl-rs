@@ -49,6 +49,7 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_void, CStr};
 use core::ptr;
 
 use crate::asn1::layout::Asn1String;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::p8_pkey::{d2i_PKCS8_PRIV_KEY_INFO, PKCS8_PRIV_KEY_INFO_free};
 use crate::asn1::x_algor::X509Algor;
 use crate::asn1::x_sig::{d2i_X509_SIG, X509_SIG_free, X509_SIG_get0};
@@ -87,7 +88,7 @@ use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{
     err_sites, raise_site, raise_site_data, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, OPENSSL_cleanse};
+use crate::runtime::mem::{CRYPTO_strdup, OPENSSL_cleanse};
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_shift,
     OPENSSL_sk_value, OpenSslStack,
@@ -313,36 +314,49 @@ unsafe fn try_name(data: *mut ExtractedParamData, v: *mut *mut OsslStoreInfo) ->
         if utf8.is_null() {
             return 0;
         }
+        // The name string is the authority's own `OPENSSL_free(newname)` at the `err:` label
+        // (a NULL-tolerant `CRYPTO_free` at `(NULL, 0)`); the handle's `Drop` is that release.
         // SAFETY: `utf8` is NUL-terminated per the object abstraction.
-        let newname = unsafe { CRYPTO_strdup(utf8, ptr::null(), 0) };
-        let mut newdesc: *mut c_char = ptr::null_mut();
-        let mut ok = !newname.is_null();
-        if ok {
-            // SAFETY: `data` is live per the contract.
-            let desc = unsafe { (*data).desc };
-            if !desc.is_null() {
-                // SAFETY: `desc` is NUL-terminated per the object abstraction.
-                newdesc = unsafe { CRYPTO_strdup(desc, ptr::null(), 0) };
-                ok = !newdesc.is_null();
+        let Some(newname) = (unsafe {
+            OwnedBlock::<c_char>::from_raw(CRYPTO_strdup(utf8, ptr::null(), 0), ptr::null(), 0)
+        }) else {
+            return 0;
+        };
+        // SAFETY: `data` is live per the contract.
+        let desc = unsafe { (*data).desc };
+        let newdesc = if desc.is_null() {
+            None
+        } else {
+            // SAFETY: `desc` is NUL-terminated per the object abstraction.
+            match unsafe {
+                OwnedBlock::<c_char>::from_raw(CRYPTO_strdup(desc, ptr::null(), 0), ptr::null(), 0)
+            } {
+                Some(d) => Some(d),
+                // The description strdup failed; `newname`'s handle drops here (the authority's
+                // `err:` label releases both strings).
+                None => return 0,
             }
-        }
-        if ok {
-            // SAFETY: the constructor takes ownership of `newname`.
-            let info = unsafe { super::store_lib::OSSL_STORE_INFO_new_NAME(newname) };
-            // SAFETY: `v` is a live out-slot per the contract.
-            unsafe { *v = info };
-            ok = !info.is_null();
-        }
-        if !ok {
-            // SAFETY: both are NULL or the allocations this frame owns.
-            unsafe {
-                CRYPTO_free(newname.cast::<c_void>(), ptr::null(), 0);
-                CRYPTO_free(newdesc.cast::<c_void>(), ptr::null(), 0);
-            }
+        };
+        // SAFETY: `newname` is this frame's own block; the constructor takes ownership only when
+        // it answers non-NULL.
+        let info = unsafe { super::store_lib::OSSL_STORE_INFO_new_NAME(newname.as_ptr()) };
+        // SAFETY: `v` is a live out-slot per the contract.
+        unsafe { *v = info };
+        if info.is_null() {
+            // The constructor left ownership with this frame; both handles drop here (the
+            // authority's `err:` label).
             return 0;
         }
-        // SAFETY: `*v` is the NAME object just built; `newdesc` transfers to it (NULL allowed).
-        unsafe { super::store_lib::OSSL_STORE_INFO_set0_NAME_description(*v, newdesc) };
+        // The object took the name block; disable the handle's `Drop`.
+        let _ = newname.into_raw();
+        // SAFETY: `info` is the NAME object just built; the description block transfers to it on
+        // success (NULL allowed when no description was strdup'd).
+        unsafe {
+            super::store_lib::OSSL_STORE_INFO_set0_NAME_description(
+                info,
+                newdesc.map_or(ptr::null_mut(), |d| d.into_raw()),
+            )
+        };
     }
     1
 }
@@ -625,8 +639,10 @@ unsafe fn try_key_value_legacy(
             unsafe { *store_info_new = Some(super::store_lib::OSSL_STORE_INFO_new_PKEY) };
         }
 
-        // SAFETY: `new_der` is NULL or the buffer `PKCS12_pbe_crypt` allocated.
-        unsafe { CRYPTO_free(new_der.cast::<c_void>(), ptr::null(), 0) };
+        // `new_der` is the buffer `PKCS12_pbe_crypt` allocated; the handle's `Drop` is the
+        // authority's own `OPENSSL_free(new_der)` at `(NULL, 0)`.
+        // SAFETY: `new_der` is NULL or this frame's own buffer.
+        drop(unsafe { OwnedBlock::<c_uchar>::from_raw(new_der, ptr::null(), 0) });
     }
 
     pk
