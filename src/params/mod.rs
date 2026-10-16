@@ -69,7 +69,7 @@ use crate::bn::bignum::BigNum;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::CRYPTO_zalloc;
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::time::TimeT;
 
 pub mod build;
@@ -80,6 +80,114 @@ pub mod from_text;
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/params.c";
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 pub(crate) const LINE: c_int = 0;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the octet-string output buffers
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `OSSL_PARAM` octet-string buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc`/`CRYPTO_zalloc` at the authority's exact size/`file`/`line`
+/// — a Rust `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook — and only its *ownership* is this type: [`Self::new`],
+/// [`Self::zalloc`] and [`Self::take`] acquire it, `Drop` is its single release, and
+/// [`Self::into_raw`] hands it to a caller's `*out` (or `*val`) that takes it over. The release is
+/// the authority's own site: a plain `CRYPTO_free` for a buffer the caller frees, and the
+/// cleansing `CRYPTO_clear_free(ptr, num)` for KDF material.
+struct OwnedBuf {
+    ptr: *mut u8,
+    release: BufRelease,
+}
+
+/// How the authority releases an owned buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)`.
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)`, which zeroes `num`
+    /// bytes first.
+    Cleansed {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<u8>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn zalloc(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_zalloc(len, file, line).cast::<u8>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// Adopt a block a caller owns (`*out`) so `Drop` is its single release, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block of `num` bytes from this crate's allocator that the caller
+    /// owns and no other owner will release; `file`/`line` are that block's own release site.
+    unsafe fn take(ptr: *mut u8, num: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::Cleansed { num, file, line },
+        })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+
+    /// Re-point the release at the authority's own site for this block, on the path that reaches
+    /// it.
+    fn set_release(&mut self, release: BufRelease) {
+        self.release = release;
+    }
+
+    /// Give up ownership of the block to the caller's `*out`/`*val`.
+    fn into_raw(self) -> *mut u8 {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Cleansed { num, file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
+                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+            }
+        }
+    }
+}
 
 /// `OSSL_PARAM_UNMODIFIED` — `return_size`'s "nothing has written this yet" value.
 pub(crate) const OSSL_PARAM_UNMODIFIED: usize = usize::MAX;
@@ -2284,11 +2392,10 @@ unsafe fn get_string_internal(
     if cur.is_null() {
         // `OPENSSL_malloc(alloc_sz)`, which is `CRYPTO_zalloc`'s sibling: the
         // authority uses malloc here, so the bytes are *not* zeroed.
-        let fresh = crate::runtime::mem::CRYPTO_malloc(alloc_sz, FILE.as_ptr(), LINE);
-        if fresh.is_null() {
+        let Some(fresh) = OwnedBuf::new(alloc_sz, FILE.as_ptr(), LINE) else {
             return false;
-        }
-        cur = fresh;
+        };
+        cur = fresh.into_raw().cast();
         // SAFETY: `val` and `max_len` are writable for one element each.
         unsafe {
             *val = cur;
@@ -2978,9 +3085,9 @@ pub(crate) unsafe fn ossl_param_get1_octet_string_from_param(
     // SAFETY: `*out` is NULL or a block of `*out_len` bytes from this allocator, and
     // `out`/`out_len` are writable.
     unsafe {
-        if !(*out).is_null() {
-            crate::runtime::mem::CRYPTO_clear_free((*out).cast(), *out_len, FILE.as_ptr(), LINE);
-        }
+        // The previous block is the caller's; `take` adopts it and its `Drop` is the authority's
+        // own cleansing `CRYPTO_clear_free((*out), *out_len)`.
+        drop(OwnedBuf::take(*out, *out_len, FILE.as_ptr(), LINE));
         *out = buf.cast();
         *out_len = len;
     }
@@ -3114,43 +3221,40 @@ pub(crate) unsafe fn ossl_param_get1_concat_octet_string(
         // stays `sz` (zero)**, because the authority's `fin:` label writes `sz` and the early arm
         // jumps to it without changing it; a length of one here made `X963KDF` hash a stray zero
         // byte (D346).
-        let z = CRYPTO_zalloc(1, FILE.as_ptr(), LINE);
-        if z.is_null() {
+        let Some(z) = OwnedBuf::zalloc(1, FILE.as_ptr(), LINE) else {
             return 0;
-        }
+        };
         // SAFETY: `out`/`out_len` are writable and `*out` is releaseable.
         unsafe {
-            if !(*out).is_null() {
-                crate::runtime::mem::CRYPTO_clear_free(
-                    (*out).cast(),
-                    *out_len,
-                    FILE.as_ptr(),
-                    LINE,
-                );
-            }
-            *out = z.cast();
+            // The previous block is the caller's; `take` adopts it and its `Drop` cleanses it.
+            drop(OwnedBuf::take(*out, *out_len, FILE.as_ptr(), LINE));
+            *out = z.into_raw();
             *out_len = sz;
         }
         return 1;
     }
-    let res = CRYPTO_zalloc(sz, FILE.as_ptr(), LINE);
-    if res.is_null() {
+    let Some(mut res) = OwnedBuf::zalloc(sz, FILE.as_ptr(), LINE) else {
         return 0;
-    }
+    };
+    // The concatenation is KDF material, so its release on the failure path and by the caller is
+    // the authority's own cleansing `CRYPTO_clear_free(res, sz)`.
+    res.set_release(BufRelease::Cleansed {
+        num: sz,
+        file: FILE.as_ptr(),
+        line: LINE,
+    });
     let mut cap = sz;
     // SAFETY: `res` is writable for `sz` bytes, which the counting pass has shown is
     // enough; `params` is readable for `n` pointers.
-    if !unsafe { setbuf_fromparams(n, params, res.cast(), &mut cap) } {
-        // SAFETY: `res` is a block of `sz` bytes from this allocator.
-        unsafe { crate::runtime::mem::CRYPTO_clear_free(res, sz, FILE.as_ptr(), LINE) };
+    if !unsafe { setbuf_fromparams(n, params, res.as_ptr(), &mut cap) } {
+        // `res` is the fill that failed; its `Drop` cleanses it.
         return 0;
     }
     // SAFETY: `out`/`out_len` are writable and `*out` is releaseable.
     unsafe {
-        if !(*out).is_null() {
-            crate::runtime::mem::CRYPTO_clear_free((*out).cast(), *out_len, FILE.as_ptr(), LINE);
-        }
-        *out = res.cast();
+        // The previous block is the caller's; `take` adopts it and its `Drop` cleanses it.
+        drop(OwnedBuf::take(*out, *out_len, FILE.as_ptr(), LINE));
+        *out = res.into_raw();
         *out_len = cap;
     }
     1
