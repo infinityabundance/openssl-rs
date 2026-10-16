@@ -830,8 +830,13 @@ pub struct Cert {
     /// The certificate callback's argument.
     #[allow(dead_code)] // as `cert_cb`
     pub cert_cb_arg: *mut c_void,
-    /// `char *psk_identity_hint` — the PSK identity hint (`SSL_[CTX_]use_psk_identity_hint`).
-    pub psk_identity_hint: *mut c_char,
+    /// `char *psk_identity_hint` — the PSK identity hint (`SSL_[CTX_]use_psk_identity_hint`), an
+    /// object-owned C-string **member buffer**. Its ownership invariant is stated once by
+    /// [`MemberCStrSlot`] and mediated by [`Cert::psk_identity_hint`]/
+    /// [`Cert::psk_identity_hint_slot`]; see `MEMBER-BUFFER-MODEL.md`. It stays `*mut c_char` at
+    /// this exact offset so the `#[repr(C)]` layout is the authority's, and it is **private**
+    /// because every read, write and release now goes through this module's handle/reader.
+    psk_identity_hint: *mut c_char,
     /// `EVP_PKEY *dh_tmp` — the explicit temporary DH key (`SSL_[CTX_]set0_tmp_dh_pkey`).
     #[allow(dead_code)] // stored for the tmp-DH setter; read by the DH key-exchange path
     pub dh_tmp: *mut c_void,
@@ -845,6 +850,29 @@ pub struct Cert {
     /// callbacks are never invoked in this slice (no handshake), so their arguments are kept
     /// verbatim rather than wrapped.
     pub custext: Vec<CustomExtMethod>,
+}
+
+impl Cert {
+    /// The object-owned PSK identity hint (NULL when unset) — the authoritative read of the
+    /// `psk_identity_hint` member buffer. Reads cannot free or alias, but funnelling them here keeps
+    /// the field's writers enumerable (see [`MemberCStrSlot`]).
+    pub(crate) fn psk_identity_hint(&self) -> *const c_char {
+        self.psk_identity_hint
+    }
+
+    /// Derive the [`MemberCStrSlot`] handle over this container's `psk_identity_hint`.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `Cert` whose `psk_identity_hint` currently obeys the member-buffer
+    /// invariant (NULL, or a single NUL-terminated `CRYPTO_strdup` block this object owns). Every
+    /// live `Cert` satisfies this because the block is zeroed at construction and the member is
+    /// only ever mutated through [`MemberCStrSlot`] or released by this module's `CtxDestroy`
+    /// body.
+    pub(crate) unsafe fn psk_identity_hint_slot(&mut self) -> MemberCStrSlot<'_> {
+        // SAFETY: `self` is live and its `psk_identity_hint` obeys the invariant per the contract.
+        unsafe { MemberCStrSlot::of(&mut self.psk_identity_hint) }
+    }
 }
 
 /// A context's or a connection's certificate container, freshly allocated and initialised empty.
@@ -950,7 +978,9 @@ unsafe impl CtxDestroy for Cert {
                 cert_pkey_clear(ptr::addr_of_mut!((*ptr).pkeys[i]));
             }
             ptr::drop_in_place(ptr::addr_of_mut!((*ptr).custext));
-            CRYPTO_free((*ptr).psk_identity_hint.cast(), FILE, 0);
+            // SAFETY: `ptr` is live and its `psk_identity_hint` obeys the member-buffer invariant,
+            // so this handle releases the object's own single block at the authority's own site.
+            (*ptr).psk_identity_hint_slot().clear(FILE, 0);
             // SAFETY: `dh_tmp` is NULL or the key the tmp-DH setter installed.
             EVP_PKEY_free((*ptr).dh_tmp.cast());
         }
@@ -1072,11 +1102,15 @@ unsafe fn ssl_cert_dup(cert: *const Cert) -> *mut Cert {
         if custom_exts_copy(&mut (*ret).custext, &(*cert).custext) == 0 {
             return ptr::null_mut();
         }
-        if !(*cert).psk_identity_hint.is_null() {
-            (*ret).psk_identity_hint = CRYPTO_strdup((*cert).psk_identity_hint, FILE, 225);
-            if (*ret).psk_identity_hint.is_null() {
+        let hint = (*cert).psk_identity_hint();
+        if !hint.is_null() {
+            let dup = CRYPTO_strdup(hint, FILE, 225);
+            if dup.is_null() {
                 return ptr::null_mut();
             }
+            // SAFETY: `ret` is a fresh container whose `psk_identity_hint` member is empty; `dup`
+            // is this call's fresh exclusive block, whose ownership it takes.
+            (*ret).psk_identity_hint_slot().store(dup);
         }
     }
     ret_owner.into_raw()
@@ -2168,10 +2202,17 @@ pub struct SslSession {
     pub sid_ctx_length: usize,
     /// `unsigned char sid_ctx[SSL_MAX_SID_CTX_LENGTH]`.
     pub sid_ctx: [u8; SSL_MAX_SID_CTX_LENGTH],
-    /// `char *psk_identity_hint`.
-    pub psk_identity_hint: *mut c_char,
-    /// `char *psk_identity`.
-    pub psk_identity: *mut c_char,
+    /// `char *psk_identity_hint` — an object-owned C-string **member buffer**. Its ownership
+    /// invariant is stated once by [`MemberCStrSlot`] and mediated by
+    /// [`SslSession::psk_identity_hint`]/[`SslSession::psk_identity_hint_slot`]; see
+    /// `MEMBER-BUFFER-MODEL.md`. It stays `*mut c_char` at this exact offset so the `#[repr(C)]`
+    /// layout is the authority's, and it is **private** because every read, write and release now
+    /// goes through this module's handle/reader.
+    psk_identity_hint: *mut c_char,
+    /// `char *psk_identity` — an object-owned C-string **member buffer**, as `psk_identity_hint`
+    /// (read through [`SslSession::psk_identity`], mutated through
+    /// [`SslSession::psk_identity_slot`]); **private** for the same reason.
+    psk_identity: *mut c_char,
     /// `int not_resumable`.
     pub not_resumable: c_int,
     /// `EVP_PKEY *peer_rpk`.
@@ -2224,8 +2265,10 @@ pub struct SslSession {
     ext_alpn_selected_len: usize,
     /// `uint8_t ext.max_fragment_len_mode` — `SSL_SESSION_get_max_fragment_length` reads it.
     pub max_fragment_len_mode: u8,
-    /// `char *srp_username`.
-    pub srp_username: *mut c_char,
+    /// `char *srp_username` — an object-owned C-string **member buffer**, as `psk_identity_hint`
+    /// (read through [`SslSession::srp_username`], mutated through
+    /// [`SslSession::srp_username_slot`]); **private** for the same reason.
+    srp_username: *mut c_char,
     /// `unsigned char *ticket_appdata` — an object-owned **blob** member buffer, paired with
     /// `ticket_appdata_len` (see [`MemberBufSlot`] and `MEMBER-BUFFER-MODEL.md`).
     ticket_appdata: *mut u8,
@@ -2263,6 +2306,58 @@ impl SslSession {
     pub(crate) unsafe fn ext_hostname_slot(&mut self) -> MemberCStrSlot<'_> {
         // SAFETY: `self` is live and its `ext_hostname` obeys the invariant per the contract.
         unsafe { MemberCStrSlot::of(&mut self.ext_hostname) }
+    }
+
+    /// The object-owned PSK identity hint (NULL when unset) — the authoritative read of the
+    /// `psk_identity_hint` member buffer (see [`SslSession::ext_hostname`]).
+    pub(crate) fn psk_identity_hint(&self) -> *const c_char {
+        self.psk_identity_hint
+    }
+
+    /// Derive the [`MemberCStrSlot`] handle over this session's `psk_identity_hint`.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live session whose `psk_identity_hint` currently obeys the member-buffer
+    /// invariant (NULL, or a single NUL-terminated `CRYPTO_strdup`/`CRYPTO_strndup` block this
+    /// object owns). Every live `SslSession` satisfies this because the block is zeroed at
+    /// construction and the member is only ever mutated through [`MemberCStrSlot`] or released by
+    /// `ssl_sess.rs`'s `CtxDestroy` body.
+    pub(crate) unsafe fn psk_identity_hint_slot(&mut self) -> MemberCStrSlot<'_> {
+        // SAFETY: `self` is live and its `psk_identity_hint` obeys the invariant per the contract.
+        unsafe { MemberCStrSlot::of(&mut self.psk_identity_hint) }
+    }
+
+    /// The object-owned PSK identity (NULL when unset) — the authoritative read of the
+    /// `psk_identity` member buffer (see [`SslSession::ext_hostname`]).
+    pub(crate) fn psk_identity(&self) -> *const c_char {
+        self.psk_identity
+    }
+
+    /// Derive the [`MemberCStrSlot`] handle over this session's `psk_identity`.
+    ///
+    /// # Safety
+    ///
+    /// As [`SslSession::psk_identity_hint_slot`], for `psk_identity`.
+    pub(crate) unsafe fn psk_identity_slot(&mut self) -> MemberCStrSlot<'_> {
+        // SAFETY: `self` is live and its `psk_identity` obeys the invariant.
+        unsafe { MemberCStrSlot::of(&mut self.psk_identity) }
+    }
+
+    /// The object-owned SRP username (NULL when unset) — the authoritative read of the
+    /// `srp_username` member buffer (see [`SslSession::ext_hostname`]).
+    pub(crate) fn srp_username(&self) -> *const c_char {
+        self.srp_username
+    }
+
+    /// Derive the [`MemberCStrSlot`] handle over this session's `srp_username`.
+    ///
+    /// # Safety
+    ///
+    /// As [`SslSession::psk_identity_hint_slot`], for `srp_username`.
+    pub(crate) unsafe fn srp_username_slot(&mut self) -> MemberCStrSlot<'_> {
+        // SAFETY: `self` is live and its `srp_username` obeys the invariant.
+        unsafe { MemberCStrSlot::of(&mut self.srp_username) }
     }
 
     /// The object-owned session ticket blob `(ptr, len)` — `(NULL, 0)` when unset — the
@@ -9701,17 +9796,21 @@ pub unsafe extern "C" fn SSL_CTX_use_psk_identity_hint(
                 return 0;
             }
         }
-        // SAFETY: `ctx` and its `cert` are live.
+        // SAFETY: `ctx` and its `cert` are live; `cert`'s `psk_identity_hint` obeys the
+        // member-buffer invariant.
         unsafe {
             let cert = (*ctx).cert;
-            CRYPTO_free((*cert).psk_identity_hint.cast(), FILE, 5795);
-            if identity_hint.is_null() {
-                (*cert).psk_identity_hint = ptr::null_mut();
-            } else {
-                (*cert).psk_identity_hint = CRYPTO_strdup(identity_hint, FILE, 5797);
-                if (*cert).psk_identity_hint.is_null() {
+            let mut slot = (*cert).psk_identity_hint_slot();
+            // Release the incumbent at the authority's own site, then allocate-and-store the
+            // replacement. A NULL `identity_hint` leaves the member cleared and a refused
+            // `CRYPTO_strdup` leaves it NULL (the authority's own failure path).
+            slot.clear(FILE, 5795);
+            if !identity_hint.is_null() {
+                let dup = CRYPTO_strdup(identity_hint, FILE, 5797);
+                if dup.is_null() {
                     return 0;
                 }
+                slot.store(dup);
             }
         }
         1
@@ -9736,17 +9835,19 @@ pub unsafe extern "C" fn SSL_use_psk_identity_hint(
                 return 0;
             }
         }
-        // SAFETY: `s` and its `cert` are live.
+        // SAFETY: `s` and its `cert` are live; `cert`'s `psk_identity_hint` obeys the
+        // member-buffer invariant.
         unsafe {
             let cert = (*s).cert;
-            CRYPTO_free((*cert).psk_identity_hint.cast(), FILE, 5816);
-            if identity_hint.is_null() {
-                (*cert).psk_identity_hint = ptr::null_mut();
-            } else {
-                (*cert).psk_identity_hint = CRYPTO_strdup(identity_hint, FILE, 5818);
-                if (*cert).psk_identity_hint.is_null() {
+            let mut slot = (*cert).psk_identity_hint_slot();
+            // As `SSL_CTX_use_psk_identity_hint`: release the incumbent, then allocate-and-store.
+            slot.clear(FILE, 5816);
+            if !identity_hint.is_null() {
+                let dup = CRYPTO_strdup(identity_hint, FILE, 5818);
+                if dup.is_null() {
                     return 0;
                 }
+                slot.store(dup);
             }
         }
         1
@@ -9767,7 +9868,7 @@ pub unsafe extern "C" fn SSL_get_psk_identity_hint(s: *const Ssl) -> *const c_ch
             ptr::null()
         } else {
             // SAFETY: `session` is live per the check above.
-            unsafe { (*session).psk_identity_hint }
+            unsafe { (*session).psk_identity_hint() }
         }
     })
 }
@@ -9786,7 +9887,7 @@ pub unsafe extern "C" fn SSL_get_psk_identity(s: *const Ssl) -> *const c_char {
             ptr::null()
         } else {
             // SAFETY: `session` is live per the check above.
-            unsafe { (*session).psk_identity }
+            unsafe { (*session).psk_identity() }
         }
     })
 }
