@@ -128,6 +128,73 @@ const LINE_MALLOC_Q_MAC: c_int = 299;
 const LINE_FREE_Q_MAC: c_int = 301;
 
 // ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size -- a Rust `Box`/`Vec` would hide
+/// both the allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook --
+/// and only its *ownership* is this type: [`Self::new`] allocates it, `Drop` is its single release,
+/// [`Self::set_release_line`] re-points that release at the authority's other site on the path that
+/// reaches it (`EVP_MAC_CTX_dup`'s failed reference at `:65`, `EVP_Q_mac`'s failed final at `:301`),
+/// and [`Self::into_raw`] hands it to a consumer that takes it over (the caller's `EVP_MAC_CTX`, or
+/// `EVP_Q_mac`'s returned buffer). A NULL pointer is a valid, empty buffer whose release is the
+/// authority's own no-op `free(NULL)`.
+///
+/// The method objects -- `evp_mac_new`'s `EVP_MAC` and `EVP_MAC_CTX_new`'s context -- are released
+/// by a *structured* body (`EVP_MAC_free`, `EVP_MAC_CTX_free`: a provider unref, a method unref and
+/// the block release) rather than a single `CRYPTO_free`, so they keep their own release functions
+/// and are not owned here.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Re-point the release at the authority's other site for this block, on the path that reaches
+    /// it.
+    fn set_release_line(&mut self, line: c_int) {
+        self.line = line;
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // The dispatch ids and the thirteen function-pointer types.
 //
 // `OSSL_FUNC_MAC_*` from `include/openssl/core_dispatch.h`, and each type is what
@@ -922,11 +989,15 @@ pub unsafe extern "C" fn EVP_MAC_CTX_dup(src: *const EvpMacCtx) -> *mut EvpMacCt
     if unsafe { (*src).algctx }.is_null() {
         return ptr::null_mut();
     }
-    let dst = CRYPTO_malloc(core::mem::size_of::<EvpMacCtx>(), FILE, LINE_MALLOC_CTX_DUP)
-        .cast::<EvpMacCtx>();
-    if dst.is_null() {
+    // The duplicate is this frame's block, allocated through the crate's allocator seam at the
+    // authority's own size/`file`/`line`; `Drop` releases it on the failure tail and `into_raw`
+    // hands it to the caller on success.
+    let Some(mut dst_buf) =
+        OwnedBuf::new(core::mem::size_of::<EvpMacCtx>(), FILE, LINE_MALLOC_CTX_DUP)
+    else {
         return ptr::null_mut();
-    }
+    };
+    let dst = dst_buf.as_ptr().cast::<EvpMacCtx>();
     // SAFETY: `dst` is a fresh block of exactly the source's size and `src` is a live object.
     unsafe { ptr::copy_nonoverlapping(src, dst, 1) };
 
@@ -934,8 +1005,9 @@ pub unsafe extern "C" fn EVP_MAC_CTX_dup(src: *const EvpMacCtx) -> *mut EvpMacCt
     if unsafe { EVP_MAC_up_ref((*dst).meth) } == 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::MAC_LIB_63) };
-        // SAFETY: `dst` is this call's own block and nothing else holds it.
-        unsafe { CRYPTO_free(dst.cast::<c_void>(), FILE, LINE_FREE_CTX_ON_DUP) };
+        // The authority releases the duplicate at its own site, `:65`.
+        dst_buf.set_release_line(LINE_FREE_CTX_ON_DUP);
+        drop(dst_buf);
         return ptr::null_mut();
     }
 
@@ -951,12 +1023,13 @@ pub unsafe extern "C" fn EVP_MAC_CTX_dup(src: *const EvpMacCtx) -> *mut EvpMacCt
     unsafe { (*dst).algctx = algctx };
     if algctx.is_null() {
         // SAFETY: `dst` is this call's own context, and the reference taken above is given back
-        // here. `freectx` is called with the NULL the failed duplicate left, which is the state
-        // the authority releases from too.
-        unsafe { EVP_MAC_CTX_free(dst) };
+        // here. The context's own releaser takes the block over -- `into_raw` gives it up without a
+        // second release. `freectx` is called with the NULL the failed duplicate left, which is the
+        // state the authority releases from too.
+        unsafe { EVP_MAC_CTX_free(dst_buf.into_raw().cast::<EvpMacCtx>()) };
         return ptr::null_mut();
     }
-    dst
+    dst_buf.into_raw().cast::<EvpMacCtx>()
 }
 
 /// `EVP_MAC *EVP_MAC_CTX_get0_mac(EVP_MAC_CTX *ctx)`.
@@ -1381,12 +1454,19 @@ pub unsafe extern "C" fn EVP_Q_mac(
     if ran {
         let mut out = out;
         if out.is_null() {
-            out = CRYPTO_malloc(len, FILE, LINE_MALLOC_Q_MAC).cast::<c_uchar>();
-            // SAFETY: `out` is the block just allocated, or NULL, and `ctx` is live.
-            if !out.is_null() && unsafe { EVP_MAC_final(ctx, out, ptr::null_mut(), len) } == 0 {
-                // SAFETY: `out` is this call's own block and the final refused to fill it.
-                unsafe { CRYPTO_free(out.cast::<c_void>(), FILE, LINE_FREE_Q_MAC) };
-                out = ptr::null_mut();
+            // The output buffer is this frame's block, allocated through the crate's allocator seam
+            // at the authority's own size/`file`/`line`; `Drop` releases it if the final refuses
+            // and `into_raw` hands it to the caller on success.
+            if let Some(mut buf) = OwnedBuf::new(len, FILE, LINE_MALLOC_Q_MAC) {
+                // SAFETY: `buf` is the block just allocated, or NULL, and `ctx` is live.
+                if unsafe { EVP_MAC_final(ctx, buf.as_ptr(), ptr::null_mut(), len) } == 0 {
+                    // The authority releases the half-filled block at its own site, `:301`.
+                    buf.set_release_line(LINE_FREE_Q_MAC);
+                    drop(buf);
+                    out = ptr::null_mut();
+                } else {
+                    out = buf.into_raw();
+                }
             }
         }
         res = out;
