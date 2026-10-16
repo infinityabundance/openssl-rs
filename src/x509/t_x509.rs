@@ -213,6 +213,99 @@ const LINE_FREE_DER_ERR: c_int = 264;
 /// `X509_STORE_CTX_print_verify_cb`'s `OPENSSL_free(str)` at `crypto/x509/t_x509.c:485`.
 const LINE_FREE_IP_ASC: c_int = 485;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the unit's two scratch blocks
+// ---------------------------------------------------------------------------------------------
+
+/// An owned DER scratch buffer.
+///
+/// `X509_ocspid_print` (`:224`) allocates the buffer, releases it at the success path's own site
+/// (`:238`) and, on every error arm, from the `err:` tail (`:264`). The block stays a
+/// `CRYPTO_malloc` at the authority's own size/`file`/`line`, so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes it -- a Rust `Box`/`Vec` would hide it. Only the
+/// *ownership* is this type: [`Self::malloc`] allocates it, [`Self::as_ptr`] exposes it for the two
+/// DER walks, [`Self::free_success`] performs the success-path release and `Drop` the `err:` one.
+struct OwnedDerBuf {
+    ptr: *mut c_void,
+    line: c_int,
+}
+
+impl OwnedDerBuf {
+    /// `CRYPTO_malloc(len, FILE, LINE_MALLOC_DER)`, or `None` when it answers NULL.
+    fn malloc(len: usize) -> Option<OwnedDerBuf> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
+        // bytes.
+        let raw = CRYPTO_malloc(len, FILE.as_ptr(), LINE_MALLOC_DER);
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedDerBuf {
+                ptr: raw,
+                line: LINE_FREE_DER_ERR,
+            })
+        }
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut c_void {
+        self.ptr
+    }
+
+    /// Release the block now, at the authority's success-path site (`:238`), rather than from the
+    /// `err:` tail (`:264`) `Drop` uses.
+    fn free_success(mut self) {
+        self.line = LINE_FREE_DER;
+    }
+}
+
+impl Drop for OwnedDerBuf {
+    /// The block's single release, through the same seam at `self.line`.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `malloc` produced and has not handed out; its single
+        // release is the authority's own plain `CRYPTO_free` at the path's own site.
+        unsafe { CRYPTO_free(self.ptr, FILE.as_ptr(), self.line) };
+    }
+}
+
+/// An owned string block a helper allocated.
+///
+/// `X509_STORE_CTX_print_verify_cb` takes a fresh block from `X509_VERIFY_PARAM_get1_ip_asc` and
+/// releases it at `:485`. Only the *ownership* is this type: [`Self::adopt`] takes the helper's
+/// block and `Drop` is its single release at the authority's own site.
+struct OwnedStr {
+    ptr: *mut c_char,
+    line: c_int,
+}
+
+impl OwnedStr {
+    /// Adopt a helper-produced string, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this unit's helper allocated that no other owner will release;
+    /// `Drop` performs its single `CRYPTO_free`.
+    unsafe fn adopt(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedStr { ptr, line })
+        }
+    }
+
+    /// The string's address, for the `BIO_printf` that reads it.
+    fn as_ptr(&self) -> *const c_char {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The string's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `adopt` took and has not handed out; its single release
+        // is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), self.line) };
+    }
+}
+
 /// One `t_x509.c` raise coordinate, declared locally because the unit is not in
 /// `gen_err_raise_sites.py`'s covered set (see the module doc).
 const fn t_x509_site(line: c_int, func: &'static CStr, reason: c_int) -> ErrSite {
@@ -555,7 +648,7 @@ pub unsafe extern "C" fn X509_ocspid_print(bp: *mut Bio, x: *mut X509) -> c_int 
         if x.is_null() || bp.is_null() {
             return 0;
         }
-        let mut der: *mut c_void = ptr::null_mut();
+        let mut der: Option<OwnedDerBuf> = None;
         let mut md: *mut EvpMd = ptr::null_mut();
         let mut sha1md = [0 as c_uchar; SHA_DIGEST_LENGTH as usize];
 
@@ -567,11 +660,9 @@ pub unsafe extern "C" fn X509_ocspid_print(bp: *mut Bio, x: *mut X509) -> c_int 
         if derlen <= 0 {
             return ocspid_err(der, md);
         }
-        der = CRYPTO_malloc(derlen as usize, FILE.as_ptr(), LINE_MALLOC_DER);
-        if der.is_null() {
-            return ocspid_err(der, md);
-        }
-        let mut dertmp = der.cast::<c_uchar>();
+        der = OwnedDerBuf::malloc(derlen as usize);
+        let dptr = der.as_ref().map_or(ptr::null_mut(), |buf| buf.as_ptr());
+        let mut dertmp = dptr.cast::<c_uchar>();
         if i2d_X509_NAME(subj, &raw mut dertmp) < 0 {
             return ocspid_err(der, md);
         }
@@ -580,7 +671,7 @@ pub unsafe extern "C" fn X509_ocspid_print(bp: *mut Bio, x: *mut X509) -> c_int 
             return ocspid_err(der, md);
         }
         if EVP_Digest(
-            der,
+            dptr,
             derlen as usize,
             sha1md.as_mut_ptr(),
             ptr::null_mut(),
@@ -597,8 +688,9 @@ pub unsafe extern "C" fn X509_ocspid_print(bp: *mut Bio, x: *mut X509) -> c_int 
             }
             i += 1;
         }
-        CRYPTO_free(der, FILE.as_ptr(), LINE_FREE_DER);
-        der = ptr::null_mut();
+        if let Some(buf) = der.take() {
+            buf.free_success();
+        }
 
         if BIO_printf(bp, c"\n        Public key OCSP hash: ".as_ptr()) <= 0 {
             return ocspid_err(der, md);
@@ -633,18 +725,17 @@ pub unsafe extern "C" fn X509_ocspid_print(bp: *mut Bio, x: *mut X509) -> c_int 
 
 /// The `err:` tail of [`X509_ocspid_print`] (`crypto/x509/t_x509.c:263-266`): release the DER
 /// buffer if it is still held, release the fetched method if it is, answer 0. The authority's
-/// `OPENSSL_free(NULL)` is a no-op, matched here by the NULL checks.
+/// `OPENSSL_free(NULL)` is a no-op, matched here by `der`'s absent `None`.
 ///
 /// # Safety
 ///
-/// `der` is NULL or a buffer from the enclosing call's `CRYPTO_malloc`; `md` is NULL or its
-/// `EVP_MD_fetch`.
-unsafe fn ocspid_err(der: *mut c_void, md: *mut EvpMd) -> c_int {
-    // SAFETY: both pointers are NULL or owned by the caller per this function's contract.
+/// `der` is `None` or the enclosing call's buffer; `md` is NULL or its `EVP_MD_fetch`.
+unsafe fn ocspid_err(der: Option<OwnedDerBuf>, md: *mut EvpMd) -> c_int {
+    // The authority's `err:` tail releases the DER buffer first, then the method; `der`'s `Drop` is
+    // that first release, at the `err:` label's own site (`:264`).
+    drop(der);
+    // SAFETY: `md` is NULL or the enclosing call's `EVP_MD_fetch`.
     unsafe {
-        if !der.is_null() {
-            CRYPTO_free(der, FILE.as_ptr(), LINE_FREE_DER_ERR);
-        }
         if !md.is_null() {
             EVP_MD_free(md);
         }
@@ -1199,12 +1290,14 @@ pub unsafe extern "C" fn X509_STORE_CTX_print_verify_cb(
                         }
                     }
                     X509_V_ERR_IP_ADDRESS_MISMATCH => {
-                        let ip_asc = X509_VERIFY_PARAM_get1_ip_asc(vpm);
-                        if !ip_asc.is_null() {
-                            BIO_printf(bio, c"Expected IP address = %s\n".as_ptr(), ip_asc);
+                        // SAFETY: `ip_asc` is NULL or this call's own
+                        // `X509_VERIFY_PARAM_get1_ip_asc` block.
+                        let ip_asc =
+                            OwnedStr::adopt(X509_VERIFY_PARAM_get1_ip_asc(vpm), LINE_FREE_IP_ASC);
+                        if let Some(s) = ip_asc.as_ref() {
+                            BIO_printf(bio, c"Expected IP address = %s\n".as_ptr(), s.as_ptr());
                         }
-                        // SAFETY: `ip_asc` is NULL or this call's own `ossl_ipaddr_to_asc`.
-                        CRYPTO_free(ip_asc.cast(), FILE.as_ptr(), LINE_FREE_IP_ASC);
+                        // `ip_asc` is released by its `Drop` at the authority's own site.
                     }
                     _ => {}
                 }

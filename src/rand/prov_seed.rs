@@ -52,6 +52,58 @@ const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/rand/prov_seed.c".a
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of `ossl_rand_get_user_nonce`'s scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// `ossl_rand_get_user_nonce` (`:98-110`) allocates a `min_len`-byte buffer, hands it to the
+/// caller's `*pout` on success and releases it with `OPENSSL_free` on the `EVP_RAND_generate`
+/// failure arm. The block stays a `CRYPTO_malloc` at this unit's own size/`file`/`line` -- a Rust
+/// `Box`/`Vec` would hide the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::new`]
+/// allocates it, `Drop` is its single `OPENSSL_free`, and [`Self::into_raw`] hands it to the caller
+/// on the success path.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, FILE, LINE)`, or `None` when the allocator answers NULL.
+    fn new(len: usize) -> Option<OwnedBuf> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
+        // bytes.
+        let raw = CRYPTO_malloc(len, FILE, LINE).cast::<c_uchar>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedBuf { ptr: raw })
+        }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the caller that takes it over (`*pout`).
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own plain `CRYPTO_free`, whose NULL arm is a no-op, is the whole release.
+        unsafe { CRYPTO_free(self.ptr.cast(), FILE, LINE) };
+    }
+}
+
 /// `size_t ossl_rand_get_entropy(OSSL_LIB_CTX *ctx, unsigned char **pout, int entropy, size_t
 /// min_len, size_t max_len)` — `prov_seed.c:18-41`. Polls the platform pool.
 ///
@@ -213,21 +265,29 @@ pub(crate) unsafe fn ossl_rand_get_user_nonce(
         return unsafe { ossl_rand_get_nonce(ctx, pout, min_len, max_len, salt, salt_len) };
     }
 
-    // `CRYPTO_malloc` is a safe function in this crate and dereferences nothing the caller owns.
-    let buf = CRYPTO_malloc(min_len, FILE, LINE).cast::<c_uchar>();
-    if buf.is_null() {
-        return 0;
-    }
+    let buf = match OwnedBuf::new(min_len) {
+        Some(buf) => buf,
+        None => return 0,
+    };
 
     // SAFETY: `rng` is live and `buf` is this frame's allocation of `min_len` bytes.
-    if unsafe { EVP_RAND_generate(rng, buf, min_len, 0, 0, salt.cast::<c_uchar>(), salt_len) } == 0
+    if unsafe {
+        EVP_RAND_generate(
+            rng,
+            buf.as_ptr(),
+            min_len,
+            0,
+            0,
+            salt.cast::<c_uchar>(),
+            salt_len,
+        )
+    } == 0
     {
-        // SAFETY: `buf` is this frame's own allocation.
-        unsafe { CRYPTO_free(buf.cast(), FILE, LINE) };
+        // The authority's success-only `OPENSSL_free` is `buf`'s `Drop`.
         return 0;
     }
     // SAFETY: `pout` is writable per the contract; ownership of `buf` moves to the caller.
-    unsafe { *pout = buf };
+    unsafe { *pout = buf.into_raw() };
     min_len
 }
 
