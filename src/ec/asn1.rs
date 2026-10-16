@@ -121,6 +121,123 @@ const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c".as_pt
 /// The line the ECDSA encoder's one allocation is attributed to — `i2d_ECDSA_SIG`'s body.
 const LINE: c_int = 1231;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the scratch blocks
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays the allocation the authority itself makes — a `CRYPTO_malloc`, or a helper's
+/// (`EC_POINT_point2buf`, `EC_KEY_priv2buf`) through that same seam — and only its *ownership* is
+/// this type: [`Self::new`] allocates it, [`Self::adopt`]/[`Self::adopt_cleansed`] take in a
+/// helper's block, `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that
+/// takes it over (`ASN1_STRING_set0`). A NULL pointer is a valid, empty buffer whose release is the
+/// authority's own no-op `free(NULL)`. The hand-outs the authority makes straight to the C caller
+/// (the `i2d_*` out-pointers) are *not* wrapped: their release belongs to the caller, so there is
+/// no interior free for an owner to consolidate.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+/// How the authority releases a scratch buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)`.
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)`, which zeroes `num`
+    /// bytes first — kept for the private-key block, which is secret.
+    Cleansed {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, alloc_file, alloc_line)`, whose `Drop` releases it at
+    /// `release_file`/`release_line`.
+    fn new(
+        len: usize,
+        alloc_file: *const c_char,
+        alloc_line: c_int,
+        release_file: *const c_char,
+        release_line: c_int,
+    ) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, alloc_file, alloc_line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Plain {
+                file: release_file,
+                line: release_line,
+            },
+        })
+    }
+
+    /// Adopt a plain block this crate allocated inside a helper, for release by `Drop` at the
+    /// authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file` is
+    /// NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf {
+            ptr,
+            release: BufRelease::Plain { file, line },
+        }
+    }
+
+    /// Adopt a block this crate allocated inside a helper whose release is the cleansing
+    /// `CRYPTO_clear_free(ptr, num, file, line)`, for release by `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns and that is readable
+    /// for `num` bytes; `file` is NULL or a NUL-terminated C string.
+    unsafe fn adopt_cleansed(
+        ptr: *mut c_uchar,
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> OwnedBuf {
+        OwnedBuf {
+            ptr,
+            release: BufRelease::Cleansed { num, file, line },
+        }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Cleansed { num, file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
+                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+            }
+        }
+    }
+}
+
 /// `PACKET` — `include/internal/packet.h`'s read cursor: a pointer and a remaining length.
 ///
 /// Only the four operations the decoder uses are modelled: a one-byte read, a sub-packet read
@@ -1437,8 +1554,8 @@ unsafe fn ec_asn1_group2curve(group: *const EcGroup, curve: *mut X9_62Curve) -> 
     let mut ok: c_int = 0;
     let tmp_1: *mut BigNum;
     let tmp_2: *mut BigNum;
-    let mut a_buf: *mut c_uchar = ptr::null_mut();
-    let mut b_buf: *mut c_uchar = ptr::null_mut();
+    let mut a_buf: Option<OwnedBuf> = None;
+    let mut b_buf: Option<OwnedBuf> = None;
     let len: c_int;
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
     unsafe {
@@ -1456,18 +1573,19 @@ unsafe fn ec_asn1_group2curve(group: *const EcGroup, curve: *mut X9_62Curve) -> 
 
             // Per SEC 1 the coefficients are padded up to the field's octet width.
             len = (EC_GROUP_get_degree(group) + 7) / 8;
-            a_buf = CRYPTO_malloc(len as usize, FILE, 328).cast::<c_uchar>();
-            b_buf = CRYPTO_malloc(len as usize, FILE, 329).cast::<c_uchar>();
-            if a_buf.is_null() || b_buf.is_null() {
+            a_buf = OwnedBuf::new(len as usize, FILE, 328, FILE, 365);
+            b_buf = OwnedBuf::new(len as usize, FILE, 329, FILE, 366);
+            let (Some(a), Some(b)) = (a_buf.as_ref(), b_buf.as_ref()) else {
                 // The authority raises nothing on this arm; the outer caller does.
                 break 'err;
-            }
-            if BN_bn2binpad(tmp_1, a_buf, len) < 0 || BN_bn2binpad(tmp_2, b_buf, len) < 0 {
+            };
+            if BN_bn2binpad(tmp_1, a.as_ptr(), len) < 0 || BN_bn2binpad(tmp_2, b.as_ptr(), len) < 0
+            {
                 raise_site(&err_sites::EC_ASN1_333);
                 break 'err;
             }
-            if ASN1_OCTET_STRING_set((*curve).a, a_buf, len) == 0
-                || ASN1_OCTET_STRING_set((*curve).b, b_buf, len) == 0
+            if ASN1_OCTET_STRING_set((*curve).a, a.as_ptr(), len) == 0
+                || ASN1_OCTET_STRING_set((*curve).b, b.as_ptr(), len) == 0
             {
                 raise_site(&err_sites::EC_ASN1_340);
                 break 'err;
@@ -1494,8 +1612,9 @@ unsafe fn ec_asn1_group2curve(group: *const EcGroup, curve: *mut X9_62Curve) -> 
             }
             ok = 1;
         }
-        CRYPTO_free(a_buf.cast(), FILE, 365);
-        CRYPTO_free(b_buf.cast(), FILE, 366);
+        // The two scratch buffers are released by their `Drop` at the authority's own sites.
+        drop(a_buf);
+        drop(b_buf);
         BN_free(tmp_1);
         BN_free(tmp_2);
     }
@@ -1559,15 +1678,17 @@ pub unsafe extern "C" fn EC_GROUP_get_ecparameters(
                 raise_site(&err_sites::EC_ASN1_416);
                 break 'err;
             }
+            // SAFETY: `EC_POINT_point2buf` allocated `buffer` through the seam and no other owner
+            // holds it; its release is the authority's own `(FILE, 420)`.
+            let buffer = OwnedBuf::adopt(buffer, FILE, 420);
             if (*ret).base.is_null() {
                 (*ret).base = ASN1_OCTET_STRING_new();
                 if (*ret).base.is_null() {
-                    CRYPTO_free(buffer.cast(), FILE, 420);
                     raise_site(&err_sites::EC_ASN1_421);
                     break 'err;
                 }
             }
-            ASN1_STRING_set0((*ret).base, buffer.cast(), len as c_int);
+            ASN1_STRING_set0((*ret).base, buffer.into_raw().cast(), len as c_int);
 
             let tmp = EC_GROUP_get0_order(group);
             if tmp.is_null() {
@@ -1834,7 +1955,10 @@ pub unsafe extern "C" fn EC_GROUP_new_from_ecparameters(
                     raise_site(&err_sites::EC_ASN1_684);
                     break 'err;
                 }
-                CRYPTO_free((*ret).seed.cast(), FILE, 687);
+                // SAFETY: `(*ret).seed` is the group's current seed block, allocated through the
+                // seam and owned by `ret`; release it at the authority's own site before replacing
+                // it. A NULL seed is the authority's own no-op `free(NULL)`.
+                drop(OwnedBuf::adopt((*ret).seed.cast::<c_uchar>(), FILE, 687));
                 (*ret).seed = CRYPTO_malloc((*(*(*params).curve).seed).length as usize, FILE, 688)
                     .cast::<c_uchar>();
                 if (*ret).seed.is_null() {
@@ -2316,8 +2440,12 @@ pub unsafe extern "C" fn i2d_ECPrivateKey(a: *const EcKey, out: *mut *mut c_ucha
             }
             ok = 1;
         }
-        CRYPTO_clear_free(priv_.cast::<c_void>(), privlen, FILE, 1070);
-        CRYPTO_free(pub_.cast::<c_void>(), FILE, 1071);
+        // SAFETY: `priv_` is NULL or a live secret block this call allocated through the seam
+        // (`EC_KEY_priv2buf`) and, on the transfer path, has already been given up (`priv_` was
+        // reset); its release is the authority's own cleansing one at `(FILE, 1070)`.
+        drop(OwnedBuf::adopt_cleansed(priv_, privlen, FILE, 1070));
+        // SAFETY: as above for the public-key block, with the authority's own plain `(FILE, 1071)`.
+        drop(OwnedBuf::adopt(pub_, FILE, 1071));
         EC_PRIVATEKEY_free(priv_key);
         if ok != 0 {
             ret
@@ -2406,7 +2534,9 @@ pub unsafe extern "C" fn i2o_ECPublicKey(a: *const EcKey, out: *mut *mut c_uchar
         {
             raise_site(&err_sites::EC_ASN1_1170);
             if new_buffer != 0 {
-                CRYPTO_free((*out).cast::<c_void>(), FILE, 1172);
+                // SAFETY: `*out` is the block `CRYPTO_malloc` allocated above, no other owner holds
+                // it, and its release is the authority's own `(FILE, 1172)`.
+                drop(OwnedBuf::adopt(*out, FILE, 1172));
                 *out = ptr::null_mut();
             }
             return 0;
