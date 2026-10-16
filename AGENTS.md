@@ -196,3 +196,161 @@ are **references for technique only**.
 An unproven raw-pointer boundary never becomes `SAFETY_DISCHARGED` merely because
 a `Drop` wrapper exists, and `hidden = 0` is a target, never a reporting
 incentive.
+
+---
+
+## 8. Three axes of evidence (compatibility ≠ safety ≠ cryptography)
+
+Compatibility is necessary for our objective but **not sufficient**: a faithful
+port can reproduce a security defect. Every subsystem must be able to answer,
+separately:
+
+- **Compatibility** — does it preserve OpenSSL's intended public behaviour?
+  (differential courts, downstream replay.)
+- **Safety** — can its ownership, aliasing, initialisation, concurrency and FFI
+  contracts prevent UB? (contracts, Miri, sanitizers, negative controls.)
+- **Cryptography** — are results, protocol decisions, secret handling and
+  timing protections correct? (Wycheproof/ACVP vectors, dudect, proofs.)
+
+Never let one axis's evidence stand in for another. A green differential court is
+not a safety result; a clean `grep` for `unsafe` is not a cryptographic result.
+
+## 9. Safe abstractions (the RustBelt standard)
+
+A safe interface must not let safe clients cause UB. For every reusable unsafe
+abstraction (owner types, adoption ctors, `CtxDestroy`, freefunc tables):
+
+- give it a **contract**: what a caller must establish, and what an implementer
+  must guarantee;
+- prefer deriving ownership from the known allocation result and restrict raw
+  adoption to genuine transfer boundaries;
+- **review the traits** — `CtxDestroy`-style destructor traits impose an
+  obligation on *implementers*. A wrong `destroy_body` (releasing the enclosing
+  allocation, or freeing a member twice) invalidates every generic owner. State
+  the destructor contract (frees its owned members exactly once, handles the
+declared initialisation state, never the enclosing block) and, where feasible,
+  make the trait`unsafe`.
+
+## 10. Aliasing and architecture layering
+
+Aliasing correctness is a conversion property, not an afterthought. Prefer, by
+layer:
+
+| Layer | Preferred representation |
+|-------|--------------------------|
+| C ABI façade | raw pointers with defined C contracts |
+| allocation / ownership | `NonNull`, typed owners, explicit transfer |
+| interior structures | borrowing, checked slices, discriminated states |
+| algorithms and parsers | safe Rust wherever feasible |
+| CPU-specific cryptography | small, documented intrinsic/assembly boundary |
+
+The target is not fewer `unsafe` expressions but **fewer ways to construct
+conflicting references**. At focused checkpoints run Miri under both Stacked
+Borrows and Tree Borrows where supported; do not require full-library Miri. Miri
+is a research instrument, not the normative aliasing spec — record what it did
+and did not cover.
+
+## 11. Cryptographic assurance instruments (distinct, not interchangeable)
+
+| Property | Instrument | Scope |
+|----------|-----------|-------|
+| algorithm correctness | Wycheproof / NIST ACVP/CAVP vectors | malformed + edge inputs |
+| unsafe-code soundness | Miri + contract review | ownership, aliasing, init |
+| bounded functional props | Kani | bounds, invariants, arithmetic |
+| mathematical equivalence | hax/Lean (or F*) for small pure interiors | proofs, not tests |
+| secret-dependent flow | ctgrind | branching/memory access |
+| statistical timing | dudect | optimised crypto ops |
+| protocol robustness | Rustls/BoringSSL/NSS-style fuzzing | handshake/record parsing |
+
+Absence of detected leakage is not proof of constant-time behaviour, and ACVP
+vectors are not a NIST validation certificate. State coverage and limits.
+
+## 12. Secret classification
+
+Tag security-sensitive operations with an explicit classification (engineering
+metadata first, safe wrappers over time):
+
+`PUBLIC_DATA`, `SECRET_DATA`, `SECRET_DEPENDENT_CONTROL`,
+`CLEANSING_REQUIRED`, `DECLASSIFICATION_BOUNDARY`.
+
+A constant-time comparison should yield an internal choice-like value until the
+authorised decision point; secret-dependent branching is forbidden before it.
+Any constant-time claim must name the target arch, compiler version, feature
+dispatch and build profile that were measured.
+
+## 13. Two fuzzing courts (never merge their verdicts)
+
+- **Deep-state exploration** — test-only deterministic crypto / controlled
+  verification bypasses to reach otherwise unreachable protocol states. Claim:
+  *protocol-state robustness under the modified model*.
+- **Authentic execution** — real crypto, real provider behaviour, full
+  handshakes. Claim: *observed behaviour of the real implementation*.
+
+Bypasses must never appear in the release configuration.
+
+## 14. Proof-carrying conversion receipt
+
+Each landed conversion batch writes a compact receipt (template:
+`forensics/memory-safety/campaign/safe-c33/RECEIPT.template.md`) with: source
+identity, authority contract, ownership before/after, unsafe eliminated /
+retained / introduced, compatibility delta, safety checks, residuals. The point
+is to let a fresh session resume without reconstructing the reasoning.
+
+## 15. Agent roles and independence
+
+Run sequentially in the same container; separation is about independent judgment:
+**contract analyst** (authority requirements, no code), **conversion engineer**
+(smallest coherent safe change), **adversarial reviewer** (can a safe interface be
+misused? do aliases escape? can destruction double-release? does failure leave
+inconsistent state?), **evidence adjudicator** (reads actual outputs; cannot
+certify from another agent's description).
+
+> The agent that writes a safety claim must not be the sole authority deciding
+> whether its evidence proves that claim.
+
+## 16. Negative controls
+
+If a court claims to detect an unsafe-ownership violation, introduce an isolated
+**test-only canary** of that defect class (aliasing, wrong release path,
+overflow, secret-dependent flow) and confirm the instrument fires. Keep canaries
+out of production artefacts and classify unsupported detectors honestly.
+
+## 17. Divergence classification (vs OpenSSL *and* the standard)
+
+| Divergence | Treatment |
+|-----------|-----------|
+| documented OpenSSL behaviour | conserve it |
+| implementation-defined | state the compatibility scope; test it |
+| UB in the C authority | do not reproduce UB; document the boundary |
+| known vulnerability mechanism | eliminate the mechanism; test the correction |
+| standards nonconformance | establish normative behaviour; record the compat consequence |
+| harness/environmental difference | keep separate from implementation findings |
+
+Never imitate a flawed implementation and call it correctness.
+
+## 18. Verification schedule
+
+| Frequency | Evidence |
+|-----------|----------|
+| every coherent conversion | fmt, clippy, compile, focused tests, contract review |
+| every integrated subsystem | library tests, relevant differential/lifetime tests, targeted Miri |
+| security-sensitive algorithm change | applicable Wycheproof/ACVP vectors, constant-time checks |
+| protocol handling change | targeted adversarial fuzzing + authentic workload |
+| reusable unsafe abstraction change | misuse analysis, negative controls, cross-caller audit |
+| Safe-33 promotion | whole-cohort dependency closure, downstream replay, broader sanitizers, refreshed forensics |
+| release candidate | full security + compatibility campaign, reproducibility, independent review |
+
+## 19. Measuring progress (five dimensions, not one %)
+
+1. **Ownership reconstruction** — mechanisms converted (not files touched).
+2. **Safe-interior coverage** — functions/mechanisms whose safe interfaces
+   enforce their invariants.
+3. **Discharged safety obligations** — verified contracts, with retained and
+   unknown obligations reported alongside.
+4. **Cryptographic assurance** — vectors, timing evidence, checked properties.
+5. **Safe-compatible consumers** — families past their dependency closure + compat.
+
+Plus a **trust-boundary budget** per subsystem: number/complexity of unsafe
+interfaces, scope of caller obligations, and the amount of code relying on them.
+A correctly scoped SIMD intrinsic and a safe fn that can build two exclusive
+references to the same memory are not the same risk.
