@@ -183,7 +183,19 @@ pub struct X509CrlMethod {
 
 /// The authority's destructor body for one of the file's heap records, without the block's own
 /// release, which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer must guarantee, for a live block this file allocated:
+/// * `destroy_body(ptr)` runs the authority's `*_free` member body **exactly once** for that object;
+/// * it frees **exactly** the members the object owns -- every releaser is the authority's own and
+///   accepts the not-yet-set (NULL/zero) state -- and **never** releases the enclosing block, which
+///   [`OwnedCtx`]'s `Drop` releases.
+///
+/// This contract carries **no** zero-validity claim: the trait does not assert that an all-zero
+/// block is a valid `Self`; this file's `OwnedCtx::new` is `CRYPTO_malloc`, and its caller fills the
+/// record before the owner can destroy it.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -254,7 +266,10 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 
 /// The authority's `X509_CRL_METHOD_free` body: an `X509_CRL_METHOD` owns no sub-resources, so
 /// only the block release [`OwnedCtx`]'s `Drop` performs is left.
-impl CtxDestroy for X509CrlMethod {
+// SAFETY: (a) holds: `destroy_body` is the authority's no-op `X509_CRL_METHOD` free body -- the
+// record owns no releasable members -- and it never releases the enclosing block, which
+// `OwnedCtx`'s `Drop` owns. The trait makes no zero-validity claim.
+unsafe impl CtxDestroy for X509CrlMethod {
     unsafe fn destroy_body(_ptr: *mut X509CrlMethod) {}
 }
 

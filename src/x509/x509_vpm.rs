@@ -245,7 +245,21 @@ const _: () = {
 
 /// The authority's `*_free` body for the file's `#[repr(C)]` object, without the block's own
 /// release, which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer must guarantee, for a live block this file allocated:
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `X509_VERIFY_PARAM_free` member
+///   body **exactly once** for that object; it frees **exactly** the members the object owns (every
+///   releaser is the authority's own and accepts the not-yet-set NULL/zero state) and **never**
+///   releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `X509_VERIFY_PARAM_free` body, without the block release [`OwnedCtx`]'s
     /// `Drop` performs.
     ///
@@ -320,7 +334,12 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 /// The authority's `X509_VERIFY_PARAM_free` body, without the block release [`OwnedCtx`]'s `Drop`
 /// performs: the policy set, the host set, the peername, the email and the IP. **`name` is
 /// deliberately not released** -- the authority's own text omits it (see the module doc).
-impl CtxDestroy for X509VerifyParam {
+// SAFETY: (a) holds: `destroy_body` is `X509_VERIFY_PARAM_free` minus the block -- it releases
+// exactly the parameter's own policy set, host set, peername, email and IP (each NULL-tolerant, and
+// deliberately not `name`) and never the enclosing block. (b) holds: a zeroed parameter is valid
+// and every release is a no-op -- the obligation the safe `OwnedCtx::<X509VerifyParam>::new` in
+// `X509_VERIFY_PARAM_new` leans on.
+unsafe impl CtxDestroy for X509VerifyParam {
     unsafe fn destroy_body(ptr: *mut X509VerifyParam) {
         // SAFETY: `ptr` is a live parameter per the trait contract; each member is NULL or owned by
         // it, and each release accepts NULL.
