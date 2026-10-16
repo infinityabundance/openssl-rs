@@ -227,6 +227,7 @@ use crate::rsa::mp::{
 };
 use crate::rsa::ossl::{ossl_rsa_alloc_blinding, ossl_rsa_free_blinding, RSA_get_default_method};
 use crate::rsa::{Rsa, RsaMethod, RsaPrimeInfo, RsaPssParams, RsaPssParams30};
+use crate::runtime::bio::owned::{CtxDestroy, RawCtx};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::ex_data::{
     CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data,
@@ -368,12 +369,16 @@ unsafe fn safe_bn_num_bits(k: *const BigNum) -> c_int {
 /// # Safety
 /// `engine` is NULL and is ignored; `libctx` is NULL or a live library context.
 unsafe fn rsa_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Rsa {
-    // `OPENSSL_zalloc` is `CRYPTO_zalloc(.., OPENSSL_FILE, OPENSSL_LINE)` in this profile, and
-    // `CRYPTO_zalloc` is a *safe* function in this crate (D113), so this call needs no guard.
-    let ret = CRYPTO_zalloc(core::mem::size_of::<Rsa>(), FILE_RSA_LIB, LINE).cast::<Rsa>();
-    if ret.is_null() {
+    // The block, allocated through the crate's allocator seam at the authority's own line. It is a
+    // `RawCtx` — owned *storage* that is not yet a validated `Rsa` — because the lock failure below
+    // releases the block **alone**, running no destructor body: exactly the authority's inline
+    // `OPENSSL_free(ret)` rather than its `err:`-label `RSA_free`.
+    // SAFETY: `Rsa`'s zero-validity obligation (b) holds (see the `CtxDestroy` impl below), so the
+    // zeroed storage is a valid `Rsa` for the body `assume_init` later makes reachable.
+    let Some(block) = RawCtx::<Rsa>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let ret = block.as_ptr();
 
     // SAFETY: `CRYPTO_THREAD_lock_new` reads no caller pointer.
     let lock = CRYPTO_THREAD_lock_new();
@@ -382,8 +387,7 @@ unsafe fn rsa_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Rsa 
     if lock.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::RSA_LIB_85) };
-        // SAFETY: `ret` is this call's own allocation and nothing else holds it.
-        unsafe { CRYPTO_free(ret.cast(), FILE_RSA_LIB, LINE) };
+        // `block`'s `Drop` releases the block alone, at the authority's own site.
         return ptr::null_mut();
     }
 
@@ -453,13 +457,18 @@ unsafe fn rsa_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Rsa 
         true
     };
 
+    // The storage is now a validated `Rsa`: every field the destructor body reads has been written
+    // or left in the zero state that body tolerates — the authority reaches the same body from its
+    // own `err:` label on a zeroed block.
+    // SAFETY: as stated; `block`'s storage is a valid `Rsa` and no other owner will release it.
+    let owned = unsafe { block.assume_init() };
     if !built {
-        // SAFETY: `ret` is this call's own object and the authority's `err:` label releases it
-        // through `RSA_free` on exactly these paths.
-        unsafe { RSA_free(ret) };
+        // `owned`'s `Drop` runs the authority's `err:`-label release: `RSA_free`'s member body
+        // followed by its single block release.
+        drop(owned);
         return ptr::null_mut();
     }
-    ret
+    owned.into_raw()
 }
 
 /// `RSA *RSA_new(void)` — `rsa_lib.c:35-38`. `rsa_new_intern(NULL, NULL)`: no engine, and the
@@ -566,6 +575,82 @@ pub(crate) unsafe fn ossl_rsa_new_with_ctx(libctx: *mut c_void) -> *mut Rsa {
     unsafe { rsa_new_intern(ptr::null_mut(), libctx) }
 }
 
+/// [`RSA_free`]'s member body (`rsa_lib.c:158-190`), without the block release [`OwnedCtx`]'s `Drop`
+/// performs: the method's `finish`, then `ex_data`, the lock, the key components, the multi-prime
+/// stack and the blinding store, in the authority's own order.
+///
+/// [`OwnedCtx`]: crate::runtime::bio::owned::OwnedCtx
+// SAFETY: (a) `destroy_body` is the authority's `RSA_free` body for a last reference -- `finish` is
+// the object's own table member, every releaser tolerates the not-yet-set NULL/zero state (the
+// constructor's `err:` label reaches this same body on a zeroed block), and it never releases the
+// enclosing block, which `OwnedCtx`/`RSA_free` release; (b) `Rsa` is a `#[repr(C)]` record of raw
+// pointers, integers, an `AtomicI32` and a `CryptoExData` array, so an all-zero block is a valid
+// `Rsa` this body is sound on.
+unsafe impl CtxDestroy for Rsa {
+    const FILE: *const c_char = FILE_RSA_LIB;
+    const LINE_ALLOC: c_int = LINE;
+    const LINE_FREE: c_int = LINE;
+
+    unsafe fn destroy_body(ptr: *mut Rsa) {
+        // The authority's `if (r->meth != NULL && r->meth->finish != NULL)`.
+        // SAFETY: `ptr` is a live object per the trait contract and this is its last reference.
+        let meth = unsafe { (*ptr).meth };
+        if !meth.is_null() {
+            // SAFETY: `meth` is the object's own table, alive until this statement.
+            if let Some(finish) = unsafe { (*meth).finish } {
+                // SAFETY: `finish` is that table's own destructor for this object.
+                unsafe { finish(ptr) };
+            }
+        }
+
+        // The authority's `ENGINE_finish(r->engine)` is omitted: `r->engine` is NULL on every state
+        // this crate can reach, and `ENGINE_finish(NULL)` returns 1 without touching anything
+        // (`eng_init.c:108-111`). See the module documentation and `src/evp/pkey_asn1.rs:54-60`.
+
+        // SAFETY: `ptr` is live and `ex_data` is a field of it.
+        unsafe {
+            CRYPTO_free_ex_data(
+                CRYPTO_EX_INDEX_RSA,
+                ptr.cast(),
+                ptr::addr_of_mut!((*ptr).ex_data),
+            )
+        };
+        // SAFETY: `ptr` is live and `lock` is the lock the constructor created.
+        unsafe { CRYPTO_THREAD_lock_free((*ptr).lock) };
+
+        // `CRYPTO_FREE_REF(&r->references)` is empty on this profile's arm of the header.
+
+        // `#ifdef OPENSSL_PEDANTIC_ZEROIZATION` does not hold, so `n` and `e` are *freed* and the six
+        // secret components are *cleared* -- the asymmetry is the authority's and is part of what a
+        // caller-installed allocator sees.
+        // SAFETY: each field is NULL or the object's own `BIGNUM`, and this is the last reference.
+        unsafe {
+            BN_free((*ptr).n);
+            BN_free((*ptr).e);
+            BN_clear_free((*ptr).d);
+            BN_clear_free((*ptr).p);
+            BN_clear_free((*ptr).q);
+            BN_clear_free((*ptr).dmp1);
+            BN_clear_free((*ptr).dmq1);
+            BN_clear_free((*ptr).iqmp);
+        }
+
+        // The authority's `RSA_PSS_PARAMS_free(r->pss)` is omitted: `r->pss` is NULL on every state
+        // this crate can reach -- its only writer's only authority caller is `rsa_backend.c:669`, a
+        // unit with no crate module -- so the call is `free(NULL)`, which returns immediately
+        // (`tasn_fre.c:36-39`). See the module documentation and D348.
+
+        // SAFETY: `prime_infos` is NULL or the object's own stack, whose elements are
+        // `RSA_PRIME_INFO` records this object owns in their entirety -- the *full* destructor,
+        // unlike the two `err:` labels, because the key is going away rather than changing hands.
+        unsafe {
+            OPENSSL_sk_pop_free((*ptr).prime_infos, Some(multip_info_free_thunk));
+        }
+        // SAFETY: `ptr` is live and this is the last reference; the blinding store is its own.
+        unsafe { ossl_rsa_free_blinding(ptr) };
+    }
+}
+
 /// `void RSA_free(RSA *r)` — `rsa_lib.c:141-191`.
 ///
 /// NULL is a no-op. The release order is the contract, and it is transcribed statement for
@@ -614,64 +699,12 @@ pub unsafe extern "C" fn RSA_free(r: *mut Rsa) {
         return;
     }
 
-    // The authority's `if (r->meth != NULL && r->meth->finish != NULL)`.
-    // SAFETY: `r` is live and this is the last reference.
-    let meth = unsafe { (*r).meth };
-    if !meth.is_null() {
-        // SAFETY: `meth` is the object's own table, alive until this statement.
-        if let Some(finish) = unsafe { (*meth).finish } {
-            // SAFETY: `finish` is that table's own destructor for this object.
-            unsafe { finish(r) };
-        }
-    }
-
-    // The authority's `ENGINE_finish(r->engine)` is omitted: `r->engine` is NULL on every state
-    // this crate can reach, and `ENGINE_finish(NULL)` returns 1 without touching anything
-    // (`eng_init.c:108-111`). See the module documentation and `src/evp/pkey_asn1.rs:54-60`.
-
-    // SAFETY: `r` is live and `ex_data` is a field of it.
+    // SAFETY: `r` is a live object whose last reference this call released; `destroy_body` is the
+    // authority's own `RSA_free` member body and this single `CRYPTO_free` is its block release.
     unsafe {
-        CRYPTO_free_ex_data(
-            CRYPTO_EX_INDEX_RSA,
-            r.cast(),
-            ptr::addr_of_mut!((*r).ex_data),
-        )
-    };
-    // SAFETY: `r` is live and `lock` is the lock the constructor created.
-    unsafe { CRYPTO_THREAD_lock_free((*r).lock) };
-
-    // `CRYPTO_FREE_REF(&r->references)` is empty on this profile's arm of the header.
-
-    // `#ifdef OPENSSL_PEDANTIC_ZEROIZATION` does not hold, so `n` and `e` are *freed* and the six
-    // secret components are *cleared* — the asymmetry is the authority's and is part of what a
-    // caller-installed allocator sees.
-    // SAFETY: each field is NULL or the object's own `BIGNUM`, and this is the last reference.
-    unsafe {
-        BN_free((*r).n);
-        BN_free((*r).e);
-        BN_clear_free((*r).d);
-        BN_clear_free((*r).p);
-        BN_clear_free((*r).q);
-        BN_clear_free((*r).dmp1);
-        BN_clear_free((*r).dmq1);
-        BN_clear_free((*r).iqmp);
+        <Rsa as CtxDestroy>::destroy_body(r);
+        CRYPTO_free(r.cast(), FILE_RSA_LIB, LINE);
     }
-
-    // The authority's `RSA_PSS_PARAMS_free(r->pss)` is omitted: `r->pss` is NULL on every state
-    // this crate can reach — its only writer's only authority caller is `rsa_backend.c:669`, a unit
-    // with no crate module — so the call is `free(NULL)`, which returns immediately
-    // (`tasn_fre.c:36-39`). See the module documentation and D348.
-
-    // SAFETY: `prime_infos` is NULL or the object's own stack, whose elements are `RSA_PRIME_INFO`
-    // records this object owns in their entirety — the *full* destructor, unlike the two `err:`
-    // labels, because the key is going away rather than changing hands.
-    unsafe {
-        OPENSSL_sk_pop_free((*r).prime_infos, Some(multip_info_free_thunk));
-    }
-    // SAFETY: `r` is live and this is the last reference; the blinding store is its own.
-    unsafe { ossl_rsa_free_blinding(r) };
-    // SAFETY: `r` is this object's own allocation, released last.
-    unsafe { CRYPTO_free(r.cast(), FILE_RSA_LIB, LINE) };
 }
 
 /// `int RSA_up_ref(RSA *r)` — `rsa_lib.c:193-203`.
