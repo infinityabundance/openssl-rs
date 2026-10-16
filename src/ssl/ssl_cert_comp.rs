@@ -87,6 +87,75 @@ fn up_ref(refs: &AtomicI32) -> c_int {
     refs.fetch_add(1, Ordering::Relaxed) + 1
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the record and its data block
+// ---------------------------------------------------------------------------------------------
+
+/// An owned block allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_zalloc`/`CRYPTO_memdup` at the authority's exact size/`file`/`line` --
+/// a Rust `Box` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type:
+/// [`Self::new_zeroed`] allocates the record, [`Self::adopt`] takes in a block the caller or a
+/// helper (`CRYPTO_memdup`) already produced, `Drop` is its single release, and
+/// [`Self::into_raw`] hands it to a consumer that takes it over (the `OSSL_COMP_CERT` return, the
+/// record's `data` field, or a `CERT_PKEY` slot). A NULL pointer is a valid, empty block whose
+/// release is the authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut u8,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `len` bytes.
+        let raw = CRYPTO_zalloc(len, file, line).cast::<u8>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// Adopt a block this file or a helper produced, for release by `Drop` at the authority's own
+    /// `(file, line)`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated through the `CRYPTO_*` seam that
+    /// no one else owns, and `file` is NULL or a NUL-terminated C string. `Drop`'s `CRYPTO_free`
+    /// is its only release.
+    unsafe fn adopt(ptr: *mut u8, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, file, line }
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut u8 {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast(), self.file, self.line) };
+    }
+}
+
 /// `size_t ossl_calculate_comp_expansion(int alg, size_t length)` — `ssl_cert_comp.c:16-43`.
 #[allow(dead_code)] // reachable only behind an enabled compression algorithm
 fn ossl_calculate_comp_expansion(alg: c_int, length: usize) -> usize {
@@ -132,30 +201,36 @@ unsafe fn OSSL_COMP_CERT_new(
     orig_len: usize,
     alg: c_int,
 ) -> *mut OsslCompCert {
-    let mut ret: *mut OsslCompCert = ptr::null_mut();
-    // SAFETY: the checks and the allocation are the authority's; a NULL `data` or an unsupported
-    // algorithm takes the `err` arm.
+    // The caller gives over the data block; the frame's owner releases it on every refusal path,
+    // exactly as the authority's `err:` label does.
+    // SAFETY: `data` is NULL or the owned allocation the caller gives over per this function's
+    // contract.
+    let data = unsafe { OwnedBuf::adopt(data, FILE, 0) };
+    // The predicate short-circuits the allocation, as the authority's `||` does; a NULL `data` or
+    // an unsupported algorithm is the authority's first `err` arm.
+    let ret = if !ossl_comp_has_alg(alg) || data.as_ptr().is_null() {
+        None
+    } else {
+        // A fresh zeroed record at the authority's own site; `Drop` is its single release.
+        OwnedBuf::new_zeroed(core::mem::size_of::<OsslCompCert>(), FILE, 0)
+    };
+    let Some(ret) = ret else {
+        // SAFETY: the error queue is thread-local state.
+        unsafe { raise_with(ERR_LIB_SSL, 1, FILE, 79) };
+        return ptr::null_mut();
+    };
+    // SAFETY: `ret` is a fresh zeroed block; every field is written before it is read. `data` is
+    // handed to the record, whose own free path releases it, so the frame's owner gives up its
+    // release.
     unsafe {
-        if !ossl_comp_has_alg(alg) || data.is_null() {
-            // `if` short-circuits before the allocation, as the authority's `||` does.
-        } else {
-            ret = CRYPTO_zalloc(core::mem::size_of::<OsslCompCert>(), FILE, 0).cast();
-            if ret.is_null() {
-                // fall through to err
-            } else {
-                (*ret).references = AtomicI32::new(1);
-                (*ret).data = data;
-                (*ret).len = len;
-                (*ret).orig_len = orig_len;
-                (*ret).alg = alg;
-                return ret;
-            }
-        }
-        raise_with(ERR_LIB_SSL, 1, FILE, 79);
-        CRYPTO_free(data.cast(), FILE, 0);
-        CRYPTO_free(ret.cast(), FILE, 0);
-        ptr::null_mut()
+        let cc = ret.as_ptr().cast::<OsslCompCert>();
+        (*cc).references = AtomicI32::new(1);
+        (*cc).data = data.into_raw();
+        (*cc).len = len;
+        (*cc).orig_len = orig_len;
+        (*cc).alg = alg;
     }
+    ret.into_raw().cast::<OsslCompCert>()
 }
 
 /// `__owur static OSSL_COMP_CERT *OSSL_COMP_CERT_from_compressed_data(...)` —
@@ -194,8 +269,13 @@ pub unsafe fn OSSL_COMP_CERT_free(cc: *mut OsslCompCert) {
         if i > 0 {
             return;
         }
-        CRYPTO_free((*cc).data.cast(), FILE, 0);
-        CRYPTO_free(cc.cast(), FILE, 0);
+        // The count reached zero, so this frame holds the record's exclusive ownership; its
+        // destructor releases the `data` block first, then the record block, at the authority's
+        // own sites.
+        // SAFETY: `data` is NULL or this record's own block.
+        drop(OwnedBuf::adopt((*cc).data, FILE, 0));
+        // SAFETY: `cc` is the record this frame exclusively owns.
+        drop(OwnedBuf::adopt(cc.cast::<u8>(), FILE, 0));
     }
 }
 
@@ -289,10 +369,15 @@ unsafe fn ssl_compress_one_cert(ssl: *mut Ssl, cpk: *mut CertKey, alg: c_int) ->
     if length == 0 {
         return 0;
     }
-    // SAFETY: `cert_data` is owned and handed over to the constructor.
-    let comp_cert = unsafe { OSSL_COMP_CERT_from_compressed_data(cert_data, length, length, alg) };
-    // SAFETY: `cert_data` is this frame's own allocation.
-    unsafe { CRYPTO_free(cert_data.cast(), FILE, 0) };
+    // The block `ssl_get_cert_to_compress` produced is this frame's; the owner is its single
+    // release at the authority's own site, after the constructor has copied it.
+    // SAFETY: `cert_data` is NULL or this frame's own allocation.
+    let cert_data = unsafe { OwnedBuf::adopt(cert_data, FILE, 0) };
+    // SAFETY: `cert_data` is readable for `length` bytes; the constructor copies it.
+    let comp_cert =
+        unsafe { OSSL_COMP_CERT_from_compressed_data(cert_data.as_ptr(), length, length, alg) };
+    // The authority releases the frame's block before it tests the constructor's result.
+    drop(cert_data);
     if comp_cert.is_null() {
         return 0;
     }
