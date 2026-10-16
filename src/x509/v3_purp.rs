@@ -404,7 +404,19 @@ const LINE_XPFREE_P: c_int = 271;
 
 /// The authority's destructor body for one of the file's heap records, without the block's own
 /// release, which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer must guarantee, for a live block this file allocated:
+/// * `destroy_body(ptr)` runs the authority's `*_free` member body **exactly once** for that object;
+/// * it frees **exactly** the members the object owns -- every releaser is the authority's own and
+///   accepts the not-yet-set (NULL/zero) state -- and **never** releases the enclosing block, which
+///   [`OwnedCtx`]'s `Drop` releases.
+///
+/// This contract carries **no** zero-validity claim: the trait does not assert that an all-zero
+/// block is a valid `Self`; this file builds its owner only through the `unsafe from_raw` reclaim
+/// route, not a `zalloc`-and-wrap constructor.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -457,7 +469,10 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 /// [`OwnedCtx::from_raw`] is only ever reached for the rows the dynamic `xptable` holds, and every
 /// one of those is pushed only after `X509_PURPOSE_add` set `X509_PURPOSE_DYNAMIC`, so the
 /// authority's leading `(*p).flags & X509_PURPOSE_DYNAMIC` early return is unobservable here.
-impl CtxDestroy for X509Purpose {
+// SAFETY: (a) holds: `destroy_body` is the authority's `x509_purpose_free` body -- it releases
+// exactly the row's own dynamic `name`/`sname` strings when the DYNAMIC_NAME flag is set (each
+// NULL-tolerant) and never the enclosing block.
+unsafe impl CtxDestroy for X509Purpose {
     unsafe fn destroy_body(ptr: *mut X509Purpose) {
         // SAFETY: `ptr` is a live row per the trait contract; `name`/`sname` are NULL or this file's
         // own `CRYPTO_strdup` blocks.

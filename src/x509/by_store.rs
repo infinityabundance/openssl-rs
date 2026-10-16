@@ -189,7 +189,21 @@ impl<'a> PropqSlot<'a> {
 
 /// The authority's destructor body for one of the file's heap records, without the block's own
 /// release, which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer must guarantee, for a live block this file allocated:
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it frees **exactly** the members the object owns (every releaser is
+///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::zalloc`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -261,7 +275,11 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 
 /// The authority's `free_store` body, without the block release [`OwnedCtx`]'s `Drop` performs: a
 /// record's two owned strings.
-impl CtxDestroy for CachedStore {
+// SAFETY: (a) holds: `destroy_body` is `free_store` -- it releases exactly the record's own `uri`
+// and `propq` strings (each NULL-tolerant) and never the enclosing block. (b) holds: a zeroed
+// record (`uri`/`propq` NULL) is a valid `Self`, and both `destroy_body` and every owner operation
+// are sound for it -- the obligation the safe `OwnedCtx::zalloc` leans on.
+unsafe impl CtxDestroy for CachedStore {
     unsafe fn destroy_body(ptr: *mut CachedStore) {
         // SAFETY: `ptr` is a live record per the trait contract; `uri` is NULL or this file's own
         // `CRYPTO_strdup` block (`CRYPTO_free` accepts NULL).
