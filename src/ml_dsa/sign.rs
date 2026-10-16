@@ -94,6 +94,75 @@ const LINE_VERIFY_ALLOC: c_int = 350;
 /// `ml_dsa_verify_internal`'s `OPENSSL_free(alloc)`, `ml_dsa_sign.c:405`.
 const LINE_VERIFY_FREE: c_int = 405;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership seam
+// ---------------------------------------------------------------------------------------------
+
+/// A temporary scratch blob owned by the internal driver that allocates it.
+///
+/// The block stays the `CRYPTO_malloc(len, FILE, line)` the authority makes, at the authority's
+/// exact size and site, because a Rust `Box`/`Vec` would hide the allocation and its release from a
+/// caller-installed `CRYPTO_set_mem_functions` hook. Only its *ownership* is this type: [`Self::new`]
+/// allocates it, `Drop` is its single release at the authority's own release line, and the driver
+/// keeps the raw pointer only for the slice arithmetic it does over the block.
+struct OwnedBuf {
+    ptr: *mut u8,
+    len: usize,
+    line_free: c_int,
+    release: Release,
+}
+
+/// How the authority releases a scratch blob.
+#[derive(Clone, Copy)]
+enum Release {
+    /// The authority's cleansing `OPENSSL_clear_free(ptr, len, FILE, line)`
+    /// (`ml_dsa_sign_internal`).
+    Cleansed,
+    /// The authority's plain `OPENSSL_free(ptr, FILE, line)` (`ml_dsa_verify_internal`).
+    Plain,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, FILE, line_alloc)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, line_alloc: c_int, line_free: c_int, release: Release) -> Option<OwnedBuf> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, exclusively owned block of
+        // `len` bytes.
+        let raw = CRYPTO_malloc(len, FILE, line_alloc).cast::<u8>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedBuf {
+                ptr: raw,
+                len,
+                line_free,
+                release,
+            })
+        }
+    }
+
+    /// The block's writable start, for the driver's slice arithmetic over it.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the authority's own clearing or plain free at its own
+    /// site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // release at its own site is the whole release.
+        unsafe {
+            match self.release {
+                Release::Cleansed => {
+                    CRYPTO_clear_free(self.ptr.cast(), self.len, FILE, self.line_free)
+                }
+                Release::Plain => CRYPTO_free(self.ptr.cast(), FILE, self.line_free),
+            }
+        }
+    }
+}
+
 /// `signature_init(sig, hint, k, z, l, c_tilde, c_tilde_len)` — `ml_dsa_sign.c:38-46`.
 ///
 /// Points an [`MlDsaSig`] at preallocated blocks; the signature owns none of them, exactly as the
@@ -246,14 +315,21 @@ unsafe fn ml_dsa_sign_internal(
         let alloc_len = w1_encoded_len
             + core::mem::size_of::<Poly>()
                 * (1 + num_polys_k + num_polys_l + num_polys_k_by_l + num_polys_sig_k);
-        let alloc = CRYPTO_malloc(alloc_len, FILE, LINE_SIGN_ALLOC).cast::<u8>();
-        if alloc.is_null() {
+        // The scratch blob is owned by the handle, whose `Drop` is the authority's own clearing free
+        // at `LINE_SIGN_CLEAR_FREE`.
+        let Some(alloc) = OwnedBuf::new(
+            alloc_len,
+            LINE_SIGN_ALLOC,
+            LINE_SIGN_CLEAR_FREE,
+            Release::Cleansed,
+        ) else {
             return 0;
-        }
+        };
+        let alloc_ptr = alloc.as_ptr();
         let md_ctx = EVP_MD_CTX_new();
 
         // Point every temporary at its slice of the blob.
-        let w1_encoded = alloc;
+        let w1_encoded = alloc_ptr;
         let mut p: *mut Poly = w1_encoded.add(w1_encoded_len).cast();
         let c_ntt = p;
         p = p.add(1);
@@ -424,7 +500,8 @@ unsafe fn ml_dsa_sign_internal(
         }
 
         EVP_MD_CTX_free(md_ctx);
-        CRYPTO_clear_free(alloc.cast(), alloc_len, FILE, LINE_SIGN_CLEAR_FREE);
+        // The scratch blob's single release, at the authority's own site.
+        drop(alloc);
         OPENSSL_cleanse(rho_prime.as_mut_ptr().cast(), rho_prime.len());
         OPENSSL_cleanse(c_tilde.as_mut_ptr().cast(), c_tilde.len());
         ret
@@ -475,21 +552,23 @@ unsafe fn ml_dsa_verify_internal(
             } else {
                 128
             };
-        let alloc = CRYPTO_malloc(
+        // The scratch blob is owned by the handle, whose `Drop` is the authority's own plain free
+        // at `LINE_VERIFY_FREE`.
+        let Some(alloc) = OwnedBuf::new(
             w1_encoded_len
                 + core::mem::size_of::<Poly>()
                     * (1 + num_polys_k + num_polys_l + num_polys_k_by_l + num_polys_sig),
-            FILE,
             LINE_VERIFY_ALLOC,
-        )
-        .cast::<u8>();
-        if alloc.is_null() {
+            LINE_VERIFY_FREE,
+            Release::Plain,
+        ) else {
             return 0;
-        }
+        };
+        let alloc_ptr = alloc.as_ptr();
         let md_ctx = EVP_MD_CTX_new();
 
         // Point every temporary at its slice of the blob.
-        let w1_encoded = alloc;
+        let w1_encoded = alloc_ptr;
         let mut p: *mut Poly = w1_encoded.add(w1_encoded_len).cast();
         let c_ntt = p;
         p = p.add(1);
@@ -597,7 +676,8 @@ unsafe fn ml_dsa_verify_internal(
             );
         }
 
-        CRYPTO_free(alloc.cast(), FILE, LINE_VERIFY_FREE);
+        // The scratch blob's single release, at the authority's own site.
+        drop(alloc);
         EVP_MD_CTX_free(md_ctx);
         ret
     }
