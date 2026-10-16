@@ -60,6 +60,144 @@ use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_strdup, CRYPTO_
 /// this unit are attributed to, as the allocator reports them.
 const FILE: *const c_char = c"crypto/ec/ec_kmeth.c".as_ptr();
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the objects this unit allocates
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `EC_KEY` block under construction.
+///
+/// `ossl_ec_key_new_method_int` allocates the object with `OPENSSL_zalloc(sizeof(*ret))` and fills
+/// its members one at a time; until it publishes the object its release is the authority's own
+/// `err:` label -- `EC_KEY_free(ret)` (`ec_kmeth.c:136-138`) -- which is the object's single
+/// release (its members and its block, through `ec_key.c`'s `EC_KEY_free`). `Drop` is exactly that
+/// release and [`Self::into_raw`] hands the finished object to the caller, so every failure path
+/// returns by letting the owner drop rather than by spelling the release out at the site.
+struct OwnedEcKey {
+    ptr: ptr::NonNull<EcKey>,
+}
+
+impl OwnedEcKey {
+    /// `CRYPTO_zalloc(sizeof(*ret), FILE, 83)`, or `None` when the allocator answers NULL.
+    fn zalloc() -> Option<OwnedEcKey> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<EcKey>()` bytes, which is exactly `EC_KEY`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<EcKey>(), FILE, 83).cast::<EcKey>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedEcKey { ptr })
+    }
+
+    /// The writable start of the object, for the constructor's member writes.
+    fn as_ptr(&self) -> *mut EcKey {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the object to the caller that publishes it.
+    fn into_raw(self) -> *mut EcKey {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedEcKey {
+    /// The authority's `err:`-label release: `EC_KEY_free(ret)`, the object's own single release.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the object `zalloc` allocated and has not handed out; it is live,
+        // its `references` is the constructor's own 1, and `EC_KEY_free` releases exactly the
+        // members and block that are set on it, exactly as the authority's `err:` label does.
+        unsafe { EC_KEY_free(self.ptr.as_ptr()) };
+    }
+}
+
+/// An owned `EC_KEY_METHOD` table, of the kind `EC_KEY_METHOD_new` allocates.
+///
+/// The table keeps the authority's `OPENSSL_zalloc(sizeof(*meth))` size/`file`/`line` and its
+/// `OPENSSL_free(meth)` release (`ec_kmeth.c:178`/`:191`); [`Self::take`] reclaims the copy
+/// `EC_KEY_METHOD_new` made -- only that copy carries `EC_KEY_METHOD_DYNAMIC`, which is the guard
+/// `EC_KEY_METHOD_free` applies before releasing it -- and [`Self::into_raw`] hands it to the
+/// caller.
+struct OwnedEcKeyMethod {
+    ptr: ptr::NonNull<EcKeyMethod>,
+}
+
+impl OwnedEcKeyMethod {
+    /// `CRYPTO_zalloc(sizeof(*meth), FILE, 178)`, or `None` when the allocator answers NULL.
+    fn zalloc() -> Option<OwnedEcKeyMethod> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<EcKeyMethod>()` bytes, which is exactly `EC_KEY_METHOD`'s layout.
+        let raw =
+            CRYPTO_zalloc(core::mem::size_of::<EcKeyMethod>(), FILE, 178).cast::<EcKeyMethod>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedEcKeyMethod { ptr })
+    }
+
+    /// The writable start of the table, for the copy `EC_KEY_METHOD_new` performs.
+    fn as_ptr(&self) -> *mut EcKeyMethod {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the table to the caller.
+    fn into_raw(self) -> *mut EcKeyMethod {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a table `EC_KEY_METHOD_new` produced, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live table this unit allocated and no owner has released; `Drop` is its single
+    /// release.
+    unsafe fn take(ptr: *mut EcKeyMethod) -> Option<OwnedEcKeyMethod> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedEcKeyMethod { ptr })
+    }
+}
+
+impl Drop for OwnedEcKeyMethod {
+    /// The table's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a table this unit allocated and has not handed out; its single
+        // release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, 191) };
+    }
+}
+
+/// An owned ECDH shared-secret buffer produced by a key method's `compute_key`.
+///
+/// The buffer is the method's own allocation; [`ECDH_compute_key`] consumes it and releases it with
+/// the authority's cleansing `OPENSSL_clear_free(sec, seclen)` (`ec_kmeth.c:172`), so the secret's
+/// whole storage is zeroed before release. [`Self::take`] adopts the pointer the method wrote and
+/// `Drop` is the single cleansing release; the buffer's address is read from the caller's own
+/// `sec`/`seclen` out-parameters while the output is produced.
+struct OwnedSecret {
+    ptr: *mut u8,
+    len: usize,
+}
+
+impl OwnedSecret {
+    /// Adopt the method's secret buffer, or `None` for NULL.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live buffer of `len` bytes this unit's allocator seam produced and this
+    /// frame owns; no other owner will release it, and this handle's `Drop` is its single release.
+    unsafe fn take(ptr: *mut u8, len: usize) -> Option<OwnedSecret> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedSecret { ptr, len })
+        }
+    }
+}
+
+impl Drop for OwnedSecret {
+    /// The buffer's single release: the authority's own cleansing `CRYPTO_clear_free(sec, seclen)`.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the buffer the method produced and this frame owns; it is readable
+        // for `self.len` bytes and its single release is the authority's own cleansing clear-free.
+        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, FILE, 172) };
+    }
+}
+
 /// `static const EC_KEY_METHOD openssl_ec_key_method` — `crypto/ec/ec_kmeth.c:24-35`.
 ///
 /// The authority's default key method. Its `name` is a `.rodata` literal, `flags` is 0 (so
@@ -218,13 +356,16 @@ pub unsafe extern "C" fn ossl_ec_key_new_method_int(
     propq: *const c_char,
     _engine: *mut Engine,
 ) -> *mut EcKey {
-    // SAFETY: `OPENSSL_zalloc` is `CRYPTO_zalloc(.., OPENSSL_FILE, OPENSSL_LINE)`, line 83.
-    unsafe {
-        let ret = CRYPTO_zalloc(core::mem::size_of::<EcKey>(), FILE, 83).cast::<EcKey>();
-        if ret.is_null() {
-            return ptr::null_mut();
-        }
+    // `OPENSSL_zalloc(sizeof(*ret))` at ec_kmeth.c:83.
+    let Some(ret_owner) = OwnedEcKey::zalloc() else {
+        return ptr::null_mut();
+    };
+    let ret = ret_owner.as_ptr();
 
+    // SAFETY: `ret` is a fresh zeroed allocation this call owns and has not published, so these
+    // are its only writes; every failure path returns by letting `ret_owner` drop, whose `Drop` is
+    // the authority's own `err:`-label `EC_KEY_free(ret)`.
+    unsafe {
         // `if (!CRYPTO_NEW_REF(&ret->references, 1))`: the fallback arm's plain, infallible store.
         (*ret).references.store(1, Ordering::Relaxed);
 
@@ -232,7 +373,7 @@ pub unsafe extern "C" fn ossl_ec_key_new_method_int(
         if !propq.is_null() {
             (*ret).propq = CRYPTO_strdup(propq, FILE, 95);
             if (*ret).propq.is_null() {
-                return fail(ret);
+                return ptr::null_mut();
             }
         }
 
@@ -252,7 +393,7 @@ pub unsafe extern "C" fn ossl_ec_key_new_method_int(
         {
             // SAFETY: a compile-time-constant site (`ec_kmeth.c:125`, ERR_R_CRYPTO_LIB).
             raise_site(&err_sites::EC_KMETH_125);
-            return fail(ret);
+            return ptr::null_mut();
         }
 
         if let Some(init) = (*ret).meth.as_ref().and_then(|m| m.init) {
@@ -260,23 +401,12 @@ pub unsafe extern "C" fn ossl_ec_key_new_method_int(
             if init(ret) == 0 {
                 // SAFETY: a compile-time-constant site (`ec_kmeth.c:131`, ERR_R_INIT_FAIL).
                 raise_site(&err_sites::EC_KMETH_131);
-                return fail(ret);
+                return ptr::null_mut();
             }
         }
-        ret
     }
-}
-
-/// The authority's `err:` label — `EC_KEY_free(ret); return NULL;` (`ec_kmeth.c:136-138`).
-///
-/// # Safety
-///
-/// `ret` is the object this unit just allocated and has not published.
-unsafe fn fail(ret: *mut EcKey) -> *mut EcKey {
-    // SAFETY: `ret` is this unit's own object and `EC_KEY_free` releases exactly what is set on
-    // it; it is `ec_key.c`'s, so the reference is a named coordinate until step 7 lands.
-    unsafe { EC_KEY_free(ret) };
-    ptr::null_mut()
+    // The object is complete; the C caller's `EC_KEY_free` is its release from here on.
+    ret_owner.into_raw()
 }
 
 /// `EC_KEY *EC_KEY_new_method(ENGINE *engine)` — `crypto/ec/ec_kmeth.c:142-145`.
@@ -341,6 +471,9 @@ pub unsafe extern "C" fn ECDH_compute_key(
         if compute_key(&mut sec, &mut seclen, pub_key, eckey) == 0 {
             return 0;
         }
+        // SAFETY: the method wrote a secret buffer of `seclen` bytes at `sec`, owned by this frame
+        // and released once, by the owner's `Drop`, below.
+        let secret = OwnedSecret::take(sec, seclen);
         if let Some(kdf) = kdf {
             let _ = kdf(sec.cast(), seclen, out, &mut outlen);
         } else {
@@ -349,8 +482,9 @@ pub unsafe extern "C" fn ECDH_compute_key(
             }
             ptr::copy_nonoverlapping(sec, out.cast::<u8>(), outlen);
         }
-        // `OPENSSL_clear_free(sec, seclen)`, line 172.
-        CRYPTO_clear_free(sec.cast(), seclen, FILE, 172);
+        // The secret is cleansed and released here, exactly as the authority's own
+        // `OPENSSL_clear_free(sec, seclen)`.
+        drop(secret);
         outlen as c_int
     }
 }
@@ -366,19 +500,19 @@ pub unsafe extern "C" fn ECDH_compute_key(
 /// `meth` is NULL or points to a live, immutable table.
 #[no_mangle]
 pub unsafe extern "C" fn EC_KEY_METHOD_new(meth: *const EcKeyMethod) -> *mut EcKeyMethod {
-    // SAFETY: `OPENSSL_zalloc(sizeof(*meth))`, line 178.
+    // `OPENSSL_zalloc(sizeof(*meth))`, line 178.
+    let Some(owner) = OwnedEcKeyMethod::zalloc() else {
+        return ptr::null_mut();
+    };
+    let ret = owner.as_ptr();
+    // SAFETY: `ret` is a fresh zeroed allocation this frame owns and has not published.
     unsafe {
-        let ret =
-            CRYPTO_zalloc(core::mem::size_of::<EcKeyMethod>(), FILE, 178).cast::<EcKeyMethod>();
-        if ret.is_null() {
-            return ptr::null_mut();
-        }
         if !meth.is_null() {
             ptr::copy_nonoverlapping(meth, ret, 1);
         }
         (*ret).flags |= EC_KEY_METHOD_DYNAMIC;
-        ret
     }
+    owner.into_raw()
 }
 
 /// `void EC_KEY_METHOD_free(EC_KEY_METHOD *meth)` — `crypto/ec/ec_kmeth.c:188-192`.
@@ -394,8 +528,10 @@ pub unsafe extern "C" fn EC_KEY_METHOD_free(meth: *mut EcKeyMethod) {
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
     unsafe {
         if (*meth).flags & EC_KEY_METHOD_DYNAMIC != 0 {
-            // `OPENSSL_free(meth)`, line 191.
-            CRYPTO_free(meth.cast(), FILE, 191);
+            // Only a table `EC_KEY_METHOD_new` produced carries the flag, so this is that copy's
+            // own single release; the authority's static table takes the no-op arm.
+            // SAFETY: `meth` is a live copy `EC_KEY_METHOD_new` produced and no owner released it.
+            drop(OwnedEcKeyMethod::take(meth));
         }
     }
 }
