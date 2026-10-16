@@ -192,7 +192,24 @@ pub struct EvpAsymCipher {
 
 /// The authority's `*_free` body for an owned object, without the block release [`OwnedCtx`]'s
 /// `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new_zeroed`]
+/// builds the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (every releaser is
+///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new_zeroed`] leans on: it validates a `CRYPTO_zalloc` block with no caller
+///   assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release `Drop` performs.
     ///
     /// # Safety
@@ -262,7 +279,11 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 
 /// The authority's `EVP_ASYM_CIPHER_free` body, without the block release [`OwnedCtx`]'s `Drop`
 /// performs: the type name and the provider *reference*, in the authority's own order.
-impl CtxDestroy for EvpAsymCipher {
+// SAFETY: (a) holds: `destroy_body` is `EVP_ASYM_CIPHER_free` minus the block -- the type name and
+// the provider reference, each releaser NULL-tolerant, never the enclosing block. (b) holds: an
+// all-zero cipher has both members NULL, so the body is the authority's own all-empty teardown --
+// what the safe `OwnedCtx::new_zeroed` leans on.
+unsafe impl CtxDestroy for EvpAsymCipher {
     unsafe fn destroy_body(ptr: *mut EvpAsymCipher) {
         // SAFETY: `ptr` is a live object per the trait contract; `type_name` is NULL or this file's
         // own `ossl_algorithm_get1_first_name` string and `prov` is NULL or a live provider the

@@ -282,7 +282,23 @@ const UI_CTRL_IS_REDOABLE: c_int = 2;
 /// release -- which [`OwnedCtx`]'s `Drop` performs. One impl per object (`UI`, `UI_STRING`,
 /// `UI_METHOD`), so the owner runs the right destructor without a `CRYPTO_free` written at a call
 /// site.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (every releaser is
+///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -452,7 +468,11 @@ impl Drop for OwnedStr {
 // the block release `OwnedCtx`'s `Drop` now owns. The member releases stay the authority's own
 // `CRYPTO_free`/`CRYPTO_free_ex_data` calls, at the authority's own `__LINE__`.
 
-impl CtxDestroy for UiString {
+// SAFETY: (a) holds: `destroy_body` is `UI_STRING_free` minus the block -- the freeable `out_string`
+// and, for a boolean string, the three owned strings, each releaser NULL-tolerant, never the
+// enclosing block. (b) holds: an all-zero string has `flags` 0, so no member is released -- what the
+// safe `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for UiString {
     unsafe fn destroy_body(ptr: *mut UiString) {
         // SAFETY: `ptr` is a live object per the trait contract.
         unsafe {
@@ -488,7 +508,11 @@ impl CtxDestroy for UiString {
     }
 }
 
-impl CtxDestroy for Ui {
+// SAFETY: (a) holds: `destroy_body` is `UI_free` minus the block -- the method's destroy-data
+// callback, the string queue, the ex-data and the lock, each releaser NULL-tolerant, never the
+// enclosing block. (b) holds: an all-zero `UI` has `flags` 0 and NULL members, so the body is the
+// authority's own all-empty teardown -- what the safe `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for Ui {
     unsafe fn destroy_body(ptr: *mut Ui) {
         // SAFETY: `ptr` is a live object per the trait contract.
         unsafe {
@@ -514,7 +538,11 @@ impl CtxDestroy for Ui {
     }
 }
 
-impl CtxDestroy for UiMethod {
+// SAFETY: (a) holds: `destroy_body` is `UI_destroy_method` minus the block -- the ex-data and the
+// name, each releaser NULL-tolerant, never the enclosing block. (b) holds: an all-zero method has
+// both members NULL/zero, so the body is the authority's own all-empty teardown -- what the safe
+// `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for UiMethod {
     unsafe fn destroy_body(ptr: *mut UiMethod) {
         // SAFETY: `ptr` is a live object per the trait contract and `ex_data` is its own.
         unsafe {

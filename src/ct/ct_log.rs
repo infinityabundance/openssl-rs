@@ -176,7 +176,24 @@ struct CtlogStoreLoadCtx {
 /// The authority's `*_free` body for one of this file's heap records, without the block release
 /// [`OwnedCtx`]'s `Drop` performs. One impl per record type, so the owner runs the right destructor
 /// from `Drop` without a `CRYPTO_free` written at any call site.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new_zeroed`]
+/// builds the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (every releaser is
+///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new_zeroed`] leans on: it validates a `CRYPTO_zalloc` block with no caller
+///   assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release `Drop` performs.
     ///
     /// # Safety
@@ -244,7 +261,11 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 
 /// The authority's `CTLOG_STORE_free` body (`crypto/ct/ct_log.c:131-138`), without the block release
 /// [`OwnedCtx`]'s `Drop` performs: the property query and the log stack.
-impl CtxDestroy for CtlogStore {
+// SAFETY: (a) holds: `destroy_body` is the authority's `CTLOG_STORE_free` body minus the block --
+// the property query and the log stack, each releaser NULL-tolerant, never the enclosing block.
+// (b) holds: an all-zero store has both members NULL, so the body is the authority's own all-empty
+// teardown -- what the safe `OwnedCtx::new_zeroed` leans on.
+unsafe impl CtxDestroy for CtlogStore {
     unsafe fn destroy_body(ptr: *mut CtlogStore) {
         // SAFETY: `ptr` is a live record per the trait contract; its `propq` is NULL or this file's
         // `CRYPTO_strdup` block and its `logs` is NULL or a live stack of `CTLOG`.
@@ -257,7 +278,11 @@ impl CtxDestroy for CtlogStore {
 
 /// The authority's `CTLOG_free` body (`crypto/ct/ct_log.c:291-299`), without the block release
 /// [`OwnedCtx`]'s `Drop` performs: the name, the key reference and the property query.
-impl CtxDestroy for Ctlog {
+// SAFETY: (a) holds: `destroy_body` is the authority's `CTLOG_free` body minus the block -- the
+// name, the key reference and the property query, each releaser NULL-tolerant, never the enclosing
+// block. (b) holds: an all-zero log has every member NULL, so the body is the authority's own
+// all-empty teardown -- what the safe `OwnedCtx::new_zeroed` leans on.
+unsafe impl CtxDestroy for Ctlog {
     unsafe fn destroy_body(ptr: *mut Ctlog) {
         // SAFETY: `ptr` is a live record per the trait contract; `name`/`propq` are NULL or this
         // file's `CRYPTO_strdup` blocks and `public_key` is NULL or an owned key.
@@ -272,7 +297,11 @@ impl CtxDestroy for Ctlog {
 /// The authority's `ctlog_store_load_ctx_free` body (`crypto/ct/ct_log.c:68-71`) plus the separate
 /// `NCONF_free(conf)` every exit of [`CTLOG_STORE_load_file`] performs, without the block release
 /// [`OwnedCtx`]'s `Drop` performs.
-impl CtxDestroy for CtlogStoreLoadCtx {
+// SAFETY: (a) holds: `destroy_body` is `ctlog_store_load_ctx_free`'s body (`NCONF_free(conf)`) minus
+// the block -- NULL-tolerant, never the enclosing block. (b) holds: an all-zero load context has a
+// NULL `conf`, so the body is the authority's own all-empty teardown -- what the safe
+// `OwnedCtx::new_zeroed` leans on.
+unsafe impl CtxDestroy for CtlogStoreLoadCtx {
     unsafe fn destroy_body(ptr: *mut CtlogStoreLoadCtx) {
         // SAFETY: `ptr` is a live load context per the trait contract; its `conf` is NULL or a live
         // `CONF`.
