@@ -113,6 +113,82 @@ const ASN1_GEN_FORMAT_HEX: c_int = 3;
 /// `ASN1_GEN_FORMAT_BITLIST` — `4` (`asn1_gen.c:40`).
 const ASN1_GEN_FORMAT_BITLIST: c_int = 4;
 
+/// `generate_v3`'s `OPENSSL_malloc(len)` of the wrapper buffer — `asn1_gen.c:205`.
+const LINE_ALLOC_WRAP_DER: c_int = 205;
+/// `generate_v3`'s `err:`-tail `OPENSSL_free(orig_der)` — `asn1_gen.c:243`.
+const LINE_FREE_ORIG_DER: c_int = 243;
+/// `generate_v3`'s `err:`-tail `OPENSSL_free(new_der)` — `asn1_gen.c:244`.
+const LINE_FREE_NEW_DER: c_int = 244;
+/// `asn1_multi`'s `err:`-tail `OPENSSL_free(der)` — `asn1_gen.c:461`.
+const LINE_FREE_MULTI_DER: c_int = 461;
+
+/// An owned DER scratch buffer.
+///
+/// Three of this unit's routines manage such a buffer by hand: `generate_v3`'s `orig_der` (a block
+/// `i2d_ASN1_TYPE` produced, released at `:243`) and `new_der` (a `CRYPTO_malloc` released at
+/// `:244`), and `asn1_multi`'s `der` (a block `i2d_ASN1_SEQUENCE_ANY`/`i2d_ASN1_SET_ANY` produced,
+/// released at `:461`). The block stays a `CRYPTO_*`-seam allocation at the authority's own
+/// size/`file`/`line`, so a caller-installed `CRYPTO_set_mem_functions` hook observes both ends --
+/// a Rust `Box`/`Vec` would hide them. Only the *ownership* is this type: [`Self::malloc`] and
+/// [`Self::adopt`] acquire it, [`Self::as_ptr`] exposes it, [`Self::into_raw`] hands it to the
+/// value that takes it over, and `Drop` is its single release at `self.line`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, FILE, alloc_line)`, released on `Drop` at `free_line`, or `None` when
+    /// the allocator answers NULL.
+    fn malloc(len: usize, alloc_line: c_int, free_line: c_int) -> Option<OwnedBuf> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
+        // bytes.
+        let raw = CRYPTO_malloc(len, FILE.as_ptr(), alloc_line).cast::<c_uchar>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedBuf {
+                ptr: raw,
+                line: free_line,
+            })
+        }
+    }
+
+    /// Adopt a block an encoder produced, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this unit's encoder produced and this frame owns; no other
+    /// owner will release it, and this handle's `Drop` is its single release.
+    unsafe fn adopt(ptr: *mut c_uchar, line: c_int) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBuf { ptr, line })
+        }
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the value that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam at `self.line`.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not handed out; its single
+        // release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.cast(), FILE.as_ptr(), self.line) };
+    }
+}
+
 /// One `ASN1_GEN_STR` row: the name, its length, and the tag it names.
 ///
 /// The length is `sizeof(name) - 1` in the authority, i.e. the name without its
@@ -950,7 +1026,8 @@ unsafe fn asn1_multi(
     perr: *mut c_int,
 ) -> *mut Asn1Type {
     let mut ret: *mut Asn1Type = ptr::null_mut();
-    let mut der: *mut c_uchar = ptr::null_mut();
+    let mut der_slot: *mut c_uchar = ptr::null_mut();
+    let mut der: Option<OwnedBuf> = None;
     // SAFETY: `OPENSSL_sk_new_null` allocates a fresh stack.
     let sk = OPENSSL_sk_new_null();
     let mut sect: *mut OpenSslStack = ptr::null_mut();
@@ -992,14 +1069,16 @@ unsafe fn asn1_multi(
             }
         }
 
-        // SAFETY: `sk` is a live stack; `der` is a writable slot.
+        // SAFETY: `sk` is a live stack; `der_slot` is a writable slot.
         let derlen = unsafe {
             if utype == V_ASN1_SET {
-                i2d_ASN1_SET_ANY(sk, &mut der)
+                i2d_ASN1_SET_ANY(sk, &mut der_slot)
             } else {
-                i2d_ASN1_SEQUENCE_ANY(sk, &mut der)
+                i2d_ASN1_SEQUENCE_ANY(sk, &mut der_slot)
             }
         };
+        // SAFETY: `der_slot` is NULL or the block the `i2d` call allocated for this call.
+        der = unsafe { OwnedBuf::adopt(der_slot, LINE_FREE_MULTI_DER) };
         if derlen < 0 {
             break 'build;
         }
@@ -1017,14 +1096,13 @@ unsafe fn asn1_multi(
         unsafe {
             (*ret).value.ptr = st.cast();
             (*ret).type_ = utype;
-            (*st).data = der;
+            (*st).data = der.take().map_or(ptr::null_mut(), |buf| buf.into_raw());
             (*st).length = derlen;
         }
-        der = ptr::null_mut();
     }
 
-    // SAFETY: `der` is this call's own or NULL.
-    unsafe { CRYPTO_free(der.cast::<c_void>(), FILE.as_ptr(), 461) };
+    // `der`, if still held, is released by its `Drop` at the authority's own `:461`.
+    drop(der);
     // SAFETY: `sk` is NULL or this call's own stack of `ASN1_TYPE` pointers; each
     // element is freed by the thunk, which is `ASN1_TYPE_free`.
     unsafe { OPENSSL_sk_pop_free(sk, Some(asn1_type_free_thunk)) };
@@ -1061,8 +1139,8 @@ unsafe fn generate_v3(
     perr: *mut c_int,
 ) -> *mut Asn1Type {
     let mut asn1_tags = new_tag_exp_arg();
-    let mut orig_der: *mut c_uchar = ptr::null_mut();
-    let mut new_der: *mut c_uchar = ptr::null_mut();
+    let mut orig_der_slot: *mut c_uchar = ptr::null_mut();
+    let mut new_der: Option<OwnedBuf> = None;
     let mut ret: *mut Asn1Type;
 
     // SAFETY: `str_` is NUL-terminated and `asn1_tags` is a live accumulator.
@@ -1108,16 +1186,20 @@ unsafe fn generate_v3(
         return ret;
     }
 
-    // SAFETY: `ret` is live; `orig_der` is a writable slot. i2d consumes nothing.
-    let cpy_len_raw = unsafe { i2d_ASN1_TYPE(ret, &mut orig_der) };
+    // SAFETY: `ret` is live; `orig_der_slot` is a writable slot. i2d consumes nothing.
+    let cpy_len_raw = unsafe { i2d_ASN1_TYPE(ret, &mut orig_der_slot) };
     // SAFETY: `ret` is live and this call owns it.
     unsafe { ASN1_TYPE_free(ret) };
     ret = ptr::null_mut();
-    if orig_der.is_null() {
-        return ptr::null_mut();
-    }
+    // SAFETY: `orig_der_slot` is NULL or the block the `i2d` call allocated for this call.
+    let orig_der = unsafe { OwnedBuf::adopt(orig_der_slot, LINE_FREE_ORIG_DER) };
+    let orig_ptr = match orig_der.as_ref() {
+        Some(buf) => buf.as_ptr(),
+        // `new_der` is still None here, so nothing else is held.
+        None => return ptr::null_mut(),
+    };
     let mut cpy_len = cpy_len_raw;
-    let mut cpy_start: *const c_uchar = orig_der;
+    let mut cpy_start: *const c_uchar = orig_ptr;
     let mut hdr_len: c_long = 0;
     let mut hdr_constructed: c_int = 0;
     let mut hdr_tag: c_int = 0;
@@ -1139,7 +1221,7 @@ unsafe fn generate_v3(
             if r & 0x80 != 0 {
                 break 'tag;
             }
-            cpy_len -= (cpy_start as usize).wrapping_sub(orig_der as usize) as c_int;
+            cpy_len -= (cpy_start as usize).wrapping_sub(orig_ptr as usize) as c_int;
             if r & 0x1 != 0 {
                 hdr_constructed = 2;
                 hdr_len = 0;
@@ -1176,12 +1258,11 @@ unsafe fn generate_v3(
             i += 1;
         }
 
-        // SAFETY: the allocator answers NULL or `len` writable bytes.
-        new_der = CRYPTO_malloc(len as usize, FILE.as_ptr(), 205).cast::<c_uchar>();
-        if new_der.is_null() {
+        new_der = OwnedBuf::malloc(len as usize, LINE_ALLOC_WRAP_DER, LINE_FREE_NEW_DER);
+        let Some(new_buf) = new_der.as_ref() else {
             break 'tag;
-        }
-        let mut p = new_der;
+        };
+        let mut p = new_buf.as_ptr();
 
         // Explicit tags first, in list order.
         let mut i = 0;
@@ -1228,16 +1309,15 @@ unsafe fn generate_v3(
         // SAFETY: `p` has `cpy_len` writable bytes here and the ranges are disjoint.
         unsafe { memcpy(p.cast(), cpy_start.cast(), cpy_len as usize) };
 
-        let mut cp: *const c_uchar = new_der;
+        let mut cp: *const c_uchar = new_buf.as_ptr();
         // SAFETY: `cp` points at the `len`-byte buffer just built.
         ret = unsafe { d2i_ASN1_TYPE(ptr::null_mut(), &mut cp, len as c_long) };
     }
 
-    // SAFETY: both are this call's own or NULL.
-    unsafe {
-        CRYPTO_free(orig_der.cast::<c_void>(), FILE.as_ptr(), 243);
-        CRYPTO_free(new_der.cast::<c_void>(), FILE.as_ptr(), 244);
-    }
+    // `orig_der` and `new_der`, if still held, are released by their `Drop` at the authority's own
+    // sites (`:243`, `:244`), in that order.
+    drop(orig_der);
+    drop(new_der);
     ret
 }
 
@@ -1331,12 +1411,15 @@ mod tests {
                 let n = i2d_ASN1_TYPE(v, &mut out);
                 assert!(n > 0, "encoding {text:?}");
                 assert!(!out.is_null());
-                let mut p: *const c_uchar = out;
+                // SAFETY: `out` is the block the `i2d` call allocated for this test.
+                let out = OwnedBuf::adopt(out, LINE_ALLOC_WRAP_DER);
+                let mut p: *const c_uchar =
+                    out.as_ref().map_or(ptr::null_mut(), |buf| buf.as_ptr());
                 let back = d2i_ASN1_TYPE(ptr::null_mut(), &mut p, n as c_long);
                 assert!(!back.is_null(), "decoding {text:?}");
                 assert_eq!((*back).type_, want);
                 ASN1_TYPE_free(back);
-                CRYPTO_free(out.cast::<c_void>(), FILE.as_ptr(), 205);
+                drop(out);
                 ASN1_TYPE_free(v);
             }
         }
