@@ -148,6 +148,59 @@ const FILE: &core::ffi::CStr = c"crypto/x509/v3_conf.c";
 const LINE_MALLOC_DER: c_int = 161;
 /// `do_ext_i2d`'s `err:` `OPENSSL_free(ext_der)` — `crypto/x509/v3_conf.c:184`.
 const LINE_FREE_DER: c_int = 184;
+/// `v3_generic_extension`'s `err:`/tail `OPENSSL_free(ext_der)` — `crypto/x509/v3_conf.c:276`.
+const LINE_FREE_GENERIC_DER: c_int = 276;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the DER blocks the extension builders allocate
+// ---------------------------------------------------------------------------------------------
+
+/// An owned DER block allocated through the crate's `CRYPTO_*` seam.
+///
+/// [`do_ext_i2d`]'s encoder output and [`v3_generic_extension`]'s decoded input are both `CRYPTO_*`
+/// blocks whose release the authority writes by hand at each function's own `err:` `__LINE__`. The
+/// block stays a `CRYPTO_*` allocation at that `file`/`line`; only its *ownership* is this handle,
+/// whose `Drop` is its single release. A NULL pointer is a valid empty block whose release is the
+/// authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_void,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// Adopt a block the seam answered, or NULL as an empty block.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block this unit's `CRYPTO_*` seam allocated in full (not a
+    /// sub-range) and no other owner will release; `line` is the authority's own release site.
+    /// `Drop`'s `CRYPTO_free` is its only release.
+    unsafe fn adopt(ptr: *mut c_void, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, line }
+    }
+
+    /// The block's address, typed for the calls that read it.
+    fn as_ptr(&self) -> *mut c_void {
+        self.ptr
+    }
+
+    /// Give up the block to a consumer that takes it over, leaving the owner empty (so its `Drop`
+    /// performs the authority's own no-op `free(NULL)` at the tail).
+    fn take_raw(&mut self) -> *mut c_void {
+        let p = self.ptr;
+        self.ptr = ptr::null_mut();
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam and the authority's own line.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block the handle adopted (or NULL, a no-op) and `Drop` runs
+        // once; the authority's own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr, FILE.as_ptr(), self.line) };
+    }
+}
 
 /// One `v3_conf.c` raise coordinate: the authority file's own line and function.
 ///
@@ -590,7 +643,10 @@ unsafe fn do_ext_i2d(
     crit: c_int,
     ext_struc: *mut c_void,
 ) -> *mut X509Extension {
-    let mut ext_der: *mut c_uchar = ptr::null_mut();
+    // The DER block, owned: `Drop` is the authority's own `CRYPTO_free(ext_der)` at its `err:`
+    // site (`:184`).
+    // SAFETY: the seed value is NULL, the empty block `OwnedBuf::adopt` documents.
+    let mut ext_der = unsafe { OwnedBuf::adopt(ptr::null_mut(), LINE_FREE_DER) };
     let mut ext_oct: *mut Asn1String = ptr::null_mut();
 
     /* Convert internal representation to DER. */
@@ -599,9 +655,12 @@ unsafe fn do_ext_i2d(
     // SAFETY: `method` is live.
     let i2d = unsafe { (*method).i2d };
     let ext_len = if let Some(it) = it {
-        // SAFETY: `ext_struc` is the value `it()` describes; `&mut ext_der` is a writable slot that
+        let mut raw: *mut c_uchar = ptr::null_mut();
+        // SAFETY: `ext_struc` is the value `it()` describes; `&raw mut raw` is a writable slot that
         // starts NULL, so the encoder allocates.
-        let len = unsafe { ASN1_item_i2d(ext_struc, &mut ext_der, it()) };
+        let len = unsafe { ASN1_item_i2d(ext_struc, &raw mut raw, it()) };
+        // SAFETY: `raw` is this call's own block or NULL.
+        ext_der = unsafe { OwnedBuf::adopt(raw.cast::<c_void>(), LINE_FREE_DER) };
         if len < 0 {
             // SAFETY: the site is a declared constant.
             unsafe { raise_site(&V3_CONF_150) };
@@ -629,8 +688,9 @@ unsafe fn do_ext_i2d(
             // SAFETY: `ext_der`/`ext_oct` are NULL or this call's own values.
             return unsafe { do_ext_i2d_err(ext_der, ext_oct) };
         }
-        ext_der = buf;
-        let mut p = ext_der;
+        // SAFETY: `buf` is a fresh block of `len` bytes this call owns.
+        ext_der = unsafe { OwnedBuf::adopt(buf.cast::<c_void>(), LINE_FREE_DER) };
+        let mut p = buf;
         if let Some(f) = i2d {
             // SAFETY: `f` is the live old-style encoder; `p` points into `ext_der`'s `len` bytes.
             unsafe { f(ext_struc, &mut p) };
@@ -646,10 +706,9 @@ unsafe fn do_ext_i2d(
         // SAFETY: `ext_der`/`ext_oct` are NULL or this call's own values.
         return unsafe { do_ext_i2d_err(ext_der, ext_oct) };
     }
-    // SAFETY: `ext_oct` is live and owns `ext_der` from here on (`ext_der` is nulled).
+    // SAFETY: `ext_oct` is live and takes the DER block (`ext_der` is emptied).
     unsafe {
-        (*ext_oct).data = ext_der;
-        ext_der = ptr::null_mut();
+        (*ext_oct).data = ext_der.take_raw().cast::<c_uchar>();
         (*ext_oct).length = ext_len;
     }
 
@@ -661,7 +720,7 @@ unsafe fn do_ext_i2d(
         // SAFETY: `ext_der`/`ext_oct` are NULL or this call's own values.
         return unsafe { do_ext_i2d_err(ext_der, ext_oct) };
     }
-    // SAFETY: `ext_oct` is this call's own string.
+    // SAFETY: `ext_oct` is this call's own string (it owns the DER block now).
     unsafe { ASN1_OCTET_STRING_free(ext_oct) };
     ext
 }
@@ -670,14 +729,13 @@ unsafe fn do_ext_i2d(
 ///
 /// # Safety
 ///
-/// `ext_der` is NULL or this call's own allocation; `ext_oct` is NULL or this call's own string.
-unsafe fn do_ext_i2d_err(ext_der: *mut c_uchar, ext_oct: *mut Asn1String) -> *mut X509Extension {
-    // SAFETY: each is NULL or this call's own value (`CRYPTO_free` and `ASN1_OCTET_STRING_free`
-    // both tolerate NULL).
-    unsafe {
-        CRYPTO_free(ext_der.cast(), FILE.as_ptr(), LINE_FREE_DER);
-        ASN1_OCTET_STRING_free(ext_oct);
-    }
+/// `ext_oct` is NULL or this call's own string.
+unsafe fn do_ext_i2d_err(ext_der: OwnedBuf, ext_oct: *mut Asn1String) -> *mut X509Extension {
+    // `ext_der`'s `Drop` is the authority's `CRYPTO_free(ext_der)` at `:184`.
+    drop(ext_der);
+    // SAFETY: `ext_oct` is NULL or this call's own string (`ASN1_OCTET_STRING_free` tolerates
+    // NULL).
+    unsafe { ASN1_OCTET_STRING_free(ext_oct) };
     ptr::null_mut()
 }
 
@@ -843,7 +901,10 @@ unsafe fn v3_generic_extension(
     gen_type: c_int,
     ctx: *mut X509V3Ctx,
 ) -> *mut X509Extension {
-    let mut ext_der: *mut c_uchar = ptr::null_mut();
+    // The DER block, owned: `Drop` is the authority's own `CRYPTO_free(ext_der)` at its `err:`
+    // site (`:276`).
+    // SAFETY: the seed value is NULL, the empty block `OwnedBuf::adopt` documents.
+    let mut ext_der = unsafe { OwnedBuf::adopt(ptr::null_mut(), LINE_FREE_GENERIC_DER) };
     let mut ext_len: c_long = 0;
     let mut oct: *mut Asn1String = ptr::null_mut();
 
@@ -857,24 +918,36 @@ unsafe fn v3_generic_extension(
         msg.push(0);
         // SAFETY: the site is a declared constant; `msg` is NUL-terminated.
         unsafe { raise_site_data(&V3_CONF_246, msg.as_ptr().cast()) };
-        // SAFETY: `obj` is NULL; `oct` is NULL; `ext_der` is NULL.
+        // SAFETY: `obj` is NULL; `oct` is NULL.
         unsafe { ASN1_OBJECT_free(obj) };
         // SAFETY: `oct` is NULL.
         unsafe { ASN1_OCTET_STRING_free(oct) };
-        // SAFETY: `ext_der` is NULL; the site is constant.
-        unsafe { CRYPTO_free(ext_der.cast::<c_void>(), FILE.as_ptr(), 276) };
+        // `ext_der` is empty; its `Drop` is the authority's own `CRYPTO_free(ext_der)` at `:276`.
+        drop(ext_der);
         return ptr::null_mut();
     }
 
     if gen_type == 1 {
-        // SAFETY: `value` is NUL-terminated; `&mut ext_len` is writable.
-        ext_der = unsafe { OPENSSL_hexstr2buf(value, &raw mut ext_len) };
+        // SAFETY: `value` is NUL-terminated; `&raw mut ext_len` is writable; the seam takes the
+        // file/line for its record only.
+        ext_der = unsafe {
+            OwnedBuf::adopt(
+                OPENSSL_hexstr2buf(value, &raw mut ext_len).cast::<c_void>(),
+                LINE_FREE_GENERIC_DER,
+            )
+        };
     } else if gen_type == 2 {
-        // SAFETY: `value` is NUL-terminated; `ctx` NULL or live; `&mut ext_len` writable.
-        ext_der = unsafe { generic_asn1(value, ctx, &raw mut ext_len) };
+        // SAFETY: `value` is NUL-terminated; `ctx` NULL or live; `&raw mut ext_len` writable; the
+        // helper allocated its block through the same seam.
+        ext_der = unsafe {
+            OwnedBuf::adopt(
+                generic_asn1(value, ctx, &raw mut ext_len).cast::<c_void>(),
+                LINE_FREE_GENERIC_DER,
+            )
+        };
     }
 
-    if ext_der.is_null() {
+    if ext_der.as_ptr().is_null() {
         // `ERR_raise_data(ERR_LIB_X509V3, X509V3_R_EXTENSION_VALUE_ERROR, "value=%s", value)`.
         let mut msg = b"value=".to_vec();
         // SAFETY: `value` is NUL-terminated.
@@ -882,12 +955,12 @@ unsafe fn v3_generic_extension(
         msg.push(0);
         // SAFETY: the site is a declared constant; `msg` is NUL-terminated.
         unsafe { raise_site_data(&V3_CONF_257, msg.as_ptr().cast()) };
-        // SAFETY: `obj` is this call's own; `oct` is NULL; `ext_der` is NULL.
+        // SAFETY: `obj` is this call's own; `oct` is NULL.
         unsafe { ASN1_OBJECT_free(obj) };
         // SAFETY: `oct` is NULL.
         unsafe { ASN1_OCTET_STRING_free(oct) };
-        // SAFETY: `ext_der` is NULL; the site is constant.
-        unsafe { CRYPTO_free(ext_der.cast::<c_void>(), FILE.as_ptr(), 276) };
+        // `ext_der` is empty; its `Drop` is the authority's own `CRYPTO_free(ext_der)` at `:276`.
+        drop(ext_der);
         return ptr::null_mut();
     }
 
@@ -896,30 +969,31 @@ unsafe fn v3_generic_extension(
     if oct.is_null() {
         // SAFETY: the site is a declared constant.
         unsafe { raise_site(&V3_CONF_263) };
-        // SAFETY: `obj` is this call's own; `oct` is NULL; `ext_der` is this call's own.
+        // SAFETY: `obj` is this call's own; `oct` is NULL.
         unsafe { ASN1_OBJECT_free(obj) };
         // SAFETY: `oct` is NULL.
         unsafe { ASN1_OCTET_STRING_free(oct) };
-        // SAFETY: `ext_der` is this call's own; the site is constant.
-        unsafe { CRYPTO_free(ext_der.cast::<c_void>(), FILE.as_ptr(), 276) };
+        // `ext_der`'s `Drop` is the authority's own `CRYPTO_free(ext_der)` at `:276`.
+        drop(ext_der);
         return ptr::null_mut();
     }
-    // SAFETY: `oct` is live and takes ownership of `ext_der` (`ext_der` is nulled).
+    // SAFETY: `oct` is live and takes the DER block (`ext_der` is emptied).
     unsafe {
-        (*oct).data = ext_der;
+        (*oct).data = ext_der.take_raw().cast::<c_uchar>();
         (*oct).length = ext_len as c_int;
-        ext_der = ptr::null_mut();
     }
 
     // SAFETY: `oct` is live; the creator duplicates its octets; `obj` is live.
     let extension = unsafe { X509_EXTENSION_create_by_OBJ(ptr::null_mut(), obj, crit, oct) };
 
-    // SAFETY: `obj`/`oct` are this call's own; `ext_der` is NULL; the site is constant.
+    // SAFETY: `obj`/`oct` are this call's own (`oct` owns the DER block now).
     unsafe {
         ASN1_OBJECT_free(obj);
         ASN1_OCTET_STRING_free(oct);
-        CRYPTO_free(ext_der.cast::<c_void>(), FILE.as_ptr(), 276);
     }
+    // The authority's trailing `CRYPTO_free(ext_der)` at `:276`: `ext_der` is empty here, so the
+    // owner's `Drop` is its own no-op `free(NULL)`.
+    drop(ext_der);
     extension
 }
 
