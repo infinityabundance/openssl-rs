@@ -354,3 +354,53 @@ Plus a **trust-boundary budget** per subsystem: number/complexity of unsafe
 interfaces, scope of caller obligations, and the amount of code relying on them.
 A correctly scoped SIMD intrinsic and a safe fn that can build two exclusive
 references to the same memory are not the same risk.
+
+## 20. Conversion-aware residual fuzzing (FRF-Fuzz), kept outside the crate
+
+FRF-Fuzz is a **standalone external instrument**: never an implementation
+dependency of the single crate, never anything `src/` links against. It lives in
+the court/venue, with pinned authority + exact converted candidate binaries.
+The distinctive idea is to try to discover where an unsafe→safe conversion
+changed observable behaviour (allocator, lifetime, protocol state, error paths),
+not just where a crash exists.
+
+Three initial targets, each with a pinned OpenSSL authority executable, the
+**exact** converted-candidate executable, a normalised transcript contract and
+deterministic replay:
+
+1. **allocator / ownership** — differential cleanup, partial initialisation,
+   failed allocation, refcount transitions;
+2. **ASN.1 / X.509** — parsing boundaries, object lifetime, policy evaluation,
+   error and rejection differences;
+3. **TLS state machines** — unexpected transitions, fragmented inputs,
+   renegotiation / post-handshake where applicable.
+
+The experiment that matters runs **across** a conversion: capture a subsystem's
+behavioural residuals → apply the ownership reconstruction → replay the *same*
+corpus against the new candidate and the authority → let FRF prioritise new
+structural differences and propose discriminating inputs → promote only
+replay-confirmed findings to FRF, each with its exact source identities and
+disposition → let Gemel preserve the history of discovered/fixed/reopened/
+unresolved divergences.
+
+- Keep the fast compare-guided exploration and the ASan-confirmation builds
+  **separate** until the documented ASan/trace-compare instrumentation
+  incompatibility is resolved. Never trade memory-safety detection for guidance.
+- Bypasses/fuzz modes are test-only and must never appear in the release
+  configuration (see §13).
+
+### Earning the claim (rigorous, honest evaluation)
+
+The four-arm ablation is `coverage → coverage+compare → residual → full`. To
+claim the original mechanisms add value, compare FRF-Fuzz against AFL++,
+libFuzzer and an appropriate LibAFL configuration under **equal CPU, time,
+corpus and instrumentation**, and measure: verified unique defects,
+time-to-first-confirmed-divergence, reproducible boundary witnesses, and
+performance on previously-unseen defects. Include at least one external
+benchmark corpus not designed around FRF's strengths. Report censoring,
+held-out defects, negative controls, reproducibility and statistics.
+
+The claim FRF must earn: the `residual`/`full` arms outperform `coverage+compare`
+on **held-out conversion defects**, and findings survive independent replay.
+Until then, do not claim frontier-level superiority. A preserved negative result
+is a valid result.
