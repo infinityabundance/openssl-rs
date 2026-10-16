@@ -43,7 +43,7 @@
 
 #![allow(unreachable_pub)]
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 use crate::bn::arith::BN_cmp;
@@ -155,6 +155,101 @@ const FILE: *const c_char =
 #[inline]
 fn is_running() -> c_int {
     1
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a generation-context key buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned key buffer allocated through the crate's allocator seam.
+///
+/// The block stays the allocation the authority itself makes -- a `CRYPTO_strdup`/`CRYPTO_memdup`
+/// for a `DSA_GEN_CTX` string or octet field -- at the authority's exact size and `file`/`line`,
+/// because a Rust `String`/`Vec` would hide both the allocation and its release from a
+/// caller-installed `CRYPTO_set_mem_functions` hook. Only its *ownership* is this type:
+/// [`Self::adopt`]/[`Self::adopt_cleansed`] take up a block the crate allocated inside a helper or
+/// reclaimed from a `DSA_GEN_CTX` field, `Drop` is its single release, and [`Self::into_raw`] hands
+/// the block to the `#[repr(C)]` field whose address the exported ABI exposes. The `DSA_GEN_CTX`
+/// block itself, whose release is a compound destructor body, stays on the raw seam.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+/// How the authority releases a key buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)` (the `mdname`/`mdprops` strings).
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)` (the `seed`).
+    Cleansed {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+}
+
+impl OwnedBuf {
+    /// Take up a plain block the crate allocated inside a helper (`CRYPTO_strdup`) or reclaimed
+    /// from a `DSA_GEN_CTX` field, for release by `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
+    /// is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// Take up a cleansing block the helper's `CRYPTO_memdup` answered or one reclaimed from the
+    /// `seed` field, for release by `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns and that is readable
+    /// for `num` bytes; `file` is NULL or a NUL-terminated C string.
+    unsafe fn adopt_cleansed(
+        ptr: *mut c_uchar,
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::Cleansed { num, file, line },
+        })
+    }
+
+    /// Give up ownership of the block to the field it is stored in.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Cleansed { num, file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `CRYPTO_clear_free` cleanses then releases it and accepts NULL.
+                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+            }
+        }
+    }
 }
 
 /// `ossl_assert` — `include/internal/assert.h`, the NDEBUG form.
@@ -853,14 +948,27 @@ unsafe extern "C" fn dsa_gen_set_template(genctx: *mut c_void, templ: *mut c_voi
 unsafe fn dsa_set_gen_seed(gctx: *mut DsaGenCtx, seed: *mut u8, seedlen: usize) -> c_int {
     // SAFETY: `gctx` is live per the contract.
     unsafe {
-        CRYPTO_clear_free((*gctx).seed.cast(), (*gctx).seedlen, FILE, 454);
+        // The old seed's handle releases and cleanses it at the authority's own site; the
+        // replacement is the helper's fresh block, handed to the field through a second handle, and
+        // a refusal leaves the field NULL.
+        drop(OwnedBuf::adopt_cleansed(
+            (*gctx).seed.cast::<c_uchar>(),
+            (*gctx).seedlen,
+            FILE,
+            454,
+        ));
         (*gctx).seed = ptr::null_mut();
         (*gctx).seedlen = 0;
         if !seed.is_null() && seedlen > 0 {
-            (*gctx).seed = CRYPTO_memdup(seed.cast(), seedlen, FILE, 458).cast::<u8>();
-            if (*gctx).seed.is_null() {
+            let Some(buf) = OwnedBuf::adopt_cleansed(
+                CRYPTO_memdup(seed.cast(), seedlen, FILE, 458).cast::<c_uchar>(),
+                seedlen,
+                FILE,
+                458,
+            ) else {
                 return 0;
-            }
+            };
+            (*gctx).seed = buf.into_raw().cast::<u8>();
             (*gctx).seedlen = seedlen;
         }
     }
@@ -940,22 +1048,40 @@ unsafe extern "C" fn dsa_gen_set_params(genctx: *mut c_void, params: *const Ossl
             if (*p).data_type != OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            CRYPTO_free((*gctx).mdname.cast(), FILE, 513);
-            (*gctx).mdname = CRYPTO_strdup((*p).data.cast::<c_char>(), FILE, 514);
-            if (*gctx).mdname.is_null() {
+            // The old string releases through its handle at the authority's own plain free; the
+            // replacement is the helper's fresh block, handed to the field through a second
+            // handle, and a refusal leaves the field NULL.
+            drop(OwnedBuf::adopt((*gctx).mdname.cast::<c_uchar>(), FILE, 513));
+            let Some(buf) = OwnedBuf::adopt(
+                CRYPTO_strdup((*p).data.cast::<c_char>(), FILE, 514).cast::<c_uchar>(),
+                FILE,
+                514,
+            ) else {
+                (*gctx).mdname = ptr::null_mut();
                 return 0;
-            }
+            };
+            (*gctx).mdname = buf.into_raw().cast::<c_char>();
         }
         p = OSSL_PARAM_locate_const(params, OSSL_PKEY_PARAM_FFC_DIGEST_PROPS);
         if !p.is_null() {
             if (*p).data_type != OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            CRYPTO_free((*gctx).mdprops.cast(), FILE, 523);
-            (*gctx).mdprops = CRYPTO_strdup((*p).data.cast::<c_char>(), FILE, 524);
-            if (*gctx).mdprops.is_null() {
+            // As above, for the digest-properties string.
+            drop(OwnedBuf::adopt(
+                (*gctx).mdprops.cast::<c_uchar>(),
+                FILE,
+                523,
+            ));
+            let Some(buf) = OwnedBuf::adopt(
+                CRYPTO_strdup((*p).data.cast::<c_char>(), FILE, 524).cast::<c_uchar>(),
+                FILE,
+                524,
+            ) else {
+                (*gctx).mdprops = ptr::null_mut();
                 return 0;
-            }
+            };
+            (*gctx).mdprops = buf.into_raw().cast::<c_char>();
         }
     }
     1
@@ -1219,9 +1345,21 @@ unsafe extern "C" fn dsa_gen_cleanup(genctx: *mut c_void) {
 
     // SAFETY: `gctx` is this call's own context and every member is its own allocation.
     unsafe {
-        CRYPTO_free((*gctx).mdname.cast(), FILE, 706);
-        CRYPTO_free((*gctx).mdprops.cast(), FILE, 707);
-        CRYPTO_clear_free((*gctx).seed.cast(), (*gctx).seedlen, FILE, 708);
+        // Each owned field's handle releases its own block at the authority's own site -- the
+        // `seed` cleanses, the two strings are plain -- and the context block itself stays on the
+        // raw seam (its release is part of this destructor body).
+        drop(OwnedBuf::adopt((*gctx).mdname.cast::<c_uchar>(), FILE, 706));
+        drop(OwnedBuf::adopt(
+            (*gctx).mdprops.cast::<c_uchar>(),
+            FILE,
+            707,
+        ));
+        drop(OwnedBuf::adopt_cleansed(
+            (*gctx).seed.cast::<c_uchar>(),
+            (*gctx).seedlen,
+            FILE,
+            708,
+        ));
         CRYPTO_free(gctx.cast(), FILE, 709);
     }
 }
