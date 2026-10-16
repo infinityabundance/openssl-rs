@@ -368,7 +368,25 @@ impl Drop for OwnedBuf {
 
 /// The authority's `key2any_freectx` body for the context, without the block's own release, which
 /// [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new_zeroed`]
+/// builds the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `key2any_freectx` member body
+///   **exactly once** for that object; it releases **exactly** the members the object owns (the
+///   passphrase data and the cipher, each releaser the authority's own and accepting the
+///   not-yet-set NULL/zero state) and **never** releases the enclosing block, which [`OwnedCtx`]'s
+///   `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new_zeroed`] leans on: it validates a `CRYPTO_zalloc` block with no caller
+///   assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// `key2any_freectx`'s body minus the block release: the passphrase data, then the cipher.
     ///
     /// # Safety
@@ -429,7 +447,11 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
     }
 }
 
-impl CtxDestroy for Key2anyCtx {
+// SAFETY: (a) holds: `destroy_body` is `key2any_freectx` minus the block -- it releases exactly the
+// context's own passphrase data and cipher (each NULL/zero tolerant) and never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what the safe
+// `OwnedCtx::new_zeroed` leans on.
+unsafe impl CtxDestroy for Key2anyCtx {
     /// `key2any_freectx`'s body minus the block release: clear the passphrase data, then free the
     /// cipher.
     unsafe fn destroy_body(ptr: *mut Key2anyCtx) {

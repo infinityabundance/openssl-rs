@@ -217,7 +217,24 @@ struct FileCtxSt {
 
 /// The authority's `*_free` body for one context, without the block release [`OwnedCtx`]'s `Drop`
 /// performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::zalloc`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (the URI and, for a
+///   stream context, the decoder chain and its two strings, each releaser the authority's own and
+///   accepting the not-yet-set NULL/zero state) and **never** releases the enclosing block, which
+///   [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::zalloc`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// `__FILE__` for this unit's `CRYPTO_*` calls (NULL: `file_store.c` passes none).
     const FILE: *const c_char;
     /// `__LINE__` for the block's allocation.
@@ -327,7 +344,11 @@ impl Drop for OwnedBlock {
     }
 }
 
-impl CtxDestroy for FileCtxSt {
+// SAFETY: (a) holds: `destroy_body` is `free_file_ctx` minus the block -- it releases exactly the
+// context's own URI and (for a stream context) decoder chain and strings, each NULL-tolerant, and
+// never the enclosing block. (b) holds: an all-zero context is valid with every release a no-op --
+// what the safe `OwnedCtx::zalloc` leans on.
+unsafe impl CtxDestroy for FileCtxSt {
     const FILE: *const c_char = ptr::null();
     const LINE_ALLOC: c_int = 0;
     const LINE_FREE: c_int = 0;

@@ -1683,9 +1683,26 @@ unsafe fn ossl_prov_aes_hw_gcm(_keybits: usize) -> *const ProvGcmHw {
 /// Unlike `src/provider/cipher.rs`'s `CipherDestroy`, a GCM context carries no member teardown: the
 /// authority's `*_gcm_freectx` is the cleansing block release alone (`cipher_aes_gcm.c:55-61`,
 /// `cipher_aria_gcm.c:45-51`, `cipher_sm4_gcm.c:47-53`), and `CRYPTO_clear_free` wipes the whole
+/// `CRYPTO_clear_free` wipes the whole
 /// block -- the key schedule included -- so [`OwnedCtx`]'s `Drop` needs only the `FILE` the block
 /// names.
-trait GcmDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
+/// the owner and its `Drop` runs the release through a safe interface:
+///
+/// * (a) **destructor** -- the authority's `*_gcm_freectx` is the cleansing block release alone
+///   (`cipher_aes_gcm.c:55-61`, `cipher_aria_gcm.c:45-51`, `cipher_sm4_gcm.c:47-53`): the object
+///   owns no member released separately, so [`OwnedCtx`]'s `Drop` (the cleansing block release only)
+///   is the complete destructor and `FILE` names the block's own release site; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which the cleansing
+///   block release is sound. This is the obligation the safe [`OwnedCtx::new`] leans on: it
+///   validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust omit part of a context's teardown; breaking (b) releases a block that
+/// is not a valid `Self`.
+unsafe trait GcmDestroy: Sized {
     /// `__FILE__` for this unit's `CRYPTO_*` calls.
     const FILE: *const c_char;
 }
@@ -1797,15 +1814,24 @@ impl<T: GcmDestroy> Drop for OwnedRaw<T> {
 
 // The three GCM context kinds: each block names its own unit's `__FILE__`.
 
-impl GcmDestroy for ProvAesGcmCtx {
+// SAFETY: (a) holds: the context owns no member released separately, so `OwnedCtx`'s cleansing block
+// release is the whole `*_gcm_freectx`, and `FILE` names the block's own release site. (b) holds: an
+// all-zero context is valid and the cleanse-release is sound -- what the safe `OwnedCtx::new` leans on.
+unsafe impl GcmDestroy for ProvAesGcmCtx {
     const FILE: *const c_char = FILE_AES_GCM;
 }
 
-impl GcmDestroy for ProvAriaGcmCtx {
+// SAFETY: (a) holds: the context owns no member released separately, so `OwnedCtx`'s cleansing block
+// release is the whole `*_gcm_freectx`, and `FILE` names the block's own release site. (b) holds: an
+// all-zero context is valid and the cleanse-release is sound -- what the safe `OwnedCtx::new` leans on.
+unsafe impl GcmDestroy for ProvAriaGcmCtx {
     const FILE: *const c_char = FILE_ARIA_GCM;
 }
 
-impl GcmDestroy for ProvSm4GcmCtx {
+// SAFETY: (a) holds: the context owns no member released separately, so `OwnedCtx`'s cleansing block
+// release is the whole `*_gcm_freectx`, and `FILE` names the block's own release site. (b) holds: an
+// all-zero context is valid and the cleanse-release is sound -- what the safe `OwnedCtx::new` leans on.
+unsafe impl GcmDestroy for ProvSm4GcmCtx {
     const FILE: *const c_char = FILE_SM4_GCM;
 }
 

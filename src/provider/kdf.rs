@@ -324,7 +324,24 @@ fn fail_at(site: &err_sites::ErrSite) -> c_int {
 /// `FILE` is the `__FILE__` the block's own release records. Implementing the trait on each
 /// `#[repr(C)]` context lets [`OwnedCtx`] run the right destructor from `Drop` without a
 /// `CRYPTO_free` written at any call site.
-trait KdfDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns -- the digest, MAC
+///   and cipher handles, the cleartext key material and the struct clear, every releaser the
+///   authority's own and accepting the not-yet-set NULL/zero state -- and **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait KdfDestroy: Sized {
     /// `__FILE__` for this unit's `CRYPTO_*` calls.
     const FILE: *const c_char;
 
@@ -451,7 +468,10 @@ impl Drop for OwnedBuf {
 // the block release `OwnedCtx`'s `Drop` now owns. The member releases stay the authority's own
 // `CRYPTO_free`/`CRYPTO_clear_free`/`EVP_*_free` calls, relocated to the context's `Drop`.
 
-impl KdfDestroy for KdfSskdf {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfSskdf {
     const FILE: *const c_char = FILE_SSKDF;
     unsafe fn destroy_body(ptr: *mut KdfSskdf) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -459,7 +479,10 @@ impl KdfDestroy for KdfSskdf {
     }
 }
 
-impl KdfDestroy for KdfX942 {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfX942 {
     const FILE: *const c_char = FILE_X942;
     unsafe fn destroy_body(ptr: *mut KdfX942) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -467,7 +490,10 @@ impl KdfDestroy for KdfX942 {
     }
 }
 
-impl KdfDestroy for KdfPkcs12 {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfPkcs12 {
     const FILE: *const c_char = FILE_PKCS12KDF;
     unsafe fn destroy_body(ptr: *mut KdfPkcs12) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -475,7 +501,10 @@ impl KdfDestroy for KdfPkcs12 {
     }
 }
 
-impl KdfDestroy for KdfSshkdf {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfSshkdf {
     const FILE: *const c_char = FILE_SSHKDF;
     unsafe fn destroy_body(ptr: *mut KdfSshkdf) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -483,7 +512,10 @@ impl KdfDestroy for KdfSshkdf {
     }
 }
 
-impl KdfDestroy for KdfPbkdf2 {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfPbkdf2 {
     const FILE: *const c_char = FILE_PBKDF2;
     unsafe fn destroy_body(ptr: *mut KdfPbkdf2) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -491,7 +523,10 @@ impl KdfDestroy for KdfPbkdf2 {
     }
 }
 
-impl KdfDestroy for KdfHkdf {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfHkdf {
     const FILE: *const c_char = FILE_HKDF;
     unsafe fn destroy_body(ptr: *mut KdfHkdf) {
         // SAFETY: `ptr` is a live context per the trait contract; `on_free` is 1, as `hkdf_free`
@@ -500,7 +535,10 @@ impl KdfDestroy for KdfHkdf {
     }
 }
 
-impl KdfDestroy for Tls1Prf {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for Tls1Prf {
     const FILE: *const c_char = FILE_TLS1_PRF;
     unsafe fn destroy_body(ptr: *mut Tls1Prf) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -508,7 +546,10 @@ impl KdfDestroy for Tls1Prf {
     }
 }
 
-impl KdfDestroy for Kbkdf {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for Kbkdf {
     const FILE: *const c_char = FILE_KBKDF;
     unsafe fn destroy_body(ptr: *mut Kbkdf) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -516,7 +557,10 @@ impl KdfDestroy for Kbkdf {
     }
 }
 
-impl KdfDestroy for KdfScrypt {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfScrypt {
     const FILE: *const c_char = FILE_SCRYPT;
     unsafe fn destroy_body(ptr: *mut KdfScrypt) {
         // SAFETY: `ptr` is a live context per the trait contract; the property query and the copied
@@ -529,7 +573,10 @@ impl KdfDestroy for KdfScrypt {
     }
 }
 
-impl KdfDestroy for Krb5kdfCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for Krb5kdfCtx {
     const FILE: *const c_char = FILE_KRB5KDF;
     unsafe fn destroy_body(ptr: *mut Krb5kdfCtx) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -537,7 +584,10 @@ impl KdfDestroy for Krb5kdfCtx {
     }
 }
 
-impl KdfDestroy for KdfHmacDrbg {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfHmacDrbg {
     const FILE: *const c_char = FILE_HMACDRBG_KDF;
     unsafe fn destroy_body(ptr: *mut KdfHmacDrbg) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -545,7 +595,10 @@ impl KdfDestroy for KdfHmacDrbg {
     }
 }
 
-impl KdfDestroy for KdfArgon2 {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfArgon2 {
     const FILE: *const c_char = FILE_ARGON2;
     unsafe fn destroy_body(ptr: *mut KdfArgon2) {
         // SAFETY: `ptr` is a live context per the trait contract; the four buffers are the
@@ -581,7 +634,10 @@ impl KdfDestroy for KdfArgon2 {
     }
 }
 
-impl KdfDestroy for KdfPbkdf1 {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfPbkdf1 {
     const FILE: *const c_char = FILE_PBKDF1;
     unsafe fn destroy_body(ptr: *mut KdfPbkdf1) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -589,7 +645,10 @@ impl KdfDestroy for KdfPbkdf1 {
     }
 }
 
-impl KdfDestroy for KdfPvk {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfPvk {
     const FILE: *const c_char = FILE_PVKKDF;
     unsafe fn destroy_body(ptr: *mut KdfPvk) {
         // SAFETY: `ptr` is a live context per the trait contract.
