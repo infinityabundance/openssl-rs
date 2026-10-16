@@ -28,7 +28,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uint, c_void, CStr};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void, CStr};
 use core::ptr;
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
@@ -132,6 +132,89 @@ fn is_running() -> c_int {
     1
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays the authority's own allocation -- a `CRYPTO_zalloc` for the `Z` prefix, a
+/// `CRYPTO_malloc` for the duplicated user ID -- at the authority's exact size and `file`/`line`,
+/// because a Rust `String`/`Vec` would hide both the allocation and its release from a
+/// caller-installed `CRYPTO_set_mem_functions` hook. Only its *ownership* is this type:
+/// [`Self::new`]/[`Self::new_zalloc`] allocate it, [`Self::adopt`] takes up a block the crate
+/// allocated inside a helper (an `OSSL_PARAM_get_octet_string`/`_utf8_string`, a `CRYPTO_strdup`)
+/// or reclaimed from a context field, `Drop` is its single release, and [`Self::into_raw`] hands the
+/// block to the `#[repr(C)]` `PROV_SM2_CTX` field whose address the exported ABI exposes.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new_zalloc(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_zalloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// Take up a plain block the crate allocated inside a helper (an `OSSL_PARAM_get_octet_string`,
+    /// an `OSSL_PARAM_get_utf8_string`, a `CRYPTO_strdup`) or reclaimed from a context field, for
+    /// release by `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
+    /// is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf { ptr, file, line })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the context field it is stored in.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// `static int sm2sig_set_mdname(PROV_SM2_CTX *psm2ctx, const char *mdname)` —
 /// `sm2_sig.c.in:97-123`.
 ///
@@ -192,10 +275,14 @@ unsafe extern "C" fn sm2sig_newctx(provctx: *mut c_void, propq: *const c_char) -
     unsafe {
         (*ctx).libctx = prov_libctx_of(provctx);
         if !propq.is_null() {
-            (*ctx).propq = CRYPTO_strdup(propq, FILE, 133);
-            if (*ctx).propq.is_null() {
-                CRYPTO_free(ctx.cast(), FILE, 134);
-                return ptr::null_mut();
+            // The copy is a plain block this context owns; a refusal drops it with the context at
+            // the authority's `err:` site.
+            match OwnedBuf::adopt(CRYPTO_strdup(propq, FILE, 133).cast::<c_uchar>(), FILE, 351) {
+                Some(buf) => (*ctx).propq = buf.into_raw().cast::<c_char>(),
+                None => {
+                    CRYPTO_free(ctx.cast(), FILE, 134);
+                    return ptr::null_mut();
+                }
             }
         }
         (*ctx).mdsize = SM3_DIGEST_LENGTH;
@@ -412,14 +499,29 @@ unsafe fn sm2sig_compute_z_digest(ctx: *mut ProvSm2SigCtx) -> c_int {
             (*ctx).flag_compute_z_digest = 0;
 
             /* get hashed prefix 'z' of tbs message */
-            let z = CRYPTO_zalloc((*ctx).mdsize, FILE, 276).cast::<u8>();
-            if z.is_null()
-                || ossl_sm2_compute_z_digest(z, (*ctx).md, (*ctx).id, (*ctx).id_len, (*ctx).ec) == 0
-                || EVP_DigestUpdate((*ctx).mdctx, z.cast::<c_void>(), (*ctx).mdsize) == 0
-            {
+            // The `Z` prefix is this frame's own zeroed block; the handle releases it through the
+            // crate's allocator seam on both the success and the refusal path.
+            let z = OwnedBuf::new_zalloc((*ctx).mdsize, FILE, 276);
+            let ok = match z.as_ref() {
+                Some(buf) => {
+                    ossl_sm2_compute_z_digest(
+                        buf.as_ptr(),
+                        (*ctx).md,
+                        (*ctx).id,
+                        (*ctx).id_len,
+                        (*ctx).ec,
+                    ) != 0
+                        && EVP_DigestUpdate(
+                            (*ctx).mdctx,
+                            buf.as_ptr().cast::<c_void>(),
+                            (*ctx).mdsize,
+                        ) != 0
+                }
+                None => false,
+            };
+            if !ok {
                 ret = 0;
             }
-            CRYPTO_free(z.cast(), FILE, 282);
         }
 
         ret
@@ -547,8 +649,10 @@ unsafe extern "C" fn sm2sig_freectx(vpsm2ctx: *mut c_void) {
     unsafe {
         free_md(ctx);
         EC_KEY_free((*ctx).ec);
-        CRYPTO_free((*ctx).propq.cast(), FILE, 351);
-        CRYPTO_free((*ctx).id.cast(), FILE, 352);
+        // Each field's handle releases its own plain block at the authority's site; the context
+        // block stays on the raw seam (its release is part of the destructor body).
+        drop(OwnedBuf::adopt((*ctx).propq.cast::<c_uchar>(), FILE, 351));
+        drop(OwnedBuf::adopt((*ctx).id.cast::<c_uchar>(), FILE, 352));
         CRYPTO_free(ctx.cast(), FILE, 353);
     }
 }
@@ -582,10 +686,18 @@ unsafe extern "C" fn sm2sig_dupctx(vpsm2ctx: *mut c_void) -> *mut c_void {
         (*dstctx).ec = (*srcctx).ec;
 
         if !(*srcctx).propq.is_null() {
-            (*dstctx).propq = CRYPTO_strdup((*srcctx).propq, FILE, 377);
-            if (*dstctx).propq.is_null() {
-                sm2sig_freectx(dstctx.cast());
-                return ptr::null_mut();
+            // The copy is a plain block the handle takes up; a refusal drops it with the context at
+            // the authority's `err:` site.
+            match OwnedBuf::adopt(
+                CRYPTO_strdup((*srcctx).propq, FILE, 377).cast::<c_uchar>(),
+                FILE,
+                351,
+            ) {
+                Some(buf) => (*dstctx).propq = buf.into_raw().cast::<c_char>(),
+                None => {
+                    sm2sig_freectx(dstctx.cast());
+                    return ptr::null_mut();
+                }
             }
         }
 
@@ -606,13 +718,16 @@ unsafe extern "C" fn sm2sig_dupctx(vpsm2ctx: *mut c_void) -> *mut c_void {
         }
 
         if !(*srcctx).id.is_null() {
-            (*dstctx).id = CRYPTO_malloc((*srcctx).id_len, FILE, 394).cast::<u8>();
-            if (*dstctx).id.is_null() {
+            // The ID copy is this frame's own block, handed to `dstctx->id`; `sm2sig_freectx`
+            // releases the field at the authority's own site.
+            let Some(id) = OwnedBuf::new((*srcctx).id_len, FILE, 394) else {
                 sm2sig_freectx(dstctx.cast());
                 return ptr::null_mut();
-            }
+            };
+            let src_id = (*srcctx).id;
+            (*dstctx).id = id.into_raw().cast::<u8>();
             (*dstctx).id_len = (*srcctx).id_len;
-            ptr::copy((*srcctx).id, (*dstctx).id, (*srcctx).id_len);
+            ptr::copy(src_id, (*dstctx).id, (*srcctx).id_len);
         }
 
         dstctx.cast()
@@ -857,8 +972,11 @@ unsafe extern "C" fn sm2sig_set_ctx_params(
             {
                 return 0;
             }
-            CRYPTO_free((*psm2ctx).id.cast(), FILE, 475);
-            (*psm2ctx).id = tmp_id.cast::<u8>();
+            // The old ID's handle releases it at the authority's own site; the replacement is the
+            // helper's fresh block, handed to the field through a second handle.
+            drop(OwnedBuf::adopt((*psm2ctx).id.cast::<c_uchar>(), FILE, 475));
+            (*psm2ctx).id = OwnedBuf::adopt(tmp_id.cast::<c_uchar>(), FILE, 475)
+                .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<u8>());
             (*psm2ctx).id_len = tmp_idlen;
         }
 
@@ -879,11 +997,13 @@ unsafe extern "C" fn sm2sig_set_ctx_params(
             if OSSL_PARAM_get_utf8_string(p.digest, ptr::addr_of_mut!(mdname), 0) == 0 {
                 return 0;
             }
+            // The helper's string is this frame's to release at the authority's own two sites: the
+            // refusal path records one line and the success path the other.
             if sm2sig_set_mdname(psm2ctx, mdname) == 0 {
-                CRYPTO_free(mdname.cast(), FILE, 496);
+                drop(OwnedBuf::adopt(mdname.cast::<c_uchar>(), FILE, 496));
                 return 0;
             }
-            CRYPTO_free(mdname.cast(), FILE, 498);
+            drop(OwnedBuf::adopt(mdname.cast::<c_uchar>(), FILE, 498));
         }
 
         1
