@@ -212,17 +212,30 @@ pub(crate) unsafe extern "C" fn CMS_ContentInfo_new_ex(
     let ci =
         unsafe { ASN1_item_new_ex(CMS_ContentInfo_it(), libctx, propq) }.cast::<CmsContentInfo>();
     if !ci.is_null() {
-        // SAFETY: `ci` was just allocated.
-        unsafe {
-            (*ci).ctx.libctx = libctx;
-            (*ci).ctx.propq = ptr::null_mut();
-            if !propq.is_null() {
-                (*ci).ctx.propq = CRYPTO_strdup(propq, FILE.as_ptr(), 64);
-                if (*ci).ctx.propq.is_null() {
-                    CMS_ContentInfo_free(ci);
-                    return ptr::null_mut();
-                }
-            }
+        // SAFETY: `ci` was just allocated and its `ctx.libctx` slot is writable.
+        unsafe { (*ci).ctx.libctx = libctx };
+        // The item layer `CRYPTO_zalloc`s the whole object, so `ctx.propq` is already unset (NULL).
+        // Take the duplicate first so a failed copy can release the object *before* the handle
+        // borrows it, then store only on success; the authority's explicit `propq = NULL` is this
+        // no-op made implicit by the zeroing allocation. The allocator coordinates (`cms_lib.c:64`)
+        // and the free-old-then-allocate-new order are preserved exactly.
+        let copy = if propq.is_null() {
+            ptr::null_mut()
+        } else {
+            // SAFETY: `propq` is NUL-terminated per the caller's contract.
+            unsafe { CRYPTO_strdup(propq, FILE.as_ptr(), 64) }
+        };
+        if !propq.is_null() && copy.is_null() {
+            // SAFETY: `ci` is live and owned here.
+            unsafe { CMS_ContentInfo_free(ci) };
+            return ptr::null_mut();
+        }
+        // SAFETY: `ci` is a live `CMS_ContentInfo` whose `ctx` the item layer zeroed, so its
+        // `propq` member is unset and obeys the member-buffer invariant.
+        let mut slot = unsafe { CmsPropqSlot::of(&mut (*ci).ctx) };
+        if !copy.is_null() {
+            // SAFETY: `copy` is this call's own fresh `CRYPTO_strdup` block and the field is unset.
+            unsafe { slot.store(copy) };
         }
     }
     ci
@@ -263,7 +276,7 @@ pub(crate) unsafe fn ossl_cms_ctx_get0_propq(ctx: *const CmsCtx) -> *const c_cha
         ptr::null()
     } else {
         // SAFETY: `ctx` is live per the contract.
-        unsafe { (*ctx).propq }
+        unsafe { (*ctx).propq() }
     }
 }
 
