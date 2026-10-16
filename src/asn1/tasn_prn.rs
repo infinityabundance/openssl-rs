@@ -65,6 +65,7 @@ use core::ffi::{c_char, c_int, c_long, c_void};
 use crate::asn1::a_strex::ASN1_STRING_print_ex;
 use crate::asn1::der::{ASN1_parse_dump, ASN1_tag2str};
 use crate::asn1::layout::*;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::prim::ASN1_INTEGER_to_BN;
 use crate::asn1::time::{ASN1_GENERALIZEDTIME_print, ASN1_UTCTIME_print};
 use crate::asn1::utl::{call_item_exp, do_adb, get_choice_selector_const, get_const_field_ptr};
@@ -76,7 +77,6 @@ use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::obj::{Asn1Object, OBJ_nid2ln, OBJ_obj2nid, OBJ_obj2txt};
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::runtime::str::OPENSSL_strnlen;
@@ -670,36 +670,43 @@ unsafe fn bignum_to_string(bn: *const crate::bn::bignum::BigNum) -> *mut c_char 
 /// `tmp` must be a NUL-terminated string this function may take ownership of, held
 /// in storage `CRYPTO_free` accepts.
 unsafe fn prepend_radix(tmp: *mut c_char) -> *mut c_char {
-    // SAFETY: `tmp` is NUL-terminated by the caller's contract.
-    let len = unsafe { OPENSSL_strnlen(tmp, usize::MAX) };
-    // SAFETY: `OPENSSL_strnlen` measured at least one byte, so `tmp[0]` is a live
+    // The caller hands over `tmp`; the handle's `Drop` is the authority's own
+    // `OPENSSL_free(tmp)` at `(FILE, LINE)`.
+    // SAFETY: `tmp` is a live NUL-terminated block this function now owns.
+    let Some(tmp) = (unsafe { OwnedBlock::<c_char>::from_raw(tmp, FILE.as_ptr(), LINE) }) else {
+        return core::ptr::null_mut();
+    };
+    let p = tmp.as_ptr();
+    // SAFETY: `p` is NUL-terminated by the caller's contract.
+    let len = unsafe { OPENSSL_strnlen(p, usize::MAX) };
+    // SAFETY: `OPENSSL_strnlen` measured at least one byte, so `p[0]` is a live
     // byte of that string.
-    let neg = unsafe { *tmp.cast::<u8>() } == b'-';
+    let neg = unsafe { *p.cast::<u8>() } == b'-';
     let out_len = len + 3;
     // SAFETY: a strictly positive size is requested and the file/line are statics.
-    let ret = CRYPTO_malloc(out_len, FILE.as_ptr(), LINE);
-    if ret.is_null() {
-        // SAFETY: this function owns `tmp`.
-        unsafe { CRYPTO_free(tmp.cast::<c_void>(), FILE.as_ptr(), LINE) };
+    // The prefix buffer is the authority's own `OPENSSL_malloc(out_len)`; the handle's
+    // `Drop` is its `OPENSSL_free` at the same site.
+    let Some(ret) = OwnedBlock::<c_char>::malloc(out_len, FILE.as_ptr(), LINE) else {
+        // `tmp`'s handle drops here, running the authority's own `OPENSSL_free(tmp)`
+        // at the `err:`-equivalent path below.
         return core::ptr::null_mut();
-    }
-    // SAFETY: `ret` owns `out_len` written bytes, `tmp` holds `len + 1` readable
-    // ones, and the copies below stay inside both: `3 + (len - 1)` and `2 + len` are
-    // each `len + 2 <= out_len - 1`.
+    };
+    // SAFETY: `ret` owns `out_len` written bytes, `p` holds `len + 1` readable ones,
+    // and the copies below stay inside both: `3 + (len - 1)` and `2 + len` are each
+    // `len + 2 <= out_len - 1`.
     unsafe {
-        let d = ret.cast::<u8>();
+        let d = ret.as_ptr().cast::<u8>();
         if neg {
             core::ptr::copy_nonoverlapping(b"-0x".as_ptr(), d, 3);
-            core::ptr::copy_nonoverlapping(tmp.cast::<u8>().add(1), d.add(3), len - 1);
+            core::ptr::copy_nonoverlapping(p.cast::<u8>().add(1), d.add(3), len - 1);
         } else {
             core::ptr::copy_nonoverlapping(b"0x".as_ptr(), d, 2);
-            core::ptr::copy_nonoverlapping(tmp.cast::<u8>(), d.add(2), len);
+            core::ptr::copy_nonoverlapping(p.cast::<u8>(), d.add(2), len);
         }
         *d.add(out_len - 1) = 0;
     }
-    // SAFETY: this function owns `tmp`.
-    unsafe { CRYPTO_free(tmp.cast::<c_void>(), FILE.as_ptr(), LINE) };
-    ret.cast::<c_char>()
+    // `tmp`'s handle drops here; the authority's own `OPENSSL_free(tmp)` is that release.
+    ret.into_raw().cast::<c_char>()
 }
 
 /// `i2s_ASN1_INTEGER(NULL, str)`, as `asn1_print_integer` reaches it.
@@ -742,16 +749,17 @@ pub(crate) unsafe fn i2s_asn1_integer(str_: *const Asn1String) -> *mut c_char {
 unsafe fn asn1_print_integer(out: *mut Bio, str_: *const Asn1String) -> c_int {
     // SAFETY: the caller's contract makes `str_` null-or-live.
     let s = unsafe { i2s_asn1_integer(str_) };
-    if s.is_null() {
+    // `s` is the block `i2s_asn1_integer` returned; the handle's `Drop` is the
+    // authority's own `OPENSSL_free(s)` at `(FILE, LINE)`.
+    // SAFETY: `s` is NULL or this frame's own block.
+    let Some(s) = (unsafe { OwnedBlock::<c_char>::from_raw(s, FILE.as_ptr(), LINE) }) else {
         return 0;
-    }
+    };
     let mut ret = 1;
     // SAFETY: `out` is live and `s` is NUL-terminated.
-    if unsafe { BIO_puts(out, s) } <= 0 {
+    if unsafe { BIO_puts(out, s.as_ptr()) } <= 0 {
         ret = 0;
     }
-    // SAFETY: `s` was allocated by `i2s_asn1_integer` and is released here.
-    unsafe { CRYPTO_free(s.cast::<c_void>(), FILE.as_ptr(), LINE) };
     ret
 }
 
