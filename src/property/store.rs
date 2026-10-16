@@ -63,7 +63,7 @@
 // restate this paragraph, and what retires it is 7.2.
 #![allow(dead_code)]
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 use core::sync::atomic::{AtomicU32, Ordering};
 
@@ -116,6 +116,77 @@ const LINE_FREE_STORE: c_int = 268;
 const LINE_MALLOC_QUERY: c_int = 922;
 /// `alg_copy`'s `OPENSSL_memdup(alg, sizeof(ALGORITHM))` (line 563).
 const LINE_MEMDUP_ALG: c_int = 563;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size -- a Rust `Box`/`Vec` would hide
+/// both the allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook --
+/// and only its *ownership* is this type: [`Self::new`] allocates it, `Drop` is its single release,
+/// and [`Self::into_raw`] hands it to a consumer that takes it over (the query cache's `lh_QUERY`
+/// table in [`ossl_method_store_cache_set`]). [`Self::adopt`] takes an empty handle whose release is
+/// the authority's own no-op `free(NULL)` on the paths where the authority frees a still-NULL entry
+/// at its own `file`/`line`.
+///
+/// The other blocks this file allocates -- the `OSSL_METHOD_STORE` itself, each `IMPLEMENTATION`,
+/// each `ALGORITHM` and `alg_copy`'s snapshot header -- are released by a *structured* body
+/// ([`impl_free`], [`alg_cleanup`], [`ossl_method_store_free`], [`del_tmpalg`]) rather than a single
+/// `CRYPTO_free`, or are handed straight to another structure, so they keep their own release
+/// functions and are not owned here.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// Adopt a block this frame owns, for release by `Drop` at the authority's own site; with a
+    /// NULL `ptr` the handle is the authority's own no-op `free(NULL)` at `file`/`line`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns; `file` is NULL or a
+    /// NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, file, line }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
 
 /// `int (*up_ref)(void *)` and `void (*free)(void *)` — the reference count and the destructor a
 /// method carries, so the store can hold one without knowing what it is.
@@ -1147,7 +1218,6 @@ pub(crate) unsafe fn ossl_method_store_cache_set(
         return 0;
     }
     let mut res: c_int = 1;
-    let mut p: *mut Query = ptr::null_mut();
     // SAFETY: `store` is live per the contract.
     unsafe {
         if ossl_property_write_lock(store) == 0 {
@@ -1159,7 +1229,9 @@ pub(crate) unsafe fn ossl_method_store_cache_set(
         let alg = ossl_method_store_retrieve(store, nid);
         if alg.is_null() {
             res = 0;
-            CRYPTO_free(p.cast::<c_void>(), FILE, LINE_FREE_QUERY);
+            // The authority's error tail frees the still-NULL cache entry; an empty handle is that
+            // same no-op `free(NULL)` at the entry's own release line.
+            drop(OwnedBuf::adopt(ptr::null_mut(), FILE, LINE_FREE_QUERY));
             ossl_property_unlock(store);
             return res;
         }
@@ -1188,45 +1260,57 @@ pub(crate) unsafe fn ossl_method_store_cache_set(
         // `sizeof(QUERY) + strlen(prop_query)`, which is exactly enough for a header whose `body`
         // already holds one `char` plus the text and its terminator.
         let len = c_strlen(prop_query);
-        p = CRYPTO_malloc(core::mem::size_of::<Query>() + len, FILE, LINE_MALLOC_QUERY)
-            .cast::<Query>();
-        if !p.is_null() {
-            (*p).query = ptr::addr_of!((*p).body).cast::<c_char>();
-            (*p).provider = prov;
-            (*p).method.method = method;
-            (*p).method.up_ref = method_up_ref;
-            (*p).method.free = method_destruct;
-            if ossl_method_up_ref(ptr::addr_of_mut!((*p).method)) == 0 {
-                res = 0;
-                CRYPTO_free(p.cast::<c_void>(), FILE, LINE_MALLOC_QUERY);
-                ossl_property_unlock(store);
-                return res;
-            }
-            c_memcpy(
-                (*p).query.cast_mut().cast::<c_void>(),
-                prop_query.cast(),
-                len + 1,
-            );
-            let old = OPENSSL_LH_insert((*alg).cache, p.cast::<c_void>()).cast::<Query>();
-            if !old.is_null() {
-                impl_cache_free(old);
-                ossl_property_unlock(store);
-                return res;
-            }
-            if OPENSSL_LH_error((*alg).cache) == 0 {
-                (*store).cache_nelem += 1;
-                if (*store).cache_nelem >= IMPL_CACHE_FLUSH_THRESHOLD {
-                    (*store).cache_need_flush = 1;
-                }
-                ossl_property_unlock(store);
-                return res;
-            }
-            // The insert failed: the table did not take the entry, so the reference it took is
-            // dropped here -- and the block is released by the shared `err:` path below.
-            ossl_method_free(ptr::addr_of_mut!((*p).method));
+        // The cache entry is this frame's block, allocated through the crate's allocator seam at the
+        // authority's own size/`file`/`line`; `Drop` is its single release, or `into_raw` hands it
+        // to the table.
+        let Some(buf) = OwnedBuf::new(core::mem::size_of::<Query>() + len, FILE, LINE_MALLOC_QUERY)
+        else {
+            // The authority's error tail frees the still-NULL entry and reports 0.
+            drop(OwnedBuf::adopt(ptr::null_mut(), FILE, LINE_MALLOC_QUERY));
+            res = 0;
+            ossl_property_unlock(store);
+            return res;
+        };
+        let p = buf.as_ptr().cast::<Query>();
+        (*p).query = ptr::addr_of!((*p).body).cast::<c_char>();
+        (*p).provider = prov;
+        (*p).method.method = method;
+        (*p).method.up_ref = method_up_ref;
+        (*p).method.free = method_destruct;
+        if ossl_method_up_ref(ptr::addr_of_mut!((*p).method)) == 0 {
+            res = 0;
+            drop(buf);
+            ossl_property_unlock(store);
+            return res;
         }
+        c_memcpy(
+            (*p).query.cast_mut().cast::<c_void>(),
+            prop_query.cast(),
+            len + 1,
+        );
+        let old = OPENSSL_LH_insert((*alg).cache, p.cast::<c_void>()).cast::<Query>();
+        if !old.is_null() {
+            impl_cache_free(old);
+            // The table took the entry over; the handle gives it up.
+            let _ = buf.into_raw();
+            ossl_property_unlock(store);
+            return res;
+        }
+        if OPENSSL_LH_error((*alg).cache) == 0 {
+            (*store).cache_nelem += 1;
+            if (*store).cache_nelem >= IMPL_CACHE_FLUSH_THRESHOLD {
+                (*store).cache_need_flush = 1;
+            }
+            // The table took the entry over; the handle gives it up.
+            let _ = buf.into_raw();
+            ossl_property_unlock(store);
+            return res;
+        }
+        // The insert failed: the table did not take the entry, so the reference it took is dropped
+        // here -- and the handle releases the block on drop.
+        ossl_method_free(ptr::addr_of_mut!((*p).method));
         res = 0;
-        CRYPTO_free(p.cast::<c_void>(), FILE, LINE_MALLOC_QUERY);
+        drop(buf);
         ossl_property_unlock(store);
     }
     res
