@@ -304,7 +304,7 @@ pub unsafe extern "C" fn PKCS12_unpack_p7encdata(
             (*content).enc_data,
             1,
             (*p7).ctx.libctx,
-            (*p7).ctx.propq,
+            (*p7).ctx.propq(),
         )
         .cast::<OpenSslStack>()
     }
