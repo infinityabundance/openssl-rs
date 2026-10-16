@@ -27,7 +27,7 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_void, CStr};
-use core::ptr;
+use core::ptr::{self, NonNull};
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::skeymgmt::{
@@ -80,6 +80,104 @@ fn is_running() -> c_int {
     1
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `PROV_SKEY` block and its secret member
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `generic_free` member body, without the block release [`OwnedCtx`]'s `Drop`
+/// performs.
+///
+/// # Safety
+///
+/// An implementer must guarantee, for a live key this unit allocated:
+/// * `destroy_body(ptr)` runs the authority's `generic_free` member body **exactly once** -- the
+///   `CRYPTO_clear_free` of the key's own secret bytes, which accepts the not-yet-set NULL/zero
+///   state -- and **never** releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * an all-zero block of `Self` is a valid `Self` for which the body is sound. This is the
+///   obligation the safe [`OwnedCtx::zalloc`] leans on, and `generic_import` builds its key with
+///   `OPENSSL_zalloc`.
+unsafe trait CtxDestroy: Sized {
+    /// `__FILE__` for this unit's `CRYPTO_*` calls.
+    const FILE: *const c_char;
+    /// `__LINE__` for the block's allocation (`generic.c` is generated, so both are `0`).
+    const LINE_ALLOC: c_int;
+    /// `__LINE__` for the block's release.
+    const LINE_FREE: c_int;
+
+    /// # Safety
+    /// `ptr` is a live key this unit allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+// SAFETY: (a) `destroy_body` is `generic_free`'s member body, releasing exactly this key's own
+// secret buffer once (the clearer accepts the unset NULL) and never the enclosing block, which
+// `OwnedCtx` releases; (b) `ProvSkey` is a `#[repr(C)]` record of raw pointers and integers, so an
+// all-zero block is a valid `ProvSkey` the body is sound on (`CRYPTO_clear_free(NULL, 0, ...)`).
+unsafe impl CtxDestroy for ProvSkey {
+    const FILE: *const c_char = FILE_GENERIC_SKEYMGMT;
+    const LINE_ALLOC: c_int = 0;
+    const LINE_FREE: c_int = 0;
+
+    unsafe fn destroy_body(ptr: *mut ProvSkey) {
+        // SAFETY: `ptr` is a live key per the trait contract.
+        unsafe {
+            CRYPTO_clear_free((*ptr).data.cast(), (*ptr).length, FILE_GENERIC_SKEYMGMT, 0);
+        }
+    }
+}
+
+/// An owned `PROV_SKEY` block.
+///
+/// The block keeps the authority's layout and its stable address (the exported ABI hands it out and
+/// takes it back), but its *ownership* is this type: it is allocated through the crate's allocator
+/// seam and `Drop` runs the authority's own destructor body before the block's single release. It
+/// stays a `CRYPTO_zalloc` at `size_of::<T>()` rather than a Rust `Box`, so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the allocation, its size and its release.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: NonNull<T>,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// `CRYPTO_zalloc(size_of::<T>(), T::FILE, T::LINE_ALLOC)`, or `None` when it answers NULL.
+    fn zalloc() -> Option<OwnedCtx<T>> {
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, T::LINE_ALLOC).cast::<T>();
+        NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// The stable address the constructor writes the key's own fields through.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's keydata pointer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
+        NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The key destructor: the authority's `generic_free` body ([`CtxDestroy::destroy_body`])
+    /// followed by the block's single release, through the same allocator seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and this is its single release; `Drop`
+        // runs once, and `destroy_body` is the authority's own body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, T::LINE_FREE);
+        }
+    }
+}
+
 /// `static const OSSL_PARAM generic_skey_import_list[]` — `generic.c:37-40`.
 static GENERIC_SKEY_IMPORT_LIST: [OsslParam; 2] =
     [param_octet_string(OSSL_SKEY_PARAM_RAW_BYTES), END];
@@ -119,22 +217,10 @@ unsafe fn generic_skey_import_decode(params: *const OsslParam) -> Result<*const 
 /// # Safety
 /// `keydata` is NULL or a `PROV_SKEY` this module allocated.
 pub(crate) unsafe extern "C" fn generic_free(keydata: *mut c_void) {
-    // SAFETY: `keydata` is NULL or a live key per the contract.
-    unsafe {
-        let generic = keydata.cast::<ProvSkey>();
-
-        if generic.is_null() {
-            return;
-        }
-
-        CRYPTO_clear_free(
-            (*generic).data.cast(),
-            (*generic).length,
-            FILE_GENERIC_SKEYMGMT,
-            0,
-        );
-        CRYPTO_free(generic.cast(), FILE_GENERIC_SKEYMGMT, 0);
-    }
+    // SAFETY: `keydata` is NULL or a live key this module allocated and no other owner has released;
+    // `from_raw` maps NULL to `None`, and its `Drop` runs the authority's own `generic_free` body
+    // (the `CRYPTO_clear_free` of the secret bytes) and block release.
+    drop(unsafe { OwnedCtx::<ProvSkey>::from_raw(keydata.cast::<ProvSkey>()) });
 }
 
 /// `void *generic_import(void *provctx, int selection, const OSSL_PARAM params[])` — `generic.c:70-115`.
@@ -169,36 +255,39 @@ pub(crate) unsafe extern "C" fn generic_import(
             return ptr::null_mut();
         }
 
-        let mut generic = CRYPTO_zalloc(core::mem::size_of::<ProvSkey>(), FILE_GENERIC_SKEYMGMT, 0)
-            .cast::<ProvSkey>();
-        if generic.is_null() {
+        // A fresh zeroed `PROV_SKEY` is the authority's own `OPENSSL_zalloc` state, so this is
+        // `CRYPTO_zalloc` at the authority's exact size/`file`/`line`; `Drop` reclaims the block at
+        // `generic_free`'s own site.
+        let Some(generic) = OwnedCtx::<ProvSkey>::zalloc() else {
             return ptr::null_mut();
-        }
+        };
+        let generic_ptr = generic.as_ptr();
 
-        (*generic).libctx = libctx;
+        (*generic_ptr).libctx = libctx;
 
-        (*generic).type_ = SKEY_TYPE_GENERIC;
+        (*generic_ptr).type_ = SKEY_TYPE_GENERIC;
 
         'end: {
-            (*generic).data = CRYPTO_memdup(
+            (*generic_ptr).data = CRYPTO_memdup(
                 (*raw_bytes).data,
                 (*raw_bytes).data_size,
                 FILE_GENERIC_SKEYMGMT,
                 0,
             )
             .cast::<u8>();
-            if (*generic).data.is_null() {
+            if (*generic_ptr).data.is_null() {
                 break 'end;
             }
-            (*generic).length = (*raw_bytes).data_size;
+            (*generic_ptr).length = (*raw_bytes).data_size;
             ok = 1;
         }
 
         if ok == 0 {
-            generic_free(generic.cast());
-            generic = ptr::null_mut();
+            // `generic`'s `Drop` runs `generic_free`'s body (the member `CRYPTO_clear_free`) and the
+            // block release, and the half-built key is never handed out.
+            return ptr::null_mut();
         }
-        generic.cast()
+        generic.into_raw().cast()
     }
 }
 
