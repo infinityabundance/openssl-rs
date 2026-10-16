@@ -31,11 +31,11 @@ use crate::pkcs7::pk7_asn1::{
     PKCS7_DIGEST_new, PKCS7_ENCRYPT_new, PKCS7_ENVELOPE_new, PKCS7_RECIP_INFO_free,
     PKCS7_RECIP_INFO_new, PKCS7_SIGNED_free, PKCS7_SIGNED_new, PKCS7_SIGNER_INFO_free,
     PKCS7_SIGNER_INFO_new, PKCS7_SIGN_ENVELOPE_new, Pkcs7, Pkcs7Ctx, Pkcs7EncContent,
-    Pkcs7RecipInfo, Pkcs7SignerInfo,
+    Pkcs7RecipInfo, Pkcs7SignerInfo, PropqSlot,
 };
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem::CRYPTO_strdup;
 use crate::runtime::obj::{
     NID_pkcs7_data, NID_pkcs7_digest, NID_pkcs7_encrypted, NID_pkcs7_enveloped, NID_pkcs7_signed,
     NID_pkcs7_signedAndEnveloped, NID_rsaEncryption, NID_undef, OBJ_cmp, OBJ_dup,
@@ -930,21 +930,20 @@ pub unsafe extern "C" fn ossl_pkcs7_set0_libctx(p7: *mut Pkcs7, ctx: *mut c_void
 /// `p7` is a live `PKCS7`; `propq` is null or a NUL-terminated string.
 #[no_mangle]
 pub unsafe extern "C" fn ossl_pkcs7_set1_propq(p7: *mut Pkcs7, propq: *const c_char) -> c_int {
-    // SAFETY: `p7` is live; its `ctx.propq` is either null or this object's own copy.
-    unsafe {
-        if !(*p7).ctx.propq.is_null() {
-            CRYPTO_free((*p7).ctx.propq.cast(), FILE.as_ptr(), 497);
-            (*p7).ctx.propq = ptr::null_mut();
-        }
-    }
+    // SAFETY: `p7` is live per the caller's contract and its `ctx.propq` obeys the member-buffer
+    // invariant.
+    let mut slot = unsafe { PropqSlot::of(&mut (*p7).ctx) };
+    // Release any incumbent at the authority's own site (`pk7_lib.c:497`), leaving it unset. A
+    // NULL incumbent makes this a no-op, exactly as the authority's NULL guard does.
+    slot.clear(FILE.as_ptr(), 497);
     if !propq.is_null() {
         // SAFETY: `propq` is NUL-terminated per the caller's contract.
         let copy = unsafe { CRYPTO_strdup(propq, FILE.as_ptr(), 501) };
         if copy.is_null() {
             return 0;
         }
-        // SAFETY: `p7` is live and its `ctx.propq` slot is writable.
-        unsafe { (*p7).ctx.propq = copy };
+        // SAFETY: `copy` is this call's own fresh `CRYPTO_strdup` block and the field is unset.
+        unsafe { slot.store(copy) };
     }
     1
 }
@@ -958,7 +957,7 @@ pub unsafe extern "C" fn ossl_pkcs7_ctx_propagate(from: *const Pkcs7, to: *mut P
     // SAFETY: both are live per the caller's contract.
     unsafe {
         ossl_pkcs7_set0_libctx(to, (*from).ctx.libctx);
-        if ossl_pkcs7_set1_propq(to, (*from).ctx.propq) == 0 {
+        if ossl_pkcs7_set1_propq(to, (*from).ctx.propq()) == 0 {
             return 0;
         }
         ossl_pkcs7_resolve_libctx(to);
@@ -990,7 +989,7 @@ pub unsafe extern "C" fn ossl_pkcs7_ctx_get0_propq(ctx: *const Pkcs7Ctx) -> *con
         ptr::null()
     } else {
         // SAFETY: `ctx` is live per the caller's contract.
-        unsafe { (*ctx).propq }
+        unsafe { (*ctx).propq() }
     }
 }
 
