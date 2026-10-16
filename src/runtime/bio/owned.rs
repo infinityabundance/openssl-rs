@@ -241,3 +241,107 @@ impl Drop for OwnedBlock {
         unsafe { CRYPTO_free(self.ptr, ptr::null(), 0) };
     }
 }
+
+// -------------------------------------------------------------------------------------------
+// Adversarial partial-initialisation tests (`stage/p25/adv-tests`, §2 / §16)
+// -------------------------------------------------------------------------------------------
+//
+// `RawCtx::drop` must release the block alone and never run `T::destroy_body` on storage that is
+// not yet a valid `T`. These tests observe that with a test-only `CtxDestroy` whose `destroy_body`
+// records that it ran, and a negative control that proves the recording is live.
+#[cfg(test)]
+mod adv_partial_init_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
+    /// Records that a `destroy_body` ran, so a test can assert it did NOT.
+    static DESTROY_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// A test-only context whose destructor records its own call and releases nothing: it holds a
+    /// plain integer, so an all-zero block is a valid value and the destructor is sound on it.
+    #[repr(C)]
+    struct ProbeCtx {
+        marker: usize,
+    }
+
+    // SAFETY: (a) `destroy_body` releases exactly the members the object owns -- none, since
+    // `ProbeCtx` holds only an integer -- and never the enclosing block; it only records its call.
+    // (b) an all-zero `ProbeCtx` is a valid value for which `destroy_body` is sound.
+    unsafe impl CtxDestroy for ProbeCtx {
+        unsafe fn destroy_body(_ptr: *mut ProbeCtx) {
+            DESTROY_CALLS.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+
+    fn destroys() -> usize {
+        DESTROY_CALLS.load(Ordering::SeqCst)
+    }
+
+    /// Dropping a `RawCtx` releases the block alone: the destructor must not run on storage that
+    /// was never validated with `assume_init`.
+    #[test]
+    fn rawctx_drop_does_not_run_destroy_body() {
+        let before = destroys();
+        {
+            let raw = RawCtx::<ProbeCtx>::zalloc();
+            assert!(raw.is_some(), "a zeroed block must be allocatable");
+            // `raw` drops here: the block is released, the destructor must not run.
+        }
+        assert_eq!(
+            destroys(),
+            before,
+            "RawCtx::drop must not run the context destructor on uninitialised storage"
+        );
+    }
+
+    /// Dropping a validated `OwnedCtx` does run the destructor exactly once.
+    #[test]
+    fn owned_ctx_drop_runs_destroy_body_once() {
+        let before = destroys();
+        {
+            let owned = OwnedCtx::<ProbeCtx>::zalloc();
+            assert!(owned.is_some());
+        }
+        assert_eq!(destroys(), before + 1);
+    }
+
+    /// Negative control (§16): prove the `DESTROY_CALLS` instrument is live. A handle reclaimed
+    /// from the raw block WITHOUT `assume_init` (test-only) drops as an `OwnedCtx`, so `Drop` does
+    /// invoke the destructor on storage that was never validated -- the exact defect the first test
+    /// guards against. If the instrument could not observe this, the first test's assertion would
+    /// be vacuous.
+    #[test]
+    fn canary_destroy_instrument_is_live() {
+        let before = destroys();
+        let raw = RawCtx::<ProbeCtx>::zalloc();
+        assert!(raw.is_some());
+        let p = match raw {
+            Some(r) => r.into_raw(),
+            None => ptr::null_mut(),
+        };
+        assert!(!p.is_null());
+        // SAFETY: `p` is the live block `raw` gave up. The canary deliberately reclaims it as an
+        // `OwnedCtx` without `assume_init`, so `Drop` runs the destructor on unvalidated storage;
+        // `ProbeCtx::destroy_body` is sound on any bit pattern, so this cannot cause UB.
+        let canary = unsafe { OwnedCtx::<ProbeCtx>::from_raw(p) };
+        drop(canary);
+        assert_eq!(
+            destroys(),
+            before + 1,
+            "the instrument must observe a destroy_body call (negative control)"
+        );
+    }
+
+    /// `OwnedBlock::take(NULL)` is `None`; a non-NULL block is owned and released by `Drop`.
+    #[test]
+    fn owned_block_take_null_is_none() {
+        // SAFETY: NULL is a valid input; `take` adopts nothing.
+        assert!(unsafe { OwnedBlock::take(ptr::null_mut()) }.is_none());
+        let p = CRYPTO_malloc(16, ptr::null(), 0);
+        assert!(!p.is_null());
+        // SAFETY: `p` is a fresh block this frame owns; the handle is its single release.
+        assert!(unsafe { OwnedBlock::take(p) }.is_some());
+    }
+}
