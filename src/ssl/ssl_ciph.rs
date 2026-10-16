@@ -899,7 +899,7 @@ unsafe fn fetch_cipher(libctx: *mut c_void, propq: *const c_char, nid: c_int) ->
 /// `ctx` must be live.
 pub(crate) unsafe fn ssl_load_ciphers(ctx: *mut SslCtx) {
     // SAFETY: `ctx` is live per the caller's contract.
-    let (libctx, propq) = unsafe { ((*ctx).libctx, (*ctx).propq) };
+    let (libctx, propq) = unsafe { ((*ctx).libctx, (*ctx).propq()) };
     // SAFETY: `ctx` is live.
     unsafe { (*ctx).disabled_enc_mask = 0 };
     for (mask, nid) in t::SSL_CIPHER_TABLE_CIPHER.iter() {

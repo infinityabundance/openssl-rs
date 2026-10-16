@@ -1147,7 +1147,7 @@ pub(crate) unsafe fn ssl_verify_cert_chain(s: *mut Ssl, sk: *mut OpenSslStack) -
         let sctx = (*s).ctx;
         let verify_store = (*sctx).cert_store;
         // `ctx = X509_STORE_CTX_new_ex(sctx->libctx, sctx->propq)` — `:453-457`.
-        let ctx = X509_STORE_CTX_new_ex((*sctx).libctx, (*sctx).propq);
+        let ctx = X509_STORE_CTX_new_ex((*sctx).libctx, (*sctx).propq());
         if ctx.is_null() {
             raise_ssl(ERR_R_X509_LIB, 455);
             return 0;
