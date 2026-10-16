@@ -187,16 +187,19 @@ const _: () = {
 /// and then indexes or iterates it (`levels[i]`, `split_at_mut`, `iter`), so no walk carries a
 /// `*mut X509PolicyLevel` or steps one with `add`/`sub`.
 ///
+/// The borrow is **owner-derived**: it takes an exclusive borrow of the owning tree value and the
+/// returned slice's lifetime is tied to that borrow, so the borrow checker — not a hand-written
+/// comment — enforces that the slice cannot outlive the tree and that no second slice is taken from
+/// the same borrow. (The tree's `levels` block is a separate allocation from the header, so a caller
+/// may still hold the header borrow and this slice at once; the remaining raw obligation is that the
+/// pointer the header records really is a live, unaliased block.)
+///
 /// # Safety
 ///
-/// `tree` is a live policy tree, and no other borrow of its level array is live for the returned
-/// slice's use.
-pub(crate) unsafe fn tree_levels<'a>(tree: *const X509PolicyTree) -> &'a mut [X509PolicyLevel] {
-    // SAFETY: `tree` is NULL or live per the contract; the borrow reads only the header's plain
-    // `levels`/`nlevel` members.
-    let Some(tree) = (unsafe { tree.as_ref() }) else {
-        return &mut [];
-    };
+/// `tree.levels`/`tree.nlevel` describe a live block of `nlevel` contiguous `X509PolicyLevel`s that
+/// this borrow uniquely reaches, and no other borrow of that block is live for the returned slice's
+/// use.
+pub(crate) unsafe fn tree_levels(tree: &mut X509PolicyTree) -> &mut [X509PolicyLevel] {
     // `levels`/`nlevel` describe the block `OwnedLevels` allocated and `tree_init` linked —
     // `nlevel` contiguous `X509PolicyLevel`s.
     let (base, nlevel) = (tree.levels, tree.nlevel);

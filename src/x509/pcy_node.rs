@@ -127,15 +127,26 @@ impl<'a> Node<'a> {
         Some(Node { node, data })
     }
 
-    /// The node's parent, uniquely borrowed, for the `nchild` maintenance the walks perform
+    /// The node's parent, exclusively borrowed, for the `nchild` maintenance the walks perform
     /// (`node->parent->nchild--`).
+    ///
+    /// The borrow is **mutation-derived**: the receiver is `&mut self`, and the returned reference's
+    /// lifetime is tied to that borrow, so the compiler enforces that this `Node` value is
+    /// exclusively borrowed while the parent is written and that the borrow cannot outlive the
+    /// value. One `Node` therefore cannot hand out two conflicting `&mut` to the same parent.
     ///
     /// # Safety
     ///
-    /// The `parent` edge is a live node and no other borrow of it is live.
-    pub(crate) unsafe fn parent_mut(&self) -> Option<&'a mut X509PolicyNode> {
+    /// The `parent` edge is NULL or a live node, and no other borrow of that parent node is live.
+    /// `Node` is `Copy`, so two `Node` values built from the same raw node — or from distinct links
+    /// to a shared parent — remain a caller obligation: the graph's own walks keep one `Node` per
+    /// node, and this method cannot prove that from the shared `&X509PolicyNode` it holds.
+    pub(crate) unsafe fn parent_mut(&mut self) -> Option<&mut X509PolicyNode> {
+        // The pointer is copied out first so the returned reference does not borrow the shared
+        // `self.node` field; the `&mut self` receiver ties the result to this `Node` value.
+        let parent = self.node.parent;
         // SAFETY: the parent edge is NULL or a live node per the contract.
-        unsafe { self.node.parent.as_mut() }
+        unsafe { parent.as_mut() }
     }
 }
 

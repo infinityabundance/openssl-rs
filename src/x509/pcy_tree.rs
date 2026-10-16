@@ -320,8 +320,9 @@ impl Drop for OwnedTree {
             OPENSSL_sk_pop_free(user_policies, Some(exnode_free_void));
 
             // The level array as a checked slice: every level is reached by iterating it, not by
-            // stepping a raw level pointer.
-            for level in tree_levels(tree).iter() {
+            // stepping a raw level pointer. The slice borrows the owner (`self`), so its lifetime is
+            // tied to the tree and it cannot outlive it.
+            for level in tree_levels(self.header_mut()).iter() {
                 X509_free(level.cert);
                 OPENSSL_sk_pop_free(level.nodes, Some(policy_node_free_void));
                 ossl_policy_node_free(level.anyPolicy);
@@ -449,10 +450,14 @@ unsafe fn tree_init(
     }
     // The tree now owns the level array; its own `Drop` reclaims it.
     levels_owner.into_raw();
+    // The tree's stable address, for the node links below: captured before the level borrow so the
+    // shared pointer does not conflict with the exclusive borrow `tree_levels` takes.
+    let tree_ptr = tree.as_ptr();
     // The level array as a checked slice: every level below is reached by indexing this, never by
-    // stepping a raw level pointer.
+    // stepping a raw level pointer. The borrow is owner-derived from `tree`, so the slice's lifetime
+    // is tied to the tree value and cannot outlive it.
     // SAFETY: `tree` is a live tree whose level array was just linked, and it is unaliased here.
-    let levels = unsafe { tree_levels(tree.as_ptr()) };
+    let levels = unsafe { tree_levels(tree.header_mut()) };
     // SAFETY: `OBJ_nid2obj(NID_any_policy)` is a static object.
     let data =
         unsafe { ossl_policy_data_new(core::ptr::null_mut(), OBJ_nid2obj(NID_any_policy), 0) };
@@ -462,13 +467,7 @@ unsafe fn tree_init(
     }
     // SAFETY: level 0 is present in the `n + 1` array; `data` and `tree` are live.
     if unsafe {
-        ossl_policy_level_add_node(
-            &raw mut levels[0],
-            data,
-            core::ptr::null_mut(),
-            tree.as_ptr(),
-            1,
-        )
+        ossl_policy_level_add_node(&raw mut levels[0], data, core::ptr::null_mut(), tree_ptr, 1)
     }
     .is_null()
     {
@@ -803,7 +802,7 @@ unsafe fn tree_prune(levels: &mut [X509PolicyLevel], start: usize) -> c_int {
             // SAFETY: `i` is in range; the element is a live node.
             let raw = unsafe { OPENSSL_sk_value(nodes, i) }.cast::<X509PolicyNode>();
             // SAFETY: `raw` is a live node; the graph links it a live datum.
-            if let Some(node) = unsafe { Node::of(raw) } {
+            if let Some(mut node) = unsafe { Node::of(raw) } {
                 if (node.data.flags & POLICY_DATA_FLAG_MAP_MASK) != 0 {
                     // SAFETY: the node's parent edge is a live node, not otherwise borrowed.
                     if let Some(parent) = unsafe { node.parent_mut() } {
@@ -832,7 +831,7 @@ unsafe fn tree_prune(levels: &mut [X509PolicyLevel], start: usize) -> c_int {
             // SAFETY: `i` is in range; the element is a live node.
             let raw = unsafe { OPENSSL_sk_value(nodes, i) }.cast::<X509PolicyNode>();
             // SAFETY: `raw` is a live node.
-            if let Some(node) = unsafe { Node::of(raw) } {
+            if let Some(mut node) = unsafe { Node::of(raw) } {
                 if node.node.nchild == 0 {
                     // SAFETY: the node's parent edge is a live node, not otherwise borrowed.
                     if let Some(parent) = unsafe { node.parent_mut() } {
@@ -851,7 +850,7 @@ unsafe fn tree_prune(levels: &mut [X509PolicyLevel], start: usize) -> c_int {
         let any = levels[k].anyPolicy;
         if !any.is_null() {
             // SAFETY: `any` is a live node.
-            if let Some(node) = unsafe { Node::of(any) } {
+            if let Some(mut node) = unsafe { Node::of(any) } {
                 if node.node.nchild == 0 {
                     // SAFETY: the anyPolicy's parent edge is a live node, not otherwise borrowed.
                     if let Some(parent) = unsafe { node.parent_mut() } {
@@ -909,7 +908,7 @@ unsafe fn tree_calculate_authority_set(
 ) -> c_int {
     // The level array as a checked slice: the authority's `curr`/`curr++` walk is an index walk.
     // SAFETY: `tree` is live, so its level array is unaliased here.
-    let levels = unsafe { tree_levels(tree) };
+    let levels = unsafe { tree_levels(&mut *tree) };
     let nlevel = levels.len();
     // SAFETY: `tree` is live and writable per the contract.
     let tree = unsafe { &mut *tree };
@@ -985,7 +984,7 @@ unsafe fn tree_calculate_user_set(
 
     // The top level's anyPolicy, the level array reached by indexing it.
     // SAFETY: `tree` is live, so its level array is unaliased here.
-    let levels = unsafe { tree_levels(tree) };
+    let levels = unsafe { tree_levels(&mut *tree) };
     let any_policy = levels[levels.len() - 1].anyPolicy;
     // SAFETY: `tree` is live and writable per the contract.
     let tree = unsafe { &mut *tree };
@@ -1071,7 +1070,7 @@ unsafe fn tree_evaluate(tree: *mut X509PolicyTree) -> c_int {
     // The level array as a checked slice: the authority's `curr`/`curr++` walk is an index walk, and
     // each level is reached by indexing it.
     // SAFETY: `tree` is live with at least two levels, so its level array is unaliased here.
-    let levels = unsafe { tree_levels(tree) };
+    let levels = unsafe { tree_levels(&mut *tree) };
     let nlevel = levels.len();
     for i in 1..nlevel {
         let cert = levels[i].cert;
