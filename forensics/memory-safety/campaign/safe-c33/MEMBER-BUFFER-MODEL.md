@@ -1,7 +1,9 @@
 # Member-buffer model — object-owned C buffers in `#[repr(C)]` structs
 
-**Status:** proven on `PKCS7.ctx.propq` (`stage/p25/memberbuf-propq`); CMS/X.509 are
-follow-up applications (see §5). Living document — re-read at the point of use.
+**Status:** proven on `PKCS7.ctx.propq` (`stage/p25/memberbuf-propq`); CMS and the X.509 family
+are follow-up applications, and `SSL_SESSION` (`stage/p25/memberbuf-sslsess`) is the first
+application of the `(ptr, len)` **blob** variant (§2.6). Living document — re-read at the point of
+use.
 
 ## 1. The problem
 
@@ -102,6 +104,39 @@ It is the **resident-member** counterpart of the per-module `OwnedStr` handle
 Both express the identical invariant — "NULL, or one seam block, released once" — and both
 keep the block at the authority's `file`/`line`.
 
+### 2.6 The `(ptr, len)` **blob** variant
+
+Some members are not C strings but `(pointer, length)` pairs the object owns as a unit:
+`SSL_SESSION`'s `ext_tick`/`ext_ticklen`, `ext_alpn_selected`/`ext_alpn_selected_len` and
+`ticket_appdata`/`ticket_appdata_len`. The model applies with one extra obligation: the length is
+part of the member, so the invariant and every operation must keep the pair consistent.
+
+> A `(unsigned char *p, size_t n)` member of an object-owned `#[repr(C)]` struct is, at every
+> observation, **either `(NULL, 0)` or a single owned block of exactly `n` bytes produced by the
+> crate's allocator seam and owned by the enclosing object** — a `CRYPTO_memdup`/`CRYPTO_malloc`
+> block, or a block adopted from the ASN.1 item layer whose ownership the object takes over. The
+> enclosing object is that block's only owner; nothing else frees it, aliases it, or writes `p` and
+> `n` independently.
+
+The handle borrows **both** fields, so a caller cannot move one without the other:
+
+| operation | kind | contract |
+|-----------|------|----------|
+| `MemberBufSlot::of(&mut p, &mut n)` | `unsafe fn` | the pair currently obeys the invariant |
+| `MemberBufSlot::clear(file, line)` | safe | release the incumbent (if any) at the authority's own `file`/`line`, leaving `(NULL, 0)` |
+| `MemberBufSlot::store(p, n)` | `unsafe fn` | `p` is NULL or a fresh exclusive block whose allocation is exactly `n`; the member is empty |
+| the object's reader (e.g. `SslSession::ext_tick`) | safe | return the current `(p, n)` — `(NULL, 0)` when unset |
+
+`clear` sets the companion length to 0 as well as the pointer — exactly the authority's "release,
+unconditionally, then set the length to zero" (e.g. `SSL_SESSION_set1_alpn_selected`,
+`ssl_sess.c:1131-1148`) — so the two fields never disagree. `store`'s `debug_assert!` requires the
+member empty, so a caller cannot leak an incumbent by storing over it. The `file`/`line` are, as in
+§2.3, the authority's own free site, and `CRYPTO_free`'s NULL no-op makes an unconditional `clear`
+observationally identical to the authority's guarded free.
+
+The C-string variant (`MemberCStrSlot`) is the `propq` shape of §2.2 — one pointer, NUL-terminated,
+no companion; both variants share the §2.3 rules and are defined in the module that owns the struct.
+
 ## 3. Applying the model to `PKCS7.ctx.propq`
 
 * `src/pkcs7/pk7_asn1.rs` — defines `PropqSlot` and `Pkcs7Ctx::propq()`; the writer sites
@@ -118,6 +153,16 @@ in exactly one place.
 
 * No behavioural divergence: coordinates, order, NULL semantics and the seam are preserved
   (see §2.3). No deliberate safety improvement over the authority was required here.
+* **`SSL_SESSION` (§5.6) carries one recorded safety improvement, on a failure path only.** The four
+  handshake writers (`statem_clnt.rs`'s `tls12`/`tls13_process_new_session_ticket`,
+  `statem_srvr.rs`'s `tls12`/`tls13_construct_new_session_ticket`) freed `sess->ext.tick` and then
+  allocated a replacement; if the allocation was refused, the pre-conversion code left the
+  *just-freed* pointer in the field — a latent double free once the session was released. The
+  handle's `clear` leaves `(NULL, 0)` instead, so the refused-allocation path is memory-safe. The
+  allocator-event transcript is unchanged (the same free, then the same refused allocation); only
+  the in-memory field on the refused path differs, and that path is reachable only through the
+  function's error return. This is the §17 "do not reproduce UB" treatment, recorded rather than
+  hidden.
 * The field is now **private** to `pkcs7/pk7_asn1.rs`: every read of `PKCS7.ctx.propq` goes
   through [`Pkcs7Ctx::propq`] and every write through [`PropqSlot`], so the C ABI
   `#[repr(C)]` representation is unchanged while the field's accesses are compile-time-confined
@@ -143,3 +188,11 @@ Adopt the model next, in this order:
    `x509/x509_lu.rs` (`X509_STORE_CTX.propq`) / `x509/by_store.rs`.
 5. A shared crate-level `MemberCStr` may be warranted once three or more families use it;
    until then each owner module keeps a module-local handle, consistent with `OwnedStr`.
+6. **`SSL_SESSION`** (`ssl/ssl_lib.rs`, lifecycle in `ssl/ssl_sess.rs`) — the C-string
+   `ext_hostname` and the `(ptr, len)` blobs `ext_tick`/`ext_ticklen`,
+   `ext_alpn_selected`/`ext_alpn_selected_len` and `ticket_appdata`/`ticket_appdata_len`. Handled
+   by module-local `MemberCStrSlot`/`MemberBufSlot` and the `SslSession` readers; the four fields
+   are **private** in `ssl_lib.rs` and every reader/writer across `src/ssl/**` (the codec
+   `ssl_asn1.rs`, the printer `ssl_txt.rs`, the handshake `statem_*.rs`) was converted. This is
+   the first application of the §2.6 **blob** variant. `psk_identity_hint`, `psk_identity` and
+   `srp_username` remain raw C-string fields (outside this task).

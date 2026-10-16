@@ -56,11 +56,15 @@
 //! by hand. The block itself is the session's stable address, handed out and taken back by the
 //! exported ABI.
 //!
-//! **The session's `#[repr(C)]` member buffers stay raw and are the documented boundary.**
-//! `ext_hostname`/`ext_tick`/`psk_identity_hint`/`psk_identity`/`srp_username`/`ext_alpn_selected`/
-//! `ticket_appdata` and the variable-sized `session_ticket` block are fields of `SSL_SESSION` /
-//! `SSL` (defined in `ssl_lib.rs`), so their setter frees and the `SSL_SESSION_free` body's frees
-//! remain the object's own releases, as in the authority.
+//! **The session's object-owned member buffers are mediated by handles.** `ext_hostname` (a
+//! C string) and the `(ptr, len)` blobs `ext_tick`/`ext_ticklen`,
+//! `ext_alpn_selected`/`ext_alpn_selected_len` and `ticket_appdata`/`ticket_appdata_len` are owned
+//! by the session and reached only through [`crate::ssl::ssl_lib::MemberCStrSlot`],
+//! [`crate::ssl::ssl_lib::MemberBufSlot`] and the `SslSession` readers (`ssl_lib.rs`). The fields
+//! are private there, so every read, write and release is compile-time-confinable to one place;
+//! see `MEMBER-BUFFER-MODEL.md`. `psk_identity_hint`, `psk_identity` and `srp_username` (and the
+//! connection's variable-sized `session_ticket` block) remain raw C-string fields outside this
+//! conversion, exactly as in the authority.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -413,34 +417,37 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
         {
             return ptr::null_mut();
         }
-        if !s.ext_hostname.is_null() {
-            (*dest).ext_hostname = CRYPTO_strdup(s.ext_hostname, FILE, 227);
-            if (*dest).ext_hostname.is_null() {
+        let hostname = s.ext_hostname();
+        if !hostname.is_null() {
+            let dup = CRYPTO_strdup(hostname, FILE, 227);
+            if dup.is_null() {
                 return ptr::null_mut();
             }
+            // SAFETY: `dup` is this call's fresh `CRYPTO_strdup` block; `dest` is freshly zeroed,
+            // so its `ext_hostname` member is empty.
+            (*dest).ext_hostname_slot().store(dup);
         }
-        if ticket != 0 && !s.ext_tick.is_null() {
-            (*dest).ext_tick = CRYPTO_memdup(s.ext_tick.cast(), s.ext_ticklen, FILE, 233).cast();
-            if (*dest).ext_tick.is_null() {
+        if ticket != 0 && !s.ext_tick().0.is_null() {
+            let (tick_ptr, tick_len) = s.ext_tick();
+            let dup = CRYPTO_memdup(tick_ptr.cast(), tick_len, FILE, 233).cast::<u8>();
+            if dup.is_null() {
                 return ptr::null_mut();
             }
-            (*dest).ext_ticklen = s.ext_ticklen;
+            // SAFETY: `dup` is this call's fresh block of `tick_len` bytes; `dest`'s member is empty.
+            (*dest).ext_tick_slot().store(dup, tick_len);
         } else {
+            // `dest` is fresh (`{ext_tick, ext_ticklen} == (NULL, 0)`) and this arm stores nothing,
+            // so the member is already the authority's post-`ext_ticklen = 0` state.
             (*dest).ext_tick_lifetime_hint = 0;
-            (*dest).ext_ticklen = 0;
         }
-        if !s.ext_alpn_selected.is_null() {
-            (*dest).ext_alpn_selected = CRYPTO_memdup(
-                s.ext_alpn_selected.cast(),
-                s.ext_alpn_selected_len,
-                FILE,
-                243,
-            )
-            .cast();
-            if (*dest).ext_alpn_selected.is_null() {
+        let (alpn_ptr, alpn_len) = s.ext_alpn_selected();
+        if !alpn_ptr.is_null() {
+            let dup = CRYPTO_memdup(alpn_ptr.cast(), alpn_len, FILE, 243).cast::<u8>();
+            if dup.is_null() {
                 return ptr::null_mut();
             }
-            (*dest).ext_alpn_selected_len = s.ext_alpn_selected_len;
+            // SAFETY: `dup` is this call's fresh block of `alpn_len` bytes; `dest`'s member is empty.
+            (*dest).ext_alpn_selected_slot().store(dup, alpn_len);
         }
         if !s.srp_username.is_null() {
             (*dest).srp_username = CRYPTO_strdup(s.srp_username, FILE, 250);
@@ -448,13 +455,15 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
                 return ptr::null_mut();
             }
         }
-        if !s.ticket_appdata.is_null() {
-            (*dest).ticket_appdata =
-                CRYPTO_memdup(s.ticket_appdata.cast(), s.ticket_appdata_len, FILE, 257).cast();
-            if (*dest).ticket_appdata.is_null() {
+        let (appdata_ptr, appdata_len) = s.ticket_appdata();
+        if !appdata_ptr.is_null() {
+            let dup = CRYPTO_memdup(appdata_ptr.cast(), appdata_len, FILE, 257).cast::<u8>();
+            if dup.is_null() {
                 return ptr::null_mut();
             }
-            (*dest).ticket_appdata_len = s.ticket_appdata_len;
+            // SAFETY: `dup` is this call's fresh block of `appdata_len` bytes; `dest`'s member is
+            // empty.
+            (*dest).ticket_appdata_slot().store(dup, appdata_len);
         }
     }
     // The block and the fields it holds are the caller's now.
@@ -537,15 +546,17 @@ impl CtxDestroy for SslSession {
             X509_free((*ptr).peer);
             crate::evp::pkey::EVP_PKEY_free((*ptr).peer_rpk.cast());
             OSSL_STACK_OF_X509_free((*ptr).peer_chain);
-            // The session's `#[repr(C)]` member buffers: these stay the object's own releases, as
-            // in the authority, not owned handles.
-            CRYPTO_free((*ptr).ext_hostname.cast(), FILE, 918);
-            CRYPTO_free((*ptr).ext_tick.cast(), FILE, 919);
+            // The session's object-owned member buffers: each is released exactly once here through
+            // its validated handle, at the authority's own `file`/`line`. `psk_identity_hint`,
+            // `psk_identity` and `srp_username` remain raw C-string fields outside this conversion.
+            // A NULL incumbent is `CRYPTO_free`'s own no-op. The release order is the authority's.
+            (*ptr).ext_hostname_slot().clear(FILE, 918);
+            (*ptr).ext_tick_slot().clear(FILE, 919);
             CRYPTO_free((*ptr).psk_identity_hint.cast(), FILE, 921);
             CRYPTO_free((*ptr).psk_identity.cast(), FILE, 922);
             CRYPTO_free((*ptr).srp_username.cast(), FILE, 925);
-            CRYPTO_free((*ptr).ext_alpn_selected.cast(), FILE, 927);
-            CRYPTO_free((*ptr).ticket_appdata.cast(), FILE, 928);
+            (*ptr).ext_alpn_selected_slot().clear(FILE, 927);
+            (*ptr).ticket_appdata_slot().clear(FILE, 928);
         }
     }
 }
@@ -1555,7 +1566,7 @@ pub unsafe extern "C" fn SSL_SESSION_set_cipher(
 pub unsafe extern "C" fn SSL_SESSION_get0_hostname(s: *const SslSession) -> *const c_char {
     guard_ffi(ptr::null(), || {
         // SAFETY: `s` is live per the caller's contract.
-        unsafe { (*s).ext_hostname }
+        unsafe { (*s).ext_hostname() }
     })
 }
 
@@ -1569,19 +1580,23 @@ pub unsafe extern "C" fn SSL_SESSION_set1_hostname(
     hostname: *const c_char,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: `s` is live per the caller's contract.
-        unsafe {
-            CRYPTO_free((*s).ext_hostname.cast(), FILE, 1083);
-            if hostname.is_null() {
-                (*s).ext_hostname = ptr::null_mut();
-                return 1;
-            }
-            (*s).ext_hostname = CRYPTO_strdup(hostname, FILE, 1088);
-            if (*s).ext_hostname.is_null() {
-                0
-            } else {
-                1
-            }
+        // SAFETY: `s` is live per the caller's contract and its `ext_hostname` member obeys the
+        // member-buffer invariant.
+        let mut slot = unsafe { (*s).ext_hostname_slot() };
+        // Release the incumbent at the authority's own site (`ssl_sess.c:1083`); a NULL incumbent is
+        // a no-op, leaving the member unset.
+        slot.clear(FILE, 1083);
+        if hostname.is_null() {
+            return 1;
+        }
+        // SAFETY: `hostname` is NUL-terminated per the caller's contract.
+        let dup = unsafe { CRYPTO_strdup(hostname, FILE, 1088) };
+        if dup.is_null() {
+            0
+        } else {
+            // SAFETY: `dup` is this call's fresh block; the member is empty after `clear`.
+            unsafe { slot.store(dup) };
+            1
         }
     })
 }
@@ -1595,7 +1610,7 @@ pub unsafe extern "C" fn SSL_SESSION_has_ticket(s: *const SslSession) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `s` is live per the caller's contract.
         unsafe {
-            if (*s).ext_ticklen > 0 {
+            if (*s).ext_tick().1 > 0 {
                 1
             } else {
                 0
@@ -1630,10 +1645,12 @@ pub unsafe extern "C" fn SSL_SESSION_get0_ticket(
 ) {
     guard_ffi((), || {
         // SAFETY: `s` is live per the caller's contract.
+        let (tick_ptr, tick_len) = unsafe { (*s).ext_tick() };
+        // SAFETY: `len` is writable and `tick` is NULL or writable, per the caller's contract.
         unsafe {
-            *len = (*s).ext_ticklen;
+            *len = tick_len;
             if !tick.is_null() {
-                *tick = (*s).ext_tick;
+                *tick = tick_ptr;
             }
         }
     })
@@ -1678,9 +1695,11 @@ pub unsafe extern "C" fn SSL_SESSION_get0_alpn_selected(
 ) {
     guard_ffi((), || {
         // SAFETY: `s` is live per the caller's contract.
+        let (alpn_ptr, alpn_len) = unsafe { (*s).ext_alpn_selected() };
+        // SAFETY: `alpn` and `len` are writable per the caller's contract.
         unsafe {
-            *alpn = (*s).ext_alpn_selected;
-            *len = (*s).ext_alpn_selected_len;
+            *alpn = alpn_ptr;
+            *len = alpn_len;
         }
     })
 }
@@ -1697,20 +1716,21 @@ pub unsafe extern "C" fn SSL_SESSION_set1_alpn_selected(
     len: usize,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: `s` is live per the caller's contract.
-        unsafe {
-            CRYPTO_free((*s).ext_alpn_selected.cast(), FILE, 1134);
-            if alpn.is_null() || len == 0 {
-                (*s).ext_alpn_selected = ptr::null_mut();
-                (*s).ext_alpn_selected_len = 0;
-                return 1;
-            }
-            (*s).ext_alpn_selected = CRYPTO_memdup(alpn.cast(), len, FILE, 1140).cast();
-            if (*s).ext_alpn_selected.is_null() {
-                (*s).ext_alpn_selected_len = 0;
-                return 0;
-            }
-            (*s).ext_alpn_selected_len = len;
+        // SAFETY: `s` is live per the caller's contract and its `ext_alpn_selected` member obeys
+        // the blob member-buffer invariant.
+        let mut slot = unsafe { (*s).ext_alpn_selected_slot() };
+        // Release the incumbent at the authority's own site (`ssl_sess.c:1134`).
+        slot.clear(FILE, 1134);
+        if alpn.is_null() || len == 0 {
+            return 1;
+        }
+        // SAFETY: `alpn` is readable for `len` bytes per the caller's contract.
+        let dup = unsafe { CRYPTO_memdup(alpn.cast(), len, FILE, 1140).cast::<u8>() };
+        if dup.is_null() {
+            0
+        } else {
+            // SAFETY: `dup` is this call's fresh block of `len` bytes; the member is empty.
+            unsafe { slot.store(dup, len) };
             1
         }
     })
@@ -1776,7 +1796,7 @@ pub unsafe extern "C" fn SSL_SESSION_is_resumable(s: *const SslSession) -> c_int
     guard_ffi(0, || {
         // SAFETY: `s` is live per the caller's contract.
         unsafe {
-            if (*s).not_resumable == 0 && ((*s).session_id_length > 0 || (*s).ext_ticklen > 0) {
+            if (*s).not_resumable == 0 && ((*s).session_id_length > 0 || (*s).ext_tick().1 > 0) {
                 1
             } else {
                 0
@@ -2118,20 +2138,23 @@ pub unsafe extern "C" fn SSL_SESSION_set1_ticket_appdata(
     len: usize,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: `ss` is live per the caller's contract.
-        unsafe {
-            CRYPTO_free((*ss).ticket_appdata.cast(), FILE, 1484);
-            (*ss).ticket_appdata_len = 0;
-            if data.is_null() || len == 0 {
-                (*ss).ticket_appdata = ptr::null_mut();
-                return 1;
-            }
-            (*ss).ticket_appdata = CRYPTO_memdup(data, len, FILE, 1490).cast();
-            if !(*ss).ticket_appdata.is_null() {
-                (*ss).ticket_appdata_len = len;
-                return 1;
-            }
+        // SAFETY: `ss` is live per the caller's contract and its `ticket_appdata` member obeys the
+        // blob member-buffer invariant.
+        let mut slot = unsafe { (*ss).ticket_appdata_slot() };
+        // Release the incumbent at the authority's own site (`ssl_sess.c:1484`), leaving the member
+        // `(NULL, 0)`.
+        slot.clear(FILE, 1484);
+        if data.is_null() || len == 0 {
+            return 1;
+        }
+        // SAFETY: `data` is readable for `len` bytes per the caller's contract.
+        let dup = unsafe { CRYPTO_memdup(data, len, FILE, 1490).cast::<u8>() };
+        if dup.is_null() {
             0
+        } else {
+            // SAFETY: `dup` is this call's fresh block of `len` bytes; the member is empty.
+            unsafe { slot.store(dup, len) };
+            1
         }
     })
 }
@@ -2149,9 +2172,11 @@ pub unsafe extern "C" fn SSL_SESSION_get0_ticket_appdata(
 ) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `ss` is live per the caller's contract.
+        let (appdata_ptr, appdata_len) = unsafe { (*ss).ticket_appdata() };
+        // SAFETY: `data` and `len` are writable per the caller's contract.
         unsafe {
-            *data = (*ss).ticket_appdata.cast();
-            *len = (*ss).ticket_appdata_len;
+            *data = appdata_ptr.cast_mut().cast();
+            *len = appdata_len;
             1
         }
     })
