@@ -65,6 +65,7 @@ Local gate for every batch (court container, 8 GB cap):
 | 40 | stage/p25/tail6 | async_wait, eng_lib, sm2/sign, slh_dsa_sig, asymcipher, seed_src | OwnedCtx/OwnedBuf; RawCtx windows; free 4→2,5→3,3→1,8→4 |
 | 41 | stage/p25/tail7 | ec/print, asn1/string, slh_dsa_kmgmt, cmp_ctx, encode_key2text | body release sites 5→0,6→0,5→0 |
 | 42 | stage/p25/tail8 | conf/modparse, thread_arch, decode_epki2pki, params/dup, ec/kmeth, ffc/params | 22 hand-written release sites → 0 |
+| 43 | stage/p25/tail9 | prov_seed, ecx_key, async_posix, provider/conf, t_x509, asn1_gen | Raw*→OwnedCtx; asn1_gen 4→1 |
 
 Converted files (union of stage/p25/* files): **~200 files** across 42 conversion batches; **1930+ allocation sites converted, ~490 remaining** of the 2420 baseline (frozen-atlas lower bound). OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
