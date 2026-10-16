@@ -36,7 +36,7 @@
 // The three tables share one body; each is a transcription of the same authority macro expansion.
 #![allow(clippy::too_many_arguments)]
 
-use core::ffi::{c_char, c_int, c_void, CStr};
+use core::ffi::{c_char, c_int, c_uchar, c_void, CStr};
 use core::ptr;
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
@@ -176,6 +176,160 @@ const LINE_GEN_CLEANUP_PROPQ: c_int = 839;
 /// `ml_kem_kmgmt.c:840`.
 const LINE_GEN_CLEANUP_CTX: c_int = 840;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a key buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned key buffer allocated through the crate's allocator seam.
+///
+/// The block stays the authority's own allocation -- a `CRYPTO_malloc`/`CRYPTO_secure_zalloc` for
+/// the export copies, a `CRYPTO_strdup` for a property-query string -- at the authority's exact size
+/// and `file`/`line`, because a Rust `String`/`Vec` would hide both the allocation and its release
+/// from a caller-installed `CRYPTO_set_mem_functions` hook. Only its *ownership* is this type:
+/// [`Self::new_cleansed`]/[`Self::new_secure_zalloc_cleansed`] allocate it, [`Self::adopt`]/
+/// [`Self::adopt_secure_cleansed`] take up a block the crate allocated inside a helper (an
+/// `OPENSSL_strdup`) or reclaimed from a key field (`encoded_dk`), `Drop` is its single release, and
+/// [`Self::into_raw`] hands the block to the `#[repr(C)]` `PROV_ML_KEM_GEN_CTX` field whose address
+/// the exported ABI exposes. The generation context itself, whose release is a compound destructor
+/// body, stays on the raw seam.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+/// How the authority releases a key buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`gctx->propq`).
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)` (`pubenc`).
+    Cleansed {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+    /// The authority's cleansing `CRYPTO_secure_clear_free(ptr, num, file, line)` (`seedenc`,
+    /// `prvenc`, `encoded_dk`).
+    SecureCleansed {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)` for a block the authority frees through its cleansing
+    /// `CRYPTO_clear_free(ptr, len, ...)`, or `None` when the allocator answers NULL.
+    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Cleansed {
+                num: len,
+                file,
+                line,
+            },
+        })
+    }
+
+    /// `CRYPTO_secure_zalloc(len, file, line)` for a block the authority frees through its cleansing
+    /// `CRYPTO_secure_clear_free(ptr, len, ...)`, or `None` when the allocator answers NULL.
+    fn new_secure_zalloc_cleansed(
+        len: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBuf> {
+        // SAFETY: `file` is NULL or a NUL-terminated C string, per this unit's `FILE`.
+        let raw = unsafe { CRYPTO_secure_zalloc(len, file, line) }.cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::SecureCleansed {
+                num: len,
+                file,
+                line,
+            },
+        })
+    }
+
+    /// Take up a plain block the crate allocated inside a helper (an `OPENSSL_strdup`) or reclaimed
+    /// from a key field, for release by `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
+    /// is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// Take up a secure, cleansing block reclaimed from a key field (`encoded_dk`), for release by
+    /// `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block from the crate's secure heap that no one else owns, readable
+    /// for `num` bytes, and `file` is NULL or a NUL-terminated C string.
+    unsafe fn adopt_secure_cleansed(
+        ptr: *mut c_uchar,
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::SecureCleansed { num, file, line },
+        })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the key field it is stored in.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Cleansed { num, file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `CRYPTO_clear_free` cleanses then releases it and accepts NULL.
+                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+            }
+            BufRelease::SecureCleansed { num, file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `CRYPTO_secure_clear_free` cleanses then releases it and accepts
+                // NULL.
+                unsafe { CRYPTO_secure_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+            }
+        }
+    }
+}
+
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
 fn is_running() -> c_int {
@@ -251,7 +405,7 @@ unsafe fn ml_kem_pairwise_test(key: *const MlKemKey, key_flags: c_int) -> c_int 
         let mut entropy = [0u8; ML_KEM_RANDOM_BYTES];
         let mut secret = [0u8; ML_KEM_SHARED_SECRET_BYTES];
         let mut out = [0u8; ML_KEM_SHARED_SECRET_BYTES];
-        let ctext: *mut u8;
+        let mut ctext_buf: Option<OwnedBuf> = None;
         let mut ret = 0;
 
         // Unless we have both a public and private key, we can't do the test
@@ -264,10 +418,13 @@ unsafe fn ml_kem_pairwise_test(key: *const MlKemKey, key_flags: c_int) -> c_int 
 
         // The authority's `err:` label, as one labelled block.
         'err: {
-            ctext = CRYPTO_malloc((*v).ctext_bytes, FILE, LINE_PCT_CTEXT).cast::<u8>();
-            if ctext.is_null() {
+            // The ciphertext scratch is this frame's own block; the handle releases it through
+            // the authority's own cleansing free on every path out of the block.
+            let Some(buf) = OwnedBuf::new_cleansed((*v).ctext_bytes, FILE, LINE_PCT_CTEXT) else {
                 break 'err;
-            }
+            };
+            let ctext = buf.as_ptr();
+            ctext_buf = Some(buf);
 
             ptr::write_bytes(out.as_mut_ptr(), 0, out.len());
 
@@ -321,7 +478,7 @@ unsafe fn ml_kem_pairwise_test(key: *const MlKemKey, key_flags: c_int) -> c_int 
             );
         }
         make_clean(&mut entropy, &mut secret, &mut out);
-        CRYPTO_clear_free(ctext.cast(), (*v).ctext_bytes, FILE, LINE_PCT_CTEXT);
+        drop(ctext_buf);
         ret
     }
 }
@@ -473,232 +630,149 @@ unsafe extern "C" fn ml_kem_export(
     // SAFETY: `key` is live per the contract.
     unsafe {
         let v = ossl_ml_kem_key_vinfo(key);
-        let mut pubenc: *mut u8 = ptr::null_mut();
-        let mut prvenc: *mut u8 = ptr::null_mut();
-        let mut seedenc: *mut u8 = ptr::null_mut();
+        let mut tmpl: *mut OSSL_PARAM_BLD = ptr::null_mut();
+        let mut ret: c_int = 0;
         let mut prvlen = 0usize;
         let mut seedlen = 0usize;
 
-        if !ossl_ml_kem_have_pubkey(key) {
-            // Fail when no key material can be returned
-            if selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY == 0 || !ossl_ml_kem_decoded_key(key) {
-                raise_site(&err_sites::PROV_ML_KEM_KMGMT_263);
-                return 0;
+        // `pubenc`/`seedenc`/`prvenc` are this frame's scratch blocks; each handle owns its block
+        // and releases it at the authority's `err:` tail through the authority's own free.
+        let mut pubenc: Option<OwnedBuf> = None;
+        let mut seedenc: Option<OwnedBuf> = None;
+        let mut prvenc: Option<OwnedBuf> = None;
+
+        // The authority's `err:` label, as one labelled block.
+        'err: {
+            if !ossl_ml_kem_have_pubkey(key) {
+                // Fail when no key material can be returned
+                if selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY == 0 || !ossl_ml_kem_decoded_key(key)
+                {
+                    raise_site(&err_sites::PROV_ML_KEM_KMGMT_263);
+                    return 0;
+                }
+            } else if selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY != 0 {
+                let Some(buf) = OwnedBuf::new_cleansed((*v).pubkey_bytes, FILE, LINE_EXPORT_PUB)
+                else {
+                    break 'err;
+                };
+                let ok = ossl_ml_kem_encode_public_key(buf.as_ptr(), (*v).pubkey_bytes, key) != 0;
+                pubenc = Some(buf);
+                if !ok {
+                    break 'err;
+                }
             }
-        } else if selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY != 0 {
-            pubenc = CRYPTO_malloc((*v).pubkey_bytes, FILE, LINE_EXPORT_PUB).cast::<u8>();
-            if pubenc.is_null()
-                || ossl_ml_kem_encode_public_key(pubenc, (*v).pubkey_bytes, key) == 0
-            {
-                export_tail(
+
+            if selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY != 0 {
+                // The seed and/or private key material are allocated on the secure heap if
+                // configured; `ossl_param_build_set_octet_string` will then use it too.
+                if ossl_ml_kem_have_seed(key) {
+                    seedlen = ML_KEM_SEED_BYTES;
+                    let Some(buf) =
+                        OwnedBuf::new_secure_zalloc_cleansed(seedlen, FILE, LINE_EXPORT_SEED)
+                    else {
+                        break 'err;
+                    };
+                    let ok = ossl_ml_kem_encode_seed(buf.as_ptr(), seedlen, key) != 0;
+                    seedenc = Some(buf);
+                    if !ok {
+                        break 'err;
+                    }
+                }
+                if ossl_ml_kem_have_prvkey(key) {
+                    prvlen = (*v).prvkey_bytes;
+                    let Some(buf) =
+                        OwnedBuf::new_secure_zalloc_cleansed(prvlen, FILE, LINE_EXPORT_PRV)
+                    else {
+                        break 'err;
+                    };
+                    let ok = ossl_ml_kem_encode_private_key(buf.as_ptr(), prvlen, key) != 0;
+                    prvenc = Some(buf);
+                    if !ok {
+                        break 'err;
+                    }
+                } else if ossl_ml_kem_have_dkenc(key) {
+                    prvlen = (*v).prvkey_bytes;
+                    let Some(buf) =
+                        OwnedBuf::new_secure_zalloc_cleansed(prvlen, FILE, LINE_EXPORT_DKENC)
+                    else {
+                        break 'err;
+                    };
+                    ptr::copy_nonoverlapping((*key).encoded_dk, buf.as_ptr(), prvlen);
+                    prvenc = Some(buf);
+                }
+            }
+
+            tmpl = OSSL_PARAM_BLD_new();
+            if tmpl.is_null() {
+                break 'err;
+            }
+
+            // The (d, z) seed, when available and private keys are requested.
+            if seedenc.as_ref().is_some_and(|buf| {
+                ossl_param_build_set_octet_string(
+                    tmpl,
                     ptr::null_mut(),
-                    seedenc,
+                    OSSL_PKEY_PARAM_ML_KEM_SEED,
+                    buf.as_ptr(),
                     seedlen,
-                    prvenc,
+                ) == 0
+            }) {
+                break 'err;
+            }
+
+            // The private key in the FIPS 203 |dk| format, when requested.
+            if prvenc.as_ref().is_some_and(|buf| {
+                ossl_param_build_set_octet_string(
+                    tmpl,
+                    ptr::null_mut(),
+                    OSSL_PKEY_PARAM_PRIV_KEY,
+                    buf.as_ptr(),
                     prvlen,
-                    pubenc,
+                ) == 0
+            }) {
+                break 'err;
+            }
+
+            // The public key on request; it is always available when either is.
+            if pubenc.as_ref().is_some_and(|buf| {
+                ossl_param_build_set_octet_string(
+                    tmpl,
+                    ptr::null_mut(),
+                    OSSL_PKEY_PARAM_PUB_KEY,
+                    buf.as_ptr(),
                     (*v).pubkey_bytes,
-                );
-                return 0;
+                ) == 0
+            }) {
+                break 'err;
             }
-        }
 
-        if selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY != 0 {
-            // The seed and/or private key material are allocated on the secure heap if
-            // configured; `ossl_param_build_set_octet_string` will then use it too.
-            if ossl_ml_kem_have_seed(key) {
-                seedlen = ML_KEM_SEED_BYTES;
-                seedenc = CRYPTO_secure_zalloc(seedlen, FILE, LINE_EXPORT_SEED).cast::<u8>();
-                if seedenc.is_null() || ossl_ml_kem_encode_seed(seedenc, seedlen, key) == 0 {
-                    export_tail(
-                        ptr::null_mut(),
-                        seedenc,
-                        seedlen,
-                        prvenc,
-                        prvlen,
-                        pubenc,
-                        (*v).pubkey_bytes,
-                    );
-                    return 0;
-                }
+            let params = OSSL_PARAM_BLD_to_param(tmpl);
+            if params.is_null() {
+                break 'err;
             }
-            if ossl_ml_kem_have_prvkey(key) {
-                prvlen = (*v).prvkey_bytes;
-                prvenc = CRYPTO_secure_zalloc(prvlen, FILE, LINE_EXPORT_PRV).cast::<u8>();
-                if prvenc.is_null() || ossl_ml_kem_encode_private_key(prvenc, prvlen, key) == 0 {
-                    export_tail(
-                        ptr::null_mut(),
-                        seedenc,
-                        seedlen,
-                        prvenc,
-                        prvlen,
-                        pubenc,
-                        (*v).pubkey_bytes,
-                    );
-                    return 0;
-                }
-            } else if ossl_ml_kem_have_dkenc(key) {
-                prvlen = (*v).prvkey_bytes;
-                prvenc = CRYPTO_secure_zalloc(prvlen, FILE, LINE_EXPORT_DKENC).cast::<u8>();
-                if prvenc.is_null() {
-                    export_tail(
-                        ptr::null_mut(),
-                        seedenc,
-                        seedlen,
-                        prvenc,
-                        prvlen,
-                        pubenc,
-                        (*v).pubkey_bytes,
-                    );
-                    return 0;
-                }
-                ptr::copy_nonoverlapping((*key).encoded_dk, prvenc, prvlen);
+
+            ret = match param_cb {
+                Some(cb) => cb(params, cbarg),
+                None => 0,
+            };
+            // `OSSL_PARAM_free()` only wipes the secure-heap data block, so wipe the key material
+            // copies held in the params first.
+            let mut p = params;
+            while !(*p).key.is_null() {
+                OPENSSL_cleanse((*p).data, (*p).data_size);
+                p = p.add(1);
             }
+            OSSL_PARAM_free(params);
         }
 
-        let tmpl = OSSL_PARAM_BLD_new();
-        if tmpl.is_null() {
-            export_tail(
-                ptr::null_mut(),
-                seedenc,
-                seedlen,
-                prvenc,
-                prvlen,
-                pubenc,
-                (*v).pubkey_bytes,
-            );
-            return 0;
-        }
-
-        // The (d, z) seed, when available and private keys are requested.
-        if !seedenc.is_null()
-            && ossl_param_build_set_octet_string(
-                tmpl,
-                ptr::null_mut(),
-                OSSL_PKEY_PARAM_ML_KEM_SEED,
-                seedenc,
-                seedlen,
-            ) == 0
-        {
-            export_tail(
-                tmpl,
-                seedenc,
-                seedlen,
-                prvenc,
-                prvlen,
-                pubenc,
-                (*v).pubkey_bytes,
-            );
-            return 0;
-        }
-
-        // The private key in the FIPS 203 |dk| format, when requested.
-        if !prvenc.is_null()
-            && ossl_param_build_set_octet_string(
-                tmpl,
-                ptr::null_mut(),
-                OSSL_PKEY_PARAM_PRIV_KEY,
-                prvenc,
-                prvlen,
-            ) == 0
-        {
-            export_tail(
-                tmpl,
-                seedenc,
-                seedlen,
-                prvenc,
-                prvlen,
-                pubenc,
-                (*v).pubkey_bytes,
-            );
-            return 0;
-        }
-
-        // The public key on request; it is always available when either is.
-        if !pubenc.is_null()
-            && ossl_param_build_set_octet_string(
-                tmpl,
-                ptr::null_mut(),
-                OSSL_PKEY_PARAM_PUB_KEY,
-                pubenc,
-                (*v).pubkey_bytes,
-            ) == 0
-        {
-            export_tail(
-                tmpl,
-                seedenc,
-                seedlen,
-                prvenc,
-                prvlen,
-                pubenc,
-                (*v).pubkey_bytes,
-            );
-            return 0;
-        }
-
-        let params = OSSL_PARAM_BLD_to_param(tmpl);
-        if params.is_null() {
-            export_tail(
-                tmpl,
-                seedenc,
-                seedlen,
-                prvenc,
-                prvlen,
-                pubenc,
-                (*v).pubkey_bytes,
-            );
-            return 0;
-        }
-
-        let ret: c_int = match param_cb {
-            Some(cb) => cb(params, cbarg),
-            None => 0,
-        };
-        // `OSSL_PARAM_free()` only wipes the secure-heap data block, so wipe the key material
-        // copies held in the params first.
-        let mut p = params;
-        while !(*p).key.is_null() {
-            OPENSSL_cleanse((*p).data, (*p).data_size);
-            p = p.add(1);
-        }
-        OSSL_PARAM_free(params);
-
-        export_tail(
-            tmpl,
-            seedenc,
-            seedlen,
-            prvenc,
-            prvlen,
-            pubenc,
-            (*v).pubkey_bytes,
-        );
+        // The `err:` tail — `ml_kem_kmgmt.c:335-340`. `ret` is 0 unless the callback ran, and the
+        // three scratch handles release their blocks here in the order the authority's tail did:
+        // the builder, then the seed, private and public copies.
+        OSSL_PARAM_BLD_free(tmpl);
+        drop(seedenc);
+        drop(prvenc);
+        drop(pubenc);
         ret
-    }
-}
-
-/// The `err:` label of `ml_kem_export` — `ml_kem_kmgmt.c:335-340`.
-///
-/// `tmpl` is NULL until the builder exists, which the authority's bare `OSSL_PARAM_BLD_free`
-/// accepts; the three buffers are freed with their **own** recorded lengths.
-///
-/// # Safety
-/// `tmpl` and the three buffers are this call's own or NULL.
-unsafe fn export_tail(
-    tmpl: *mut OSSL_PARAM_BLD,
-    seedenc: *mut u8,
-    seedlen: usize,
-    prvenc: *mut u8,
-    prvlen: usize,
-    pubenc: *mut u8,
-    pub_bytes: usize,
-) {
-    // SAFETY: `tmpl` is this call's own builder and NULL is accepted.
-    unsafe { OSSL_PARAM_BLD_free(tmpl) };
-    // SAFETY: the three pointers are this call's own or NULL, which both free functions accept.
-    unsafe {
-        CRYPTO_secure_clear_free(seedenc.cast(), seedlen, FILE, LINE_EXPORT_SEED);
-        CRYPTO_secure_clear_free(prvenc.cast(), prvlen, FILE, LINE_EXPORT_PRV);
-        CRYPTO_clear_free(pubenc.cast(), pub_bytes, FILE, LINE_EXPORT_PUB);
     }
 }
 
@@ -995,19 +1069,25 @@ unsafe fn check_prvenc(prvenc: *const u8, key: *mut MlKemKey) -> c_int {
 
     // SAFETY: `key` is live per the contract.
     unsafe {
-        let buf = CRYPTO_malloc(len, FILE, LINE_CHECK_PRVENC).cast::<u8>();
+        // The scratch is this frame's own block; the handle releases it through the authority's own
+        // cleansing free once the comparison is made.
+        let buf = OwnedBuf::new_cleansed(len, FILE, LINE_CHECK_PRVENC);
         let mut ret = 0;
-        if !buf.is_null() && ossl_ml_kem_encode_private_key(buf, len, key) != 0 {
+        if let Some(b) = buf.as_ref() {
+            let encoded = ossl_ml_kem_encode_private_key(b.as_ptr(), len, key) != 0;
             ret = c_int::from(
-                crate::runtime::mem::CRYPTO_memcmp(buf.cast(), prvenc.cast(), len) == 0,
+                encoded
+                    && crate::runtime::mem::CRYPTO_memcmp(b.as_ptr().cast(), prvenc.cast(), len)
+                        == 0,
             );
         }
-        CRYPTO_clear_free(buf.cast(), len, FILE, LINE_CHECK_PRVENC);
+        let had_buf = buf.is_some();
+        drop(buf);
         if ret != 0 {
             return 1;
         }
 
-        if !buf.is_null() {
+        if had_buf {
             raise_with_alg(
                 &err_sites::PROV_ML_KEM_KMGMT_453,
                 "explicit ",
@@ -1220,7 +1300,12 @@ unsafe extern "C" fn ml_kem_load(reference: *const c_void, reference_sz: usize) 
                 return load_err(key, encoded_dk, &mut seed, prvkey_bytes);
             }
         }
-        CRYPTO_secure_clear_free(encoded_dk.cast(), prvkey_bytes, FILE, LINE_LOAD_CLEAR);
+        drop(OwnedBuf::adopt_secure_cleansed(
+            encoded_dk.cast::<c_uchar>(),
+            prvkey_bytes,
+            FILE,
+            LINE_LOAD_CLEAR,
+        ));
         OPENSSL_cleanse(seed.as_mut_ptr().cast(), seed.len());
         key.cast()
     }
@@ -1239,7 +1324,12 @@ unsafe fn load_err(
     // SAFETY: `key` is this call's own and NULL is accepted by both free functions.
     unsafe {
         if !key.is_null() && !(*key).vinfo.is_null() {
-            CRYPTO_secure_clear_free(encoded_dk.cast(), prvkey_bytes, FILE, LINE_LOAD_CLEAR);
+            drop(OwnedBuf::adopt_secure_cleansed(
+                encoded_dk.cast::<c_uchar>(),
+                prvkey_bytes,
+                FILE,
+                LINE_LOAD_CLEAR,
+            ));
         }
         OPENSSL_cleanse(seed.as_mut_ptr().cast(), seed.len());
         ossl_ml_kem_key_free(key);
@@ -1473,8 +1563,20 @@ unsafe extern "C" fn ml_kem_gen_set_params(vgctx: *mut c_void, params: *const Os
             if (*p.propq).data_type != OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            CRYPTO_free((*gctx).propq.cast(), FILE, LINE_GEN_FREE_PROPQ);
-            (*gctx).propq = CRYPTO_strdup((*p.propq).data.cast(), FILE, LINE_GEN_FREE_PROPQ);
+            // The old `propq` is a live plain block this context owns; the handle releases it at
+            // the authority's own site, then `CRYPTO_strdup` builds the replacement, whose handle
+            // hands the block to the field.
+            drop(OwnedBuf::adopt(
+                (*gctx).propq.cast::<c_uchar>(),
+                FILE,
+                LINE_GEN_FREE_PROPQ,
+            ));
+            (*gctx).propq = OwnedBuf::adopt(
+                CRYPTO_strdup((*p.propq).data.cast(), FILE, LINE_GEN_FREE_PROPQ).cast::<c_uchar>(),
+                FILE,
+                LINE_GEN_FREE_PROPQ,
+            )
+            .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<c_char>());
             if (*gctx).propq.is_null() {
                 return 0;
             }
@@ -1619,7 +1721,13 @@ unsafe extern "C" fn ml_kem_gen_cleanup(vgctx: *mut c_void) {
         if !(*gctx).seed.is_null() {
             OPENSSL_cleanse((*gctx).seed.cast(), ML_KEM_SEED_BYTES);
         }
-        CRYPTO_free((*gctx).propq.cast(), FILE, LINE_GEN_CLEANUP_PROPQ);
+        // The `propq` field's handle releases its own plain block at the authority's site; the
+        // context block stays on the raw seam (its release is part of the destructor body).
+        drop(OwnedBuf::adopt(
+            (*gctx).propq.cast::<c_uchar>(),
+            FILE,
+            LINE_GEN_CLEANUP_PROPQ,
+        ));
         CRYPTO_free(gctx.cast(), FILE, LINE_GEN_CLEANUP_CTX);
     }
 }
