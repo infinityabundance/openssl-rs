@@ -1,11 +1,11 @@
-# AGENTS.md — memory-safety conversion guideline (local, gitignored)
+# AGENTS.md — memory-safety conversion guideline (standing standard)
 
-Local working instructions for the `openssl-rs` unsafe→safe conversion campaign
-(`integrate/safe-c33`). Not evidence, not shipped: excluded via `.gitignore`.
+The standing engineering standard for the `openssl-rs` unsafe→safe conversion
+campaign (`integrate/safe-c33`). **Tracked in Git** (not an admitted forensic
+artifact): it is a living working document, so re-read it at the point of use
+rather than assuming a session already has it.
 
-**Load this file at the start of every fresh session.** It is deliberately local,
-so it can silently disappear after a clone or context reset unless the
-orchestrator re-reads it explicitly.
+**Load this file at the start of every fresh session.**
 
 The goal is not "uses Rust". The goal is **sound abstractions with genuinely safe
 interiors**: every unsafe assumption either eliminated (made inexpressible) or

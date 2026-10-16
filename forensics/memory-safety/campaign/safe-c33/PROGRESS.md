@@ -94,9 +94,10 @@ then the member-buffer unit.
 
 Not one percentage; report each axis honestly.
 
-1. **Ownership reconstruction** — 20 conversion batches across ~51 files; the
-   reusable adoption-pattern set (OwnedBuf / OwnedCtx+`CtxDestroy` / partial-
-   construction `Raw*` owners) is now sound (adoption ctors are `unsafe fn`).
+1. **Ownership reconstruction** — **36 conversion batches** across ~165 files
+   (plus the adoption-soundness and P0-abstraction repairs); the reusable
+   adoption-pattern set (OwnedBuf / OwnedCtx+`CtxDestroy` / partial-construction
+   `Raw*` owners) is now sound (adoption ctors are `unsafe fn`).
 2. **Safe-interior coverage** — *not yet comprehensively measured*; the sparsest
    structural conversions so far are sparse_array and the X.509 policy tree.
 3. **Discharged safety obligations** — local gate green per batch; full
@@ -114,15 +115,22 @@ structs crossing fn-pointer tables.
 
 - **P0 done**: `src/runtime/bio/owned.rs` (and 15 sibling files) — safe raw
   ownership adoption removed; ctors are `unsafe fn` with a real `# Safety`.
-- **P0 open**: `src/asn1/owned.rs` — replace unchecked allocation-size
-  multiplication with `checked_mul` + OpenSSL failure semantics.
-- **P0 open**: `src/x509/pcy_lib.rs` `tree_levels` — tie the mutable level-array
-  borrow to the tree owner, not a caller-chosen lifetime.
-- **P0 open**: `src/x509/pcy_node.rs` `Node::parent_mut` — make exclusive parent
-  access derivable from the graph's mutation model.
+  Since then the same abstraction's *uninitialised* `OwnedCtx::malloc` was split
+  into `RawCtx<T>` (block-only release) + `unsafe assume_init -> OwnedCtx<T>`
+  (batch `stage/p25/rawctx`), and `Cert.custext` (zeroed `Vec`) was fixed
+  (`stage/p25/zeroval`).
+- **P0 done**: `src/asn1/owned.rs` — allocation-size multiplication now uses
+  `checked_mul` with the module's failure outcome (batch `stage/p25/p0-abstractions`).
+- **P0 done**: `src/x509/pcy_lib.rs` `tree_levels` — now takes
+  `&mut X509PolicyTree` and returns a borrow tied to the owner.
+- **P0 done (residual recorded)**: `src/x509/pcy_node.rs` `Node::parent_mut` —
+  now takes `&mut self`; `Node: Copy` leaves multi-`Node` aliasing of one parent
+  a documented caller obligation.
 - **P1 open**: `CipherDestroy`/`CtxDestroy` implementer contract (make the trait
   obligation explicit/`unsafe`); `src/ffi/mod.rs` post-panic state rules;
-  secret-bearing-context classification.
+  secret-bearing-context classification. Also: `ssl_lib.rs`'s `OwnedCtx::new`
+  should adopt the `RawCtx`/`assume_init` split (sound today only because every
+  `T` it is instantiated with now has a valid zeroed state).
 
 ## Receipts
 
