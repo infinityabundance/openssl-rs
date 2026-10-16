@@ -364,6 +364,62 @@ const DANE_3104: ErrSite = dane_site(3104, c"dane_i2d", X509_R_BAD_SELECTOR);
 const DANE_3109: ErrSite = dane_site(3109, c"dane_i2d", ERR_R_ASN1_LIB);
 
 // ---------------------------------------------------------------------------------------------
+// Ownership of the DER caches `dane_i2d`/`i2d_PUBKEY` answer
+// ---------------------------------------------------------------------------------------------
+
+/// `dane_match_cert`'s `OPENSSL_free(i2dbuf)` of the previous selector's cache (`x509_vfy.c:3196`).
+const LINE_FREE_MID: c_int = 3196;
+/// `dane_match_cert`'s tail `OPENSSL_free(i2dbuf)` (`x509_vfy.c:3261`).
+const LINE_FREE_CERT: c_int = 3261;
+/// `dane_match_rpk`'s `OPENSSL_free(i2dbuf)` (`x509_vfy.c:3377`).
+const LINE_FREE_RPK: c_int = 3377;
+
+/// An owned DER block allocated through the crate's `CRYPTO_*` seam.
+///
+/// `dane_match_cert`'s per-selector certificate/SPKI cache and `dane_match_rpk`'s one-shot raw
+/// public key encoding are both `CRYPTO_*` blocks the authority releases by hand at its own
+/// `__LINE__`s. The block stays a `CRYPTO_*` allocation at that `file`/`line`; only its *ownership*
+/// is this handle, whose `Drop` is its single release. A NULL pointer is a valid empty block whose
+/// release is the authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// Adopt a block the seam answered, or NULL as an empty block.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block the crate's `CRYPTO_*` seam allocated in full (not a
+    /// sub-range) and no other owner will release; `line` is the authority's own release site.
+    /// `Drop`'s `CRYPTO_free` is its only release.
+    unsafe fn adopt(ptr: *mut c_uchar, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, line }
+    }
+
+    /// The block's address, for the calls that read it.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Re-point the release at the authority's other site for this block, on the path that reaches
+    /// it (`dane_match_cert`'s mid-loop selector refresh at `:3196`, its tail at `:3261`).
+    fn set_release_line(&mut self, line: c_int) {
+        self.line = line;
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam and the authority's own line.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block the handle adopted (or NULL, a no-op) and `Drop` runs
+        // once; the authority's own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast(), FILE.as_ptr(), self.line) };
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // The single choke point for the opaque `dane` field.
 // ---------------------------------------------------------------------------------------------
 
@@ -464,7 +520,8 @@ pub(crate) unsafe extern "C" fn dane_match_cert(
     let mut selector: c_uint = DANETLS_NONE;
     let mut ordinal: c_uint = DANETLS_NONE;
     let mut mtype: c_uint = DANETLS_NONE;
-    let mut i2dbuf: *mut c_uchar = ptr::null_mut();
+    // SAFETY: the seed value is NULL, the empty block `OwnedBuf::adopt` documents.
+    let mut i2dbuf = unsafe { OwnedBuf::adopt(ptr::null_mut(), LINE_FREE_CERT) };
     let mut i2dlen: c_uint = 0;
     let mut mdbuf = [0u8; EVP_MAX_MD_SIZE];
     let mut cmpbuf: *mut c_uchar = ptr::null_mut();
@@ -520,12 +577,19 @@ pub(crate) unsafe extern "C" fn dane_match_cert(
             // SAFETY: `t` is live.
             selector = u32::from(unsafe { (*t).selector });
 
-            // Update per-selector state.
-            // SAFETY: `i2dbuf` is NULL or came from `dane_i2d` and is not owned elsewhere.
-            unsafe { CRYPTO_free(i2dbuf.cast(), FILE.as_ptr(), 3196) };
-            // SAFETY: `cert` is live and `i2dlen` is a writable local; `t` is live.
-            i2dbuf = unsafe { dane_i2d(cert, (*t).selector, &raw mut i2dlen) };
-            if i2dbuf.is_null() {
+            // Update per-selector state: the authority releases the previous selector's cache at
+            // `:3196` and regenerates it, kept until the tail's `:3261`.
+            i2dbuf.set_release_line(LINE_FREE_MID);
+            drop(i2dbuf);
+            // SAFETY: `cert` is live and `i2dlen` is a writable local; `t` is live, and the encoder
+            // answers NULL or a fresh block.
+            i2dbuf = unsafe {
+                OwnedBuf::adopt(
+                    dane_i2d(cert, (*t).selector, &raw mut i2dlen),
+                    LINE_FREE_CERT,
+                )
+            };
+            if i2dbuf.as_ptr().is_null() {
                 return -1;
             }
 
@@ -554,7 +618,7 @@ pub(crate) unsafe extern "C" fn dane_match_cert(
             // SAFETY: `dane` is live, so `dctx` and its digest table are live; `mtype` indexes it.
             let md = unsafe { *(*(*dane).dctx).mdevp.add(mtype as usize) };
 
-            cmpbuf = i2dbuf;
+            cmpbuf = i2dbuf.as_ptr();
             cmplen = i2dlen;
 
             if !md.is_null() {
@@ -563,7 +627,7 @@ pub(crate) unsafe extern "C" fn dane_match_cert(
                 // and `md` is a live digest; `cmplen` is writable.
                 if unsafe {
                     EVP_Digest(
-                        i2dbuf.cast(),
+                        i2dbuf.as_ptr().cast(),
                         i2dlen as usize,
                         cmpbuf,
                         &raw mut cmplen,
@@ -609,9 +673,8 @@ pub(crate) unsafe extern "C" fn dane_match_cert(
         i += 1;
     }
 
-    // Clear the one-element DER cache.
-    // SAFETY: `i2dbuf` is NULL or came from `dane_i2d` and is not owned elsewhere.
-    unsafe { CRYPTO_free(i2dbuf.cast(), FILE.as_ptr(), 3261) };
+    // Clear the one-element DER cache: `i2dbuf`'s `Drop` is the authority's own tail release at
+    // `:3261`.
     matched
 }
 
@@ -759,9 +822,13 @@ pub(crate) unsafe extern "C" fn dane_match_rpk(ctx: *mut X509StoreCtx, rpk: *mut
     if len <= 0 {
         return -1;
     }
+    // The encoding is owned: `Drop` is the authority's own tail release at `:3377`.
+    // SAFETY: `i2dbuf` is the block `i2d_PUBKEY` just answered (or NULL) and is not owned
+    // elsewhere.
+    let i2dbuf = unsafe { OwnedBuf::adopt(i2dbuf, LINE_FREE_RPK) };
     let i2dlen = len as c_uint;
     let mut cmplen = len as c_uint;
-    let mut cmpbuf = i2dbuf;
+    let mut cmpbuf = i2dbuf.as_ptr();
 
     let mut i: c_int = 0;
     while i < recnum {
@@ -782,7 +849,7 @@ pub(crate) unsafe extern "C" fn dane_match_rpk(ctx: *mut X509StoreCtx, rpk: *mut
             // SAFETY: `dane` is live, so `dctx` and its digest table are live; `mtype` indexes it.
             let md = unsafe { *(*(*dane).dctx).mdevp.add(mtype as usize) };
 
-            cmpbuf = i2dbuf;
+            cmpbuf = i2dbuf.as_ptr();
             cmplen = i2dlen;
 
             if !md.is_null() {
@@ -791,7 +858,7 @@ pub(crate) unsafe extern "C" fn dane_match_rpk(ctx: *mut X509StoreCtx, rpk: *mut
                 // and `md` is a live digest; `cmplen` is writable.
                 if unsafe {
                     EVP_Digest(
-                        i2dbuf.cast(),
+                        i2dbuf.as_ptr().cast(),
                         i2dlen as usize,
                         cmpbuf,
                         &raw mut cmplen,
@@ -821,8 +888,7 @@ pub(crate) unsafe extern "C" fn dane_match_rpk(ctx: *mut X509StoreCtx, rpk: *mut
         }
         i += 1;
     }
-    // SAFETY: `i2dbuf` came from `i2d_PUBKEY` and is not owned elsewhere.
-    unsafe { CRYPTO_free(i2dbuf.cast(), FILE.as_ptr(), 3377) };
+    // `i2dbuf`'s `Drop` is the authority's own tail release at `:3377`.
     matched
 }
 
