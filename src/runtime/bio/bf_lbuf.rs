@@ -25,7 +25,7 @@ use crate::ffi::guard_ffi;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 
 use super::method::{bread_conv, bwrite_conv};
-use super::owned::{CtxDestroy, OwnedBlock, OwnedCtx};
+use super::owned::{CtxDestroy, OwnedBlock, OwnedCtx, RawCtx};
 use super::{
     Bio, BioMethod, BIO_CTRL_DUP, BIO_CTRL_FLUSH, BIO_CTRL_INFO, BIO_CTRL_RESET, BIO_CTRL_WPENDING,
     BIO_C_DO_STATE_MACHINE, BIO_C_SET_BUFF_SIZE, BIO_FLAGS_RWS, BIO_FLAGS_SHOULD_RETRY,
@@ -99,8 +99,9 @@ unsafe fn ctx(b: *mut Bio) -> *mut BioLineBufferCtx {
 /// # Safety
 /// `bi` must be a live BIO.
 unsafe extern "C" fn linebuffer_new(bi: *mut Bio) -> c_int {
-    // SAFETY: `OwnedCtx::malloc` returns a fresh allocation of the requested size, or NULL.
-    let Some(ctx) = OwnedCtx::<BioLineBufferCtx>::malloc() else {
+    // SAFETY: `RawCtx::malloc` returns a fresh, uninitialised allocation of the requested size, or
+    // NULL; the storage is not yet a valid `BioLineBufferCtx`, so it is a `RawCtx`.
+    let Some(ctx) = RawCtx::<BioLineBufferCtx>::malloc() else {
         return 0;
     };
     let c = ctx.as_ptr();
@@ -108,7 +109,9 @@ unsafe extern "C" fn linebuffer_new(bi: *mut Bio) -> c_int {
     unsafe {
         (*c).obuf = CRYPTO_malloc(DEFAULT_LINEBUFFER_SIZE as usize, ptr::null(), 0).cast();
         if (*c).obuf.is_null() {
-            // The context never escaped; the handle's `Drop` releases it (and the NULL member).
+            // The context never became a valid `BioLineBufferCtx` (its members are not all set);
+            // `ctx` drops here as a `RawCtx`, releasing the block alone -- exactly the authority's
+            // own bare `OPENSSL_free` on this path.
             return 0;
         }
         (*c).obuf_size = DEFAULT_LINEBUFFER_SIZE;
@@ -117,7 +120,13 @@ unsafe extern "C" fn linebuffer_new(bi: *mut Bio) -> c_int {
         (*bi).ptr = c.cast();
         (*bi).flags = 0;
     }
-    // The context is now the BIO's; `linebuffer_free` reclaims it through `OwnedCtx::from_raw`.
+    // Every member is now initialised, so the context is a valid `BioLineBufferCtx` and the
+    // destructor may run: validate it, then hand it to the BIO.
+    // SAFETY: `obuf`/`obuf_size`/`obuf_len` were all written above, so the block is a valid
+    // `BioLineBufferCtx` whose `obuf` (NULL or an owned seam block) satisfies `destroy_body`, and
+    // `ctx` gave up the block -- which is now the BIO's; `linebuffer_free` reclaims it through
+    // `OwnedCtx::from_raw`.
+    let ctx = unsafe { ctx.assume_init() };
     let _ = ctx.into_raw();
     1
 }
