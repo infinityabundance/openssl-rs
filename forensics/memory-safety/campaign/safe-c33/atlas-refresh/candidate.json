@@ -1,19 +1,19 @@
 {
   "candidate": {
-    "branch": "stage/p25/atlas-refresh",
+    "branch": "integrate/safe-c33",
     "crate_name": "openssl-rs",
     "crate_version": "0.0.27",
-    "head_sha": "33aa543fa9bf2fccd93f471358376daed1dca5f2",
+    "head_sha": "f6e27c32033f8c93ae39ad7053440bb9c3c1aa31",
     "inventory_base_sha": "b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491",
     "inventory_head_sha_frozen": "67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34",
     "src_content_hash_rule": "sha256 over the byte string 'openssl-rs/src-rs/v1\\0' followed, for each src/**/*.rs in sorted relative-path order, by relpath\\0filebytes\\0",
-    "src_content_sha256": "0af39beef47e9fe6de7e2657b43fe63f5cdbe912c080d5b89e58f87f5633e658",
-    "src_rs_files": 864
+    "src_content_sha256": "57c53d19a51d570c62313f842d08dcc1fe2eb23277754b57be87dc49888ca8e2",
+    "src_rs_files": 865
   },
   "census_crosscheck": {
-    "closure_files_absent_from_frozen_census": 2,
-    "closure_files_changed_since_frozen_census": 191,
-    "closure_files_matched": 434,
+    "closure_files_absent_from_frozen_census": 3,
+    "closure_files_changed_since_frozen_census": 195,
+    "closure_files_matched": 430,
     "note": "The census is the FROZEN Phase-25 atlas (earlier candidate). A changed file is candidate drift since that freeze, not a defect.",
     "source": "artifacts/phase25/source-census.json"
   },
@@ -669,7 +669,7 @@
     "p1000_pass_families_match": true
   },
   "cohort_metrics": {
-    "1_unique_closure_files": 627,
+    "1_unique_closure_files": 628,
     "2_files_ownership_reconstructed": 187,
     "3_files_fully_discharged_obligations": 0,
     "3_note": "Obligations are discharged ONLY at the seal point (AGENTS.md \u00a77 SAFETY_DISCHARGED, \u00a718). No per-site validity contract has been proven for any closure file at this candidate, so this is honestly 0. A present seam is OWNERSHIP_RECONSTRUCTED, which is not discharge.",
@@ -679,14 +679,14 @@
       ],
       "note": "Sites in no-seam files are unambiguously unconverted interior. Sites in seam-bearing files are mixed: they include legitimate seam-constructor sites and any remaining interior sites \u2014 this lightweight pass cannot separate them, so they are reported, not claimed clean.",
       "seam_bearing_files_with_raw_sites": 174,
-      "seam_bearing_raw_sites_unclassified": 2686,
-      "unconverted_no_seam_files": 149,
-      "unconverted_no_seam_sites": 742,
-      "upper_bound_total": 3428
+      "seam_bearing_raw_sites_unclassified": 2727,
+      "unconverted_no_seam_files": 150,
+      "unconverted_no_seam_sites": 749,
+      "upper_bound_total": 3476
     },
     "5_consumers_safe_compatible": 0,
     "5_note": "0 by construction: no mechanism is SAFETY_DISCHARGED, so no consumer's dependency closure can be discharged. Functional re-testing is required before any graduation.",
-    "closure_raw_sites_total": 3486,
+    "closure_raw_sites_total": 3534,
     "per_consumer": [
       {
         "evidence": "fingerprint",
@@ -1180,7 +1180,7 @@
       }
     ]
   },
-  "generated_utc": "2026-10-16T20:27:33Z",
+  "generated_utc": "2026-10-16T22:39:45Z",
   "generator": "forensics/memory-safety/campaign/safe-c33/atlas_refresh.py",
   "kind": "safe-c33-atlas-refresh",
   "ledger_seam_crosscheck": {
@@ -1394,7 +1394,7 @@
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 83,
       "closure_no_seam_raw_files": 16,
-      "closure_raw_sites": 431,
+      "closure_raw_sites": 432,
       "closure_seam_files": 30,
       "closure_seam_raw_files": 30,
       "closure_zero_raw_files": 37,
@@ -1436,7 +1436,7 @@
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 34,
       "closure_no_seam_raw_files": 4,
-      "closure_raw_sites": 128,
+      "closure_raw_sites": 129,
       "closure_seam_files": 16,
       "closure_seam_raw_files": 11,
       "closure_zero_raw_files": 19,
@@ -1462,7 +1462,7 @@
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 270,
       "closure_no_seam_raw_files": 74,
-      "closure_raw_sites": 1846,
+      "closure_raw_sites": 1865,
       "closure_seam_files": 86,
       "closure_seam_raw_files": 79,
       "closure_zero_raw_files": 117,
@@ -1642,7 +1642,7 @@
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 97,
       "closure_no_seam_raw_files": 21,
-      "closure_raw_sites": 431,
+      "closure_raw_sites": 438,
       "closure_seam_files": 28,
       "closure_seam_raw_files": 28,
       "closure_zero_raw_files": 48,
@@ -1717,9 +1717,9 @@
     {
       "category": "SSL/SSL_CTX/session",
       "closure_allocator_definition_files": [],
-      "closure_files_recomputed": 43,
-      "closure_no_seam_raw_files": 5,
-      "closure_raw_sites": 265,
+      "closure_files_recomputed": 44,
+      "closure_no_seam_raw_files": 6,
+      "closure_raw_sites": 285,
       "closure_seam_files": 11,
       "closure_seam_raw_files": 11,
       "closure_zero_raw_files": 27,
@@ -1736,15 +1736,16 @@
       "families_total": 25,
       "id": "SSL_SESSION",
       "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_file_count": 5,
+      "unconverted_interior_file_count": 6,
       "unconverted_interior_files": [
+        "src/ssl/adv_alloc.rs",
         "src/ssl/bio_ssl.rs",
         "src/ssl/d1_lib.rs",
         "src/ssl/s3_lib.rs",
         "src/ssl/statem/extensions_clnt.rs",
         "src/ssl/statem/extensions_srvr.rs"
       ],
-      "unconverted_interior_sites": 17
+      "unconverted_interior_sites": 24
     }
   ],
   "next_targets": [
@@ -1807,10 +1808,10 @@
     {
       "families_reaching": 25,
       "mechanism": "SSL_SESSION",
-      "score": 425,
+      "score": 600,
       "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_files": 5,
-      "unconverted_interior_sites": 17
+      "unconverted_interior_files": 6,
+      "unconverted_interior_sites": 24
     },
     {
       "families_reaching": 33,
@@ -1833,15 +1834,15 @@
       "src/runtime/mem.rs"
     ],
     "allocator_definition_note": "Files defining the CRYPTO_* allocator entry points (the seam itself); their raw sites are the seam being defined, not interior residuals, and are excluded from metric 4.",
-    "files_total": 864,
-    "files_with_raw_sites": 393,
+    "files_total": 865,
+    "files_with_raw_sites": 394,
     "files_with_seam": 226,
     "files_zero_raw_sites": 471,
     "raw_site_patterns": [
       "\\bCRYPTO_(?:malloc|zalloc|calloc|strdup|memdup)\\b",
       "\\bCRYPTO_(?:free|clear_free)\\b"
     ],
-    "raw_sites_total": 4331,
+    "raw_sites_total": 4385,
     "seam_tokens": [
       "OwnedCtx",
       "OwnedBuf",
@@ -1892,7 +1893,7 @@
       },
       {
         "mechanism": "SSL_SESSION",
-        "unconverted_interior_files": 5
+        "unconverted_interior_files": 6
       }
     ],
     "demonstrated_failure_note": "A closure file with a raw allocator site and NO ownership seam is a known-unconverted interior site in a mechanism a consumer needs. This is the only class this refresh asserts as failure-shaped; it is not a functional regression.",
