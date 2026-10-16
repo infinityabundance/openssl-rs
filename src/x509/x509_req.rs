@@ -167,8 +167,12 @@ pub struct X509Req {
     pub(crate) distinguishing_id: *mut Asn1String,
     /// `OSSL_LIB_CTX *libctx` -- the object's library context (type opaque here).
     pub(crate) libctx: *mut c_void,
-    /// `char *propq` -- the object's property query, owned.
-    pub(crate) propq: *mut c_char,
+    /// `char *propq` -- the object's property query, an object-owned C-string **member buffer**.
+    /// Its ownership invariant is stated once by [`PropqSlot`] and mediated by [`PropqSlot`]/
+    /// [`X509Req::propq`]; see the `MEMBER-BUFFER-MODEL.md` note. It stays `*mut c_char` at this
+    /// exact offset so the `#[repr(C)]` layout is the authority's, and it is **module-private**
+    /// because every read, write and release now goes through this module's handle/reader.
+    propq: *mut c_char,
 }
 
 const _: () = {
@@ -182,6 +186,82 @@ const _: () = {
     assert!(core::mem::offset_of!(X509Req, libctx) == 104);
     assert!(core::mem::offset_of!(X509Req, propq) == 112);
 };
+
+impl X509Req {
+    /// The object-owned property-query string (NULL when unset) -- the authoritative read of the
+    /// `propq` member buffer. Reads cannot free or alias, but funnelling them here keeps the
+    /// field's writers enumerable (see [`PropqSlot`]).
+    pub(crate) fn propq(&self) -> *const c_char {
+        self.propq
+    }
+}
+
+/// A validated handle over the object-owned C-string member `X509_REQ::propq`.
+///
+/// ## Member-buffer invariant (stated once)
+/// `X509_REQ::propq` is always either NULL or a single NUL-terminated block produced by the
+/// crate's `CRYPTO_strdup` seam and owned by the enclosing `X509_REQ`. That object is the block's
+/// *only* owner: the block is released **exactly once**, by `req_cb`'s `FREE_POST` arm
+/// (`x_req.rs`) or by the next [`PropqSlot::clear`]/[`PropqSlot::store`] that replaces it
+/// (`ossl_x509_req_set0_libctx`). Nothing else frees or aliases it.
+///
+/// ## Why the field stays raw
+/// The `#[repr(C)]` layout is the authority's, so the field must remain `*mut c_char` at its exact
+/// offset; a Rust owner type cannot live in the struct. This handle is a transient **borrow** over
+/// the field -- the resident-member counterpart of the per-module `OwnedStr`, and the X.509
+/// analogue of `pk7_asn1.rs`'s `PropqSlot` and `cms_asn1.rs`'s `CmsPropqSlot`. The struct is
+/// defined here; its lifecycle (`ossl_x509_req_set0_libctx`, `req_cb`) lives in `x_req.rs` and
+/// uses this handle, so the field is module-private and its writers are enumerable.
+///
+/// `unsafe` appears only at the two proof boundaries: [`PropqSlot::of`] (which asserts the field
+/// currently obeys the invariant) and [`PropqSlot::store`] (which accepts an externally-allocated
+/// block). `clear` is safe because a handle built by [`PropqSlot::of`] guarantees the incumbent is
+/// the object's own single block.
+pub(crate) struct PropqSlot<'a> {
+    /// Borrow of the object's member field; its value obeys the invariant for `'a`.
+    slot: &'a mut *mut c_char,
+}
+
+impl<'a> PropqSlot<'a> {
+    /// Derive the handle from a live object.
+    ///
+    /// # Safety
+    ///
+    /// `x` is a live `X509_REQ` and is borrowed mutably for `'a`; its `propq` field currently
+    /// obeys the member-buffer invariant. A live `X509_REQ` satisfies this because the ASN.1 item
+    /// layer zeroes the object at construction and the member is only ever mutated through this
+    /// handle (`X509_REQ_new_ex`, `ossl_x509_req_set0_libctx`) or released by `req_cb`'s
+    /// `FREE_POST` arm.
+    pub(crate) unsafe fn of(x: &'a mut X509Req) -> PropqSlot<'a> {
+        PropqSlot { slot: &mut x.propq }
+    }
+
+    /// Release any incumbent value through the authority's own `CRYPTO_free` site, leaving the
+    /// field NULL. This is the authority's `OPENSSL_free(p)` followed by `p = NULL`; NULL is a
+    /// no-op for `CRYPTO_free`, so the release is total.
+    pub(crate) fn clear(&mut self, file: *const c_char, line: c_int) {
+        let old = core::mem::replace(self.slot, ptr::null_mut());
+        // SAFETY: by the member-buffer invariant the incumbent is NULL or the object's own single
+        // `CRYPTO_strdup` block, so this is that block's one release; `CRYPTO_free` ignores NULL.
+        unsafe { CRYPTO_free(old.cast(), file, line) };
+    }
+
+    /// Store a freshly-`CRYPTO_strdup`ed value into the (now empty) field, transferring ownership
+    /// of it to the enclosing object.
+    ///
+    /// # Safety
+    ///
+    /// `new` is NULL or a live NUL-terminated block this caller owns exclusively (produced by the
+    /// crate's `CRYPTO_strdup` seam) and no other owner will release it; the field is currently
+    /// unset (NULL).
+    pub(crate) unsafe fn store(&mut self, new: *mut c_char) {
+        debug_assert!(
+            (*self.slot).is_null(),
+            "propq member slot must be empty before store"
+        );
+        *self.slot = new;
+    }
+}
 
 /// `long X509_REQ_get_version(const X509_REQ *req)` -- `crypto/x509/x509_req.c:306-309`.
 ///
@@ -399,7 +479,7 @@ pub unsafe extern "C" fn X509_to_X509_REQ(
     md: *const EvpMd,
 ) -> *mut X509Req {
     // SAFETY: `x` is live per the contract and its two context fields are read from it.
-    let ret = unsafe { X509_REQ_new_ex((*x).libctx, (*x).propq) };
+    let ret = unsafe { X509_REQ_new_ex((*x).libctx, (*x).propq()) };
     if ret.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&X509_REQ_31) };
