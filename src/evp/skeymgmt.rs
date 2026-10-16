@@ -220,7 +220,12 @@ pub struct EvpSkeyMgmt {
 
 /// The authority's `EVP_SKEYMGMT_free` body minus the block release [`OwnedCtx`]'s `Drop` performs:
 /// the type name and the provider reference, in that order (`:169`, `:170`).
-impl CtxDestroy for EvpSkeyMgmt {
+// SAFETY: (a) `destroy_body` is the authority's `EVP_SKEYMGMT_free` member body, releasing exactly
+// this method's type name and provider reference once (each releaser accepts the unset NULL) and
+// never the enclosing block, which `OwnedCtx` releases; (b) `EvpSkeyMgmt` is a `#[repr(C)]` record
+// of raw pointers, an integer, an `AtomicI32` and `Option<fn>` dispatch slots, so an all-zero block
+// is a valid `EvpSkeyMgmt` the body is sound on.
+unsafe impl CtxDestroy for EvpSkeyMgmt {
     const FILE: *const c_char = FILE_METH;
     const LINE_ALLOC: c_int = LINE_ZALLOC_SKEYMGMT;
     const LINE_FREE: c_int = LINE_FREE_SKEYMGMT;

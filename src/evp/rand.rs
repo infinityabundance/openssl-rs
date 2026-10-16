@@ -313,7 +313,12 @@ pub struct EvpRand {
 
 /// The authority's `EVP_RAND_free` body minus the block release [`OwnedCtx`]'s `Drop` performs: the
 /// type name and the provider reference (`:73`, `:74`).
-impl CtxDestroy for EvpRand {
+// SAFETY: (a) `destroy_body` is the authority's `EVP_RAND_free` member body, releasing exactly this
+// method's type name and provider reference once (each releaser accepts the unset NULL) and never
+// the enclosing block, which `OwnedCtx` releases; (b) `EvpRand` is a `#[repr(C)]` record of raw
+// pointers, an integer, an `AtomicI32` and many `Option<fn>` dispatch slots, so an all-zero block
+// is a valid `EvpRand` the body is sound on.
+unsafe impl CtxDestroy for EvpRand {
     const FILE: *const c_char = FILE;
     const LINE_ALLOC: c_int = LINE_ZALLOC_RAND;
     const LINE_FREE: c_int = LINE_FREE_RAND;

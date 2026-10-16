@@ -50,7 +50,12 @@ struct BioLineBufferCtx {
 /// the output buffer `linebuffer_new` allocated. The buffer stays a plain `#[repr(C)]` member the
 /// authority owns and resizes by hand in `linebuffer_ctrl`; only the context block's ownership
 /// moves to the handle.
-impl CtxDestroy for BioLineBufferCtx {
+// SAFETY: (a) `destroy_body` is the authority's `linebuffer_free` member body, releasing exactly
+// this context's output buffer once (the `OwnedBlock::take` accepts the unset NULL) and never the
+// enclosing block, which `OwnedCtx` releases; (b) `BioLineBufferCtx` is a `#[repr(C)]` record of a
+// raw pointer and integers, so an all-zero block is a valid `BioLineBufferCtx` the body is sound
+// on.
+unsafe impl CtxDestroy for BioLineBufferCtx {
     unsafe fn destroy_body(ptr: *mut BioLineBufferCtx) {
         // SAFETY: `ptr` is a live context per the trait contract; `obuf` is NULL or an owned seam
         // block whose single release is the block handle's `Drop`.

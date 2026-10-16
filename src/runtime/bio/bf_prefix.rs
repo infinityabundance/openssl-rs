@@ -51,7 +51,11 @@ struct PrefixCtx {
 /// the context's `prefix` duplicate, when it has one, is released exactly as `prefix_destroy`
 /// releases it. `prefix` stays a plain `#[repr(C)]` member the authority owns and frees by hand;
 /// only the context block's own ownership moves to the handle.
-impl CtxDestroy for PrefixCtx {
+// SAFETY: (a) `destroy_body` is the authority's `prefix_destroy` member body, releasing exactly
+// this context's `prefix` duplicate once when set (the NULL test admits the unset state) and never
+// the enclosing block, which `OwnedCtx` releases; (b) `PrefixCtx` is a `#[repr(C)]` record of a raw
+// pointer and integers, so an all-zero block is a valid `PrefixCtx` the body is sound on.
+unsafe impl CtxDestroy for PrefixCtx {
     unsafe fn destroy_body(ptr: *mut PrefixCtx) {
         // SAFETY: `ptr` is a live context per the trait contract.
         if !unsafe { (*ptr).prefix }.is_null() {

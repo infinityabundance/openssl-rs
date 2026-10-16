@@ -71,7 +71,12 @@ pub(crate) struct TsVerifyCtx {
     pub(crate) tsa_name: *mut GeneralName,
 }
 
-impl CtxDestroy for TsVerifyCtx {
+// SAFETY: (a) `destroy_body` is the authority's `TS_VERIFY_CTX_free` member body
+// (`TS_VERIFY_CTX_cleanup`), releasing exactly this context's own store/certs/policy/algorithm/
+// imprint/data/nonce/name members once (each releaser accepts the unset NULL) and never the
+// enclosing block, which `OwnedCtx` releases; (b) `TsVerifyCtx` is a `#[repr(C)]` record of
+// integers and raw pointers, so an all-zero block is a valid `TsVerifyCtx` the body is sound on.
+unsafe impl CtxDestroy for TsVerifyCtx {
     const FILE: *const c_char = FILE.as_ptr();
     const LINE_ALLOC: c_int = 17;
     const LINE_FREE: c_int = 34;

@@ -44,7 +44,26 @@ use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 /// distinct so a caller-installed `CRYPTO_set_mem_functions` hook observes the release at the same
 /// site the authority releases it (the `bf_*` filters allocate and free at `NULL`/`0`, while
 /// `ossl_core_bio.c` records its own `__FILE__` and the two lines it names).
-pub(crate) trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of this contract, because the owner ([`OwnedCtx`]) runs the
+/// implementer's body through a safe interface:
+///
+/// (a) **destructor** — [`destroy_body`](CtxDestroy::destroy_body) runs the authority's `*_free`
+///     member body **exactly once**, releasing exactly the members the object owns (every releaser
+///     it calls must accept the not-yet-set NULL/zero state of a partially built object), and it
+///     **never** releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases alone; and
+/// (b) **zero-validity** — an all-zero block of `Self` is a valid `Self`, and `destroy_body` and
+///     every operation the owner performs on it are sound for that value. This is the obligation
+///     the safe [`OwnedCtx::zalloc`] leans on: it validates an authority `CRYPTO_zalloc` block with
+///     no caller assertion, so `Self` must be a type whose zeroed state the authority's own
+///     constructor leaves.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`. Either is undefined behaviour reachable
+/// without `unsafe` at the call site.
+pub(crate) unsafe trait CtxDestroy: Sized {
     /// `__FILE__` for this context's `CRYPTO_*` calls, or NULL where the authority passes none.
     const FILE: *const c_char = ptr::null();
     /// `__LINE__` for the context's allocation.
@@ -76,10 +95,8 @@ impl<T: CtxDestroy> OwnedCtx<T> {
     /// is used for (each is one the authority builds with `OPENSSL_zalloc`), so `destroy_body` is
     /// written against it and the block may be validated immediately.
     pub(crate) fn zalloc() -> Option<OwnedCtx<T>> {
-        // SAFETY: for every context this constructor is used for, the all-zero block is the
-        // authority's own constructed `T` (the authority builds it with `OPENSSL_zalloc`), and
-        // `destroy_body` is written to release exactly that state, so the storage holds a valid `T`
-        // whose members satisfy the destructor's invariants.
+        // SAFETY: `T: CtxDestroy` carries implementer obligation (b) — an all-zero block is a valid
+        // `T` for which `destroy_body` is sound — so the zeroed storage is a valid `T`.
         Some(unsafe { RawCtx::<T>::zalloc()?.assume_init() })
     }
 

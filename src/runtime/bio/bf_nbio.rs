@@ -63,7 +63,11 @@ struct NbioTest {
 ///
 /// `bf_nbio.c`'s `nbiof_free` frees the context without reading it, so the destructor body is
 /// empty and the whole of the ownership is the handle's `Drop`.
-impl CtxDestroy for NbioTest {
+// SAFETY: (a) `nbiof_free` reads and releases nothing, so `destroy_body` is the empty authority
+// body and never the enclosing block, which `OwnedCtx` releases; (b) `NbioTest` is a `#[repr(C)]`
+// record of two `int`s, so an all-zero block is a valid `NbioTest` the empty body is trivially
+// sound on.
+unsafe impl CtxDestroy for NbioTest {
     unsafe fn destroy_body(_ptr: *mut NbioTest) {}
 }
 

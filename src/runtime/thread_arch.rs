@@ -158,7 +158,12 @@ pub(crate) struct CryptoThread {
 /// release is NULL-safe, so the body is written against the state the constructor's own failure
 /// paths leave behind: the mutex/condvar members it did not get to set read NULL, and the
 /// `pthread_t` block is released by [`OwnedThreadHandle`].
-impl CtxDestroy for CryptoThread {
+// SAFETY: (a) `destroy_body` is the authority's `native_clean` member body, releasing exactly this
+// object's own mutex, state lock, condvar and `pthread_t` block once (each releaser accepts the
+// unset NULL) and never the enclosing block, which `OwnedCtx` releases; (b) `CryptoThread` is a
+// `#[repr(C)]` record of integers, raw pointers and `Option<fn>`, so an all-zero block is a valid
+// `CryptoThread` the body is sound on.
+unsafe impl CtxDestroy for CryptoThread {
     const FILE: *const c_char = FILE_ARCH;
     const LINE_ALLOC: c_int = LINE_ARCH_ZALLOC;
     const LINE_FREE: c_int = LINE_ARCH_FREE;

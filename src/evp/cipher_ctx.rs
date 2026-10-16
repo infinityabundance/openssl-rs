@@ -301,7 +301,13 @@ pub struct EvpCipherCtx {
 /// (the same reset a caller may call itself), which releases the provider's `algctx`, drops the
 /// fetched cipher's reference and releases the legacy `cipher_data`. [`OwnedCtx`]'s `Drop` then adds
 /// the block release the authority wrote by hand.
-impl CtxDestroy for EvpCipherCtx {
+// SAFETY: (a) `destroy_body` is the authority's `EVP_CIPHER_CTX_free` member body
+// (`EVP_CIPHER_CTX_reset`), releasing exactly this context's own provider context, fetched cipher
+// reference and legacy data once (the member tests are the authority's own) and never the enclosing
+// block, which `OwnedCtx` releases; (b) `EvpCipherCtx` is a `#[repr(C)]` record of raw pointers,
+// integers, byte arrays and `usize`s, so an all-zero block is a valid `EvpCipherCtx` the body is
+// sound on.
+unsafe impl CtxDestroy for EvpCipherCtx {
     const FILE: *const c_char = FILE_ENC;
     const LINE_ALLOC: c_int = LINE_ZALLOC_CTX;
     const LINE_FREE: c_int = LINE_FREE_CTX;

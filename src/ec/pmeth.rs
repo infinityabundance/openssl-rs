@@ -131,7 +131,12 @@ struct EcPkeyCtx {
 /// performs the block release at the authority's own site, so this body is the first three members
 /// alone -- kept as the authority's own `EC_*_free`/`OPENSSL_free` calls so a caller-installed
 /// `CRYPTO_set_mem_functions` hook observes the releases at the same sites.
-impl CtxDestroy for EcPkeyCtx {
+// SAFETY: (a) `destroy_body` is the authority's `pkey_ec_cleanup` member body, releasing exactly
+// this context's own group, duplicated cofactor key and shared-info buffer once (each releaser
+// accepts the unset NULL) and never the enclosing block, which `OwnedCtx` releases; (b) `EcPkeyCtx`
+// is a `#[repr(C)]` record of raw pointers, `char`-typed integers and `usize`s, so an all-zero block
+// is a valid `EcPkeyCtx` the body is sound on.
+unsafe impl CtxDestroy for EcPkeyCtx {
     const FILE: *const c_char = FILE;
     const LINE_ALLOC: c_int = LINE_ZALLOC_DCTX;
     const LINE_FREE: c_int = LINE_FREE_DCTX;

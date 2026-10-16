@@ -220,7 +220,12 @@ unsafe fn accept_free(a: *mut BioAccept) {
     unsafe { drop(OwnedCtx::<BioAccept>::from_raw(a)) };
 }
 
-impl CtxDestroy for BioAccept {
+// SAFETY: (a) `destroy_body` is the authority's `acpt_free` member body, releasing exactly this
+// context's own strings, address chain and chained BIO once (each releaser accepts the unset NULL)
+// and never the enclosing block, which `OwnedCtx` releases; (b) `BioAccept` is a `#[repr(C)]`
+// record of raw pointers, integers and nested plain records, so an all-zero block is a valid
+// `BioAccept` the body is sound on.
+unsafe impl CtxDestroy for BioAccept {
     unsafe fn destroy_body(ptr: *mut BioAccept) {
         // SAFETY: `ptr` is a live context per the trait contract; the six strings are NULL or
         // owned seam blocks, `addr_first` and `bio_chain` are NULL or owned by the context.

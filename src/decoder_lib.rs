@@ -103,7 +103,12 @@ const ERR_DATA_BUFFER: usize = 1024;
 /// The authority's `ossl_decoder_instance_free` body minus the block release [`OwnedCtx`]'s `Drop`
 /// performs: the three per-field releases at `decoder_lib.c:301-312`, each NULL-tested because the
 /// `err:` label reaches this with a half-built instance.
-impl CtxDestroy for OsslDecoderInstance {
+// SAFETY: (a) `destroy_body` runs the authority's `ossl_decoder_instance_free` member body,
+// releasing exactly this instance's provider context through its `freectx` once (the per-field
+// tests are the authority's own and admit a half-built instance) and never the enclosing block,
+// which `OwnedCtx` releases; (b) `OsslDecoderInstance` is a `#[repr(C)]` record of raw pointers and
+// integers, so an all-zero block is a valid `OsslDecoderInstance` the body is sound on.
+unsafe impl CtxDestroy for OsslDecoderInstance {
     unsafe fn destroy_body(ptr: *mut OsslDecoderInstance) {
         // SAFETY: `ptr` is a live instance per the trait contract; `decoder` is NULL for a
         // half-built instance and the per-field tests are the authority's own.
