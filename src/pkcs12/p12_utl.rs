@@ -29,7 +29,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uchar, c_ulong};
+use core::ffi::{c_char, c_int, c_uchar, c_ulong, c_void};
 
 use crate::asn1::a_d2i_fp::{ASN1_item_d2i_bio_ex, ASN1_item_d2i_fp_ex};
 use crate::asn1::a_i2d_fp::{ASN1_item_i2d_bio, ASN1_item_i2d_fp};
@@ -46,6 +46,69 @@ const FILE: &core::ffi::CStr = c"crypto/pkcs12/p12_utl.c";
 /// The line the authority's `OPENSSL_malloc` call expands to, as the authority spells it (the
 /// allocation site is the file's own `OPENSSL_malloc`, without a pin line, so the crate uses 0).
 const LINE: c_int = 0;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the conversion buffers
+// ---------------------------------------------------------------------------------------------
+
+/// An owned heap buffer from this unit's `OPENSSL_malloc`/`OPENSSL_free` seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's exact size and `file`/`line` -- a Rust
+/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::new`] allocates
+/// it, `Drop` is its single release, [`Self::into_raw`] hands the finished string to the caller that
+/// takes it over, and [`Self::as_mut_slice`] lends the writable interior the writers fill, so the
+/// byte writes are checked indexing rather than raw pointer arithmetic.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    len: usize,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            len,
+            file,
+            line,
+        })
+    }
+
+    /// The block as a writable slice of exactly the length it was allocated with.
+    fn as_mut_slice(&mut self) -> &mut [u8] {
+        // SAFETY: `self.ptr` is the live block `new` allocated with `self.len` writable bytes, and
+        // this handle is its only owner and lends it exclusively for this borrow.
+        unsafe { core::slice::from_raw_parts_mut(self.ptr, self.len) }
+    }
+
+    /// The start of the block, for the caller that takes the block's address.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the caller that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam and at the authority's own `file`/`line`.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
 
 /// `unsigned char *OPENSSL_asc2uni(const char *asc, int asclen, unsigned char **uni,
 /// int *unilen)` — `crypto/pkcs12/p12_utl.c:18-43`.
@@ -75,33 +138,33 @@ pub unsafe extern "C" fn OPENSSL_asc2uni(
     }
     let ulen = asclen * 2 + 2;
     // SAFETY: `ulen` is a positive byte count.
-    let unitmp = CRYPTO_malloc(ulen as usize, FILE.as_ptr(), LINE).cast::<c_uchar>();
-    if unitmp.is_null() {
+    let Some(mut buf) = OwnedBuf::new(ulen as usize, FILE.as_ptr(), LINE) else {
         return core::ptr::null_mut();
-    }
-    let mut i = 0;
-    while i < ulen - 2 {
-        // SAFETY: `unitmp` has `ulen` writable bytes and `asc` has `asclen` readable ones;
-        // `i >> 1 < asclen` throughout.
-        unsafe {
-            *unitmp.add(i as usize) = 0;
-            *unitmp.add(i as usize + 1) = *asc.add((i >> 1) as usize) as c_uchar;
+    };
+    {
+        let out = buf.as_mut_slice();
+        let mut i: c_int = 0;
+        while i < ulen - 2 {
+            out[i as usize] = 0;
+            // SAFETY: `asc` has `asclen` readable bytes per the contract; `i >> 1 < asclen`
+            // throughout.
+            out[i as usize + 1] = unsafe { *asc.add((i >> 1) as usize) } as c_uchar;
+            i += 2;
         }
-        i += 2;
+        // Make result double null terminated.
+        out[(ulen - 2) as usize] = 0;
+        out[(ulen - 1) as usize] = 0;
     }
-    // Make result double null terminated.
-    // SAFETY: the last two bytes are within the allocation.
+    // SAFETY: `unilen`/`uni` are each NULL or writable per the contract.
     unsafe {
-        *unitmp.add((ulen - 2) as usize) = 0;
-        *unitmp.add((ulen - 1) as usize) = 0;
         if !unilen.is_null() {
             *unilen = ulen;
         }
         if !uni.is_null() {
-            *uni = unitmp;
+            *uni = buf.as_ptr();
         }
     }
-    unitmp
+    buf.into_raw()
 }
 
 /// `char *OPENSSL_uni2asc(const unsigned char *uni, int unilen)` — `crypto/pkcs12/p12_utl.c:45-66`.
@@ -130,24 +193,22 @@ pub unsafe extern "C" fn OPENSSL_uni2asc(uni: *const c_uchar, unilen: c_int) -> 
     // SAFETY: `uni` is readable for `unilen` bytes; skipping the leading byte is in range.
     let uni = unsafe { uni.add(1) };
     // SAFETY: `asclen` is a positive byte count.
-    let asctmp = CRYPTO_malloc(asclen as usize, FILE.as_ptr(), LINE).cast::<c_char>();
-    if asctmp.is_null() {
+    let Some(mut buf) = OwnedBuf::new(asclen as usize, FILE.as_ptr(), LINE) else {
         return core::ptr::null_mut();
-    }
-    let mut i = 0;
-    while i < unilen {
-        // SAFETY: `asctmp` has `asclen` bytes and `uni` has `unilen - 1` readable bytes after the
-        // skip; `i >> 1 < asclen` and `i < unilen - 1` throughout.
-        unsafe {
-            *asctmp.add((i >> 1) as usize) = *uni.add(i as usize) as c_char;
+    };
+    {
+        let out = buf.as_mut_slice();
+        let mut i = 0;
+        while i < unilen {
+            // SAFETY: `uni` has `unilen - 1` readable bytes after the skip; `i >> 1 < asclen`
+            // and `i < unilen - 1` throughout.
+            out[(i >> 1) as usize] = unsafe { *uni.add(i as usize) };
+            i += 2;
         }
-        i += 2;
+        // The final byte is within the allocation.
+        out[(asclen - 1) as usize] = 0;
     }
-    // SAFETY: the final byte is within the allocation.
-    unsafe {
-        *asctmp.add((asclen - 1) as usize) = 0;
-    }
-    asctmp
+    buf.into_raw().cast::<c_char>()
 }
 
 /// `unsigned char *OPENSSL_utf82uni(const char *asc, int asclen, unsigned char **uni,
@@ -199,58 +260,56 @@ pub unsafe extern "C" fn OPENSSL_utf82uni(
     ulen += 2; // for the trailing UTF-16 zero
 
     // SAFETY: `ulen` is a positive byte count.
-    let ret = CRYPTO_malloc(ulen as usize, FILE.as_ptr(), LINE).cast::<c_uchar>();
-    if ret.is_null() {
+    let Some(mut buf) = OwnedBuf::new(ulen as usize, FILE.as_ptr(), LINE) else {
         return core::ptr::null_mut();
-    }
-    let mut unitmp = ret;
-    let mut i: c_int = 0;
-    while i < asclen {
-        // SAFETY: as in the sizing loop, but the value slot is only read.
-        let j = unsafe {
-            UTF8_getc(
-                asc.cast::<c_uchar>().add(i as usize),
-                asclen - i,
-                &raw mut utf32chr,
-            )
-        };
-        if utf32chr >= 0x10000 {
-            // A pair of UTF-16 characters.
-            let v = utf32chr - 0x10000;
-            let hi = 0xD800 + (v >> 10);
-            let lo = 0xDC00 + (v & 0x3ff);
-            // SAFETY: the sizing loop reserved four bytes for this code point.
-            unsafe {
-                *unitmp = (hi >> 8) as c_uchar;
-                *unitmp.add(1) = hi as c_uchar;
-                *unitmp.add(2) = (lo >> 8) as c_uchar;
-                *unitmp.add(3) = lo as c_uchar;
-                unitmp = unitmp.add(4);
+    };
+    {
+        let out = buf.as_mut_slice();
+        let mut w: c_int = 0;
+        let mut i: c_int = 0;
+        while i < asclen {
+            // SAFETY: as in the sizing loop, but the value slot is only read.
+            let j = unsafe {
+                UTF8_getc(
+                    asc.cast::<c_uchar>().add(i as usize),
+                    asclen - i,
+                    &raw mut utf32chr,
+                )
+            };
+            if utf32chr >= 0x10000 {
+                // A pair of UTF-16 characters.
+                let v = utf32chr - 0x10000;
+                let hi = 0xD800 + (v >> 10);
+                let lo = 0xDC00 + (v & 0x3ff);
+                // The sizing loop reserved four bytes for this code point.
+                out[w as usize] = (hi >> 8) as c_uchar;
+                out[w as usize + 1] = hi as c_uchar;
+                out[w as usize + 2] = (lo >> 8) as c_uchar;
+                out[w as usize + 3] = lo as c_uchar;
+                w += 4;
+            } else {
+                // Or just one.
+                // The sizing loop reserved two bytes for this code point.
+                out[w as usize] = (utf32chr >> 8) as c_uchar;
+                out[w as usize + 1] = utf32chr as c_uchar;
+                w += 2;
             }
-        } else {
-            // Or just one.
-            // SAFETY: the sizing loop reserved two bytes for this code point.
-            unsafe {
-                *unitmp = (utf32chr >> 8) as c_uchar;
-                *unitmp.add(1) = utf32chr as c_uchar;
-                unitmp = unitmp.add(2);
-            }
+            i += j;
         }
-        i += j;
+        // Make result double null terminated.
+        out[w as usize] = 0;
+        out[w as usize + 1] = 0;
     }
-    // Make result double null terminated.
-    // SAFETY: two bytes remain for the trailing zeros.
+    // SAFETY: `unilen`/`uni` are each NULL or writable per the contract.
     unsafe {
-        *unitmp = 0;
-        *unitmp.add(1) = 0;
         if !unilen.is_null() {
             *unilen = ulen;
         }
         if !uni.is_null() {
-            *uni = ret;
+            *uni = buf.as_ptr();
         }
     }
-    ret
+    buf.into_raw()
 }
 
 /// `static int bmp_to_utf8(char *str, const unsigned char *utf16, int len)` —
@@ -331,40 +390,39 @@ pub unsafe extern "C" fn OPENSSL_uni2utf8(uni: *const c_uchar, unilen: c_int) ->
     }
 
     // SAFETY: `asclen` is a positive byte count.
-    let asctmp = CRYPTO_malloc(asclen as usize, FILE.as_ptr(), LINE).cast::<c_char>();
-    if asctmp.is_null() {
+    let Some(mut buf) = OwnedBuf::new(asclen as usize, FILE.as_ptr(), LINE) else {
         return core::ptr::null_mut();
-    }
-    let mut written: c_int = 0;
-    let mut i: c_int = 0;
-    while i < unilen {
-        // SAFETY: `asctmp + written` has room for the four bytes `bmp_to_utf8` may write, since
-        // the sizing pass counted every code point's width.
-        let j = unsafe {
-            bmp_to_utf8(
-                asctmp.add(written as usize),
-                uni.add(i as usize),
-                unilen - i,
-            )
-        };
-        if j < 0 {
-            // When `UTF8_putc` fails.
-            // SAFETY: `asctmp` is this call's allocation.
-            unsafe { CRYPTO_free(asctmp.cast(), FILE.as_ptr(), LINE) };
-            return core::ptr::null_mut();
+    };
+    {
+        let out = buf.as_mut_slice();
+        let mut written: c_int = 0;
+        let mut i: c_int = 0;
+        while i < unilen {
+            // SAFETY: `out[written..]` has room for the four bytes `bmp_to_utf8` may write, since
+            // the sizing pass counted every code point's width, and `uni` is readable for
+            // `unilen` bytes with `i < unilen`.
+            let j = unsafe {
+                bmp_to_utf8(
+                    out[written as usize..].as_mut_ptr().cast(),
+                    uni.add(i as usize),
+                    unilen - i,
+                )
+            };
+            if j < 0 {
+                // When `UTF8_putc` fails. `buf`'s `Drop` is the authority's own
+                // `OPENSSL_free(asctmp)`, at the same `file`/`line`.
+                return core::ptr::null_mut();
+            }
+            i += if j == 4 { 4 } else { 2 };
+            written += j;
         }
-        i += if j == 4 { 4 } else { 2 };
-        written += j;
-    }
-    // If no terminating zero write one.
-    if needs_nul {
-        // SAFETY: a NUL is needed only when `needs_nul` set, in which case the sizing pass added
-        // the extra byte, so `written` is in range.
-        unsafe {
-            *asctmp.add(written as usize) = 0;
+        // If no terminating zero, write one; the sizing pass added the extra byte, so `written`
+        // is in range.
+        if needs_nul {
+            out[written as usize] = 0;
         }
     }
-    asctmp
+    buf.into_raw().cast::<c_char>()
 }
 
 /// `int i2d_PKCS12_bio(BIO *bp, const PKCS12 *p12)` — `crypto/pkcs12/p12_utl.c:237-240`.

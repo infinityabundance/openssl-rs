@@ -201,21 +201,20 @@ pub unsafe extern "C" fn ossl_kdf_data_new(provctx: *mut c_void) -> *mut KdfData
             return ptr::null_mut();
         }
 
-        let kdfdata = CRYPTO_zalloc(core::mem::size_of::<KdfData>(), FILE_KDF_LEGACY_KMGMT, 0)
-            .cast::<KdfData>();
-        if kdfdata.is_null() {
+        let Some(kdfdata) = OwnedCtx::<KdfData>::new_zeroed(FILE_KDF_LEGACY_KMGMT, 0, 61) else {
             return ptr::null_mut();
-        }
+        };
+        let kdfdata_ptr = kdfdata.as_ptr();
 
         // `if (!CRYPTO_NEW_REF(&kdfdata->refcnt, 1))` — the header's fallback arm on this profile is
         // `refcnt->val = n; return 1;`, so the failure branch (and its `OPENSSL_free`) is
         // unreachable rather than omitted. `NEW_REF` cannot fail for an inline atomic.
-        // SAFETY: `refcnt` is a field of this call's own allocation.
-        (*kdfdata).refcnt.store(1, Ordering::Relaxed);
+        // SAFETY: `kdfdata_ptr` is a field of this call's own allocation.
+        (*kdfdata_ptr).refcnt.store(1, Ordering::Relaxed);
         // SAFETY: as above; `provctx` is the caller's.
-        (*kdfdata).libctx = prov_libctx_of(provctx);
+        (*kdfdata_ptr).libctx = prov_libctx_of(provctx);
 
-        kdfdata
+        kdfdata.into_raw()
     }
 }
 
@@ -240,8 +239,9 @@ pub unsafe extern "C" fn ossl_kdf_data_free(kdfdata: *mut KdfData) {
     }
 
     // `CRYPTO_FREE_REF(&kdfdata->refcnt)` is empty on this profile's arm of the header.
-    // SAFETY: this is the last reference to the handle.
-    unsafe { CRYPTO_free(kdfdata.cast(), FILE_KDF_LEGACY_KMGMT, 61) };
+    // SAFETY: this is the last reference to the handle; `from_raw` reclaims the block for its
+    // single release by `Drop`.
+    drop(unsafe { OwnedCtx::<KdfData>::from_raw(kdfdata, FILE_KDF_LEGACY_KMGMT, 61) });
 }
 
 /// `int ossl_kdf_data_up_ref(KDF_DATA *kdfdata)` — `kdf_legacy_kmgmt.c:64-80`. The one guard the
@@ -413,6 +413,231 @@ struct DhGenCtx {
     cbarg: *mut c_void,
     /// `int dh_type` — `DH_FLAG_TYPE_DH` or `DH_FLAG_TYPE_DHX`.
     dh_type: c_int,
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the key-manager handles and the parameter-generation context
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's destructor body for one of the file's heap records, without the block's own
+/// release, which [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live record this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned one of the file's heap records.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its exact `CRYPTO_zalloc` size/`file`/
+/// `line` -- a Rust `Box` would hide both the release and the caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::new_zeroed`]
+/// allocates it, [`Self::from_raw`] takes back the block a dispatch `free`/`gen_cleanup` hands over,
+/// `Drop` runs the authority's own free body ([`CtxDestroy::destroy_body`]) followed by its single
+/// block release, and [`Self::into_raw`] hands it to the dispatch contract that takes it over.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// `CRYPTO_zalloc(size_of::<T>(), file, alloc_line)`, whose `Drop` releases it at
+    /// `file`/`release_line`, or `None` when the allocator answers NULL.
+    fn new_zeroed(
+        file: *const c_char,
+        alloc_line: c_int,
+        release_line: c_int,
+    ) -> Option<OwnedCtx<T>> {
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx {
+            ptr,
+            file,
+            line: release_line,
+        })
+    }
+
+    /// The record's address, for the calls that read or write it.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Reclaim the record a dispatch `free`/`gen_cleanup` hands over, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live record this file allocated that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// Give up ownership of the record to the dispatch contract that takes it over.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The record's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
+    /// followed by its single block release, through the same allocator seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; `destroy_body` is
+        // the authority's own free body and this is the block's single release.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+/// The authority's `ossl_kdf_data_free` body (`kdf_legacy_kmgmt.c:49-62`), without the block
+/// release [`OwnedCtx`]'s `Drop` performs: a `KDF_DATA` owns no member -- its `libctx` is borrowed.
+impl CtxDestroy for KdfData {
+    unsafe fn destroy_body(_ptr: *mut KdfData) {}
+}
+
+/// The authority's `dh_gen_cleanup` body (`dh_kmgmt.c:818-828`), without the block release
+/// [`OwnedCtx`]'s `Drop` performs: the two owned names and the cleansed FIPS186-4 seed.
+impl CtxDestroy for DhGenCtx {
+    unsafe fn destroy_body(ptr: *mut DhGenCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `mdname`/`mdprops` are NULL or
+        // this file's `CRYPTO_strdup` blocks and `seed` is NULL or a `CRYPTO_memdup` block.
+        unsafe {
+            CRYPTO_free((*ptr).mdname.cast(), FILE_DH_KMGMT, 825);
+            CRYPTO_free((*ptr).mdprops.cast(), FILE_DH_KMGMT, 826);
+            CRYPTO_clear_free((*ptr).seed.cast(), (*ptr).seedlen, FILE_DH_KMGMT, 827);
+        }
+    }
+}
+
+/// An owned `DhGenCtx` block still under construction.
+///
+/// `dh_gen_init_base` allocates the context and fills its members one at a time; until it is
+/// published its release is the block alone -- the authority's own `OPENSSL_free(gctx)` at its
+/// `err:` tail (`:485`) -- so the destructor ([`CtxDestroy::destroy_body`]) over members that may
+/// not be set must not run. [`Self::finish`] hands the block to the dispatch contract on success.
+struct RawDhGenCtx {
+    ptr: ptr::NonNull<DhGenCtx>,
+}
+
+impl RawDhGenCtx {
+    /// `CRYPTO_zalloc(sizeof(*gctx), FILE, 463)`, or `None` when it answers NULL.
+    fn new() -> Option<RawDhGenCtx> {
+        let raw =
+            CRYPTO_zalloc(core::mem::size_of::<DhGenCtx>(), FILE_DH_KMGMT, 463).cast::<DhGenCtx>();
+        ptr::NonNull::new(raw).map(|ptr| RawDhGenCtx { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut DhGenCtx {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the dispatch contract.
+    fn finish(self) -> *mut DhGenCtx {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for RawDhGenCtx {
+    /// The authority's `dh_gen_init_base` error-path release (`:485`): the block alone.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; its single
+        // release is the authority's own plain `CRYPTO_free` at the `err:` tail.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE_DH_KMGMT, 485) };
+    }
+}
+
+/// An owned `char *` allocated through the crate's `CRYPTO_strdup` seam: a `DhGenCtx`'s `mdname`
+/// and `mdprops`.
+struct OwnedStr {
+    ptr: *mut c_char,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedStr {
+    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL; `file`/`line` is the authority's release
+    /// site for the string.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
+    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it.
+    unsafe fn take(ptr: *mut c_char, file: *const c_char, line: c_int) -> Option<OwnedStr> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedStr { ptr, file, line })
+        }
+    }
+
+    /// Give up ownership of the string to the context that takes it over.
+    fn into_raw(self) -> *mut c_char {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The string's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block the seam answered and has not handed out; its single
+        // release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
+/// An owned, secret-bearing byte block from this unit's `CRYPTO_memdup`/`CRYPTO_clear_free` seam: a
+/// `DhGenCtx`'s FIPS186-4 `seed`.
+struct OwnedBuf {
+    ptr: *mut u8,
+    len: usize,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// Adopt a block this unit allocated, or `None` for NULL; `len` is the block's length and
+    /// `file`/`line` is the authority's release site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this unit allocated through the crate's `CRYPTO_*` seam in
+    /// full (not a sub-range) and no other owner will release; `len` is its length.
+    unsafe fn take(ptr: *mut u8, len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBuf {
+                ptr,
+                len,
+                file,
+                line,
+            })
+        }
+    }
+
+    /// Give up ownership of the block to the context that takes it over.
+    fn into_raw(self) -> *mut u8 {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release: the authority's own `OPENSSL_clear_free`, cleansing the seed over
+    /// its recorded length before the allocator frees it.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; `self.len` is its
+        // allocation length; the authority's own `CRYPTO_clear_free` accepts NULL.
+        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, self.file, self.line) };
+    }
 }
 
 /// `static int dh_gen_type_name2id_w_default(const char *name, int type)` — `dh_kmgmt.c:82-99`.
@@ -980,35 +1205,35 @@ unsafe fn dh_gen_init_base(
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let gctx =
-        CRYPTO_zalloc(core::mem::size_of::<DhGenCtx>(), FILE_DH_KMGMT, 463).cast::<DhGenCtx>();
-    if !gctx.is_null() {
-        // SAFETY: `gctx` is this call's own allocation; `provctx` is the caller's.
+    let gctx = RawDhGenCtx::new();
+    if let Some(g) = &gctx {
+        // SAFETY: `g` is this call's own allocation; `provctx` is the caller's.
         unsafe {
-            (*gctx).selection = selection;
-            (*gctx).libctx = prov_libctx_of(provctx);
-            (*gctx).pbits = 2048;
-            (*gctx).qbits = 224;
-            (*gctx).mdname = ptr::null_mut();
-            (*gctx).gen_type = if type_ == DH_FLAG_TYPE_DHX {
+            (*g.as_ptr()).selection = selection;
+            (*g.as_ptr()).libctx = prov_libctx_of(provctx);
+            (*g.as_ptr()).pbits = 2048;
+            (*g.as_ptr()).qbits = 224;
+            (*g.as_ptr()).mdname = ptr::null_mut();
+            (*g.as_ptr()).gen_type = if type_ == DH_FLAG_TYPE_DHX {
                 DH_PARAMGEN_TYPE_FIPS_186_2
             } else {
                 DH_PARAMGEN_TYPE_GENERATOR
             };
-            (*gctx).gindex = -1;
-            (*gctx).hindex = 0;
-            (*gctx).pcounter = -1;
-            (*gctx).generator = DH_GENERATOR_2;
-            (*gctx).dh_type = type_;
+            (*g.as_ptr()).gindex = -1;
+            (*g.as_ptr()).hindex = 0;
+            (*g.as_ptr()).pcounter = -1;
+            (*g.as_ptr()).generator = DH_GENERATOR_2;
+            (*g.as_ptr()).dh_type = type_;
         }
     }
-    // SAFETY: `gctx` is NULL or this call's own context; `params` is the caller's array.
-    if unsafe { dh_gen_set_params(gctx.cast(), params) } == 0 {
-        // SAFETY: `gctx` is this call's own allocation, not yet published.
-        unsafe { CRYPTO_free(gctx.cast(), FILE_DH_KMGMT, 485) };
+    let gctx_ptr = gctx.as_ref().map_or(ptr::null_mut(), RawDhGenCtx::as_ptr);
+    // SAFETY: `gctx_ptr` is NULL or this call's own context; `params` is the caller's array.
+    if unsafe { dh_gen_set_params(gctx_ptr.cast(), params) } == 0 {
+        // The authority's `err:` tail: the block alone, not yet published, released by `gctx`'s
+        // `Drop` (a `None` for a refused allocation, the authority's own `free(NULL)`).
         return ptr::null_mut();
     }
-    gctx.cast()
+    gctx.map_or(ptr::null_mut(), RawDhGenCtx::finish).cast()
 }
 
 /// `static void *dh_gen_init(void *provctx, int selection, const OSSL_PARAM params[])` —
@@ -1061,16 +1286,29 @@ unsafe extern "C" fn dh_gen_set_template(genctx: *mut c_void, templ: *mut c_void
 /// # Safety
 /// `gctx` is live; `seed` is NULL or readable for `seedlen` bytes.
 unsafe fn dh_set_gen_seed(gctx: *mut DhGenCtx, seed: *mut u8, seedlen: usize) -> c_int {
-    // SAFETY: `gctx` is live per the contract, and its own `seed`/`seedlen` are released here.
+    // The field's previous seed is released through the cleansed owner at the authority's own site;
+    // then the new block is allocated and handed to the field.
+    // SAFETY: `gctx` is live per the contract; its own `seed`/`seedlen` are the field this call
+    // replaces, and `seed` is readable for `seedlen` bytes.
     unsafe {
-        CRYPTO_clear_free((*gctx).seed.cast(), (*gctx).seedlen, FILE_DH_KMGMT, 517);
+        drop(OwnedBuf::take(
+            (*gctx).seed,
+            (*gctx).seedlen,
+            FILE_DH_KMGMT,
+            517,
+        ));
         (*gctx).seed = ptr::null_mut();
         (*gctx).seedlen = 0;
         if !seed.is_null() && seedlen > 0 {
-            (*gctx).seed = CRYPTO_memdup(seed.cast(), seedlen, FILE_DH_KMGMT, 521).cast();
-            if (*gctx).seed.is_null() {
+            let Some(dup) = OwnedBuf::take(
+                CRYPTO_memdup(seed.cast(), seedlen, FILE_DH_KMGMT, 521).cast::<u8>(),
+                seedlen,
+                FILE_DH_KMGMT,
+                521,
+            ) else {
                 return 0;
-            }
+            };
+            (*gctx).seed = dup.into_raw();
             (*gctx).seedlen = seedlen;
         }
     }
@@ -1228,8 +1466,16 @@ unsafe fn dhx_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c
             if (*p).data_type != crate::params::OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            CRYPTO_free((*gctx).mdname.cast(), FILE_DH_KMGMT, 635);
-            (*gctx).mdname = CRYPTO_strdup((*p).data.cast::<c_char>(), FILE_DH_KMGMT, 636);
+            // The field's previous name is released through its owner at the authority's own site,
+            // then the new duplicate is installed (NULL, as the authority leaves it, on a strdup
+            // refusal).
+            drop(OwnedStr::take((*gctx).mdname, FILE_DH_KMGMT, 635));
+            (*gctx).mdname = OwnedStr::take(
+                CRYPTO_strdup((*p).data.cast::<c_char>(), FILE_DH_KMGMT, 636),
+                FILE_DH_KMGMT,
+                636,
+            )
+            .map_or(ptr::null_mut(), OwnedStr::into_raw);
             if (*gctx).mdname.is_null() {
                 return 0;
             }
@@ -1239,8 +1485,13 @@ unsafe fn dhx_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c
             if (*p).data_type != crate::params::OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            CRYPTO_free((*gctx).mdprops.cast(), FILE_DH_KMGMT, 644);
-            (*gctx).mdprops = CRYPTO_strdup((*p).data.cast::<c_char>(), FILE_DH_KMGMT, 645);
+            drop(OwnedStr::take((*gctx).mdprops, FILE_DH_KMGMT, 644));
+            (*gctx).mdprops = OwnedStr::take(
+                CRYPTO_strdup((*p).data.cast::<c_char>(), FILE_DH_KMGMT, 645),
+                FILE_DH_KMGMT,
+                645,
+            )
+            .map_or(ptr::null_mut(), OwnedStr::into_raw);
             if (*gctx).mdprops.is_null() {
                 return 0;
             }
@@ -1507,17 +1758,11 @@ unsafe fn dh_gen_end(dh: *mut Dh, gencb: *mut BnGencb, ret: c_int) -> *mut c_voi
 unsafe extern "C" fn dh_gen_cleanup(genctx: *mut c_void) {
     let gctx = genctx.cast::<DhGenCtx>();
 
-    if gctx.is_null() {
-        return;
-    }
-
-    // SAFETY: `gctx` is the caller's context, allocated by `dh_gen_init_base`.
-    unsafe {
-        CRYPTO_free((*gctx).mdname.cast(), FILE_DH_KMGMT, 825);
-        CRYPTO_free((*gctx).mdprops.cast(), FILE_DH_KMGMT, 826);
-        CRYPTO_clear_free((*gctx).seed.cast(), (*gctx).seedlen, FILE_DH_KMGMT, 827);
-        CRYPTO_free(gctx.cast(), FILE_DH_KMGMT, 828);
-    }
+    // `from_raw` reclaims the context for its `Drop`, which runs the authority's own
+    // `dh_gen_cleanup` body (the two names and the cleansed seed) and its block release; a NULL
+    // answers `None` (no release).
+    // SAFETY: `gctx` is the caller's context, allocated by `dh_gen_init_base` and not released.
+    drop(unsafe { OwnedCtx::<DhGenCtx>::from_raw(gctx, FILE_DH_KMGMT, 828) });
 }
 
 /// `static void *dh_load(const void *reference, size_t reference_sz)` — `dh_kmgmt.c:831-843`.
