@@ -38,8 +38,16 @@ Local gate for every batch (court container, 8 GB cap):
 | 18 | stage/p25/x509-lku | x509/by_dir.rs, x509_vpm.rs, x509_lu.rs | OwnedCtx + partial-construction Raw* owners; free 6→3,10→6,6→3 |
 | 19 | stage/p25/ssl-rest2 | ssl/cert_comp, tls_srp, ssl_rsa, ssl_ciph | free 5→0,3→0,1→0; closes a dangling srp info pointer |
 | -- | stage/p25/adopt-soundness | 16 files + AGENTS.md | **soundness**: every safe adoption ctor (`take`/`adopt`) → `unsafe fn` + real `# Safety` (AGENTS.md §1); A/B/C |
+| 20 | stage/p25/x509-tail1 | x509spki, x509_trust, x_x509, x509_req, x_crl | OwnedCtx/OwnedStr/RawTrust; eliminated trtable_free pairing |
+| 21 | stage/p25/x509-tail2 | x509_meth, v3_pci, v3_conf | RawMethod/OwnedMethod; policy_grow realloc contract; free 5→1 ×2 |
+| 22 | stage/p25/x509-tail3 | v3_purp, v3_asid | OwnedCtx<X509Purpose>; RawPurpose/RawRange; free 8→5, 4→2 |
+| 23 | stage/p25/x509-tail4 | v3_info, v3_akid, by_store, v3_lib, dane | interior frees 15→0 |
+| 24 | stage/p25/rand-engine | rand/rand_lib.rs, engine/eng_dyn.rs, runtime/rcu.rs | free 18→7, 14→7, 13→3; rcu alloc/lifetime only |
+| 25 | stage/p25/cms-final | cms/cms_smime.rs | OwnedChainArray (checked_mul); cms_asn1/lib are member-buffer residuals |
+| 26 | stage/p25/dh-dsa-pkey | dh/mod.rs, dsa/mod.rs, rsa/sign.rs | Raw/OwnedMethod; rsa/sign free 7→1 (cleansed) |
+| -- | stage/p25/p0-abstractions | asn1/owned.rs, x509/{pcy_lib,pcy_node,pcy_tree}.rs | **P0**: `checked_mul` in the alloc helper; owner-derived `tree_levels`; `parent_mut(&mut self)` |
 
-Converted files (union of stage/p25/* files): ~51 files across 19 conversion batches plus the adoption-soundness fix.
+Converted files (union of stage/p25/* files): 128 files touched; **1391 allocation sites converted, 1029 remaining** of the 2420 baseline (frozen-atlas lower bound).
 
 ## Standing conversion standard
 
