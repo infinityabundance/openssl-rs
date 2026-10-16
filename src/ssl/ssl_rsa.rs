@@ -47,7 +47,7 @@ use crate::runtime::bio::bss_file::BIO_s_file;
 use crate::runtime::bio::iolib::BIO_ctrl;
 use crate::runtime::bio::{BIO_free, BIO_new, Bio, BIO_CLOSE, BIO_C_SET_FILENAME, BIO_FP_READ};
 use crate::runtime::err::{raise_with, ERR_clear_error, ERR_peek_error};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_realloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_realloc, CRYPTO_zalloc};
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::ssl::ssl_cert::{ssl_cert_lookup_by_pkey, ssl_security_cert, SSL_CERT_INFO};
 use crate::ssl::ssl_lib::SSL_is_quic;
@@ -864,6 +864,57 @@ pub unsafe extern "C" fn SSL_use_certificate_chain_file(
 // serverinfo
 // -------------------------------------------------------------------------------------------
 
+/// An owned serverinfo scratch block allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_zalloc` at the authority's exact size/`file`/`line` -- a Rust `Vec`
+/// would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type:
+/// [`Self::new_zeroed`] allocates the V1->V2 rebuild buffer, `Drop` is its single release at the
+/// authority's own site, and [`Self::as_ptr`] hands the address to the appender and the recursive
+/// installer.
+struct OwnedBuf {
+    ptr: *mut u8,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_zalloc(len, file, alloc_line)`, or `None` when the allocator answers NULL.
+    /// `alloc_line` is the authority's allocation site and `line` its release site.
+    fn new_zeroed(
+        len: usize,
+        file: *const c_char,
+        alloc_line: c_int,
+        line: c_int,
+    ) -> Option<OwnedBuf> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `len` bytes.
+        let raw = CRYPTO_zalloc(len, file, alloc_line).cast::<u8>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new_zeroed` allocated and has not been handed out; its
+        // single release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.cast(), self.file, self.line) };
+    }
+}
+
 /// `struct packet_st`-style cursor over the serverinfo bytes.
 struct Cursor<'a> {
     data: &'a [u8],
@@ -1157,15 +1208,24 @@ pub unsafe extern "C" fn SSL_CTX_use_serverinfo_ex(
         unsafe {
             if version == SSL_SERVERINFOV1 {
                 let sinfo_length = extension_append_length(SSL_SERVERINFOV1, serverinfo_length);
-                let sinfo = crate::runtime::mem::CRYPTO_zalloc(sinfo_length, FILE, 818);
-                if sinfo.is_null() {
+                // The V1->V2 rebuild buffer, allocated at the authority's own site (`:818`) and
+                // released by `Drop` at its own site (`:827`).
+                let Some(sinfo) = OwnedBuf::new_zeroed(sinfo_length, FILE, 818, 827) else {
                     return 0;
-                }
-                let sinfo = sinfo.cast::<u8>();
-                extension_append(SSL_SERVERINFOV1, serverinfo, serverinfo_length, sinfo);
-                let ret = SSL_CTX_use_serverinfo_ex(ctx, SSL_SERVERINFOV2, sinfo, sinfo_length);
-                CRYPTO_free(sinfo.cast(), FILE, 827);
-                return ret;
+                };
+                extension_append(
+                    SSL_SERVERINFOV1,
+                    serverinfo,
+                    serverinfo_length,
+                    sinfo.as_ptr(),
+                );
+                // The recursive installer copies `sinfo`, which `Drop` then releases.
+                return SSL_CTX_use_serverinfo_ex(
+                    ctx,
+                    SSL_SERVERINFOV2,
+                    sinfo.as_ptr(),
+                    sinfo_length,
+                );
             }
             if serverinfo_process_buffer(version, serverinfo, serverinfo_length, ptr::null_mut())
                 == 0
@@ -1179,6 +1239,10 @@ pub unsafe extern "C" fn SSL_CTX_use_serverinfo_ex(
                 return 0;
             }
             let cpk = crate::ssl::ssl_lib::cert_active_key((*ctx).cert);
+            // The block stays `CertKey`'s: the authority regrows its `serverinfo` in place and,
+            // on a refused regrowth, leaves the old block (and its `cert_pkey_clear` release)
+            // intact.
+            // SAFETY: `(*cpk).serverinfo` is NULL or the live block `CertKey` owns.
             let new_serverinfo =
                 CRYPTO_realloc((*cpk).serverinfo.cast(), serverinfo_length, FILE, 839).cast::<u8>();
             if new_serverinfo.is_null() {
