@@ -81,4 +81,5 @@ __pycache__/
 # Local agent working instructions for the unsafe-to-safe conversion campaign.
 # Kept local-only on purpose: it is a living working document, not shipped
 # evidence, and must not appear in the repository's admitted artifact set.
-/agents.md
+# Use the exact AGENTS.md capitalization so the agent orchestrator loads it.
+/AGENTS.md
