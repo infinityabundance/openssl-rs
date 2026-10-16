@@ -4105,3 +4105,143 @@ unsafe fn server_wait(s: *mut Ssl) -> c_int {
     }
     -1
 }
+
+// -------------------------------------------------------------------------------------------
+// Adversarial allocator-refusal test (`stage/p25/adv-tests`, §16 / §18)
+// -------------------------------------------------------------------------------------------
+//
+// Drives the TLS1.2 server ticket writer with its replacement allocation refused and asserts the
+// recorded safety improvement: the member is left `(NULL, 0)` rather than holding the just-freed
+// pointer, so the later session destructor cannot release a dangling block.
+//
+// Run alone, after installing the process-global allocator:
+//   OPENSSL_RS_ADV_PROBE=1 cargo test --lib \
+//     ssl::statem::statem_srvr::adv_probe -- --exact --test-threads=1 --nocapture
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    use crate::ssl::adv_alloc::{self, Ev};
+    use crate::ssl::ssl_sess::{SSL_SESSION_free, SSL_SESSION_new};
+
+    /// The refusal path of `tls12_construct_new_session_ticket`: the incumbent ticket is released,
+    /// the replacement allocation is refused, and the writer answers its authority error with the
+    /// member left empty. The allocator transcript is the authority's (one free, then the one
+    /// refused request); the destruction performs no second release of the freed block.
+    #[test]
+    fn tls12_construct_refused_ticket_alloc_leaves_ext_tick_empty() {
+        if !adv_alloc::probe_enabled() {
+            eprintln!("skip: set OPENSSL_RS_ADV_PROBE=1 and run this test alone");
+            return;
+        }
+        let _g = crate::test_support::lock_global_state();
+        if !adv_alloc::install() {
+            eprintln!("skip: allocator install refused; run this test alone (--test-threads=1)");
+            return;
+        }
+
+        // Let RAND initialise its DRBG before the measured window, so its one-off allocation is
+        // not mistaken for the writer's own replacement request.
+        let mut warm = [0u8; 8];
+        // SAFETY: `warm` is writable for 8 bytes.
+        unsafe { crate::rand::rand_lib::RAND_bytes(warm.as_mut_ptr(), 8) };
+
+        // SAFETY: the session and the `Ssl` block are this frame's own allocations.
+        let (sess, s, incumbent) = unsafe {
+            let sess = SSL_SESSION_new();
+            assert!(!sess.is_null(), "SSL_SESSION_new must answer a session");
+            let incumbent = CRYPTO_malloc(20, core::ptr::null(), 0).cast::<u8>();
+            assert!(!incumbent.is_null());
+            (*sess).ext_tick_slot().store(incumbent, 20);
+            let s = adv_alloc::zeroed_ssl();
+            assert!(!s.is_null(), "a zeroed Ssl block must be allocatable");
+            (*s).session = sess;
+            (*s).hit = 0;
+            (sess, s, incumbent)
+        };
+
+        adv_alloc::reset();
+        adv_alloc::arm(TLS12_TICKET_LEN);
+        // SAFETY: `s` is the live connection this frame built, with its session set.
+        let r = unsafe { tls12_construct_new_session_ticket(s) };
+        adv_alloc::disarm();
+
+        assert_eq!(
+            r, 0,
+            "a refused ticket allocation must return the authority's error"
+        );
+        // SAFETY: `sess` is live.
+        let (p, n) = unsafe { (*sess).ext_tick() };
+        assert!(
+            p.is_null() && n == 0,
+            "the refused path must leave the member (NULL, 0)"
+        );
+
+        let ev = adv_alloc::events();
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { refused: true, .. }))
+                .count(),
+            1,
+            "exactly one request is refused"
+        );
+        let at = match ev
+            .iter()
+            .position(|e| matches!(e, Ev::Malloc { refused: true, .. }))
+        {
+            Some(i) => i,
+            None => panic!("the ticket allocation must be refused: {ev:?}"),
+        };
+        assert!(
+            matches!(&ev[at], Ev::Malloc { n, site: true, refused: true } if *n == TLS12_TICKET_LEN),
+            "the refused request is the writer's own (NULL,0) request of TLS12_TICKET_LEN"
+        );
+        assert!(
+            ev[..at]
+                .iter()
+                .any(|e| matches!(e, Ev::Free { p } if *p == incumbent as usize)),
+            "the incumbent is released before the refused replacement"
+        );
+
+        // The destruction must not release the freed incumbent a second time.
+        // SAFETY: `sess` is live and owned here; `s` is the block `zeroed_ssl` allocated.
+        unsafe {
+            SSL_SESSION_free(sess);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+        assert!(
+            !adv_alloc::double_free(),
+            "the session destructor must not release the freed incumbent"
+        );
+    }
+
+    /// Negative control (§16): prove the double-release instrument fires, so the assertion above
+    /// is meaningful. A block is released twice; the hook must flag it (and must not forward the
+    /// second release, so the run continues to the assertion).
+    #[test]
+    fn canary_double_release_is_detected() {
+        if !adv_alloc::probe_enabled() {
+            eprintln!("skip: set OPENSSL_RS_ADV_PROBE=1 and run this test alone");
+            return;
+        }
+        let _g = crate::test_support::lock_global_state();
+        if !adv_alloc::install() {
+            eprintln!("skip: allocator install refused; run this test alone (--test-threads=1)");
+            return;
+        }
+        adv_alloc::reset();
+        // SAFETY: `b` is a fresh block; the second release is the deliberate test-only defect.
+        unsafe {
+            let b = CRYPTO_malloc(16, core::ptr::null(), 0).cast::<u8>();
+            assert!(!b.is_null());
+            CRYPTO_free(b.cast(), core::ptr::null(), 0);
+            CRYPTO_free(b.cast(), core::ptr::null(), 0);
+        }
+        assert!(
+            adv_alloc::double_free(),
+            "the instrument must flag a double release (negative control)"
+        );
+    }
+}

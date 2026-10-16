@@ -3383,3 +3383,226 @@ unsafe fn client_wait(s: *mut Ssl) -> c_int {
     let _ = MSG_FLOW_ERROR_13;
     -1
 }
+
+// -------------------------------------------------------------------------------------------
+// Adversarial allocator-refusal tests (`stage/p25/adv-tests`, §16 / §18)
+// -------------------------------------------------------------------------------------------
+//
+// Drive the TLS1.2 and TLS1.3 client ticket writers with their replacement allocation refused and
+// assert the recorded safety improvement: the member is left `(NULL, 0)` rather than holding the
+// just-freed pointer, so the later session destructor cannot release a dangling block.
+//
+// Run alone, after installing the process-global allocator:
+//   OPENSSL_RS_ADV_PROBE=1 cargo test --lib \
+//     ssl::statem::statem_clnt::adv_probe -- --exact --test-threads=1 --nocapture
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    use crate::ssl::adv_alloc::{self, Ev};
+    use crate::ssl::ssl_sess::{SSL_SESSION_free, SSL_SESSION_new};
+
+    /// The TLS1.2 body `lifetime(4) || ticket_len(2) || ticket`.
+    fn tls12_ticket_msg(ticket: &[u8]) -> Vec<u8> {
+        let body_len = 4 + 2 + ticket.len();
+        let mut msg = vec![
+            SSL3_MT_NEWSESSION_TICKET as u8,
+            (body_len >> 16) as u8,
+            (body_len >> 8) as u8,
+            body_len as u8,
+        ];
+        msg.extend_from_slice(&3600u32.to_be_bytes());
+        msg.push((ticket.len() >> 8) as u8);
+        msg.push(ticket.len() as u8);
+        msg.extend_from_slice(ticket);
+        msg
+    }
+
+    /// The TLS1.3 body `lifetime(4) || age_add(4) || nonce_len(1)=0 || ticket_len(2) || ticket ||
+    /// ext_len(2)=0`.
+    fn tls13_ticket_msg(ticket: &[u8]) -> Vec<u8> {
+        let body_len = 4 + 4 + 1 + 2 + ticket.len() + 2;
+        let mut msg = vec![
+            SSL3_MT_NEWSESSION_TICKET as u8,
+            (body_len >> 16) as u8,
+            (body_len >> 8) as u8,
+            body_len as u8,
+        ];
+        msg.extend_from_slice(&3600u32.to_be_bytes());
+        msg.extend_from_slice(&0u32.to_be_bytes());
+        msg.push(0); // nonce_len
+        msg.push((ticket.len() >> 8) as u8);
+        msg.push(ticket.len() as u8);
+        msg.extend_from_slice(ticket);
+        msg.extend_from_slice(&[0, 0]); // extensions
+        msg
+    }
+
+    /// Shared assertions: exactly one request refused, at the writer's own `(NULL, 0)` site and of
+    /// the ticket length; the incumbent released before it; no double release observed.
+    fn assert_refusal_transcript(incumbent: usize, ticklen: usize) {
+        let ev = adv_alloc::events();
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { refused: true, .. }))
+                .count(),
+            1,
+            "exactly one request is refused"
+        );
+        let at = match ev
+            .iter()
+            .position(|e| matches!(e, Ev::Malloc { refused: true, .. }))
+        {
+            Some(i) => i,
+            None => panic!("the ticket allocation must be refused: {ev:?}"),
+        };
+        assert!(
+            matches!(&ev[at], Ev::Malloc { n, site: true, refused: true } if *n == ticklen),
+            "the refused request is the writer's own (NULL,0) request of `ticklen`"
+        );
+        assert!(
+            ev[..at]
+                .iter()
+                .any(|e| matches!(e, Ev::Free { p } if *p == incumbent)),
+            "the incumbent is released before the refused replacement"
+        );
+        assert!(!adv_alloc::double_free(), "no release is performed twice");
+    }
+
+    /// `tls12_process_new_session_ticket` refusal path. The session has a zero id, so the writer
+    /// uses it directly (no duplicate); an incumbent ticket is present and is released before the
+    /// refused replacement.
+    #[test]
+    fn tls12_process_refused_ticket_alloc_leaves_ext_tick_empty() {
+        if !adv_alloc::probe_enabled() {
+            eprintln!("skip: set OPENSSL_RS_ADV_PROBE=1 and run this test alone");
+            return;
+        }
+        let _g = crate::test_support::lock_global_state();
+        if !adv_alloc::install() {
+            eprintln!("skip: allocator install refused; run this test alone (--test-threads=1)");
+            return;
+        }
+        let ticklen = 16usize;
+        let msg = tls12_ticket_msg(&[0xAB; 16]);
+
+        // SAFETY: the session and `Ssl` block are this frame's own allocations.
+        let (sess, s, incumbent) = unsafe {
+            let sess = SSL_SESSION_new();
+            assert!(!sess.is_null());
+            // session_id_length stays 0, so the writer uses `sess` directly.
+            let incumbent = CRYPTO_malloc(20, core::ptr::null(), 0).cast::<u8>();
+            assert!(!incumbent.is_null());
+            (*sess).ext_tick_slot().store(incumbent, 20);
+            let s = adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            (*s).session = sess;
+            (sess, s, incumbent)
+        };
+
+        adv_alloc::reset();
+        adv_alloc::arm(ticklen);
+        // SAFETY: `s` is the live connection this frame built, with its session set.
+        let r = unsafe { tls12_process_new_session_ticket(s, &msg) };
+        adv_alloc::disarm();
+
+        assert_eq!(
+            r, 0,
+            "a refused ticket allocation returns the authority's error"
+        );
+        // SAFETY: `sess` is live.
+        let (p, n) = unsafe { (*sess).ext_tick() };
+        assert!(
+            p.is_null() && n == 0,
+            "the refused path leaves the member (NULL, 0)"
+        );
+        assert_refusal_transcript(incumbent as usize, ticklen);
+
+        // SAFETY: `sess` is live and owned here; `s` is the block `zeroed_ssl` allocated.
+        unsafe {
+            SSL_SESSION_free(sess);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+        assert!(!adv_alloc::double_free());
+    }
+
+    /// `tls13_process_new_session_ticket` refusal path. TLS1.3 always replaces the session with a
+    /// duplicate, so the writer's member is the duplicate's; the refusal must still leave it empty.
+    #[test]
+    fn tls13_process_refused_ticket_alloc_leaves_ext_tick_empty() {
+        if !adv_alloc::probe_enabled() {
+            eprintln!("skip: set OPENSSL_RS_ADV_PROBE=1 and run this test alone");
+            return;
+        }
+        let _g = crate::test_support::lock_global_state();
+        if !adv_alloc::install() {
+            eprintln!("skip: allocator install refused; run this test alone (--test-threads=1)");
+            return;
+        }
+        let ticklen = 16usize;
+        let msg = tls13_ticket_msg(&[0xCD; 16]);
+
+        // SAFETY: the session and `Ssl` block are this frame's own allocations.
+        let (sess0, s) = unsafe {
+            let sess0 = SSL_SESSION_new();
+            assert!(!sess0.is_null());
+            let s = adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            (*s).session = sess0;
+            (sess0, s)
+        };
+
+        adv_alloc::reset();
+        adv_alloc::arm(ticklen);
+        // SAFETY: `s` is the live connection this frame built, with its session set.
+        let r = unsafe { tls13_process_new_session_ticket(s, &msg) };
+        adv_alloc::disarm();
+
+        assert_eq!(
+            r, 0,
+            "a refused ticket allocation returns the authority's error"
+        );
+        // SAFETY: `s` is live; the writer replaced its session with a fresh duplicate (sess0 was
+        // released inside the writer).
+        let dup = unsafe { (*s).session };
+        assert!(
+            !dup.is_null() && dup != sess0,
+            "TLS1.3 replaces the session with a duplicate"
+        );
+        // SAFETY: `dup` is live.
+        let (p, n) = unsafe { (*dup).ext_tick() };
+        assert!(
+            p.is_null() && n == 0,
+            "the refused path leaves the member (NULL, 0)"
+        );
+        // The duplicate's member is empty, so no incumbent free precedes the refusal.
+        let ev = adv_alloc::events();
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { refused: true, .. }))
+                .count(),
+            1,
+            "exactly one request is refused"
+        );
+        let at = match ev
+            .iter()
+            .position(|e| matches!(e, Ev::Malloc { refused: true, .. }))
+        {
+            Some(i) => i,
+            None => panic!("the ticket allocation must be refused: {ev:?}"),
+        };
+        assert!(
+            matches!(&ev[at], Ev::Malloc { n, site: true, refused: true } if *n == ticklen),
+            "the refused request is the writer's own (NULL,0) request of `ticklen`"
+        );
+
+        // SAFETY: `dup` is the session the writer owns; `s` is the block `zeroed_ssl` allocated.
+        unsafe {
+            SSL_SESSION_free(dup);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+        assert!(!adv_alloc::double_free());
+    }
+}
