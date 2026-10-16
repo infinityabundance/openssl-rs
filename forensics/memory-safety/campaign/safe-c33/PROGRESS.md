@@ -69,6 +69,9 @@ Local gate for every batch (court container, 8 GB cap):
 | 44 | stage/p25/tail10 | property/strings, slh_dsa/dsa, ml_dsa/sign, bn/blinding, bn/rand, evp/e_aria | 7 routine-body release sites → 0 |
 | -- | stage/p25/ctor-soundness | ssl/ssl_lib.rs | **soundness**: `RawCtx`/`assume_init` staged init; `CtxDestroy` unsafe trait |
 | -- | stage/p25/zerovalid | runtime/bio/owned.rs + 26 implementers | **soundness**: shared `CtxDestroy` unsafe trait (zero-validity + destructor contract) |
+| -- | stage/p25/memberbuf-propq | pkcs7/{pk7_lib,pk7_asn1}.rs | **member-buffer model** (MEMBER-BUFFER-MODEL.md); PropqSlot proven on PKCS7 |
+| -- | stage/p25/memberbuf-cms | cms/{cms_lib,cms_asn1}.rs, pkcs12/p12_asn.rs, pkcs7/pk7_mime.rs | CmsPropqSlot; **CmsCtx.propq now private** |
+| -- | stage/p25/memberbuf-x509 | x509/{x_x509,x_crl,x509_req,x_pubkey,x_req,x_all,x509_vfy}.rs | X509_CRL/REQ/PUBKEY propq fields **private** |
 
 Converted files (union of stage/p25/* files): **~218 files** across **44 conversion batches** plus the soundness/P0/doc repairs; **1982 of 2420 allocation sites** converted, **438 remaining** (frozen-atlas lower bound). OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
@@ -145,11 +148,26 @@ structs crossing fn-pointer tables.
 - **P0 done (residual recorded)**: `src/x509/pcy_node.rs` `Node::parent_mut` —
   now takes `&mut self`; `Node: Copy` leaves multi-`Node` aliasing of one parent
   a documented caller obligation.
-- **P1 open**: `CipherDestroy`/`CtxDestroy` implementer contract (make the trait
-  obligation explicit/`unsafe`); `src/ffi/mod.rs` post-panic state rules;
-  secret-bearing-context classification. Also: `ssl_lib.rs`'s `OwnedCtx::new`
-  should adopt the `RawCtx`/`assume_init` split (sound today only because every
-  `T` it is instantiated with now has a valid zeroed state).
+- **P1 open**: `CipherDestroy`/`CtxDestroy` implementer contract — the
+  *shared* `bio::owned::CtxDestroy` is now an `unsafe trait` (batch
+  `zerovalid`); the ~39 module-local `CtxDestroy` copies still need the same
+  audit/funnel. Also: `src/ffi/mod.rs` post-panic state rules; secret-bearing
+  classification. `ssl_lib.rs`'s `OwnedCtx::new` was migrated to
+  `RawCtx`/`assume_init` (batch `ctor-soundness`), so that item is done.
+
+## Member-buffer unit (in progress)
+
+Model: `MEMBER-BUFFER-MODEL.md`. Object-owned C buffers stay raw in
+`#[repr(C)]`; a per-type borrow view (`unsafe of` / safe `clear` / `unsafe
+store` / safe reader) funnels every write/read/release so the invariant lives
+in one place, and the field becomes **private** once all accessors convert
+(compile-time enforcement).
+
+Landed: PKCS7 `propq` (proven), CMS `propq` (private), PKCS12 nested release,
+X.509 `X509_CRL`/`X509_REQ`/`X509_PUBKEY` (private). Remaining: PKCS7's five
+enumerated readers (then its field too), `X509.propq` (needs the `src/ocsp`
+readers), `X509_STORE_CTX`/`by_store`, then the larger SSL context/session
+members buffers.
 
 ## Receipts
 
