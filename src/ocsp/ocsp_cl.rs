@@ -555,7 +555,7 @@ pub unsafe extern "C" fn OCSP_request_sign(
                 key,
                 dgst,
                 (*signer).libctx,
-                (*signer).propq,
+                (*signer).propq(),
             ) == 0
             {
                 OCSP_SIGNATURE_free((*req).optionalSignature);

@@ -257,8 +257,12 @@ pub struct X509 {
     pub(crate) distinguishing_id: *mut Asn1String,
     /// `OSSL_LIB_CTX *libctx` — the object's library context.
     pub(crate) libctx: *mut c_void,
-    /// `char *propq` — the object's property query, owned.
-    pub(crate) propq: *mut c_char,
+    /// `char *propq` — the object's property query, owned. Private: every read goes through
+    /// [`X509::propq`] and every write through [`PropqSlot`], so the member-buffer invariant is
+    /// enforced at compile time (see [`MEMBER-BUFFER-MODEL.md`] and [`PropqSlot`]).
+    ///
+    /// [`MEMBER-BUFFER-MODEL.md`]: ../../forensics/memory-safety/campaign/safe-c33/MEMBER-BUFFER-MODEL.md
+    propq: *mut c_char,
 }
 
 const _: () = {
