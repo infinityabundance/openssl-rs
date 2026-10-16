@@ -633,3 +633,8 @@ pub mod t1_trce;
 pub mod tls13_enc;
 pub mod tls_depr;
 pub mod tls_srp;
+
+// Test-only allocator-injection harness for the `stage/p25/adv-tests` adversarial tests. Compiled
+// only under `cfg(test)`; never a product dependency (see the module's own header).
+#[cfg(test)]
+pub(crate) mod adv_alloc;

@@ -12231,3 +12231,170 @@ pub unsafe extern "C" fn SSL_get1_supported_ciphers(s: *mut Ssl) -> *mut OpenSsl
         }
     })
 }
+
+// -------------------------------------------------------------------------------------------
+// Adversarial member-buffer tests (`stage/p25/adv-tests`)
+// -------------------------------------------------------------------------------------------
+//
+// These are deterministic and need no installed allocator: they drive the validated handles over a
+// real `SslSession`'s member buffers and assert the member-buffer invariant (§2.6) directly. The
+// allocator-transcript half of the same defect class (the exact free/refused-alloc sequence) is
+// asserted by the probe tests in `statem_srvr.rs`/`statem_clnt.rs`, which install the seam.
+#[cfg(test)]
+mod adv_member_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+    use crate::ssl::ssl_sess::{SSL_SESSION_dup, SSL_SESSION_free, SSL_SESSION_new};
+
+    /// The member-buffer predicate the refusal test asserts: an empty blob member is `(NULL, 0)`.
+    fn member_is_empty(p: *const u8, len: usize) -> bool {
+        p.is_null() && len == 0
+    }
+
+    fn new_session() -> *mut SslSession {
+        // SAFETY: `SSL_SESSION_new` has no precondition.
+        let s = unsafe { SSL_SESSION_new() };
+        assert!(!s.is_null(), "SSL_SESSION_new must answer a zeroed session");
+        s
+    }
+
+    /// Store / replace / clear / zero-length on a `(ptr, len)` blob member, and the same on a
+    /// second blob member (`ext_alpn_selected`) to show the handle is not `ext_tick`-specific.
+    #[test]
+    fn blob_slot_store_replace_clear_and_zero_length() {
+        let s = new_session();
+        // SAFETY: `s` is live and owned here; each block is this frame's own allocation.
+        unsafe {
+            let b1 = CRYPTO_malloc(8, ptr::null(), 0).cast::<u8>();
+            assert!(!b1.is_null());
+            (*s).ext_tick_slot().store(b1, 8);
+            assert_eq!((*s).ext_tick(), (b1 as *const u8, 8));
+
+            // Replace: clear releases the incumbent and leaves the member empty; store then owns.
+            (*s).ext_tick_slot().clear(ptr::null(), 0);
+            assert!(member_is_empty((*s).ext_tick().0, (*s).ext_tick().1));
+            let b2 = CRYPTO_malloc(4, ptr::null(), 0).cast::<u8>();
+            assert!(!b2.is_null());
+            (*s).ext_tick_slot().store(b2, 4);
+            assert_eq!((*s).ext_tick(), (b2 as *const u8, 4));
+
+            // A zero-length store is the same empty member as a clear.
+            (*s).ext_tick_slot().clear(ptr::null(), 0);
+            (*s).ext_tick_slot().store(ptr::null_mut(), 0);
+            assert!(member_is_empty((*s).ext_tick().0, (*s).ext_tick().1));
+
+            // The same handle over a second blob member.
+            let a1 = CRYPTO_malloc(3, ptr::null(), 0).cast::<u8>();
+            assert!(!a1.is_null());
+            (*s).ext_alpn_selected_slot().store(a1, 3);
+            assert_eq!((*s).ext_alpn_selected(), (a1 as *const u8, 3));
+            (*s).ext_alpn_selected_slot().clear(ptr::null(), 0);
+            assert!(member_is_empty(
+                (*s).ext_alpn_selected().0,
+                (*s).ext_alpn_selected().1
+            ));
+
+            SSL_SESSION_free(s);
+        }
+    }
+
+    /// Store / replace / NULL input on a C-string member (`ext_hostname`).
+    #[test]
+    fn cstr_slot_store_replace_and_null_input() {
+        let s = new_session();
+        // SAFETY: `s` is live; each string is this frame's own `CRYPTO_strdup` block.
+        unsafe {
+            let a = CRYPTO_strdup(c"alpha".as_ptr(), ptr::null(), 0);
+            assert!(!a.is_null());
+            (*s).ext_hostname_slot().store(a);
+            assert_eq!((*s).ext_hostname(), a as *const c_char);
+
+            let b = CRYPTO_strdup(c"beta".as_ptr(), ptr::null(), 0);
+            assert!(!b.is_null());
+            (*s).ext_hostname_slot().clear(ptr::null(), 0);
+            (*s).ext_hostname_slot().store(b);
+            assert_eq!((*s).ext_hostname(), b as *const c_char);
+
+            // A NULL input leaves the member NULL (the authority's empty state).
+            (*s).ext_hostname_slot().clear(ptr::null(), 0);
+            (*s).ext_hostname_slot().store(ptr::null_mut());
+            assert!((*s).ext_hostname().is_null());
+
+            SSL_SESSION_free(s);
+        }
+    }
+
+    /// The refused-allocation regression, at the handle level: after the incumbent is released and
+    /// the replacement allocation is refused, the member must be `(NULL, 0)` -- never the
+    /// just-freed pointer (the pre-conversion defect). Destruction then touches only NULL.
+    #[test]
+    fn refusal_after_release_leaves_the_member_empty() {
+        let s = new_session();
+        // SAFETY: `s` is live and owned here.
+        unsafe {
+            let incumbent = CRYPTO_malloc(16, ptr::null(), 0).cast::<u8>();
+            assert!(!incumbent.is_null());
+            (*s).ext_tick_slot().store(incumbent, 16);
+
+            // The writer's shape: release the incumbent, then the replacement `CRYPTO_malloc` is
+            // refused (answers NULL), so nothing is stored.
+            (*s).ext_tick_slot().clear(ptr::null(), 0);
+
+            assert!(
+                member_is_empty((*s).ext_tick().0, (*s).ext_tick().1),
+                "a refused replacement must leave the member (NULL, 0), not the freed pointer"
+            );
+
+            // The destructor's clear is a NULL no-op; the block is not released twice.
+            SSL_SESSION_free(s);
+        }
+    }
+
+    /// Ownership transfer: `SSL_SESSION_dup` gives the duplicate its own member block, so each
+    /// session releases exactly its own -- no shared block, no double release.
+    #[test]
+    fn session_dup_owns_a_distinct_member_block() {
+        let s = new_session();
+        // SAFETY: `s` is live and owned here; `dup` is the reference this test owns.
+        unsafe {
+            let incumbent = CRYPTO_malloc(16, ptr::null(), 0).cast::<u8>();
+            assert!(!incumbent.is_null());
+            (*s).ext_tick_slot().store(incumbent, 16);
+
+            let dup = SSL_SESSION_dup(s);
+            assert!(!dup.is_null(), "SSL_SESSION_dup must answer a session");
+            let (dp, dl) = (*dup).ext_tick();
+            assert_eq!(dl, 16, "the duplicate must carry the same length");
+            assert!(
+                !dp.is_null() && dp != incumbent,
+                "the duplicate must own a distinct block, not alias the source's"
+            );
+
+            SSL_SESSION_free(dup);
+            SSL_SESSION_free(s);
+        }
+    }
+
+    /// Negative control (§16): prove the `member_is_empty` predicate the refusal test asserts is
+    /// live for the defect class -- a released block whose pointer (and length) is left in the
+    /// member. A correct release passes it; the defect state fails it.
+    #[test]
+    fn canary_predicate_detects_a_dangling_member() {
+        // `CRYPTO_malloc` is a safe function; `released` is a fresh block, released once below and
+        // never dereferenced again.
+        let released = CRYPTO_malloc(16, ptr::null(), 0).cast::<u8>();
+        assert!(!released.is_null());
+        // SAFETY: `released` is the live block from the previous line; this is its single release.
+        unsafe { CRYPTO_free(released.cast(), ptr::null(), 0) };
+
+        // The correct released state passes the predicate.
+        assert!(member_is_empty(ptr::null(), 0));
+        // The defect state (released but not nulled, length not zeroed) must fail it.
+        assert!(
+            !member_is_empty(released as *const u8, 16),
+            "the predicate must reject a released-but-not-nulled member"
+        );
+    }
+}
