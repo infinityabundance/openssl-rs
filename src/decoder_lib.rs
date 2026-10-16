@@ -69,6 +69,7 @@ use crate::runtime::bio::bss_file::BIO_s_file;
 use crate::runtime::bio::bss_mem::BIO_new_mem_buf;
 use crate::runtime::bio::core_bio::{ossl_core_bio_free, ossl_core_bio_new_from_bio, OsslCoreBio};
 use crate::runtime::bio::iolib::BIO_ctrl;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::{
     BIO_free, BIO_new, BIO_pop, BIO_push, Bio, BIO_CTRL_INFO, BIO_C_FILE_SEEK, BIO_C_FILE_TELL,
@@ -78,7 +79,6 @@ use crate::runtime::err::{
     err_sites, raise_site, raise_site_data, ERR_clear_last_mark, ERR_peek_error,
     ERR_peek_last_error, ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_set_cmp_func, OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
@@ -100,13 +100,37 @@ const OSSL_OBJECT_PARAM_INPUT_TYPE: *const c_char = c"input-type".as_ptr();
 /// pre-formatted `ERR_raise_data` message is built in.
 const ERR_DATA_BUFFER: usize = 1024;
 
+/// The authority's `ossl_decoder_instance_free` body minus the block release [`OwnedCtx`]'s `Drop`
+/// performs: the three per-field releases at `decoder_lib.c:301-312`, each NULL-tested because the
+/// `err:` label reaches this with a half-built instance.
+impl CtxDestroy for OsslDecoderInstance {
+    unsafe fn destroy_body(ptr: *mut OsslDecoderInstance) {
+        // SAFETY: `ptr` is a live instance per the trait contract; `decoder` is NULL for a
+        // half-built instance and the per-field tests are the authority's own.
+        unsafe {
+            let decoder = (*ptr).decoder;
+            if !decoder.is_null() {
+                // SAFETY: `decoder` is live, so a `freectx` it publishes is a live callback.
+                if let Some(freectx) = (*decoder).freectx {
+                    // SAFETY: `freectx` is the decoder's own releaser and `decoderctx` is its
+                    // context.
+                    freectx((*ptr).decoderctx);
+                }
+                (*ptr).decoderctx = ptr::null_mut();
+                // SAFETY: `decoder` is live and this instance holds its reference.
+                crate::decoder_meth::OSSL_DECODER_free(decoder);
+                (*ptr).decoder = ptr::null_mut();
+            }
+        }
+    }
+}
+
 /// The `err:` label of [`ossl_decoder_instance_new`] — `decoder_lib.c:296-298`.
 ///
-/// # Safety
-/// `inst` must be a live instance this call allocated.
-unsafe fn fail_instance(inst: *mut OsslDecoderInstance) -> *mut OsslDecoderInstance {
-    // SAFETY: `inst` is live and owned here.
-    unsafe { ossl_decoder_instance_free(inst) };
+/// Releases the half-built instance — its `Drop` runs the authority's per-field releases and the
+/// block release — and answers NULL.
+fn fail_instance(inst: OwnedCtx<OsslDecoderInstance>) -> *mut OsslDecoderInstance {
+    drop(inst);
     ptr::null_mut()
 }
 
@@ -261,12 +285,13 @@ pub unsafe extern "C" fn ossl_decoder_instance_new(
         return ptr::null_mut();
     }
 
-    // The constructor asks only for a zeroed block of the instance's size.
-    let decoder_inst = CRYPTO_zalloc(core::mem::size_of::<OsslDecoderInstance>(), ptr::null(), 0)
-        .cast::<OsslDecoderInstance>();
-    if decoder_inst.is_null() {
+    // A zeroed instance (all-NULL fields, zero scalars) is safe for the per-field destructor, so
+    // `OwnedCtx::zalloc` may validate it; `into_raw` hands the C caller the pointer
+    // `ossl_decoder_instance_free` reclaims.
+    let Some(decoder_inst_owned) = OwnedCtx::<OsslDecoderInstance>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let decoder_inst = decoder_inst_owned.as_ptr();
 
     // SAFETY: `decoder` is live.
     let prov = unsafe { crate::decoder_meth::OSSL_DECODER_get0_provider(decoder) };
@@ -287,8 +312,7 @@ pub unsafe extern "C" fn ossl_decoder_instance_new(
             );
             raise_site_data(&err_sites::DECODER_LIB_263, msg.as_ptr());
         }
-        // SAFETY: `decoder_inst` is live and owned here.
-        return unsafe { fail_instance(decoder_inst) };
+        return fail_instance(decoder_inst_owned);
     }
 
     /* The "input" property is mandatory */
@@ -317,8 +341,7 @@ pub unsafe extern "C" fn ossl_decoder_instance_new(
             );
             raise_site_data(&err_sites::DECODER_LIB_274, msg.as_ptr());
         }
-        // SAFETY: `decoder_inst` is live and owned here.
-        return unsafe { fail_instance(decoder_inst) };
+        return fail_instance(decoder_inst_owned);
     }
 
     /* The "structure" property is optional */
@@ -335,15 +358,14 @@ pub unsafe extern "C" fn ossl_decoder_instance_new(
     if unsafe { crate::decoder_meth::OSSL_DECODER_up_ref(decoder) } == 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DECODER_LIB_290) };
-        // SAFETY: `decoder_inst` is live and owned here.
-        return unsafe { fail_instance(decoder_inst) };
+        return fail_instance(decoder_inst_owned);
     }
     // SAFETY: `decoder_inst` is live and uniquely owned here.
     unsafe {
         (*decoder_inst).decoder = decoder;
         (*decoder_inst).decoderctx = decoderctx;
     }
-    decoder_inst
+    decoder_inst_owned.into_raw()
 }
 
 /// `void ossl_decoder_instance_free(OSSL_DECODER_INSTANCE *decoder_inst)` —
@@ -358,26 +380,10 @@ pub unsafe extern "C" fn ossl_decoder_instance_new(
 /// `decoder_inst` must be NULL or a live instance this crate allocated.
 #[no_mangle]
 pub unsafe extern "C" fn ossl_decoder_instance_free(decoder_inst: *mut OsslDecoderInstance) {
-    if decoder_inst.is_null() {
-        return;
-    }
-    // SAFETY: `decoder_inst` is live.
-    let decoder = unsafe { (*decoder_inst).decoder };
-    if !decoder.is_null() {
-        // SAFETY: `decoder` is live.
-        if let Some(freectx) = unsafe { (*decoder).freectx } {
-            // SAFETY: `freectx` is a live provider callback and `decoderctx` is its context.
-            unsafe { freectx((*decoder_inst).decoderctx) };
-        }
-        // SAFETY: `decoder_inst` is live.
-        unsafe { (*decoder_inst).decoderctx = ptr::null_mut() };
-        // SAFETY: `decoder` is live and this instance holds its reference.
-        unsafe { crate::decoder_meth::OSSL_DECODER_free(decoder) };
-        // SAFETY: `decoder_inst` is live.
-        unsafe { (*decoder_inst).decoder = ptr::null_mut() };
-    }
-    // SAFETY: `decoder_inst` is live and this is the instance's own block.
-    unsafe { CRYPTO_free(decoder_inst.cast(), ptr::null(), 0) };
+    // `decoder_inst` is NULL or a live instance this crate allocated; `from_raw` reclaims it and its
+    // `Drop` runs the authority's per-field releases then the block release at `(NULL, 0)`.
+    // SAFETY: `decoder_inst` is NULL or a live instance this crate allocated and has not released.
+    drop(unsafe { OwnedCtx::<OsslDecoderInstance>::from_raw(decoder_inst) });
 }
 
 /// `OSSL_DECODER_INSTANCE *ossl_decoder_instance_dup(const OSSL_DECODER_INSTANCE *src)` —
@@ -393,23 +399,24 @@ pub unsafe extern "C" fn ossl_decoder_instance_free(decoder_inst: *mut OsslDecod
 pub(crate) unsafe fn ossl_decoder_instance_dup(
     src: *const OsslDecoderInstance,
 ) -> *mut OsslDecoderInstance {
-    // The constructor asks only for a zeroed block of the instance's size.
-    let dest = CRYPTO_zalloc(core::mem::size_of::<OsslDecoderInstance>(), ptr::null(), 0)
-        .cast::<OsslDecoderInstance>();
-    if dest.is_null() {
+    // The constructor window: storage that is not yet a valid instance, so its `Drop` releases the
+    // bare block (the authority's `OPENSSL_free(dest)` on the error arms) and never runs the
+    // per-field destructor over the source's shared fields.
+    let Some(dest_owned) = RawCtx::<OsslDecoderInstance>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let dest = dest_owned.as_ptr();
 
     // SAFETY: both pointers are live and the struct holds raw pointers and scalars only, so the
     // duplication runs no destructor twice -- the `ptr::read`/`ptr::write` pair `src/ec/ameth.rs`
-    // records for the same shape.
+    // records for the same shape, and `dest` is `OsslDecoderInstance`-sized writable storage.
     unsafe { ptr::write(dest, ptr::read(src)) };
     // SAFETY: `dest` is live and its decoder is the source's.
     if unsafe { crate::decoder_meth::OSSL_DECODER_up_ref((*dest).decoder) } == 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DECODER_LIB_324) };
-        // SAFETY: `dest` is live and owned here.
-        unsafe { CRYPTO_free(dest.cast(), ptr::null(), 0) };
+        // `dest_owned`'s `Drop` is the authority's error-arm bare `OPENSSL_free(dest)`.
+        drop(dest_owned);
         return ptr::null_mut();
     }
     // SAFETY: `dest` is live and its decoder is live (the reference above).
@@ -420,8 +427,8 @@ pub(crate) unsafe fn ossl_decoder_instance_dup(
     let Some(newctx) = (unsafe { (*(*dest).decoder).newctx }) else {
         // SAFETY: `dest` is live and holds the reference taken above.
         unsafe { crate::decoder_meth::OSSL_DECODER_free((*dest).decoder) };
-        // SAFETY: `dest` is live and owned here.
-        unsafe { CRYPTO_free(dest.cast(), ptr::null(), 0) };
+        // `dest_owned`'s `Drop` is the authority's error-arm bare `OPENSSL_free(dest)`.
+        drop(dest_owned);
         return ptr::null_mut();
     };
     // SAFETY: `newctx` is a live provider callback and `provctx` is its producer's context.
@@ -431,13 +438,17 @@ pub(crate) unsafe fn ossl_decoder_instance_dup(
         unsafe { raise_site(&err_sites::DECODER_LIB_332) };
         // SAFETY: `dest` is live and holds the reference taken above.
         unsafe { crate::decoder_meth::OSSL_DECODER_free((*dest).decoder) };
-        // SAFETY: `dest` is live and owned here.
-        unsafe { CRYPTO_free(dest.cast(), ptr::null(), 0) };
+        // `dest_owned`'s `Drop` is the authority's error-arm bare `OPENSSL_free(dest)`.
+        drop(dest_owned);
         return ptr::null_mut();
     }
     // SAFETY: `dest` is live.
     unsafe { (*dest).decoderctx = decoderctx };
-    dest
+    // The instance is fully built: `assume_init` makes it an `OwnedCtx` whose `Drop` runs the
+    // authority's per-field destructor, and `into_raw` hands it to the C caller.
+    // SAFETY: `dest` now holds a valid `OsslDecoderInstance` — `ptr::write` wrote the source
+    // instance and the field above was set — and this handle is its single owner.
+    unsafe { dest_owned.assume_init() }.into_raw()
 }
 
 /// `void ossl_decoder_ctx_set_harderr(OSSL_DECODER_CTX *ctx)` — `decoder_lib.c:344-348`.

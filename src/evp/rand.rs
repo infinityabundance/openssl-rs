@@ -65,6 +65,7 @@ use crate::params::{
 };
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
@@ -310,6 +311,23 @@ pub struct EvpRand {
     pub(crate) clear_seed: Option<RandClearSeedFn>,
 }
 
+/// The authority's `EVP_RAND_free` body minus the block release [`OwnedCtx`]'s `Drop` performs: the
+/// type name and the provider reference (`:73`, `:74`).
+impl CtxDestroy for EvpRand {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_RAND;
+    const LINE_FREE: c_int = LINE_FREE_RAND;
+
+    unsafe fn destroy_body(ptr: *mut EvpRand) {
+        // SAFETY: `ptr` is a live method per the trait contract; `type_name` is NULL or this file's
+        // own `CRYPTO_strdup` block and `prov` is NULL or an owned provider reference.
+        unsafe {
+            CRYPTO_free((*ptr).type_name.cast::<c_void>(), FILE, LINE_FREE_TYPE_NAME);
+            ossl_provider_free((*ptr).prov);
+        }
+    }
+}
+
 /// `struct evp_rand_ctx_st` — `EVP_RAND_CTX`, from `crypto/evp/evp_local.h`.
 ///
 /// **Four fields, where every other context in this stratum has two.** The algorithm context and
@@ -328,6 +346,81 @@ pub struct EvpRandCtx {
     pub(crate) parent: *mut EvpRandCtx,
     /// `CRYPTO_REF_COUNT refcnt` — the **context's** count, not the method's.
     pub(crate) refcnt: AtomicI32,
+}
+
+/// The `crypto/evp/evp_rand.c` context-block seam.
+///
+/// `EvpRandCtx` is allocated at `:350`. `EVP_RAND_CTX_new`'s error arm releases the **bare block** at
+/// `:374` — it must not re-run the destructor body, because it has already handed the provider
+/// context to the method's `freectx` — while `EVP_RAND_CTX_free` runs the destructor body and
+/// releases at `:399`. The release line and whether the destructor body runs are therefore
+/// properties of the handle, not of the type, so this seam carries both.
+struct OwnedRandCtx {
+    ptr: ptr::NonNull<EvpRandCtx>,
+    release_line: c_int,
+    destruct: bool,
+}
+
+impl OwnedRandCtx {
+    /// `OPENSSL_zalloc(sizeof(*ctx))` at `:350`, in the constructor window: `Drop` releases the bare
+    /// block at the error arm's `:374`.
+    fn zalloc() -> Option<OwnedRandCtx> {
+        let raw = CRYPTO_zalloc(core::mem::size_of::<EvpRandCtx>(), FILE, LINE_ZALLOC_CTX)
+            .cast::<EvpRandCtx>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedRandCtx {
+            ptr,
+            release_line: LINE_FREE_CTX_ON_NEW,
+            destruct: false,
+        })
+    }
+
+    /// The context's stable address, for the fields the constructor sets.
+    fn as_ptr(&self) -> *mut EvpRandCtx {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the finished context to the C caller's pointer.
+    fn into_raw(self) -> *mut EvpRandCtx {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim the finished context `into_raw` gave the C caller, for release by `Drop`, which runs
+    /// the authority's destructor body and the block release at `EVP_RAND_CTX_free`'s `:399`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live, fully built context a previous `into_raw` gave up and `Drop` has not
+    /// released.
+    unsafe fn reclaim(ptr: *mut EvpRandCtx) -> Option<OwnedRandCtx> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedRandCtx {
+            ptr,
+            release_line: LINE_FREE_CTX,
+            destruct: true,
+        })
+    }
+}
+
+impl Drop for OwnedRandCtx {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle allocated (or `reclaim` took) and `Drop` runs
+        // once; the destructor body runs only for a fully built context, and this is its single
+        // release.
+        unsafe {
+            if self.destruct {
+                let p = self.ptr.as_ptr();
+                // The authority's `EVP_RAND_CTX_free` order: the provider context through the
+                // method's own `freectx`, then the method's reference, then the block.
+                let meth = (*p).meth;
+                if let Some(f) = (*meth).freectx {
+                    f((*p).algctx);
+                }
+                (*p).algctx = ptr::null_mut();
+                EVP_RAND_free(meth);
+            }
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, self.release_line);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -362,14 +455,15 @@ unsafe extern "C" fn evp_rand_free(vrand: *mut c_void) {
 /// # Safety
 /// No preconditions: it allocates and writes one field.
 unsafe fn evp_rand_new() -> *mut EvpRand {
-    let rand =
-        CRYPTO_zalloc(core::mem::size_of::<EvpRand>(), FILE, LINE_ZALLOC_RAND).cast::<EvpRand>();
-    if rand.is_null() {
+    // A zeroed `EvpRand` (all-NULL pointers, zero scalars) is the authority's own `OPENSSL_zalloc`
+    // state, so `OwnedCtx::zalloc` may validate it.
+    let Some(rand) = OwnedCtx::<EvpRand>::zalloc() else {
         return ptr::null_mut();
-    }
-    // SAFETY: `rand` is a fresh zeroed block this call owns.
-    unsafe { (*rand).refcnt = AtomicI32::new(1) };
-    rand
+    };
+    let p = rand.as_ptr();
+    // SAFETY: `p` is a fresh zeroed block this call owns.
+    unsafe { (*p).refcnt = AtomicI32::new(1) };
+    rand.into_raw()
 }
 
 /// `static void *evp_rand_from_algorithm(int name_id, const OSSL_ALGORITHM *algodef,
@@ -600,16 +694,9 @@ pub unsafe extern "C" fn EVP_RAND_free(rand: *mut EvpRand) {
     if last > 1 {
         return;
     }
-    // SAFETY: the count reached zero, so this is the last reference and the block is this call's.
-    unsafe {
-        CRYPTO_free(
-            (*rand).type_name.cast::<c_void>(),
-            FILE,
-            LINE_FREE_TYPE_NAME,
-        );
-        ossl_provider_free((*rand).prov);
-        CRYPTO_free(rand.cast::<c_void>(), FILE, LINE_FREE_RAND);
-    }
+    // SAFETY: the count reached zero, so this is the last reference and the block is this call's;
+    // `Drop` runs the name and provider releases (`:73`) then the block release at `:76`.
+    unsafe { drop(OwnedCtx::<EvpRand>::from_raw(rand)) };
 }
 
 /// `int evp_rand_get_number(const EVP_RAND *rand)` — internal, and the namemap identity.
@@ -874,11 +961,13 @@ pub unsafe extern "C" fn EVP_RAND_CTX_new(
         return ptr::null_mut();
     }
 
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<EvpRandCtx>(), FILE, LINE_ZALLOC_CTX)
-        .cast::<EvpRandCtx>();
-    if ctx.is_null() {
+    // A zeroed context (all-NULL pointers, zero scalars) is the authority's own `OPENSSL_zalloc`
+    // state, so `OwnedRandCtx::zalloc` may validate it; `into_raw` hands the C caller the pointer
+    // `EVP_RAND_CTX_free` reclaims.
+    let Some(ctx_owned) = OwnedRandCtx::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let ctx = ctx_owned.as_ptr();
     // SAFETY: `ctx` is a fresh zeroed block this call owns.
     unsafe { (*ctx).refcnt = AtomicI32::new(1) };
 
@@ -889,8 +978,8 @@ pub unsafe extern "C" fn EVP_RAND_CTX_new(
         if unsafe { EVP_RAND_CTX_up_ref(parent) } == 0 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::EVP_RAND_359) };
-            // SAFETY: `ctx` is this call's own block and nothing else holds it yet.
-            unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE_CTX_ON_NEW) };
+            // `ctx_owned`'s `Drop` is the error arm's bare `OPENSSL_free(ctx)` at `:374`.
+            drop(ctx_owned);
             return ptr::null_mut();
         }
         // SAFETY: `parent` is live.
@@ -930,8 +1019,8 @@ pub unsafe extern "C" fn EVP_RAND_CTX_new(
             // SAFETY: `f` is the method's own releaser and `algctx` is what its constructor left.
             unsafe { f(algctx) };
         }
-        // SAFETY: `ctx` is this call's own block.
-        unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE_CTX_ON_NEW) };
+        // `ctx_owned`'s `Drop` is the error arm's bare `OPENSSL_free(ctx)` at `:374`.
+        drop(ctx_owned);
         // The parent's reference, given back. A NULL parent is accepted and does nothing.
         // SAFETY: `parent` is NULL or live per the contract, and this is the reference taken above.
         unsafe { EVP_RAND_CTX_free(parent) };
@@ -943,7 +1032,7 @@ pub unsafe extern "C" fn EVP_RAND_CTX_new(
         (*ctx).meth = rand;
         (*ctx).parent = parent;
     }
-    ctx
+    ctx_owned.into_raw()
 }
 
 /// `void EVP_RAND_CTX_free(EVP_RAND_CTX *ctx)`.
@@ -967,20 +1056,11 @@ pub unsafe extern "C" fn EVP_RAND_CTX_free(ctx: *mut EvpRandCtx) {
         return;
     }
     // SAFETY: the count reached zero, so this is the last reference.
-    let (meth, algctx, parent) = unsafe { ((*ctx).meth, (*ctx).algctx, (*ctx).parent) };
-    // SAFETY: `meth` is live, because this context holds a reference to it.
-    let freectx = unsafe { (*meth).freectx };
-    if let Some(f) = freectx {
-        // SAFETY: `f` is the method's own releaser and `algctx` is the context its constructor
-        // handed back.
-        unsafe { f(algctx) };
-    }
-    // SAFETY: `ctx` is live.
-    unsafe { (*ctx).algctx = ptr::null_mut() };
-    // SAFETY: `meth` is live and this is the reference `EVP_RAND_CTX_new` took.
-    unsafe { EVP_RAND_free(meth) };
-    // SAFETY: `ctx` came from this crate's allocator and has just been released of everything.
-    unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE_CTX) };
+    let parent = unsafe { (*ctx).parent };
+    // SAFETY: `ctx` is a live context this crate allocated and has not released; its `Drop` runs the
+    // destructor body (the provider context through the method's `freectx`, then the method's
+    // reference) and the block release at `:399`.
+    unsafe { drop(OwnedRandCtx::reclaim(ctx)) };
     // The parent's reference, and the recursion: a NULL parent is accepted and does nothing.
     // SAFETY: `parent` is NULL or live, and this is the reference `EVP_RAND_CTX_new` took.
     unsafe { EVP_RAND_CTX_free(parent) };
