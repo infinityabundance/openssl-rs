@@ -666,7 +666,7 @@ pub unsafe extern "C" fn X509_ocspid_print(bp: *mut Bio, x: *mut X509) -> c_int 
         if i2d_X509_NAME(subj, &raw mut dertmp) < 0 {
             return ocspid_err(der, md);
         }
-        md = EVP_MD_fetch((*x).libctx, SN_SHA1.as_ptr(), (*x).propq);
+        md = EVP_MD_fetch((*x).libctx, SN_SHA1.as_ptr(), (*x).propq());
         if md.is_null() {
             return ocspid_err(der, md);
         }

@@ -510,7 +510,7 @@ pub unsafe extern "C" fn OCSP_basic_sign(
             &mut pkctx,
             EVP_MD_get0_name(dgst),
             (*signer).libctx,
-            (*signer).propq,
+            (*signer).propq(),
             key,
             ptr::null(),
         ) == 0
@@ -613,7 +613,7 @@ pub unsafe extern "C" fn OCSP_RESPID_set_by_key(respid: *mut OcspRespid, cert: *
         if cert.is_null() {
             return 0;
         }
-        OCSP_RESPID_set_by_key_ex(respid, cert, (*cert).libctx, (*cert).propq)
+        OCSP_RESPID_set_by_key_ex(respid, cert, (*cert).libctx, (*cert).propq())
     }
 }
 
@@ -686,6 +686,6 @@ pub unsafe extern "C" fn OCSP_RESPID_match(respid: *mut OcspRespid, cert: *mut X
         if cert.is_null() {
             return 0;
         }
-        OCSP_RESPID_match_ex(respid, cert, (*cert).libctx, (*cert).propq)
+        OCSP_RESPID_match_ex(respid, cert, (*cert).libctx, (*cert).propq())
     }
 }
