@@ -182,22 +182,207 @@ pub(crate) const DSO_FLAG_NAME_TRANSLATION_EXT_ONLY: c_int = 0x02;
 /// `DSO_FLAG_GLOBAL_SYMBOLS`.
 pub(crate) const DSO_FLAG_GLOBAL_SYMBOLS: c_int = 0x20;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the object block and its two names
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's plain `DSO_free` body for the object, without the block's own release, which
+/// [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// `DSO_free`'s body minus the block release: the method-data stack, then the two names.
+    ///
+    /// # Safety
+    /// `ptr` is a live object this unit allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned `DSO` block.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
+/// hands it out and takes it back), but its *ownership* is this type: [`Self::new_zeroed`]
+/// allocates it through the crate's allocator seam at the authority's own `(file, alloc_line)` and
+/// `Drop` releases it at the authority's own `(file, line)` -- with the object's destructor body
+/// first. It stays a `CRYPTO_zalloc`/`CRYPTO_free` at the authority's own size rather than a Rust
+/// `Box`, so a caller-installed `CRYPTO_set_mem_functions` hook observes the allocation, its size
+/// and its release exactly as it observes the authority's.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    /// The `__LINE__` this handle's `Drop` records for the block release.
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Allocate a fresh zeroed block of `T`'s size at `file`/`alloc_line`, or `None` when the seam
+    /// answers NULL (the authority's refused `CRYPTO_zalloc`).
+    fn new_zeroed(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` answers NULL or a fresh, zeroed, writable block of `size_of::<T>()`
+        // bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// The block's stable address the exported ABI holds.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C ABI's `DSO *`.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// Release the block without the destructor body, at `line` -- the authority's own bare
+    /// `OPENSSL_free` in `DSO_new_method`'s stack-failure arm, which runs before the object is a
+    /// live object and does not reach the object's destructor. The destructor body is skipped
+    /// deliberately: this is the one place the owner is not the destructor, and it is the
+    /// authority's own partial teardown (the stack is the very member that failed to build).
+    fn release_block(self, line: c_int) {
+        let ptr = self.ptr.as_ptr().cast::<c_void>();
+        let file = self.file;
+        core::mem::forget(self);
+        // SAFETY: `ptr` is the block `new_zeroed` allocated and this is its single release; the
+        // authority's error arm writes its own bare `CRYPTO_free`.
+        unsafe { CRYPTO_free(ptr, file, line) };
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The object destructor: the authority's own `DSO_free` body ([`CtxDestroy::destroy_body`])
+    /// followed by the block release, through the same allocator seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new_zeroed` allocated (or `from_raw` reclaimed) and this
+        // is its single release; `Drop` runs once and the body is the authority's own.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+impl CtxDestroy for Dso {
+    /// `DSO_free`'s body minus the block release: `OPENSSL_sk_free(meth_data)`, then the two
+    /// names. A zeroed (partially built) object has a NULL stack and two NULL names, so this is
+    /// the authority's own all-empty teardown there.
+    unsafe fn destroy_body(ptr: *mut Dso) {
+        // SAFETY: `ptr` is a live object per the trait contract, so its fields are readable and its
+        // stack is one this layer created.
+        unsafe {
+            OPENSSL_sk_free((*ptr).meth_data);
+            if !(*ptr).filename.is_null() {
+                CRYPTO_free(
+                    (*ptr).filename.cast::<c_void>(),
+                    FILE_LIB,
+                    LINE_FREE_FILENAME,
+                );
+            }
+            if !(*ptr).loaded_filename.is_null() {
+                CRYPTO_free(
+                    (*ptr).loaded_filename.cast::<c_void>(),
+                    FILE_LIB,
+                    LINE_FREE_LOADED,
+                );
+            }
+        }
+    }
+}
+
+/// An owned NUL-terminated C string allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc`/`CRYPTO_strdup` at the authority's exact size/`file`/`line` --
+/// a Rust `String` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type. [`Self::new`]
+/// allocates a scratch path buffer, [`Self::adopt`] takes in a `CRYPTO_strdup` duplicate (or the
+/// object's current name), `Drop` is the block's single release at the authority's own site, and
+/// [`Self::into_raw`] hands the block to `dso->filename`. A NULL pointer is a valid, empty buffer
+/// whose release is the authority's own no-op `free(NULL)`.
+struct OwnedStr {
+    ptr: *mut c_char,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedStr {
+    /// `CRYPTO_malloc(len, alloc_file, alloc_line)`, whose `Drop` releases it at
+    /// `release_file`/`release_line`.
+    fn new(
+        len: usize,
+        alloc_file: *const c_char,
+        alloc_line: c_int,
+        release_file: *const c_char,
+        release_line: c_int,
+    ) -> Option<OwnedStr> {
+        let raw = CRYPTO_malloc(len, alloc_file, alloc_line).cast::<c_char>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedStr {
+            ptr: raw,
+            file: release_file,
+            line: release_line,
+        })
+    }
+
+    /// Adopt a block this crate allocated -- a `CRYPTO_strdup` duplicate, or the object's current
+    /// name -- for release by `Drop` at `file`/`line`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
+    /// or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_char, file: *const c_char, line: c_int) -> OwnedStr {
+        OwnedStr { ptr, file, line }
+    }
+
+    /// The writable start of the string.
+    fn as_ptr(&self) -> *mut c_char {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to `dso->filename`.
+    fn into_raw(self) -> *mut c_char {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// `static DSO *DSO_new_method(DSO_METHOD *meth)`
 ///
 /// # Safety
 /// `meth` must be NULL or a `'static` method.
 unsafe fn new_method(meth: *mut DsoMethod) -> *mut Dso {
-    let ret = CRYPTO_zalloc(core::mem::size_of::<Dso>(), FILE_LIB, LINE_ZALLOC).cast::<Dso>();
-    if ret.is_null() {
+    // The allocation and its ownership are the same call: `new_zeroed` is the authority's
+    // `OPENSSL_zalloc`, and the handle is its single owner until the object is handed out.
+    let Some(owned) = OwnedCtx::<Dso>::new_zeroed(FILE_LIB, LINE_ZALLOC, LINE_FREE_DSO) else {
         return ptr::null_mut();
-    }
+    };
+    let ret = owned.as_ptr();
     // SAFETY: `ret` is a fresh, exclusively owned block of exactly this type.
     unsafe {
         (*ret).meth_data = OPENSSL_sk_new_null();
         if (*ret).meth_data.is_null() {
             // `sk_new` raises nothing of its own, so the authority raises here.
             raise_site(&err_sites::DSO_LIB_23);
-            CRYPTO_free(ret.cast::<c_void>(), FILE_LIB, LINE_FREE_STACK_FAIL);
+            owned.release_block(LINE_FREE_STACK_FAIL);
             return ptr::null_mut();
         }
         // The `meth` argument is accepted and **discarded**: the authority assigns
@@ -218,12 +403,16 @@ unsafe fn new_method(meth: *mut DsoMethod) -> *mut Dso {
     unsafe {
         if let Some(init) = (*ret).meth.as_ref().and_then(|m| m.init) {
             if init(ret) == 0 {
-                DSO_free(ret);
+                // The authority's failure arm calls `DSO_free(ret)`: hand the block over to the
+                // C ABI's own reclaim path rather than running the destructor body here, so the
+                // unload/finish the authority performs are the authority's.
+                let raw = owned.into_raw();
+                DSO_free(raw);
                 return ptr::null_mut();
             }
         }
     }
-    ret
+    owned.into_raw()
 }
 
 /// `DSO *DSO_new(void)`
@@ -278,22 +467,11 @@ pub unsafe extern "C" fn DSO_free(dso: *mut Dso) -> c_int {
                     return 0;
                 }
             }
-            OPENSSL_sk_free((*dso).meth_data);
-            if !(*dso).filename.is_null() {
-                CRYPTO_free(
-                    (*dso).filename.cast::<c_void>(),
-                    FILE_LIB,
-                    LINE_FREE_FILENAME,
-                );
-            }
-            if !(*dso).loaded_filename.is_null() {
-                CRYPTO_free(
-                    (*dso).loaded_filename.cast::<c_void>(),
-                    FILE_LIB,
-                    LINE_FREE_LOADED,
-                );
-            }
-            CRYPTO_free(dso.cast::<c_void>(), FILE_LIB, LINE_FREE_DSO);
+        }
+        // The last reference is gone: reclaim the block and run the object's destructor body.
+        // SAFETY: `dso` is a live object a previous `into_raw` gave up and `Drop` has not released.
+        if let Some(owned) = unsafe { OwnedCtx::from_raw(dso, FILE_LIB, LINE_FREE_DSO) } {
+            drop(owned);
         }
         1
     })
@@ -565,14 +743,18 @@ pub unsafe extern "C" fn DSO_set_filename(dso: *mut Dso, filename: *const c_char
             if copied.is_null() {
                 return 0;
             }
+            // SAFETY: `copied` is a live duplicate no one else owns.
+            let dup = OwnedStr::adopt(copied, FILE_LIB, LINE_FREE_FILENAME);
             if !(*dso).filename.is_null() {
-                CRYPTO_free(
-                    (*dso).filename.cast::<c_void>(),
+                // SAFETY: the object's current name is a live block this unit owns; release it at
+                // the authority's own site.
+                drop(OwnedStr::adopt(
+                    (*dso).filename,
                     FILE_LIB,
                     LINE_FREE_FILENAME,
-                );
+                ));
             }
-            (*dso).filename = copied;
+            (*dso).filename = dup.into_raw();
         }
         1
     })
@@ -707,20 +889,24 @@ pub unsafe extern "C" fn DSO_dsobyaddr(addr: *mut c_void, flags: c_int) -> *mut 
             return ptr::null_mut();
         }
         // SAFETY: `len` is a positive length, so the allocation is at least a byte.
-        let filename = CRYPTO_malloc(len as usize, FILE_LIB, LINE_MALLOC_BYADDR).cast::<c_char>();
+        let filename = OwnedStr::new(
+            len as usize,
+            FILE_LIB,
+            LINE_MALLOC_BYADDR,
+            FILE_LIB,
+            LINE_FREE_BYADDR,
+        );
         let mut ret = ptr::null_mut();
-        if !filename.is_null() {
-            // SAFETY: `filename` has `len` writable bytes.
-            if unsafe { DSO_pathbyaddr(addr, filename, len) } == len {
-                // SAFETY: `filename` is NUL-terminated by the call above, and the
-                // method is chosen by `DSO_load` itself (a NULL method).
-                ret = unsafe { DSO_load(ptr::null_mut(), filename, ptr::null_mut(), flags) };
+        if let Some(f) = &filename {
+            // SAFETY: `f` has `len` writable bytes.
+            if unsafe { DSO_pathbyaddr(addr, f.as_ptr(), len) } == len {
+                // SAFETY: `f` is NUL-terminated by the call above, and the method is chosen by
+                // `DSO_load` itself (a NULL method); `DSO_load` copies the name, so `f` may be
+                // released when this frame ends.
+                ret = unsafe { DSO_load(ptr::null_mut(), f.as_ptr(), ptr::null_mut(), flags) };
             }
         }
-        if !filename.is_null() {
-            // SAFETY: the block came from `CRYPTO_malloc`.
-            unsafe { CRYPTO_free(filename.cast::<c_void>(), FILE_LIB, LINE_FREE_BYADDR) };
-        }
+        // `filename` is released by its `Drop` at `LINE_FREE_BYADDR` as this frame ends.
         ret
     })
 }
