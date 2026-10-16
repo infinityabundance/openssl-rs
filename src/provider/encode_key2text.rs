@@ -122,6 +122,81 @@ use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack,
 };
 
+/// An owned seam block released with the authority's plain `CRYPTO_free` (`file` NULL/`line` 0) --
+/// the `pub_buf` an EC-key encoder left for this frame.
+///
+/// The block stays the authority's own allocation through the same allocator seam, so a
+/// caller-installed `CRYPTO_set_mem_functions` hook observes its release; only its *ownership* is
+/// this type.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+}
+
+impl OwnedBuf {
+    /// Adopt a non-NULL block a helper allocated in full through the crate's `CRYPTO_*` seam, for
+    /// release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live, non-NULL block the crate's allocator seam allocated in full (not a
+    /// sub-range) and this caller owns exclusively -- this handle's `Drop` is its single release.
+    unsafe fn adopt(ptr: *mut c_uchar) -> OwnedBuf {
+        OwnedBuf { ptr }
+    }
+
+    /// The start of the block.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast(), ptr::null(), 0) };
+    }
+}
+
+/// An owned seam block released with the authority's *cleansing* `CRYPTO_clear_free` over a recorded
+/// length (`file` NULL/`line` 0) -- the `buf`/`priv_buf` an EC-key encoder left for this frame.
+///
+/// The length is the extent the authority cleansed before releasing, so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the same release; only its *ownership* is this type.
+struct OwnedClearBuf {
+    ptr: *mut c_uchar,
+    len: usize,
+}
+
+impl OwnedClearBuf {
+    /// Adopt a non-NULL block a helper allocated in full through the crate's `CRYPTO_*` seam, for
+    /// cleansing release by `Drop` over `len` bytes.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live, non-NULL block the crate's allocator seam allocated in full (not a
+    /// sub-range) that is valid for `len` bytes and this caller owns exclusively -- this handle's
+    /// `Drop` is its single release.
+    unsafe fn adopt(ptr: *mut c_uchar, len: usize) -> OwnedClearBuf {
+        OwnedClearBuf { ptr, len }
+    }
+
+    /// The start of the block.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedClearBuf {
+    /// The block's single *cleansing* release, through the same seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released and is valid for
+        // `self.len` bytes; the authority's own `CRYPTO_clear_free` accepts NULL.
+        unsafe { CRYPTO_clear_free(self.ptr.cast(), self.len, ptr::null(), 0) };
+    }
+}
+
 /// `OPENSSL_EC_NAMED_CURVE` — `include/openssl/ec.h:1033`, read by `ec_param_to_text`.
 const OPENSSL_EC_NAMED_CURVE: c_int = crate::evp::pkey_ctx::OPENSSL_EC_NAMED_CURVE;
 
@@ -450,11 +525,14 @@ unsafe fn ec_param_explicit_gen_to_text(
     if buflen == 0 {
         return 0;
     }
+    // SAFETY: `EC_POINT_point2buf` answered this non-NULL `buf` as a `buflen`-octet block the
+    // crate's allocator produced in full; this frame is its only owner.
+    let buf = unsafe { OwnedClearBuf::adopt(buf, buflen) };
+    let buf_ptr = buf.as_ptr();
 
     // SAFETY: `out` is live and `buf` is valid for `buflen` bytes.
-    let ret = unsafe { ossl_bio_print_labeled_buf(out, glabel, buf, buflen) };
-    // SAFETY: `buf` is the allocation `EC_POINT_point2buf` returned; `buflen` its length.
-    unsafe { CRYPTO_clear_free(buf.cast(), buflen, ptr::null(), 0) };
+    let ret = unsafe { ossl_bio_print_labeled_buf(out, glabel, buf_ptr, buflen) };
+    // `buf`'s own `Drop` runs the authority's `OPENSSL_clear_free`.
     ret
 }
 
@@ -573,9 +651,9 @@ unsafe fn ec_param_to_text(out: *mut Bio, group: *const EcGroup, libctx: *mut c_
 unsafe extern "C" fn ec_to_text(out: *mut Bio, key: *const c_void, selection: c_int) -> c_int {
     let ec = key.cast::<EcKey>();
     let mut type_label: *const c_char = ptr::null();
-    let mut priv_buf: *mut c_uchar = ptr::null_mut();
+    let mut priv_buf: Option<OwnedClearBuf> = None;
     let mut priv_len: usize = 0;
-    let mut pub_buf: *mut c_uchar = ptr::null_mut();
+    let mut pub_buf: Option<OwnedBuf> = None;
     let mut pub_len: usize = 0;
 
     if out.is_null() || ec.is_null() {
@@ -611,11 +689,15 @@ unsafe extern "C" fn ec_to_text(out: *mut Bio, key: *const c_void, selection: c_
             unsafe { raise_site(&err_sites::PROV_ENCODE_KEY2TEXT_344) };
             return 0;
         }
-        // SAFETY: `ec` is live and `priv_buf` is this frame's out-parameter.
-        priv_len = unsafe { EC_KEY_priv2buf(ec, &mut priv_buf) };
+        let mut raw: *mut c_uchar = ptr::null_mut();
+        // SAFETY: `ec` is live and `raw` is this frame's out-parameter.
+        priv_len = unsafe { EC_KEY_priv2buf(ec, &mut raw) };
         if priv_len == 0 {
             return 0;
         }
+        // SAFETY: `EC_KEY_priv2buf` answered this non-NULL `raw` as a `priv_len`-byte block the
+        // crate's allocator produced in full; this frame is its only owner.
+        priv_buf = Some(unsafe { OwnedClearBuf::adopt(raw, priv_len) });
     }
     if (selection & OSSL_KEYMGMT_SELECT_KEYPAIR) != 0 {
         // SAFETY: `ec` is live.
@@ -623,20 +705,26 @@ unsafe extern "C" fn ec_to_text(out: *mut Bio, key: *const c_void, selection: c_
         if pub_pt.is_null() {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::PROV_ENCODE_KEY2TEXT_355) };
-            // SAFETY: `priv_buf` is NULL or the allocation `EC_KEY_priv2buf` returned.
-            unsafe { CRYPTO_clear_free(priv_buf.cast(), priv_len, ptr::null(), 0) };
+            // `priv_buf`'s own `Drop` runs the authority's `OPENSSL_clear_free`.
             return 0;
         }
-        // SAFETY: `ec` is live; `pub_buf` is this frame's out-parameter.
+        let mut raw: *mut c_uchar = ptr::null_mut();
+        // SAFETY: `ec` is live; `raw` is this frame's out-parameter.
         pub_len =
-            unsafe { EC_KEY_key2buf(ec, EC_KEY_get_conv_form(ec), &mut pub_buf, ptr::null_mut()) };
+            unsafe { EC_KEY_key2buf(ec, EC_KEY_get_conv_form(ec), &mut raw, ptr::null_mut()) };
         if pub_len == 0 {
-            // SAFETY: `priv_buf` is NULL or the allocation `EC_KEY_priv2buf` returned.
-            unsafe { CRYPTO_clear_free(priv_buf.cast(), priv_len, ptr::null(), 0) };
+            // `priv_buf`'s own `Drop` runs the authority's `OPENSSL_clear_free`.
             return 0;
         }
+        // SAFETY: `EC_KEY_key2buf` answered this non-NULL `raw` as a `pub_len`-byte block the
+        // crate's allocator produced in full; this frame is its only owner.
+        pub_buf = Some(unsafe { OwnedBuf::adopt(raw) });
     }
 
+    let priv_ptr = priv_buf
+        .as_ref()
+        .map_or(ptr::null_mut(), OwnedClearBuf::as_ptr);
+    let pub_ptr = pub_buf.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
     let mut ret = 1;
     // SAFETY: `out` is live; every pointer argument is live and matches its conversion. The three
     // checks are separate statements because the authority's are, and each is skipped once an
@@ -653,14 +741,14 @@ unsafe extern "C" fn ec_to_text(out: *mut Bio, key: *const c_void, selection: c_
             ret = 0;
         }
         if ret != 0
-            && !priv_buf.is_null()
-            && ossl_bio_print_labeled_buf(out, c"priv:".as_ptr(), priv_buf, priv_len) == 0
+            && !priv_ptr.is_null()
+            && ossl_bio_print_labeled_buf(out, c"priv:".as_ptr(), priv_ptr, priv_len) == 0
         {
             ret = 0;
         }
         if ret != 0
-            && !pub_buf.is_null()
-            && ossl_bio_print_labeled_buf(out, c"pub:".as_ptr(), pub_buf, pub_len) == 0
+            && !pub_ptr.is_null()
+            && ossl_bio_print_labeled_buf(out, c"pub:".as_ptr(), pub_ptr, pub_len) == 0
         {
             ret = 0;
         }
@@ -669,11 +757,8 @@ unsafe extern "C" fn ec_to_text(out: *mut Bio, key: *const c_void, selection: c_
         }
     }
 
-    // SAFETY: both buffers are NULL or the allocations their producers returned.
-    unsafe {
-        CRYPTO_clear_free(priv_buf.cast(), priv_len, ptr::null(), 0);
-        CRYPTO_free(pub_buf.cast(), ptr::null(), 0);
-    }
+    // Both buffers are released by their own `Drop` -- the `priv` block cleansed -- at the
+    // authority's own site.
     ret
 }
 

@@ -28,7 +28,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uchar};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 use crate::asn1::text::to_hex;
@@ -45,6 +45,117 @@ use crate::runtime::str::OPENSSL_hexstr2buf_ex;
 /// build record's `../../src/openssl-3.6.4/` prefix — the spelling `src/packet.rs` and
 /// `src/dh/ctrl.rs` use.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_print.c".as_ptr();
+
+/// An owned seam block released with the authority's plain `CRYPTO_free` at its own `file`/`line`.
+///
+/// The block stays a `CRYPTO_*` allocation at the authority's exact site (observable to a
+/// caller-installed `CRYPTO_set_mem_functions` hook), but its *ownership* is this type:
+/// [`Self::new`] allocates it, [`Self::adopt`] takes in the block `EC_POINT_point2buf` allocated
+/// for this frame, `Drop` is its single release, and [`Self::into_raw`] hands `EC_POINT_point2hex`'s
+/// output to the C caller that will free it.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let ptr = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf { ptr, file, line })
+    }
+
+    /// Adopt a non-NULL block a helper allocated in full through the crate's `CRYPTO_*` seam, for
+    /// release by `Drop` at `file`/`line`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live, non-NULL block the crate's allocator seam allocated in full (not a
+    /// sub-range), owned by this caller and no other -- this handle's `Drop` is its single release;
+    /// `file` is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, file, line }
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the C caller that will free it.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
+/// An owned seam block released with the authority's *cleansing* `CRYPTO_clear_free` over a recorded
+/// length (`EC_POINT_hex2point`'s octet buffer), at its own `file`/`line`.
+///
+/// The block is a `OPENSSL_clear_free` whose length the decoder writes ([`Self::set_len`]), so the
+/// release stays the authority's own cleansing call: `Drop` runs it over exactly the octets the
+/// authority's `err:` tail cleansed.
+struct OwnedClearBuf {
+    ptr: *mut c_uchar,
+    len: usize,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedClearBuf {
+    /// `CRYPTO_malloc(len, file, alloc_line)`, whose `Drop` cleanses and releases it at
+    /// `file`/`release_line` (`OPENSSL_clear_free`), or `None` when the allocator answers NULL.
+    fn new(
+        len: usize,
+        file: *const c_char,
+        alloc_line: c_int,
+        release_line: c_int,
+    ) -> Option<OwnedClearBuf> {
+        let ptr = CRYPTO_malloc(len, file, alloc_line).cast::<c_uchar>();
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedClearBuf {
+            ptr,
+            len,
+            file,
+            line: release_line,
+        })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Record the length the decoder wrote, the extent the cleansing release must cover.
+    fn set_len(&mut self, len: usize) {
+        self.len = len;
+    }
+}
+
+impl Drop for OwnedClearBuf {
+    /// The block's single *cleansing* release, through the same seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; `self.len` is the
+        // extent the authority cleansed; the authority's own `CRYPTO_clear_free` accepts NULL.
+        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, self.file, self.line) };
+    }
+}
 
 /// `char *EC_POINT_point2hex(const EC_GROUP *group, const EC_POINT *point,`
 /// `point_conversion_form_t form, BN_CTX *ctx)` — `crypto/ec/ec_print.c:16-41`.
@@ -73,47 +184,51 @@ pub unsafe extern "C" fn EC_POINT_point2hex(
             return ptr::null_mut();
         }
 
+        // SAFETY: `EC_POINT_point2buf` answered this non-NULL `buf` as a `buf_len`-octet block the
+        // crate's allocator produced in full, and this frame is its only owner; the authority
+        // releases it with `OPENSSL_free` at line 39.
+        let buf = OwnedBuf::adopt(buf, FILE, 39);
+
         // `OPENSSL_malloc(buf_len * 2 + 2)`, line 29.
-        let ret = CRYPTO_malloc(buf_len * 2 + 2, FILE, 29).cast::<c_char>();
-        if ret.is_null() {
-            // goto err
-            CRYPTO_free(buf.cast(), FILE, 39);
-            return ret;
-        }
+        let Some(ret) = OwnedBuf::new(buf_len * 2 + 2, FILE, 29) else {
+            // goto err: `buf` is released by its own `Drop` -- no `CRYPTO_free` written here.
+            return ptr::null_mut();
+        };
+        let ret_ptr = ret.as_ptr().cast::<c_char>();
 
         for i in 0..buf_len {
             // SAFETY: `buf` holds `buf_len` octets and `ret` holds room for two digits per octet.
             let mut pair = [0u8; 2];
-            to_hex(&mut pair, *buf.add(i));
-            *ret.add(2 * i) = pair[0] as c_char;
-            *ret.add(2 * i + 1) = pair[1] as c_char;
+            to_hex(&mut pair, *buf.as_ptr().add(i));
+            *ret_ptr.add(2 * i) = pair[0] as c_char;
+            *ret_ptr.add(2 * i + 1) = pair[1] as c_char;
         }
-        *ret.add(2 * buf_len) = 0;
+        *ret_ptr.add(2 * buf_len) = 0;
 
-        // err: (the fall-through path shares the label with the allocation failure above)
-        CRYPTO_free(buf.cast(), FILE, 39);
-        ret
+        // err: (the fall-through path shares the label with the allocation failure above); `buf` is
+        // released by its own `Drop`, and `ret` is the block the caller takes ownership of.
+        ret.into_raw().cast::<c_char>()
     }
 }
 
 /// The authority's shared `err:` tail of `EC_POINT_hex2point`, written once so the three
-/// `goto err` sites cannot drift: release the octet buffer over the length the decoder wrote,
-/// and, if the call did not succeed, clear the point it allocated but not the caller's own.
+/// `goto err` sites cannot drift: release the octet buffer over the length the decoder wrote (its
+/// own `Drop` runs the authority's `OPENSSL_clear_free`, line 72), and, if the call did not
+/// succeed, clear the point it allocated but not the caller's own.
 ///
 /// # Safety
 ///
-/// `oct_buf` is NULL or a block of at least `oct_buf_len` bytes from this allocator that is not
-/// owned elsewhere; `pt` is NULL or a live point; `point` is the caller's point parameter.
+/// `pt` is NULL or a live point; `point` is the caller's point parameter. `oct_buf`, when `Some`,
+/// is this frame's own octet block, released exactly once by this call.
 unsafe fn hex2point_tail(
     ok: c_int,
-    oct_buf: *mut c_uchar,
-    oct_buf_len: usize,
+    oct_buf: Option<OwnedClearBuf>,
     pt: *mut EcPoint,
     point: *mut EcPoint,
 ) -> *mut EcPoint {
-    // `OPENSSL_clear_free(oct_buf, oct_buf_len)`, line 72.
-    // SAFETY: `oct_buf`/`oct_buf_len` are this frame's and the allocator's contract holds.
-    unsafe { CRYPTO_clear_free(oct_buf.cast(), oct_buf_len, FILE, 72) };
+    // `OPENSSL_clear_free(oct_buf, oct_buf_len)`, line 72: the block's own `Drop` runs it over the
+    // recorded length.
+    drop(oct_buf);
     let mut pt = pt;
     if ok == 0 {
         if pt != point {
@@ -146,8 +261,6 @@ pub unsafe extern "C" fn EC_POINT_hex2point(
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
     unsafe {
         let mut ok = 0;
-        let mut oct_buf: *mut c_uchar = ptr::null_mut();
-        let mut oct_buf_len = 0usize;
         let pt: *mut EcPoint;
 
         if group.is_null() || hex.is_null() {
@@ -157,7 +270,7 @@ pub unsafe extern "C" fn EC_POINT_hex2point(
         if point.is_null() {
             pt = EC_POINT_new(group);
             if pt.is_null() {
-                return hex2point_tail(ok, oct_buf, oct_buf_len, pt, point);
+                return hex2point_tail(ok, None, pt, point);
             }
         } else {
             pt = point;
@@ -166,20 +279,22 @@ pub unsafe extern "C" fn EC_POINT_hex2point(
         // `len = strlen(hex) / 2`, line 62.
         // SAFETY: `hex` is NUL-terminated per the caller's contract.
         let len = strlen(hex) / 2;
-        // `OPENSSL_malloc(len)`, line 63.
-        oct_buf = CRYPTO_malloc(len, FILE, 63).cast::<c_uchar>();
-        if oct_buf.is_null() {
-            return hex2point_tail(ok, oct_buf, oct_buf_len, pt, point);
-        }
+        // `OPENSSL_malloc(len)`, line 63; the err tail's `OPENSSL_clear_free`, line 72.
+        let Some(mut oct_buf) = OwnedClearBuf::new(len, FILE, 63, 72) else {
+            // goto err: no block was allocated, so the authority's clear-free is a NULL release.
+            return hex2point_tail(ok, None, pt, point);
+        };
 
-        if OPENSSL_hexstr2buf_ex(oct_buf, len, &mut oct_buf_len, hex, 0) == 0
-            || EC_POINT_oct2point(group, pt, oct_buf, oct_buf_len, ctx) == 0
-        {
-            return hex2point_tail(ok, oct_buf, oct_buf_len, pt, point);
+        let mut oct_buf_len = 0usize;
+        let decoded = OPENSSL_hexstr2buf_ex(oct_buf.as_ptr(), len, &mut oct_buf_len, hex, 0);
+        // The decoder records the length it wrote; the authority cleanses exactly that many octets.
+        oct_buf.set_len(oct_buf_len);
+        if decoded == 0 || EC_POINT_oct2point(group, pt, oct_buf.as_ptr(), oct_buf_len, ctx) == 0 {
+            return hex2point_tail(ok, Some(oct_buf), pt, point);
         }
         ok = 1;
 
-        hex2point_tail(ok, oct_buf, oct_buf_len, pt, point)
+        hex2point_tail(ok, Some(oct_buf), pt, point)
     }
 }
 
