@@ -165,9 +165,24 @@ in one place, and the field becomes **private** once all accessors convert
 
 Landed: PKCS7 `propq` (private), CMS `propq` (private), PKCS12 nested release,
 X.509 `X509`/`X509_CRL`/`X509_REQ`/`X509_PUBKEY` (all private),
-`X509_STORE_CTX` + cached-store `propq` (private). Remaining: the SSL
-context/session member buffers, then the other member-buffer families the
-dependency atlas names for the 33 consumers.
+`X509_STORE_CTX` + cached-store `propq` (private), and the
+`SslSession` buffers `ext_hostname`/`ext_tick`/`ext_alpn_selected`/
+`ticket_appdata` (all private; a latent ticket double-free closed).
+Remaining: the `SslCtx`/`Ssl` connection member buffers, the remaining
+`SslSession` C-string members (`psk_identity_hint`/`psk_identity`/
+`srp_username`), then the other member-buffer families the dependency
+atlas names for the 33 consumers.
+
+## Destructor-trait audit (complete)
+
+All **46** module-local destructor traits (`CtxDestroy`/`CipherDestroy`/
+`MacDestroy`/`KdfDestroy`/`GcmDestroy`/`DrbgCtx`/`FreeOnDrop`) are now
+`unsafe trait` with an explicit `# Safety` implementer contract; **0 safe
+ones remain** (batches `ctxtrait-x509`, `ctxtrait-provider`, `ctxtrait-rest`).
+Contract (a) destructor always; (b) zero-validity only where a safe
+zalloc-wrap constructor relies on it. Traits were **not** consolidated
+(contracts kept module-local, as their construction/release semantics
+differ).
 
 ## Receipts
 
