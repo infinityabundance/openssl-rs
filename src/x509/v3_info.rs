@@ -109,6 +109,52 @@ const V3_INFO_127: crate::runtime::err::err_sites::ErrSite =
 const V3_INFO_138: crate::runtime::err::err_sites::ErrSite =
     v3_info_site(138, c"v2i_AUTHORITY_INFO_ACCESS", X509V3_R_BAD_OBJECT);
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the strings the two callbacks allocate
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `char *` block from this unit's `CRYPTO_malloc`/`CRYPTO_strndup` seam.
+///
+/// `i2v_AUTHORITY_INFO_ACCESS`'s rewritten `CONF_VALUE` name and
+/// `v2i_AUTHORITY_INFO_ACCESS`'s `;`-prefix duplicate are both `CRYPTO_*` blocks the authority
+/// releases by hand at its own `__LINE__`s. The block stays a `CRYPTO_*` allocation at that
+/// `file`/`line`; only its *ownership* is this handle, whose `Drop` is its single release.
+struct OwnedStr {
+    ptr: *mut c_char,
+    line: c_int,
+}
+
+impl OwnedStr {
+    /// Adopt a `CRYPTO_*` string, or `None` for NULL.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a NUL-terminated string the crate's `CRYPTO_*` seam allocated in full (not
+    /// a sub-range) and no other owner will release; `line` is the authority's own release site.
+    /// `Drop`'s `CRYPTO_free` is its only release.
+    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedStr { ptr, line })
+        }
+    }
+
+    /// The string's address, for the calls that read it.
+    fn as_ptr(&self) -> *const c_char {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The string's single release, through the same seam and the authority's own line.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block the handle adopted and `Drop` runs once; the authority's
+        // own `CRYPTO_free` accepts the block.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), self.line) };
+    }
+}
+
 /// `struct ACCESS_DESCRIPTION_st` — `ACCESS_DESCRIPTION`, from `include/openssl/x509v3.h`.
 #[repr(C)]
 pub struct AccessDescription {
@@ -342,12 +388,14 @@ unsafe extern "C" fn i2v_AUTHORITY_INFO_ACCESS(
         unsafe { i2t_ASN1_OBJECT(objtmp.as_mut_ptr(), 80, (*desc).method) };
         // SAFETY: both strings are NUL-terminated.
         let nlen = unsafe { strlen(objtmp.as_ptr()) + 3 + strlen((*vtmp).name) } + 1;
-        // SAFETY: `nlen` is the exact byte count the authority frees.
+        // SAFETY: `nlen` is the exact byte count the authority allocates at `:84`; the allocator
+        // answers NULL or a fresh block, which is handed to `vtmp->name` below.
         let ntmp = CRYPTO_malloc(nlen, FILE.as_ptr(), LINE_MALLOC).cast::<c_char>();
         if ntmp.is_null() {
             return i2v_ainfo_err(ret, tret);
         }
-        // SAFETY: `ntmp` has `nlen` bytes; both sources are NUL-terminated.
+        // SAFETY: `ntmp` has `nlen` bytes; both sources are NUL-terminated, and `(*vtmp).name` is
+        // the `CONF_VALUE`'s own string.
         unsafe {
             BIO_snprintf(
                 ntmp,
@@ -356,7 +404,10 @@ unsafe extern "C" fn i2v_AUTHORITY_INFO_ACCESS(
                 objtmp.as_ptr(),
                 (*vtmp).name,
             );
-            CRYPTO_free((*vtmp).name.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_NAME);
+            // The authority's `OPENSSL_free(vtmp->name)` at `:88`: hand the old name to an owner
+            // whose `Drop` is that release, then install the fresh block, which `vtmp->name` now
+            // owns (released later by the `CONF_VALUE` destructor).
+            drop(OwnedStr::take((*vtmp).name, LINE_FREE_NAME));
             (*vtmp).name = ntmp;
         }
         i += 1;
@@ -448,33 +499,37 @@ unsafe extern "C" fn v2i_AUTHORITY_INFO_ACCESS(
             return v2i_ainfo_err(ainfo);
         }
         // SAFETY: `cnf->name` is NUL-terminated; the length is the `;` prefix.
+        // SAFETY: `cnf` is live and its `name` is NUL-terminated; the allocator answers NULL or a
+        // fresh block the authority releases at its own `:140` site.
         let objtmp = unsafe {
-            CRYPTO_strndup(
-                (*cnf).name,
-                (ptmp as usize) - ((*cnf).name as usize),
-                FILE.as_ptr(),
-                LINE_STRNDUP,
+            OwnedStr::take(
+                CRYPTO_strndup(
+                    (*cnf).name,
+                    (ptmp as usize) - ((*cnf).name as usize),
+                    FILE.as_ptr(),
+                    LINE_STRNDUP,
+                ),
+                LINE_FREE_OBJ,
             )
         };
-        if objtmp.is_null() {
+        let Some(objtmp) = objtmp else {
             return v2i_ainfo_err(ainfo);
-        }
+        };
         // SAFETY: `objtmp` is NUL-terminated; `no_name` is 0.
-        unsafe { (*acc).method = OBJ_txt2obj(objtmp, 0) };
+        unsafe { (*acc).method = OBJ_txt2obj(objtmp.as_ptr(), 0) };
         // SAFETY: `acc` is live.
         if unsafe { (*acc).method }.is_null() {
             let mut msg: Vec<u8> = b"value=".to_vec();
             // SAFETY: `objtmp` is NUL-terminated.
-            unsafe { push_cstr(&mut msg, objtmp) };
+            unsafe { push_cstr(&mut msg, objtmp.as_ptr()) };
             msg.push(0);
             // SAFETY: the site is a compiled-in constant.
             unsafe { raise_site_data(&V3_INFO_138, msg.as_ptr().cast::<c_char>()) };
-            // SAFETY: `objtmp` is this call's own.
-            unsafe { CRYPTO_free(objtmp.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_OBJ) };
+            // `objtmp`'s `Drop` is the authority's `OPENSSL_free(objtmp)` at `:140`.
             return v2i_ainfo_err(ainfo);
         }
-        // SAFETY: `objtmp` is this call's own.
-        unsafe { CRYPTO_free(objtmp.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_OBJ) };
+        // `objtmp`'s `Drop` is the authority's `OPENSSL_free(objtmp)` at `:140`; it runs at the end
+        // of this iteration.
         i += 1;
     }
     ainfo.cast::<c_void>()
