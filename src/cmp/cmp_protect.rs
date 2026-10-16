@@ -11,7 +11,7 @@
 #![allow(dead_code, non_snake_case)]
 #![allow(private_interfaces)]
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 use crate::asn1::a_sign::ASN1_item_sign_ex;
@@ -81,6 +81,51 @@ unsafe fn raise_cmp(line: c_int, func: &'static core::ffi::CStr, reason: c_int) 
     };
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// The block stays a helper's own allocation (`i2d_OSSL_CMP_PROTECTEDPART`,
+/// `i2d_OSSL_CRMF_PBMPARAMETER`, or the PasswordBasedMAC result `OSSL_CRMF_pbm_new` builds) at the
+/// authority's exact `file`/`line` -- a Rust `Box`/`Vec` would hide both the allocation and its
+/// release from a caller-installed `CRYPTO_set_mem_functions` hook -- and only its *ownership* is
+/// this type: [`Self::adopt`] takes in the helper's block and `Drop` is its single release at the
+/// authority's own `file`/`line`. A NULL pointer is a valid, empty buffer whose release is the
+/// authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// Adopt a block this crate allocated inside a helper, for release by `Drop` at the
+    /// authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
+    /// or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, file, line }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// `ASN1_BIT_STRING *ossl_cmp_calc_protection(const OSSL_CMP_CTX *ctx, const OSSL_CMP_MSG *msg)`
 /// — `cmp_protect.c:26-124`. Internal.
 ///
@@ -121,7 +166,6 @@ pub(crate) unsafe fn ossl_cmp_calc_protection(
         let mut sig_len: usize = 0;
         let mut protection: *mut u8 = ptr::null_mut();
         let mut pbm: *mut crate::crmf::crmf_asn::CrmfPbmParameter = ptr::null_mut();
-        let mut prot: *mut Asn1String;
 
         // SAFETY: `ctx` is live.
         if unsafe { (*ctx).secret_value }.is_null() {
@@ -138,14 +182,13 @@ pub(crate) unsafe fn ossl_cmp_calc_protection(
         // SAFETY: `prot_part` is a live local; the slot is writable.
         let len: c_int =
             unsafe { i2d_OSSL_CMP_PROTECTEDPART(ptr::addr_of!(prot_part), &mut prot_part_der) };
-        if len < 0 || prot_part_der.is_null() {
+        // The encoding is the helper's own block; the handle releases it at the authority's own
+        // `:99` site on every path below.
+        // SAFETY: `prot_part_der` is NULL or a live block the helper allocated and no one else owns.
+        let prot_part_der = unsafe { OwnedBuf::adopt(prot_part_der.cast(), FILE.as_ptr(), 99) };
+        if len < 0 || prot_part_der.as_ptr().is_null() {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_cmp(69, c"ossl_cmp_calc_protection", 115) };
-            // SAFETY: both are NULL or allocated here.
-            unsafe {
-                CRYPTO_free(protection.cast(), FILE.as_ptr(), 98);
-                CRYPTO_free(prot_part_der.cast(), FILE.as_ptr(), 99);
-            }
             return ptr::null_mut();
         }
 
@@ -160,11 +203,6 @@ pub(crate) unsafe fn ossl_cmp_calc_protection(
         if pbm.is_null() {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_cmp(78, c"ossl_cmp_calc_protection", 138) };
-            // SAFETY: both are NULL or allocated here.
-            unsafe {
-                CRYPTO_free(protection.cast(), FILE.as_ptr(), 98);
-                CRYPTO_free(prot_part_der.cast(), FILE.as_ptr(), 99);
-            }
             return ptr::null_mut();
         }
 
@@ -178,7 +216,7 @@ pub(crate) unsafe fn ossl_cmp_calc_protection(
                 (*ctx).libctx,
                 (*ctx).propq,
                 pbm,
-                prot_part_der,
+                prot_part_der.as_ptr(),
                 len as usize,
                 secret_data,
                 secret_len as usize,
@@ -186,50 +224,38 @@ pub(crate) unsafe fn ossl_cmp_calc_protection(
                 &mut sig_len,
             )
         };
+        // The MAC result is the helper's own block; the handle releases it at the authority's own
+        // `:98` site on every path below.
+        // SAFETY: `protection` is NULL or a live block the helper allocated and no one else owns.
+        let protection = unsafe { OwnedBuf::adopt(protection.cast(), FILE.as_ptr(), 98) };
         if ok == 0 {
-            // SAFETY: the failure path owns the four allocations.
-            unsafe {
-                OSSL_CRMF_PBMPARAMETER_free(pbm);
-                CRYPTO_free(protection.cast(), FILE.as_ptr(), 98);
-                CRYPTO_free(prot_part_der.cast(), FILE.as_ptr(), 99);
-            }
+            // SAFETY: the failure path owns the parameter object.
+            unsafe { OSSL_CRMF_PBMPARAMETER_free(pbm) };
             return ptr::null_mut();
         }
 
         if sig_len > c_int::MAX as usize {
-            // SAFETY: the failure path owns the four allocations.
-            unsafe {
-                OSSL_CRMF_PBMPARAMETER_free(pbm);
-                CRYPTO_free(protection.cast(), FILE.as_ptr(), 98);
-                CRYPTO_free(prot_part_der.cast(), FILE.as_ptr(), 99);
-            }
+            // SAFETY: the failure path owns the parameter object.
+            unsafe { OSSL_CRMF_PBMPARAMETER_free(pbm) };
             return ptr::null_mut();
         }
         // SAFETY: `ASN1_BIT_STRING_new` returns a fresh string or NULL.
-        prot = ASN1_BIT_STRING_new();
+        let prot = ASN1_BIT_STRING_new();
         if prot.is_null() {
-            // SAFETY: the failure path owns the four allocations.
-            unsafe {
-                OSSL_CRMF_PBMPARAMETER_free(pbm);
-                CRYPTO_free(protection.cast(), FILE.as_ptr(), 98);
-                CRYPTO_free(prot_part_der.cast(), FILE.as_ptr(), 99);
-            }
+            // SAFETY: the failure path owns the parameter object.
+            unsafe { OSSL_CRMF_PBMPARAMETER_free(pbm) };
             return ptr::null_mut();
         }
         // SAFETY: `prot` is live.
         unsafe { ossl_asn1_string_set_bits_left(prot, 0) };
         // SAFETY: `prot` is live and the buffer readable for `sig_len`.
-        if unsafe { ASN1_BIT_STRING_set(prot, protection, sig_len as c_int) } == 0 {
+        if unsafe { ASN1_BIT_STRING_set(prot, protection.as_ptr(), sig_len as c_int) } == 0 {
             // SAFETY: `prot` is this call's own object.
             unsafe { ASN1_BIT_STRING_free(prot) };
-            prot = ptr::null_mut();
+            return ptr::null_mut();
         }
-        // SAFETY: the four allocations are NULL or this call's own.
-        unsafe {
-            OSSL_CRMF_PBMPARAMETER_free(pbm);
-            CRYPTO_free(protection.cast(), FILE.as_ptr(), 98);
-            CRYPTO_free(prot_part_der.cast(), FILE.as_ptr(), 99);
-        }
+        // SAFETY: the parameter object is this call's own.
+        unsafe { OSSL_CRMF_PBMPARAMETER_free(pbm) };
         prot
     } else {
         // SAFETY: `ctx` is live.
@@ -436,43 +462,37 @@ unsafe fn pbmac_algor(ctx: *const OsslCmpCtx) -> *mut crate::asn1::x_algor::X509
     // SAFETY: `ASN1_STRING_new` returns a fresh string or NULL.
     let pbm_str = ASN1_STRING_new();
     if pbm.is_null() || pbm_str.is_null() {
-        // SAFETY: `pbm_str` is NULL or this call's own; `pbm_der`/`pbm` likewise.
+        // SAFETY: `pbm_str` is NULL or this call's own; `pbm` likewise.
         unsafe {
             ASN1_STRING_free(pbm_str);
-            CRYPTO_free(pbm_der.cast(), FILE.as_ptr(), 212);
             OSSL_CRMF_PBMPARAMETER_free(pbm);
         }
         return ptr::null_mut();
     }
     // SAFETY: `pbm` is live; the slot is writable.
     let pbm_der_len = unsafe { i2d_OSSL_CRMF_PBMPARAMETER(pbm, &mut pbm_der) };
+    // The encoding is the helper's own block; the handle releases it at the authority's own `:212`
+    // site on every path below.
+    // SAFETY: `pbm_der` is NULL or a live block the helper allocated and no one else owns.
+    let pbm_der = unsafe { OwnedBuf::adopt(pbm_der.cast(), FILE.as_ptr(), 212) };
     if pbm_der_len < 0 {
         // SAFETY: `pbm_str` is this call's own.
-        unsafe {
-            ASN1_STRING_free(pbm_str);
-            CRYPTO_free(pbm_der.cast(), FILE.as_ptr(), 212);
-            OSSL_CRMF_PBMPARAMETER_free(pbm);
-        }
+        unsafe { ASN1_STRING_free(pbm_str) };
         return ptr::null_mut();
     }
     // SAFETY: `pbm_str` is live; `pbm_der` readable for `pbm_der_len`.
-    if unsafe { ASN1_STRING_set(pbm_str, pbm_der.cast(), pbm_der_len) } == 0 {
+    if unsafe { ASN1_STRING_set(pbm_str, pbm_der.as_ptr().cast(), pbm_der_len) } == 0 {
         // SAFETY: `pbm_str` is this call's own.
-        unsafe {
-            ASN1_STRING_free(pbm_str);
-            CRYPTO_free(pbm_der.cast(), FILE.as_ptr(), 212);
-            OSSL_CRMF_PBMPARAMETER_free(pbm);
-        }
+        unsafe { ASN1_STRING_free(pbm_str) };
         return ptr::null_mut();
     }
-    // SAFETY: `pbm_der`/`pbm` are this call's own.
+    // SAFETY: `pbm_str`/`pbm` are this call's own; `pbm_der` releases on drop.
     unsafe {
         let alg =
             ossl_X509_ALGOR_from_nid(NID_id_PasswordBasedMAC, V_ASN1_SEQUENCE, pbm_str.cast());
         if alg.is_null() {
             ASN1_STRING_free(pbm_str);
         }
-        CRYPTO_free(pbm_der.cast(), FILE.as_ptr(), 212);
         OSSL_CRMF_PBMPARAMETER_free(pbm);
         alg
     }
