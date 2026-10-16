@@ -378,6 +378,208 @@ const LINE_ZALLOC_BN_BUFFER: c_int = 2232;
 /// `EVP_PKEY_get_bn_param`'s two frees of that buffer (lines 2248 and 2250).
 const LINE_FREE_BN_BUFFER: c_int = 2248;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `EVP_PKEY` block and of the heap buffers `EVP_PKEY_new`, `EVP_PKEY_free`,
+// `EVP_PKEY_get_bn_param` and `EVP_PKEY_get1_encoded_public_key` manage by hand.
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's destructor body for one of this file's heap records, without the block's own
+/// release, which [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `EVP_PKEY_free` body, without the block release [`OwnedCtx`]'s `Drop`
+    /// performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live record this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned `EVP_PKEY` block.
+///
+/// The block keeps the authority's layout and its exact `CRYPTO_zalloc` size/`file`/`line`, but its
+/// *ownership* is this type: [`Self::from_raw`] reclaims the block the C caller still holds and
+/// `Drop` runs the authority's own destructor body ([`CtxDestroy::destroy_body`]) followed by its
+/// single block release at the authority's own site. A Rust `Box` would hide both the release and
+/// the caller-installed `CRYPTO_set_mem_functions` hook.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Reclaim a block the C caller hands back, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this file allocated that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The record's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
+    /// followed by its single block release, through the same allocator seam and the authority's own
+    /// site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `from_raw` reclaimed and this is its single release;
+        // `Drop` runs once and `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+/// The authority's `EVP_PKEY_free` body, without the block release [`OwnedCtx`]'s `Drop` performs:
+/// the key data, the ex-data block and the lock.
+impl CtxDestroy for EvpPkey {
+    unsafe fn destroy_body(ptr: *mut EvpPkey) {
+        // SAFETY: `ptr` is a live record per the trait contract; every member is set because only a
+        // completed `EVP_PKEY_new` reaches `EVP_PKEY_free`.
+        unsafe {
+            evp_pkey_free_it(ptr);
+            CRYPTO_free_ex_data(
+                CRYPTO_EX_INDEX_EVP_PKEY,
+                ptr.cast(),
+                ptr::addr_of_mut!((*ptr).ex_data),
+            );
+            CRYPTO_THREAD_lock_free((*ptr).lock);
+        }
+    }
+}
+
+/// An owned `EVP_PKEY` block still under construction.
+///
+/// `EVP_PKEY_new` allocates the block and fills its members one at a time; until it is complete its
+/// release is the block alone -- the authority's own `OPENSSL_free(ret)` on each refusal -- so the
+/// full destructor ([`CtxDestroy::destroy_body`]) over members that may not be set must not run.
+/// [`Self::finish`] hands the block to the C caller on success.
+struct RawPkey {
+    ptr: ptr::NonNull<EvpPkey>,
+}
+
+impl RawPkey {
+    /// `CRYPTO_zalloc(sizeof(*ret), FILE, 1491)`, or `None` when it answers NULL.
+    fn new() -> Option<RawPkey> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<EvpPkey>()` bytes, which is exactly `EvpPkey`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<EvpPkey>(), FILE, LINE_ZALLOC_PKEY)
+            .cast::<EvpPkey>();
+        ptr::NonNull::new(raw).map(|ptr| RawPkey { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut EvpPkey {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller.
+    fn finish(self) -> *mut EvpPkey {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for RawPkey {
+    /// The authority's `EVP_PKEY_new` refusal release: the block alone.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; its single
+        // release is the authority's own plain `CRYPTO_free` at the allocation's own site.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, LINE_ZALLOC_PKEY) };
+    }
+}
+
+/// An owned heap buffer allocated through the crate's allocator seam.
+///
+/// [`Self::new`] allocates with `CRYPTO_malloc` and [`Self::new_zeroed`] with `CRYPTO_zalloc`; both
+/// carry the authority's own allocation site, and `Drop` is the buffer's single release at the
+/// authority's own site. `clear` selects the authority's cleansing release (`CRYPTO_clear_free`,
+/// chosen for the retry buffer only once the provider has filled it with key material) versus the
+/// plain `CRYPTO_free`.
+struct OwnedBlock {
+    ptr: ptr::NonNull<u8>,
+    len: usize,
+    clear: bool,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBlock {
+    /// Allocate `len` bytes through `CRYPTO_malloc`, or `None` when it answers NULL. `alloc_line`
+    /// is the authority's allocation site and `line` its release site.
+    fn new(len: usize, file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedBlock> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
+        // bytes.
+        let raw = CRYPTO_malloc(len, file, alloc_line).cast::<u8>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedBlock {
+            ptr,
+            len,
+            clear: false,
+            file,
+            line,
+        })
+    }
+
+    /// Allocate `len` zeroed bytes through `CRYPTO_zalloc`, or `None` when it answers NULL.
+    fn new_zeroed(
+        len: usize,
+        file: *const c_char,
+        alloc_line: c_int,
+        line: c_int,
+    ) -> Option<OwnedBlock> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `len` bytes.
+        let raw = CRYPTO_zalloc(len, file, alloc_line).cast::<u8>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedBlock {
+            ptr,
+            len,
+            clear: false,
+            file,
+            line,
+        })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr.as_ptr()
+    }
+
+    /// Select the authority's cleansing release, for a buffer the provider has filled with key
+    /// material.
+    fn set_clear(&mut self, clear: bool) {
+        self.clear = clear;
+    }
+
+    /// Give up ownership of the block to the C caller's out-pointer.
+    fn into_raw(self) -> *mut u8 {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBlock {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
+        // released before; `self.len` is its allocation length and `clear` selects the authority's
+        // cleanse-then-free. Both accept NULL.
+        unsafe {
+            if self.clear {
+                CRYPTO_clear_free(
+                    self.ptr.as_ptr().cast::<c_void>(),
+                    self.len,
+                    self.file,
+                    self.line,
+                );
+            } else {
+                CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+            }
+        }
+    }
+}
+
 /// `EVP_PKEY *EVP_PKEY_new(void)`.
 ///
 /// Two allocations and an ex-data initialisation, and the failure path is the reason the order is
@@ -391,56 +593,50 @@ const LINE_FREE_BN_BUFFER: c_int = 2248;
 /// whose result is a raw pointer, not because it reads anything of the caller's.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_new() -> *mut EvpPkey {
-    /* `CRYPTO_zalloc` is one of the safe entry points of this crate: it validates its own argument
-     * and answers NULL rather than reading anything of the caller's. */
-    let ret =
-        CRYPTO_zalloc(core::mem::size_of::<EvpPkey>(), FILE, LINE_ZALLOC_PKEY).cast::<EvpPkey>();
-
-    if ret.is_null() {
+    let Some(ret) = RawPkey::new() else {
         return ptr::null_mut();
-    }
+    };
+    let p = ret.as_ptr();
 
-    // SAFETY: `ret` is this call's own allocation.
+    // SAFETY: `p` is this call's own allocation.
     unsafe {
-        (*ret).type_ = EVP_PKEY_NONE;
-        (*ret).save_type = EVP_PKEY_NONE;
-        (*ret).references = AtomicI32::new(1);
+        (*p).type_ = EVP_PKEY_NONE;
+        (*p).save_type = EVP_PKEY_NONE;
+        (*p).references = AtomicI32::new(1);
     }
 
     let lock = CRYPTO_THREAD_lock_new();
     if lock.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::P_LIB_1504) };
-        // SAFETY: `ret` is this call's own allocation, not yet published.
-        unsafe { CRYPTO_free(ret.cast(), FILE, LINE_ZALLOC_PKEY) };
+        // `ret` drops here and releases the block alone, exactly as the authority's refusal does.
         return ptr::null_mut();
     }
-    // SAFETY: `ret` is live.
-    unsafe { (*ret).lock = lock };
+    // SAFETY: `p` is live.
+    unsafe { (*p).lock = lock };
 
     /* The authority sets this immediately before the ex-data block, on the legacy half's behalf:
      * a `d2i` of a key with parameters saves them unless told otherwise. */
-    // SAFETY: `ret` is live.
-    unsafe { (*ret).save_parameters = 1 };
+    // SAFETY: `p` is live.
+    unsafe { (*p).save_parameters = 1 };
 
-    // SAFETY: `ret` is live and `ex_data` is a field of it.
+    // SAFETY: `p` is live and `ex_data` is a field of it.
     if unsafe {
         CRYPTO_new_ex_data(
             CRYPTO_EX_INDEX_EVP_PKEY,
-            ret.cast(),
-            ptr::addr_of_mut!((*ret).ex_data),
+            p.cast(),
+            ptr::addr_of_mut!((*p).ex_data),
         )
     } == 0
     {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::P_LIB_1511) };
-        // SAFETY: `lock` is live and `ret` is this call's own allocation.
+        // SAFETY: `lock` is live and not yet freed.
         unsafe { CRYPTO_THREAD_lock_free(lock) };
-        // SAFETY: `ret` is this call's own allocation, not yet published.
-        unsafe { CRYPTO_free(ret.cast(), FILE, LINE_ZALLOC_PKEY) };
+        // `ret` drops here and releases the block alone, exactly as the authority's refusal does.
         return ptr::null_mut();
     }
-    ret
+    ret.finish()
 }
 
 /// `int EVP_PKEY_up_ref(EVP_PKEY *pkey)`.
@@ -554,22 +750,10 @@ pub unsafe extern "C" fn EVP_PKEY_free(x: *mut EvpPkey) {
         return;
     }
 
-    // SAFETY: `x` is live and this is the last reference.
-    unsafe { evp_pkey_free_it(x) };
-    // SAFETY: `x` is live and `ex_data` is a field of it.
-    unsafe {
-        CRYPTO_free_ex_data(
-            CRYPTO_EX_INDEX_EVP_PKEY,
-            x.cast(),
-            ptr::addr_of_mut!((*x).ex_data),
-        )
-    };
-    // SAFETY: `x` is live and `lock` is the lock `EVP_PKEY_new` created.
-    let lock = unsafe { (*x).lock };
-    // SAFETY: `lock` is live and not yet freed.
-    unsafe { CRYPTO_THREAD_lock_free(lock) };
-    // SAFETY: `x` is this object's own allocation.
-    unsafe { CRYPTO_free(x.cast(), FILE, LINE_ZALLOC_PKEY) };
+    // SAFETY: `x` is a live key this crate allocated and this is its last reference; `from_raw`
+    // reclaims the block and `Drop` runs the authority's own body ([`CtxDestroy::destroy_body`])
+    // followed by the block release, so this is its last use.
+    unsafe { drop(OwnedCtx::<EvpPkey>::from_raw(x, FILE, LINE_ZALLOC_PKEY)) };
 }
 
 /// `static int pkey_set_type(EVP_PKEY *pkey, ENGINE *e, int type, const char *str, int len,
@@ -1087,8 +1271,7 @@ pub unsafe extern "C" fn EVP_PKEY_get_bn_param(
      * cleanup rather than for the read: an unfilled buffer is cleansed on the way out, and cleansing
      * uninitialised bytes would be a read of them. */
     let mut buffer = [0u8; 2048];
-    let mut buf: *mut u8 = ptr::null_mut();
-    let mut buf_sz: usize = 0;
+    let mut buf: Option<OwnedBlock> = None;
 
     if key_name.is_null() || bn.is_null() {
         return 0;
@@ -1108,57 +1291,47 @@ pub unsafe extern "C" fn EVP_PKEY_get_bn_param(
         {
             return 0;
         }
-        buf_sz = params[0].return_size;
-        /* `CRYPTO_zalloc` is a safe entry point of this crate: it validates its own argument and
-         * answers NULL rather than reading anything of the caller's. */
-        buf = CRYPTO_zalloc(buf_sz, FILE, LINE_ZALLOC_BN_BUFFER).cast::<u8>();
-        if buf.is_null() {
+        let buf_sz = params[0].return_size;
+        // The retry buffer, allocated through the crate's allocator seam; `Drop` is its single
+        // release, chosen between the authority's cleansing form and its plain one by `modified`.
+        buf = OwnedBlock::new_zeroed(buf_sz, FILE, LINE_ZALLOC_BN_BUFFER, LINE_FREE_BN_BUFFER);
+        let Some(block) = buf.as_mut() else {
             return 0;
-        }
-        params[0].data = buf.cast::<c_void>();
+        };
+        params[0].data = block.as_ptr().cast::<c_void>();
         params[0].data_size = buf_sz;
 
         // SAFETY: `pkey` is NULL or live and the buffer is now `buf_sz` bytes of `buf`.
         if unsafe { EVP_PKEY_get_params(pkey, params.as_mut_ptr()) } == 0 {
-            // SAFETY: both are this call's own.
-            return unsafe { bn_param_cleanup(buf, buf_sz, &mut params, &mut buffer, 0) };
+            return bn_param_cleanup(buf.take(), &mut params, &mut buffer, 0);
         }
     }
     /* Fail if the param was not found. */
     // SAFETY: `params` is a live array.
     if unsafe { crate::params::OSSL_PARAM_modified(params.as_ptr()) } == 0 {
-        // SAFETY: both are this call's own.
-        return unsafe { bn_param_cleanup(buf, buf_sz, &mut params, &mut buffer, 0) };
+        return bn_param_cleanup(buf.take(), &mut params, &mut buffer, 0);
     }
     // SAFETY: `params` holds one modified BN parameter and `bn` is a live out-parameter.
     let ret = unsafe { crate::params::OSSL_PARAM_get_BN(params.as_ptr(), bn) };
-    // SAFETY: both are this call's own.
-    unsafe { bn_param_cleanup(buf, buf_sz, &mut params, &mut buffer, ret) }
+    bn_param_cleanup(buf.take(), &mut params, &mut buffer, ret)
 }
 
 /// The `err:` label of `EVP_PKEY_get_bn_param`, which is reached with `ret` still zero.
 ///
-/// # Safety
-/// `buf` must be NULL or `buf_sz` bytes allocated by this call; `params` and `buffer` must be the
-/// live locals of the caller.
-unsafe fn bn_param_cleanup(
-    buf: *mut u8,
-    buf_sz: usize,
+/// The retry buffer is owned here, so `Drop` performs its single release: the authority's own
+/// `CRYPTO_clear_free` when the provider filled it (the buffer then holds key material) and its
+/// plain `CRYPTO_free` otherwise. With no heap buffer, a modified run cleanses the stack buffer in
+/// place, exactly as the authority does.
+fn bn_param_cleanup(
+    mut buf: Option<OwnedBlock>,
     params: &mut [crate::params::OsslParam; 2],
     buffer: &mut [u8; 2048],
     ret: c_int,
 ) -> c_int {
     // SAFETY: `params` is a live array of two.
     let modified = unsafe { crate::params::OSSL_PARAM_modified(params.as_ptr()) } != 0;
-    if !buf.is_null() {
-        if modified {
-            // SAFETY: `buf` is `buf_sz` bytes this call allocated and `modified` says the provider
-            // wrote into it, so it may hold key material.
-            unsafe { CRYPTO_clear_free(buf.cast(), buf_sz, FILE, LINE_FREE_BN_BUFFER) };
-        } else {
-            // SAFETY: `buf` is `buf_sz` bytes this call allocated and nothing was written.
-            unsafe { CRYPTO_free(buf.cast(), FILE, LINE_FREE_BN_BUFFER) };
-        }
+    if let Some(block) = buf.as_mut() {
+        block.set_clear(modified);
     } else if modified {
         // SAFETY: `buffer` is a live 2048-byte buffer and the provider wrote
         // `params[0].data_size` bytes into it.
@@ -3596,10 +3769,14 @@ pub unsafe extern "C" fn EVP_PKEY_get1_encoded_public_key(
         unsafe { *ppub = ptr::null_mut() };
         // This allocates `return_size` bytes, which is the authority's `OPENSSL_malloc`; the crate's
         // `CRYPTO_malloc` carries the authority's coordinates and its own failure raise.
-        let buf = CRYPTO_malloc(return_size, FILE, LINE_MALLOC_ENCODED_PUBKEY).cast::<u8>();
-        if buf.is_null() {
+        let Some(buf) = OwnedBlock::new(
+            return_size,
+            FILE,
+            LINE_MALLOC_ENCODED_PUBKEY,
+            LINE_FREE_ENCODED_PUBKEY,
+        ) else {
             return 0;
-        }
+        };
 
         // SAFETY: `pkey` is live, `buf` is `return_size` writable bytes and the name is
         // NUL-terminated.
@@ -3607,18 +3784,17 @@ pub unsafe extern "C" fn EVP_PKEY_get1_encoded_public_key(
             EVP_PKEY_get_octet_string_param(
                 pkey,
                 OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY,
-                buf,
+                buf.as_ptr(),
                 return_size,
                 ptr::null_mut(),
             )
         } == 0
         {
-            // SAFETY: `buf` is this call's own block.
-            unsafe { CRYPTO_free(buf.cast::<c_void>(), FILE, LINE_FREE_ENCODED_PUBKEY) };
+            // `buf` drops here: the authority's own plain release at its own site.
             return 0;
         }
         // SAFETY: `ppub` is writable.
-        unsafe { *ppub = buf };
+        unsafe { *ppub = buf.into_raw() };
         return return_size;
     }
 
