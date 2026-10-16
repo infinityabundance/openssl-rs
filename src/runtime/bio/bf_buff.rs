@@ -78,7 +78,11 @@ pub(crate) struct BioBufferCtx {
 /// one destructor serves both filters. The two buffers stay plain `#[repr(C)]` members the
 /// authority owns and resizes by hand in `buffer_ctrl`; only the context block's ownership moves
 /// to the handle.
-impl CtxDestroy for BioBufferCtx {
+// SAFETY: (a) `destroy_body` is the authority's `buffer_free` member body, releasing exactly this
+// context's two buffers once (each `OwnedBlock::take` accepts the unset NULL) and never the
+// enclosing block, which `OwnedCtx` releases; (b) `BioBufferCtx` is a `#[repr(C)]` record of raw
+// pointers and integers, so an all-zero block is a valid `BioBufferCtx` the body is sound on.
+unsafe impl CtxDestroy for BioBufferCtx {
     unsafe fn destroy_body(ptr: *mut BioBufferCtx) {
         // SAFETY: `ptr` is a live context per the trait contract; both members are NULL or owned
         // seam blocks whose single release is the block handle's `Drop`.

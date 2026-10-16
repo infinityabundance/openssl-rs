@@ -132,7 +132,12 @@ struct DhPkeyCtx {
 /// authority's own site, so this body is the first two members alone -- kept as the authority's own
 /// `OPENSSL_free`/`ASN1_OBJECT_free` calls so a caller-installed `CRYPTO_set_mem_functions` hook
 /// observes the releases at the same sites.
-impl CtxDestroy for DhPkeyCtx {
+// SAFETY: (a) `destroy_body` is the authority's `pkey_dh_cleanup` member body, releasing exactly
+// this context's own object, key-gen scratch and shared-info buffer once (each releaser accepts the
+// unset NULL) and never the enclosing block, which `OwnedCtx` releases; (b) `DhPkeyCtx` is a
+// `#[repr(C)]` record of raw pointers, integers, a small integer array and `usize`s, so an all-zero
+// block is a valid `DhPkeyCtx` the body is sound on.
+unsafe impl CtxDestroy for DhPkeyCtx {
     const FILE: *const c_char = FILE;
     const LINE_ALLOC: c_int = LINE_ZALLOC_DCTX;
     const LINE_FREE: c_int = LINE_FREE_DCTX;

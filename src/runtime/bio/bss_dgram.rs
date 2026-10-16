@@ -268,7 +268,11 @@ struct BioDgramData {
 /// The authority's `dgram_free` body for the context block. `dgram_free` clears the socket state
 /// through `dgram_clear` and then releases the block; the block has no destructor body of its own,
 /// so the whole of its ownership is [`OwnedCtx`]'s `Drop`.
-impl CtxDestroy for BioDgramData {
+// SAFETY: (a) `dgram_free` releases no member of the context block, so `destroy_body` is the empty
+// authority body and never the enclosing block, which `OwnedCtx` releases; (b) `BioDgramData` is a
+// `#[repr(C)]` record of nested plain address/time records and integers, so an all-zero block is a
+// valid `BioDgramData` the empty body is trivially sound on.
+unsafe impl CtxDestroy for BioDgramData {
     unsafe fn destroy_body(_ptr: *mut BioDgramData) {}
 }
 

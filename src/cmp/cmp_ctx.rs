@@ -478,7 +478,12 @@ unsafe fn cmp_ctx_set_md(ctx: *mut OsslCmpCtx, pmd: *mut *mut EvpMd, nid: c_int)
 /// `OSSL_CMP_CTX_free`'s body (`cmp_ctx.c:185-245`), without the block release [`OwnedCtx`]'s
 /// `Drop` performs: every member the authority releases there, in the authority's own order --
 /// including the two `secret_value` cleansing arms, which are kept as the authority writes them.
-impl CtxDestroy for OsslCmpCtx {
+// SAFETY: (a) `destroy_body` is the authority's `OSSL_CMP_CTX_free` member body, releasing exactly
+// this context's own strings, keys, stacks and objects once (each releaser accepts the unset NULL)
+// and never the enclosing block, which `OwnedCtx` releases; (b) `OsslCmpCtx` is a `#[repr(C)]`
+// record of raw pointers, integers, `Option<fn>` and a pointer-typed `CbPtr`, so an all-zero block
+// is a valid `OsslCmpCtx` the body is sound on.
+unsafe impl CtxDestroy for OsslCmpCtx {
     const FILE: *const c_char = FILE_C;
     const LINE_ALLOC: c_int = 102;
     const LINE_FREE: c_int = 244;

@@ -181,7 +181,12 @@ struct RsaPkeyCtx {
 /// block release at the authority's own site, so this body is the first three members alone -- kept
 /// as the authority's own `BN_free`/`OPENSSL_free` calls so a caller-installed
 /// `CRYPTO_set_mem_functions` hook observes the releases at the same sites.
-impl CtxDestroy for RsaPkeyCtx {
+// SAFETY: (a) `destroy_body` is the authority's `pkey_rsa_cleanup` member body, releasing exactly
+// this context's own exponent, scratch and OAEP label once (each releaser accepts the unset NULL)
+// and never the enclosing block, which `OwnedCtx` releases; (b) `RsaPkeyCtx` is a `#[repr(C)]`
+// record of raw pointers, integers, a small integer array and `usize`s, so an all-zero block is a
+// valid `RsaPkeyCtx` the body is sound on.
+unsafe impl CtxDestroy for RsaPkeyCtx {
     const FILE: *const c_char = FILE;
     const LINE_ALLOC: c_int = LINE_ZALLOC_RCTX;
     const LINE_FREE: c_int = LINE_FREE_RCTX;
