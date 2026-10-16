@@ -19,9 +19,19 @@
 //! release. The `#[repr(C)]` layouts, the stable addresses the C ABI hands out, the exported
 //! symbols and their return/error semantics are unchanged.
 //!
+//! ## Two states, so a destructor cannot run too early
+//!
+//! [`OwnedCtx`]'s `Drop` runs `destroy_body`, which reads members the block must already hold. A
+//! safe constructor that hands out *uninitialised* storage as an [`OwnedCtx`] would let a safe
+//! caller drop it and make `destroy_body` read uninitialised bytes -- UB through a safe interface.
+//! So allocation and validity are split: [`RawCtx`] owns storage that is **not yet** a valid `T`
+//! and its `Drop` releases the block alone, and [`RawCtx::assume_init`] is the one validated
+//! transition to [`OwnedCtx`], whose `Drop` may run `destroy_body`.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_void};
+use core::mem::MaybeUninit;
 use core::ptr::{self, NonNull};
 
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
@@ -61,21 +71,16 @@ pub(crate) struct OwnedCtx<T: CtxDestroy> {
 impl<T: CtxDestroy> OwnedCtx<T> {
     /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None`
     /// when it answers NULL -- the authority's refused `CRYPTO_zalloc`.
+    ///
+    /// A zeroed block is the authority's own constructed state for every context this constructor
+    /// is used for (each is one the authority builds with `OPENSSL_zalloc`), so `destroy_body` is
+    /// written against it and the block may be validated immediately.
     pub(crate) fn zalloc() -> Option<OwnedCtx<T>> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, T::LINE_ALLOC).cast::<T>();
-        NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
-    }
-
-    /// Allocate a fresh, **uninitialised** block of `T`'s size through the installed allocator, or
-    /// `None` when it answers NULL -- the authority's `CRYPTO_malloc` for the blocks it does not
-    /// zero (`ossl_core_bio.c`'s handle and `linebuffer.c`'s context).
-    pub(crate) fn malloc() -> Option<OwnedCtx<T>> {
-        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
-        // `size_of::<T>()` bytes.
-        let raw = CRYPTO_malloc(core::mem::size_of::<T>(), T::FILE, T::LINE_ALLOC).cast::<T>();
-        NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
+        // SAFETY: for every context this constructor is used for, the all-zero block is the
+        // authority's own constructed `T` (the authority builds it with `OPENSSL_zalloc`), and
+        // `destroy_body` is written to release exactly that state, so the storage holds a valid `T`
+        // whose members satisfy the destructor's invariants.
+        Some(unsafe { RawCtx::<T>::zalloc()?.assume_init() })
     }
 
     /// The stable address the C ABI hands out and takes back.
@@ -110,6 +115,79 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
             T::destroy_body(self.ptr.as_ptr());
             CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, T::LINE_FREE);
         }
+    }
+}
+
+/// Allocated storage for a context that is **not yet** a valid `T`.
+///
+/// [`OwnedCtx`]'s `Drop` runs `T::destroy_body`, which reads the members the destructor needs.
+/// That is only sound once the storage holds a fully initialised `T`, so a constructor that hands
+/// out raw storage must not be an [`OwnedCtx`]. [`RawCtx`] is the type for that window: it owns the
+/// block, never forms a reference to `T` (it holds `NonNull<MaybeUninit<T>>`), and its `Drop`
+/// releases the **block alone** -- it never runs `T::destroy_body`.
+///
+/// The window closes with [`RawCtx::assume_init`], the one validated transition to [`OwnedCtx`].
+pub(crate) struct RawCtx<T: CtxDestroy> {
+    ptr: NonNull<MaybeUninit<T>>,
+}
+
+impl<T: CtxDestroy> RawCtx<T> {
+    /// Allocate a fresh, **uninitialised** block of `T`'s size through the installed allocator, or
+    /// `None` when it answers NULL -- the authority's `CRYPTO_malloc` for the blocks it does not
+    /// zero (`ossl_core_bio.c`'s handle and `linebuffer.c`'s context).
+    pub(crate) fn malloc() -> Option<RawCtx<T>> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_malloc(core::mem::size_of::<T>(), T::FILE, T::LINE_ALLOC)
+            .cast::<MaybeUninit<T>>();
+        NonNull::new(raw).map(|ptr| RawCtx { ptr })
+    }
+
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
+    /// it answers NULL -- the authority's `CRYPTO_zalloc`. The bytes are zero but the block is a
+    /// `RawCtx`: zeroing is not, by itself, a valid `T` for every context, so the caller still
+    /// validates it with [`RawCtx::assume_init`].
+    pub(crate) fn zalloc() -> Option<RawCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, T::LINE_ALLOC)
+            .cast::<MaybeUninit<T>>();
+        NonNull::new(raw).map(|ptr| RawCtx { ptr })
+    }
+
+    /// The stable address the caller initialises `T`'s fields through.
+    pub(crate) fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr().cast::<T>()
+    }
+
+    /// Give up ownership of the uninitialised block to the C caller's context pointer.
+    pub(crate) fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr().cast::<T>();
+        core::mem::forget(self);
+        p
+    }
+
+    /// The validated transition: the storage now holds a fully initialised, valid `T`.
+    ///
+    /// # Safety
+    /// The storage holds a valid, fully initialised `T` -- every field [`CtxDestroy::destroy_body`]
+    /// reads has been written, so the block is a valid `T` and its members satisfy the destructor's
+    /// invariants -- and no other owner will release it: the returned handle's `Drop` is the block's
+    /// single release.
+    pub(crate) unsafe fn assume_init(self) -> OwnedCtx<T> {
+        let ptr = self.ptr.cast::<T>();
+        core::mem::forget(self);
+        OwnedCtx { ptr }
+    }
+}
+
+impl<T: CtxDestroy> Drop for RawCtx<T> {
+    /// Releases the **block alone**: `T` is not (yet) a valid value, so its destructor body must not
+    /// run. Same allocator, size and `T::FILE`/`T::LINE_FREE` as [`OwnedCtx`]'s block release.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle allocated and has not handed out; this is its
+        // single release, and the authority's own bare `CRYPTO_free` is the whole release.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, T::LINE_FREE) };
     }
 }
 
