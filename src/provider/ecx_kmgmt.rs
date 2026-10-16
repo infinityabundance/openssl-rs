@@ -41,7 +41,7 @@
 
 #![allow(unreachable_pub)]
 
-use core::ffi::{c_char, c_int, c_void, CStr};
+use core::ffi::{c_char, c_int, c_uchar, c_void, CStr};
 use core::ptr;
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
@@ -155,6 +155,188 @@ fn is_running() -> c_int {
     1
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the generator block and the property/secret buffers
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `*_free` body for one `#[repr(C)]` object, without the block release
+/// [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// `__FILE__` for this unit's `CRYPTO_*` calls.
+    const FILE: *const c_char;
+    /// `__LINE__` for the block's allocation.
+    const LINE_ALLOC: c_int;
+    /// `__LINE__` for the block's release.
+    const LINE_FREE: c_int;
+
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live object this unit allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned `#[repr(C)]` object block.
+///
+/// The block keeps the authority's layout and its stable address (the exported ABI hands it out and
+/// takes it back), but its *ownership* is this type: it is allocated through the crate's allocator
+/// seam and `Drop` runs the authority's own destructor body before the block's single release. The
+/// block stays a `CRYPTO_zalloc` at `size_of::<T>()` rather than a Rust `Box`, so a
+/// caller-installed `CRYPTO_set_mem_functions` hook observes the allocation, its size and its
+/// release exactly as it observes the authority's.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
+    /// it answers NULL (the authority's refused `CRYPTO_zalloc`).
+    fn zalloc() -> Option<OwnedCtx<T>> {
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, T::LINE_ALLOC).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// The stable address of the block, for the constructor's own field writes.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's pointer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`]) followed by the
+    /// block's single release, through the same allocator seam the block was allocated on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `zalloc` allocated (or `from_raw` reclaimed) and this is
+        // its single release; `Drop` runs once, and `destroy_body` is the authority's own body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, T::LINE_FREE);
+        }
+    }
+}
+
+/// An owned property/secret buffer allocated through the crate's allocator seam.
+///
+/// The block stays the authority's own allocation -- a `CRYPTO_strdup` property copy or a member
+/// buffer the crate allocated. Only its *ownership* is this type: a replace site adopts the member's
+/// own raw pointer and [`Self::into_raw`] hands the replacement back, so `Drop` is its single
+/// release at the authority's own `file`/`line` (plain or cleansing, matching the `CRYPTO_*` call
+/// the authority uses at that site).
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+/// How the authority releases a property/secret buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)` (the property query).
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)` (the private key).
+    Cleansed {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_strdup(str, file, line)`, or `None` when the allocator answers NULL.
+    ///
+    /// # Safety
+    /// `str_` is NULL or NUL-terminated.
+    unsafe fn new_strdup(
+        str_: *const c_char,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBuf> {
+        // SAFETY: `str_` is NULL or NUL-terminated per the contract.
+        let raw = unsafe { CRYPTO_strdup(str_, file, line) }.cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// Take up the plain block a member field still holds, for release by `Drop` at the authority's
+    /// own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// Take up the cleansing block a member field still holds, for release by `Drop` at the
+    /// authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated, readable for `num` bytes, that no one
+    /// else owns.
+    unsafe fn adopt_cleansed(
+        ptr: *mut c_uchar,
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::Cleansed { num, file, line },
+        })
+    }
+
+    /// Give up ownership of the block to the member field it is stored in.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Cleansed { num, file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `CRYPTO_clear_free` cleanses then releases it and accepts NULL.
+                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+            }
+        }
+    }
+}
+
 /// `struct ecx_gen_ctx` — `ecx_kmgmt.c:84-91`.
 #[repr(C)]
 struct EcxGenCtx {
@@ -170,6 +352,27 @@ struct EcxGenCtx {
     dhkem_ikm: *mut u8,
     /// `size_t dhkem_ikmlen`.
     dhkem_ikmlen: usize,
+}
+
+impl CtxDestroy for EcxGenCtx {
+    const FILE: *const c_char = FILE_ECX_KMGMT;
+    const LINE_ALLOC: c_int = 998;
+    const LINE_FREE: c_int = 1413;
+
+    /// `ecx_gen_cleanup`'s body, without the block release: the secret DHKEM IKM and the property
+    /// query.
+    unsafe fn destroy_body(ptr: *mut EcxGenCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe {
+            CRYPTO_clear_free(
+                (*ptr).dhkem_ikm.cast(),
+                (*ptr).dhkem_ikmlen,
+                FILE_ECX_KMGMT,
+                1411,
+            );
+            CRYPTO_free((*ptr).propq.cast(), FILE_ECX_KMGMT, 1412);
+        }
+    }
 }
 
 /// `static ossl_inline int ecx_key_type_is_ed(ECX_KEY_TYPE type)` — `ecx_kmgmt.c:104-107`.
@@ -893,13 +1096,14 @@ unsafe extern "C" fn ed448_gettable_params(_provctx: *mut c_void) -> *const Ossl
 unsafe fn set_property_query(ecxkey: *mut EcxKey, propq: *const c_char) -> c_int {
     // SAFETY: `ecxkey` is live and its own `propq` is released and replaced here.
     unsafe {
-        CRYPTO_free((*ecxkey).propq.cast(), FILE_ECX_KMGMT, 848);
+        drop(OwnedBuf::adopt((*ecxkey).propq.cast(), FILE_ECX_KMGMT, 848));
         (*ecxkey).propq = ptr::null_mut();
         if !propq.is_null() {
-            (*ecxkey).propq = CRYPTO_strdup(propq, FILE_ECX_KMGMT, 851);
-            if (*ecxkey).propq.is_null() {
+            // SAFETY: `propq` is NUL-terminated per the contract.
+            let Some(buf) = OwnedBuf::new_strdup(propq, FILE_ECX_KMGMT, 851) else {
                 return 0;
-            }
+            };
+            (*ecxkey).propq = buf.into_raw().cast();
         }
     }
     1
@@ -970,12 +1174,13 @@ unsafe extern "C" fn ecx_set_params(key: *mut c_void, params: *const OsslParam) 
             {
                 return 0;
             }
-            CRYPTO_clear_free(
+            // Relocate the secret's cleansing release into the seam's `Drop`.
+            drop(OwnedBuf::adopt_cleansed(
                 (*ecxkey).privkey.cast(),
                 (*ecxkey).keylen,
                 FILE_ECX_KMGMT,
                 930,
-            );
+            ));
             (*ecxkey).privkey = ptr::null_mut();
             (*ecxkey).haspubkey = 1;
         }
@@ -1066,25 +1271,25 @@ unsafe fn ecx_gen_init(
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let gctx =
-        CRYPTO_zalloc(core::mem::size_of::<EcxGenCtx>(), FILE_ECX_KMGMT, 998).cast::<EcxGenCtx>();
-    if gctx.is_null() {
+    let Some(gctx) = OwnedCtx::<EcxGenCtx>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let gctx_ptr = gctx.as_ptr();
 
-    // SAFETY: `gctx` is this call's own allocation; `provctx` is the caller's.
+    // SAFETY: `gctx_ptr` is this call's own allocation; `provctx` is the caller's.
     unsafe {
-        (*gctx).libctx = prov_libctx_of(provctx);
-        (*gctx).type_ = type_;
-        (*gctx).selection = selection;
+        (*gctx_ptr).libctx = prov_libctx_of(provctx);
+        (*gctx_ptr).type_ = type_;
+        (*gctx_ptr).selection = selection;
     }
-    // SAFETY: `gctx` is non-NULL; `params` is the caller's array.
-    if unsafe { ecx_gen_set_params(gctx.cast(), params) } == 0 {
-        // SAFETY: `gctx` is this call's own allocation, not yet published.
-        unsafe { ecx_gen_cleanup(gctx.cast()) };
+    // SAFETY: `gctx_ptr` is non-NULL; `params` is the caller's array.
+    if unsafe { ecx_gen_set_params(gctx_ptr.cast(), params) } == 0 {
+        // SAFETY: `gctx` is this call's own allocation, not yet published; `Drop` is its single
+        // release.
+        drop(gctx);
         return ptr::null_mut();
     }
-    gctx.cast()
+    gctx.into_raw().cast()
 }
 
 /// `static void *x25519_gen_init(void *provctx, int selection, const OSSL_PARAM params[])` —
@@ -1255,15 +1460,23 @@ unsafe extern "C" fn ecx_gen_set_params(genctx: *mut c_void, params: *const Ossl
             if (*p.kdfpropq).data_type != OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            CRYPTO_free((*gctx).propq.cast(), FILE_ECX_KMGMT, 1152);
-            (*gctx).propq = CRYPTO_strdup((*p.kdfpropq).data.cast(), FILE_ECX_KMGMT, 1153);
-            if (*gctx).propq.is_null() {
+            drop(OwnedBuf::adopt((*gctx).propq.cast(), FILE_ECX_KMGMT, 1152));
+            (*gctx).propq = ptr::null_mut();
+            // SAFETY: `p.kdfpropq`'s UTF8 value is NUL-terminated.
+            let Some(buf) = OwnedBuf::new_strdup((*p.kdfpropq).data.cast(), FILE_ECX_KMGMT, 1153)
+            else {
                 return 0;
-            }
+            };
+            (*gctx).propq = buf.into_raw().cast();
         }
 
         if !p.ikm.is_null() && (*p.ikm).data_size != 0 && !(*p.ikm).data.is_null() {
-            CRYPTO_free((*gctx).dhkem_ikm.cast(), FILE_ECX_KMGMT, 1160);
+            // Release the member's previous block, then let the helper write the replacement.
+            drop(OwnedBuf::adopt(
+                (*gctx).dhkem_ikm.cast(),
+                FILE_ECX_KMGMT,
+                1160,
+            ));
             (*gctx).dhkem_ikm = ptr::null_mut();
             let slot: *mut *mut u8 = &raw mut (*gctx).dhkem_ikm;
             if OSSL_PARAM_get_octet_string(
@@ -1472,23 +1685,11 @@ unsafe extern "C" fn ed448_gen(
 /// # Safety
 /// The keymgmt `gen_cleanup` dispatch contract.
 unsafe extern "C" fn ecx_gen_cleanup(genctx: *mut c_void) {
-    let gctx = genctx.cast::<EcxGenCtx>();
-
-    if gctx.is_null() {
-        return;
-    }
-
-    // SAFETY: `gctx` is the caller's context, allocated by `ecx_gen_init`.
-    unsafe {
-        CRYPTO_clear_free(
-            (*gctx).dhkem_ikm.cast(),
-            (*gctx).dhkem_ikmlen,
-            FILE_ECX_KMGMT,
-            1411,
-        );
-        CRYPTO_free((*gctx).propq.cast(), FILE_ECX_KMGMT, 1412);
-        CRYPTO_free(gctx.cast(), FILE_ECX_KMGMT, 1413);
-    }
+    // `genctx` is NULL or the block `ecx_gen_init` gave up through `into_raw`; `Drop` runs the
+    // authority's own destructor body and the block's single release.
+    // SAFETY: `genctx` is NULL or a live block a previous `into_raw` gave up and `Drop` has not
+    // released.
+    drop(unsafe { OwnedCtx::<EcxGenCtx>::from_raw(genctx.cast::<EcxGenCtx>()) });
 }
 
 /// `void *ecx_load(const void *reference, size_t reference_sz)` — `ecx_kmgmt.c:1416-1428`. The
