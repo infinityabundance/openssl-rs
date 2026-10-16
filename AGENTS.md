@@ -15,6 +15,16 @@ Compatibility is preserved, but compatibility is never an excuse to reproduce a
 known-unsafe operation: preserve OpenSSL behaviour where required, and **record**
 any deliberate safety improvement that deviates from it.
 
+### How to read this file
+
+- **§0–§7 are the always-enforced conversion contract** — apply them to every
+  batch.
+- **§8–§20 are specialized procedures**, invoked when a change touches the
+  relevant concern (a reusable unsafe abstraction, a security-sensitive
+  algorithm, protocol handling, a promotion, research instrumentation). Do not
+  treat every technique below as a requirement for every small edit — that
+  recreates the verification bottleneck this campaign exists to escape.
+
 ---
 
 ## 0. The standard to hold (good ≠ exceptional)
@@ -228,8 +238,8 @@ abstraction (owner types, adoption ctors, `CtxDestroy`, freefunc tables):
   obligation on *implementers*. A wrong `destroy_body` (releasing the enclosing
   allocation, or freeing a member twice) invalidates every generic owner. State
   the destructor contract (frees its owned members exactly once, handles the
-declared initialisation state, never the enclosing block) and, where feasible,
-  make the trait`unsafe`.
+  declared initialisation state, never the enclosing block) and, where feasible,
+  make the trait `unsafe`.
 
 ## 10. Aliasing and architecture layering
 
@@ -377,11 +387,23 @@ deterministic replay:
 
 The experiment that matters runs **across** a conversion: capture a subsystem's
 behavioural residuals → apply the ownership reconstruction → replay the *same*
-corpus against the new candidate and the authority → let FRF prioritise new
-structural differences and propose discriminating inputs → promote only
-replay-confirmed findings to FRF, each with its exact source identities and
-disposition → let Gemel preserve the history of discovered/fixed/reopened/
-unresolved divergences.
+corpus against the new candidate and the authority → **FRF-Fuzz's exploration /
+DSFB machinery** prioritises new structural differences and proposes
+discriminating inputs → promote only replay-confirmed findings to **FRF**, which
+**independently adjudicates** each promotion, carrying its exact source
+identities and disposition → let Gemel preserve the history of
+discovered/fixed/reopened/unresolved divergences. Keep hypothesis generation
+(FRF-Fuzz) separate from verification (FRF); that separation is the framework's
+principal strength.
+
+**Executable adapters.** FRF-Fuzz's authority interface expects an executable
+that speaks its fixture protocol. The pinned OpenSSL executable and the exact
+converted candidate therefore each need a **compatible case-harness adapter**
+that normalises the same observables (allocator events, return values, error
+codes, transcript bytes), preserves allocator and error semantics, and records
+the exact candidate build identity (commit + binary hash). Without those
+adapters §20 would describe the intended experiment but not how the existing
+FRF-Fuzz implementation executes it.
 
 - Keep the fast compare-guided exploration and the ASan-confirmation builds
   **separate** until the documented ASan/trace-compare instrumentation
