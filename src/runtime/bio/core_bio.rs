@@ -48,7 +48,7 @@ use core::sync::atomic::{AtomicI32, Ordering};
 use crate::runtime::bio::bss_file::BIO_new_file;
 use crate::runtime::bio::bss_mem::BIO_new_mem_buf;
 use crate::runtime::bio::iolib::{BIO_ctrl, BIO_gets, BIO_puts, BIO_read_ex, BIO_write_ex};
-use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::bio::{BIO_free, BIO_up_ref, Bio};
 
 /// The authority's translation unit, for the allocation-tracking `file` argument.
@@ -114,9 +114,9 @@ impl CtxDestroy for OsslCoreBio {
 /// None: the answer is a new handle or NULL.
 #[allow(dead_code)] // unreachable until 6.8b-i publishes the core dispatch table
 unsafe fn core_bio_new() -> *mut OsslCoreBio {
-    // SAFETY: `OwnedCtx::malloc` answers NULL or a fresh, uninitialised block of exactly this
-    // type; the block is this call's to initialise.
-    let Some(cb) = OwnedCtx::<OsslCoreBio>::malloc() else {
+    // SAFETY: `RawCtx::malloc` answers NULL or a fresh, uninitialised block of exactly this type;
+    // the storage is not yet a valid `OsslCoreBio`, so it is a `RawCtx`.
+    let Some(cb) = RawCtx::<OsslCoreBio>::malloc() else {
         return ptr::null_mut();
     };
     let p = cb.as_ptr();
@@ -126,6 +126,9 @@ unsafe fn core_bio_new() -> *mut OsslCoreBio {
     // SAFETY: `p` is a fresh block this handle owns, so the field write is to
     // uninitialised-owned storage.
     unsafe { (*p).ref_cnt = AtomicI32::new(1) };
+    // The handle escapes with `bio` still uninitialised; it becomes a valid `OsslCoreBio` when a
+    // constructor sets `bio`, and is then reclaimed at the C ABI through `OwnedCtx::from_raw`.
+    // `destroy_body` is empty, so the destructor never reads the uninitialised field.
     cb.into_raw()
 }
 
