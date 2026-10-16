@@ -67,8 +67,10 @@ Local gate for every batch (court container, 8 GB cap):
 | 42 | stage/p25/tail8 | conf/modparse, thread_arch, decode_epki2pki, params/dup, ec/kmeth, ffc/params | 22 hand-written release sites → 0 |
 | 43 | stage/p25/tail9 | prov_seed, ecx_key, async_posix, provider/conf, t_x509, asn1_gen | Raw*→OwnedCtx; asn1_gen 4→1 |
 | 44 | stage/p25/tail10 | property/strings, slh_dsa/dsa, ml_dsa/sign, bn/blinding, bn/rand, evp/e_aria | 7 routine-body release sites → 0 |
+| -- | stage/p25/ctor-soundness | ssl/ssl_lib.rs | **soundness**: `RawCtx`/`assume_init` staged init; `CtxDestroy` unsafe trait |
+| -- | stage/p25/zerovalid | runtime/bio/owned.rs + 26 implementers | **soundness**: shared `CtxDestroy` unsafe trait (zero-validity + destructor contract) |
 
-Converted files (union of stage/p25/* files): **~200 files** across 42 conversion batches; **1930+ allocation sites converted, ~490 remaining** of the 2420 baseline (frozen-atlas lower bound). OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
+Converted files (union of stage/p25/* files): **~218 files** across **44 conversion batches** plus the soundness/P0/doc repairs; **1982 of 2420 allocation sites** converted, **438 remaining** (frozen-atlas lower bound). OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
 
@@ -106,14 +108,19 @@ then the member-buffer unit.
 
 Not one percentage; report each axis honestly.
 
-1. **Ownership reconstruction** — **36 conversion batches** across ~165 files
-   (plus the adoption-soundness and P0-abstraction repairs); the reusable
-   adoption-pattern set (OwnedBuf / OwnedCtx+`CtxDestroy` / partial-construction
-   `Raw*` owners) is now sound (adoption ctors are `unsafe fn`).
+1. **Ownership reconstruction** — **44 conversion batches** across ~218 files
+   (plus the adoption-soundness, P0-abstraction, and constructor-soundness repairs);
+   the reusable adoption-pattern set (OwnedBuf / OwnedCtx+`CtxDestroy` /
+   partial-construction `Raw*` / staged `RawCtx`+`assume_init`) is now sound.
 2. **Safe-interior coverage** — *not yet comprehensively measured*; the sparsest
    structural conversions so far are sparse_array and the X.509 policy tree.
-3. **Discharged safety obligations** — local gate green per batch; full
-   `SAFETY_DISCHARGED` enumeration awaits the seal-point regeneration.
+3. **Discharged safety obligations** — local gate green per batch; three
+   reusable-abstraction soundness fixes landed (adoption ctors are `unsafe fn`;
+   `RawCtx`/`assume_init` staged init in `bio::owned` and `ssl_lib`; `CtxDestroy`
+   is now an `unsafe trait` encoding the zero-validity + destructor contract for
+   the shared seam). Counted separately from sites converted — a converted site
+   is not a discharged obligation. Full `SAFETY_DISCHARGED` enumeration still
+   awaits the seal-point regeneration.
 4. **Cryptographic assurance** — bounded; no new vectors run in this campaign
    (WycHEproof/ACVP/constant-time remain at their Phase-25 evidence state).
 5. **Safe-compatible consumers** — 0 new families graduated (per AGENTS.md §7 a
