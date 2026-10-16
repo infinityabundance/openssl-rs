@@ -185,10 +185,13 @@ are **references for technique only**.
   established dependency closure is `SAFETY_DISCHARGED`**, unresolved
   dependencies are accounted for, and compatibility is confirmed against the
   **exact converted implementation**. L4 build/link and L7 functional evidence
-  remain separate (an L4 pass is not an L7 pass). No family inherits safety
-  graduation solely from a shared mechanism's successful conversion: a consumer
-  like curl depends on many mechanisms, and discharging one does not make the
-  whole consumer safe.
+  remain separate (an L4 pass is not an L7 pass). An unresolved or unknown
+  safety-relevant dependency **blocks** `SAFE_COMPATIBLE` graduation until its
+  applicability is excluded with evidence or its safety obligations are
+  discharged: recording an unknown is necessary, but recording it does not
+  establish safety. No family inherits safety graduation solely from a shared
+  mechanism's successful conversion: a consumer like curl depends on many
+  mechanisms, and discharging one does not make the whole consumer safe.
 
 An unproven raw-pointer boundary never becomes `SAFETY_DISCHARGED` merely because
 a `Drop` wrapper exists, and `hidden = 0` is a target, never a reporting
