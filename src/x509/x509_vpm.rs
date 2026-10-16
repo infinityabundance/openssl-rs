@@ -240,6 +240,164 @@ const _: () = {
 };
 
 // ---------------------------------------------------------------------------------------------
+// Ownership of the parameter block and its scratch strings
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `*_free` body for the file's `#[repr(C)]` object, without the block's own
+/// release, which [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `X509_VERIFY_PARAM_free` body, without the block release [`OwnedCtx`]'s
+    /// `Drop` performs.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live parameter this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned `X509_VERIFY_PARAM` block.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
+/// hands it out and takes it back), but its *ownership* is this type: [`Self::new`] allocates it
+/// through the crate's allocator seam at the authority's own `(file, alloc_line)`, `Drop` runs the
+/// authority's own free body ([`CtxDestroy::destroy_body`]) followed by its single block release at
+/// the authority's own `(file, line)`, and [`Self::into_raw`] hands the block to the caller. It
+/// stays a `CRYPTO_zalloc` at `size_of::<X509VerifyParam>()` rather than a Rust `Box` on purpose --
+/// a caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its release
+/// exactly as it observes the authority's.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
+    /// it answers NULL. `alloc_line` is the authority's allocation site and `line` its release site.
+    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// The stable address the exported ABI hands out and takes back.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block this file allocated that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The parameter's destructor: the authority's `X509_VERIFY_PARAM_free` body
+    /// ([`CtxDestroy::destroy_body`]) followed by its single block release, through the same
+    /// allocator seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
+        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+/// The authority's `X509_VERIFY_PARAM_free` body, without the block release [`OwnedCtx`]'s `Drop`
+/// performs: the policy set, the host set, the peername, the email and the IP. **`name` is
+/// deliberately not released** -- the authority's own text omits it (see the module doc).
+impl CtxDestroy for X509VerifyParam {
+    unsafe fn destroy_body(ptr: *mut X509VerifyParam) {
+        // SAFETY: `ptr` is a live parameter per the trait contract; each member is NULL or owned by
+        // it, and each release accepts NULL.
+        unsafe {
+            OPENSSL_sk_pop_free((*ptr).policies, Some(asn1_object_free_void));
+            OPENSSL_sk_pop_free((*ptr).hosts, Some(str_free));
+            CRYPTO_free((*ptr).peername.cast(), FILE.as_ptr(), 0);
+            CRYPTO_free((*ptr).email.cast(), FILE.as_ptr(), 0);
+            CRYPTO_free((*ptr).ip.cast(), FILE.as_ptr(), 0);
+        }
+    }
+}
+
+/// An owned C string (or byte block) allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_strdup`/`CRYPTO_strndup`/`CRYPTO_zalloc` at the authority's exact
+/// `file`/`line` -- a Rust `Box`/`CString` would hide both the allocation and its release from a
+/// caller-installed `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type:
+/// [`Self::new_zeroed`] allocates it, [`Self::adopt`] takes a block the parameter already held back
+/// for release, `Drop` is its single release, and [`Self::into_raw`] hands it to the member that
+/// takes it over. A NULL pointer is a valid, empty block whose release is the authority's own no-op
+/// `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        // `CRYPTO_zalloc` is a safe function.
+        let raw = CRYPTO_zalloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// Take back a block the authority allocated (or NULL), for release by `Drop` at the
+    /// authority's own site.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block this file allocated that no one else owns, and `file` is NULL
+    /// or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, file, line }
+    }
+
+    /// The start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the member that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // The `str_copy`/`str_free` adapters and the two stack element destructors — `x509_vpm.c:26-34`.
 // ---------------------------------------------------------------------------------------------
 
@@ -282,23 +440,22 @@ unsafe extern "C" fn asn1_object_free_void(a: *mut c_void) {
 /// A zeroed parameter with `trust = X509_TRUST_DEFAULT`, `depth = -1` and `auth_level = -1`.
 #[no_mangle]
 pub extern "C" fn X509_VERIFY_PARAM_new() -> *mut X509VerifyParam {
-    let param = CRYPTO_zalloc(
-        core::mem::size_of::<X509VerifyParam>(),
-        FILE.as_ptr(),
-        LINE_ZALLOC_PARAM,
-    );
-    if param.is_null() {
+    // `OwnedCtx::new` is the authority's own `OPENSSL_zalloc(sizeof(*param))`; it answers NULL when
+    // the allocator does, else a fresh zeroed block of the parameter's size.
+    let Some(param) =
+        OwnedCtx::<X509VerifyParam>::new(FILE.as_ptr(), LINE_ZALLOC_PARAM, LINE_FREE_PARAM)
+    else {
         return ptr::null_mut();
-    }
-    let param = param.cast::<X509VerifyParam>();
-    // SAFETY: `param` is a fresh zeroed block.
+    };
+    let p = param.as_ptr();
+    // SAFETY: `p` is a fresh zeroed block of the parameter's size.
     unsafe {
-        (*param).trust = X509_TRUST_DEFAULT;
-        // (*param).inh_flags = X509_VP_FLAG_DEFAULT; -- commented out in the authority (`:89`).
-        (*param).depth = -1;
-        (*param).auth_level = -1; // -1 means unset, 0 is explicit (`:91`).
+        (*p).trust = X509_TRUST_DEFAULT;
+        // (*p).inh_flags = X509_VP_FLAG_DEFAULT; -- commented out in the authority (`:89`).
+        (*p).depth = -1;
+        (*p).auth_level = -1; // -1 means unset, 0 is explicit (`:91`).
     }
-    param
+    param.into_raw()
 }
 
 /// `void X509_VERIFY_PARAM_free(X509_VERIFY_PARAM *param)` — `crypto/x509/x509_vpm.c:95-105`.
@@ -312,24 +469,10 @@ pub extern "C" fn X509_VERIFY_PARAM_new() -> *mut X509VerifyParam {
 /// `param` must be NULL or a live parameter not already freed.
 #[no_mangle]
 pub unsafe extern "C" fn X509_VERIFY_PARAM_free(param: *mut X509VerifyParam) {
-    if param.is_null() {
-        return;
-    }
-    // SAFETY: `param` is live per the contract; each member is NULL or owned by it.
-    unsafe {
-        // SAFETY: the same contract.
-        OPENSSL_sk_pop_free((*param).policies, Some(asn1_object_free_void));
-        // SAFETY: the same contract.
-        OPENSSL_sk_pop_free((*param).hosts, Some(str_free));
-        // SAFETY: each pointer is NULL or an owned block.
-        CRYPTO_free((*param).peername.cast(), FILE.as_ptr(), 0);
-        // SAFETY: the same contract.
-        CRYPTO_free((*param).email.cast(), FILE.as_ptr(), 0);
-        // SAFETY: the same contract.
-        CRYPTO_free((*param).ip.cast(), FILE.as_ptr(), 0);
-        // SAFETY: the same contract.
-        CRYPTO_free(param.cast(), FILE.as_ptr(), LINE_FREE_PARAM);
-    }
+    // SAFETY: `param` is NULL or the block `X509_VERIFY_PARAM_new` allocated; reclaiming it runs the
+    // authority's own free body (the policy set, the host set, the peername, the email and the IP)
+    // and releases the block at the authority's own site.
+    drop(unsafe { OwnedCtx::<X509VerifyParam>::from_raw(param, FILE.as_ptr(), LINE_FREE_PARAM) });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -498,31 +641,30 @@ unsafe fn int_x509_param_set1(
     src: *const c_char,
     mut srclen: usize,
 ) -> c_int {
-    let tmp: *mut c_char;
-    if !src.is_null() {
+    let tmp: Option<OwnedBuf> = if !src.is_null() {
         if srclen == 0 {
             // SAFETY: `src` is NUL-terminated per the contract.
             srclen = unsafe { libc_strlen(src) };
         }
-        // SAFETY: the block is `srclen + 1` writable bytes.
-        let raw = CRYPTO_zalloc(srclen + 1, FILE.as_ptr(), 0);
-        if raw.is_null() {
+        // The fresh block is the authority's own `OPENSSL_zalloc(srclen + 1)`; it owns the copy
+        // until the assignment below gives it to `*pdest`.
+        let Some(buf) = OwnedBuf::new_zeroed(srclen + 1, FILE.as_ptr(), 0) else {
             return 0;
-        }
-        tmp = raw.cast::<c_char>();
-        // SAFETY: `tmp` is `srclen + 1` bytes, `src` is `srclen` readable bytes.
+        };
+        // SAFETY: `buf` is `srclen + 1` bytes, `src` is `srclen` readable bytes.
         unsafe {
-            ptr::copy_nonoverlapping(src, tmp, srclen);
-            *tmp.add(srclen) = 0; // enforce NUL termination (`:247`).
+            ptr::copy_nonoverlapping(src, buf.as_ptr().cast::<c_char>(), srclen);
+            *buf.as_ptr().cast::<c_char>().add(srclen) = 0; // enforce NUL termination (`:247`).
         }
+        Some(buf)
     } else {
-        tmp = ptr::null_mut();
-        srclen = 0;
-    }
+        None
+    };
     // SAFETY: `pdest` is live and `*pdest` is the old owned block.
     unsafe {
-        CRYPTO_free((*pdest).cast(), FILE.as_ptr(), 0);
-        *pdest = tmp;
+        // Release the old block through its owner (the authority's own `:255` free).
+        drop(OwnedBuf::adopt((*pdest).cast(), FILE.as_ptr(), 0));
+        *pdest = tmp.map_or(ptr::null_mut(), |b| b.into_raw().cast::<c_char>());
         if !pdestlen.is_null() {
             *pdestlen = srclen;
         }
@@ -543,7 +685,8 @@ pub unsafe extern "C" fn X509_VERIFY_PARAM_set1_name(
 ) -> c_int {
     // SAFETY: `param` is live; `name` is NULL or NUL-terminated.
     unsafe {
-        CRYPTO_free((*param).name.cast(), FILE.as_ptr(), 0);
+        // Release the old name through its owner, then copy the new one (the authority's order).
+        drop(OwnedBuf::adopt((*param).name.cast(), FILE.as_ptr(), 0));
         (*param).name = CRYPTO_strdup(name, FILE.as_ptr(), 0);
         (!(*param).name.is_null()) as c_int
     }
@@ -848,29 +991,32 @@ unsafe fn int_x509_param_set_hosts(
             return 1;
         }
 
-        let copy = CRYPTO_strndup(name, namelen, FILE.as_ptr(), 0);
-        if copy.is_null() {
+        let raw = CRYPTO_strndup(name, namelen, FILE.as_ptr(), 0);
+        if raw.is_null() {
             return 0;
         }
+        // The host string owns the fresh copy: every early exit below releases it, and only a
+        // successful push gives it up to `vpm->hosts`.
+        // SAFETY: `raw` is a fresh, non-NULL block this file allocated.
+        let copy = OwnedBuf::adopt(raw.cast(), FILE.as_ptr(), 0);
 
         if (*vpm).hosts.is_null() {
             (*vpm).hosts = OPENSSL_sk_new_null();
             if (*vpm).hosts.is_null() {
-                // SAFETY: `copy` is an owned block.
-                CRYPTO_free(copy.cast(), FILE.as_ptr(), 0);
                 return 0;
             }
         }
 
-        if OPENSSL_sk_push((*vpm).hosts, copy.cast()) == 0 {
-            // SAFETY: `copy` is an owned block.
-            CRYPTO_free(copy.cast(), FILE.as_ptr(), 0);
+        if OPENSSL_sk_push((*vpm).hosts, copy.as_ptr().cast::<c_void>()) == 0 {
+            drop(copy);
             if OPENSSL_sk_num((*vpm).hosts) == 0 {
                 OPENSSL_sk_free((*vpm).hosts);
                 (*vpm).hosts = ptr::null_mut();
             }
             return 0;
         }
+        // The push succeeded, so `vpm->hosts` owns the copy now.
+        let _ = copy.into_raw();
     }
     1
 }
@@ -982,7 +1128,8 @@ pub unsafe extern "C" fn X509_VERIFY_PARAM_move_peername(
             (*from).peername
         };
         if (*to).peername != peername {
-            CRYPTO_free((*to).peername.cast(), FILE.as_ptr(), 0);
+            // Release the replaced peername through its owner (the authority's own `:426` free).
+            drop(OwnedBuf::adopt((*to).peername.cast(), FILE.as_ptr(), 0));
             (*to).peername = peername;
         }
         if !from.is_null() {
