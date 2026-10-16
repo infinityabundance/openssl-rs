@@ -77,3 +77,8 @@ __pycache__/
 
 # Phase-25 in-container toolchain/scratch homes (bind-mounted at /work; must never be committed)
 /.phase25-*/
+
+# Local agent working instructions for the unsafe-to-safe conversion campaign.
+# Kept local-only on purpose: it is a living working document, not shipped
+# evidence, and must not appear in the repository's admitted artifact set.
+/agents.md
