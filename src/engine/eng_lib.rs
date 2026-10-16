@@ -236,6 +236,103 @@ const _: () = {
 };
 
 // ---------------------------------------------------------------------------------------------
+// Ownership of the `ENGINE` object
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `ENGINE` block still under construction.
+///
+/// [`ENGINE_new`] allocates the block and fills its members one at a time; on its `CRYPTO_new_ex_data`
+/// refusal the authority's release is the block alone (`crypto/engine/eng_lib.c:46`), so the
+/// destructor ([`OwnedEngine`]) over members that may not be set must not run. [`Self::finish`] hands
+/// the block to the C ABI on success.
+struct RawEngine {
+    ptr: ptr::NonNull<Engine>,
+}
+
+impl RawEngine {
+    /// `CRYPTO_zalloc(sizeof(*ret), FILE, 36)`, or `None` when it answers NULL.
+    fn new() -> Option<RawEngine> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<Engine>()` bytes, which is exactly `Engine`'s layout.
+        let raw = CRYPTO_zalloc(size_of::<Engine>(), FILE, LINE_NEW).cast::<Engine>();
+        ptr::NonNull::new(raw).map(|ptr| RawEngine { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut Engine {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C ABI's answer.
+    fn finish(self) -> *mut Engine {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for RawEngine {
+    /// The authority's `ENGINE_new` refusal release (`crypto/engine/eng_lib.c:46`): the block alone,
+    /// at the authority's own `OPENSSL_free` site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; its single
+        // release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, LINE_FREE) };
+    }
+}
+
+/// An owned `ENGINE` block at its last structural reference.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its exact `CRYPTO_zalloc` size/`file`/`line`,
+/// but its *ownership* is this type: [`Self::from_raw`] reclaims the block the refcount reaches zero
+/// on and `Drop` runs the authority's own destructor body (`engine_free_util`'s,
+/// `crypto/engine/eng_lib.c:77-102`) followed by its single block release. The destructor's
+/// `engine_remove_dynamic_id` step takes the caller's `not_locked` flag, so the owner carries it --
+/// the generic `CtxDestroy` shape in the adjacent units cannot express that runtime argument.
+struct OwnedEngine {
+    ptr: ptr::NonNull<Engine>,
+    not_locked: c_int,
+}
+
+impl OwnedEngine {
+    /// Reclaim the `ENGINE` block at its last structural reference, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live `ENGINE` this file allocated whose caller holds its last structural
+    /// reference, so no other owner will release it; `Drop` is the block's single release.
+    unsafe fn from_raw(ptr: *mut Engine, not_locked: c_int) -> Option<OwnedEngine> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedEngine { ptr, not_locked })
+    }
+}
+
+impl Drop for OwnedEngine {
+    /// `engine_free_util`'s last-reference body (`crypto/engine/eng_lib.c:77-102`): the dynamically
+    /// allocated public-key method tables, the destroy hook, the dynamic-id unlink, the ex-data free
+    /// and the block release -- the authority's own order.
+    fn drop(&mut self) {
+        let ptr = self.ptr.as_ptr();
+        // SAFETY: `ptr` is the block `from_raw` reclaimed at its last reference; every member is set
+        // because only a completed `ENGINE_new` object reaches its last reference, and this is the
+        // block's single release.
+        unsafe {
+            crate::engine::tb_pkmeth::engine_pkey_meths_free(ptr);
+            crate::engine::tb_asnmth::engine_pkey_asn1_meths_free(ptr);
+            if let Some(destroy) = (*ptr).destroy {
+                destroy(ptr);
+            }
+            crate::engine::eng_list::engine_remove_dynamic_id(ptr, self.not_locked);
+            CRYPTO_free_ex_data(
+                CRYPTO_EX_INDEX_ENGINE,
+                ptr.cast::<c_void>(),
+                ptr::addr_of_mut!((*ptr).ex_data),
+            );
+            CRYPTO_free(ptr.cast::<c_void>(), FILE, LINE_FREE);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // The engine-wide lock — `eng_lib.c:15-25`
 // ---------------------------------------------------------------------------------------------
 
@@ -337,15 +434,14 @@ pub extern "C" fn ENGINE_new() -> *mut Engine {
             unsafe { raise_site(&ENG_LIB_33) };
             return ptr::null_mut();
         }
-        let ret = CRYPTO_zalloc(size_of::<Engine>(), FILE, LINE_NEW) as *mut Engine;
-        if ret.is_null() {
+        let Some(raw) = RawEngine::new() else {
             return ptr::null_mut();
-        }
+        };
+        let ret = raw.as_ptr();
         // `CRYPTO_NEW_REF(&ret->struct_ref, 1)` — the fallback arm assigns.
-        // SAFETY: `ret` is a fresh zeroed `Engine`.
-        unsafe { (*ret).struct_ref = 1 };
-        // SAFETY: `ret` is live and its `ex_data` block is in place.
+        // SAFETY: `ret` is a fresh zeroed `Engine` and its `ex_data` block is in place.
         let ok = unsafe {
+            (*ret).struct_ref = 1;
             CRYPTO_new_ex_data(
                 CRYPTO_EX_INDEX_ENGINE,
                 ret.cast::<c_void>(),
@@ -353,11 +449,10 @@ pub extern "C" fn ENGINE_new() -> *mut Engine {
             )
         };
         if ok == 0 {
-            // SAFETY: `ret` is the allocation above and is not used again.
-            unsafe { CRYPTO_free(ret.cast::<c_void>(), FILE, LINE_FREE) };
+            // `raw`'s `Drop` releases the block alone, exactly the authority's refusal path.
             return ptr::null_mut();
         }
-        ret
+        raw.finish()
     })
 }
 
@@ -408,28 +503,9 @@ pub(crate) unsafe fn engine_free_util(e: *mut Engine, not_locked: c_int) -> c_in
     if i > 0 {
         return 1;
     }
-    // The dynamically allocated public-key methods, then the destroy hook, then the
-    // dynamic-id unlink, the ex-data free and the object itself — the authority's order.
-    // SAFETY: `e` is live and this is its last reference.
-    unsafe {
-        crate::engine::tb_pkmeth::engine_pkey_meths_free(e);
-        crate::engine::tb_asnmth::engine_pkey_asn1_meths_free(e);
-    }
-    // SAFETY: `e` is live; `destroy` is the caller's hook or NULL.
-    if let Some(destroy) = unsafe { (*e).destroy } {
-        // SAFETY: the hook is the caller's and is called with the ENGINE it was set on.
-        unsafe { destroy(e) };
-    }
-    // SAFETY: `e` is live and this is its last reference.
-    unsafe {
-        crate::engine::eng_list::engine_remove_dynamic_id(e, not_locked);
-        CRYPTO_free_ex_data(
-            CRYPTO_EX_INDEX_ENGINE,
-            e.cast::<c_void>(),
-            ptr::addr_of_mut!((*e).ex_data),
-        );
-        CRYPTO_free(e.cast::<c_void>(), FILE, LINE_FREE);
-    }
+    // SAFETY: `e` is live and this is its last structural reference, so no other owner will release
+    // it; `Drop` runs the authority's own destructor body and this is the block's single release.
+    drop(unsafe { OwnedEngine::from_raw(e, not_locked) });
     1
 }
 
@@ -464,6 +540,58 @@ const _: () = {
     assert!(core::mem::offset_of!(EngineCleanupItem, cb) == 0);
 };
 
+/// An owned `struct st_engine_cleanup_item`.
+///
+/// The item is a plain `CRYPTO_malloc` block the cleanup stack adopts and releases at one site
+/// (`crypto/engine/eng_lib.c`); its `Drop` is that single release.
+struct OwnedItem {
+    ptr: ptr::NonNull<EngineCleanupItem>,
+}
+
+impl OwnedItem {
+    /// `CRYPTO_malloc(sizeof(*item), FILE, 132)`, or `None` when it answers NULL; the item's `cb` is
+    /// set before it is handed out.
+    fn new(cb: Option<EngineCleanupCb>) -> Option<OwnedItem> {
+        let raw = CRYPTO_malloc(size_of::<EngineCleanupItem>(), FILE, LINE_ITEM)
+            .cast::<EngineCleanupItem>();
+        let ptr = ptr::NonNull::new(raw)?;
+        // SAFETY: `ptr` is a fresh, writable `EngineCleanupItem` of this call's own allocation.
+        unsafe { (*ptr.as_ptr()).cb = cb };
+        Some(OwnedItem { ptr })
+    }
+
+    /// The item's address, for the stack that takes it over.
+    fn as_ptr(&self) -> *mut EngineCleanupItem {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the item to the cleanup stack that takes it over.
+    fn into_raw(self) -> *mut EngineCleanupItem {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim an element the cleanup stack hands to its `sk_*_pop_free` callback, for release by
+    /// `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live item this file allocated that no other owner will release.
+    unsafe fn from_raw(ptr: *mut EngineCleanupItem) -> Option<OwnedItem> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedItem { ptr })
+    }
+}
+
+impl Drop for OwnedItem {
+    /// The item's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, LINE_ITEM) };
+    }
+}
+
 /// `static STACK_OF(ENGINE_CLEANUP_ITEM) *cleanup_stack = NULL` (`:117`).
 static CLEANUP_STACK: AtomicPtr<OpenSslStack> = AtomicPtr::new(ptr::null_mut());
 
@@ -481,15 +609,8 @@ fn int_cleanup_check(create: bool) -> bool {
 }
 
 /// `static ENGINE_CLEANUP_ITEM *int_cleanup_item(ENGINE_CLEANUP_CB *cb)` — `:128-136`.
-fn int_cleanup_item(cb: Option<EngineCleanupCb>) -> *mut EngineCleanupItem {
-    let item =
-        CRYPTO_malloc(size_of::<EngineCleanupItem>(), FILE, LINE_ITEM) as *mut EngineCleanupItem;
-    if item.is_null() {
-        return ptr::null_mut();
-    }
-    // SAFETY: `item` is the fresh allocation above and is writable.
-    unsafe { (*item).cb = cb };
-    item
+fn int_cleanup_item(cb: Option<EngineCleanupCb>) -> Option<OwnedItem> {
+    OwnedItem::new(cb)
 }
 
 /// `int engine_cleanup_add_first(ENGINE_CLEANUP_CB *cb)` — `:138-151`.
@@ -500,16 +621,17 @@ pub(crate) unsafe fn engine_cleanup_add_first(cb: Option<EngineCleanupCb>) -> c_
     if !int_cleanup_check(true) {
         return 0;
     }
-    let item = int_cleanup_item(cb);
-    if !item.is_null() {
-        let stack = CLEANUP_STACK.load(Ordering::Acquire);
-        // SAFETY: `stack` is the non-NULL stack `int_cleanup_check` created.
-        if unsafe { OPENSSL_sk_insert(stack, item.cast::<c_void>(), 0) } > 0 {
-            return 1;
-        }
-        // SAFETY: `item` was not inserted and is not used again.
-        unsafe { CRYPTO_free(item.cast::<c_void>(), FILE, LINE_ITEM) };
+    let Some(item) = int_cleanup_item(cb) else {
+        return 0;
+    };
+    let stack = CLEANUP_STACK.load(Ordering::Acquire);
+    // SAFETY: `stack` is the non-NULL stack `int_cleanup_check` created.
+    if unsafe { OPENSSL_sk_insert(stack, item.as_ptr().cast::<c_void>(), 0) } > 0 {
+        // The stack now owns the item; `into_raw` gives up this handle's ownership.
+        item.into_raw();
+        return 1;
     }
+    // `item` was not inserted; its `Drop` releases it at the authority's own site.
     0
 }
 
@@ -521,16 +643,17 @@ pub(crate) unsafe fn engine_cleanup_add_last(cb: Option<EngineCleanupCb>) -> c_i
     if !int_cleanup_check(true) {
         return 0;
     }
-    let item = int_cleanup_item(cb);
-    if !item.is_null() {
-        let stack = CLEANUP_STACK.load(Ordering::Acquire);
-        // SAFETY: `stack` is the non-NULL stack `int_cleanup_check` created.
-        if unsafe { OPENSSL_sk_push(stack, item.cast::<c_void>()) } > 0 {
-            return 1;
-        }
-        // SAFETY: `item` was not inserted and is not used again.
-        unsafe { CRYPTO_free(item.cast::<c_void>(), FILE, LINE_ITEM) };
+    let Some(item) = int_cleanup_item(cb) else {
+        return 0;
+    };
+    let stack = CLEANUP_STACK.load(Ordering::Acquire);
+    // SAFETY: `stack` is the non-NULL stack `int_cleanup_check` created.
+    if unsafe { OPENSSL_sk_push(stack, item.as_ptr().cast::<c_void>()) } > 0 {
+        // The stack now owns the item; `into_raw` gives up this handle's ownership.
+        item.into_raw();
+        return 1;
     }
+    // `item` was not inserted; its `Drop` releases it at the authority's own site.
     0
 }
 
@@ -549,8 +672,9 @@ unsafe extern "C" fn engine_cleanup_cb_free(item: *mut c_void) {
         // SAFETY: the callback was registered by a caller and is live.
         unsafe { cb() };
     }
-    // SAFETY: `item` is not used again.
-    unsafe { CRYPTO_free(item.cast::<c_void>(), FILE, LINE_ITEM) };
+    // SAFETY: `item` is a live `EngineCleanupItem` this callback takes ownership of per the
+    // `sk_*_pop_free` contract; `Drop` is its single release.
+    drop(unsafe { OwnedItem::from_raw(item) });
 }
 
 // `void engine_cleanup_int(void)` (`crypto/engine/eng_lib.c:175-184`) is withheld. Its closure
