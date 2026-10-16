@@ -70,8 +70,10 @@ pub struct Pkcs7Ctx {
     /// `char *propq` — an object-owned C-string **member buffer**. Its ownership invariant is
     /// stated once by [`PropqSlot`] and mediated by [`PropqSlot`]/[`Pkcs7Ctx::propq`]; see the
     /// `MEMBER-BUFFER-MODEL.md` note. It stays `*mut c_char` at this exact offset so the
-    /// `#[repr(C)]` layout is the authority's.
-    pub(crate) propq: *mut c_char,
+    /// `#[repr(C)]` layout is the authority's. It is **private**: every reader goes through
+    /// [`Pkcs7Ctx::propq`] and every writer through [`PropqSlot`], so the field's accesses are
+    /// compile-time-confined to this module.
+    propq: *mut c_char,
 }
 
 impl Pkcs7Ctx {

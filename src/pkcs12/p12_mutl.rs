@@ -559,7 +559,7 @@ unsafe fn pkcs12_gen_mac(
             md_fetch = EVP_MD_fetch(
                 (*authsafes).ctx.libctx,
                 md_name.as_ptr(),
-                (*authsafes).ctx.propq,
+                (*authsafes).ctx.propq(),
             );
             let mut md: *const EvpMd = md_fetch;
             if md.is_null() {
@@ -580,7 +580,7 @@ unsafe fn pkcs12_gen_mac(
             if pbmac1_md_nid != NID_undef && pkcs12_key_gen.is_none() {
                 keylen = pbmac1_pbkdf2_hmac(
                     (*authsafes).ctx.libctx,
-                    (*authsafes).ctx.propq,
+                    (*authsafes).ctx.propq(),
                     pass,
                     passlen,
                     macalg,
@@ -663,7 +663,7 @@ unsafe fn pkcs12_gen_mac(
                         key.as_mut_ptr(),
                         md,
                         (*authsafes).ctx.libctx,
-                        (*authsafes).ctx.propq,
+                        (*authsafes).ctx.propq(),
                     ) == 0
                     {
                         raise_site(&err_sites::PKCS12_MUTL_284);
