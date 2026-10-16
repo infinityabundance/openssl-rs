@@ -2108,6 +2108,51 @@ unsafe fn strspn(s: *const c_char, accept: &[u8]) -> usize {
     }
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `v2i_IPAddrBlocks` string it allocates with `CRYPTO_strdup`
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `CRYPTO_strdup` string.
+///
+/// [`Self::take`] adopts the seam's result and `Drop` is its single release, through the same
+/// allocator seam and at the authority's own site. The adopted site is the `err:` path; the two
+/// success paths select their own before the value drops.
+struct OwnedStr {
+    ptr: ptr::NonNull<c_char>,
+    line: c_int,
+}
+
+impl OwnedStr {
+    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL. `line` is the authority's release site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
+    /// `CRYPTO_strdup` seam, is owned by the caller, and will not be freed or handed to any other
+    /// owner -- this handle's `Drop` is its single release.
+    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedStr { ptr, line })
+    }
+
+    /// The string's address, for the parse below.
+    fn as_ptr(&self) -> *mut c_char {
+        self.ptr.as_ptr()
+    }
+
+    /// Choose the authority's release site for this string.
+    fn set_line(&mut self, line: c_int) {
+        self.line = line;
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The string's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
+        // single release is the authority's own plain `CRYPTO_free` at the selected site.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE.as_ptr(), self.line) };
+    }
+}
+
 /// `static void *v2i_IPAddrBlocks(const struct v3_ext_method *method, struct v3_ext_ctx *ctx,
 /// STACK_OF(CONF_VALUE) *values)` — `crypto/x509/v3_addr.c:917-1082`.
 ///
@@ -2125,7 +2170,7 @@ unsafe extern "C" fn v2i_IPAddrBlocks(
     const V4ADDR_CHARS: &[u8] = b"0123456789.";
     const V6ADDR_CHARS: &[u8] = b"0123456789.:abcdefABCDEF";
 
-    let mut s: *mut c_char = ptr::null_mut();
+    let mut s: Option<OwnedStr> = None;
     let mut t: *mut c_char = ptr::null_mut();
 
     // SAFETY: `ip_address_family_cmp` is the comparator for this element type.
@@ -2210,19 +2255,31 @@ unsafe extern "C" fn v2i_IPAddrBlocks(
                 // SAFETY: `t` points into `value`.
                 t = unsafe { t.add(strspn(t, b" \t")) };
                 // SAFETY: `t` is NUL-terminated; the file/line are this unit's.
-                s = unsafe { CRYPTO_strdup(t, FILE.as_ptr(), LINE_V2I_STRDUP_SAFI) };
+                s = unsafe {
+                    OwnedStr::take(
+                        CRYPTO_strdup(t, FILE.as_ptr(), LINE_V2I_STRDUP_SAFI),
+                        LINE_V2I_ERR_FREE,
+                    )
+                };
             } else {
                 // SAFETY: `val` is live; `val->value` is NUL-terminated.
                 let value = unsafe { (*val).value };
                 // SAFETY: `value` is NUL-terminated; the file/line are this unit's.
-                s = unsafe { CRYPTO_strdup(value, FILE.as_ptr(), LINE_V2I_STRDUP) };
+                s = unsafe {
+                    OwnedStr::take(
+                        CRYPTO_strdup(value, FILE.as_ptr(), LINE_V2I_STRDUP),
+                        LINE_V2I_ERR_FREE,
+                    )
+                };
             }
-            if s.is_null() {
+            if s.is_none() {
                 break 'each false;
             }
+            // The adopted string's address for the parse below.
+            let s_ptr = s.as_ref().map(OwnedStr::as_ptr).unwrap_or(ptr::null_mut());
 
-            // SAFETY: `s` is NUL-terminated; the literal is static.
-            if unsafe { strcmp(s, c"inherit".as_ptr()) } == 0 {
+            // SAFETY: `s_ptr` is NUL-terminated; the literal is static.
+            if unsafe { strcmp(s_ptr, c"inherit".as_ptr()) } == 0 {
                 // SAFETY: `addr` is live; `safi_mut` is NULL or this frame's storage.
                 if unsafe { X509v3_addr_add_inherit(addr, afi, safi_mut) } == 0 {
                     // SAFETY: the site is a compiled-in constant.
@@ -2231,25 +2288,26 @@ unsafe extern "C" fn v2i_IPAddrBlocks(
                     unsafe { conf_add_error_name_value(val) };
                     break 'each false;
                 }
-                // SAFETY: `s` is this call's own allocation.
-                unsafe { CRYPTO_free(s.cast::<c_void>(), FILE.as_ptr(), LINE_V2I_FREE_INHERIT) };
-                s = ptr::null_mut();
+                // The authority's own release on the `inherit` path.
+                if let Some(mut st) = s.take() {
+                    st.set_line(LINE_V2I_FREE_INHERIT);
+                }
                 i += 1;
                 continue;
             }
 
-            // SAFETY: `s` is NUL-terminated; `addr_chars` is a static byte set.
-            let mut i1 = unsafe { strspn(s, addr_chars) } as c_int;
-            // SAFETY: `s.add(i1)` points into `s`'s buffer.
-            let mut i2 = i1 + unsafe { strspn(s.add(i1 as usize), b" \t") } as c_int;
-            // SAFETY: `i2` indexes within `s` (bounded by its NUL).
-            let delim = unsafe { *s.add(i2 as usize) } as u8;
+            // SAFETY: `s_ptr` is NUL-terminated; `addr_chars` is a static byte set.
+            let mut i1 = unsafe { strspn(s_ptr, addr_chars) } as c_int;
+            // SAFETY: `s_ptr.add(i1)` points into `s_ptr`'s buffer.
+            let mut i2 = i1 + unsafe { strspn(s_ptr.add(i1 as usize), b" \t") } as c_int;
+            // SAFETY: `i2` indexes within `s_ptr` (bounded by its NUL).
+            let delim = unsafe { *s_ptr.add(i2 as usize) } as u8;
             i2 += 1;
-            // SAFETY: `i1` indexes within `s`.
-            unsafe { *s.add(i1 as usize) = 0 };
+            // SAFETY: `i1` indexes within `s_ptr`.
+            unsafe { *s_ptr.add(i1 as usize) = 0 };
 
-            // SAFETY: `min` has 16 writable bytes; `s` is NUL-terminated.
-            if unsafe { ossl_a2i_ipadd(min.as_mut_ptr(), s) } != length {
+            // SAFETY: `min` has 16 writable bytes; `s_ptr` is NUL-terminated.
+            if unsafe { ossl_a2i_ipadd(min.as_mut_ptr(), s_ptr) } != length {
                 // SAFETY: the site is a compiled-in constant.
                 unsafe { raise_site(&V3_ADDR_1011) };
                 // SAFETY: `val` is live per the stack contract.
@@ -2259,10 +2317,11 @@ unsafe extern "C" fn v2i_IPAddrBlocks(
 
             match delim {
                 b'/' => {
-                    // SAFETY: `s.add(i2)` is NUL-terminated; `&raw mut t` is writable.
-                    let prefixlen = unsafe { strtoul(s.add(i2 as usize), &raw mut t, 10) } as c_int;
-                    // SAFETY: `t` and `s.add(i2)` point into `s`.
-                    let (at_start, tc) = unsafe { (t == s.add(i2 as usize), *t) };
+                    // SAFETY: `s_ptr.add(i2)` is NUL-terminated; `&raw mut t` is writable.
+                    let prefixlen =
+                        unsafe { strtoul(s_ptr.add(i2 as usize), &raw mut t, 10) } as c_int;
+                    // SAFETY: `t` and `s_ptr.add(i2)` point into `s_ptr`.
+                    let (at_start, tc) = unsafe { (t == s_ptr.add(i2 as usize), *t) };
                     if at_start || tc != 0 || prefixlen > length * 8 || prefixlen < 0 {
                         // SAFETY: the site is a compiled-in constant.
                         unsafe { raise_site(&V3_ADDR_1023) };
@@ -2282,20 +2341,22 @@ unsafe extern "C" fn v2i_IPAddrBlocks(
                     }
                 }
                 b'-' => {
-                    // SAFETY: `s.add(i2)` points at a readable byte in `s`.
-                    i1 = i2 + unsafe { strspn(s.add(i2 as usize), b" \t") } as c_int;
-                    // SAFETY: `s.add(i1)` points at a readable byte in `s`.
-                    i2 = i1 + unsafe { strspn(s.add(i1 as usize), addr_chars) } as c_int;
-                    // SAFETY: `i2` indexes within `s`.
-                    if i1 == i2 || unsafe { *s.add(i2 as usize) } != 0 {
+                    // SAFETY: `s_ptr.add(i2)` points at a readable byte in `s_ptr`.
+                    i1 = i2 + unsafe { strspn(s_ptr.add(i2 as usize), b" \t") } as c_int;
+                    // SAFETY: `s_ptr.add(i1)` points at a readable byte in `s_ptr`.
+                    i2 = i1 + unsafe { strspn(s_ptr.add(i1 as usize), addr_chars) } as c_int;
+                    // SAFETY: `i2` indexes within `s_ptr`.
+                    if i1 == i2 || unsafe { *s_ptr.add(i2 as usize) } != 0 {
                         // SAFETY: the site is a compiled-in constant.
                         unsafe { raise_site(&V3_ADDR_1036) };
                         // SAFETY: `val` is live per the stack contract.
                         unsafe { conf_add_error_name_value(val) };
                         break 'each false;
                     }
-                    // SAFETY: `max` has 16 writable bytes; `s.add(i1)` is a NUL-terminated suffix.
-                    if unsafe { ossl_a2i_ipadd(max.as_mut_ptr(), s.add(i1 as usize)) } != length {
+                    // SAFETY: `max` has 16 writable bytes; `s_ptr.add(i1)` is a NUL-terminated
+                    // suffix.
+                    if unsafe { ossl_a2i_ipadd(max.as_mut_ptr(), s_ptr.add(i1 as usize)) } != length
+                    {
                         // SAFETY: the site is a compiled-in constant.
                         unsafe { raise_site(&V3_ADDR_1041) };
                         // SAFETY: `val` is live per the stack contract.
@@ -2353,9 +2414,10 @@ unsafe extern "C" fn v2i_IPAddrBlocks(
                 }
             }
 
-            // SAFETY: `s` is this call's own allocation.
-            unsafe { CRYPTO_free(s.cast::<c_void>(), FILE.as_ptr(), LINE_V2I_FREE) };
-            s = ptr::null_mut();
+            // The authority's own release at the end of the loop body.
+            if let Some(mut st) = s.take() {
+                st.set_line(LINE_V2I_FREE);
+            }
             i += 1;
         }
         // SAFETY: `addr` is a live stack.
@@ -2366,8 +2428,8 @@ unsafe extern "C" fn v2i_IPAddrBlocks(
     };
 
     if !ok {
-        // SAFETY: `s` is NULL or this call's own allocation.
-        unsafe { CRYPTO_free(s.cast::<c_void>(), FILE.as_ptr(), LINE_V2I_ERR_FREE) };
+        // `s` drops here at the `err:` site it was adopted with.
+        drop(s.take());
         // SAFETY: `addr` is live and owns its elements; the thunk frees each.
         unsafe { OPENSSL_sk_pop_free(addr, Some(ip_address_family_free_void)) };
         return ptr::null_mut();
