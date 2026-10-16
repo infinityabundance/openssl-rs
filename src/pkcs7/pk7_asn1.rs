@@ -67,8 +67,88 @@ pub(crate) const FILE: &core::ffi::CStr = c"crypto/pkcs7/pk7_asn1.c";
 pub struct Pkcs7Ctx {
     /// `OSSL_LIB_CTX *libctx`.
     pub(crate) libctx: *mut c_void,
-    /// `char *propq` — owned by the `PKCS7`, freed by [`PKCS7_free`].
+    /// `char *propq` — an object-owned C-string **member buffer**. Its ownership invariant is
+    /// stated once by [`PropqSlot`] and mediated by [`PropqSlot`]/[`Pkcs7Ctx::propq`]; see the
+    /// `MEMBER-BUFFER-MODEL.md` note. It stays `*mut c_char` at this exact offset so the
+    /// `#[repr(C)]` layout is the authority's.
     pub(crate) propq: *mut c_char,
+}
+
+impl Pkcs7Ctx {
+    /// The object-owned property-query string (NULL when unset) — the authoritative read of the
+    /// `propq` member buffer. Reads cannot free or alias, but funnelling them here keeps the
+    /// field's writers enumerable (see [`PropqSlot`]).
+    pub(crate) fn propq(&self) -> *const c_char {
+        self.propq
+    }
+}
+
+/// A validated handle over the object-owned C-string member `PKCS7_CTX::propq`.
+///
+/// ## Member-buffer invariant (stated once)
+/// `PKCS7_CTX::propq` is always either NULL or a single NUL-terminated block produced by the
+/// crate's `CRYPTO_strdup` seam and owned by the enclosing `PKCS7`. That `PKCS7` is the block's
+/// *only* owner: the block is released **exactly once**, by [`PKCS7_free`] or by the next
+/// [`PropqSlot::clear`]/[`PropqSlot::store`] that replaces it. Nothing else frees or aliases it.
+///
+/// ## Why the field stays raw
+/// The `#[repr(C)]` layout is the authority's, so the field must remain `*mut c_char` at its
+/// exact offset; a Rust owner type cannot live in the struct. This handle is therefore a
+/// transient **borrow** over the field, the only sanctioned way to move the member's ownership
+/// in and out of it. It is the resident-member counterpart of the per-module `OwnedStr`
+/// (`CRYPTO_strdup` block, released once at the authority's own `file`/`line`): here the
+/// enclosing object is the owner and its destructor stands in for `Drop`, so the handle supplies
+/// the release (`clear`) and store (`store`) operations instead of a `Drop` impl.
+///
+/// `unsafe` appears only at the two proof boundaries: constructing the handle (which asserts the
+/// field currently obeys the invariant) and `store` (which accepts an externally-allocated
+/// block). `clear` is safe because a handle built by [`PropqSlot::of`] guarantees the incumbent
+/// is the object's own single block.
+pub(crate) struct PropqSlot<'a> {
+    /// Borrow of the object's member field; its value obeys the invariant for `'a`.
+    slot: &'a mut *mut c_char,
+}
+
+impl<'a> PropqSlot<'a> {
+    /// Derive the handle from a live object's embedded context.
+    ///
+    /// # Safety
+    ///
+    /// `ctx` is the `ctx` member of a live `PKCS7` and is borrowed mutably for `'a`; its
+    /// `propq` field currently obeys the member-buffer invariant. A live `PKCS7` satisfies this
+    /// because the ASN.1 item layer zeroes `ctx` at construction and the member is only ever
+    /// mutated through this handle (`PKCS7_new_ex`, `ossl_pkcs7_set1_propq`).
+    pub(crate) unsafe fn of(ctx: &'a mut Pkcs7Ctx) -> PropqSlot<'a> {
+        PropqSlot {
+            slot: &mut ctx.propq,
+        }
+    }
+
+    /// Release any incumbent value through the authority's own `CRYPTO_free` site, leaving the
+    /// field NULL. This is the authority's `if (p) { CRYPTO_free(p); p = NULL; }` — NULL is a
+    /// no-op for `CRYPTO_free`, so the release is total.
+    pub(crate) fn clear(&mut self, file: *const c_char, line: c_int) {
+        let old = core::mem::replace(self.slot, ptr::null_mut());
+        // SAFETY: by the member-buffer invariant the incumbent is NULL or the object's own single
+        // `CRYPTO_strdup` block, so this is that block's one release; `CRYPTO_free` ignores NULL.
+        unsafe { CRYPTO_free(old.cast(), file, line) };
+    }
+
+    /// Store a freshly-`CRYPTO_strdup`ed value into the (now empty) field, transferring ownership
+    /// of it to the enclosing object.
+    ///
+    /// # Safety
+    ///
+    /// `new` is NULL or a live NUL-terminated block this caller owns exclusively (produced by the
+    /// crate's `CRYPTO_strdup` seam) and no other owner will release it; the field is currently
+    /// unset (NULL).
+    pub(crate) unsafe fn store(&mut self, new: *mut c_char) {
+        debug_assert!(
+            (*self.slot).is_null(),
+            "propq member slot must be empty before store"
+        );
+        *self.slot = new;
+    }
 }
 
 /// `struct pkcs7_issuer_and_serial_st` — `pkcs7.h.in:54-57`.
@@ -1609,21 +1689,29 @@ pub unsafe extern "C" fn PKCS7_new_ex(libctx: *mut c_void, propq: *const c_char)
     if pkcs7.is_null() {
         return ptr::null_mut();
     }
-    // SAFETY: `pkcs7` is live and its `ctx` slot is writable.
-    unsafe {
-        (*pkcs7).ctx.libctx = libctx;
-        (*pkcs7).ctx.propq = ptr::null_mut();
-    }
-    if !propq.is_null() {
+    // SAFETY: `pkcs7` is live and its `ctx.libctx` slot is writable.
+    unsafe { (*pkcs7).ctx.libctx = libctx };
+    // The item layer `CRYPTO_zalloc`s the whole object, so `ctx.propq` is already unset (NULL).
+    // Take the duplicate first so a failed copy can release the object *before* the handle borrows
+    // it, then store only on success; the authority's explicit `propq = NULL` is this no-op made
+    // implicit by the zeroing allocation.
+    let copy = if propq.is_null() {
+        ptr::null_mut()
+    } else {
         // SAFETY: `propq` is NUL-terminated per the caller's contract.
-        let copy = unsafe { CRYPTO_strdup(propq, FILE.as_ptr(), 102) };
-        if copy.is_null() {
-            // SAFETY: `pkcs7` is live and owned here.
-            unsafe { PKCS7_free(pkcs7) };
-            return ptr::null_mut();
-        }
-        // SAFETY: `pkcs7` is live and its `ctx.propq` slot is writable.
-        unsafe { (*pkcs7).ctx.propq = copy };
+        unsafe { CRYPTO_strdup(propq, FILE.as_ptr(), 102) }
+    };
+    if !propq.is_null() && copy.is_null() {
+        // SAFETY: `pkcs7` is live and owned here.
+        unsafe { PKCS7_free(pkcs7) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `pkcs7` is a live `PKCS7` whose `ctx` the item layer zeroed, so its `propq` member
+    // is unset and obeys the member-buffer invariant.
+    let mut slot = unsafe { PropqSlot::of(&mut (*pkcs7).ctx) };
+    if !copy.is_null() {
+        // SAFETY: `copy` is this call's own fresh `CRYPTO_strdup` block and the field is unset.
+        unsafe { slot.store(copy) };
     }
     pkcs7
 }
@@ -1638,9 +1726,10 @@ pub unsafe extern "C" fn PKCS7_free(p7: *mut Pkcs7) {
     if p7.is_null() {
         return;
     }
-    // SAFETY: `p7` is live; its `ctx.propq` is either null or this object's own copy.
+    // SAFETY: `p7` is live; its `ctx.propq` obeys the member-buffer invariant (NULL or this
+    // object's own single `CRYPTO_strdup` block), so `clear` is that block's one release.
     unsafe {
-        CRYPTO_free((*p7).ctx.propq.cast(), FILE.as_ptr(), 115);
+        PropqSlot::of(&mut (*p7).ctx).clear(FILE.as_ptr(), 115);
         ASN1_item_free(p7.cast(), PKCS7_it());
     }
 }
@@ -1665,7 +1754,7 @@ pub unsafe extern "C" fn d2i_PKCS7(
         // SAFETY: `*a` is a live `PKCS7` per the caller's contract.
         unsafe {
             libctx = (**a).ctx.libctx;
-            propq = (**a).ctx.propq;
+            propq = (**a).ctx.propq();
         }
     }
     // SAFETY: the caller's contract carries throughout.
