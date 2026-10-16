@@ -747,6 +747,63 @@ unsafe extern "C" fn pd_free(pd: *mut c_void) {
     unsafe { CRYPTO_free(pd, FILE, LINE_FREE_PD) };
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the parser's allocations
+// ---------------------------------------------------------------------------------------------
+
+/// An owned heap block from this unit's `OPENSSL_malloc`/`OPENSSL_free` seam.
+///
+/// The block stays a `CRYPTO_malloc` at the authority's own size and `__FILE__`/`__LINE__` -- a Rust
+/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::take`] takes it
+/// in from the seam, `Drop` is its single release at the authority's own `err:` line, and
+/// [`Self::into_raw`] hands it to the consumer that takes it over (the caller of the parser, or the
+/// stack a `OPENSSL_sk_push` installs it in).
+struct OwnedBlock {
+    ptr: *mut c_void,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBlock {
+    /// Adopt a block the seam answered, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the seam's own `CRYPTO_malloc` allocated in full (not a
+    /// sub-range), aligned for the type the frame casts it to and initialized for every byte the
+    /// frame reads or writes; this frame exclusively owns it and has not released it, and
+    /// `file`/`line` is the authority's own release site. `Drop`'s `CRYPTO_free` is its only
+    /// release.
+    unsafe fn take(ptr: *mut c_void, file: *const c_char, line: c_int) -> Option<OwnedBlock> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBlock { ptr, file, line })
+        }
+    }
+
+    /// The block's address, typed for the calls that read or write it.
+    fn as_ptr<T>(&self) -> *mut T {
+        self.ptr.cast::<T>()
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_void {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBlock {
+    /// The block's single release, through the same seam and the authority's own line.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
+        // released before; its single release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr, self.file, self.line) };
+    }
+}
+
 /// `static OSSL_PROPERTY_LIST *stack_to_property_list(OSSL_LIB_CTX *ctx,
 /// STACK_OF(OSSL_PROPERTY_DEFINITION) *sk)`
 ///
@@ -769,38 +826,46 @@ unsafe fn stack_to_property_list(ctx: *mut c_void, sk: *mut OpenSslStack) -> *mu
     } else {
         (n - 1) as usize * defn_size
     };
-    let r = CRYPTO_malloc(
-        core::mem::size_of::<OsslPropertyList>() + tail,
-        FILE,
-        LINE_MALLOC_LIST,
-    )
-    .cast::<OsslPropertyList>();
-    if r.is_null() {
+    // SAFETY: `CRYPTO_malloc` is this crate's allocator seam and answered a block or NULL.
+    let Some(r) = (unsafe {
+        OwnedBlock::take(
+            CRYPTO_malloc(
+                core::mem::size_of::<OsslPropertyList>() + tail,
+                FILE,
+                LINE_MALLOC_LIST,
+            ),
+            FILE,
+            LINE_FREE_LIST_DUP,
+        )
+    }) else {
         return ptr::null_mut();
-    }
+    };
+    let r_ptr = r.as_ptr::<OsslPropertyList>();
     // SAFETY: `sk` is a stack built with `pd_compare`, the authority's own sort.
     unsafe { OPENSSL_sk_sort(sk) };
-    // SAFETY: `r` is a fresh allocation of the header plus `n - 1` definitions, so
-    // the tail has exactly `n` slots, and `sk`'s elements are live definitions.
+    // SAFETY: `r_ptr` is a fresh allocation of the header plus `n - 1` definitions, so the tail has
+    // exactly `n` slots, and `sk`'s elements are live definitions.
     unsafe {
-        (*r).has_optional = 0;
+        (*r_ptr).has_optional = 0;
         let mut prev_name_idx: OsslPropertyIdx = 0;
         for i in 0..n {
             let src = OPENSSL_sk_value(sk, i).cast::<OsslPropertyDefinition>();
-            let dst = properties_ptr(r).add(i as usize).cast_mut();
+            let dst = properties_ptr(r_ptr).add(i as usize).cast_mut();
             *dst = *src;
-            (*r).has_optional |= (*dst).optional;
+            (*r_ptr).has_optional |= (*dst).optional;
             if i > 0 && (*dst).name_idx == prev_name_idx {
-                CRYPTO_free(r.cast::<c_void>(), FILE, LINE_FREE_LIST_DUP);
+                // The authority frees the half-built list on this refusal before it raises; `r`'s
+                // `Drop` is that single release.
+                drop(r);
                 let name = ossl_property_name_str(ctx, prev_name_idx);
                 raise_duplicated(&err_sites::PROPERTY_PARSE_333, name);
                 return ptr::null_mut();
             }
             prev_name_idx = (*dst).name_idx;
         }
-        (*r).num_properties = n;
+        (*r_ptr).num_properties = n;
     }
-    r
+    r.into_raw().cast::<OsslPropertyList>()
 }
 
 /// `OSSL_PROPERTY_LIST *ossl_parse_property(OSSL_LIB_CTX *ctx, const char *defn)`
@@ -822,7 +887,7 @@ pub(crate) unsafe fn ossl_parse_property(
     if sk.is_null() {
         return ptr::null_mut();
     }
-    let mut prop: *mut OsslPropertyDefinition = ptr::null_mut();
+    let mut prop: Option<OwnedBlock> = None;
     let mut res: *mut OsslPropertyList = ptr::null_mut();
     let mut s = Cur { p: defn };
 
@@ -832,39 +897,45 @@ pub(crate) unsafe fn ossl_parse_property(
         let mut done = s.ch() == 0;
         while !done {
             let start = s;
-            prop = CRYPTO_malloc(
-                core::mem::size_of::<OsslPropertyDefinition>(),
+            prop = OwnedBlock::take(
+                CRYPTO_malloc(
+                    core::mem::size_of::<OsslPropertyDefinition>(),
+                    FILE,
+                    LINE_MALLOC_PROP,
+                ),
                 FILE,
-                LINE_MALLOC_PROP,
-            )
-            .cast::<OsslPropertyDefinition>();
-            if prop.is_null() {
+                LINE_FREE_PROP,
+            );
+            let Some(prop_ref) = prop.as_ref() else {
+                break;
+            };
+            let prop_ptr = prop_ref.as_ptr::<OsslPropertyDefinition>();
+            (*prop_ptr).v = PropertyValue { int_val: 0 };
+            (*prop_ptr).optional = 0;
+            if !parse_name(ctx, &mut s, 1, ptr::addr_of_mut!((*prop_ptr).name_idx)) {
                 break;
             }
-            (*prop).v = PropertyValue { int_val: 0 };
-            (*prop).optional = 0;
-            if !parse_name(ctx, &mut s, 1, ptr::addr_of_mut!((*prop).name_idx)) {
-                break;
-            }
-            (*prop).oper = OSSL_PROPERTY_OPER_EQ;
-            if (*prop).name_idx == 0 {
+            (*prop_ptr).oper = OSSL_PROPERTY_OPER_EQ;
+            if (*prop_ptr).name_idx == 0 {
                 raise_unknown_name(&err_sites::PROPERTY_PARSE_370, start.p);
                 break;
             }
             if match_ch(&mut s, b'=') {
-                if !parse_value(ctx, &mut s, prop, 1) {
+                if !parse_value(ctx, &mut s, prop_ptr, 1) {
                     raise_here(&err_sites::PROPERTY_PARSE_376, start.p);
                     break;
                 }
             } else {
                 // A name alone means a true Boolean.
-                (*prop).type_ = OSSL_PROPERTY_TYPE_STRING;
-                (*prop).v.str_val = OSSL_PROPERTY_TRUE;
+                (*prop_ptr).type_ = OSSL_PROPERTY_TYPE_STRING;
+                (*prop_ptr).v.str_val = OSSL_PROPERTY_TRUE;
             }
-            if OPENSSL_sk_push(sk, prop.cast::<c_void>()) <= 0 {
+            if OPENSSL_sk_push(sk, prop_ptr.cast::<c_void>()) <= 0 {
                 break;
             }
-            prop = ptr::null_mut();
+            // The stack now owns the element; the handle gives up ownership rather than
+            // releasing it at the end of the frame.
+            let _ = prop.take().map(OwnedBlock::into_raw);
             done = !match_ch(&mut s, b',');
         }
         if s.ch() != 0 {
@@ -873,10 +944,9 @@ pub(crate) unsafe fn ossl_parse_property(
             res = stack_to_property_list(ctx, sk);
         }
         // The `err:` block, which runs in both the loop-exit and the success case and
-        // is a no-op for the NULL `prop` a successful parse leaves.
-        if !prop.is_null() {
-            CRYPTO_free(prop.cast::<c_void>(), FILE, LINE_FREE_PROP);
-        }
+        // is a no-op for the NULL `prop` a successful parse leaves. `prop`'s `Drop` is
+        // the authority's own `OPENSSL_free(prop)` here, before the stack is freed.
+        drop(prop.take());
         OPENSSL_sk_pop_free(sk, Some(pd_free));
     }
     res
@@ -903,7 +973,7 @@ pub(crate) unsafe fn ossl_parse_query(
     if sk.is_null() {
         return ptr::null_mut();
     }
-    let mut prop: *mut OsslPropertyDefinition = ptr::null_mut();
+    let mut prop: Option<OwnedBlock> = None;
     let mut res: *mut OsslPropertyList = ptr::null_mut();
     let mut c = Cur { p: s };
 
@@ -912,56 +982,60 @@ pub(crate) unsafe fn ossl_parse_query(
         c = skip_space(c);
         let mut done = c.ch() == 0;
         while !done {
-            prop = CRYPTO_malloc(
-                core::mem::size_of::<OsslPropertyDefinition>(),
+            prop = OwnedBlock::take(
+                CRYPTO_malloc(
+                    core::mem::size_of::<OsslPropertyDefinition>(),
+                    FILE,
+                    LINE_MALLOC_QPROP,
+                ),
                 FILE,
-                LINE_MALLOC_QPROP,
-            )
-            .cast::<OsslPropertyDefinition>();
-            if prop.is_null() {
+                LINE_FREE_QPROP,
+            );
+            let Some(prop_ref) = prop.as_ref() else {
                 break;
-            }
-            (*prop).v = PropertyValue { int_val: 0 };
+            };
+            let prop_ptr = prop_ref.as_ptr::<OsslPropertyDefinition>();
+            (*prop_ptr).v = PropertyValue { int_val: 0 };
 
             if match_ch(&mut c, b'-') {
-                (*prop).oper = OSSL_PROPERTY_OVERRIDE;
-                (*prop).optional = 0;
-                if !parse_name(ctx, &mut c, 1, ptr::addr_of_mut!((*prop).name_idx)) {
+                (*prop_ptr).oper = OSSL_PROPERTY_OVERRIDE;
+                (*prop_ptr).optional = 0;
+                if !parse_name(ctx, &mut c, 1, ptr::addr_of_mut!((*prop_ptr).name_idx)) {
                     break;
                 }
                 // `goto skip_value` — the push is the only thing after it.
-                if OPENSSL_sk_push(sk, prop.cast::<c_void>()) <= 0 {
+                if OPENSSL_sk_push(sk, prop_ptr.cast::<c_void>()) <= 0 {
                     break;
                 }
-                prop = ptr::null_mut();
+                let _ = prop.take().map(OwnedBlock::into_raw);
                 done = !match_ch(&mut c, b',');
                 continue;
             }
-            (*prop).optional = u32::from(match_ch(&mut c, b'?'));
-            if !parse_name(ctx, &mut c, 1, ptr::addr_of_mut!((*prop).name_idx)) {
+            (*prop_ptr).optional = u32::from(match_ch(&mut c, b'?'));
+            if !parse_name(ctx, &mut c, 1, ptr::addr_of_mut!((*prop_ptr).name_idx)) {
                 break;
             }
             let mut skip_value = false;
             if match_ch(&mut c, b'=') {
-                (*prop).oper = OSSL_PROPERTY_OPER_EQ;
+                (*prop_ptr).oper = OSSL_PROPERTY_OPER_EQ;
             } else if matches(&mut c, c"!=") {
-                (*prop).oper = OSSL_PROPERTY_OPER_NE;
+                (*prop_ptr).oper = OSSL_PROPERTY_OPER_NE;
             } else {
                 // A name alone is a Boolean comparison for true.
-                (*prop).oper = OSSL_PROPERTY_OPER_EQ;
-                (*prop).type_ = OSSL_PROPERTY_TYPE_STRING;
-                (*prop).v.str_val = OSSL_PROPERTY_TRUE;
+                (*prop_ptr).oper = OSSL_PROPERTY_OPER_EQ;
+                (*prop_ptr).type_ = OSSL_PROPERTY_TYPE_STRING;
+                (*prop_ptr).v.str_val = OSSL_PROPERTY_TRUE;
                 skip_value = true;
             }
-            if !skip_value && !parse_value(ctx, &mut c, prop, create_values) {
+            if !skip_value && !parse_value(ctx, &mut c, prop_ptr, create_values) {
                 // The authority does not fail here: it records that the value could
                 // not be produced and lets the comparison answer against absence.
-                (*prop).type_ = OSSL_PROPERTY_TYPE_VALUE_UNDEFINED;
+                (*prop_ptr).type_ = OSSL_PROPERTY_TYPE_VALUE_UNDEFINED;
             }
-            if OPENSSL_sk_push(sk, prop.cast::<c_void>()) <= 0 {
+            if OPENSSL_sk_push(sk, prop_ptr.cast::<c_void>()) <= 0 {
                 break;
             }
-            prop = ptr::null_mut();
+            let _ = prop.take().map(OwnedBlock::into_raw);
             done = !match_ch(&mut c, b',');
         }
         if c.ch() != 0 {
@@ -969,9 +1043,9 @@ pub(crate) unsafe fn ossl_parse_query(
         } else {
             res = stack_to_property_list(ctx, sk);
         }
-        if !prop.is_null() {
-            CRYPTO_free(prop.cast::<c_void>(), FILE, LINE_FREE_QPROP);
-        }
+        // The `err:` block; `prop`'s `Drop` is the authority's own `OPENSSL_free(prop)` here,
+        // before the stack is freed.
+        drop(prop.take());
         OPENSSL_sk_pop_free(sk, Some(pd_free));
     }
     res
@@ -1163,18 +1237,24 @@ pub(crate) unsafe fn ossl_property_merge(
     let t = na + nb;
     let defn_size = core::mem::size_of::<OsslPropertyDefinition>();
     let tail = if t == 0 { 0 } else { (t - 1) * defn_size };
-    let r = CRYPTO_malloc(
-        core::mem::size_of::<OsslPropertyList>() + tail,
-        FILE,
-        LINE_MALLOC_MERGED,
-    )
-    .cast::<OsslPropertyList>();
-    if r.is_null() {
+    // SAFETY: `CRYPTO_malloc` is this crate's allocator seam and answered a block or NULL.
+    let Some(r) = (unsafe {
+        OwnedBlock::take(
+            CRYPTO_malloc(
+                core::mem::size_of::<OsslPropertyList>() + tail,
+                FILE,
+                LINE_MALLOC_MERGED,
+            ),
+            FILE,
+            LINE_FREE_LIST,
+        )
+    }) else {
         return ptr::null_mut();
-    }
-    // SAFETY: `r` is a fresh allocation with room for `t` definitions.
+    };
+    let r_ptr = r.as_ptr::<OsslPropertyList>();
+    // SAFETY: `r_ptr` is a fresh allocation with room for `t` definitions.
     unsafe {
-        (*r).has_optional = 0;
+        (*r_ptr).has_optional = 0;
         let (mut i, mut j, mut n) = (0usize, 0usize, 0usize);
         while i < na || j < nb {
             // The merge step, as one expression: which element advances is the whole
@@ -1201,14 +1281,14 @@ pub(crate) unsafe fn ossl_property_merge(
                 j += 1;
                 c
             };
-            let dst = properties_ptr(r).add(n).cast_mut();
+            let dst = properties_ptr(r_ptr).add(n).cast_mut();
             *dst = *copy;
-            (*r).has_optional |= (*dst).optional;
+            (*r_ptr).has_optional |= (*dst).optional;
             n += 1;
         }
-        (*r).num_properties = n as c_int;
+        (*r_ptr).num_properties = n as c_int;
     }
-    r
+    r.into_raw().cast::<OsslPropertyList>()
 }
 
 // ---------------------------------------------------------------------------
