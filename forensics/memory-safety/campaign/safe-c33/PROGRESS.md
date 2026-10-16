@@ -51,8 +51,12 @@ Local gate for every batch (court container, 8 GB cap):
 | 29 | stage/p25/provider-codecs | decode_msblob2key, mac_legacy_kmgmt, ml_kem_codecs, ecx_kmgmt, file_store | free 6→2, 7→6, 5→1, 7→5, 8→5 |
 | 30 | stage/p25/km-p12-prop | asn1/a_sign, pkcs12/p12_utl, property/parse, provider/keymgmt | free 11→1, 5→3, 9→7; owner-lent slices |
 | 31 | stage/p25/ec-dso-enc | dso/mod.rs, ec/asn1.rs, provider/encode_key2any.rs | free 7→2, 6→2 |
+| 32 | stage/p25/pkey-crmf-addr | evp/pkey.rs, crmf/crmf_lib.rs, x509/v3_addr.rs | free 11→2, 6→4, 3→1; non-elidable cleanse improvement |
+| 33 | stage/p25/pmeth | dh/ec/rsa pmeth, dsa/ameth, rsa/ossl | OwnedCtx<CtxDestroy>; rsa/ossl 23→15 |
+| 34 | stage/p25/provider-sigs | legacyprov, dsa_kmgmt, dsa_sig, ecdsa_sig | free 2→1,7→5,6→3,6→3 (decode_der2key deferred) |
+| 35 | stage/p25/tail1 | ct_b64, conf/conf_ssl, runtime/str, evp/exchange, evp/pem_bridge | OwnedStore/PemBuf; free 6→1,5→3,4→3,5→4,4→3 |
 
-Converted files (union of stage/p25/* files): **~150 files** across 31 conversion batches plus the adoption-soundness and P0-abstraction repairs.
+Converted files (union of stage/p25/* files): **~165 files** across 35 conversion batches plus the adoption-soundness and P0-abstraction repairs. Long tail remains (~3 sites/file).
 
 ## Standing conversion standard
 
