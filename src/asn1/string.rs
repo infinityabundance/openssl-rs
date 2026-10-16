@@ -30,12 +30,92 @@ use crate::asn1::layout::*;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_realloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc, CRYPTO_zalloc};
 
 /// The authority translation unit for the string primitives.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/asn1/asn1_lib.c";
 /// The authority passes `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 pub(crate) const LINE: c_int = 0;
+
+/// An owned seam block: an `ASN1_STRING` object or its `data` buffer. Both are allocated through the
+/// crate's allocator seam and released with a plain `CRYPTO_free` at this module's own
+/// `FILE`/`LINE`, so a caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and
+/// its release exactly as it observes the authority's.
+///
+/// Only the *ownership* is this type: [`Self::new`] and [`Self::new_zeroed`] allocate, [`Self::take`]
+/// reclaims a block (or a NULL pointer, which `CRYPTO_realloc`/`CRYPTO_free` treat as empty) for
+/// release, [`Self::resize`] is the authority's `CRYPTO_realloc`, [`Self::into_raw`] hands a block to
+/// the C caller that owns it, and `Drop` is a held block's single release.
+struct OwnedBlock {
+    ptr: *mut c_uchar,
+}
+
+impl OwnedBlock {
+    /// A fresh block of `len` bytes through the installed allocator, or `None` when it answers NULL.
+    fn new(len: usize) -> Option<OwnedBlock> {
+        let ptr = CRYPTO_malloc(len, FILE.as_ptr(), LINE).cast::<c_uchar>();
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBlock { ptr })
+        }
+    }
+
+    /// A fresh, zeroed block of `len` bytes through the installed allocator, or `None` when it
+    /// answers NULL.
+    fn new_zeroed(len: usize) -> Option<OwnedBlock> {
+        let ptr = CRYPTO_zalloc(len, FILE.as_ptr(), LINE).cast::<c_uchar>();
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBlock { ptr })
+        }
+    }
+
+    /// Reclaim the block `ptr` names (`NULL` included) for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block the crate's allocator seam produced in full (not a sub-range)
+    /// and this caller owns exclusively -- the returned handle's `Drop` is its single release.
+    unsafe fn take(ptr: *mut c_uchar) -> OwnedBlock {
+        OwnedBlock { ptr }
+    }
+
+    /// `CRYPTO_realloc(self.ptr, len, FILE, LINE)`: on success the block is the new one and `true` is
+    /// answered; on failure the original is unchanged and `false` is answered.
+    fn resize(&mut self, len: usize) -> bool {
+        // SAFETY: `self.ptr` is this handle's block (or NULL, which `CRYPTO_realloc` treats as an
+        // allocation) and no one else owns it while the handle holds it.
+        let new = unsafe { CRYPTO_realloc(self.ptr.cast::<c_void>(), len, FILE.as_ptr(), LINE) };
+        if new.is_null() {
+            return false;
+        }
+        self.ptr = new.cast::<c_uchar>();
+        true
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBlock {
+    /// The block's single release, through the same seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), LINE) };
+    }
+}
 
 /// Read a `*const Asn1String` as a reference.
 ///
@@ -90,15 +170,13 @@ pub(crate) unsafe fn bytes<'a>(p: *const Asn1String) -> &'a [u8] {
 
 /// `ASN1_STRING_type_new` — a fresh string of a given type.
 pub(crate) fn string_type_new(type_: c_int) -> *mut Asn1String {
-    // SAFETY: `CRYPTO_zalloc` answers null or `sizeof(ASN1_STRING)` zeroed bytes.
-    let ret =
-        CRYPTO_zalloc(core::mem::size_of::<Asn1String>(), FILE.as_ptr(), LINE).cast::<Asn1String>();
-    if ret.is_null() {
+    let Some(block) = OwnedBlock::new_zeroed(core::mem::size_of::<Asn1String>()) else {
         return core::ptr::null_mut();
-    }
-    // SAFETY: `ret` is a fresh zeroed `ASN1_STRING`.
-    unsafe { (*ret).type_ = type_ };
-    ret
+    };
+    // SAFETY: `block` holds `size_of::<ASN1_STRING>()` zeroed bytes, a fresh valid `ASN1_STRING`;
+    // the field write is the constructor's own.
+    unsafe { (*block.as_ptr().cast::<Asn1String>()).type_ = type_ };
+    block.into_raw().cast::<Asn1String>()
 }
 
 /// `ossl_asn1_string_embed_free`.
@@ -114,12 +192,13 @@ pub(crate) unsafe fn string_embed_free(a: *mut Asn1String, embed: c_int) {
     // SAFETY: `a` is live.
     let (flags, data) = unsafe { ((*a).flags, (*a).data) };
     if flags & ASN1_STRING_FLAG_NDEF == 0 {
-        // SAFETY: `data` came from this allocator or is null.
-        unsafe { CRYPTO_free(data.cast::<c_void>(), FILE.as_ptr(), LINE) };
+        // SAFETY: `data` came from this allocator or is null and this frame owns it exclusively.
+        drop(unsafe { OwnedBlock::take(data) });
     }
     if embed == 0 {
-        // SAFETY: `a` was allocated by `string_type_new`.
-        unsafe { CRYPTO_free(a.cast::<c_void>(), FILE.as_ptr(), LINE) };
+        // SAFETY: `a` was allocated by `string_type_new`/the item machinery through this allocator
+        // and this frame owns it exclusively.
+        drop(unsafe { OwnedBlock::take(a.cast::<c_uchar>()) });
     }
 }
 
@@ -156,16 +235,15 @@ pub(crate) unsafe fn string_set_body(
         return 0;
     }
     if (s.length as usize) <= len || s.data.is_null() {
-        let old = s.data;
-        // SAFETY: `old` came from this allocator or is null; the new size is
-        // `len + 1` and `CRYPTO_realloc` answers null or that many bytes.
-        let new = unsafe { CRYPTO_realloc(old.cast::<c_void>(), len + 1, FILE.as_ptr(), LINE) };
-        if new.is_null() {
+        // SAFETY: `s.data` came from this allocator (or is null) and this frame owns it; taking it
+        // makes the owner below its single release while the resize runs.
+        let mut data = unsafe { OwnedBlock::take(s.data) };
+        if !data.resize(len + 1) {
             // The authority restores the original pointer so the string stays valid.
-            s.data = old;
+            s.data = data.into_raw();
             return 0;
         }
-        s.data = new.cast::<c_uchar>();
+        s.data = data.into_raw();
     }
     s.length = len as c_int;
     if !data.is_null() {
@@ -415,8 +493,9 @@ pub unsafe extern "C" fn ASN1_STRING_set0(str_: *mut Asn1String, data: *mut c_vo
     guard_ffi((), || {
         // SAFETY: the caller guarantees `str_` is live and uniquely owned.
         if let Some(s) = unsafe { as_str_mut(str_) } {
-            // SAFETY: `s.data` came from this allocator or is null.
-            unsafe { CRYPTO_free(s.data.cast::<c_void>(), FILE.as_ptr(), LINE) };
+            // SAFETY: `s.data` came from this allocator or is null and this frame owns it
+            // exclusively.
+            drop(unsafe { OwnedBlock::take(s.data) });
             s.data = data.cast::<c_uchar>();
             s.length = len;
         }
@@ -702,14 +781,12 @@ pub unsafe extern "C" fn ossl_sk_ASN1_UTF8STRING2text(
         }
         i += 1;
     }
-    // SAFETY: `CRYPTO_malloc` returns `length + 1` writable bytes or NULL.
-    let result =
-        crate::runtime::mem::CRYPTO_malloc(length + 1, FILE.as_ptr(), 456).cast::<c_char>();
-    if result.is_null() {
+    // `CRYPTO_malloc(length + 1)`, line 456; the caller owns the block `Drop` would otherwise free.
+    let Some(result) = OwnedBlock::new(length + 1) else {
         return ptr::null_mut();
-    }
+    };
 
-    let mut p = result;
+    let mut p = result.as_ptr().cast::<c_char>();
     let mut i = 0;
     while i < n {
         // SAFETY: `i` is in range of the live stack.
@@ -733,7 +810,7 @@ pub unsafe extern "C" fn ossl_sk_ASN1_UTF8STRING2text(
     // SAFETY: `p` is within the allocation and NUL is the terminator the authority writes.
     unsafe { *p = 0 };
 
-    result
+    result.into_raw().cast::<c_char>()
 }
 
 /// `strlen` — a NUL-terminated C string's length.
