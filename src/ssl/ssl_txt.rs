@@ -121,10 +121,11 @@ pub unsafe extern "C" fn SSL_SESSION_print(bp: *mut Bio, x: *const SslSession) -
             if BIO_puts(bp, c"\n    PSK identity: ".as_ptr()) <= 0 {
                 return 0;
             }
-            let psk = if s.psk_identity.is_null() {
+            let psk_id = s.psk_identity();
+            let psk = if psk_id.is_null() {
                 c"None".as_ptr()
             } else {
-                s.psk_identity
+                psk_id
             };
             if BIO_printf(bp, c"%s".as_ptr(), psk) <= 0 {
                 return 0;
@@ -132,10 +133,11 @@ pub unsafe extern "C" fn SSL_SESSION_print(bp: *mut Bio, x: *const SslSession) -
             if BIO_puts(bp, c"\n    PSK identity hint: ".as_ptr()) <= 0 {
                 return 0;
             }
-            let hint = if s.psk_identity_hint.is_null() {
+            let hint_ptr = s.psk_identity_hint();
+            let hint = if hint_ptr.is_null() {
                 c"None".as_ptr()
             } else {
-                s.psk_identity_hint
+                hint_ptr
             };
             if BIO_printf(bp, c"%s".as_ptr(), hint) <= 0 {
                 return 0;
@@ -143,10 +145,11 @@ pub unsafe extern "C" fn SSL_SESSION_print(bp: *mut Bio, x: *const SslSession) -
             if BIO_puts(bp, c"\n    SRP username: ".as_ptr()) <= 0 {
                 return 0;
             }
-            let srp = if s.srp_username.is_null() {
+            let srp_name = s.srp_username();
+            let srp = if srp_name.is_null() {
                 c"None".as_ptr()
             } else {
-                s.srp_username
+                srp_name
             };
             if BIO_printf(bp, c"%s".as_ptr(), srp) <= 0 {
                 return 0;
