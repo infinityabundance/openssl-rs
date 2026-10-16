@@ -303,6 +303,72 @@ const LINE_FREE_EXT: c_int = 199;
 /// `crypto/x509/x509_req.c:38`.
 const LINE_MALLOC_VERSION: c_int = 38;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer allocated through the crate's allocator seam.
+///
+/// Each block stays a `CRYPTO_malloc` (or the item layer's own `OPENSSL_malloc`) at the authority's
+/// exact size/`file`/`line` -- a Rust `Box`/`Vec` would hide both the allocation and its release
+/// from a caller-installed `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this
+/// type: [`Self::new`] allocates it, [`Self::adopt`] takes in a block the item layer built, `Drop`
+/// is its single release at the authority's own site, and [`Self::into_raw`] hands the version
+/// byte to the request's integer. A NULL pointer is a valid, empty block whose release is the
+/// authority's own no-op `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            file,
+            line,
+        })
+    }
+
+    /// Adopt a block the item layer allocated inside `ASN1_item_i2d`, for release by `Drop` at
+    /// the authority's own site.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block the item layer allocated that no one else owns, and `file` is
+    /// NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, file, line }
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the request's integer.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// The authority's `err:` tail of [`X509_to_X509_REQ`]: free the request and answer NULL.
 ///
 /// # Safety
@@ -343,15 +409,18 @@ pub unsafe extern "C" fn X509_to_X509_REQ(
     /* `ri->version->length = 1; ri->version->data = OPENSSL_malloc(1); ... = 0;` — the version is
      * written as a one-byte zero rather than through `ASN1_INTEGER_set`, which is the authority's
      * own shape. */
-    // SAFETY: `ret` is live and its `version` is the fresh item's own integer.
+    // `version_data` owns the fresh one-byte block; a failed allocation is the authority's own
+    // free-and-NULL tail, and the block's ownership moves into the request's integer once written.
+    let Some(version_data) = OwnedBuf::new(1, FILE.as_ptr(), LINE_MALLOC_VERSION) else {
+        // SAFETY: `ret` is this call's own request.
+        return unsafe { to_req_err(ret) };
+    };
+    // SAFETY: `version_data` owns one byte and `ret` is live, its `version` the fresh item's own
+    // integer.
     unsafe {
         (*(*ret).req_info.version).length = 1;
-        (*(*ret).req_info.version).data =
-            CRYPTO_malloc(1, FILE.as_ptr(), LINE_MALLOC_VERSION).cast::<c_uchar>();
-        if (*(*ret).req_info.version).data.is_null() {
-            return to_req_err(ret);
-        }
-        *(*(*ret).req_info.version).data = 0;
+        *version_data.as_ptr() = 0;
+        (*(*ret).req_info.version).data = version_data.into_raw();
     }
 
     // SAFETY: `ret` and `x` are live.
@@ -641,12 +710,14 @@ unsafe fn add_extensions_nid_tail(
     if extlen <= 0 {
         return 0;
     }
+    // `ext` is the block the item layer allocated above; the handle owns it and its `Drop` is the
+    // authority's own single `OPENSSL_free` on every exit below.
+    // SAFETY: `ext` is NULL or a block `ASN1_item_i2d` allocated that no one else owns.
+    let ext = unsafe { OwnedBuf::adopt(ext, FILE.as_ptr(), LINE_FREE_EXT) };
     if !mod_exts.is_null() {
         // SAFETY: `req` is live per the contract; `loc` is a live attribute index.
         let att = unsafe { X509at_delete_attr((*req).req_info.attributes, loc) };
         if att.is_null() {
-            // SAFETY: `ext` was allocated by the item layer above.
-            unsafe { CRYPTO_free(ext.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_EXT) };
             return 0;
         }
         // SAFETY: `att` is a live attribute this call owns.
@@ -654,10 +725,7 @@ unsafe fn add_extensions_nid_tail(
     }
     // SAFETY: `req` is live per the contract; the remaining arguments are the caller's contract,
     // and `ext`/`extlen` are the encoding built above.
-    let rv = unsafe { X509_REQ_add1_attr_by_NID(req, nid, V_ASN1_SEQUENCE, ext, extlen) };
-    // SAFETY: `ext` was allocated by the item layer above.
-    unsafe { CRYPTO_free(ext.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_EXT) };
-    rv
+    unsafe { X509_REQ_add1_attr_by_NID(req, nid, V_ASN1_SEQUENCE, ext.as_ptr(), extlen) }
 }
 
 /// `int X509_REQ_add_extensions_nid(X509_REQ *req, const STACK_OF(X509_EXTENSION) *exts, int nid)`
