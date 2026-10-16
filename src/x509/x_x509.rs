@@ -292,6 +292,79 @@ const _: () = {
     assert!(core::mem::offset_of!(X509, propq) == 376);
 };
 
+impl X509 {
+    /// The object-owned property-query string (NULL when unset) — the authoritative read of the
+    /// `propq` member buffer. Reads cannot free or alias, but funnelling them here keeps the
+    /// field's writers enumerable (see [`PropqSlot`]).
+    pub(crate) fn propq(&self) -> *const c_char {
+        self.propq
+    }
+}
+
+/// A validated handle over the object-owned C-string member `X509::propq`.
+///
+/// ## Member-buffer invariant (stated once)
+/// `X509::propq` is always either NULL or a single NUL-terminated block produced by the crate's
+/// `CRYPTO_strdup` seam and owned by the enclosing `X509`. That object is the block's *only*
+/// owner: the block is released **exactly once**, by [`x509_cb`]'s `FREE_POST` arm or by the next
+/// [`PropqSlot::clear`]/[`PropqSlot::store`] that replaces it (`ossl_x509_set0_libctx`). Nothing
+/// else frees or aliases it.
+///
+/// ## Why the field stays raw
+/// The `#[repr(C)]` layout is the authority's, so the field must remain `*mut c_char` at its exact
+/// offset; a Rust owner type cannot live in the struct. This handle is a transient **borrow** over
+/// the field — the resident-member counterpart of the per-module `OwnedStr`, and the X.509
+/// analogue of `pk7_asn1.rs`'s `PropqSlot` and `cms_asn1.rs`'s `CmsPropqSlot`.
+///
+/// `unsafe` appears only at the two proof boundaries: [`PropqSlot::of`] (which asserts the field
+/// currently obeys the invariant) and [`PropqSlot::store`] (which accepts an externally-allocated
+/// block). `clear` is safe because a handle built by [`PropqSlot::of`] guarantees the incumbent is
+/// the object's own single block.
+pub(crate) struct PropqSlot<'a> {
+    /// Borrow of the object's member field; its value obeys the invariant for `'a`.
+    slot: &'a mut *mut c_char,
+}
+
+impl<'a> PropqSlot<'a> {
+    /// Derive the handle from a live object.
+    ///
+    /// # Safety
+    ///
+    /// `x` is a live `X509` and is borrowed mutably for `'a`; its `propq` field currently obeys
+    /// the member-buffer invariant. A live `X509` satisfies this because the ASN.1 item layer
+    /// zeroes the object at construction and the member is only ever mutated through this handle
+    /// (`X509_new_ex`, `ossl_x509_set0_libctx`) or released by `x509_cb`'s `FREE_POST` arm.
+    pub(crate) unsafe fn of(x: &'a mut X509) -> PropqSlot<'a> {
+        PropqSlot { slot: &mut x.propq }
+    }
+
+    /// Release any incumbent value through the authority's own `CRYPTO_free` site, leaving the
+    /// field NULL. This is the authority's `OPENSSL_free(p)` followed by `p = NULL`; NULL is a
+    /// no-op for `CRYPTO_free`, so the release is total.
+    pub(crate) fn clear(&mut self, file: *const c_char, line: c_int) {
+        let old = core::mem::replace(self.slot, ptr::null_mut());
+        // SAFETY: by the member-buffer invariant the incumbent is NULL or the object's own single
+        // `CRYPTO_strdup` block, so this is that block's one release; `CRYPTO_free` ignores NULL.
+        unsafe { CRYPTO_free(old.cast(), file, line) };
+    }
+
+    /// Store a freshly-`CRYPTO_strdup`ed value into the (now empty) field, transferring ownership
+    /// of it to the enclosing object.
+    ///
+    /// # Safety
+    ///
+    /// `new` is NULL or a live NUL-terminated block this caller owns exclusively (produced by the
+    /// crate's `CRYPTO_strdup` seam) and no other owner will release it; the field is currently
+    /// unset (NULL).
+    pub(crate) unsafe fn store(&mut self, new: *mut c_char) {
+        debug_assert!(
+            (*self.slot).is_null(),
+            "propq member slot must be empty before store"
+        );
+        *self.slot = new;
+    }
+}
+
 // ---------------------------------------------------------------------------------------------
 // The `X509_CINF` item — `ASN1_SEQUENCE_enc(X509_CINF, enc, 0)` (`:18-29`)
 // ---------------------------------------------------------------------------------------------
@@ -554,18 +627,17 @@ unsafe extern "C" fn x509_cb(
                 X509_CERT_AUX_free((*ret).aux.cast());
                 ASN1_OCTET_STRING_free((*ret).skid);
                 ASN1_OCTET_STRING_free((*ret).distinguishing_id);
-                CRYPTO_free(
-                    (*ret).propq.cast(),
-                    FILE.as_ptr(),
-                    LINE_FREE_PROPQ_FREE_POST,
-                );
+                // `ret` is live and its `propq` obeys the member-buffer invariant, so `clear` is
+                // that block's one release at the authority's own site (`:98`); a NULL incumbent
+                // makes it a no-op.
+                PropqSlot::of(&mut *ret).clear(FILE.as_ptr(), LINE_FREE_PROPQ_FREE_POST);
             }
         }
         ASN1_OP_DUP_POST => {
             // SAFETY: `exarg` is the source `X509` for this operation.
             let old = exarg.cast::<X509>();
             // SAFETY: `ret` and `old` are live.
-            if unsafe { ossl_x509_set0_libctx(ret, (*old).libctx, (*old).propq) } == 0 {
+            if unsafe { ossl_x509_set0_libctx(ret, (*old).libctx, (*old).propq()) } == 0 {
                 return 0;
             }
         }
@@ -575,7 +647,7 @@ unsafe extern "C" fn x509_cb(
         }
         ASN1_OP_GET0_PROPQ => {
             // SAFETY: `exarg` is a `const char **` out-slot.
-            unsafe { *(exarg.cast::<*const c_char>()) = (*ret).propq };
+            unsafe { *(exarg.cast::<*const c_char>()) = (*ret).propq() };
         }
         _ => {}
     }
@@ -848,16 +920,22 @@ pub unsafe extern "C" fn ossl_x509_set0_libctx(
     propq: *const c_char,
 ) -> c_int {
     if !x.is_null() {
-        // SAFETY: `x` is live per the contract.
+        // SAFETY: `x` is live per the contract and its `propq` obeys the member-buffer invariant.
         unsafe {
             (*x).libctx = libctx;
-            CRYPTO_free((*x).propq.cast(), FILE.as_ptr(), LINE_FREE_PROPQ);
-            (*x).propq = ptr::null_mut();
+            let mut slot = PropqSlot::of(&mut *x);
+            // Release any incumbent at the authority's own site (`:144`), leaving it unset. A NULL
+            // incumbent makes this a no-op, exactly as the authority's NULL guard does.
+            slot.clear(FILE.as_ptr(), LINE_FREE_PROPQ);
             if !propq.is_null() {
-                (*x).propq = CRYPTO_strdup(propq, FILE.as_ptr(), LINE_STRDUP_PROPQ);
-                if (*x).propq.is_null() {
+                // SAFETY: `propq` is NUL-terminated per the contract.
+                let copy = CRYPTO_strdup(propq, FILE.as_ptr(), LINE_STRDUP_PROPQ);
+                if copy.is_null() {
                     return 0;
                 }
+                // SAFETY: `copy` is this call's own fresh `CRYPTO_strdup` block and the slot is
+                // unset.
+                slot.store(copy);
             }
         }
     }
