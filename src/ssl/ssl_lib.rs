@@ -779,22 +779,30 @@ pub struct Cert {
     pub custext: Vec<CustomExtMethod>,
 }
 
-/// A context's or a connection's certificate container, freshly allocated and empty.
+/// A context's or a connection's certificate container, freshly allocated and initialised empty.
 ///
 /// The block is an [`OwnedCtx`] whose `Drop` runs [`CtxDestroy::destroy_body`] (the authority's
 /// `cert_free` body) and then the block release; the caller takes ownership with
 /// [`OwnedCtx::into_raw`], and [`cert_free`] reclaims it. `Drop` is the only release.
 ///
 /// # Safety
-/// The returned handle is a live, zeroed `Cert` with the authority's security-level default
+/// The returned handle is a live `Cert` with the authority's security-level default
 /// (`ssl_cert.c:84`'s `OPENSSL_TLS_SECURITY_LEVEL` = 2).
 unsafe fn cert_new() -> Option<OwnedCtx<Cert>> {
     // The container block, allocated through the crate's allocator seam (authority size). `Drop` is
     // its single release and `into_raw` hands it to the enclosing object.
     let c_owner = OwnedCtx::<Cert>::new(FILE, 0, 0)?;
     let c = c_owner.as_ptr();
-    // SAFETY: `c` is a fresh zeroed allocation.
+    // SAFETY: `c` is live, but its bytes are the allocator's zeros, and zeroed bytes are not a valid
+    // `Cert`: every other field is a raw pointer or an integer (whose zero is the authority's own
+    // empty state), but `custext` is a `Vec`, whose zeroed bytes -- a NULL buffer pointer -- are not
+    // a valid `Vec`. Write a valid empty `Vec` first, before any operation -- in particular before
+    // `destroy_body`, which drops `custext` in place -- can read it, then set the scalar fields.
+    // `cert_new`'s only refusal is `OwnedCtx::new`'s NULL, which runs before the block exists, and
+    // every write below is infallible, so no path that can reach `destroy_body` leaves `custext`
+    // uninitialised.
     unsafe {
+        ptr::write(ptr::addr_of_mut!((*c).custext), Vec::new());
         (*c).sec_level = 2;
         (*c).sec_cb = Some(ssl_security_default_callback);
         (*c).ssl_pkey_num = SSL_PKEY_NUM;
@@ -855,10 +863,11 @@ impl CtxDestroy for Cert {
     /// `ptr` is a live container this file allocated and has not released.
     unsafe fn destroy_body(ptr: *mut Cert) {
         // SAFETY: `ptr` is live per the contract; a NULL `psk_identity_hint` is `CRYPTO_free`'s own
-        // no-op. `custext` is the `Vec` `cert_new` zero-initialised and `SSL_CTX_add_*_custom_ext`
-        // may have grown; dropping it in place releases the record buffer (the records hold only
-        // borrowed callback pointers and raw args the caller owns, exactly as the authority's
-        // `custom_exts_free` releases only the array when the old-style wrapper is absent).
+        // no-op. `custext` is the valid empty `Vec` `cert_new` wrote (never a zeroed block) and
+        // `SSL_CTX_add_*_custom_ext` may have grown; dropping it in place releases the record buffer
+        // (the records hold only borrowed callback pointers and raw args the caller owns, exactly as
+        // the authority's `custom_exts_free` releases only the array when the old-style wrapper is
+        // absent).
         unsafe {
             for i in 0..SSL_PKEY_NUM {
                 cert_pkey_clear(ptr::addr_of_mut!((*ptr).pkeys[i]));
