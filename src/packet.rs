@@ -92,6 +92,64 @@ const FILE_PACKET: *const c_char = c"../../src/openssl-3.6.4/crypto/packet.c".as
 /// `__LINE__` is inert under `OPENSSL_NO_CRYPTO_MDEBUG`, which this profile defines.
 const LINE: c_int = 0;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the sub-packet nodes
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `WPACKET_SUB` node allocated through the crate's `CRYPTO_zalloc` seam.
+///
+/// The packet's `subs` chain is stored in `#[repr(C)]` fields the body reads by name, so this
+/// handle owns a node only for the windows around a transition: between its allocation and the
+/// write into `pkt->subs`, and between taking a node off the chain and the authority's plain
+/// `CRYPTO_free`. `Drop` is the block's single release, at the authority's own `file`/`line`. A
+/// zeroed block is a valid `WPACKET_SUB` — every member is a pointer or an integer — so `zalloc`
+/// hands one out directly.
+struct OwnedSub {
+    ptr: *mut WpacketSub,
+}
+
+impl OwnedSub {
+    /// `CRYPTO_zalloc(sizeof(WPACKET_SUB), FILE, LINE)`, or `None` when the allocator answers NULL.
+    fn zalloc() -> Option<OwnedSub> {
+        let raw = CRYPTO_zalloc(core::mem::size_of::<WpacketSub>(), FILE_PACKET, LINE)
+            .cast::<WpacketSub>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedSub { ptr: raw })
+    }
+
+    /// Reclaim a node the packet's `subs` chain holds, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is a live `WPACKET_SUB` this unit allocated through the seam and no other owner will
+    /// release.
+    unsafe fn adopt(ptr: *mut WpacketSub) -> OwnedSub {
+        OwnedSub { ptr }
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut WpacketSub {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the `pkt->subs` field that takes it over.
+    fn into_raw(self) -> *mut WpacketSub {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedSub {
+    /// The block's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `zalloc`/`adopt` took and has not handed out; its single
+        // release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE_PACKET, LINE) };
+    }
+}
+
 /// `GETBUF(p)` — `crypto/packet.c:40-44`: the static buffer if there is one, else the `BUF_MEM`'s
 /// data, else NULL.
 ///
@@ -274,11 +332,10 @@ unsafe fn wpacket_intern_init_len(pkt: *mut Wpacket, lenbytes: usize) -> c_int {
         (*pkt).curr = 0;
         (*pkt).written = 0;
 
-        (*pkt).subs = CRYPTO_zalloc(core::mem::size_of::<WpacketSub>(), FILE_PACKET, LINE)
-            .cast::<WpacketSub>();
-        if (*pkt).subs.is_null() {
+        let Some(subs) = OwnedSub::zalloc() else {
             return 0;
-        }
+        };
+        (*pkt).subs = subs.into_raw();
 
         if lenbytes == 0 {
             return 1;
@@ -289,7 +346,8 @@ unsafe fn wpacket_intern_init_len(pkt: *mut Wpacket, lenbytes: usize) -> c_int {
 
         let mut lenchars: *mut c_uchar = core::ptr::null_mut();
         if WPACKET_allocate_bytes(pkt, lenbytes, &mut lenchars) == 0 {
-            CRYPTO_free((*pkt).subs.cast(), FILE_PACKET, LINE);
+            // SAFETY: `(*pkt).subs` is the node this call just installed and has not released.
+            drop(OwnedSub::adopt((*pkt).subs));
             (*pkt).subs = core::ptr::null_mut();
             return 0;
         }
@@ -606,7 +664,7 @@ unsafe fn wpacket_intern_close(pkt: *mut Wpacket, sub: *mut WpacketSub, doclose:
         // SAFETY: `pkt` and `sub` are live; `sub->parent` is live or NULL.
         unsafe {
             (*pkt).subs = (*sub).parent;
-            CRYPTO_free(sub.cast(), FILE_PACKET, LINE);
+            drop(OwnedSub::adopt(sub));
         }
     }
 
@@ -675,7 +733,8 @@ pub(crate) unsafe extern "C" fn WPACKET_finish(pkt: *mut Wpacket) -> c_int {
 
         let ret = wpacket_intern_close(pkt, (*pkt).subs, 1);
         if ret != 0 {
-            CRYPTO_free((*pkt).subs.cast(), FILE_PACKET, LINE);
+            // SAFETY: `(*pkt).subs` is a live node this packet owns.
+            drop(OwnedSub::adopt((*pkt).subs));
             (*pkt).subs = core::ptr::null_mut();
         }
 
@@ -707,31 +766,30 @@ pub(crate) unsafe extern "C" fn WPACKET_start_sub_packet_len__(
     }
 
     // SAFETY: `pkt` is live.
-    let sub =
-        CRYPTO_zalloc(core::mem::size_of::<WpacketSub>(), FILE_PACKET, LINE).cast::<WpacketSub>();
-    if sub.is_null() {
+    let Some(sub) = OwnedSub::zalloc() else {
         return 0;
-    }
+    };
+    let subp = sub.as_ptr();
 
-    // SAFETY: `pkt` and `sub` are live.
+    // SAFETY: `pkt` is live; `sub` is this call's fresh block.
     unsafe {
-        (*sub).parent = (*pkt).subs;
-        (*pkt).subs = sub;
-        (*sub).pwritten = (*pkt).written + lenbytes;
-        (*sub).lenbytes = lenbytes;
+        (*subp).parent = (*pkt).subs;
+        (*pkt).subs = sub.into_raw();
+        (*subp).pwritten = (*pkt).written + lenbytes;
+        (*subp).lenbytes = lenbytes;
     }
 
     if lenbytes == 0 {
-        // SAFETY: `sub` is live.
+        // SAFETY: `subp` is the live node just installed.
         unsafe {
-            (*sub).packet_len = 0;
+            (*subp).packet_len = 0;
         }
         return 1;
     }
 
-    // SAFETY: `pkt` and `sub` are live.
+    // SAFETY: `pkt` and `subp` are live.
     unsafe {
-        (*sub).packet_len = (*pkt).written;
+        (*subp).packet_len = (*pkt).written;
 
         let mut lenchars: *mut c_uchar = core::ptr::null_mut();
         if WPACKET_allocate_bytes(pkt, lenbytes, &mut lenchars) == 0 {
@@ -1015,7 +1073,7 @@ pub(crate) unsafe extern "C" fn WPACKET_cleanup(pkt: *mut Wpacket) {
         let mut sub = (*pkt).subs;
         while !sub.is_null() {
             let parent = (*sub).parent;
-            CRYPTO_free(sub.cast(), FILE_PACKET, LINE);
+            drop(OwnedSub::adopt(sub));
             sub = parent;
         }
         (*pkt).subs = core::ptr::null_mut();
