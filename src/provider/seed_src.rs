@@ -196,6 +196,158 @@ pub(crate) struct ProvSeedSrc {
     pub state: c_int,
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the two RAND contexts and the `entropy`/`nonce` buffers they hold
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `*_free` body for one of this unit's `#[repr(C)]` contexts, without the block
+/// release [`OwnedCtx`]'s `Drop` performs. `FILE`/`LINE_ALLOC`/`LINE_FREE` are the authority's own
+/// `CRYPTO_*` coordinates, kept distinct so a caller-installed `CRYPTO_set_mem_functions` hook
+/// observes the release at the site the authority releases it.
+trait CtxDestroy: Sized {
+    /// `__FILE__` for this context's `CRYPTO_*` calls.
+    const FILE: *const c_char;
+    /// `__LINE__` for the context's allocation.
+    const LINE_ALLOC: c_int;
+    /// `__LINE__` for the context's block release.
+    const LINE_FREE: c_int;
+
+    /// The authority's `*_free` body, without the block release `Drop` performs.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live context this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned `#[repr(C)]` context block.
+///
+/// The block keeps the authority's layout and its exact `CRYPTO_zalloc` size/`file`/`line`, but its
+/// *ownership* is this type: [`Self::zalloc`] allocates it, [`Self::from_raw`] takes back the block
+/// the C ABI hands to a `*_free`, and `Drop` runs the authority's own free body
+/// ([`CtxDestroy::destroy_body`]) followed by its single block release. A Rust `Box` would hide both
+/// the release and a caller-installed `CRYPTO_set_mem_functions` hook.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// `CRYPTO_zalloc(size_of::<T>(), T::FILE, T::LINE_ALLOC)`, or `None` when it answers NULL. The
+    /// zeroed image is the authority's own starting state -- every owned pointer is NULL -- so
+    /// [`CtxDestroy::destroy_body`] on it is the authority's own all-empty free.
+    fn zalloc() -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, T::LINE_ALLOC).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the context to the C ABI's answer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim the block the C ABI hands to a `*_free`, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live context this file allocated that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The context's destructor: the authority's own free body followed by its single block release,
+    /// through the same allocator seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; `destroy_body` is
+        // the authority's own free body and this is the block's single release.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, T::LINE_FREE);
+        }
+    }
+}
+
+/// An owned `entropy`/`nonce` buffer: a block `OSSL_PARAM_get_octet_string` left for the context, or
+/// one reclaimed from a field.
+///
+/// The block stays the authority's own allocation, at its exact `file`/`line`, so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes its release. `Drop` is its single release.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// Take up a plain block the crate allocated inside `OSSL_PARAM_get_octet_string` or a context
+    /// field still holds, for release by `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns; `file` is NULL
+    /// or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf { ptr, file, line })
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
+/// `seed_src_free`'s body (`seed_src.c:70-73`): the block alone, no owned members.
+impl CtxDestroy for ProvSeedSrc {
+    const FILE: *const c_char = FILE_SEED_SRC;
+    const LINE_ALLOC: c_int = LINE_SEED_SRC_ZALLOC;
+    const LINE_FREE: c_int = LINE_SEED_SRC_FREE;
+
+    unsafe fn destroy_body(_ptr: *mut ProvSeedSrc) {}
+}
+
+/// `test_rng_free`'s body (`test_rng.c:74-84`), without the block release [`OwnedCtx`]'s `Drop`
+/// performs: the two owned buffers and the lock, in the authority's own order.
+impl CtxDestroy for ProvTestRng {
+    const FILE: *const c_char = FILE_TEST_RNG;
+    const LINE_ALLOC: c_int = LINE_TEST_RNG_ZALLOC;
+    const LINE_FREE: c_int = LINE_TEST_RNG_FREE;
+
+    unsafe fn destroy_body(ptr: *mut ProvTestRng) {
+        // SAFETY: `ptr` is a live context per the trait contract; `entropy`/`nonce` are NULL or this
+        // file's own `OSSL_PARAM_get_octet_string` blocks and `lock` is NULL or the context's own.
+        unsafe {
+            drop(OwnedBuf::adopt(
+                (*ptr).entropy,
+                FILE_TEST_RNG,
+                LINE_TEST_RNG_FREE_ENTROPY,
+            ));
+            drop(OwnedBuf::adopt(
+                (*ptr).nonce,
+                FILE_TEST_RNG,
+                LINE_TEST_RNG_FREE_NONCE,
+            ));
+            CRYPTO_THREAD_lock_free((*ptr).lock);
+        }
+    }
+}
+
 /// `static void *seed_src_new(void *provctx, void *parent, const OSSL_DISPATCH
 /// *parent_dispatch)` — `seed_src.c:51-68`.
 ///
@@ -219,19 +371,13 @@ unsafe extern "C" fn seed_src_new(
             return ptr::null_mut();
         }
 
-        let s = CRYPTO_zalloc(
-            core::mem::size_of::<ProvSeedSrc>(),
-            FILE_SEED_SRC,
-            LINE_SEED_SRC_ZALLOC,
-        )
-        .cast::<ProvSeedSrc>();
-        if s.is_null() {
+        let Some(s) = OwnedCtx::<ProvSeedSrc>::zalloc() else {
             return ptr::null_mut();
-        }
-
-        (*s).provctx = provctx;
-        (*s).state = EVP_RAND_STATE_UNINITIALISED;
-        s.cast()
+        };
+        let p = s.as_ptr();
+        (*p).provctx = provctx;
+        (*p).state = EVP_RAND_STATE_UNINITIALISED;
+        s.into_raw().cast()
     }
 }
 
@@ -241,8 +387,8 @@ unsafe extern "C" fn seed_src_new(
 /// # Safety
 /// The dispatch contract; `vseed` is a context `seed_src_new` allocated or NULL.
 unsafe extern "C" fn seed_src_free(vseed: *mut c_void) {
-    // SAFETY: `vseed` is NULL or a live `ProvSeedSrc` per the contract.
-    unsafe { CRYPTO_free(vseed, FILE_SEED_SRC, LINE_SEED_SRC_FREE) };
+    // SAFETY: `vseed` is NULL or a live `ProvSeedSrc` per the contract; `Drop` is its single release.
+    drop(unsafe { OwnedCtx::<ProvSeedSrc>::from_raw(vseed.cast()) });
 }
 
 /// `static int seed_src_instantiate(void *vseed, unsigned int strength,
@@ -702,20 +848,14 @@ unsafe extern "C" fn test_rng_new(
 ) -> *mut c_void {
     // SAFETY: the caller's contract.
     unsafe {
-        let t = CRYPTO_zalloc(
-            core::mem::size_of::<ProvTestRng>(),
-            FILE_TEST_RNG,
-            LINE_TEST_RNG_ZALLOC,
-        )
-        .cast::<ProvTestRng>();
-        if t.is_null() {
+        let Some(t) = OwnedCtx::<ProvTestRng>::zalloc() else {
             return ptr::null_mut();
-        }
-
-        (*t).max_request = INT_MAX;
-        (*t).provctx = provctx;
-        (*t).state = EVP_RAND_STATE_UNINITIALISED;
-        t.cast()
+        };
+        let p = t.as_ptr();
+        (*p).max_request = INT_MAX;
+        (*p).provctx = provctx;
+        (*p).state = EVP_RAND_STATE_UNINITIALISED;
+        t.into_raw().cast()
     }
 }
 
@@ -729,21 +869,9 @@ unsafe extern "C" fn test_rng_new(
 /// # Safety
 /// The dispatch contract; `vtest` is a context `test_rng_new` allocated or NULL.
 unsafe extern "C" fn test_rng_free(vtest: *mut c_void) {
-    // SAFETY: `vtest` is NULL or a live `ProvTestRng` per the contract.
-    unsafe {
-        if vtest.is_null() {
-            return;
-        }
-        let t = vtest.cast::<ProvTestRng>();
-        CRYPTO_free(
-            (*t).entropy.cast(),
-            FILE_TEST_RNG,
-            LINE_TEST_RNG_FREE_ENTROPY,
-        );
-        CRYPTO_free((*t).nonce.cast(), FILE_TEST_RNG, LINE_TEST_RNG_FREE_NONCE);
-        CRYPTO_THREAD_lock_free((*t).lock);
-        CRYPTO_free(vtest, FILE_TEST_RNG, LINE_TEST_RNG_FREE);
-    }
+    // SAFETY: `vtest` is NULL or a live `ProvTestRng` per the contract; `Drop` runs the authority's
+    // own free body (the entropy and nonce buffers, the lock) and this is the block's single release.
+    drop(unsafe { OwnedCtx::<ProvTestRng>::from_raw(vtest.cast()) });
 }
 
 /// `static int test_rng_instantiate(void *vtest, unsigned int strength,
@@ -1062,11 +1190,12 @@ unsafe extern "C" fn test_rng_set_ctx_params(
             if OSSL_PARAM_get_octet_string(p, &mut ptr, 0, &mut size) == 0 {
                 return 0;
             }
-            CRYPTO_free(
-                (*t).entropy.cast(),
+            // `(*t).entropy` is NULL or the buffer the context owns; `Drop` is its release.
+            drop(OwnedBuf::adopt(
+                (*t).entropy,
                 FILE_TEST_RNG,
                 LINE_TEST_RNG_SET_FREE_ENTROPY,
-            );
+            ));
             (*t).entropy = ptr.cast::<c_uchar>();
             (*t).entropy_len = size;
             (*t).entropy_pos = 0;
@@ -1078,11 +1207,12 @@ unsafe extern "C" fn test_rng_set_ctx_params(
             if OSSL_PARAM_get_octet_string(p, &mut ptr, 0, &mut size) == 0 {
                 return 0;
             }
-            CRYPTO_free(
-                (*t).nonce.cast(),
+            // `(*t).nonce` is NULL or the buffer the context owns; `Drop` is its release.
+            drop(OwnedBuf::adopt(
+                (*t).nonce,
                 FILE_TEST_RNG,
                 LINE_TEST_RNG_SET_FREE_NONCE,
-            );
+            ));
             (*t).nonce = ptr.cast::<c_uchar>();
             (*t).nonce_len = size;
         }
