@@ -61,8 +61,9 @@ use crate::params::{
 };
 use crate::provider::cipher::{param_int, param_octet_string, param_utf8_string};
 use crate::provider::ctx::prov_libctx_of;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, OPENSSL_cleanse};
 use crate::selftest::OsslCallback;
 use crate::slh_dsa::hash_ctx::{ossl_slh_dsa_hash_ctx_free, ossl_slh_dsa_hash_ctx_new};
 use crate::slh_dsa::key::{
@@ -110,6 +111,68 @@ const LINE_STRDUP_PROPQ: c_int = 111;
 const LINE_FREE_GCTX: c_int = 300;
 /// `slh_dsa_kmgmt.c:452`, the `OPENSSL_free(gctx->propq)` sites.
 const LINE_FREE_PROPQ: c_int = 452;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the generation context and its `propq` duplicate
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `propq` duplicate: a block this unit's `CRYPTO_strdup` leaves in the context, or one
+/// reclaimed from the field, released by `Drop` with a plain `CRYPTO_free` at the authority's own
+/// site.
+///
+/// The block stays the authority's own allocation, at its exact `file`/`line`, so a
+/// caller-installed `CRYPTO_set_mem_functions` hook observes its release; only its *ownership* is
+/// this type.
+struct OwnedStr {
+    ptr: *mut c_char,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedStr {
+    /// Adopt a block a field still holds, for release by `Drop` at the authority's own site; NULL
+    /// answers `None`, which the callers treat as the authority's NULL release.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block the crate's allocator seam produced in full and this caller
+    /// owns exclusively -- this handle's `Drop` is its single release; `file` is NULL or a
+    /// NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_char, file: *const c_char, line: c_int) -> Option<OwnedStr> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedStr { ptr, file, line })
+        }
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The block's single release, through the same seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
+/// `slh_dsa_gen_cleanup`'s body (`slh_dsa_kmgmt.c.in:450-452`), without the block release
+/// [`OwnedCtx`]'s `Drop` performs: cleanse the entropy, then release the `propq` duplicate, in the
+/// authority's own order.
+impl CtxDestroy for SlhDsaGenCtx {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_GCTX;
+    const LINE_FREE: c_int = LINE_FREE_GCTX;
+
+    unsafe fn destroy_body(ptr: *mut SlhDsaGenCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `propq` is NULL or this file's own
+        // `CRYPTO_strdup` block.
+        unsafe {
+            OPENSSL_cleanse((*ptr).entropy.as_mut_ptr().cast(), (*ptr).entropy.len());
+            drop(OwnedStr::adopt((*ptr).propq, FILE, LINE_FREE_PROPQ));
+        }
+    }
+}
 
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
@@ -630,20 +693,21 @@ unsafe extern "C" fn slh_dsa_gen_init(
         return ptr::null_mut();
     }
 
-    // SAFETY: `CRYPTO_zalloc` answers a zeroed block or NULL.
-    let gctx = CRYPTO_zalloc(core::mem::size_of::<SlhDsaGenCtx>(), FILE, LINE_ZALLOC_GCTX)
-        .cast::<SlhDsaGenCtx>();
-    if !gctx.is_null() {
-        // SAFETY: `gctx` is a fresh zeroed block this call owns.
-        unsafe {
-            (*gctx).libctx = libctx;
-            if slh_dsa_gen_set_params(gctx.cast(), params) == 0 {
-                CRYPTO_free(gctx.cast(), FILE, LINE_FREE_GCTX);
-                return ptr::null_mut();
-            }
+    // SAFETY: `gctx` is a fresh zeroed block this call owns; `params` is the caller's and `libctx`
+    // the creating provider's.
+    let Some(gctx) = OwnedCtx::<SlhDsaGenCtx>::zalloc() else {
+        return ptr::null_mut();
+    };
+    // SAFETY: `gctx` is this call's own fresh zeroed block; `libctx` is the creating provider's
+    // context and `params` is the caller's.
+    unsafe {
+        (*gctx.as_ptr()).libctx = libctx;
+        if slh_dsa_gen_set_params(gctx.as_ptr().cast(), params) == 0 {
+            // `gctx`'s `Drop` runs the authority's own free body and its single block release.
+            return ptr::null_mut();
         }
     }
-    gctx.cast()
+    gctx.into_raw().cast()
 }
 
 /// `static void *slh_dsa_gen(void *genctx, const char *alg)` — `slh_dsa_kmgmt.c:595-616`.
@@ -773,7 +837,9 @@ unsafe extern "C" fn slh_dsa_gen_set_params(
             if (*p.propq).data_type != OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            CRYPTO_free((*gctx).propq.cast(), FILE, LINE_FREE_PROPQ);
+            // The incumbent duplicate is released by its own `Drop` before the new one is stored;
+            // the authority's `OPENSSL_free(gctx->propq)`, line 452.
+            drop(OwnedStr::adopt((*gctx).propq, FILE, LINE_FREE_PROPQ));
             (*gctx).propq =
                 CRYPTO_strdup((*p.propq).data.cast::<c_char>(), FILE, LINE_STRDUP_PROPQ);
             if (*gctx).propq.is_null() {
@@ -803,18 +869,10 @@ unsafe extern "C" fn slh_dsa_gen_settable_params(
 /// # Safety
 /// The keymgmt `gen_cleanup` dispatch contract.
 unsafe extern "C" fn slh_dsa_gen_cleanup(genctx: *mut c_void) {
-    let gctx = genctx.cast::<SlhDsaGenCtx>();
-
-    if gctx.is_null() {
-        return;
-    }
-
-    // SAFETY: `gctx` is the caller's live context.
-    unsafe {
-        OPENSSL_cleanse((*gctx).entropy.as_mut_ptr().cast(), (*gctx).entropy.len());
-        CRYPTO_free((*gctx).propq.cast(), FILE, LINE_FREE_PROPQ);
-        CRYPTO_free(gctx.cast(), FILE, LINE_ZALLOC_GCTX);
-    }
+    // SAFETY: the `gen_cleanup` dispatch contract; `genctx` is NULL or a live context this file
+    // allocated and `Drop` is its single release, running the authority's own free body (cleanse the
+    // entropy, release the `propq` duplicate) before the block release.
+    drop(unsafe { OwnedCtx::<SlhDsaGenCtx>::from_raw(genctx.cast()) });
 }
 
 /// `MAKE_KEYMGMT_FUNCTIONS(alg, fn)` — `slh_dsa_kmgmt.c:455-488`, once per parameter set.
