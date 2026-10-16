@@ -839,7 +839,7 @@ pub unsafe extern "C" fn d2i_PKCS7_fp(fp: *mut FILE, p7: *mut *mut Pkcs7) -> *mu
             // SAFETY: `existing` is live per the check above.
             libctx = unsafe { (*existing).ctx.libctx };
             // SAFETY: as above.
-            propq = unsafe { (*existing).ctx.propq };
+            propq = unsafe { (*existing).ctx.propq() };
         }
     }
     // SAFETY: `fp`/`p7` are the caller's and the context/property query come from the object.
@@ -882,7 +882,7 @@ pub unsafe extern "C" fn d2i_PKCS7_bio(bp: *mut Bio, p7: *mut *mut Pkcs7) -> *mu
             // SAFETY: `existing` is live per the check above.
             libctx = unsafe { (*existing).ctx.libctx };
             // SAFETY: as above.
-            propq = unsafe { (*existing).ctx.propq };
+            propq = unsafe { (*existing).ctx.propq() };
         }
     }
     // SAFETY: `bp`/`p7` are the caller's and the context/property query come from the object.
