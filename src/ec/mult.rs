@@ -29,9 +29,10 @@ use crate::ec::lib::{
     EC_POINT_is_at_infinity, EC_POINT_new, EC_POINT_set_to_infinity, EC_pre_comp_free,
 };
 use crate::ec::{EcGroup, EcPoint, Pct};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_malloc_array, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_malloc_array};
 
 /// The `crypto/ec/ec_mult.c` translation unit, as the allocator reports it.
 const FILE: &core::ffi::CStr = c"crypto/ec/ec_mult.c";
@@ -60,34 +61,61 @@ pub(crate) struct EcPreCompSt {
     pub(crate) references: AtomicI32,
 }
 
+impl CtxDestroy for EcPreCompSt {
+    const FILE: *const c_char = FILE.as_ptr();
+    const LINE_ALLOC: c_int = 57;
+    const LINE_FREE: c_int = 101;
+
+    /// `EC_ec_pre_comp_free`'s body minus the block release [`OwnedCtx`]'s `Drop` performs: the
+    /// points array and the points it holds (`:90-98`). `group` is borrowed and `references` is a
+    /// scalar, so neither is released here.
+    unsafe fn destroy_body(ptr: *mut EcPreCompSt) {
+        // SAFETY: `ptr` is a live precomputation per the trait contract; `points` is NULL or this
+        // object's own array of owned points, terminated by a NULL pivot.
+        unsafe {
+            if !(*ptr).points.is_null() {
+                let mut pts = (*ptr).points;
+
+                while !(*pts).is_null() {
+                    EC_POINT_free(*pts);
+                    pts = pts.add(1);
+                }
+                CRYPTO_free((*ptr).points.cast(), FILE.as_ptr(), 98);
+            }
+        }
+    }
+}
+
 /// `static EC_PRE_COMP *ec_pre_comp_new(const EC_GROUP *group)` — `crypto/ec/ec_mult.c:50-70`.
 ///
 /// # Safety
 ///
 /// `group` is null or live; the returned pointer is null or owned by the caller.
 unsafe fn ec_pre_comp_new(group: *const EcGroup) -> *mut EcPreCompSt {
-    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
+    if group.is_null() {
+        return ptr::null_mut();
+    }
+
+    // A zeroed `EcPreCompSt` (NULL `points`, zero scalars) is the authority's own `OPENSSL_zalloc`
+    // state, so `OwnedCtx::zalloc` may validate it.
+    let Some(ret) = OwnedCtx::<EcPreCompSt>::zalloc() else {
+        return ptr::null_mut();
+    };
+    let p = ret.as_ptr();
+    // SAFETY: `p` is a fresh zeroed block this call owns.
     unsafe {
-        if group.is_null() {
-            return ptr::null_mut();
-        }
-
-        let ret = CRYPTO_zalloc(core::mem::size_of::<EcPreCompSt>(), FILE.as_ptr(), 57)
-            .cast::<EcPreCompSt>();
-        if ret.is_null() {
-            return ret;
-        }
-
-        (*ret).group = group;
-        (*ret).blocksize = 8; /* default */
-        (*ret).w = 4; /* default */
+        (*p).group = group;
+        (*p).blocksize = 8; /* default */
+        (*p).w = 4; /* default */
 
         // `if (!CRYPTO_NEW_REF(&ret->references, 1))` — this profile's header arm is the plain
         // store, which cannot fail, so the authority's free-and-answer-NULL limb is unreachable
         // and is not written. `src/dsa/object.rs` records the same reduction.
-        (*ret).references.store(1, Ordering::Relaxed);
-        ret
+        (*p).references.store(1, Ordering::Relaxed);
     }
+    // `into_raw` hands the caller the C pointer; `EC_ec_pre_comp_free` reclaims it when the last
+    // reference goes, so the ownership transfer stays with the authority's refcount discipline.
+    ret.into_raw()
 }
 
 /// `EC_PRE_COMP *EC_ec_pre_comp_dup(EC_PRE_COMP *pre)` — `crypto/ec/ec_mult.c:72-78`.
@@ -144,17 +172,11 @@ pub(crate) unsafe extern "C" fn EC_ec_pre_comp_free(pre: *mut EcPreCompSt) {
             return;
         }
 
-        if !(*pre).points.is_null() {
-            let mut pts = (*pre).points;
-
-            while !(*pts).is_null() {
-                EC_POINT_free(*pts);
-                pts = pts.add(1);
-            }
-            CRYPTO_free((*pre).points.cast(), FILE.as_ptr(), 98);
-        }
-        // `CRYPTO_FREE_REF(&pre->references)` is empty on this profile's arm of the header.
-        CRYPTO_free(pre.cast(), FILE.as_ptr(), 101);
+        // `i <= 0` means no reference remains, so this object is owned solely here and its `Drop`
+        // runs the authority's own points release (`:98`) followed by the block release at `:101`.
+        // SAFETY: `pre` is a live object this module allocated and, having reached zero
+        // references, no other owner will release it.
+        drop(OwnedCtx::<EcPreCompSt>::from_raw(pre));
     }
 }
 

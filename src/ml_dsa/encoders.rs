@@ -86,6 +86,93 @@ const LINE_SK_DECODE_CLEAR_SEED: c_int = 773;
 /// `ossl_ml_dsa_sk_decode`'s `OPENSSL_secure_malloc(in_len)`, `ml_dsa_encoders.c:809`.
 const LINE_SK_DECODE_PRV: c_int = 809;
 
+/// An owned encoder block on this unit's allocator seam.
+///
+/// The public encoding is an `OPENSSL_malloc` block and the secret one an `OPENSSL_secure_malloc`
+/// block, each released at its own `__LINE__`; this handle carries both the allocation and release
+/// coordinates and the release kind, so a caller-installed `CRYPTO_set_mem_functions`/
+/// `CRYPTO_secure_malloc` observer sees each exactly as it sees the authority's. `Drop` is the
+/// block's single release; `into_raw` is how the encoding is transferred into the key, and the
+/// secret variant's release is the authority's `OPENSSL_secure_clear_free` (cleansing preserved).
+struct OwnedBuf {
+    ptr: ptr::NonNull<u8>,
+    len: usize,
+    file: *const c_char,
+    line: c_int,
+    secure: bool,
+}
+
+impl OwnedBuf {
+    /// `OPENSSL_malloc(len)` at `file`/`line`, released by `Drop` at `release_line`.
+    fn malloc(
+        len: usize,
+        file: *const c_char,
+        line: c_int,
+        release_line: c_int,
+    ) -> Option<OwnedBuf> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
+        // bytes.
+        let raw = CRYPTO_malloc(len, file, line).cast::<u8>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedBuf {
+            ptr,
+            len,
+            file,
+            line: release_line,
+            secure: false,
+        })
+    }
+
+    /// `OPENSSL_secure_malloc(len)` at `file`/`line`, released by `Drop` with
+    /// `OPENSSL_secure_clear_free` at `release_line`.
+    fn secure_malloc(
+        len: usize,
+        file: *const c_char,
+        line: c_int,
+        release_line: c_int,
+    ) -> Option<OwnedBuf> {
+        // SAFETY: `CRYPTO_secure_malloc` answers NULL or a fresh, writable block of `len` bytes.
+        let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<u8>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedBuf {
+            ptr,
+            len,
+            file,
+            line: release_line,
+            secure: true,
+        })
+    }
+
+    /// The block's stable address, for the packet builder's writes.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr.as_ptr()
+    }
+
+    /// Hand the block to the key's owning member, so `Drop` no longer releases it.
+    fn into_raw(self) -> *mut u8 {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle allocated and has not handed out; `Drop` runs
+        // once, so this is its single release, through the authority's own release seam and line.
+        unsafe {
+            if self.secure {
+                CRYPTO_secure_clear_free(
+                    self.ptr.as_ptr().cast::<c_void>(),
+                    self.len,
+                    self.file,
+                    self.line,
+                );
+            } else {
+                CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+            }
+        }
+    }
+}
+
 /// `POLY_COEFF_NUM_BYTES(bits)` — `ml_dsa_encoders.c:19`, `bits * (256 / 8)`.
 const fn poly_coeff_num_bytes(bits: usize) -> usize {
     bits * (ML_DSA_NUM_POLY_COEFFICIENTS / 8)
@@ -887,16 +974,20 @@ pub(crate) unsafe fn ossl_ml_dsa_pk_encode(key: *mut MlDsaKey) -> c_int {
     let t1_len = unsafe { (*key).t1.num_poly };
     // SAFETY: `key` is live, so its `params` field names the key's static parameter set.
     let enc_len = unsafe { (*(*key).params).pk_len };
-    // SAFETY: `CRYPTO_malloc` answers NULL on failure, which is checked below.
-    let enc = CRYPTO_malloc(enc_len, FILE, LINE_PK_ENCODE_ENC).cast::<u8>();
+    // `OPENSSL_malloc(enc_len)` at `:629`, released by `Drop` at `:650` when the encoding does not
+    // land (the authority's error-path `OPENSSL_free(enc)`); on success `into_raw` transfers it into
+    // `key->pub_encoding`.
+    let Some(enc_owned) =
+        OwnedBuf::malloc(enc_len, FILE, LINE_PK_ENCODE_ENC, LINE_PK_ENCODE_FREE_ENC)
+    else {
+        return 0;
+    };
+    let enc = enc_owned.as_ptr();
+    let mut enc_owned = Some(enc_owned);
     // SAFETY: `Wpacket` is a builder of integers and pointers; the value is initialised by the
     // `WPACKET_init_static_len` below before it is read, and `WPACKET_finish` on an all-zero
     // packet is the authority's NULL-`subs` early return.
     let mut pkt = unsafe { core::mem::zeroed::<Wpacket>() };
-
-    if enc.is_null() {
-        return 0;
-    }
 
     'err: {
         // SAFETY: `pkt` is a live local, `enc` is `enc_len` writable bytes and `key->rho` is the
@@ -930,16 +1021,18 @@ pub(crate) unsafe fn ossl_ml_dsa_pk_encode(key: *mut MlDsaKey) -> c_int {
                 LINE_PK_ENCODE_FREE_PUB,
             )
         };
-        // SAFETY: `key` is live and `enc` is transferred into it.
-        unsafe { (*key).pub_encoding = enc };
+        // Transfer the owned block into the key; `take` stops its `Drop` from releasing it.
+        // SAFETY: `key` is live and the block is this call's own.
+        unsafe {
+            (*key).pub_encoding = enc_owned.take().map_or(ptr::null_mut(), OwnedBuf::into_raw)
+        };
         ret = 1;
     }
     // SAFETY: `pkt` was initialised above.
     unsafe { WPACKET_finish(&mut pkt) };
-    if ret == 0 {
-        // SAFETY: `enc` came from `CRYPTO_malloc` and was not stored into `key`.
-        unsafe { CRYPTO_free(enc.cast::<c_void>(), FILE, LINE_PK_ENCODE_FREE_ENC) };
-    }
+    // `enc_owned` is still `Some` only when the encoding did not land; its `Drop` is the authority's
+    // error-path `OPENSSL_free(enc)` at `:650`.
+    drop(enc_owned);
     ret
 }
 
@@ -1037,14 +1130,17 @@ pub(crate) unsafe fn ossl_ml_dsa_sk_encode(key: *mut MlDsaKey) -> c_int {
     let enc_len = unsafe { (*params).sk_len };
     // SAFETY: `key` is live with an allocated `t0` vector per the contract.
     let mut t0 = unsafe { (*key).t0.poly };
-    // SAFETY: `CRYPTO_secure_malloc` answers NULL on failure, which is checked below.
-    let enc = unsafe { CRYPTO_secure_malloc(enc_len, FILE, LINE_SK_ENCODE_ENC) }.cast::<u8>();
+    // `OPENSSL_secure_malloc(enc_len)` at `:716`, released by `Drop` (secure clear) at `:750` when
+    // the encoding does not land; on success `into_raw` transfers it into `key->priv_encoding`.
+    let Some(enc_owned) =
+        OwnedBuf::secure_malloc(enc_len, FILE, LINE_SK_ENCODE_ENC, LINE_SK_ENCODE_CLEAR_ENC)
+    else {
+        return 0;
+    };
+    let enc = enc_owned.as_ptr();
+    let mut enc_owned = Some(enc_owned);
     // SAFETY: `Wpacket` is initialised by the `WPACKET_init_static_len` below before it is read.
     let mut pkt = unsafe { core::mem::zeroed::<Wpacket>() };
-
-    if enc.is_null() {
-        return 0;
-    }
 
     /* eta is the range of private key coefficients (-eta...eta). */
     // SAFETY: `params` points at a static parameter set.
@@ -1111,23 +1207,18 @@ pub(crate) unsafe fn ossl_ml_dsa_sk_encode(key: *mut MlDsaKey) -> c_int {
                 LINE_SK_ENCODE_CLEAR_PRV,
             )
         };
-        // SAFETY: `key` is live and `enc` is transferred into it.
-        unsafe { (*key).priv_encoding = enc };
+        // Transfer the owned block into the key; `take` stops its `Drop` from releasing it.
+        // SAFETY: `key` is live and the block is this call's own.
+        unsafe {
+            (*key).priv_encoding = enc_owned.take().map_or(ptr::null_mut(), OwnedBuf::into_raw)
+        };
         ret = 1;
     }
     // SAFETY: `pkt` was initialised above.
     unsafe { WPACKET_finish(&mut pkt) };
-    if ret == 0 {
-        // SAFETY: `enc` came from `CRYPTO_secure_malloc` and was not stored into `key`.
-        unsafe {
-            CRYPTO_secure_clear_free(
-                enc.cast::<c_void>(),
-                enc_len,
-                FILE,
-                LINE_SK_ENCODE_CLEAR_ENC,
-            )
-        };
-    }
+    // `enc_owned` is still `Some` only when the encoding did not land; its `Drop` is the authority's
+    // error-path `OPENSSL_secure_clear_free(enc, enc_len)` at `:750`.
+    drop(enc_owned);
     ret
 }
 
