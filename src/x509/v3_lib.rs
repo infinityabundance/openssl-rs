@@ -184,6 +184,86 @@ const _: () = {
 // `Asn1Item` and `Asn1Template` claim it in `src/asn1/layout.rs`.
 unsafe impl Sync for X509V3ExtMethod {}
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the dynamic `X509V3_EXT_DYNAMIC` rows
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's destructor body for one of the file's heap records, without the block's own
+/// release, which [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live record this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned `X509V3_EXT_DYNAMIC` row.
+///
+/// The block keeps the authority's layout and its exact `CRYPTO_malloc` size/`file`/`line`, but its
+/// *ownership* is this type: [`Self::new`] allocates it, `Drop` runs the authority's own destructor
+/// body ([`CtxDestroy::destroy_body`], empty for a row that owns nothing itself) followed by its
+/// single block release at the authority's own site, and [`Self::into_raw`] hands the row to the
+/// process-global `ext_list` that takes it over.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// `CRYPTO_malloc(sizeof(*T), file, alloc_line)`, or `None` when the allocator answers NULL.
+    /// `alloc_line` is the authority's allocation site and `line` its release site.
+    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_malloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the `ext_list` that takes it over.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block the `ext_list` holds, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block this file allocated that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The row's destructor: the authority's own `ext_list_free` body
+    /// ([`CtxDestroy::destroy_body`]) followed by its single block release, through the same
+    /// allocator seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
+        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+/// The authority's `ext_list_free` body, without the block release [`OwnedCtx`]'s `Drop` performs:
+/// a copied row owns nothing itself, so only the block release is left.
+impl CtxDestroy for X509V3ExtMethod {
+    unsafe fn destroy_body(_ptr: *mut X509V3ExtMethod) {}
+}
+
 /// `#define X509V3_EXT_DYNAMIC 0x1` — `include/openssl/x509v3.h:121`.
 pub(crate) const X509V3_EXT_DYNAMIC: c_int = 0x1;
 
@@ -337,8 +417,12 @@ unsafe extern "C" fn ext_list_free(ext: *mut c_void) {
     if !method.is_null() {
         // SAFETY: the slot holds a method pointer per the stack contract.
         if unsafe { (*method).ext_flags } & X509V3_EXT_DYNAMIC != 0 {
-            // SAFETY: a DYNAMIC row was `OPENSSL_malloc`ed by `X509V3_EXT_add_alias`.
-            unsafe { CRYPTO_free(ext, FILE.as_ptr(), LINE_FREE) };
+            // A DYNAMIC row was `CRYPTO_malloc`ed by `X509V3_EXT_add_alias`; reclaiming it runs the
+            // row's single block release at the authority's own `:119` site.
+            // SAFETY: `method` is a live DYNAMIC row this module allocated and has not released.
+            drop(unsafe {
+                OwnedCtx::<X509V3ExtMethod>::from_raw(method, FILE.as_ptr(), LINE_FREE)
+            });
         }
     }
 }
@@ -514,28 +598,27 @@ pub unsafe extern "C" fn X509V3_EXT_add_alias(nid_to: c_int, nid_from: c_int) ->
         unsafe { raise_site(&err_sites::V3_LIB_95) };
         return 0;
     }
+    // `tmpext` owns the fresh copy; a failed `X509V3_EXT_add` releases it at the authority's own
+    // `:104` site, and a successful one gives the block up to the `ext_list`.
     // SAFETY: the allocator answers NULL or one `X509V3ExtMethod`-sized block.
-    let tmpext = CRYPTO_malloc(
-        core::mem::size_of::<X509V3ExtMethod>(),
-        FILE.as_ptr(),
-        LINE_MALLOC_ALIAS,
-    )
-    .cast::<X509V3ExtMethod>();
-    if tmpext.is_null() {
+    let Some(tmpext) =
+        OwnedCtx::<X509V3ExtMethod>::new(FILE.as_ptr(), LINE_MALLOC_ALIAS, LINE_FREE_ALIAS)
+    else {
         return 0;
-    }
-    // SAFETY: `tmpext` is a fresh, unaliased allocation of one row; `ext` is a live row.
+    };
+    // SAFETY: `tmpext.as_ptr()` is a fresh, unaliased allocation of one row; `ext` is a live row.
     unsafe {
-        ptr::write(tmpext, ptr::read(ext));
-        (*tmpext).ext_nid = nid_to;
-        (*tmpext).ext_flags |= X509V3_EXT_DYNAMIC;
+        ptr::write(tmpext.as_ptr(), ptr::read(ext));
+        (*tmpext.as_ptr()).ext_nid = nid_to;
+        (*tmpext.as_ptr()).ext_flags |= X509V3_EXT_DYNAMIC;
     }
-    // SAFETY: `tmpext` is this call's own row, so `X509V3_EXT_add`'s contract holds.
-    if unsafe { X509V3_EXT_add(tmpext) } == 0 {
-        // SAFETY: `tmpext` is this call's own allocation, not owned by the list on this path.
-        unsafe { CRYPTO_free(tmpext.cast(), FILE.as_ptr(), LINE_FREE_ALIAS) };
+    // SAFETY: `tmpext.as_ptr()` is this call's own row, so `X509V3_EXT_add`'s contract holds.
+    if unsafe { X509V3_EXT_add(tmpext.as_ptr()) } == 0 {
+        // `tmpext` drops here, at the authority's `:104` site.
         return 0;
     }
+    // The `ext_list` owns the row now.
+    let _ = tmpext.into_raw();
     1
 }
 

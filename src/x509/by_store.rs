@@ -101,6 +101,103 @@ struct CachedStore {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Ownership of the recorded stores
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's destructor body for one of the file's heap records, without the block's own
+/// release, which [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live record this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned [`CachedStore`] record.
+///
+/// The block keeps the authority's layout, its exact `CRYPTO_zalloc` size/`file`/`line` and its
+/// stable address (the lookup's `method_data` stack holds it), but its *ownership* is this type:
+/// [`Self::zalloc`] allocates it (a zeroed record is exactly the authority's `OPENSSL_zalloc`
+/// result), `Drop` runs the authority's own destructor body ([`CtxDestroy::destroy_body`])
+/// followed by its single block release at the authority's own site, and [`Self::into_raw`] hands
+/// the block to the stack that takes it over.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// `CRYPTO_zalloc(sizeof(*T), file, alloc_line)`, or `None` when the allocator answers NULL.
+    /// `alloc_line` is the authority's allocation site and `line` its release site.
+    fn zalloc(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(size_of::<T>(), file, alloc_line).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// The stable address the lookup's stack holds.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the stack that takes it over.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous [`Self::into_raw`] handed to the lookup's stack, for release by
+    /// `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block this file allocated that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The record's destructor: the authority's own `free_store` body
+    /// ([`CtxDestroy::destroy_body`]) followed by its single block release, through the same
+    /// allocator seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `zalloc` allocated (or `from_raw` reclaimed) and this is
+        // its single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+/// The authority's `free_store` body, without the block release [`OwnedCtx`]'s `Drop` performs: a
+/// record's two owned strings.
+impl CtxDestroy for CachedStore {
+    unsafe fn destroy_body(ptr: *mut CachedStore) {
+        // SAFETY: `ptr` is a live record per the trait contract; `uri`/`propq` are NULL or this
+        // file's own `CRYPTO_strdup` blocks (`CRYPTO_free` accepts NULL).
+        unsafe {
+            CRYPTO_free(
+                (*ptr).uri.cast::<c_void>(),
+                FILE.as_ptr(),
+                LINE_FREE_STORE_URI,
+            );
+            CRYPTO_free(
+                (*ptr).propq.cast::<c_void>(),
+                FILE.as_ptr(),
+                LINE_FREE_STORE_PROPQ,
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // The loader — `crypto/x509/by_store.c:24-125`
 // ---------------------------------------------------------------------------------------------
 
@@ -217,38 +314,17 @@ unsafe fn cache_objects(
 
 /// `static void free_store(CACHED_STORE *store)` — `crypto/x509/by_store.c:112-119`.
 ///
-/// Releases a recorded store's owned strings and the record itself. A NULL `store` is a no-op.
-///
-/// # Safety
-///
-/// `store` must be NULL or a record this module allocated, not already freed.
-unsafe fn free_store(store: *mut CachedStore) {
-    if !store.is_null() {
-        // SAFETY: `store` is live per the contract; its strings are its own.
-        unsafe {
-            CRYPTO_free(
-                (*store).uri.cast::<c_void>(),
-                FILE.as_ptr(),
-                LINE_FREE_STORE_URI,
-            );
-            CRYPTO_free(
-                (*store).propq.cast::<c_void>(),
-                FILE.as_ptr(),
-                LINE_FREE_STORE_PROPQ,
-            );
-            CRYPTO_free(store.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_STORE);
-        }
-    }
-}
-
-/// The `CACHED_STORE` destructor [`by_store_free`] passes to `OPENSSL_sk_pop_free`.
+/// The `CACHED_STORE` destructor [`by_store_free`] passes to `OPENSSL_sk_pop_free`. Takes the raw
+/// element the stack hands back and reclaims it as an [`OwnedCtx`], whose `Drop` is the record's
+/// single release (its two strings and the block) at the authority's own `free_store` sites.
 ///
 /// # Safety
 ///
 /// `elem` must be NULL or a record this module allocated.
 unsafe extern "C" fn free_store_thunk(elem: *mut c_void) {
-    // SAFETY: `elem` is NULL or a record per the contract; `free_store` accepts NULL.
-    unsafe { free_store(elem.cast::<CachedStore>()) };
+    // SAFETY: `elem` is NULL or a record this module allocated; `from_raw` reclaims it and `Drop`
+    // runs the authority's own release.
+    drop(unsafe { OwnedCtx::<CachedStore>::from_raw(elem.cast(), FILE.as_ptr(), LINE_FREE_STORE) });
 }
 
 /// `static void by_store_free(X509_LOOKUP *ctx)` — `crypto/x509/by_store.c:121-125`.
@@ -291,21 +367,27 @@ unsafe extern "C" fn by_store_ctrl_ex(
             if !argp.is_null() {
                 // SAFETY: `ctx` is live per the contract.
                 let mut stores = unsafe { X509_LOOKUP_get_method_data(ctx) }.cast::<OpenSslStack>();
-                // SAFETY: the allocator takes the file/line for its mdbg record only.
-                let store =
-                    CRYPTO_zalloc(size_of::<CachedStore>(), FILE.as_ptr(), LINE_ZALLOC_STORE)
-                        .cast::<CachedStore>();
-
-                if store.is_null() {
+                // `store` owns the fresh record: every early return below releases its strings and
+                // the block at the authority's own `free_store` sites, and only a successful push
+                // gives the block up to `stores`.
+                // SAFETY: the allocator takes the file/line for its mdbg record only; a zeroed
+                // `CachedStore` is the authority's own `OPENSSL_zalloc` result.
+                let Some(store) = OwnedCtx::<CachedStore>::zalloc(
+                    FILE.as_ptr(),
+                    LINE_ZALLOC_STORE,
+                    LINE_FREE_STORE,
+                ) else {
                     return 0;
-                }
+                };
 
-                // SAFETY: `argp` is NUL-terminated per the contract; `store` is this call's own.
+                // SAFETY: `argp` is NUL-terminated per the contract; `store.as_ptr()` is this
+                // call's own record.
                 unsafe {
-                    (*store).uri = CRYPTO_strdup(argp, FILE.as_ptr(), LINE_STRDUP_URI);
-                    (*store).libctx = libctx;
+                    (*store.as_ptr()).uri = CRYPTO_strdup(argp, FILE.as_ptr(), LINE_STRDUP_URI);
+                    (*store.as_ptr()).libctx = libctx;
                     if !propq.is_null() {
-                        (*store).propq = CRYPTO_strdup(propq, FILE.as_ptr(), LINE_STRDUP_PROPQ);
+                        (*store.as_ptr()).propq =
+                            CRYPTO_strdup(propq, FILE.as_ptr(), LINE_STRDUP_PROPQ);
                     }
                 }
                 // Open this now to check for errors, so they can be reported early.
@@ -323,16 +405,14 @@ unsafe extern "C" fn by_store_ctrl_ex(
                         ptr::null_mut(),
                     )
                 };
-                // SAFETY: `store` is this call's own record, so its fields are live.
+                // SAFETY: `store.as_ptr()` is this call's own record, so its fields are live.
                 let missing = unsafe {
-                    (*store).uri.is_null() || (!propq.is_null() && (*store).propq.is_null())
+                    (*store.as_ptr()).uri.is_null()
+                        || (!propq.is_null() && (*store.as_ptr()).propq.is_null())
                 };
                 if sctx.is_null() || missing {
-                    // SAFETY: `sctx` is NULL or this call's own context; `store` is its own record.
-                    unsafe {
-                        OSSL_STORE_close(sctx);
-                        free_store(store);
-                    }
+                    // SAFETY: `sctx` is NULL or this call's own context; `store` drops on return.
+                    unsafe { OSSL_STORE_close(sctx) };
                     return 0;
                 }
                 // SAFETY: `sctx` is this call's own live context.
@@ -345,18 +425,19 @@ unsafe extern "C" fn by_store_ctrl_ex(
                         unsafe { X509_LOOKUP_set_method_data(ctx, stores.cast::<c_void>()) };
                     }
                 }
-                // SAFETY: `stores` is NULL or this lookup's own stack; `store` is the element.
+                // SAFETY: `stores` is NULL or this lookup's own stack; `store.as_ptr()` is the
+                // element.
                 if stores.is_null() {
-                    // SAFETY: `store` was not installed, so this call still owns it.
-                    unsafe { free_store(store) };
+                    // `store` was not installed, so this call still owns it; it drops on return.
                     return 0;
                 }
-                // SAFETY: `stores` is this lookup's own stack; `store` is the element to push.
-                if unsafe { OPENSSL_sk_push(stores, store.cast::<c_void>()) } <= 0 {
-                    // SAFETY: `store` was not installed, so this call still owns it.
-                    unsafe { free_store(store) };
+                // SAFETY: `stores` is this lookup's own stack; `store.as_ptr()` is the element.
+                if unsafe { OPENSSL_sk_push(stores, store.as_ptr().cast::<c_void>()) } <= 0 {
+                    // `store` was not installed, so this call still owns it; it drops on return.
                     return 0;
                 }
+                // The push succeeded, so `stores` owns the record now.
+                let _ = store.into_raw();
                 return 1;
             }
             // NOP if no URI is given.
