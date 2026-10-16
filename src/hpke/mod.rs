@@ -724,13 +724,16 @@ pub(crate) unsafe fn hpke_labeled_extract(
 ) -> c_int {
     let labeled_ikmlen =
         LABEL_HPKEV1.len() + protocol_label.len() + suiteidlen + label.len() + ikmlen;
-    // SAFETY: the destination was sized as the exact sum below and each copy is of its own length.
-    // The buffer is owned until this call returns; `Drop` is its release.
-    let Some(labeled_ikm) = OwnedBuf::take(
-        CRYPTO_malloc(labeled_ikmlen, FILE_HPKE_UTIL, 316).cast::<c_uchar>(),
-        FILE_HPKE_UTIL,
-        338,
-    ) else {
+    // SAFETY: `CRYPTO_malloc` is this crate's allocator seam, so the `labeled_ikmlen`-byte block
+    // it answers has that provenance; this frame owns it and no other owner releases it. The
+    // buffer is owned until this call returns; `Drop` is its release.
+    let Some(labeled_ikm) = (unsafe {
+        OwnedBuf::take(
+            CRYPTO_malloc(labeled_ikmlen, FILE_HPKE_UTIL, 316).cast::<c_uchar>(),
+            FILE_HPKE_UTIL,
+            338,
+        )
+    }) else {
         return 0;
     };
 
@@ -816,11 +819,15 @@ pub(crate) unsafe fn hpke_labeled_expand(
         + suiteidlen
         + label.len()
         + infolen;
-    let Some(labeled_info) = OwnedBuf::take(
-        CRYPTO_malloc(labeled_infolen, FILE_HPKE_UTIL, 366).cast::<c_uchar>(),
-        FILE_HPKE_UTIL,
-        388,
-    ) else {
+    // SAFETY: `CRYPTO_malloc` is this crate's allocator seam, so the `labeled_infolen`-byte block
+    // it answers has that provenance; this frame owns it and no other owner releases it.
+    let Some(labeled_info) = (unsafe {
+        OwnedBuf::take(
+            CRYPTO_malloc(labeled_infolen, FILE_HPKE_UTIL, 366).cast::<c_uchar>(),
+            FILE_HPKE_UTIL,
+            388,
+        )
+    }) else {
         return 0;
     };
 
@@ -1267,7 +1274,12 @@ struct OwnedBuf {
 
 impl OwnedBuf {
     /// Adopt a block the frame's seam answered, or `None` for NULL.
-    fn take(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a block this frame allocated through the crate's allocator seam
+    /// (`CRYPTO_malloc`), so it has that provenance; the caller owns it and no other owner will
+    /// release it. `Drop` performs its single `CRYPTO_free` at `(file, line)`.
+    unsafe fn take(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
         if ptr.is_null() {
             None
         } else {
@@ -2661,13 +2673,16 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_set1_authpub(
             unsafe { raise_site(&err_sites::HPKE_1011) };
             break 'body;
         }
-        // SAFETY: `lpub` is a fresh 512-byte block; owned until handed to `authpub` or released
-        // by its `Drop` as this block is left.
-        let Some(lpub) = OwnedBuf::take(
-            CRYPTO_malloc(OSSL_HPKE_MAXSIZE, FILE_HPKE, 1018).cast::<c_uchar>(),
-            FILE_HPKE,
-            1025,
-        ) else {
+        // SAFETY: `lpub` is the fresh `OSSL_HPKE_MAXSIZE`-byte `CRYPTO_malloc` block from this
+        // crate's allocator seam; this frame owns it until handed to `authpub` or released by its
+        // `Drop` as this block is left.
+        let Some(lpub) = (unsafe {
+            OwnedBuf::take(
+                CRYPTO_malloc(OSSL_HPKE_MAXSIZE, FILE_HPKE, 1018).cast::<c_uchar>(),
+                FILE_HPKE,
+                1025,
+            )
+        }) else {
             break 'body;
         };
         // SAFETY: `pubp` is live; `lpub` writable for 512 bytes.
