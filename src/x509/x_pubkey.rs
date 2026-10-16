@@ -261,9 +261,13 @@ pub struct X509Pubkey {
     /// [`ossl_x509_PUBKEY_get0_libctx`] and passed to the decoder. The crate models an
     /// `OSSL_LIB_CTX *` as `*mut c_void`, as every landed entry point does.
     pub(crate) libctx: *mut c_void,
-    /// `char *propq` — the decoding property query, owned by the object and passed to the
-    /// decoder.
-    pub(crate) propq: *mut c_char,
+    /// `char *propq` — the decoding property query, an object-owned C-string **member buffer**.
+    /// Its ownership invariant is stated once by [`PropqSlot`] and mediated by [`PropqSlot`]/
+    /// [`X509Pubkey::propq`]; see the `MEMBER-BUFFER-MODEL.md` note. It stays `*mut c_char` at
+    /// this exact offset so the `#[repr(C)]` layout is the authority's, and it is
+    /// **module-private** because every read, write and release now goes through this module's
+    /// handle/reader.
+    propq: *mut c_char,
     /// `unsigned int flag_force_legacy : 1` — forces the legacy decode path in
     /// [`x509_pubkey_decode`]; set by `d2i_PUBKEY_int` for `ossl_d2i_PUBKEY_legacy` and by
     /// [`X509_PUBKEY_dup`] when `EVP_PKEY_dup` fails.
@@ -279,6 +283,79 @@ const _: () = {
     assert!(core::mem::offset_of!(X509Pubkey, propq) == 32);
     assert!(core::mem::offset_of!(X509Pubkey, flag_force_legacy) == 40);
 };
+
+impl X509Pubkey {
+    /// The object-owned property-query string (NULL when unset) — the authoritative read of the
+    /// `propq` member buffer. Reads cannot free or alias, but funnelling them here keeps the
+    /// field's writers enumerable (see [`PropqSlot`]).
+    pub(crate) fn propq(&self) -> *const c_char {
+        self.propq
+    }
+}
+
+/// A validated handle over the object-owned C-string member `X509_PUBKEY::propq`.
+///
+/// ## Member-buffer invariant (stated once)
+/// `X509_PUBKEY::propq` is always either NULL or a single NUL-terminated block produced by the
+/// crate's `CRYPTO_strdup` seam and owned by the enclosing `X509_PUBKEY`. That object is the
+/// block's *only* owner: the block is released **exactly once**, by [`x509_pubkey_ex_free`]'s
+/// release arm or by the next [`PropqSlot::clear`]/[`PropqSlot::store`] that replaces it. Nothing
+/// else frees or aliases it.
+///
+/// ## Why the field stays raw
+/// The `#[repr(C)]` layout is the authority's, so the field must remain `*mut c_char` at its exact
+/// offset; a Rust owner type cannot live in the struct. This handle is a transient **borrow** over
+/// the field — the resident-member counterpart of the per-module `OwnedStr`, and the X.509
+/// analogue of `pk7_asn1.rs`'s `PropqSlot` and `cms_asn1.rs`'s `CmsPropqSlot`.
+///
+/// `unsafe` appears only at the two proof boundaries: [`PropqSlot::of`] (which asserts the field
+/// currently obeys the invariant) and [`PropqSlot::store`] (which accepts an externally-allocated
+/// block). `clear` is safe because a handle built by [`PropqSlot::of`] guarantees the incumbent is
+/// the object's own single block.
+pub(crate) struct PropqSlot<'a> {
+    /// Borrow of the object's member field; its value obeys the invariant for `'a`.
+    slot: &'a mut *mut c_char,
+}
+
+impl<'a> PropqSlot<'a> {
+    /// Derive the handle from a live object.
+    ///
+    /// # Safety
+    ///
+    /// `x` is a live `X509_PUBKEY` and is borrowed mutably for `'a`; its `propq` field currently
+    /// obeys the member-buffer invariant. A live `X509_PUBKEY` satisfies this because the item
+    /// layer `CRYPTO_zalloc`s the object at construction and the member is only ever mutated
+    /// through this handle (`x509_pubkey_set0_libctx`) or released by `x509_pubkey_ex_free`.
+    pub(crate) unsafe fn of(x: &'a mut X509Pubkey) -> PropqSlot<'a> {
+        PropqSlot { slot: &mut x.propq }
+    }
+
+    /// Release any incumbent value through the authority's own `CRYPTO_free` site, leaving the
+    /// field NULL. This is the authority's `OPENSSL_free(p)` followed by `p = NULL`; NULL is a
+    /// no-op for `CRYPTO_free`, so the release is total.
+    pub(crate) fn clear(&mut self, file: *const c_char, line: c_int) {
+        let old = core::mem::replace(self.slot, ptr::null_mut());
+        // SAFETY: by the member-buffer invariant the incumbent is NULL or the object's own single
+        // `CRYPTO_strdup` block, so this is that block's one release; `CRYPTO_free` ignores NULL.
+        unsafe { CRYPTO_free(old.cast(), file, line) };
+    }
+
+    /// Store a freshly-`CRYPTO_strdup`ed value into the (now empty) field, transferring ownership
+    /// of it to the enclosing object.
+    ///
+    /// # Safety
+    ///
+    /// `new` is NULL or a live NUL-terminated block this caller owns exclusively (produced by the
+    /// crate's `CRYPTO_strdup` seam) and no other owner will release it; the field is currently
+    /// unset (NULL).
+    pub(crate) unsafe fn store(&mut self, new: *mut c_char) {
+        debug_assert!(
+            (*self.slot).is_null(),
+            "propq member slot must be empty before store"
+        );
+        *self.slot = new;
+    }
+}
 
 // ---------------------------------------------------------------------------------------------
 // The `X509_PUBKEY_INTERNAL` item — `ASN1_SEQUENCE(X509_PUBKEY_INTERNAL)` (`:63-66`)
@@ -398,20 +475,22 @@ unsafe fn x509_pubkey_set0_libctx(
     propq: *const c_char,
 ) -> c_int {
     if !x.is_null() {
-        // SAFETY: `x` is live per the contract.
+        // SAFETY: `x` is live per the contract and its `propq` obeys the member-buffer invariant.
         unsafe {
             (*x).libctx = libctx;
-            CRYPTO_free(
-                (*x).propq.cast::<c_void>(),
-                FILE.as_ptr(),
-                LINE_FREE_PROPQ_SET0,
-            );
-            (*x).propq = ptr::null_mut();
+            let mut slot = PropqSlot::of(&mut *x);
+            // Release any incumbent at the authority's own site (`:52`), leaving it unset. A NULL
+            // incumbent makes this a no-op, exactly as the authority's NULL guard does.
+            slot.clear(FILE.as_ptr(), LINE_FREE_PROPQ_SET0);
             if !propq.is_null() {
-                (*x).propq = CRYPTO_strdup(propq, FILE.as_ptr(), LINE_STRDUP_SET0);
-                if (*x).propq.is_null() {
+                // SAFETY: `propq` is NUL-terminated per the contract.
+                let copy = CRYPTO_strdup(propq, FILE.as_ptr(), LINE_STRDUP_SET0);
+                if copy.is_null() {
                     return 0;
                 }
+                // SAFETY: `copy` is this call's own fresh `CRYPTO_strdup` block and the slot is
+                // unset.
+                slot.store(copy);
             }
         }
     }
@@ -434,11 +513,10 @@ unsafe extern "C" fn x509_pubkey_ex_free(pval: *mut *mut c_void, _it: *const Asn
                 X509_ALGOR_free((*pubkey).algor);
                 ASN1_BIT_STRING_free((*pubkey).public_key);
                 EVP_PKEY_free((*pubkey).pkey);
-                CRYPTO_free(
-                    (*pubkey).propq.cast::<c_void>(),
-                    FILE.as_ptr(),
-                    LINE_FREE_PROPQ,
-                );
+                // `pubkey` is live and its `propq` obeys the member-buffer invariant, so `clear`
+                // is that block's one release at the authority's own site (`:93`); a NULL
+                // incumbent makes it a no-op.
+                PropqSlot::of(&mut *pubkey).clear(FILE.as_ptr(), LINE_FREE_PROPQ);
                 CRYPTO_free(pubkey.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_PUBKEY);
                 *pval = ptr::null_mut();
             }
@@ -673,7 +751,7 @@ unsafe extern "C" fn x509_pubkey_ex_d2i_ex(
                     txtoidname.as_ptr(),
                     EVP_PKEY_PUBLIC_KEY,
                     (*pubkey).libctx,
-                    (*pubkey).propq,
+                    (*pubkey).propq(),
                 )
             };
             if !dctx.is_null() {
@@ -907,7 +985,7 @@ pub unsafe extern "C" fn X509_PUBKEY_dup(a: *const X509Pubkey) -> *mut X509Pubke
     let (a_libctx, a_propq, a_algor, a_pubkey, a_pkey) = unsafe {
         (
             (*a).libctx,
-            (*a).propq,
+            (*a).propq(),
             (*a).algor,
             (*a).public_key,
             (*a).pkey,
@@ -2350,7 +2428,7 @@ pub(crate) unsafe extern "C" fn ossl_x509_PUBKEY_get0_libctx(
             *plibctx = (*key).libctx;
         }
         if !ppropq.is_null() {
-            *ppropq = (*key).propq;
+            *ppropq = (*key).propq();
         }
     }
     1

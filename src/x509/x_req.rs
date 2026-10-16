@@ -65,9 +65,9 @@ use crate::asn1::string::ASN1_OCTET_STRING_free;
 use crate::asn1::x_algor::X509_ALGOR_it;
 use crate::evp::pkey::{EVP_PKEY_dup, EVP_PKEY_free};
 use crate::runtime::err::{err_sites::ErrSite, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem::CRYPTO_strdup;
 use crate::runtime::stack::OPENSSL_sk_new_null;
-use crate::x509::x509_req::{X509Req, X509ReqInfo};
+use crate::x509::x509_req::{PropqSlot, X509Req, X509ReqInfo};
 use crate::x509::x_attrib::X509_ATTRIBUTE_it;
 use crate::x509::x_name::X509_NAME_it;
 use crate::x509::x_pubkey::{X509_PUBKEY_get0, X509_PUBKEY_it, X509_PUBKEY_set};
@@ -298,11 +298,10 @@ unsafe extern "C" fn req_cb(
             // SAFETY: `ret` is live; the two fields are its own.
             unsafe {
                 ASN1_OCTET_STRING_free((*ret).distinguishing_id);
-                CRYPTO_free(
-                    (*ret).propq.cast(),
-                    FILE.as_ptr(),
-                    LINE_FREE_PROPQ_FREE_POST,
-                );
+                // `ret` is live and its `propq` obeys the member-buffer invariant, so `clear` is
+                // that block's one release at the authority's own site (`:63`); a NULL incumbent
+                // makes it a no-op.
+                PropqSlot::of(&mut *ret).clear(FILE.as_ptr(), LINE_FREE_PROPQ_FREE_POST);
             }
         }
         ASN1_OP_DUP_POST => {
@@ -310,7 +309,7 @@ unsafe extern "C" fn req_cb(
             let old = exarg.cast::<X509Req>();
             // SAFETY: `ret` and `old` are live per the item layer's contract.
             unsafe {
-                if ossl_x509_req_set0_libctx(ret, (*old).libctx, (*old).propq) == 0 {
+                if ossl_x509_req_set0_libctx(ret, (*old).libctx, (*old).propq()) == 0 {
                     return 0;
                 }
                 if !(*old).req_info.pubkey.is_null() {
@@ -343,7 +342,7 @@ unsafe extern "C" fn req_cb(
         ASN1_OP_GET0_PROPQ => {
             let propq = exarg.cast::<*const c_char>();
             // SAFETY: `propq` is the caller's out-slot; `ret` is live.
-            unsafe { *propq = (*ret).propq };
+            unsafe { *propq = (*ret).propq() };
         }
         _ => {}
     }
@@ -525,16 +524,22 @@ pub unsafe extern "C" fn ossl_x509_req_set0_libctx(
     propq: *const c_char,
 ) -> c_int {
     if !x.is_null() {
-        // SAFETY: `x` is live per the contract.
+        // SAFETY: `x` is live per the contract and its `propq` obeys the member-buffer invariant.
         unsafe {
             (*x).libctx = libctx;
-            CRYPTO_free((*x).propq.cast(), FILE.as_ptr(), LINE_FREE_PROPQ);
-            (*x).propq = ptr::null_mut();
+            let mut slot = PropqSlot::of(&mut *x);
+            // Release any incumbent at the authority's own site (`:146`), leaving it unset. A NULL
+            // incumbent makes this a no-op, exactly as the authority's NULL guard does.
+            slot.clear(FILE.as_ptr(), LINE_FREE_PROPQ);
             if !propq.is_null() {
-                (*x).propq = CRYPTO_strdup(propq, FILE.as_ptr(), LINE_STRDUP_PROPQ);
-                if (*x).propq.is_null() {
+                // SAFETY: `propq` is NUL-terminated per the contract.
+                let copy = CRYPTO_strdup(propq, FILE.as_ptr(), LINE_STRDUP_PROPQ);
+                if copy.is_null() {
                     return 0;
                 }
+                // SAFETY: `copy` is this call's own fresh `CRYPTO_strdup` block and the slot is
+                // unset.
+                slot.store(copy);
             }
         }
     }

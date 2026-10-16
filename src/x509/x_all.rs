@@ -401,7 +401,7 @@ pub unsafe extern "C" fn X509_REQ_sign(
             pkey,
             md,
             (*x).libctx,
-            (*x).propq,
+            (*x).propq(),
         )
     }
 }
@@ -601,7 +601,7 @@ pub unsafe extern "C" fn X509_CRL_sign(
             pkey,
             md,
             (*x).libctx,
-            (*x).propq,
+            (*x).propq(),
         )
     }
 }
@@ -952,7 +952,7 @@ pub unsafe extern "C" fn d2i_X509_REQ_bio(bp: *mut Bio, req: *mut *mut X509Req) 
             // SAFETY: `existing` is live per the check above.
             libctx = unsafe { (*existing).libctx };
             // SAFETY: as above.
-            propq = unsafe { (*existing).propq };
+            propq = unsafe { (*existing).propq() };
         }
     }
     // SAFETY: `bp`/`req` are the caller's and the context/property query come from the request.
@@ -1692,7 +1692,7 @@ pub unsafe extern "C" fn X509_CRL_digest(
             md,
             len,
             (*data).libctx,
-            (*data).propq,
+            (*data).propq(),
         )
     }
 }
@@ -1724,7 +1724,7 @@ pub unsafe extern "C" fn X509_REQ_digest(
             md,
             len,
             (*data).libctx,
-            (*data).propq,
+            (*data).propq(),
         )
     }
 }
