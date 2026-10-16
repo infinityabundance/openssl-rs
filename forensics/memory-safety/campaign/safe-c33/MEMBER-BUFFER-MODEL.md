@@ -118,17 +118,24 @@ in exactly one place.
 
 * No behavioural divergence: coordinates, order, NULL semantics and the seam are preserved
   (see §2.3). No deliberate safety improvement over the authority was required here.
-* The field remains `pub(crate)`; other modules still touch it directly (§5). That is a
-  *retained* boundary, not a hidden one — it is enumerated below.
+* The field is now **private** to `pkcs7/pk7_asn1.rs`: every read of `PKCS7.ctx.propq` goes
+  through [`Pkcs7Ctx::propq`] and every write through [`PropqSlot`], so the C ABI
+  `#[repr(C)]` representation is unchanged while the field's accesses are compile-time-confined
+  to the module that owns it. The former cross-module readers (§5.1) are converted and the
+  retained raw boundary is now only `PropqSlot::of`/`store` (the two proof edges) — a
+  *retained*, not hidden, boundary.
 
 ## 5. Follow-up applications (same model, not yet converted)
 
 Adopt the model next, in this order:
 
-1. **`pkcs7/pk7_mime.rs`** (read: `SMIME_read_PKCS7_ex`) and **`pkcs12/p12_add.rs`**
-   (read: `PKCS12_unpack_p7encdata_ex`) — readers of `PKCS7.ctx.propq`.
-2. **`pkcs12/p12_asn.rs`** (`PKCS12_free`, `p12_asn.c:35`) — a *second release site* for a
-   `PKCS7.ctx.propq` (the nested `authsafes`); it must adopt `PropqSlot::clear`.
+1. ~~**`pkcs7/pk7_mime.rs`** (read: `SMIME_read_PKCS7_ex`) and **`pkcs12/p12_add.rs`**
+   (read: `PKCS12_unpack_p7encdata_ex`) — readers of `PKCS7.ctx.propq`.~~ **Done** (along with
+   the `pkcs12/{p12_kiss,p12_mutl,p12_npas}.rs` and `x509/x_all.rs` readers of
+   `PKCS7.ctx.propq`); this is what let the `Pkcs7Ctx::propq` field go private.
+2. ~~**`pkcs12/p12_asn.rs`** (`PKCS12_free`, `p12_asn.c:35`) — a *second release site* for a
+   `PKCS7.ctx.propq` (the nested `authsafes`); it must adopt `PropqSlot::clear`.~~ **Done**
+   (uses `PropqSlot::clear(FILE, 35)`).
 3. **CMS**: `cms/cms_lib.rs` and the `CmsCtx` in `cms/cms_asn1.rs` (`CMS_ContentInfo`'s
    `propq`) — a different struct, same invariant.
 4. **X.509 family**: `x509/x_x509.rs` (`X509.propq`), `x509/x_crl.rs` (`X509_CRL.propq`),
