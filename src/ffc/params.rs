@@ -55,7 +55,7 @@
 //! builds; it is transcribed because it is what makes `ossl_ffc_params_copy` of a static
 //! prime cheap, and because a caller that hands in a `BN_with_flags` view reaches it.
 
-use core::ffi::{c_char, c_int, c_uint};
+use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::ptr;
 
 use crate::bn::arith::BN_cmp;
@@ -81,6 +81,70 @@ const LINE: c_int = 0;
 /// `.rodata`, and the one `ffc_bn_cpy` tests. Defined once in [`crate::bn::bignum`],
 /// beside the code that now tests it in `BN_free`, rather than copied here.
 const BN_FLG_STATIC_DATA: c_int = crate::bn::bignum::BN_FLG_STATIC_DATA;
+
+/// An owned `seed` buffer, allocated through this unit's `CRYPTO_memdup` seam and released by
+/// `Drop` at the authority's own `file`/`line` (`FILE_FFC_PARAMS`, `LINE`) with its plain
+/// `CRYPTO_free`.
+///
+/// The four `BIGNUM` members are `BN_*` objects and keep their own API; `seed` is this unit's one
+/// `CRYPTO_*`-seam block, so it gets an owner: [`Self::memdup`] acquires a fresh duplicate,
+/// [`Self::take`] reclaims the pointer a slot already holds, [`Self::into_raw`] stores a duplicate
+/// back into the slot, and `Drop` is the block's single release. The release is plain and not the
+/// cleansing form, because `OPENSSL_PEDANTIC_ZEROIZATION` is not defined on this profile (the
+/// reading [`ossl_ffc_params_cleanup`] records).
+struct OwnedBuf {
+    ptr: *mut u8,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_memdup(src, len, FILE_FFC_PARAMS, LINE)`, or `None` when the allocator answers NULL
+    /// (including for a NULL or oversized source, exactly as the callee reports).
+    ///
+    /// # Safety
+    ///
+    /// `src` is readable for `len` bytes.
+    unsafe fn memdup(src: *const u8, len: usize) -> Option<OwnedBuf> {
+        // SAFETY: the caller's contract -- `src` is readable for `len` bytes.
+        let raw =
+            unsafe { CRYPTO_memdup(src.cast::<c_void>(), len, FILE_FFC_PARAMS, LINE) }.cast::<u8>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedBuf { ptr: raw })
+        }
+    }
+
+    /// Reclaim the buffer a `seed` slot holds, or `None` for NULL.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live buffer this unit allocated through the crate's `CRYPTO_memdup` seam
+    /// and the slot owns; no other owner will release it, and this handle's `Drop` is its single
+    /// release.
+    unsafe fn take(ptr: *mut u8) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBuf { ptr })
+        }
+    }
+
+    /// Give up ownership of the buffer to the `seed` slot that stores it.
+    fn into_raw(self) -> *mut u8 {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `CRYPTO_memdup` answered and has not handed out; its
+        // single release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE_FFC_PARAMS, LINE) };
+    }
+}
 
 /// `void ossl_ffc_params_init(FFC_PARAMS *params)` — `crypto/ffc/ffc_params.c:20-26`.
 ///
@@ -131,7 +195,9 @@ pub(crate) unsafe fn ossl_ffc_params_cleanup(params: *mut FfcParams) {
         BN_free((*params).q);
         BN_free((*params).g);
         BN_free((*params).j);
-        CRYPTO_free((*params).seed.cast(), FILE_FFC_PARAMS, LINE);
+        // `seed` is NULL or the object's own `CRYPTO_memdup` block; this call owns it and
+        // `OwnedBuf`'s `Drop` performs its single release.
+        drop(OwnedBuf::take((*params).seed));
         ossl_ffc_params_init(params);
     }
 }
@@ -253,11 +319,15 @@ pub(crate) unsafe fn ossl_ffc_params_set_seed(
             if ptr::eq((*params).seed, seed) {
                 return 1;
             }
-            CRYPTO_free((*params).seed.cast(), FILE_FFC_PARAMS, LINE);
+            // `seed` is the object's own `CRYPTO_memdup` block; this call owns it and `OwnedBuf`'s
+            // `Drop` performs its single release.
+            drop(OwnedBuf::take((*params).seed));
         }
 
         if !seed.is_null() && seedlen > 0 {
-            (*params).seed = CRYPTO_memdup(seed.cast(), seedlen, FILE_FFC_PARAMS, LINE).cast();
+            // `seed` is readable for `seedlen` bytes per this function's `# Safety`.
+            let dup = OwnedBuf::memdup(seed, seedlen);
+            (*params).seed = dup.map_or(ptr::null_mut(), OwnedBuf::into_raw);
             if (*params).seed.is_null() {
                 return 0;
             }
@@ -519,11 +589,14 @@ pub(crate) unsafe fn ossl_ffc_params_copy(dst: *mut FfcParams, src: *const FfcPa
 
         (*dst).mdname = (*src).mdname;
         (*dst).mdprops = (*src).mdprops;
-        CRYPTO_free((*dst).seed.cast(), FILE_FFC_PARAMS, LINE);
+        // `seed` is `dst`'s own `CRYPTO_memdup` block; this call owns it and `OwnedBuf`'s `Drop`
+        // performs its single release.
+        drop(OwnedBuf::take((*dst).seed));
         (*dst).seedlen = (*src).seedlen;
         if !(*src).seed.is_null() {
-            (*dst).seed =
-                CRYPTO_memdup((*src).seed.cast(), (*src).seedlen, FILE_FFC_PARAMS, LINE).cast();
+            // `src`'s `seed` is readable for `src`'s `seedlen` bytes because `src` owns it.
+            let dup = OwnedBuf::memdup((*src).seed, (*src).seedlen);
+            (*dst).seed = dup.map_or(ptr::null_mut(), OwnedBuf::into_raw);
             if (*dst).seed.is_null() {
                 ossl_ffc_params_cleanup(dst);
                 return 0;
