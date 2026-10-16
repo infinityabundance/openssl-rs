@@ -1,0 +1,1939 @@
+{
+  "candidate": {
+    "branch": "stage/p25/atlas-refresh",
+    "crate_name": "openssl-rs",
+    "crate_version": "0.0.27",
+    "head_sha": "33aa543fa9bf2fccd93f471358376daed1dca5f2",
+    "inventory_base_sha": "b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491",
+    "inventory_head_sha_frozen": "67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34",
+    "src_content_hash_rule": "sha256 over the byte string 'openssl-rs/src-rs/v1\\0' followed, for each src/**/*.rs in sorted relative-path order, by relpath\\0filebytes\\0",
+    "src_content_sha256": "0af39beef47e9fe6de7e2657b43fe63f5cdbe912c080d5b89e58f87f5633e658",
+    "src_rs_files": 864
+  },
+  "census_crosscheck": {
+    "closure_files_absent_from_frozen_census": 2,
+    "closure_files_changed_since_frozen_census": 191,
+    "closure_files_matched": 434,
+    "note": "The census is the FROZEN Phase-25 atlas (earlier candidate). A changed file is candidate drift since that freeze, not a defect.",
+    "source": "artifacts/phase25/source-census.json"
+  },
+  "cohort": {
+    "authoritative_source": "forensics/memory-safety/campaign/safe-c33/state.json#cohort (cross-checked against forensics/downstream/p1000-run.json body.counts / verdicts)",
+    "build_link_only": [
+      "cyrus-sasl",
+      "dovecot",
+      "fetchmail",
+      "fossil",
+      "hiredis-ssl",
+      "iperf3",
+      "keepalived",
+      "kmod",
+      "ldns",
+      "libarchive",
+      "libevent",
+      "librdkafka",
+      "libretls",
+      "links",
+      "mosquitto",
+      "openvpn",
+      "proxytunnel",
+      "rsync",
+      "socat",
+      "squid",
+      "sslscan",
+      "ssmtp",
+      "stunnel",
+      "tinc",
+      "tnftp"
+    ],
+    "candidate_verdict": "DROP_IN_PASS",
+    "count": 33,
+    "families": [
+      {
+        "evidence": "fingerprint",
+        "family": "curl",
+        "level": "L7-functional",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 9
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "cyrus-sasl",
+        "level": "L4-linked",
+        "libssl": false,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 449
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "dovecot",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 11
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "fetchmail",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 62
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "fossil",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 63
+      },
+      {
+        "evidence": "fingerprint",
+        "family": "haproxy",
+        "level": "L7-functional",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 14
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "hiredis-ssl",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 836
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "iperf3",
+        "level": "L4-linked",
+        "libssl": false,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 251
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "isync",
+        "level": "L7-functional",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 16
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "keepalived",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 73
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "kmod",
+        "level": "L4-linked",
+        "libssl": false,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 17
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "ldns",
+        "level": "L4-linked",
+        "libssl": false,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 141
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "libarchive",
+        "level": "L4-linked",
+        "libssl": false,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 263
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "libevent",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 143
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "librdkafka",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 21
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "libretls",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 145
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "links",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 84
+      },
+      {
+        "evidence": "fingerprint",
+        "family": "monit",
+        "level": "L7-functional",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 27
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "mosquitto",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 28
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "nginx",
+        "level": "L7-functional",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 88
+      },
+      {
+        "evidence": "fingerprint",
+        "family": "openssh",
+        "level": "L7-functional",
+        "libssl": false,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 34
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "openvpn",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 35
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "proxytunnel",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 364
+      },
+      {
+        "evidence": "fingerprint",
+        "family": "pure-ftpd",
+        "level": "L7-functional",
+        "libssl": true,
+        "mechanisms": [
+          "ERR",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION"
+        ],
+        "rank": 39
+      },
+      {
+        "evidence": "fingerprint",
+        "family": "redis",
+        "level": "L7-functional",
+        "libssl": true,
+        "mechanisms": [
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION"
+        ],
+        "rank": 40
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "rsync",
+        "level": "L4-linked",
+        "libssl": false,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 381
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "socat",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 104
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "squid",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 45
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "sslscan",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 164
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "ssmtp",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 401
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "stunnel",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 403
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "tinc",
+        "level": "L4-linked",
+        "libssl": false,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 110
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "tnftp",
+        "level": "L4-linked",
+        "libssl": true,
+        "mechanisms": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "EVP_PKEY_PROVIDER",
+          "RAND_CMS_STORE_KEYFMT",
+          "RUNTIME_ALLOC_OWNERSHIP",
+          "RUNTIME_CONCURRENCY",
+          "SSL_SESSION",
+          "X509_VERIFY_POLICY"
+        ],
+        "rank": 413
+      }
+    ],
+    "fingerprinted": [
+      "curl",
+      "haproxy",
+      "monit",
+      "openssh",
+      "pure-ftpd",
+      "redis"
+    ],
+    "l7_functional": [
+      "curl",
+      "haproxy",
+      "isync",
+      "monit",
+      "nginx",
+      "openssh",
+      "pure-ftpd",
+      "redis"
+    ],
+    "levels": {
+      "L4-linked": 25,
+      "L7-functional": 8
+    },
+    "p1000_counts": {
+      "candidate_specific_patch_count": 0,
+      "families": 1000,
+      "measurable_families": 33,
+      "measurable_reaches_baseline": 33,
+      "not_applicable_families": 967,
+      "recipe_backed_families": 35,
+      "rows": 2000,
+      "verdicts": {
+        "DROP_IN_FAIL": 0,
+        "DROP_IN_NOT_APPLICABLE": 967,
+        "DROP_IN_PARTIAL": 0,
+        "DROP_IN_PASS": 33,
+        "DROP_IN_UNKNOWN": 0
+      }
+    },
+    "p1000_ladder_levels": {
+      "L2-configured": 33,
+      "L3-built": 33,
+      "L4-linked": 33,
+      "L5-loaded": 8,
+      "L6-runtime": 8,
+      "L7-functional": 8
+    },
+    "p1000_pass_families_match": true
+  },
+  "cohort_metrics": {
+    "1_unique_closure_files": 627,
+    "2_files_ownership_reconstructed": 187,
+    "3_files_fully_discharged_obligations": 0,
+    "3_note": "Obligations are discharged ONLY at the seal point (AGENTS.md \u00a77 SAFETY_DISCHARGED, \u00a718). No per-site validity contract has been proven for any closure file at this candidate, so this is honestly 0. A present seam is OWNERSHIP_RECONSTRUCTED, which is not discharge.",
+    "4_unresolved_interior_raw_sites": {
+      "allocator_definition_files_excluded": [
+        "src/runtime/mem.rs"
+      ],
+      "note": "Sites in no-seam files are unambiguously unconverted interior. Sites in seam-bearing files are mixed: they include legitimate seam-constructor sites and any remaining interior sites \u2014 this lightweight pass cannot separate them, so they are reported, not claimed clean.",
+      "seam_bearing_files_with_raw_sites": 174,
+      "seam_bearing_raw_sites_unclassified": 2686,
+      "unconverted_no_seam_files": 149,
+      "unconverted_no_seam_sites": 742,
+      "upper_bound_total": 3428
+    },
+    "5_consumers_safe_compatible": 0,
+    "5_note": "0 by construction: no mechanism is SAFETY_DISCHARGED, so no consumer's dependency closure can be discharged. Functional re-testing is required before any graduation.",
+    "closure_raw_sites_total": 3486,
+    "per_consumer": [
+      {
+        "evidence": "fingerprint",
+        "family": "curl",
+        "level": "L7-functional",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "cyrus-sasl",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 3,
+        "mechanisms_required": 7,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "dovecot",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "fetchmail",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "fossil",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "fingerprint",
+        "family": "haproxy",
+        "level": "L7-functional",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "hiredis-ssl",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "iperf3",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 3,
+        "mechanisms_required": 7,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "isync",
+        "level": "L7-functional",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "keepalived",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "kmod",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 3,
+        "mechanisms_required": 7,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "ldns",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 3,
+        "mechanisms_required": 7,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "libarchive",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 3,
+        "mechanisms_required": 7,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "libevent",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "librdkafka",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "libretls",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "links",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "fingerprint",
+        "family": "monit",
+        "level": "L7-functional",
+        "mechanisms_ownership_reconstructed": 4,
+        "mechanisms_required": 7,
+        "mechanisms_unsafe_open": 3,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "mosquitto",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "nginx",
+        "level": "L7-functional",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "fingerprint",
+        "family": "openssh",
+        "level": "L7-functional",
+        "mechanisms_ownership_reconstructed": 4,
+        "mechanisms_required": 8,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "openvpn",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "proxytunnel",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "fingerprint",
+        "family": "pure-ftpd",
+        "level": "L7-functional",
+        "mechanisms_ownership_reconstructed": 3,
+        "mechanisms_required": 4,
+        "mechanisms_unsafe_open": 1,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ERR"
+        ]
+      },
+      {
+        "evidence": "fingerprint",
+        "family": "redis",
+        "level": "L7-functional",
+        "mechanisms_ownership_reconstructed": 4,
+        "mechanisms_required": 7,
+        "mechanisms_unsafe_open": 3,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "rsync",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 3,
+        "mechanisms_required": 7,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "socat",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "squid",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "sslscan",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "ssmtp",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "stunnel",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "tinc",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 3,
+        "mechanisms_required": 7,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      },
+      {
+        "evidence": "linkage-inferred",
+        "family": "tnftp",
+        "level": "L4-linked",
+        "mechanisms_ownership_reconstructed": 5,
+        "mechanisms_required": 9,
+        "mechanisms_unsafe_open": 4,
+        "safe_compatible_eligible": false,
+        "unsafe_open_ids": [
+          "ASN1_OCSP",
+          "BIO",
+          "ERR",
+          "RUNTIME_ALLOC_OWNERSHIP"
+        ]
+      }
+    ]
+  },
+  "generated_utc": "2026-10-16T20:27:33Z",
+  "generator": "forensics/memory-safety/campaign/safe-c33/atlas_refresh.py",
+  "kind": "safe-c33-atlas-refresh",
+  "ledger_seam_crosscheck": {
+    "file_not_in_tree": [],
+    "ledger_files_total": 26,
+    "missing_seam_token": [
+      {
+        "file": "src/evp/p_legacy.rs",
+        "mechanism": "EVP_PKEY_PROVIDER"
+      },
+      {
+        "file": "src/x509/pcy_data.rs",
+        "mechanism": "X509_VERIFY_POLICY"
+      },
+      {
+        "file": "src/x509/pcy_lib.rs",
+        "mechanism": "X509_VERIFY_POLICY"
+      },
+      {
+        "file": "src/context/namemap.rs",
+        "mechanism": "RUNTIME_CONCURRENCY"
+      },
+      {
+        "file": "src/runtime/thread_events.rs",
+        "mechanism": "RUNTIME_CONCURRENCY"
+      }
+    ],
+    "note": "Files state.json lists as converted_files_on_branch that carry NO recognised seam token in the current tree. The file-level seam heuristic therefore UNDERCOUNTS reconstruction for structural/lock-based conversions that leave no owner token.",
+    "seam_token_present": 21
+  },
+  "mapping_coverage": {
+    "covered_top_level_modules": [
+      "asn1",
+      "bn",
+      "cmp",
+      "cms",
+      "context",
+      "crmf",
+      "dh",
+      "dsa",
+      "ec",
+      "evp",
+      "ffc",
+      "ocsp",
+      "params",
+      "pem",
+      "pkcs12",
+      "pkcs7",
+      "property",
+      "provider",
+      "rand",
+      "rsa",
+      "runtime",
+      "ssl",
+      "store",
+      "ts",
+      "x509"
+    ],
+    "note": "src modules named by none of the nine mechanism directory rules (e.g. mac, sm2, modes, des, sm3). Their conversion work is real but is OUT of this nine-mechanism closure: a known coverage gap of this refresh, not a claim they are unconverted.",
+    "uncovered_top_level_modules": {
+      "apps": 59,
+      "async": 4,
+      "compat": 6,
+      "ct": 10,
+      "des": 1,
+      "digest": 14,
+      "dso": 2,
+      "engine": 20,
+      "ess": 3,
+      "ffi": 1,
+      "hpke": 1,
+      "http": 3,
+      "mac": 6,
+      "ml_dsa": 11,
+      "ml_kem": 5,
+      "modes": 7,
+      "runtime": 29,
+      "selftest": 2,
+      "slh_dsa": 12,
+      "sm2": 3,
+      "sm3": 1,
+      "src/aes.rs": 1,
+      "src/aria.rs": 1,
+      "src/asn1_dsa.rs": 1,
+      "src/blowfish.rs": 1,
+      "src/camellia.rs": 1,
+      "src/cast.rs": 1,
+      "src/chacha.rs": 1,
+      "src/cipher_tables.rs": 1,
+      "src/decoder_lib.rs": 1,
+      "src/decoder_meth.rs": 1,
+      "src/decoder_pkey.rs": 1,
+      "src/der_writer.rs": 1,
+      "src/encoder_lib.rs": 1,
+      "src/encoder_meth.rs": 1,
+      "src/encoder_pkey.rs": 1,
+      "src/idea.rs": 1,
+      "src/lib.rs": 1,
+      "src/packet.rs": 1,
+      "src/param_build_set.rs": 1,
+      "src/passphrase.rs": 1,
+      "src/punycode.rs": 1,
+      "src/quic_vlint.rs": 1,
+      "src/rc2.rs": 1,
+      "src/rc4.rs": 1,
+      "src/seed.rs": 1,
+      "src/sm4.rs": 1,
+      "src/status.rs": 1,
+      "src/test_support.rs": 1,
+      "srp": 3,
+      "txt_db": 1,
+      "ui": 5
+    }
+  },
+  "mechanism_file_mapping": {
+    "paths": {
+      "ASN1_OCSP": [
+        "src/asn1/",
+        "src/ocsp/",
+        "src/ts/",
+        "src/runtime/obj.rs",
+        "src/runtime/obj_table.rs"
+      ],
+      "BIO": [
+        "src/runtime/bio/",
+        "src/context/core_bio.rs"
+      ],
+      "ERR": [
+        "src/runtime/err.rs",
+        "src/runtime/err_state.rs",
+        "src/runtime/err_sites.rs",
+        "src/runtime/err_loaders.rs",
+        "src/runtime/err_reasons.rs",
+        "src/runtime/err_strings.rs",
+        "src/ssl/ssl_err_legacy.rs"
+      ],
+      "EVP_PKEY_PROVIDER": [
+        "src/evp/",
+        "src/provider/",
+        "src/property/",
+        "src/params/",
+        "src/ec/",
+        "src/rsa/",
+        "src/dsa/",
+        "src/dh/",
+        "src/bn/",
+        "src/ffc/"
+      ],
+      "RAND_CMS_STORE_KEYFMT": [
+        "src/rand/",
+        "src/cms/",
+        "src/store/",
+        "src/pem/",
+        "src/pkcs7/",
+        "src/pkcs12/",
+        "src/cmp/",
+        "src/crmf/"
+      ],
+      "RUNTIME_ALLOC_OWNERSHIP": [
+        "src/runtime/mem.rs",
+        "src/runtime/secure.rs",
+        "src/runtime/buffer.rs",
+        "src/runtime/stack.rs",
+        "src/runtime/ex_data.rs",
+        "src/runtime/init.rs",
+        "src/runtime/lhash.rs",
+        "src/context/"
+      ],
+      "RUNTIME_CONCURRENCY": [
+        "src/runtime/thread.rs",
+        "src/runtime/thread_arch.rs",
+        "src/runtime/thread_events.rs",
+        "src/runtime/threads_common.rs",
+        "src/runtime/init.rs"
+      ],
+      "SSL_SESSION": [
+        "src/ssl/"
+      ],
+      "X509_VERIFY_POLICY": [
+        "src/x509/"
+      ]
+    },
+    "rule": "declared as data in atlas_refresh.py:MECHANISM_PATHS; trailing '/' = directory prefix, bare path = exact file; derived from CLOSURE.md 'authority evidence' prefixes + state.json converted_files_on_branch + PROGRESS.md"
+  },
+  "mechanisms": [
+    {
+      "category": "BIO/error",
+      "closure_allocator_definition_files": [],
+      "closure_files_recomputed": 7,
+      "closure_no_seam_raw_files": 1,
+      "closure_raw_sites": 22,
+      "closure_seam_files": 1,
+      "closure_seam_raw_files": 1,
+      "closure_zero_raw_files": 5,
+      "converted_files_on_branch": [],
+      "crate_files_frozen": 8,
+      "crate_unsafe_operations_frozen": 540,
+      "families_inferred": 27,
+      "families_measured": 6,
+      "families_total": 33,
+      "id": "ERR",
+      "state": "UNSAFE_OPEN",
+      "unconverted_interior_file_count": 1,
+      "unconverted_interior_files": [
+        "src/runtime/err_state.rs"
+      ],
+      "unconverted_interior_sites": 4
+    },
+    {
+      "category": "RAND/CMS/STORE/key formats",
+      "closure_allocator_definition_files": [],
+      "closure_files_recomputed": 83,
+      "closure_no_seam_raw_files": 16,
+      "closure_raw_sites": 431,
+      "closure_seam_files": 30,
+      "closure_seam_raw_files": 30,
+      "closure_zero_raw_files": 37,
+      "converted_files_on_branch": [
+        "src/cms/cms_env.rs",
+        "src/pem/pvkfmt.rs",
+        "src/store/store_lib.rs"
+      ],
+      "crate_files_frozen": 96,
+      "crate_unsafe_operations_frozen": 21499,
+      "families_inferred": 27,
+      "families_measured": 6,
+      "families_total": 33,
+      "id": "RAND_CMS_STORE_KEYFMT",
+      "state": "OWNERSHIP_RECONSTRUCTED",
+      "unconverted_interior_file_count": 16,
+      "unconverted_interior_files": [
+        "src/cmp/cmp_asn.rs",
+        "src/cmp/cmp_client.rs",
+        "src/cmp/cmp_genm.rs",
+        "src/cmp/cmp_hdr.rs",
+        "src/cmp/cmp_server.rs",
+        "src/pem/key_legacy.rs",
+        "src/pem/pem_info.rs",
+        "src/pem/pem_lib.rs",
+        "src/pem/pem_oth.rs",
+        "src/pkcs12/p12_key.rs",
+        "src/pkcs12/p12_kiss.rs",
+        "src/pkcs12/p12_mutl.rs",
+        "src/pkcs12/p12_p8e.rs",
+        "src/store/store_meth.rs",
+        "src/store/store_register.rs",
+        "src/store/store_result.rs"
+      ],
+      "unconverted_interior_sites": 65
+    },
+    {
+      "category": "BIO/error",
+      "closure_allocator_definition_files": [],
+      "closure_files_recomputed": 34,
+      "closure_no_seam_raw_files": 4,
+      "closure_raw_sites": 128,
+      "closure_seam_files": 16,
+      "closure_seam_raw_files": 11,
+      "closure_zero_raw_files": 19,
+      "converted_files_on_branch": [],
+      "crate_files_frozen": 40,
+      "crate_unsafe_operations_frozen": 6593,
+      "families_inferred": 27,
+      "families_measured": 5,
+      "families_total": 32,
+      "id": "BIO",
+      "state": "UNSAFE_OPEN",
+      "unconverted_interior_file_count": 4,
+      "unconverted_interior_files": [
+        "src/runtime/bio/addr_info.rs",
+        "src/runtime/bio/bio_sock2.rs",
+        "src/runtime/bio/bss_log.rs",
+        "src/runtime/bio/bss_mem.rs"
+      ],
+      "unconverted_interior_sites": 30
+    },
+    {
+      "category": "EVP/PKEY/digest/cipher/provider state",
+      "closure_allocator_definition_files": [],
+      "closure_files_recomputed": 270,
+      "closure_no_seam_raw_files": 74,
+      "closure_raw_sites": 1846,
+      "closure_seam_files": 86,
+      "closure_seam_raw_files": 79,
+      "closure_zero_raw_files": 117,
+      "converted_files_on_branch": [
+        "src/ec/smpl.rs",
+        "src/evp/digest.rs",
+        "src/evp/e_aes.rs",
+        "src/evp/p_legacy.rs",
+        "src/evp/pkey_ctx.rs",
+        "src/hpke/mod.rs",
+        "src/provider/cipher.rs",
+        "src/provider/digest.rs",
+        "src/provider/kdf.rs",
+        "src/provider/mac.rs",
+        "src/provider/rand.rs"
+      ],
+      "crate_files_frozen": 371,
+      "crate_unsafe_operations_frozen": 90830,
+      "families_inferred": 27,
+      "families_measured": 5,
+      "families_total": 32,
+      "id": "EVP_PKEY_PROVIDER",
+      "state": "OWNERSHIP_RECONSTRUCTED",
+      "unconverted_interior_file_count": 74,
+      "unconverted_interior_files": [
+        "src/bn/bignum.rs",
+        "src/bn/gf2m.rs",
+        "src/bn/intern.rs",
+        "src/bn/primes.rs",
+        "src/dh/asn1.rs",
+        "src/dh/ctrl.rs",
+        "src/dh/key.rs",
+        "src/dh/object.rs",
+        "src/dsa/asn1.rs",
+        "src/dsa/pmeth.rs",
+        "src/dsa/sign.rs",
+        "src/ec/backend.rs",
+        "src/ec/ctrl.rs",
+        "src/ec/curve.rs",
+        "src/ec/depr.rs",
+        "src/ec/ecdh_ossl.rs",
+        "src/ec/ecdsa.rs",
+        "src/ec/ecdsa_ossl.rs",
+        "src/ec/ecx_backend.rs",
+        "src/ec/ecx_meth.rs",
+        "src/ec/key.rs",
+        "src/ec/oct.rs",
+        "src/ec/prn.rs",
+        "src/evp/algorithm.rs",
+        "src/evp/bio_ok.rs",
+        "src/evp/cipher.rs",
+        "src/evp/e_chacha20_poly1305.rs",
+        "src/evp/encode.rs",
+        "src/evp/evp_lib.rs",
+        "src/evp/evp_pbe.rs",
+        "src/evp/evp_pkey.rs",
+        "src/evp/kem.rs",
+        "src/evp/keymgmt.rs",
+        "src/evp/keymgmt_lib.rs",
+        "src/evp/p_legacy.rs",
+        "src/evp/pkey_asn1.rs",
+        "src/evp/signature.rs",
+        "src/params/from_text.rs",
+        "src/property/defn_cache.rs",
+        "src/property/globals.rs",
+        "src/provider/activate.rs",
+        "src/provider/child.rs",
+        "src/provider/cipher_tdes_wrap.rs",
+        "src/provider/core_dispatch.rs",
+        "src/provider/ctx.rs",
+        "src/provider/decode_pem2der.rs",
+        "src/provider/decode_pvk2key.rs",
+        "src/provider/decode_spki2typespki.rs",
+        "src/provider/ec_kem.rs",
+        "src/provider/ecx_exch.rs",
+        "src/provider/ecx_kem.rs",
+        "src/provider/eddsa_sig.rs",
+        "src/provider/encode_key2blob.rs",
+        "src/provider/encode_key2ms.rs",
+        "src/provider/endecoder_common.rs",
+        "src/provider/file_store_any2obj.rs",
+        "src/provider/init.rs",
+        "src/provider/ml_common_codecs.rs",
+        "src/provider/ml_dsa_codecs.rs",
+        "src/provider/ml_dsa_kmgmt.rs",
+        "src/provider/ml_kem_kem.rs",
+        "src/provider/mlx_kem.rs",
+        "src/provider/rsa_kem.rs",
+        "src/provider/rsa_kmgmt.rs",
+        "src/provider/skeymgmt.rs",
+        "src/provider/sm2_enc.rs",
+        "src/provider/util.rs",
+        "src/rsa/ameth.rs",
+        "src/rsa/asn1.rs",
+        "src/rsa/ctrl.rs",
+        "src/rsa/gen.rs",
+        "src/rsa/mp.rs",
+        "src/rsa/object.rs",
+        "src/rsa/pss.rs"
+      ],
+      "unconverted_interior_sites": 402
+    },
+    {
+      "category": "runtime allocator/ownership",
+      "closure_allocator_definition_files": [
+        "src/runtime/mem.rs"
+      ],
+      "closure_files_recomputed": 12,
+      "closure_no_seam_raw_files": 4,
+      "closure_raw_sites": 122,
+      "closure_seam_files": 3,
+      "closure_seam_raw_files": 3,
+      "closure_zero_raw_files": 4,
+      "converted_files_on_branch": [],
+      "crate_files_frozen": 40,
+      "crate_unsafe_operations_frozen": 4229,
+      "families_inferred": 27,
+      "families_measured": 4,
+      "families_total": 31,
+      "id": "RUNTIME_ALLOC_OWNERSHIP",
+      "state": "UNSAFE_OPEN",
+      "unconverted_interior_file_count": 4,
+      "unconverted_interior_files": [
+        "src/context/mod.rs",
+        "src/context/namemap.rs",
+        "src/context/thread_data.rs",
+        "src/runtime/buffer.rs"
+      ],
+      "unconverted_interior_sites": 42
+    },
+    {
+      "category": "ASN.1",
+      "closure_allocator_definition_files": [],
+      "closure_files_recomputed": 79,
+      "closure_no_seam_raw_files": 22,
+      "closure_raw_sites": 207,
+      "closure_seam_files": 12,
+      "closure_seam_raw_files": 11,
+      "closure_zero_raw_files": 46,
+      "converted_files_on_branch": [],
+      "crate_files_frozen": 79,
+      "crate_unsafe_operations_frozen": 10865,
+      "families_inferred": 27,
+      "families_measured": 4,
+      "families_total": 31,
+      "id": "ASN1_OCSP",
+      "state": "UNSAFE_OPEN",
+      "unconverted_interior_file_count": 22,
+      "unconverted_interior_files": [
+        "src/asn1/a_digest.rs",
+        "src/asn1/a_dup.rs",
+        "src/asn1/a_i2d_fp.rs",
+        "src/asn1/a_mbstr.rs",
+        "src/asn1/a_strex.rs",
+        "src/asn1/a_strnid.rs",
+        "src/asn1/a_verify.rs",
+        "src/asn1/bitstr.rs",
+        "src/asn1/fre.rs",
+        "src/asn1/new.rs",
+        "src/asn1/p5_pbe.rs",
+        "src/asn1/p5_pbev2.rs",
+        "src/asn1/t_pkey.rs",
+        "src/asn1/tasn_prn.rs",
+        "src/asn1/time.rs",
+        "src/asn1/utl.rs",
+        "src/asn1/x_algor.rs",
+        "src/asn1/x_info.rs",
+        "src/asn1/x_int64.rs",
+        "src/asn1/x_pkey.rs",
+        "src/ts/ts_lib.rs",
+        "src/ts/ts_rsp_verify.rs"
+      ],
+      "unconverted_interior_sites": 111
+    },
+    {
+      "category": "X.509 verify/policy",
+      "closure_allocator_definition_files": [],
+      "closure_files_recomputed": 97,
+      "closure_no_seam_raw_files": 21,
+      "closure_raw_sites": 431,
+      "closure_seam_files": 28,
+      "closure_seam_raw_files": 28,
+      "closure_zero_raw_files": 48,
+      "converted_files_on_branch": [
+        "src/x509/pcy_data.rs",
+        "src/x509/pcy_lib.rs",
+        "src/x509/pcy_node.rs",
+        "src/x509/pcy_tree.rs",
+        "src/x509/v3_utl.rs",
+        "src/x509/x509_vfy.rs"
+      ],
+      "crate_files_frozen": 97,
+      "crate_unsafe_operations_frozen": 18207,
+      "families_inferred": 27,
+      "families_measured": 4,
+      "families_total": 31,
+      "id": "X509_VERIFY_POLICY",
+      "state": "OWNERSHIP_RECONSTRUCTED",
+      "unconverted_interior_file_count": 21,
+      "unconverted_interior_files": [
+        "src/x509/pcy_cache.rs",
+        "src/x509/pcy_data.rs",
+        "src/x509/pcy_lib.rs",
+        "src/x509/v3_cpols.rs",
+        "src/x509/v3_enum.rs",
+        "src/x509/v3_group_ac.rs",
+        "src/x509/v3_ia5.rs",
+        "src/x509/v3_ind_iss.rs",
+        "src/x509/v3_no_ass.rs",
+        "src/x509/v3_no_rev_avail.rs",
+        "src/x509/v3_prn.rs",
+        "src/x509/v3_san.rs",
+        "src/x509/v3_single_use.rs",
+        "src/x509/v3_soa_id.rs",
+        "src/x509/v3_sxnet.rs",
+        "src/x509/v3_usernotice.rs",
+        "src/x509/v3_utf8.rs",
+        "src/x509/x509_acert.rs",
+        "src/x509/x509_cmp.rs",
+        "src/x509/x509_obj.rs",
+        "src/x509/x_attrib.rs"
+      ],
+      "unconverted_interior_sites": 45
+    },
+    {
+      "category": "runtime concurrency",
+      "closure_allocator_definition_files": [],
+      "closure_files_recomputed": 5,
+      "closure_no_seam_raw_files": 2,
+      "closure_raw_sites": 41,
+      "closure_seam_files": 2,
+      "closure_seam_raw_files": 2,
+      "closure_zero_raw_files": 1,
+      "converted_files_on_branch": [
+        "src/context/namemap.rs",
+        "src/runtime/thread_events.rs"
+      ],
+      "crate_files_frozen": 9,
+      "crate_unsafe_operations_frozen": 1572,
+      "families_inferred": 20,
+      "families_measured": 5,
+      "families_total": 25,
+      "id": "RUNTIME_CONCURRENCY",
+      "state": "OWNERSHIP_RECONSTRUCTED",
+      "unconverted_interior_file_count": 2,
+      "unconverted_interior_files": [
+        "src/runtime/thread_events.rs",
+        "src/runtime/threads_common.rs"
+      ],
+      "unconverted_interior_sites": 26
+    },
+    {
+      "category": "SSL/SSL_CTX/session",
+      "closure_allocator_definition_files": [],
+      "closure_files_recomputed": 43,
+      "closure_no_seam_raw_files": 5,
+      "closure_raw_sites": 265,
+      "closure_seam_files": 11,
+      "closure_seam_raw_files": 11,
+      "closure_zero_raw_files": 27,
+      "converted_files_on_branch": [
+        "src/ssl/ssl_lib.rs",
+        "src/ssl/ssl_sess.rs",
+        "src/ssl/statem/statem_clnt.rs",
+        "src/ssl/statem/statem_srvr.rs"
+      ],
+      "crate_files_frozen": 41,
+      "crate_unsafe_operations_frozen": 11781,
+      "families_inferred": 20,
+      "families_measured": 5,
+      "families_total": 25,
+      "id": "SSL_SESSION",
+      "state": "OWNERSHIP_RECONSTRUCTED",
+      "unconverted_interior_file_count": 5,
+      "unconverted_interior_files": [
+        "src/ssl/bio_ssl.rs",
+        "src/ssl/d1_lib.rs",
+        "src/ssl/s3_lib.rs",
+        "src/ssl/statem/extensions_clnt.rs",
+        "src/ssl/statem/extensions_srvr.rs"
+      ],
+      "unconverted_interior_sites": 17
+    }
+  ],
+  "next_targets": [
+    {
+      "families_reaching": 32,
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "score": 12864,
+      "state": "OWNERSHIP_RECONSTRUCTED",
+      "unconverted_interior_files": 74,
+      "unconverted_interior_sites": 402
+    },
+    {
+      "families_reaching": 31,
+      "mechanism": "ASN1_OCSP",
+      "score": 3441,
+      "state": "UNSAFE_OPEN",
+      "unconverted_interior_files": 22,
+      "unconverted_interior_sites": 111
+    },
+    {
+      "families_reaching": 33,
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "score": 2145,
+      "state": "OWNERSHIP_RECONSTRUCTED",
+      "unconverted_interior_files": 16,
+      "unconverted_interior_sites": 65
+    },
+    {
+      "families_reaching": 31,
+      "mechanism": "X509_VERIFY_POLICY",
+      "score": 1395,
+      "state": "OWNERSHIP_RECONSTRUCTED",
+      "unconverted_interior_files": 21,
+      "unconverted_interior_sites": 45
+    },
+    {
+      "families_reaching": 31,
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "score": 1302,
+      "state": "UNSAFE_OPEN",
+      "unconverted_interior_files": 4,
+      "unconverted_interior_sites": 42
+    },
+    {
+      "families_reaching": 32,
+      "mechanism": "BIO",
+      "score": 960,
+      "state": "UNSAFE_OPEN",
+      "unconverted_interior_files": 4,
+      "unconverted_interior_sites": 30
+    },
+    {
+      "families_reaching": 25,
+      "mechanism": "RUNTIME_CONCURRENCY",
+      "score": 650,
+      "state": "OWNERSHIP_RECONSTRUCTED",
+      "unconverted_interior_files": 2,
+      "unconverted_interior_sites": 26
+    },
+    {
+      "families_reaching": 25,
+      "mechanism": "SSL_SESSION",
+      "score": 425,
+      "state": "OWNERSHIP_RECONSTRUCTED",
+      "unconverted_interior_files": 5,
+      "unconverted_interior_sites": 17
+    },
+    {
+      "families_reaching": 33,
+      "mechanism": "ERR",
+      "score": 132,
+      "state": "UNSAFE_OPEN",
+      "unconverted_interior_files": 1,
+      "unconverted_interior_sites": 4
+    }
+  ],
+  "non_claims": [
+    "This refresh measures ownership-reconstruction progress only; it claims no SAFETY_DISCHARGED and no SAFE_COMPATIBLE.",
+    "The 33 historical DROP_IN_PASS verdicts are against an EARLIER candidate; functional re-testing is required before graduation.",
+    "A present seam (OwnedCtx/OwnedBuf/impl Drop/\u2026) is OWNERSHIP_RECONSTRUCTED, never discharge.",
+    "Mechanism\u2192file association is a declared directory mapping, not a per-symbol proof; it is an upper bound used for reachability.",
+    "Raw allocator sites in seam-bearing files are reported, not claimed converted."
+  ],
+  "recomputed_source_scan": {
+    "allocator_definition_files": [
+      "src/runtime/mem.rs"
+    ],
+    "allocator_definition_note": "Files defining the CRYPTO_* allocator entry points (the seam itself); their raw sites are the seam being defined, not interior residuals, and are excluded from metric 4.",
+    "files_total": 864,
+    "files_with_raw_sites": 393,
+    "files_with_seam": 226,
+    "files_zero_raw_sites": 471,
+    "raw_site_patterns": [
+      "\\bCRYPTO_(?:malloc|zalloc|calloc|strdup|memdup)\\b",
+      "\\bCRYPTO_(?:free|clear_free)\\b"
+    ],
+    "raw_sites_total": 4331,
+    "seam_tokens": [
+      "OwnedCtx",
+      "OwnedBuf",
+      "OwnedBlock",
+      "OwnedStr",
+      "PropqSlot",
+      "RawCtx",
+      "OwnedRaw",
+      "CtxDestroy",
+      "CipherDestroy",
+      "impl Drop"
+    ]
+  },
+  "schema": "openssl-rs/p25-safe-c33/atlas-refresh/1",
+  "unknown_vs_demonstrated_failure": {
+    "demonstrated_failure": [
+      {
+        "mechanism": "ERR",
+        "unconverted_interior_files": 1
+      },
+      {
+        "mechanism": "RAND_CMS_STORE_KEYFMT",
+        "unconverted_interior_files": 16
+      },
+      {
+        "mechanism": "BIO",
+        "unconverted_interior_files": 4
+      },
+      {
+        "mechanism": "EVP_PKEY_PROVIDER",
+        "unconverted_interior_files": 74
+      },
+      {
+        "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+        "unconverted_interior_files": 4
+      },
+      {
+        "mechanism": "ASN1_OCSP",
+        "unconverted_interior_files": 22
+      },
+      {
+        "mechanism": "X509_VERIFY_POLICY",
+        "unconverted_interior_files": 21
+      },
+      {
+        "mechanism": "RUNTIME_CONCURRENCY",
+        "unconverted_interior_files": 2
+      },
+      {
+        "mechanism": "SSL_SESSION",
+        "unconverted_interior_files": 5
+      }
+    ],
+    "demonstrated_failure_note": "A closure file with a raw allocator site and NO ownership seam is a known-unconverted interior site in a mechanism a consumer needs. This is the only class this refresh asserts as failure-shaped; it is not a functional regression.",
+    "unknown_coverage": [
+      {
+        "families_without_symbol_fingerprint": 27,
+        "mechanism": "ERR"
+      },
+      {
+        "families_without_symbol_fingerprint": 27,
+        "mechanism": "RAND_CMS_STORE_KEYFMT"
+      },
+      {
+        "families_without_symbol_fingerprint": 27,
+        "mechanism": "BIO"
+      },
+      {
+        "families_without_symbol_fingerprint": 27,
+        "mechanism": "EVP_PKEY_PROVIDER"
+      },
+      {
+        "families_without_symbol_fingerprint": 27,
+        "mechanism": "RUNTIME_ALLOC_OWNERSHIP"
+      },
+      {
+        "families_without_symbol_fingerprint": 27,
+        "mechanism": "ASN1_OCSP"
+      },
+      {
+        "families_without_symbol_fingerprint": 27,
+        "mechanism": "X509_VERIFY_POLICY"
+      },
+      {
+        "families_without_symbol_fingerprint": 20,
+        "mechanism": "RUNTIME_CONCURRENCY"
+      },
+      {
+        "families_without_symbol_fingerprint": 20,
+        "mechanism": "SSL_SESSION"
+      }
+    ],
+    "unknown_coverage_note": "Mechanism dependence is MEASURED (symbol fingerprint) for 6 families and INFERRED (linkage/surface) for 27; isync and nginx reach L7 with no fingerprint. The join speaks for 6 of 1000. Absence of a fingerprint is unknown coverage, not a pass."
+  }
+}
