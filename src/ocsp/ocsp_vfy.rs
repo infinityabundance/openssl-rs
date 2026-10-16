@@ -283,7 +283,7 @@ pub(crate) unsafe extern "C" fn ocsp_verify(
                     ptr::null(),
                     skey,
                     (*signer).libctx,
-                    (*signer).propq,
+                    (*signer).propq(),
                 )
             } else {
                 // `OCSP_BASICRESP_verify(bs, skey, signer->libctx, signer->propq)`.
@@ -295,7 +295,7 @@ pub(crate) unsafe extern "C" fn ocsp_verify(
                     ptr::null(),
                     skey,
                     (*signer).libctx,
-                    (*signer).propq,
+                    (*signer).propq(),
                 )
             };
             if ret <= 0 {
@@ -374,7 +374,7 @@ pub(crate) unsafe extern "C" fn ocsp_find_signer_sk(
         while i < n {
             let x = OPENSSL_sk_value(certs, i).cast::<X509>();
             if !x.is_null() {
-                let md = EVP_MD_fetch((*x).libctx, SN_SHA1, (*x).propq);
+                let md = EVP_MD_fetch((*x).libctx, SN_SHA1, (*x).propq());
                 if md.is_null() {
                     break;
                 }
