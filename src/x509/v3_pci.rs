@@ -101,6 +101,117 @@ const LINE_REALLOC_TEXT: c_int = 204;
 /// The `OPENSSL_free((*policy)->data)` at `v3_pci.c:217` (realloc-failure arm of `text:`).
 const LINE_FREE_TEXT_FAIL: c_int = 217;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the policy octet string's buffer and the `hex:` scratch block
+// ---------------------------------------------------------------------------------------------
+
+/// An owned block allocated through the crate's `CRYPTO_*` seam.
+///
+/// [`process_pci_value`]'s policy arms hold two such blocks: the scratch the `hex:` decoder
+/// (`OPENSSL_hexstr2buf`) answers, and the `policy` octet string's accumulated buffer as
+/// `CRYPTO_realloc` grows it. The block stays a `CRYPTO_*` allocation at the authority's own
+/// `file`/`line`; only its *ownership* is this handle, whose `Drop` is its single release at that
+/// line. A NULL pointer is a valid empty block whose release is the authority's own no-op
+/// `free(NULL)`.
+struct OwnedBuf {
+    ptr: *mut c_void,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// Adopt a block the seam answered, or NULL as an empty block.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block this unit's `CRYPTO_*` seam allocated in full (not a
+    /// sub-range) and no other owner will release; `line` is the authority's own release site.
+    /// `Drop`'s `CRYPTO_free` is its only release.
+    unsafe fn adopt(ptr: *mut c_void, line: c_int) -> OwnedBuf {
+        OwnedBuf { ptr, line }
+    }
+
+    /// The block's address, typed for the calls that read it.
+    fn as_ptr(&self) -> *mut c_void {
+        self.ptr
+    }
+
+    /// Re-point the release at the authority's other site for this block, on the path that
+    /// reaches it.
+    fn set_release_line(&mut self, line: c_int) {
+        self.line = line;
+    }
+
+    /// Give up the block to a consumer that takes it over, leaving the owner empty.
+    fn take_raw(&mut self) -> *mut c_void {
+        let p = self.ptr;
+        self.ptr = ptr::null_mut();
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam and the authority's own line.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block the handle adopted (or NULL, a no-op) and `Drop` runs
+        // once; the authority's own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr, FILE.as_ptr(), self.line) };
+    }
+}
+
+/// Grow the `policy` octet string's accumulated buffer by `n` bytes and append the `n` bytes at
+/// `src`, NUL-terminating -- the authority's `OPENSSL_realloc((*policy)->data, ...)` at
+/// `realloc_line`.
+///
+/// The accumulated buffer is taken into an [`OwnedBuf`] for the realloc, so its release on the
+/// failure arm is that handle's `Drop` at `free_line` (the authority's own
+/// `OPENSSL_free((*policy)->data)`) and its hand-back on success is one `take_raw`. A realloc
+/// failure leaves the old block with the owner and the string emptied, exactly the authority's
+/// reset. Answers `true` on success, `false` on realloc failure.
+///
+/// # Safety
+///
+/// `str_` is a live `ASN1_OCTET_STRING` whose `data` is NULL or a block this unit's `CRYPTO_*`
+/// seam allocated and not yet released; `src` is readable for `n` bytes.
+unsafe fn policy_grow(
+    str_: *mut Asn1String,
+    src: *const c_void,
+    n: usize,
+    realloc_line: c_int,
+    free_line: c_int,
+) -> bool {
+    // SAFETY: `str_` is live per the contract.
+    let len = unsafe { (*str_).length };
+    // Take the accumulated buffer into an owner whose `Drop` is the authority's failure-arm
+    // release at `free_line`.
+    // SAFETY: `(*str_).data` is NULL or this unit's block per the contract.
+    let mut buf = unsafe { OwnedBuf::adopt((*str_).data.cast::<c_void>(), free_line) };
+    // The owner holds the block now; the string gets it back only on success.
+    // SAFETY: `str_` is live.
+    unsafe {
+        (*str_).data = ptr::null_mut();
+        (*str_).length = 0;
+    }
+    let newlen = (len as c_long + n as c_long + 1) as usize;
+    // SAFETY: `buf`'s block is this unit's, NULL or live, and `newlen` is the requested size; a
+    // NULL answer leaves the old block with the owner.
+    let newp = unsafe { CRYPTO_realloc(buf.as_ptr(), newlen, FILE.as_ptr(), realloc_line) };
+    if newp.is_null() {
+        // `buf`'s `Drop` releases the old block at `free_line`; the string stays empty.
+        return false;
+    }
+    // SAFETY: `newp` is `newlen` writable bytes; `len + n + 1 == newlen`, so the copy at `len` and
+    // the terminating NUL at `len + n` fit.
+    unsafe {
+        (*str_).data = newp.cast::<c_uchar>();
+        memcpy((*str_).data.add(len as usize).cast::<c_void>(), src, n);
+        (*str_).length = len + n as c_int;
+        *(*str_).data.add((*str_).length as usize) = 0;
+    }
+    // The octet string owns the block now; the owner gives it up so its `Drop` cannot release it.
+    buf.take_raw();
+    true
+}
+
 /// One `v3_pci.c` raise coordinate, declared locally (see the module doc).
 const fn v3_pci_site(
     line: c_int,
@@ -363,55 +474,43 @@ unsafe fn process_pci_value(
         let text = unsafe { check_and_skip_prefix(valp, b"text:") };
         if let Some(rest) = hex {
             valp = rest;
-            // SAFETY: `valp` is NUL-terminated per the contract.
-            let data2 = unsafe { OPENSSL_hexstr2buf(valp, &raw mut val_len) };
-            if data2.is_null() {
+            // SAFETY: `valp` is NUL-terminated per the contract; the seam takes the file/line for
+            // its record only.
+            let mut data2 = unsafe {
+                OwnedBuf::adopt(
+                    OPENSSL_hexstr2buf(valp, &raw mut val_len).cast::<c_void>(),
+                    LINE_FREE_HEX2_FAIL,
+                )
+            };
+            if data2.as_ptr().is_null() {
                 // SAFETY: `val` is live.
                 unsafe { conf_err(val) };
                 // SAFETY: `policy` is a writable slot; the site is the local goto-err tail.
                 return unsafe { process_pci_value_err(free_policy, policy) };
             }
             // SAFETY: `pol` is the live policy string; `data2` is live for `val_len` bytes.
-            let newp = unsafe {
-                CRYPTO_realloc(
-                    (*pol).data.cast::<c_void>(),
-                    ((*pol).length as c_long + val_len + 1) as usize,
-                    FILE.as_ptr(),
+            if unsafe {
+                policy_grow(
+                    pol,
+                    data2.as_ptr(),
+                    val_len as usize,
                     LINE_REALLOC_HEX,
+                    LINE_FREE_HEX_DATA_FAIL,
                 )
-            };
-            if !newp.is_null() {
-                // SAFETY: `pol` is live and the copy lies within the new allocation.
-                unsafe {
-                    (*pol).data = newp.cast::<c_uchar>();
-                    memcpy(
-                        (*pol).data.add((*pol).length as usize).cast::<c_void>(),
-                        data2.cast::<c_void>(),
-                        val_len as usize,
-                    );
-                    (*pol).length += val_len as c_int;
-                    *(*pol).data.add((*pol).length as usize) = 0;
-                }
-                tmp_data = newp.cast::<c_uchar>();
+            } {
+                // The scratch's release moves to the authority's success-path site (`:163`), where
+                // the owner's `Drop` performs it at the end of this arm.
+                data2.set_release_line(LINE_FREE_HEX2_OK);
+                // SAFETY: `pol` is live.
+                tmp_data = unsafe { (*pol).data };
             } else {
-                // SAFETY: `data2` and `pol`'s `data` are this call's allocations.
-                unsafe {
-                    CRYPTO_free(data2.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_HEX2_FAIL);
-                    CRYPTO_free(
-                        (*pol).data.cast::<c_void>(),
-                        FILE.as_ptr(),
-                        LINE_FREE_HEX_DATA_FAIL,
-                    );
-                    (*pol).data = ptr::null_mut();
-                    (*pol).length = 0;
-                }
+                // `policy_grow` released the buffer at `LINE_FREE_HEX_DATA_FAIL`; `data2`'s `Drop`
+                // releases the scratch at `LINE_FREE_HEX2_FAIL`.
                 // SAFETY: `val` is live.
                 unsafe { conf_err(val) };
                 // SAFETY: `policy` is a writable slot; the site is the local goto-err tail.
                 return unsafe { process_pci_value_err(free_policy, policy) };
             }
-            // SAFETY: `data2` is this call's allocation and not owned elsewhere.
-            unsafe { CRYPTO_free(data2.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_HEX2_OK) };
         } else if let Some(rest) = file {
             valp = rest;
             let mut buf = [0 as c_uchar; 2048];
@@ -437,26 +536,20 @@ unsafe fn process_pci_value(
                 if n == 0 {
                     continue;
                 }
-                // SAFETY: `pol` is the live policy string.
-                let newp = unsafe {
-                    CRYPTO_realloc(
-                        (*pol).data.cast::<c_void>(),
-                        ((*pol).length as c_long + n as c_long + 1) as usize,
-                        FILE.as_ptr(),
+                // SAFETY: `pol` is the live policy string; `buf` holds `n` bytes.
+                if unsafe {
+                    policy_grow(
+                        pol,
+                        buf.as_mut_ptr().cast::<c_void>(),
+                        n as usize,
                         LINE_REALLOC_FILE,
+                        LINE_FREE_FILE_FAIL,
                     )
-                };
-                if newp.is_null() {
-                    // SAFETY: `pol`'s `data` is this call's allocation.
-                    unsafe {
-                        CRYPTO_free(
-                            (*pol).data.cast::<c_void>(),
-                            FILE.as_ptr(),
-                            LINE_FREE_FILE_FAIL,
-                        );
-                        (*pol).data = ptr::null_mut();
-                        (*pol).length = 0;
-                    }
+                } {
+                    // SAFETY: `pol` is live.
+                    tmp_data = unsafe { (*pol).data };
+                } else {
+                    // `policy_grow` released the buffer at `LINE_FREE_FILE_FAIL`.
                     // SAFETY: `val` is live.
                     unsafe { conf_err(val) };
                     // SAFETY: `b` is the BIO this call opened.
@@ -464,18 +557,6 @@ unsafe fn process_pci_value(
                     // SAFETY: `policy` is a writable slot; the site is the local goto-err tail.
                     return unsafe { process_pci_value_err(free_policy, policy) };
                 }
-                // SAFETY: `pol` is live and the copy lies within the new allocation.
-                unsafe {
-                    (*pol).data = newp.cast::<c_uchar>();
-                    memcpy(
-                        (*pol).data.add((*pol).length as usize).cast::<c_void>(),
-                        buf.as_mut_ptr().cast::<c_void>(),
-                        n as usize,
-                    );
-                    (*pol).length += n;
-                    *(*pol).data.add((*pol).length as usize) = 0;
-                }
-                tmp_data = newp.cast::<c_uchar>();
             }
             // SAFETY: `b` is the BIO this call opened.
             unsafe { BIO_free_all(b) };
@@ -492,39 +573,21 @@ unsafe fn process_pci_value(
             // SAFETY: `valp` is NUL-terminated per the contract. The authority truncates the
             // `size_t` to an `int` before widening it to the `long`.
             val_len = (unsafe { strlen(valp) } as c_int) as c_long;
-            // SAFETY: `pol` is the live policy string.
-            let newp = unsafe {
-                CRYPTO_realloc(
-                    (*pol).data.cast::<c_void>(),
-                    ((*pol).length as c_long + val_len + 1) as usize,
-                    FILE.as_ptr(),
+            // SAFETY: `pol` is the live policy string; `value + 5` is the text after `text:` and is
+            // readable for `val_len` bytes.
+            if unsafe {
+                policy_grow(
+                    pol,
+                    value.add(5).cast::<c_void>(),
+                    val_len as usize,
                     LINE_REALLOC_TEXT,
+                    LINE_FREE_TEXT_FAIL,
                 )
-            };
-            if !newp.is_null() {
-                // SAFETY: `pol` is live and the copy lies within the new allocation.
-                unsafe {
-                    (*pol).data = newp.cast::<c_uchar>();
-                    memcpy(
-                        (*pol).data.add((*pol).length as usize).cast::<c_void>(),
-                        value.add(5).cast::<c_void>(),
-                        val_len as usize,
-                    );
-                    (*pol).length += val_len as c_int;
-                    *(*pol).data.add((*pol).length as usize) = 0;
-                }
-                tmp_data = newp.cast::<c_uchar>();
+            } {
+                // SAFETY: `pol` is live.
+                tmp_data = unsafe { (*pol).data };
             } else {
-                // SAFETY: `pol`'s `data` is this call's allocation.
-                unsafe {
-                    CRYPTO_free(
-                        (*pol).data.cast::<c_void>(),
-                        FILE.as_ptr(),
-                        LINE_FREE_TEXT_FAIL,
-                    );
-                    (*pol).data = ptr::null_mut();
-                    (*pol).length = 0;
-                }
+                // `policy_grow` released the buffer at `LINE_FREE_TEXT_FAIL`.
                 // SAFETY: `val` is live.
                 unsafe { conf_err(val) };
                 // SAFETY: `policy` is a writable slot; the site is the local goto-err tail.
