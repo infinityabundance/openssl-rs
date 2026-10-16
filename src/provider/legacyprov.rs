@@ -195,6 +195,83 @@ unsafe extern "C" fn legacy_get_params(_provctx: *mut c_void, params: *mut OsslP
 }
 
 // ---------------------------------------------------------------------------------------------
+// Ownership of a context block
+// ---------------------------------------------------------------------------------------------
+
+/// An owned digest context block.
+///
+/// Every construction in this module is the same shape: a `CRYPTO_zalloc` of the context, a
+/// `CRYPTO_clear_free` of it, and a `dupctx` that `CRYPTO_malloc`s a copy -- no context owns a
+/// pointer of its own, so the authority's `*_freectx` body *is* the block release. The block keeps
+/// the authority's `#[repr(C)]` layout and its stable address (the dispatch hands it out as
+/// `*mut c_void` and takes it back in `*_freectx`), but its *ownership* is this type: `new`/`dup`
+/// allocate it through the crate's allocator seam and `Drop` is its single release. The block stays
+/// a `CRYPTO_*` allocation at `size_of::<T>()` on purpose: a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the allocation, its size and its cleansing release
+/// exactly as it observes the authority's, which a Rust global allocation would hide.
+struct OwnedCtx<T> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T> OwnedCtx<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
+    /// it answers NULL (the authority's refused `CRYPTO_zalloc`).
+    fn new() -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), FILE, LINE).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// A shallow copy of `src`, allocated with the authority's own `CRYPTO_malloc` at
+    /// `size_of::<T>()` and owned until it is handed to the caller.
+    ///
+    /// # Safety
+    /// `src` is a live `T`.
+    unsafe fn dup(src: *const T) -> Option<OwnedCtx<T>> {
+        let raw = CRYPTO_malloc(core::mem::size_of::<T>(), FILE, LINE).cast::<T>();
+        let owner = OwnedCtx {
+            ptr: ptr::NonNull::new(raw)?,
+        };
+        // SAFETY: both regions are `size_of::<T>()` bytes and distinct.
+        unsafe { ptr::copy_nonoverlapping(src, owner.ptr.as_ptr(), 1) };
+        Some(owner)
+    }
+
+    /// Give up ownership of the block to the C caller's context pointer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+}
+
+impl<T> Drop for OwnedCtx<T> {
+    /// The context destructor: the authority's `*_freectx` body, which for every construction here
+    /// is the block's own cleansing release.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new`/`dup`/`from_raw` produced and this is its single
+        // release; `Drop` runs once.
+        unsafe {
+            CRYPTO_clear_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                core::mem::size_of::<T>(),
+                FILE,
+                LINE,
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // The digest rows — `legacy_digests[]`, `legacyprov.c:87-104`
 // ---------------------------------------------------------------------------------------------
 
@@ -213,32 +290,31 @@ macro_rules! legacy_digest_impl {
                 if ossl_prov_is_running() == 0 {
                     return ptr::null_mut();
                 }
-                CRYPTO_zalloc(core::mem::size_of::<$ctx>(), FILE, LINE)
+                // The context block, owned here until it is handed to the caller.
+                let Some(ctx) = OwnedCtx::<$ctx>::new() else {
+                    return ptr::null_mut();
+                };
+                ctx.into_raw().cast()
             }
 
             unsafe extern "C" fn freectx(vctx: *mut c_void) {
-                // SAFETY: `vctx` is what `newctx` allocated or NULL, for which this is a no-op.
-                unsafe {
-                    CRYPTO_clear_free(vctx, core::mem::size_of::<$ctx>(), FILE, LINE);
-                }
+                // `OPENSSL_clear_free(ctx, sizeof(*ctx))` — the context holds a chaining state.
+                // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is
+                // its release, a no-op for NULL in this crate.
+                unsafe { drop(OwnedCtx::<$ctx>::from_raw(vctx.cast())) };
             }
 
             unsafe extern "C" fn dupctx(ctx: *mut c_void) -> *mut c_void {
                 if ossl_prov_is_running() == 0 || ctx.is_null() {
                     return ptr::null_mut();
                 }
-                let ret = CRYPTO_malloc(core::mem::size_of::<$ctx>(), FILE, LINE);
-                if !ret.is_null() {
-                    // SAFETY: both regions are `size_of::<$ctx>()` bytes and distinct.
-                    unsafe {
-                        ptr::copy_nonoverlapping(
-                            ctx.cast::<u8>(),
-                            ret.cast::<u8>(),
-                            core::mem::size_of::<$ctx>(),
-                        );
-                    }
-                }
-                ret
+                // `*ret = *in` is a copy of `sizeof(*ctx)` bytes; both sides are that size. The copy
+                // is owned here until it is handed to the caller.
+                // SAFETY: `ctx` is the caller's live context.
+                let Some(ret) = (unsafe { OwnedCtx::<$ctx>::dup(ctx.cast()) }) else {
+                    return ptr::null_mut();
+                };
+                ret.into_raw().cast()
             }
 
             unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
@@ -412,32 +488,31 @@ mod mdc2 {
         if ossl_prov_is_running() == 0 {
             return ptr::null_mut();
         }
-        CRYPTO_zalloc(core::mem::size_of::<Mdc2Ctx>(), FILE, LINE)
+        // The context block, owned here until it is handed to the caller.
+        let Some(ctx) = OwnedCtx::<Mdc2Ctx>::new() else {
+            return ptr::null_mut();
+        };
+        ctx.into_raw().cast()
     }
 
     unsafe extern "C" fn freectx(vctx: *mut c_void) {
-        // SAFETY: `vctx` is what `newctx` allocated or NULL.
-        unsafe {
-            CRYPTO_clear_free(vctx, core::mem::size_of::<Mdc2Ctx>(), FILE, LINE);
-        }
+        // `OPENSSL_clear_free(ctx, sizeof(*ctx))` — the context holds a chaining state.
+        // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its
+        // release, a no-op for NULL in this crate.
+        unsafe { drop(OwnedCtx::<Mdc2Ctx>::from_raw(vctx.cast())) };
     }
 
     unsafe extern "C" fn dupctx(ctx: *mut c_void) -> *mut c_void {
         if ossl_prov_is_running() == 0 || ctx.is_null() {
             return ptr::null_mut();
         }
-        let ret = CRYPTO_malloc(core::mem::size_of::<Mdc2Ctx>(), FILE, LINE);
-        if !ret.is_null() {
-            // SAFETY: both regions are `size_of::<Mdc2Ctx>()` bytes and distinct.
-            unsafe {
-                ptr::copy_nonoverlapping(
-                    ctx.cast::<u8>(),
-                    ret.cast::<u8>(),
-                    core::mem::size_of::<Mdc2Ctx>(),
-                );
-            }
-        }
-        ret
+        // `*ret = *in` is a copy of `sizeof(*ctx)` bytes; both sides are that size. The copy is
+        // owned here until it is handed to the caller.
+        // SAFETY: `ctx` is the caller's live context.
+        let Some(ret) = (unsafe { OwnedCtx::<Mdc2Ctx>::dup(ctx.cast()) }) else {
+            return ptr::null_mut();
+        };
+        ret.into_raw().cast()
     }
 
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
