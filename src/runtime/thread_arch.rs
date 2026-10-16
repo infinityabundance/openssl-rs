@@ -50,6 +50,7 @@
 use core::ffi::{c_char, c_int, c_ulong, c_void};
 use core::ptr;
 
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::thread::{
     ossl_crypto_condvar_broadcast, ossl_crypto_condvar_free, ossl_crypto_condvar_new,
@@ -150,6 +151,95 @@ pub(crate) struct CryptoThread {
     pub(crate) ctx: *mut c_void,
 }
 
+/// The object's destructor body, without the block release [`OwnedCtx`]'s `Drop` performs:
+/// `native_clean`'s four member releases (`arch.c:113-144`).
+///
+/// Every member is NULL on the zeroed block `ossl_crypto_thread_native_start` allocates, and each
+/// release is NULL-safe, so the body is written against the state the constructor's own failure
+/// paths leave behind: the mutex/condvar members it did not get to set read NULL, and the
+/// `pthread_t` block is released by [`OwnedThreadHandle`].
+impl CtxDestroy for CryptoThread {
+    const FILE: *const c_char = FILE_ARCH;
+    const LINE_ALLOC: c_int = LINE_ARCH_ZALLOC;
+    const LINE_FREE: c_int = LINE_ARCH_FREE;
+
+    unsafe fn destroy_body(ptr: *mut CryptoThread) {
+        // SAFETY: `ptr` is a live object this unit allocated per the trait contract; the three
+        // mutex/condvar members and the `pthread_t` block are each NULL or this unit's own.
+        unsafe {
+            ossl_crypto_mutex_free(ptr::addr_of_mut!((*ptr).lock));
+            ossl_crypto_mutex_free(ptr::addr_of_mut!((*ptr).statelock));
+            ossl_crypto_condvar_free(ptr::addr_of_mut!((*ptr).condvar));
+            drop(OwnedThreadHandle::from_raw((*ptr).handle));
+        }
+    }
+}
+
+/// The separate `pthread_t` block `native_spawn` allocates (`thread_posix.c:41`) and `native_clean`
+/// releases. It is a block apart from the [`CryptoThread`] object, so it has its own owner: the
+/// object's `handle` member holds it between the spawn and the clean.
+///
+/// The block stays a `CRYPTO_zalloc` at the authority's own `file`/`line` (`FILE_POSIX`,
+/// `LINE_POSIX_ZALLOC`) and is released at the authority's own failure-path coordinates
+/// (`FILE_POSIX`, `LINE_POSIX_FREE`), so a caller-installed `CRYPTO_set_mem_functions` hook
+/// observes both ends; only its *ownership* is this type.
+struct OwnedThreadHandle {
+    ptr: ptr::NonNull<c_ulong>,
+}
+
+impl OwnedThreadHandle {
+    /// `CRYPTO_zalloc(sizeof(*handle), FILE_POSIX, LINE_POSIX_ZALLOC)`, or `None` when the
+    /// allocator answers NULL.
+    fn zalloc() -> Option<OwnedThreadHandle> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<c_ulong>()` bytes, which is exactly the `pthread_t` slot's layout.
+        let raw = CRYPTO_zalloc(
+            core::mem::size_of::<c_ulong>(),
+            FILE_POSIX,
+            LINE_POSIX_ZALLOC,
+        )
+        .cast::<c_ulong>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedThreadHandle { ptr })
+    }
+
+    /// The `pthread_t` slot `pthread_create`/`pthread_join` read and write.
+    fn as_ptr(&self) -> *mut c_ulong {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the object that stores it in its `handle` member.
+    fn into_raw(self) -> *mut c_ulong {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim the block an object's `handle` member still holds, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or the block [`Self::zalloc`] produced and [`Self::into_raw`] gave the object;
+    /// this handle's `Drop` is its single release.
+    unsafe fn from_raw(ptr: *mut c_ulong) -> Option<OwnedThreadHandle> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedThreadHandle { ptr })
+    }
+}
+
+impl Drop for OwnedThreadHandle {
+    /// The block's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `zalloc` allocated and has not handed out; its single
+        // release is the authority's own plain `CRYPTO_free`.
+        unsafe {
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                FILE_POSIX,
+                LINE_POSIX_FREE,
+            )
+        };
+    }
+}
+
 /// `static void *thread_start_thunk(void *vthread)` —
 /// `crypto/thread/arch/thread_posix.c:18-33`.
 ///
@@ -190,16 +280,10 @@ unsafe fn ossl_crypto_thread_native_spawn(thread: *mut CryptoThread) -> c_int {
         // `pthread_t` is heap-allocated rather than stored inline: the authority allocates
         // it (`:41`) and `native_clean` frees `handle->handle` (`:238` of that file's own
         // numbering).
-        let handle = CRYPTO_zalloc(
-            core::mem::size_of::<c_ulong>(),
-            FILE_POSIX,
-            LINE_POSIX_ZALLOC,
-        )
-        .cast::<c_ulong>();
-        if handle.is_null() {
+        let Some(handle) = OwnedThreadHandle::zalloc() else {
             (*thread).handle = ptr::null_mut();
             return 0;
-        }
+        };
 
         // 56 bytes, 8-aligned: glibc's `pthread_attr_t`. Only `setdetachstate` touches it,
         // and only when the spawner will not join.
@@ -209,7 +293,7 @@ unsafe fn ossl_crypto_thread_native_spawn(thread: *mut CryptoThread) -> c_int {
             pthread_attr_setdetachstate(attr.as_mut_ptr().cast(), PTHREAD_CREATE_DETACHED);
         }
         let ret = pthread_create(
-            handle,
+            handle.as_ptr(),
             attr.as_ptr().cast(),
             thread_start_thunk,
             thread.cast(),
@@ -218,11 +302,12 @@ unsafe fn ossl_crypto_thread_native_spawn(thread: *mut CryptoThread) -> c_int {
 
         if ret != 0 {
             (*thread).handle = ptr::null_mut();
-            CRYPTO_free(handle.cast(), FILE_POSIX, LINE_POSIX_FREE);
+            // `handle` drops here, releasing the block exactly as the authority's own
+            // `OPENSSL_free(handle)` does on this path.
             return 0;
         }
 
-        (*thread).handle = handle;
+        (*thread).handle = handle.into_raw();
         1
     }
 }
@@ -300,52 +385,40 @@ pub(crate) unsafe fn ossl_crypto_thread_native_start(
         return ptr::null_mut();
     };
 
-    // SAFETY: a fresh zeroed allocation of this call's own object.
-    let handle = CRYPTO_zalloc(
-        core::mem::size_of::<CryptoThread>(),
-        FILE_ARCH,
-        LINE_ARCH_ZALLOC,
-    )
-    .cast::<CryptoThread>();
-    if handle.is_null() {
+    // `CRYPTO_zalloc(sizeof(*handle), FILE_ARCH, LINE_ARCH_ZALLOC)`: a zeroed block is this
+    // object's own constructed state (every member is NULL or a plain word), which is the state
+    // [`CtxDestroy::destroy_body`] is written against, so it may be validated immediately.
+    let Some(handle) = OwnedCtx::<CryptoThread>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let ret = handle.as_ptr();
 
-    // SAFETY: `handle` is this call's own zeroed allocation and no other thread can
+    // SAFETY: `ret` is this call's own zeroed allocation and no other thread can
     // observe it yet, so these are its only writes.
     unsafe {
-        (*handle).lock = ossl_crypto_mutex_new();
-        if (*handle).lock.is_null() {
-            CRYPTO_free(handle.cast(), FILE_ARCH, LINE_ARCH_FREE);
+        (*ret).lock = ossl_crypto_mutex_new();
+        if (*ret).lock.is_null() {
             return ptr::null_mut();
         }
-        (*handle).statelock = ossl_crypto_mutex_new();
-        if (*handle).statelock.is_null() {
-            ossl_crypto_mutex_free(ptr::addr_of_mut!((*handle).lock));
-            CRYPTO_free(handle.cast(), FILE_ARCH, LINE_ARCH_FREE);
+        (*ret).statelock = ossl_crypto_mutex_new();
+        if (*ret).statelock.is_null() {
             return ptr::null_mut();
         }
-        (*handle).condvar = ossl_crypto_condvar_new();
-        if (*handle).condvar.is_null() {
-            ossl_crypto_mutex_free(ptr::addr_of_mut!((*handle).statelock));
-            ossl_crypto_mutex_free(ptr::addr_of_mut!((*handle).lock));
-            CRYPTO_free(handle.cast(), FILE_ARCH, LINE_ARCH_FREE);
+        (*ret).condvar = ossl_crypto_condvar_new();
+        if (*ret).condvar.is_null() {
             return ptr::null_mut();
         }
 
-        (*handle).data = data;
-        (*handle).routine = Some(routine);
-        (*handle).joinable = joinable;
+        (*ret).data = data;
+        (*ret).routine = Some(routine);
+        (*ret).joinable = joinable;
 
-        if ossl_crypto_thread_native_spawn(handle) == 1 {
-            return handle;
+        if ossl_crypto_thread_native_spawn(ret) == 1 {
+            return handle.into_raw();
         }
-
-        ossl_crypto_condvar_free(ptr::addr_of_mut!((*handle).condvar));
-        ossl_crypto_mutex_free(ptr::addr_of_mut!((*handle).statelock));
-        ossl_crypto_mutex_free(ptr::addr_of_mut!((*handle).lock));
-        CRYPTO_free(handle.cast(), FILE_ARCH, LINE_ARCH_FREE);
     }
+    // `handle` drops here, running the authority's own `err:`-path release: the members it did
+    // set, the `pthread_t` block (NULL when `native_spawn` failed) and the object's block.
     ptr::null_mut()
 }
 
@@ -465,20 +538,20 @@ pub(crate) unsafe fn ossl_crypto_thread_native_clean(handle: *mut CryptoThread) 
     unsafe {
         let req_state_mask = CRYPTO_THREAD_FINISHED | CRYPTO_THREAD_JOINED;
         ossl_crypto_mutex_lock((*handle).statelock);
-        if thread_state(handle) & req_state_mask == 0 {
-            ossl_crypto_mutex_unlock((*handle).statelock);
+        let cleanable = thread_state(handle) & req_state_mask != 0;
+        ossl_crypto_mutex_unlock((*handle).statelock);
+        if !cleanable {
             return 0;
         }
-        ossl_crypto_mutex_unlock((*handle).statelock);
 
-        ossl_crypto_mutex_free(ptr::addr_of_mut!((*handle).lock));
-        ossl_crypto_mutex_free(ptr::addr_of_mut!((*handle).statelock));
-        ossl_crypto_condvar_free(ptr::addr_of_mut!((*handle).condvar));
-
-        // The `pthread_t` block `native_spawn` allocated; deliberately not `pthread_join`ed
-        // here, because `FINISHED` may have been reached through the already-joined path.
-        CRYPTO_free((*handle).handle.cast(), FILE_POSIX, LINE_POSIX_FREE);
-        CRYPTO_free(handle.cast(), FILE_ARCH, LINE_ARCH_FREE);
+        // The state check above is the authority's own cleanable guard; it passed, so the object
+        // is reclaimed for release by `Drop`, whose [`CtxDestroy::destroy_body`] is the
+        // authority's own `native_clean` body -- the three member releases and the `pthread_t`
+        // block, each NULL-safe because `FINISHED` may have been reached through the
+        // already-joined path -- followed by the object's single block release.
+        // SAFETY: `handle` is the live object `ossl_crypto_thread_native_start` returned and no
+        // owner has released it.
+        drop(OwnedCtx::<CryptoThread>::from_raw(handle));
     }
     1
 }

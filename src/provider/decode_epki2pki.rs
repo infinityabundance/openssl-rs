@@ -53,12 +53,12 @@ use crate::pkcs12::p12_decr::PKCS12_pbe_crypt_ex;
 use crate::provider::cipher::param_utf8_string;
 use crate::provider::ctx::prov_libctx_of;
 use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedBlock, OwnedCtx};
 use crate::runtime::bio::BIO_free;
 use crate::runtime::buffer::BufMem;
 use crate::runtime::err::{
     err_sites, raise_site, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::obj::OBJ_obj2txt;
 use crate::selftest::OsslCallback;
 
@@ -92,19 +92,31 @@ struct Epki2pkiCtx {
     propq: [c_char; OSSL_MAX_PROPQUERY_SIZE],
 }
 
+/// The context's destructor body, without the block release [`OwnedCtx`]'s `Drop` performs.
+///
+/// `epki2pki_freectx` (`decode_epki2pki.c:54-58`) releases nothing but the block, and the authority
+/// allocates and releases that block at `NULL`/`0`, so the trait's own coordinates and an empty
+/// body are the authority's release.
+impl CtxDestroy for Epki2pkiCtx {
+    unsafe fn destroy_body(_ptr: *mut Epki2pkiCtx) {}
+}
+
 /// `static void *epki2pki_newctx(void *provctx)` — `decode_epki2pki.c:45-52`.
 ///
 /// # Safety
 /// The decoder `newctx` dispatch contract.
 unsafe extern "C" fn epki2pki_newctx(provctx: *mut c_void) -> *mut c_void {
-    // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<Epki2pkiCtx>(), ptr::null(), 0).cast::<Epki2pkiCtx>();
-    if !ctx.is_null() {
-        // SAFETY: `ctx` is a fresh zeroed allocation this frame owns.
-        unsafe { (*ctx).provctx = provctx };
-    }
-    ctx.cast::<c_void>()
+    // `OPENSSL_zalloc(sizeof(*ctx))`: a zeroed block is this context's constructed state
+    // (`provctx` is the only member set afterwards and `propq` is a zeroed array), which is the
+    // state [`CtxDestroy::destroy_body`] is written against.
+    let Some(ctx) = OwnedCtx::<Epki2pkiCtx>::zalloc() else {
+        return ptr::null_mut();
+    };
+    // SAFETY: `ctx.as_ptr()` is a fresh zeroed allocation this frame owns and no other owner
+    // observes it yet.
+    unsafe { (*ctx.as_ptr()).provctx = provctx };
+    // The C caller takes the block over; its `freectx` reclaims it.
+    ctx.into_raw().cast::<c_void>()
 }
 
 /// `static void epki2pki_freectx(void *vctx)` — `decode_epki2pki.c:54-58`.
@@ -112,8 +124,9 @@ unsafe extern "C" fn epki2pki_newctx(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The decoder `freectx` dispatch contract.
 unsafe extern "C" fn epki2pki_freectx(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or the context `epki2pki_newctx` allocated.
-    unsafe { CRYPTO_free(vctx.cast::<c_void>(), ptr::null(), 0) };
+    // SAFETY: `vctx` is NULL or the context `epki2pki_newctx` allocated and has not released;
+    // `OwnedCtx`'s `Drop` frees the block alone at the authority's own (NULL, 0) site.
+    drop(unsafe { OwnedCtx::<Epki2pkiCtx>::from_raw(vctx.cast::<Epki2pkiCtx>()) });
 }
 
 /// `struct epki2pki_set_ctx_params_st` — `decode_epki2pki.c:71-73`, the one field the
@@ -360,8 +373,9 @@ pub(crate) unsafe fn ossl_epki2pki_der_decode(
     }
     // SAFETY: `p8inf` is NULL or live and this call owns it.
     unsafe { PKCS8_PRIV_KEY_INFO_free(p8inf) };
-    // SAFETY: `new_der` is NULL or the allocation `PKCS12_pbe_crypt_ex` made.
-    unsafe { CRYPTO_free(new_der.cast::<c_void>(), ptr::null(), 0) };
+    // SAFETY: `new_der` is NULL or the allocation `PKCS12_pbe_crypt_ex` made and this frame owns
+    // it; `OwnedBlock`'s `Drop` releases it at the authority's own (NULL, 0) site.
+    drop(unsafe { OwnedBlock::take(new_der.cast::<c_void>()) });
     ok
 }
 
@@ -402,10 +416,10 @@ unsafe extern "C" fn epki2pki_decode(
     let der = unsafe { (*mem).data.cast::<c_uchar>() };
     // SAFETY: as above.
     let der_len = unsafe { (*mem).length as c_long };
-    // SAFETY: `mem` is the allocation the read made; its header is released here and its `data`
-    // buffer by the free below, exactly as the authority's `OPENSSL_free(mem)`/`OPENSSL_free(der)`
-    // pair does.
-    unsafe { CRYPTO_free(mem.cast::<c_void>(), ptr::null(), 0) };
+    // SAFETY: `mem` is the allocation the read made, and this frame owns it; its header is
+    // released here and its `data` buffer by the block below, exactly as the authority's
+    // `OPENSSL_free(mem)`/`OPENSSL_free(der)` pair does.
+    drop(unsafe { OwnedBlock::take(mem.cast::<c_void>()) });
 
     // SAFETY: `der` is a live buffer of `der_len` bytes and `ctx` is the caller's context.
     let ok = unsafe {
@@ -421,8 +435,9 @@ unsafe extern "C" fn epki2pki_decode(
             (*ctx).propq.as_ptr(),
         )
     };
-    // SAFETY: `der` is the buffer the read allocated and this call owns it.
-    unsafe { CRYPTO_free(der.cast::<c_void>(), ptr::null(), 0) };
+    // SAFETY: `der` is the buffer the read allocated and this frame owns it; `OwnedBlock`'s
+    // `Drop` releases it at the authority's own (NULL, 0) site.
+    drop(unsafe { OwnedBlock::take(der.cast::<c_void>()) });
     ok
 }
 
