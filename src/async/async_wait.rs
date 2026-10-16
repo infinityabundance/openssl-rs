@@ -81,7 +81,25 @@ pub struct AsyncWaitCtx {
 
 /// The authority's `*_free` body for an owned context, without the block release [`OwnedCtx`]'s
 /// `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe
+/// [`OwnedCtx::new_zeroed`] builds the owner and its `Drop` runs the implementer's body through a
+/// safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (every releaser is
+///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new_zeroed`] leans on: it validates a `CRYPTO_zalloc` block with no caller
+///   assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release `Drop` performs.
     ///
     /// # Safety
@@ -147,7 +165,11 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 /// The authority's `ASYNC_WAIT_CTX_free` body (`crypto/async/async_wait.c:20-42`), without the
 /// block release [`OwnedCtx`]'s `Drop` performs: the cleanup callbacks of every live entry and the
 /// release of every node.
-impl CtxDestroy for AsyncWaitCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `ASYNC_WAIT_CTX_free` body minus the block
+// -- it runs every live entry's cleanup callback and releases every node, each the authority's own,
+// and never the enclosing block. (b) holds: an all-zero context has a NULL `fds` list, so the body
+// is the authority's own all-empty teardown -- what the safe `OwnedCtx::new_zeroed` leans on.
+unsafe impl CtxDestroy for AsyncWaitCtx {
     unsafe fn destroy_body(ptr: *mut AsyncWaitCtx) {
         // SAFETY: `ptr` is a live object per the trait contract; `fds` is NULL or this file's own
         // list of nodes.

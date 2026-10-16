@@ -96,7 +96,20 @@ const LINE_CLEAR_FREE_DERIVE_SKEY: c_int = 627;
 
 /// The authority's destructor body for one of this file's heap records, without the block's own
 /// release, which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer must guarantee, for a live block this file allocated:
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (the method's owned
+///   `type_name` and the provider reference, each releaser the authority's own and accepting the
+///   not-yet-set NULL/zero state) and **never** releases the enclosing block, which [`OwnedCtx`]'s
+///   `Drop` releases.
+///
+/// This contract carries **no** zero-validity claim: the owner is built only by reclaiming a live
+/// record whose construction the authority completed before the owner exists ([`OwnedCtx::from_raw`]
+/// at `EVP_KEYEXCH_free`), so an all-zero block is **not** relied on as a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -144,7 +157,11 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 
 /// The `EVP_KEYEXCH_free` destructor body, without the block release [`OwnedCtx`]'s `Drop` performs:
 /// the method's owned `type_name` and the provider reference it holds.
-impl CtxDestroy for EvpKeyExch {
+// SAFETY: (a) holds: `destroy_body` is the authority's `EVP_KEYEXCH_free` body minus the block --
+// the method's owned `type_name` and the provider reference, each releaser NULL-tolerant, never the
+// enclosing block. The trait makes no zero-validity claim: the owner is built only by reclaiming a
+// live record via `OwnedCtx::from_raw`.
+unsafe impl CtxDestroy for EvpKeyExch {
     unsafe fn destroy_body(ptr: *mut EvpKeyExch) {
         // SAFETY: `ptr` is a live record per the trait contract; `type_name` is NULL or this file's
         // own `CRYPTO_malloc` block and `prov` holds the reference `evp_keyexch_new` took. The two

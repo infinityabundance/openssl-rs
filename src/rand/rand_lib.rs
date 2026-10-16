@@ -356,7 +356,20 @@ impl Drop for OwnedStr {
 
 /// The authority's destructor body for a [`RandGlobal`], without the block's own release, which
 /// [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer must guarantee, for a live block this unit allocated:
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `ossl_rand_ctx_free` member body
+///   **exactly once** for that object; it releases **exactly** the members the object owns (the
+///   lock, the two DRBG contexts and the seven owned names, each releaser the authority's own and
+///   accepting the not-yet-set NULL/zero state) and **never** releases the enclosing block, which
+///   [`OwnedCtx`]'s `Drop` releases.
+///
+/// This contract carries **no** zero-validity claim: the block is built through the staged
+/// [`RawGlobal`] route ([`RawGlobal::finish`] hands it to the lib-context slot), so an all-zero
+/// block is **not** relied on as a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `ossl_rand_ctx_free` body, without the block release [`OwnedCtx`]'s `Drop`
     /// performs.
     ///
@@ -403,7 +416,10 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
     }
 }
 
-impl CtxDestroy for RandGlobal {
+// SAFETY: (a) holds: `destroy_body` is `ossl_rand_ctx_free` minus the block -- the lock, the two
+// DRBG contexts and the seven owned names, each releaser NULL-tolerant, never the enclosing block.
+// The trait makes no zero-validity claim: the object is built through the staged `RawGlobal` route.
+unsafe impl CtxDestroy for RandGlobal {
     /// `ossl_rand_ctx_free`'s body: the lock, the two DRBG contexts and the seven owned names.
     unsafe fn destroy_body(ptr: *mut RandGlobal) {
         // SAFETY: `ptr` is a live record per the trait contract; each releaser accepts NULL and

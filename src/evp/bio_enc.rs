@@ -153,7 +153,23 @@ const FILE_ENC: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/bio_enc.c".
 
 /// The authority's own destructor body of a BIO context, without the block release [`OwnedCtx`]'s
 /// `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::zalloc`]
+/// builds the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (every releaser is
+///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::zalloc`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -243,7 +259,12 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
     }
 }
 
-impl CtxDestroy for BioB64Ctx {
+// SAFETY: (a) holds: `destroy_body` is the `b64_new`/`b64_free` release minus the block -- the base64
+// context, NULL only on the `b64_new` error path where `EVP_ENCODE_CTX_free(NULL)` is the
+// authority's own no-op, never the enclosing block. (b) holds: an all-zero context has a NULL base64
+// context, so the body is the authority's own all-empty teardown -- what the safe `OwnedCtx::zalloc`
+// leans on.
+unsafe impl CtxDestroy for BioB64Ctx {
     unsafe fn destroy_body(ptr: *mut BioB64Ctx) {
         // SAFETY: `ptr` is a live context per the trait contract; the base64 context is NULL only on
         // the `b64_new` error path, where `EVP_ENCODE_CTX_free(NULL)` is the authority's own no-op.
@@ -251,7 +272,12 @@ impl CtxDestroy for BioB64Ctx {
     }
 }
 
-impl CtxDestroy for BioEncCtx {
+// SAFETY: (a) holds: `destroy_body` is the `enc_new`/`enc_free` release minus the block -- the
+// cipher context, NULL only on the `enc_new` error path where `EVP_CIPHER_CTX_free(NULL)` is the
+// authority's own no-op, never the enclosing block. (b) holds: an all-zero context has a NULL cipher
+// context, so the body is the authority's own all-empty teardown -- what the safe `OwnedCtx::zalloc`
+// leans on.
+unsafe impl CtxDestroy for BioEncCtx {
     unsafe fn destroy_body(ptr: *mut BioEncCtx) {
         // SAFETY: `ptr` is a live context per the trait contract; the cipher context is NULL only on
         // the `enc_new` error path, where `EVP_CIPHER_CTX_free(NULL)` is the authority's own no-op.

@@ -215,7 +215,23 @@ const LINE_FREE_MD: c_int = 867;
 
 /// The authority's `*_free` body for one of the file's `#[repr(C)]` objects, without the block's own
 /// release, which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (every releaser is
+///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -933,7 +949,11 @@ unsafe fn evp_md_free_int(md: *mut EvpMd) {
 
 /// The authority's `evp_md_free_int` body, without the block release [`OwnedCtx`]'s `Drop` performs:
 /// the type name and the provider reference.
-impl CtxDestroy for EvpMd {
+// SAFETY: (a) holds: `destroy_body` is `evp_md_free_int` minus the block -- the type name and the
+// provider reference, each releaser NULL-tolerant, never the enclosing block. (b) holds: an all-zero
+// method has both members NULL, so the body is the authority's own all-empty teardown -- what the
+// safe `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for EvpMd {
     unsafe fn destroy_body(ptr: *mut EvpMd) {
         // SAFETY: `ptr` is live per the trait contract.
         unsafe {
@@ -2067,7 +2087,11 @@ pub unsafe extern "C" fn EVP_MD_CTX_free(ctx: *mut EvpMdCtx) {
 
 /// The authority's `EVP_MD_CTX_free` body, without the block release [`OwnedCtx`]'s `Drop`
 /// performs: the reset that releases everything the context holds.
-impl CtxDestroy for EvpMdCtx {
+// SAFETY: (a) holds: `destroy_body` is `EVP_MD_CTX_free` minus the block -- `EVP_MD_CTX_reset`,
+// which releases everything the context holds and never the enclosing block. (b) holds: an all-zero
+// context resets to the same all-empty state, so the body is the authority's own all-empty teardown
+// -- what the safe `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for EvpMdCtx {
     unsafe fn destroy_body(ptr: *mut EvpMdCtx) {
         // SAFETY: `ptr` is live per the trait contract.
         unsafe { EVP_MD_CTX_reset(ptr) };

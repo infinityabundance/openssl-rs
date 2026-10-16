@@ -175,7 +175,20 @@ const SSL3_RT_MAX_PLAIN_LENGTH: usize = 16384;
 /// `*_free`. [`OwnedCtx`]'s `Drop` runs it, so the frame never writes the free by hand; the
 /// authority's free function remains the object's authority and the handle only records that this
 /// frame owns one reference to it.
-trait FreeOnDrop: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on the contract because [`OwnedCtx`]'s `Drop` runs the implementer's body
+/// through a safe interface:
+///
+/// * **release** -- `free_on_drop(ptr)` runs the object's own `*_free` -- the **complete** release
+///   of the object its matching `*_new` created -- **exactly once**, for a live object this frame
+///   owns one reference to. It must be the `*_free` matching that `*_new`, and it is the object's
+///   single release: the frame never calls the free by hand.
+///
+/// There is **no** zero-validity claim: the handle wraps a `*_new` answer, not a `CRYPTO_zalloc`
+/// block, so no all-zero value is relied on as a valid `Self`.
+unsafe trait FreeOnDrop: Sized {
     /// The authority's own `*_free` for this object.
     ///
     /// # Safety
@@ -220,7 +233,10 @@ impl<T: FreeOnDrop> Drop for OwnedCtx<T> {
 }
 
 /// `EVP_MD_CTX_free` is the `EVP_MD_CTX` block's own release.
-impl FreeOnDrop for crate::evp::digest::EvpMdCtx {
+// SAFETY: release holds: `free_on_drop` runs `EVP_MD_CTX_free`, the `*_free` matching
+// `EVP_MD_CTX_new`, exactly once on a live `EVP_MD_CTX` this frame owns; it is the object's single
+// release. No zero-validity claim: the handle wraps an `EVP_MD_CTX_new` answer.
+unsafe impl FreeOnDrop for crate::evp::digest::EvpMdCtx {
     /// # Safety
     /// `ptr` is a live `EVP_MD_CTX` this frame owns and has not released.
     unsafe fn free_on_drop(ptr: *mut Self) {
@@ -230,7 +246,10 @@ impl FreeOnDrop for crate::evp::digest::EvpMdCtx {
 }
 
 /// `SSL_SESSION_free` is the `SSL_SESSION` block's own release.
-impl FreeOnDrop for crate::ssl::ssl_lib::SslSession {
+// SAFETY: release holds: `free_on_drop` runs `SSL_SESSION_free`, the `*_free` matching the
+// `SSL_SESSION` constructor, exactly once on a live session this frame owns; it is the object's
+// single release. No zero-validity claim: the handle wraps a constructor answer.
+unsafe impl FreeOnDrop for crate::ssl::ssl_lib::SslSession {
     /// # Safety
     /// `ptr` is a live `SSL_SESSION` this frame owns and has not released.
     unsafe fn free_on_drop(ptr: *mut Self) {
@@ -240,7 +259,10 @@ impl FreeOnDrop for crate::ssl::ssl_lib::SslSession {
 }
 
 /// `EVP_PKEY_free` is the `EVP_PKEY` block's own release.
-impl FreeOnDrop for crate::evp::pkey::EvpPkey {
+// SAFETY: release holds: `free_on_drop` runs `EVP_PKEY_free`, the `*_free` matching
+// `EVP_PKEY_new`, exactly once on a live `EVP_PKEY` this frame owns; it is the object's single
+// release. No zero-validity claim: the handle wraps an `EVP_PKEY_new` answer.
+unsafe impl FreeOnDrop for crate::evp::pkey::EvpPkey {
     /// # Safety
     /// `ptr` is a live `EVP_PKEY` this frame owns and has not released.
     unsafe fn free_on_drop(ptr: *mut Self) {
