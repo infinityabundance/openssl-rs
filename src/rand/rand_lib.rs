@@ -306,6 +306,169 @@ pub(crate) fn RAND_get0_libctx(ctx: *mut c_void) -> *mut c_void {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Ownership of the per-context record and the names it holds
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `char *` allocated through the crate's `CRYPTO_strdup` seam.
+///
+/// The name blocks a [`RandGlobal`] holds are separate allocations: [`random_set_string`] and
+/// [`set_random_provider_name`] strdup each and install it, [`ossl_rand_ctx_new`] strdups the
+/// seed provider's name, and [`ossl_rand_ctx_free`] releases them all. A handle's `Drop` is one
+/// block's single release at the authority's own site.
+struct OwnedStr {
+    ptr: *mut c_char,
+    line: c_int,
+}
+
+impl OwnedStr {
+    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL. `line` is the authority's release
+    /// site for the string.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
+    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it. `Drop`
+    /// performs its single `CRYPTO_free`.
+    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedStr { ptr, line })
+        }
+    }
+
+    /// Give up ownership of the string to the field that takes it over.
+    fn into_raw(self) -> *mut c_char {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The string's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
+        // single release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, self.line) };
+    }
+}
+
+/// The authority's destructor body for a [`RandGlobal`], without the block's own release, which
+/// [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `ossl_rand_ctx_free` body, without the block release [`OwnedCtx`]'s `Drop`
+    /// performs.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live record this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned heap record of this unit.
+///
+/// The block keeps the authority's layout and its exact allocator size/`file`/`line`, but its
+/// *ownership* is this type: [`Self::from_raw`] takes back the block the lib-context slot hands
+/// over and `Drop` runs the authority's own destructor body ([`CtxDestroy::destroy_body`])
+/// followed by its single block release at the authority's own site.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Reclaim a record the lib-context slot holds, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live record this file allocated that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The record's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
+    /// followed by its single block release, through the same allocator seam and the authority's
+    /// own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `from_raw` reclaimed and this is its single release;
+        // `Drop` runs once, and `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+impl CtxDestroy for RandGlobal {
+    /// `ossl_rand_ctx_free`'s body: the lock, the two DRBG contexts and the seven owned names.
+    unsafe fn destroy_body(ptr: *mut RandGlobal) {
+        // SAFETY: `ptr` is a live record per the trait contract; each releaser accepts NULL and
+        // each name is NULL or this file's own `CRYPTO_strdup` block.
+        unsafe {
+            CRYPTO_THREAD_lock_free((*ptr).lock);
+            EVP_RAND_CTX_free((*ptr).primary);
+            EVP_RAND_CTX_free((*ptr).seed);
+            drop(OwnedStr::take(
+                (*ptr).random_provider_name,
+                L_CTX_FREE_PROVIDER_NAME,
+            ));
+            drop(OwnedStr::take((*ptr).rng_name, L_CTX_FREE_RNG_NAME));
+            drop(OwnedStr::take((*ptr).rng_cipher, L_CTX_FREE_RNG_CIPHER));
+            drop(OwnedStr::take((*ptr).rng_digest, L_CTX_FREE_RNG_DIGEST));
+            drop(OwnedStr::take((*ptr).rng_propq, L_CTX_FREE_RNG_PROPQ));
+            drop(OwnedStr::take((*ptr).seed_name, L_CTX_FREE_SEED_NAME));
+            drop(OwnedStr::take((*ptr).seed_propq, L_CTX_FREE_SEED_PROPQ));
+        }
+    }
+}
+
+/// An owned [`RandGlobal`] block still under construction.
+///
+/// [`ossl_rand_ctx_new`] allocates the record and fills it one acquisition at a time; until it is
+/// handed to the slot its release is the block alone -- the authority's own `OPENSSL_free` on its
+/// two failure arms (`:543`) -- so the destructor over members that may not be set must not run.
+/// [`Self::finish`] hands the block to the slot on success.
+struct RawGlobal {
+    ptr: ptr::NonNull<RandGlobal>,
+}
+
+impl RawGlobal {
+    /// `CRYPTO_zalloc(sizeof(*dgbl), FILE, 513)`, or `None` when it answers NULL.
+    fn new() -> Option<RawGlobal> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
+        // of exactly `RAND_GLOBAL`'s layout.
+        let raw =
+            CRYPTO_zalloc(core::mem::size_of::<RandGlobal>(), FILE, L_CTX_NEW).cast::<RandGlobal>();
+        ptr::NonNull::new(raw).map(|ptr| RawGlobal { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut RandGlobal {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the lib-context slot.
+    fn finish(self) -> *mut RandGlobal {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for RawGlobal {
+    /// The authority's `ossl_rand_ctx_new` failure-path release (`:543`): the block alone.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; its single
+        // release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, L_CTX_ERR_FREE) };
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // Slot construction and release: `ossl_rand_ctx_new` / `ossl_rand_ctx_free`
 // ---------------------------------------------------------------------------------------------
 
@@ -314,91 +477,50 @@ pub(crate) fn RAND_get0_libctx(ctx: *mut c_void) -> *mut c_void {
 /// The slot constructor for `OSSL_LIB_CTX_DRBG_INDEX`: `context_init` calls this for slot 5 and
 /// `context_deinit` calls [`ossl_rand_ctx_free`].
 pub(crate) unsafe extern "C" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {
-    let dgbl =
-        CRYPTO_zalloc(core::mem::size_of::<RandGlobal>(), FILE, L_CTX_NEW).cast::<RandGlobal>();
-    if dgbl.is_null() {
+    let Some(dgbl) = RawGlobal::new() else {
         return ptr::null_mut();
-    }
+    };
 
     // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist
     // before this object does.
     crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null());
 
-    // SAFETY: `dgbl` is this call's own fresh zeroed block.
-    let name = unsafe { CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME) }
-        .cast::<c_char>();
-    if name.is_null() {
-        // SAFETY: `dgbl` is this call's own allocation and nothing else holds it.
-        unsafe { CRYPTO_free(dgbl.cast::<c_void>(), FILE, L_CTX_ERR_FREE) };
+    // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this
+    // call's own fresh block or NULL.
+    let name = unsafe {
+        OwnedStr::take(
+            CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),
+            L_CTX_ERR_PROVIDER_NAME,
+        )
+    };
+    // The authority's first failure arm frees the block alone (`:543`), which `RawGlobal`'s `Drop`
+    // performs; the name was never acquired.
+    let Some(name) = name else {
         return ptr::null_mut();
-    }
-    // SAFETY: `dgbl` is this call's own block, published nowhere yet.
-    unsafe { (*dgbl).random_provider_name = name };
+    };
 
     let lock = CRYPTO_THREAD_lock_new();
     if lock.is_null() {
-        // SAFETY: both pointers are this call's own and the block was never published.
-        unsafe {
-            CRYPTO_free(
-                (*dgbl).random_provider_name.cast::<c_void>(),
-                FILE,
-                L_CTX_ERR_PROVIDER_NAME,
-            );
-            CRYPTO_free(dgbl.cast::<c_void>(), FILE, L_CTX_ERR_FREE);
-        }
+        // The authority's second failure arm frees the name (`:541`) and then the block (`:543`);
+        // `name` drops before `dgbl` because it is declared later.
         return ptr::null_mut();
     }
-    // SAFETY: as above; the lock is published on this line and nowhere earlier.
-    unsafe { (*dgbl).lock = lock };
 
-    dgbl.cast::<c_void>()
+    let p = dgbl.as_ptr();
+    // SAFETY: `p` is this call's own fresh block, published nowhere yet.
+    unsafe {
+        (*p).random_provider_name = name.into_raw();
+        (*p).lock = lock;
+    }
+
+    dgbl.finish().cast::<c_void>()
 }
 
 /// `void ossl_rand_ctx_free(void *vdgbl)`.
 pub(crate) unsafe fn ossl_rand_ctx_free(vdgbl: *mut c_void) {
-    let dgbl = vdgbl.cast::<RandGlobal>();
-    if dgbl.is_null() {
-        return;
-    }
-    // SAFETY: `dgbl` is live per the caller's contract; every field is a plain pointer or a live
-    // object this module owns, and each releaser accepts NULL.
-    unsafe {
-        CRYPTO_THREAD_lock_free((*dgbl).lock);
-        EVP_RAND_CTX_free((*dgbl).primary);
-        EVP_RAND_CTX_free((*dgbl).seed);
-        CRYPTO_free(
-            (*dgbl).random_provider_name.cast::<c_void>(),
-            FILE,
-            L_CTX_FREE_PROVIDER_NAME,
-        );
-        CRYPTO_free((*dgbl).rng_name.cast::<c_void>(), FILE, L_CTX_FREE_RNG_NAME);
-        CRYPTO_free(
-            (*dgbl).rng_cipher.cast::<c_void>(),
-            FILE,
-            L_CTX_FREE_RNG_CIPHER,
-        );
-        CRYPTO_free(
-            (*dgbl).rng_digest.cast::<c_void>(),
-            FILE,
-            L_CTX_FREE_RNG_DIGEST,
-        );
-        CRYPTO_free(
-            (*dgbl).rng_propq.cast::<c_void>(),
-            FILE,
-            L_CTX_FREE_RNG_PROPQ,
-        );
-        CRYPTO_free(
-            (*dgbl).seed_name.cast::<c_void>(),
-            FILE,
-            L_CTX_FREE_SEED_NAME,
-        );
-        CRYPTO_free(
-            (*dgbl).seed_propq.cast::<c_void>(),
-            FILE,
-            L_CTX_FREE_SEED_PROPQ,
-        );
-        CRYPTO_free(dgbl.cast::<c_void>(), FILE, L_CTX_FREE);
-    }
+    // SAFETY: `vdgbl` is NULL or the live `RAND_GLOBAL` this slot was handed, released exactly
+    // once, here; `Drop` runs the authority's own free body and its single block release.
+    drop(unsafe { OwnedCtx::<RandGlobal>::from_raw(vdgbl.cast::<RandGlobal>(), FILE, L_CTX_FREE) });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1529,18 +1651,23 @@ pub unsafe extern "C" fn RAND_set0_private(ctx: *mut c_void, rand: *mut EvpRandC
 /// # Safety
 /// `p` must point to a live `char *` slot; `s` NULL or NUL-terminated.
 unsafe fn random_set_string(p: *mut *mut c_char, s: *const c_char) -> c_int {
-    let mut d: *mut c_char = ptr::null_mut();
-    if !s.is_null() {
+    let fresh: Option<OwnedStr> = if s.is_null() {
+        None
+    } else {
         // SAFETY: `s` is NUL-terminated per the contract.
-        d = unsafe { CRYPTO_strdup(s, FILE, L_RANDOM_SET_STRING_DUP) }.cast::<c_char>();
-        if d.is_null() {
-            return 0;
+        let dup = unsafe { CRYPTO_strdup(s, FILE, L_RANDOM_SET_STRING_DUP) };
+        // SAFETY: `dup` is this call's own `CRYPTO_strdup` answer or NULL.
+        match unsafe { OwnedStr::take(dup, L_RANDOM_SET_STRING_FREE) } {
+            // A failed strdup leaves the slot as it was, which is the authority's early return.
+            None => return 0,
+            Some(dup) => Some(dup),
         }
-    }
-    // SAFETY: `p` is a live slot holding the string this replaces; a NULL value is accepted.
-    unsafe { CRYPTO_free((*p).cast::<c_void>(), FILE, L_RANDOM_SET_STRING_FREE) };
+    };
+    // SAFETY: `p` is a live slot holding NULL or this module's own `CRYPTO_strdup` block; the
+    // seam performs the authority's own plain release.
+    drop(unsafe { OwnedStr::take(*p, L_RANDOM_SET_STRING_FREE) });
     // SAFETY: `p` is live per the contract.
-    unsafe { *p = d };
+    unsafe { *p = fresh.map_or(ptr::null_mut(), OwnedStr::into_raw) };
     1
 }
 
@@ -1784,13 +1911,20 @@ unsafe fn set_random_provider_name(dgbl: *mut RandGlobal, name: *const c_char) -
             return 1;
         }
     }
-    // SAFETY: `existing` is NULL or owned by `dgbl`; the free accepts NULL.
-    unsafe { CRYPTO_free(existing.cast::<c_void>(), FILE, L_PROVIDER_NAME_DUP) };
+    // SAFETY: `existing` is NULL or this field's own `CRYPTO_strdup` block; the seam performs
+    // the authority's own plain release.
+    drop(unsafe { OwnedStr::take(existing, L_PROVIDER_NAME_DUP) });
     // SAFETY: `name` is NUL-terminated per the contract.
-    let fresh = unsafe { CRYPTO_strdup(name, FILE, L_PROVIDER_NAME_DUP) }.cast::<c_char>();
+    let fresh = unsafe {
+        OwnedStr::take(
+            CRYPTO_strdup(name, FILE, L_PROVIDER_NAME_DUP),
+            L_PROVIDER_NAME_DUP,
+        )
+    };
+    let raw = fresh.map_or(ptr::null_mut(), OwnedStr::into_raw);
     // SAFETY: `dgbl` is live.
-    unsafe { (*dgbl).random_provider_name = fresh };
-    c_int::from(!fresh.is_null())
+    unsafe { (*dgbl).random_provider_name = raw };
+    c_int::from(!raw.is_null())
 }
 
 /// `int RAND_set1_random_provider(OSSL_LIB_CTX *ctx, OSSL_PROVIDER *prov)`.
@@ -1808,13 +1942,12 @@ pub unsafe extern "C" fn RAND_set1_random_provider(
     }
 
     if prov.is_null() {
-        // SAFETY: `dgbl` is live and the name is its own allocation.
+        // SAFETY: `dgbl` is live and the name is its own `CRYPTO_strdup` block, released here.
         unsafe {
-            CRYPTO_free(
-                (*dgbl).random_provider_name.cast::<c_void>(),
-                FILE,
+            drop(OwnedStr::take(
+                (*dgbl).random_provider_name,
                 L_PROVIDER_NAME_DUP,
-            );
+            ));
             (*dgbl).random_provider_name = ptr::null_mut();
             (*dgbl).random_provider = ptr::null_mut();
         }
