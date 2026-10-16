@@ -10,8 +10,8 @@
 //! * The purpose table lands: [`XSTANDARD`] (`xstandard[]`, `:46-70`) with its ten rows, the
 //!   dynamic [`XPTABLE`] (`:75`), [`xp_cmp`] (`:77-80`), [`X509_check_purpose`] (`:88-103`),
 //!   [`X509_PURPOSE_set`] (`:106-114`), the six `X509_PURPOSE_get*` accessors (`:116-170`,
-//!   `:281-299`), [`X509_PURPOSE_add`] (`:176-260`), [`xptable_free`] (`:262-273`) and
-//!   [`X509_PURPOSE_cleanup`] (`:275-279`).
+//!   `:281-299`), [`X509_PURPOSE_add`] (`:176-260`), `xptable_free` (`:262-273`, its body now the
+//!   `CtxDestroy` implementation for [`X509Purpose`]) and [`X509_PURPOSE_cleanup`] (`:275-279`).
 //! * The extension-support search lands: [`X509_supported_extension`] (`:309-346`) over the
 //!   sorted `supported_nids[]` (`:318-336`), with the generated `OBJ_bsearch_nid` collapsed into
 //!   [`obj_bsearch_nid`] over [`nid_cmp`].
@@ -399,6 +399,184 @@ const LINE_XPFREE_SNAME: c_int = 269;
 const LINE_XPFREE_P: c_int = 271;
 
 // ---------------------------------------------------------------------------------------------
+// Ownership of the file's heap records and the dynamic rows' names
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's destructor body for one of the file's heap records, without the block's own
+/// release, which [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live record this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned one of the file's heap records.
+///
+/// The block keeps the authority's layout and its exact `CRYPTO_malloc` size/`file`/`line`, but its
+/// *ownership* is this type: [`Self::from_raw`] takes back a row the dynamic table hands over and
+/// `Drop` runs the authority's own destructor body ([`CtxDestroy::destroy_body`]) followed by its
+/// single block release at the authority's own site. A Rust `Box` would hide both the release and
+/// the caller-installed `CRYPTO_set_mem_functions` hook.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Reclaim a row the dynamic table holds, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live dynamic row this file allocated that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The record's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
+    /// followed by its single block release, through the same allocator seam and the authority's own
+    /// site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `from_raw` reclaimed and this is its single release;
+        // `Drop` runs once, and `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+/// The authority's `xptable_free` body, without the block release [`OwnedCtx`]'s `Drop` performs:
+/// the dynamic row's two owned names.
+///
+/// [`OwnedCtx::from_raw`] is only ever reached for the rows the dynamic `xptable` holds, and every
+/// one of those is pushed only after `X509_PURPOSE_add` set `X509_PURPOSE_DYNAMIC`, so the
+/// authority's leading `(*p).flags & X509_PURPOSE_DYNAMIC` early return is unobservable here.
+impl CtxDestroy for X509Purpose {
+    unsafe fn destroy_body(ptr: *mut X509Purpose) {
+        // SAFETY: `ptr` is a live row per the trait contract; `name`/`sname` are NULL or this file's
+        // own `CRYPTO_strdup` blocks.
+        unsafe {
+            if (*ptr).flags & X509_PURPOSE_DYNAMIC_NAME != 0 {
+                CRYPTO_free(
+                    (*ptr).name.cast::<c_void>(),
+                    FILE.as_ptr(),
+                    LINE_XPFREE_NAME,
+                );
+                CRYPTO_free(
+                    (*ptr).sname.cast::<c_void>(),
+                    FILE.as_ptr(),
+                    LINE_XPFREE_SNAME,
+                );
+            }
+        }
+    }
+}
+
+/// An owned `X509_PURPOSE` block still under construction.
+///
+/// `X509_PURPOSE_add` allocates the row and fills its members one at a time; until the row is
+/// installed its release is the block alone -- the authority's own `OPENSSL_free(ptmp)` at its
+/// `err:` label (`:257`) -- so the destructor ([`CtxDestroy::destroy_body`]) over names that may not
+/// be set must not run. [`Self::finish`] hands the block to the dynamic table on success.
+struct RawPurpose {
+    ptr: ptr::NonNull<X509Purpose>,
+}
+
+impl RawPurpose {
+    /// `CRYPTO_malloc(sizeof(*ptmp), FILE, 205)`, or `None` when it answers NULL.
+    fn new() -> Option<RawPurpose> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
+        // `size_of::<X509Purpose>()` bytes, which is exactly `X509_PURPOSE`'s layout.
+        let raw = CRYPTO_malloc(size_of::<X509Purpose>(), FILE.as_ptr(), LINE_ADD_MALLOC)
+            .cast::<X509Purpose>();
+        ptr::NonNull::new(raw).map(|ptr| RawPurpose { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut X509Purpose {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the dynamic table.
+    fn finish(self) -> *mut X509Purpose {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for RawPurpose {
+    /// The authority's `X509_PURPOSE_add` error-path release (`:257`): the block alone.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; its single
+        // release is the authority's own plain `CRYPTO_free` at the `err:` label.
+        unsafe {
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                FILE.as_ptr(),
+                LINE_ADD_ERR_PTMP,
+            )
+        };
+    }
+}
+
+/// An owned `char *` name allocated through the crate's `CRYPTO_strdup` seam.
+///
+/// A dynamic row's names are blocks separate from the row: [`X509_PURPOSE_add`] strdups each,
+/// installs it into the row and hands it over on success; a failed install releases it at the
+/// authority's own `err:` sites (`:255`/`:256`), and replacing an existing row's names releases the
+/// old ones at `:219`/`:220`.
+struct OwnedStr {
+    ptr: *mut c_char,
+    line: c_int,
+}
+
+impl OwnedStr {
+    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL. `line` is the authority's release site
+    /// for the string.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
+    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it. `Drop` performs
+    /// its single `CRYPTO_free`.
+    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedStr { ptr, line })
+        }
+    }
+
+    /// The string's address, for the row that takes it over.
+    fn as_ptr(&self) -> *const c_char {
+        self.ptr
+    }
+
+    /// Give up ownership of the string to the row that takes it over.
+    fn into_raw(self) -> *mut c_char {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The string's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
+        // single release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), self.line) };
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // The purpose type and the two tables — `v3_purp.c:46-80`
 // ---------------------------------------------------------------------------------------------
 
@@ -568,46 +746,19 @@ unsafe extern "C" fn xp_cmp(a: *const c_void, b: *const c_void) -> c_int {
     }
 }
 
-/// `static void xptable_free(X509_PURPOSE *p)` — `v3_purp.c:262-273`.
-///
-/// Frees a dynamic row's owned names and then the row; a standard row (no `X509_PURPOSE_DYNAMIC`)
-/// and NULL are left alone.
-///
-/// # Safety
-///
-/// `p` must be NULL or a row this module allocated through [`X509_PURPOSE_add`].
-unsafe fn xptable_free(p: *mut X509Purpose) {
-    if p.is_null() {
-        return;
-    }
-    // SAFETY: `p` is non-NULL and live per the contract.
-    if (unsafe { (*p).flags } & X509_PURPOSE_DYNAMIC) == 0 {
-        return;
-    }
-    // SAFETY: `p` is a dynamic row and its fields are live.
-    if (unsafe { (*p).flags } & X509_PURPOSE_DYNAMIC_NAME) != 0 {
-        // SAFETY: `name`/`sname` are the dynamic row's own owned strings.
-        unsafe {
-            CRYPTO_free((*p).name.cast::<c_void>(), FILE.as_ptr(), LINE_XPFREE_NAME);
-            CRYPTO_free(
-                (*p).sname.cast::<c_void>(),
-                FILE.as_ptr(),
-                LINE_XPFREE_SNAME,
-            );
-        }
-    }
-    // SAFETY: `p` is the row this function frees.
-    unsafe { CRYPTO_free(p.cast::<c_void>(), FILE.as_ptr(), LINE_XPFREE_P) };
-}
-
 /// The `X509_PURPOSE` destructor [`X509_PURPOSE_cleanup`] passes to `OPENSSL_sk_pop_free`.
 ///
+/// Takes the raw element the stack hands back and reclaims it as an [`OwnedCtx`], whose `Drop`
+/// runs the authority's own `xptable_free` body (`:268`/`:269`) and its single block release
+/// (`:271`).
+///
 /// # Safety
 ///
-/// `elem` must be NULL or an `X509_PURPOSE` this module allocated.
+/// `elem` must be NULL or a dynamic `X509_PURPOSE` this module allocated.
 unsafe extern "C" fn xptable_free_thunk(elem: *mut c_void) {
-    // SAFETY: `elem` is NULL or a row per the contract; `xptable_free` accepts NULL.
-    unsafe { xptable_free(elem.cast::<X509Purpose>()) };
+    // SAFETY: `elem` is NULL or a dynamic row this module allocated; `from_raw` reclaims it and
+    // `Drop` runs the authority's own free body and block release.
+    drop(unsafe { OwnedCtx::<X509Purpose>::from_raw(elem.cast(), FILE.as_ptr(), LINE_XPFREE_P) });
 }
 
 /// The `ASN1_OBJECT` destructor the extended-key-usage `pop_free` passes.
@@ -813,6 +964,9 @@ pub unsafe extern "C" fn X509_PURPOSE_add(
     arg: *mut c_void,
 ) -> c_int {
     let mut old_id = 0;
+    // `raw` owns the fresh row this call allocates; an existing row (`idx != -1`) is the reserved
+    // or dynamic table's and is left raw.
+    let raw: Option<RawPurpose>;
     let ptmp: *mut X509Purpose;
 
     if id < X509_PURPOSE_MIN {
@@ -839,14 +993,13 @@ pub unsafe extern "C" fn X509_PURPOSE_add(
             unsafe { raise_site(&V3_PURP_202) };
             return 0;
         }
-        // `CRYPTO_malloc` is the authority's safe `OPENSSL_malloc`.
-        ptmp = CRYPTO_malloc(size_of::<X509Purpose>(), FILE.as_ptr(), LINE_ADD_MALLOC)
-            .cast::<X509Purpose>();
-        if ptmp.is_null() {
+        let Some(r) = RawPurpose::new() else {
             return 0;
-        }
-        // SAFETY: `ptmp` is a fresh allocation.
-        unsafe { (*ptmp).flags = X509_PURPOSE_DYNAMIC };
+        };
+        // SAFETY: `r` is this call's own fresh row.
+        unsafe { (*r.as_ptr()).flags = X509_PURPOSE_DYNAMIC };
+        ptmp = r.as_ptr();
+        raw = Some(r);
     } else {
         // SAFETY: `idx` is a valid index returned by the lookup above.
         ptmp = unsafe { X509_PURPOSE_get0(idx) };
@@ -858,35 +1011,48 @@ pub unsafe extern "C" fn X509_PURPOSE_add(
             unsafe { raise_site(&V3_PURP_212) };
             return 0;
         }
+        raw = None;
     }
 
     // OPENSSL_free existing name if dynamic
     // SAFETY: `ptmp` is live; its name fields are its own.
     if (unsafe { (*ptmp).flags } & X509_PURPOSE_DYNAMIC_NAME) != 0 {
-        // SAFETY: `ptmp`'s owned strings are being replaced.
+        // The row owned two names; handing each to an owner makes its `Drop` the authority's own
+        // `OPENSSL_free` at `:219`/`:220`.
+        // SAFETY: `name`/`sname` are the row's own dynamic strings; no other owner will release
+        // them.
         unsafe {
-            CRYPTO_free(
-                (*ptmp).name.cast::<c_void>(),
-                FILE.as_ptr(),
-                LINE_ADD_FREE_NAME,
-            );
-            CRYPTO_free(
-                (*ptmp).sname.cast::<c_void>(),
-                FILE.as_ptr(),
-                LINE_ADD_FREE_SNAME,
-            );
+            drop(OwnedStr::take((*ptmp).name, LINE_ADD_FREE_NAME));
+            drop(OwnedStr::take((*ptmp).sname, LINE_ADD_FREE_SNAME));
         }
     }
     // Dup supplied name
-    // SAFETY: `name`/`sname` are NUL-terminated and `ptmp` is live.
+    // SAFETY: `name` is NUL-terminated per the contract; the allocator takes file/line only.
+    let dup_name = unsafe {
+        OwnedStr::take(
+            CRYPTO_strdup(name, FILE.as_ptr(), LINE_ADD_STRDUP_NAME),
+            LINE_ADD_ERR_NAME,
+        )
+    };
+    // SAFETY: `sname` is NUL-terminated per the contract; the allocator takes file/line only.
+    let dup_sname = unsafe {
+        OwnedStr::take(
+            CRYPTO_strdup(sname, FILE.as_ptr(), LINE_ADD_STRDUP_SNAME),
+            LINE_ADD_ERR_SNAME,
+        )
+    };
+    // SAFETY: `ptmp` is live and writable.
     unsafe {
-        (*ptmp).name = CRYPTO_strdup(name, FILE.as_ptr(), LINE_ADD_STRDUP_NAME);
-        (*ptmp).sname = CRYPTO_strdup(sname, FILE.as_ptr(), LINE_ADD_STRDUP_SNAME);
+        (*ptmp).name = dup_name
+            .as_ref()
+            .map_or(ptr::null_mut(), |s| s.as_ptr().cast_mut());
+        (*ptmp).sname = dup_sname
+            .as_ref()
+            .map_or(ptr::null_mut(), |s| s.as_ptr().cast_mut());
     }
 
     let mut result = 1;
-    // SAFETY: `ptmp` is live and its just-assigned string fields are readable.
-    if unsafe { (*ptmp).name.is_null() || (*ptmp).sname.is_null() } {
+    if dup_name.is_none() || dup_sname.is_none() {
         // goto err
         result = 0;
     } else {
@@ -931,22 +1097,32 @@ pub unsafe extern "C" fn X509_PURPOSE_add(
 
     if result == 0 {
         if idx == -1 {
-            // SAFETY: `ptmp` is the fresh row this failure path owns.
-            unsafe {
-                CRYPTO_free(
-                    (*ptmp).name.cast::<c_void>(),
-                    FILE.as_ptr(),
-                    LINE_ADD_ERR_NAME,
-                );
-                CRYPTO_free(
-                    (*ptmp).sname.cast::<c_void>(),
-                    FILE.as_ptr(),
-                    LINE_ADD_ERR_SNAME,
-                );
-                CRYPTO_free(ptmp.cast::<c_void>(), FILE.as_ptr(), LINE_ADD_ERR_PTMP);
+            // The authority's `err:` tail (`:255`-`:257`): a fresh row is not installed, so release
+            // it and the names the strdups left in it.
+            drop(dup_name);
+            drop(dup_sname);
+            drop(raw);
+        } else {
+            // The authority leaves an existing row owning whatever the strdups installed, so hand
+            // the names over rather than releasing them.
+            if let Some(s) = dup_name {
+                let _ = s.into_raw();
+            }
+            if let Some(s) = dup_sname {
+                let _ = s.into_raw();
             }
         }
         return 0;
+    }
+    // The row owns the names now, and a fresh row that was pushed is the dynamic table's.
+    if let Some(s) = dup_name {
+        let _ = s.into_raw();
+    }
+    if let Some(s) = dup_sname {
+        let _ = s.into_raw();
+    }
+    if let Some(r) = raw {
+        let _ = r.finish();
     }
     1
 }
