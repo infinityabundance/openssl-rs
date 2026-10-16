@@ -159,6 +159,7 @@ pub mod prn;
 pub mod rfc5114;
 
 use core::ffi::{c_char, c_int, c_uchar, c_void};
+use core::ptr::NonNull;
 use core::sync::atomic::AtomicI32;
 
 use crate::bn::bignum::BigNum;
@@ -354,6 +355,148 @@ const FILE_DH_METH: *const c_char = c"../../src/openssl-3.6.4/crypto/dh/dh_meth.
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the method table and its name
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `DH_METHOD` block still under construction.
+///
+/// `DH_meth_new`/`DH_meth_dup` fill the block before handing it to the caller; until then its only
+/// release is the block itself -- the authority's own error-path `OPENSSL_free(dhm)` -- so the full
+/// destructor, which also releases `name`, must not run. [`Self::finish`] hands the block to the
+/// caller on success.
+///
+/// `new` zero-allocates the block, and an all-NULL value is valid for `DH_METHOD` (every member is
+/// a raw pointer or an optional callback), so its block is a valid instance from its first byte.
+/// `new_uninit` instead `malloc`s for `DH_meth_dup`'s whole-block `memcpy`; its block is *not* a
+/// valid `DH_METHOD` until that copy has run, and this handle never reads a field, so its `Drop` is
+/// sound over the uninitialised bytes in between.
+struct RawMethod {
+    ptr: NonNull<DhMethod>,
+}
+
+impl RawMethod {
+    /// `CRYPTO_zalloc(sizeof(DH_METHOD), FILE_DH_METH, LINE)`, or `None` when it answers NULL.
+    fn new() -> Option<RawMethod> {
+        // `CRYPTO_zalloc` answers NULL or a fresh zeroed block of `size_of::<DhMethod>()` bytes,
+        // which is exactly `DH_METHOD`'s layout and a valid instance for this all-pointer type.
+        let raw =
+            CRYPTO_zalloc(core::mem::size_of::<DhMethod>(), FILE_DH_METH, LINE).cast::<DhMethod>();
+        NonNull::new(raw).map(|ptr| RawMethod { ptr })
+    }
+
+    /// `CRYPTO_malloc(sizeof(DH_METHOD), FILE_DH_METH, LINE)` for `DH_meth_dup`'s whole-block
+    /// `memcpy`, or `None` when it answers NULL.
+    ///
+    /// The block is uninitialised: the caller must write all of `size_of::<DhMethod>()` bytes
+    /// before the block is read or handed to a C caller. `Drop` releases the block alone.
+    fn new_uninit() -> Option<RawMethod> {
+        let raw =
+            CRYPTO_malloc(core::mem::size_of::<DhMethod>(), FILE_DH_METH, LINE).cast::<DhMethod>();
+        NonNull::new(raw).map(|ptr| RawMethod { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut DhMethod {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the caller.
+    fn finish(self) -> *mut DhMethod {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for RawMethod {
+    /// The authority's constructor error-path release: the block alone, without its `name`.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new`/`new_uninit` allocated and has not been handed out;
+        // its single release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE_DH_METH, LINE) };
+    }
+}
+
+/// An owned `DH_METHOD` the C ABI hands back.
+///
+/// `DH_meth_free` releases the table's `name` and then the table; [`Self::from_raw`] reclaims a
+/// block a previous [`RawMethod::finish`] handed to a C caller, so both releases are its `Drop`.
+struct OwnedMethod {
+    ptr: NonNull<DhMethod>,
+}
+
+impl OwnedMethod {
+    /// Reclaim a table the C ABI hands back, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live `DH_METHOD` this file allocated through the `CRYPTO_*` seam that no
+    /// other owner will release; its `name` is NULL or this file's own `CRYPTO_strdup` block.
+    unsafe fn from_raw(ptr: *mut DhMethod) -> Option<OwnedMethod> {
+        NonNull::new(ptr).map(|ptr| OwnedMethod { ptr })
+    }
+}
+
+impl Drop for OwnedMethod {
+    /// The table's release (`DH_meth_free`): its `name` and then the table.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the live table `from_raw` reclaimed and `Drop` runs once; `name` is
+        // NULL (a `CRYPTO_free` no-op) or the block this file's `new`/`dup` strdup'd, and both
+        // releases are the authority's own.
+        unsafe {
+            CRYPTO_free(
+                (*self.ptr.as_ptr()).name.cast::<c_void>(),
+                FILE_DH_METH,
+                LINE,
+            );
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE_DH_METH, LINE);
+        }
+    }
+}
+
+/// An owned `char *` allocated through the crate's `CRYPTO_strdup` seam.
+///
+/// The table's `name` is a block separate from the table: a duplicate installs one and the table's
+/// release reclaims it. [`DH_meth_set1_name`] replaces the field, so the old block is released and
+/// the new one handed to the field with [`Self::into_raw`].
+struct OwnedStr {
+    ptr: *mut c_char,
+}
+
+impl OwnedStr {
+    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
+    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it. `Drop` performs
+    /// its single plain `CRYPTO_free`.
+    unsafe fn take(ptr: *mut c_char) -> Option<OwnedStr> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedStr { ptr })
+        }
+    }
+
+    /// Give up ownership of the string to the field that takes it over.
+    fn into_raw(self) -> *mut c_char {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The string's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
+        // single release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE_DH_METH, LINE) };
+    }
+}
+
 /// `DH_METHOD *DH_meth_new(const char *name, int flags)` — `crypto/dh/dh_meth.c:20-35`.
 ///
 /// A zero-allocated table with `flags` stored and `name` duplicated. **A failed `OPENSSL_strdup`
@@ -365,21 +508,20 @@ const LINE: c_int = 0;
 /// `name` is NULL or a NUL-terminated C string.
 #[no_mangle]
 pub unsafe extern "C" fn DH_meth_new(name: *const c_char, flags: c_int) -> *mut DhMethod {
-    // SAFETY: the caller's contract.
-    unsafe {
-        let dhm =
-            CRYPTO_zalloc(core::mem::size_of::<DhMethod>(), FILE_DH_METH, LINE).cast::<DhMethod>();
-
-        if !dhm.is_null() {
-            (*dhm).flags = flags;
-            (*dhm).name = CRYPTO_strdup(name, FILE_DH_METH, LINE);
-            if !(*dhm).name.is_null() {
-                return dhm;
-            }
-            CRYPTO_free(dhm.cast(), FILE_DH_METH, LINE);
-        }
-        core::ptr::null_mut()
-    }
+    let Some(dhm) = RawMethod::new() else {
+        return core::ptr::null_mut();
+    };
+    // SAFETY: `dhm` is this call's own fresh zeroed table, live and writable.
+    unsafe { (*dhm.as_ptr()).flags = flags };
+    // SAFETY: `name` is NULL or a NUL-terminated string per the contract.
+    let Some(name) = (unsafe { OwnedStr::take(CRYPTO_strdup(name, FILE_DH_METH, LINE)) }) else {
+        // `dhm`'s `Drop` performs the authority's error-path release: the table alone.
+        return core::ptr::null_mut();
+    };
+    // SAFETY: `dhm` is this call's own live table; the name is handed to the field, so the table's
+    // release owns it.
+    unsafe { (*dhm.as_ptr()).name = name.into_raw() };
+    dhm.finish()
 }
 
 /// `void DH_meth_free(DH_METHOD *dhm)` — `crypto/dh/dh_meth.c:37-43`. NULL is a no-op, and the
@@ -390,13 +532,9 @@ pub unsafe extern "C" fn DH_meth_new(name: *const c_char, flags: c_int) -> *mut 
 /// `dhm` is NULL or a table [`DH_meth_new`] or [`DH_meth_dup`] returned.
 #[no_mangle]
 pub unsafe extern "C" fn DH_meth_free(dhm: *mut DhMethod) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        if !dhm.is_null() {
-            CRYPTO_free((*dhm).name.cast(), FILE_DH_METH, LINE);
-            CRYPTO_free(dhm.cast(), FILE_DH_METH, LINE);
-        }
-    }
+    // SAFETY: `dhm` is NULL or a live `DH_METHOD` this file allocated whose ownership no other
+    // holder retains (the C contract); `OwnedMethod`'s `Drop` is its release.
+    drop(unsafe { OwnedMethod::from_raw(dhm) });
 }
 
 /// `DH_METHOD *DH_meth_dup(const DH_METHOD *dhm)` — `crypto/dh/dh_meth.c:45-60`.
@@ -415,21 +553,22 @@ pub unsafe extern "C" fn DH_meth_free(dhm: *mut DhMethod) {
 /// `dhm` is a live table.
 #[no_mangle]
 pub unsafe extern "C" fn DH_meth_dup(dhm: *const DhMethod) -> *mut DhMethod {
-    // SAFETY: the caller's contract.
-    unsafe {
-        let ret =
-            CRYPTO_malloc(core::mem::size_of::<DhMethod>(), FILE_DH_METH, LINE).cast::<DhMethod>();
-
-        if !ret.is_null() {
-            core::ptr::copy_nonoverlapping(dhm, ret, 1);
-            (*ret).name = CRYPTO_strdup((*dhm).name, FILE_DH_METH, LINE);
-            if !(*ret).name.is_null() {
-                return ret;
-            }
-            CRYPTO_free(ret.cast(), FILE_DH_METH, LINE);
-        }
-        core::ptr::null_mut()
-    }
+    let Some(ret) = RawMethod::new_uninit() else {
+        return core::ptr::null_mut();
+    };
+    // SAFETY: `dhm` is a live table per the contract, and `ret` is this call's own fresh
+    // `size_of::<DhMethod>()`-byte block, so the copy writes exactly its extent.
+    unsafe { core::ptr::copy_nonoverlapping(dhm, ret.as_ptr(), 1) };
+    // SAFETY: `dhm` is live; its `name` is NULL or a NUL-terminated string.
+    let Some(name) = (unsafe { OwnedStr::take(CRYPTO_strdup((*dhm).name, FILE_DH_METH, LINE)) })
+    else {
+        // `ret`'s `Drop` performs the authority's error-path release: the block alone. Its `name`
+        // is the NULL the failed `strdup` stored, so the copied alias is not released.
+        return core::ptr::null_mut();
+    };
+    // SAFETY: `ret` is this call's own live block; the name is handed to the field.
+    unsafe { (*ret.as_ptr()).name = name.into_raw() };
+    ret.finish()
 }
 
 /// `const char *DH_meth_get0_name(const DH_METHOD *dhm)` — `crypto/dh/dh_meth.c:62-65`.
@@ -453,17 +592,19 @@ pub unsafe extern "C" fn DH_meth_get0_name(dhm: *const DhMethod) -> *const c_cha
 /// `dhm` is a live table; `name` is NULL or a NUL-terminated C string.
 #[no_mangle]
 pub unsafe extern "C" fn DH_meth_set1_name(dhm: *mut DhMethod, name: *const c_char) -> c_int {
-    // SAFETY: the caller's contract.
+    // SAFETY: `name` is NULL or a NUL-terminated string per the contract.
+    let Some(new_name) = (unsafe { OwnedStr::take(CRYPTO_strdup(name, FILE_DH_METH, LINE)) })
+    else {
+        // A NULL argument answers 0 and leaves the old name in place.
+        return 0;
+    };
+    // SAFETY: `dhm` is a live table per the contract; its `name` is NULL or this file's own block.
+    // The duplicate is made first and the old name released second, the authority's order.
     unsafe {
-        let tmpname = CRYPTO_strdup(name, FILE_DH_METH, LINE);
-
-        if tmpname.is_null() {
-            return 0;
-        }
-        CRYPTO_free((*dhm).name.cast(), FILE_DH_METH, LINE);
-        (*dhm).name = tmpname;
-        1
+        drop(OwnedStr::take((*dhm).name));
+        (*dhm).name = new_name.into_raw();
     }
+    1
 }
 
 /// `int DH_meth_get_flags(const DH_METHOD *dhm)` — `crypto/dh/dh_meth.c:80-83`.
