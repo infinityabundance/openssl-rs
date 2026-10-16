@@ -301,7 +301,14 @@ struct OwnedBlock {
 
 impl OwnedBlock {
     /// Own a block the frame's seam answered, or `None` for NULL.
-    fn take(ptr: *mut c_void, file: *const c_char, line: c_int) -> Option<OwnedBlock> {
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this frame's own `CRYPTO_*` call allocated in full (not a
+    /// sub-range), aligned for the type the frame casts it to and initialized for every byte the
+    /// frame reads or writes; this frame exclusively owns it and has not released it, and
+    /// `file`/`line` is the authority's own release site. `Drop`'s `CRYPTO_free` is its only
+    /// release.
+    unsafe fn take(ptr: *mut c_void, file: *const c_char, line: c_int) -> Option<OwnedBlock> {
         if ptr.is_null() {
             None
         } else {

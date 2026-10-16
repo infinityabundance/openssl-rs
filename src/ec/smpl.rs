@@ -92,7 +92,13 @@ struct OwnedBlock {
 impl OwnedBlock {
     /// Adopt a block the seam answered, or NULL as the empty block whose release is a no-op. Used
     /// where the authority keeps and later frees the block unconditionally.
-    fn adopt(ptr: *mut c_void, file: *const c_char, line: c_int) -> OwnedBlock {
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this seam's `CRYPTO_malloc_array` allocated in full (not a
+    /// sub-range), aligned for `*mut BigNum` and initialized for every element the function reads or
+    /// writes; this frame exclusively owns it and has not released it, and `file`/`line` is the
+    /// authority's own release site. `Drop`'s `CRYPTO_free` is its only release.
+    unsafe fn adopt(ptr: *mut c_void, file: *const c_char, line: c_int) -> OwnedBlock {
         OwnedBlock { ptr, file, line }
     }
 }

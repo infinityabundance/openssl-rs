@@ -407,7 +407,13 @@ struct OwnedBuf {
 
 impl OwnedBuf {
     /// Adopt a block `CRYPTO_malloc`/`CRYPTO_zalloc`/`CRYPTO_calloc` answered, or `None` for NULL.
-    fn take(ptr: *mut u8, len: usize, file: *const c_char, clear: bool) -> Option<OwnedBuf> {
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate's `CRYPTO_malloc`/`CRYPTO_zalloc`/`CRYPTO_calloc`
+    /// seam allocated in full for `len` bytes (not a sub-range) and aligned for `u8`; this frame
+    /// exclusively owns it and has not released it, and `len` is the block's own allocation length so
+    /// the `clear`-selected `CRYPTO_clear_free`/`CRYPTO_free` `Drop` release is exact.
+    unsafe fn take(ptr: *mut u8, len: usize, file: *const c_char, clear: bool) -> Option<OwnedBuf> {
         if ptr.is_null() {
             None
         } else {
