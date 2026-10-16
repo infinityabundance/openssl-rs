@@ -131,7 +131,19 @@ use crate::x509::x_x509::X509;
 
 /// The authority's `*_free` body for one of the file's `#[repr(C)]` objects, without the block's own
 /// release, which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer must guarantee, for a live block this file allocated:
+/// * `destroy_body(ptr)` runs the authority's `*_free` member body **exactly once** for that object;
+/// * it frees **exactly** the members the object owns -- every releaser is the authority's own and
+///   accepts the not-yet-set (NULL/zero) state -- and **never** releases the enclosing block, which
+///   [`OwnedCtx`]'s `Drop` releases.
+///
+/// This contract carries **no** zero-validity claim: the trait does not assert that an all-zero
+/// block is a valid `Self`; this file builds its owner only through the `unsafe from_raw` reclaim
+/// route, not a `zalloc`-and-wrap constructor.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -461,7 +473,10 @@ pub unsafe extern "C" fn X509V3_conf_free(conf: *mut ConfValue) {
 
 /// The authority's `X509V3_conf_free` body, without the block release [`OwnedCtx`]'s `Drop`
 /// performs: the three member strings.
-impl CtxDestroy for ConfValue {
+// SAFETY: (a) holds: `destroy_body` is the authority's `CONF_VALUE` free body -- it releases
+// exactly the object's own `name`, `value` and `section` strings (each NULL-tolerant) and never the
+// enclosing block.
+unsafe impl CtxDestroy for ConfValue {
     unsafe fn destroy_body(ptr: *mut ConfValue) {
         // SAFETY: `ptr` is live per the trait contract; each field is NULL or this structure's own.
         unsafe {
