@@ -36,6 +36,7 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void};
+use core::mem::MaybeUninit;
 use core::ptr;
 use core::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 
@@ -542,7 +543,24 @@ const SSL_ST_READ_HEADER: c_int = 0xF0;
 
 /// The authority's `*_free` body for one of the file's `#[repr(C)]` objects, without the block's
 /// own release, which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// This is an `unsafe trait`: a wrong `destroy_body` -- one that releases the enclosing block, or
+/// fails to release an owned member exactly once -- would invalidate every [`OwnedCtx`] built over
+/// `Self`.
+///
+/// # Safety
+///
+/// An implementer must guarantee, for a live block this file allocated:
+/// * `destroy_body(ptr)` runs the authority's `*_free` member body **exactly once** for that object;
+/// * it frees **exactly** the members the object owns -- every releaser is the authority's own and
+///   accepts the not-yet-set (NULL) state -- and **never** releases the enclosing block, which
+///   [`OwnedCtx`]'s `Drop` releases; and
+/// * it reads only members the constructor has initialised before the value becomes a live object.
+///
+/// This contract carries **no** zero-validity claim: the trait does not assert that an all-zero
+/// block is a valid `Self`. A constructor establishes validity itself and takes the one validated
+/// transition with [`RawCtx::assume_init`].
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -554,8 +572,9 @@ trait CtxDestroy: Sized {
 ///
 /// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
 /// hands it out and takes it back, and it is a member of another object), but its *ownership* is
-/// this type: [`Self::new`] allocates it through the crate's allocator seam at the authority's own
-/// `(file, alloc_line)` and `Drop` releases it at the authority's own `(file, line)`. It stays a
+/// this type: a constructor allocates it with [`RawCtx::zalloc`] and validates it with
+/// [`RawCtx::assume_init`] through the crate's allocator seam at the authority's own
+/// `(file, alloc_line)`, and `Drop` releases it at the authority's own `(file, line)`. It stays a
 /// `CRYPTO_zalloc`/`CRYPTO_malloc` at the authority's own size rather than a Rust `Box`, so a
 /// caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly
 /// as it observes the authority's.
@@ -566,15 +585,6 @@ struct OwnedCtx<T: CtxDestroy> {
 }
 
 impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Allocate a fresh block of `T`'s size through the installed allocator, or `None` when it
-    /// answers NULL. `alloc_line` is the authority's allocation site and `line` its release site.
-    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
-        // `CRYPTO_zalloc` answers NULL or a fresh, zeroed, writable block of `size_of::<T>()`
-        // bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
     /// The stable address the exported ABI and the enclosing objects hold.
     fn as_ptr(&self) -> *mut T {
         self.ptr.as_ptr()
@@ -604,8 +614,8 @@ impl<T: CtxDestroy> OwnedCtx<T> {
         let ptr = self.ptr.as_ptr().cast::<c_void>();
         let file = self.file;
         core::mem::forget(self);
-        // SAFETY: `ptr` is the block `new` allocated and this is its single release; the authority's
-        // refusal writes its own bare `CRYPTO_free` and never reaches the destructor.
+        // SAFETY: `ptr` is the block the constructor allocated and this is its single release; the
+        // authority's refusal writes its own bare `CRYPTO_free` and never reaches the destructor.
         unsafe { CRYPTO_free(ptr, file, line) };
     }
 }
@@ -614,13 +624,71 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
     /// The object destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`]) followed
     /// by the block release, through the same allocator seam and the authority's own site.
     fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw`/`take` reclaimed) and this
-        // is its single release; `Drop` runs once, and `destroy_body` is the authority's own free
-        // body.
+        // SAFETY: `self.ptr` is the block the constructor validated with `RawCtx::assume_init` (or
+        // `from_raw` reclaimed) and this is its single release; `Drop` runs once, and
+        // `destroy_body` is the authority's own free body.
         unsafe {
             T::destroy_body(self.ptr.as_ptr());
             CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
         }
+    }
+}
+
+/// Allocated storage for one of the file's `#[repr(C)]` objects that is **not yet** a valid `T`.
+///
+/// [`OwnedCtx`]'s `Drop` runs `T::destroy_body`, which reads the members the destructor needs; that
+/// is only sound once the storage holds a fully initialised, valid `T`. A constructor that has only
+/// raw storage must therefore hold a [`RawCtx`] until it has written those members: [`RawCtx`] owns
+/// the block, never forms a reference to `T` (it holds `NonNull<MaybeUninit<T>>`), and its `Drop`
+/// releases the **block alone** -- it never runs `T::destroy_body`.
+///
+/// The window closes with [`RawCtx::assume_init`], the one validated transition to [`OwnedCtx`].
+struct RawCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<MaybeUninit<T>>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> RawCtx<T> {
+    /// Allocate a fresh, **zeroed** block of `T`'s size through the installed allocator, or `None`
+    /// when it answers NULL. `alloc_line` is the authority's allocation site and `line` its release
+    /// site. The bytes are zero but the block is a `RawCtx`: zeroing is not, by itself, a valid `T`
+    /// for every object, so the caller still validates it with [`RawCtx::assume_init`].
+    fn zalloc(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<RawCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw =
+            CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<MaybeUninit<T>>();
+        ptr::NonNull::new(raw).map(|ptr| RawCtx { ptr, file, line })
+    }
+
+    /// The stable address the caller initialises `T`'s fields through.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr().cast::<T>()
+    }
+
+    /// The validated transition: the storage now holds a fully initialised, valid `T`.
+    ///
+    /// # Safety
+    /// The storage holds a valid, fully initialised `T` -- every field [`CtxDestroy::destroy_body`]
+    /// reads has been written, so the block is a valid `T` and its members satisfy the destructor's
+    /// invariants -- and no other owner will release it: the returned handle's `Drop` is the
+    /// block's single release.
+    unsafe fn assume_init(self) -> OwnedCtx<T> {
+        let ptr = self.ptr.cast::<T>();
+        let (file, line) = (self.file, self.line);
+        core::mem::forget(self);
+        OwnedCtx { ptr, file, line }
+    }
+}
+
+impl<T: CtxDestroy> Drop for RawCtx<T> {
+    /// Releases the **block alone**: `T` is not (yet) a valid value, so its destructor body must not
+    /// run. Same allocator, size, file and `line` as [`OwnedCtx`]'s block release.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle allocated and has not handed out; this is its
+        // single release, and the authority's own bare `CRYPTO_free` is the whole release.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line) };
     }
 }
 
@@ -789,18 +857,20 @@ pub struct Cert {
 /// The returned handle is a live `Cert` with the authority's security-level default
 /// (`ssl_cert.c:84`'s `OPENSSL_TLS_SECURITY_LEVEL` = 2).
 unsafe fn cert_new() -> Option<OwnedCtx<Cert>> {
-    // The container block, allocated through the crate's allocator seam (authority size). `Drop` is
-    // its single release and `into_raw` hands it to the enclosing object.
-    let c_owner = OwnedCtx::<Cert>::new(FILE, 0, 0)?;
-    let c = c_owner.as_ptr();
-    // SAFETY: `c` is live, but its bytes are the allocator's zeros, and zeroed bytes are not a valid
-    // `Cert`: every other field is a raw pointer or an integer (whose zero is the authority's own
-    // empty state), but `custext` is a `Vec`, whose zeroed bytes -- a NULL buffer pointer -- are not
-    // a valid `Vec`. Write a valid empty `Vec` first, before any operation -- in particular before
-    // `destroy_body`, which drops `custext` in place -- can read it, then set the scalar fields.
-    // `cert_new`'s only refusal is `OwnedCtx::new`'s NULL, which runs before the block exists, and
-    // every write below is infallible, so no path that can reach `destroy_body` leaves `custext`
-    // uninitialised.
+    // The container block, allocated through the crate's allocator seam (authority size) as a
+    // `RawCtx`: its bytes are the allocator's zeros, and zeroed bytes are not a valid `Cert`, so the
+    // block is not yet an [`OwnedCtx`] whose `Drop` may run `destroy_body`. `Drop` is its single
+    // release and `into_raw` hands it to the enclosing object.
+    let raw = RawCtx::<Cert>::zalloc(FILE, 0, 0)?;
+    let c = raw.as_ptr();
+    // SAFETY: `c` is a fresh, zeroed block. Its bytes are the allocator's zeros, and zeroed bytes
+    // are not a valid `Cert`: every other field is a raw pointer or an integer (whose zero is the
+    // authority's own empty state) or an `Option<fn>` (`None`), but `custext` is a `Vec`, whose
+    // zeroed bytes -- a NULL buffer pointer -- are not a valid `Vec`. Write a valid empty `Vec`
+    // first, then the scalar fields, so the block is a valid `Cert` before `assume_init` hands it to
+    // an owner whose `Drop` may drop `custext` in place. `cert_new`'s only refusal is
+    // `RawCtx::zalloc`'s NULL, which runs before the block exists, and every write below is
+    // infallible, so no path that can reach `destroy_body` leaves `custext` uninitialised.
     unsafe {
         ptr::write(ptr::addr_of_mut!((*c).custext), Vec::new());
         (*c).sec_level = 2;
@@ -809,7 +879,11 @@ unsafe fn cert_new() -> Option<OwnedCtx<Cert>> {
         (*c).key_index = SSL_PKEY_RSA;
         (*c).references = AtomicI32::new(1);
     }
-    Some(c_owner)
+    // SAFETY: every field of `Cert` is now written -- `custext` is a valid empty `Vec` and the rest
+    // are the authority's own non-zero defaults over a zero-valid remainder (`destroy_body` accepts
+    // every other field's zero) -- so the block is a valid `Cert`, and `raw` gave up the block, which
+    // is now the returned owner's.
+    Some(unsafe { raw.assume_init() })
 }
 
 /// The active `CERT_PKEY` a certificate container holds (`c->key`, stored here as an index).
@@ -858,7 +932,10 @@ unsafe fn cert_free(c: *mut Cert) {
 }
 
 /// The authority's `cert_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-impl CtxDestroy for Cert {
+// SAFETY: `destroy_body` is the authority's `cert_free` body minus the block release: it releases
+// the owned `pkeys`, `custext`, `psk_identity_hint` and `dh_tmp` exactly once, frees exactly those
+// members and never the enclosing block, and reads only members `cert_new` initialised.
+unsafe impl CtxDestroy for Cert {
     /// # Safety
     /// `ptr` is a live container this file allocated and has not released.
     unsafe fn destroy_body(ptr: *mut Cert) {
@@ -2285,13 +2362,19 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
         }
         let _ = crate::runtime::dso_shared::openssl_init_crypto(OPENSSL_INIT_LOAD_SSL_STRINGS);
 
-        // The context block, allocated through the crate's allocator seam (authority size); `Drop`
-        // is its single release on every refusal below and `into_raw` hands it out on success. `ret`
-        // is the block's stable address, and every refusal reaches `SSL_CTX_free`, which is
-        // `OwnedCtx`'s `Drop`.
-        let Some(ret_owner) = OwnedCtx::<SslCtx>::new(FILE, 4014, 4467) else {
+        // The context block, allocated through the crate's allocator seam (authority size) as a
+        // `RawCtx`, then validated because `SslCtx` is zero-valid. `Drop` is its single release on
+        // every refusal below and `into_raw` hands it out on success. `ret` is the block's stable
+        // address, and every refusal reaches `SSL_CTX_free`, which is `OwnedCtx`'s `Drop`.
+        let Some(raw) = RawCtx::<SslCtx>::zalloc(FILE, 4014, 4467) else {
             return ptr::null_mut();
         };
+        // SAFETY: every field of `SslCtx` is a raw pointer, integer, atomic, fixed array or
+        // `Option<fn>` -- and each embedded record (`CryptoExData`, `DaneCtx`, `SrpCtx`,
+        // `SessionStats`) the same -- so an all-zero block is a valid `SslCtx`. It is therefore
+        // validated now, before the fallible member allocations below, whose authority refusal paths
+        // release through `Drop`, exactly as the authority's own partial `SSL_CTX_free` does.
+        let ret_owner = unsafe { raw.assume_init() };
         let ret = ret_owner.as_ptr();
         // SAFETY: `ret` is a fresh zeroed allocation; every write below is to it.
         unsafe {
@@ -2436,7 +2519,10 @@ pub unsafe extern "C" fn SSL_CTX_free(ctx: *mut SslCtx) {
 }
 
 /// The authority's `SSL_CTX_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-impl CtxDestroy for SslCtx {
+// SAFETY: `destroy_body` is the authority's `SSL_CTX_free` body minus the block release: it frees
+// exactly the members the context owns, never the enclosing block, and reads only members
+// `SSL_CTX_new_ex` initialised (every one NULL-safe on a partial context).
+unsafe impl CtxDestroy for SslCtx {
     /// # Safety
     /// `ctx` is a live context whose reference count has reached zero and which this file owns.
     unsafe fn destroy_body(ctx: *mut SslCtx) {
@@ -2489,14 +2575,19 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
         }
         // SAFETY: `ctx` is non-NULL and live; its method was checked above.
         let method = unsafe { (*ctx).method };
-        // The connection block, allocated through the crate's allocator seam (authority size);
-        // `Drop` is its single release and `into_raw` hands it out on success. `s` is the block's
-        // stable address. The authority's two early refusals below tear down only the lock and the
-        // block (`ssl_lib.c:731`), so they release the block without the destructor body; every
-        // later refusal reaches `SSL_free`, which is `OwnedCtx`'s `Drop`.
-        let Some(s_owner) = OwnedCtx::<Ssl>::new(FILE, 731, 1442) else {
+        // The connection block, allocated through the crate's allocator seam (authority size) as a
+        // `RawCtx`, then validated because `Ssl` is zero-valid; `Drop` is its single release and
+        // `into_raw` hands it out on success. `s` is the block's stable address. The authority's two
+        // early refusals below tear down only the lock and the block (`ssl_lib.c:731`), so they
+        // release the block without the destructor body; every later refusal reaches `SSL_free`,
+        // which is `OwnedCtx`'s `Drop`.
+        let Some(raw) = RawCtx::<Ssl>::zalloc(FILE, 731, 1442) else {
             return ptr::null_mut();
         };
+        // SAFETY: every field of `Ssl` is a raw pointer, integer, atomic, fixed array or
+        // `Option<fn>` -- and each embedded record (`CryptoExData`, `SslDane`, `SrpCtx`,
+        // `QuicTlsCallbacks`) the same -- so an all-zero block is a valid `Ssl`.
+        let s_owner = unsafe { raw.assume_init() };
         let s = s_owner.as_ptr();
         // SAFETY: `s` is a fresh zeroed allocation; every write below is to it.
         unsafe {
@@ -2803,7 +2894,10 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
 }
 
 /// The authority's `SSL_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-impl CtxDestroy for Ssl {
+// SAFETY: `destroy_body` is the authority's `SSL_free` body minus the block release: it frees
+// exactly the members the connection owns, never the enclosing block, and reads only members
+// `SSL_new` initialised (every one NULL-safe on a partial connection).
+unsafe impl CtxDestroy for Ssl {
     /// # Safety
     /// `s` is a live connection whose reference count has reached zero and which this file owns.
     unsafe fn destroy_body(s: *mut Ssl) {
@@ -10725,7 +10819,10 @@ unsafe extern "C" fn tlsa_free(t: *mut c_void) {
 }
 
 /// The authority's `tlsa_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-impl CtxDestroy for DanetlsRecord {
+// SAFETY: `destroy_body` is the authority's `tlsa_free` body minus the block release: it frees the
+// owned `data` and `spki` exactly once (each accepts NULL), never the enclosing block, and reads
+// only members `dane_tlsa_add` initialised.
+unsafe impl CtxDestroy for DanetlsRecord {
     /// # Safety
     /// `t` is a live record this file allocated and has not released.
     unsafe fn destroy_body(t: *mut DanetlsRecord) {
@@ -10941,14 +11038,18 @@ unsafe fn dane_tlsa_add(
         unsafe { raise_ssl(SSL_R_DANE_TLSA_NULL_DATA, 312) };
         return 0;
     }
-    // SAFETY: a fresh zeroed `danetls_record`.
-    // The record block, allocated through the crate's allocator seam (authority size); `Drop` is its
-    // single release on every refusal below and `into_raw` hands it to the stack on success. `t` is
-    // the block's stable address, and every refusal reaches `tlsa_free`, which is `OwnedCtx`'s
-    // `Drop`. The record's `data` member buffer stays the object's own release, as in the authority.
-    let Some(t_owner) = OwnedCtx::<DanetlsRecord>::new(FILE, 316, 165) else {
+    // The record block, allocated through the crate's allocator seam (authority size) as a `RawCtx`,
+    // then validated because `DanetlsRecord` is zero-valid. `Drop` is its single release on every
+    // refusal below and `into_raw` hands it to the stack on success. `t` is the block's stable
+    // address, and every refusal reaches `tlsa_free`, which is `OwnedCtx`'s `Drop`. The record's
+    // `data` member buffer stays the object's own release, as in the authority.
+    let Some(raw) = RawCtx::<DanetlsRecord>::zalloc(FILE, 316, 165) else {
         return -1;
     };
+    // SAFETY: every field of `DanetlsRecord` is a `u8` discriminant, a raw pointer or a `usize` --
+    // all zero-valid -- so an all-zero block is a valid `DanetlsRecord`; the field writes below then
+    // refine it and every refusal reaches `tlsa_free`, which is `OwnedCtx`'s `Drop`.
+    let t_owner = unsafe { raw.assume_init() };
     let t = t_owner.as_ptr();
     // SAFETY: `t` is a fresh record; `data` is readable for `dlen` bytes.
     unsafe {
