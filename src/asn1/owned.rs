@@ -44,16 +44,26 @@ impl<T> OwnedBlock<T> {
     /// arm, or `None` when it answers NULL.
     ///
     /// `count` items of `T` is `count * size_of::<T>()` bytes, which is the size the
-    /// authority asks for.
+    /// authority asks for. The product is `checked_mul`-guarded: an overflow is the
+    /// module's failure outcome (`None`, the same arm as a refused allocation), so a
+    /// wrapped, too-small request never reaches the allocator. No block is allocated
+    /// on that path, so nothing is leaked, and when the product does not overflow the
+    /// request is byte-for-byte the authority's own size.
     pub(crate) fn malloc(count: usize, file: *const c_char, line: c_int) -> Option<OwnedBlock<T>> {
-        let raw = CRYPTO_malloc(count * core::mem::size_of::<T>(), file, line).cast::<T>();
+        let size = count.checked_mul(core::mem::size_of::<T>())?;
+        let raw = CRYPTO_malloc(size, file, line).cast::<T>();
         ptr::NonNull::new(raw).map(|ptr| OwnedBlock { ptr, file, line })
     }
 
     /// Allocate `count` *zeroed* blocks of `T` through the installed allocator's
     /// *zalloc* arm, or `None` when it answers NULL.
+    ///
+    /// As [`malloc`](OwnedBlock::malloc), the byte count is `checked_mul`-guarded so
+    /// an overflow answers the module's failure outcome without ever asking the
+    /// allocator for a wrapped size.
     pub(crate) fn zalloc(count: usize, file: *const c_char, line: c_int) -> Option<OwnedBlock<T>> {
-        let raw = CRYPTO_zalloc(count * core::mem::size_of::<T>(), file, line).cast::<T>();
+        let size = count.checked_mul(core::mem::size_of::<T>())?;
+        let raw = CRYPTO_zalloc(size, file, line).cast::<T>();
         ptr::NonNull::new(raw).map(|ptr| OwnedBlock { ptr, file, line })
     }
 
