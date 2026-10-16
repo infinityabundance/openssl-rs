@@ -414,7 +414,12 @@ struct OwnedStr {
 
 impl OwnedStr {
     /// Adopt a `CRYPTO_strdup` result, or `None` for NULL. `line` is the authority's `err:` free.
-    fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
+    /// `CRYPTO_strdup` seam, so it has that provenance; the caller owns it and no other owner will
+    /// release it. `Drop` performs its single `CRYPTO_free`.
+    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
         if ptr.is_null() {
             None
         } else {
@@ -885,11 +890,13 @@ pub unsafe extern "C" fn UI_dup_input_string(
     let prompt_copy = if prompt.is_null() {
         None
     } else {
-        match OwnedStr::take(
-            // SAFETY: `prompt` is NUL-terminated per the contract.
-            unsafe { CRYPTO_strdup(prompt, FILE, LINE_DUP_INPUT_PROMPT) },
-            LINE_DUP_INPUT_FREE,
-        ) {
+        // SAFETY: `prompt` is NUL-terminated per the contract, and the `CRYPTO_strdup` block this
+        // adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(prompt, FILE, LINE_DUP_INPUT_PROMPT);
+            OwnedStr::take(copy, LINE_DUP_INPUT_FREE)
+        } {
             Some(copy) => Some(copy),
             None => return 0,
         }
@@ -964,11 +971,13 @@ pub unsafe extern "C" fn UI_dup_verify_string(
     let prompt_copy = if prompt.is_null() {
         None
     } else {
-        match OwnedStr::take(
-            // SAFETY: `prompt` is NUL-terminated per the contract.
-            unsafe { CRYPTO_strdup(prompt, FILE, LINE_DUP_VERIFY_PROMPT) },
-            LINE_DUP_VERIFY_FREE,
-        ) {
+        // SAFETY: `prompt` is NUL-terminated per the contract, and the `CRYPTO_strdup` block this
+        // adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(prompt, FILE, LINE_DUP_VERIFY_PROMPT);
+            OwnedStr::take(copy, LINE_DUP_VERIFY_FREE)
+        } {
             Some(copy) => Some(copy),
             None => return -1,
         }
@@ -1054,11 +1063,13 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
     let prompt_copy = if prompt.is_null() {
         None
     } else {
-        match OwnedStr::take(
-            // SAFETY: `prompt` is NUL-terminated per the contract.
-            unsafe { CRYPTO_strdup(prompt, FILE, LINE_DUP_BOOL_PROMPT) },
-            LINE_DUP_BOOL_ERR,
-        ) {
+        // SAFETY: `prompt` is NUL-terminated per the contract, and the `CRYPTO_strdup` block this
+        // adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(prompt, FILE, LINE_DUP_BOOL_PROMPT);
+            OwnedStr::take(copy, LINE_DUP_BOOL_ERR)
+        } {
             Some(copy) => Some(copy),
             None => return -1,
         }
@@ -1066,11 +1077,13 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
     let action_desc_copy = if action_desc.is_null() {
         None
     } else {
-        match OwnedStr::take(
-            // SAFETY: `action_desc` is NUL-terminated per the contract.
-            unsafe { CRYPTO_strdup(action_desc, FILE, LINE_DUP_BOOL_ACTION) },
-            LINE_DUP_BOOL_ERR,
-        ) {
+        // SAFETY: `action_desc` is NUL-terminated per the contract, and the `CRYPTO_strdup` block
+        // this adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(action_desc, FILE, LINE_DUP_BOOL_ACTION);
+            OwnedStr::take(copy, LINE_DUP_BOOL_ERR)
+        } {
             Some(copy) => Some(copy),
             None => return -1,
         }
@@ -1078,11 +1091,13 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
     let ok_chars_copy = if ok_chars.is_null() {
         None
     } else {
-        match OwnedStr::take(
-            // SAFETY: `ok_chars` is NUL-terminated per the contract.
-            unsafe { CRYPTO_strdup(ok_chars, FILE, LINE_DUP_BOOL_OK) },
-            LINE_DUP_BOOL_ERR,
-        ) {
+        // SAFETY: `ok_chars` is NUL-terminated per the contract, and the `CRYPTO_strdup` block
+        // this adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(ok_chars, FILE, LINE_DUP_BOOL_OK);
+            OwnedStr::take(copy, LINE_DUP_BOOL_ERR)
+        } {
             Some(copy) => Some(copy),
             None => return -1,
         }
@@ -1090,11 +1105,13 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
     let cancel_chars_copy = if cancel_chars.is_null() {
         None
     } else {
-        match OwnedStr::take(
-            // SAFETY: `cancel_chars` is NUL-terminated per the contract.
-            unsafe { CRYPTO_strdup(cancel_chars, FILE, LINE_DUP_BOOL_CANCEL) },
-            LINE_DUP_BOOL_ERR,
-        ) {
+        // SAFETY: `cancel_chars` is NUL-terminated per the contract, and the `CRYPTO_strdup` block
+        // this adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(cancel_chars, FILE, LINE_DUP_BOOL_CANCEL);
+            OwnedStr::take(copy, LINE_DUP_BOOL_ERR)
+        } {
             Some(copy) => Some(copy),
             None => return -1,
         }
@@ -1161,11 +1178,13 @@ pub unsafe extern "C" fn UI_dup_info_string(ui: *mut Ui, text: *const c_char) ->
     let text_copy = if text.is_null() {
         None
     } else {
-        match OwnedStr::take(
-            // SAFETY: `text` is NUL-terminated per the contract.
-            unsafe { CRYPTO_strdup(text, FILE, LINE_DUP_INFO_PROMPT) },
-            LINE_DUP_INFO_FREE,
-        ) {
+        // SAFETY: `text` is NUL-terminated per the contract, and the `CRYPTO_strdup` block this
+        // adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(text, FILE, LINE_DUP_INFO_PROMPT);
+            OwnedStr::take(copy, LINE_DUP_INFO_FREE)
+        } {
             Some(copy) => Some(copy),
             None => return -1,
         }
@@ -1230,11 +1249,13 @@ pub unsafe extern "C" fn UI_dup_error_string(ui: *mut Ui, text: *const c_char) -
     let text_copy = if text.is_null() {
         None
     } else {
-        match OwnedStr::take(
-            // SAFETY: `text` is NUL-terminated per the contract.
-            unsafe { CRYPTO_strdup(text, FILE, LINE_DUP_ERROR_PROMPT) },
-            LINE_DUP_ERROR_FREE,
-        ) {
+        // SAFETY: `text` is NUL-terminated per the contract, and the `CRYPTO_strdup` block this
+        // adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(text, FILE, LINE_DUP_ERROR_PROMPT);
+            OwnedStr::take(copy, LINE_DUP_ERROR_FREE)
+        } {
             Some(copy) => Some(copy),
             None => return -1,
         }
@@ -1755,11 +1776,13 @@ pub unsafe extern "C" fn UI_create_method(name: *const c_char) -> *mut UiMethod 
         return ptr::null_mut();
     };
 
-    // SAFETY: `name` is NUL-terminated per the contract.
-    let name_copy = OwnedStr::take(
-        unsafe { CRYPTO_strdup(name, FILE, LINE_CREATE_METHOD_DUP) },
-        LINE_CREATE_METHOD_FREE_NAME,
-    );
+    // SAFETY: `name` is NUL-terminated per the contract, and the `CRYPTO_strdup` block this
+    // adopts is freshly allocated on that seam, owned by this call, and released only by
+    // `OwnedStr`'s `Drop`.
+    let name_copy = unsafe {
+        let copy = CRYPTO_strdup(name, FILE, LINE_CREATE_METHOD_DUP);
+        OwnedStr::take(copy, LINE_CREATE_METHOD_FREE_NAME)
+    };
 
     let ex_ok = if let Some(copy) = name_copy.as_ref() {
         // SAFETY: `ui_method` is ours and `copy` is the dup just made; the field assignment is ours

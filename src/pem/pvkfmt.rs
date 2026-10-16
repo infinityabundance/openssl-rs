@@ -152,7 +152,13 @@ struct OwnedBuf {
 impl OwnedBuf {
     /// Adopt a block the frame's seam answered, or `None` for NULL. `len` is the length a clearing
     /// release needs; it is ignored by the plain form.
-    fn take(ptr: *mut c_uchar, len: usize, clear: bool) -> Option<OwnedBuf> {
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a block this frame allocated through the crate's allocator seam
+    /// (`CRYPTO_malloc`, or a helper such as `do_i2b` that allocates on it), so it has that
+    /// provenance; the caller owns it and no other owner will release it. `len`/`clear` describe
+    /// that block's allocation, and `Drop` performs its single release.
+    unsafe fn take(ptr: *mut c_uchar, len: usize, clear: bool) -> Option<OwnedBuf> {
         if ptr.is_null() {
             None
         } else {
@@ -566,12 +572,15 @@ pub(crate) unsafe fn ossl_b2i_bio(in_: *mut Bio, ispub: *mut c_int) -> *mut EvpP
         unsafe { raise_site(&err_sites::PVKFMT_344) };
         return ptr::null_mut();
     }
-    // SAFETY: `length` bytes as a raw allocation; owned by `buf` until this frame returns.
-    let Some(buf) = OwnedBuf::take(
-        CRYPTO_malloc(length as usize, ptr::null(), 0).cast::<c_uchar>(),
-        length as usize,
-        false,
-    ) else {
+    // SAFETY: `CRYPTO_malloc` is this crate's allocator seam, so the `length`-byte block it
+    // answers has that provenance; this frame owns it and no other owner releases it.
+    let Some(buf) = (unsafe {
+        OwnedBuf::take(
+            CRYPTO_malloc(length as usize, ptr::null(), 0).cast::<c_uchar>(),
+            length as usize,
+            false,
+        )
+    }) else {
         return ptr::null_mut();
     };
     p = buf.as_ptr();
@@ -1077,7 +1086,10 @@ unsafe fn do_i2b_bio(out: *mut Bio, pk: *const EvpPkey, ispub: c_int) -> c_int {
     }
     // `do_i2b` filled the cursor with either the caller's buffer or, on the NULL cursor this call
     // passes, a fresh block; this frame adopts it (or NULL) so `Drop` is its release.
-    let Some(tmp) = OwnedBuf::take(tmp, outlen as usize, false) else {
+    // SAFETY: `tmp` is the block `do_i2b` allocated on this crate's allocator seam for the NULL
+    // cursor (or NULL), so it has that provenance; this frame owns it and no other owner releases
+    // it.
+    let Some(tmp) = (unsafe { OwnedBuf::take(tmp, outlen as usize, false) }) else {
         return -1;
     };
     // SAFETY: `out` is live and `tmp` holds `outlen` bytes.
@@ -1500,12 +1512,16 @@ unsafe fn do_PVK_body_key(
             unsafe { EVP_CIPHER_CTX_free(cctx) };
             return ptr::null_mut();
         }
-        // SAFETY: `keylen + 8` bytes as a raw allocation; adopted by `enctmp`.
-        let Some(buf) = OwnedBuf::take(
-            CRYPTO_malloc(keylen as usize + 8, ptr::null(), 0).cast::<c_uchar>(),
-            keylen as usize + 8,
-            false,
-        ) else {
+        // SAFETY: `CRYPTO_malloc` is this crate's allocator seam, so the `keylen + 8`-byte block
+        // it answers has that provenance; this frame (via `enctmp`) owns it and no other owner
+        // releases it.
+        let Some(buf) = (unsafe {
+            OwnedBuf::take(
+                CRYPTO_malloc(keylen as usize + 8, ptr::null(), 0).cast::<c_uchar>(),
+                keylen as usize + 8,
+                false,
+            )
+        }) else {
             // SAFETY: `cctx` is this frame's own.
             unsafe { EVP_CIPHER_CTX_free(cctx) };
             return ptr::null_mut();
@@ -1676,12 +1692,15 @@ unsafe fn do_PVK_key_bio(
         return ptr::null_mut();
     }
     let buflen = keylen + saltlen;
-    // SAFETY: `buflen` bytes as a raw allocation; owned by `buf` until this frame returns.
-    let Some(buf) = OwnedBuf::take(
-        CRYPTO_malloc(buflen as usize, ptr::null(), 0).cast::<c_uchar>(),
-        buflen as usize,
-        true,
-    ) else {
+    // SAFETY: `CRYPTO_malloc` is this crate's allocator seam, so the `buflen`-byte block it
+    // answers has that provenance; this frame owns it and no other owner releases it.
+    let Some(buf) = (unsafe {
+        OwnedBuf::take(
+            CRYPTO_malloc(buflen as usize, ptr::null(), 0).cast::<c_uchar>(),
+            buflen as usize,
+            true,
+        )
+    }) else {
         return ptr::null_mut();
     };
     p = buf.as_ptr();
@@ -1829,13 +1848,16 @@ unsafe fn i2b_PVK(
         // SAFETY: `out` is the caller's cursor slot and the branch read it as non-NULL.
         p = unsafe { *out };
     } else {
-        // SAFETY: `outlen` bytes as a raw allocation. Owned by `start` until it is either handed
-        // to the caller's cursor at the tail or released by `start`'s `Drop` on an error return.
-        start = OwnedBuf::take(
-            CRYPTO_malloc(outlen as usize, ptr::null(), 0).cast::<c_uchar>(),
-            outlen as usize,
-            false,
-        );
+        // SAFETY: `CRYPTO_malloc` is this crate's allocator seam, so the `outlen`-byte block it
+        // answers has that provenance; `start` owns it until it is either handed to the caller's
+        // cursor at the tail or released by `start`'s `Drop` on an error return.
+        start = unsafe {
+            OwnedBuf::take(
+                CRYPTO_malloc(outlen as usize, ptr::null(), 0).cast::<c_uchar>(),
+                outlen as usize,
+                false,
+            )
+        };
         let Some(buf) = start.as_ref() else {
             return -1;
         };
@@ -2004,7 +2026,10 @@ pub unsafe extern "C" fn i2b_PVK_bio_ex(
     }
     // `i2b_PVK` filled the NULL cursor this call passed with a fresh block; this frame adopts it
     // (or NULL) so `Drop` is its release.
-    let tmp = OwnedBuf::take(tmp, outlen as usize, false);
+    // SAFETY: `tmp` is the block `i2b_PVK` allocated on this crate's allocator seam for the NULL
+    // cursor (or NULL), so it has that provenance; this frame owns it and no other owner releases
+    // it.
+    let tmp = unsafe { OwnedBuf::take(tmp, outlen as usize, false) };
     // SAFETY: `out` is live and `tmp` holds `outlen` bytes (or is the NULL `i2b_PVK` answered).
     let wrlen = unsafe {
         BIO_write(
