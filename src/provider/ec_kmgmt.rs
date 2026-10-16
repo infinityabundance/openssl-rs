@@ -204,6 +204,103 @@ fn is_running() -> c_int {
     1
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a key buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned key buffer allocated through the crate's allocator seam.
+///
+/// The block stays the allocation the authority itself makes -- an `OPENSSL_strdup`/`CRYPTO_memdup`
+/// for an `EC_GEN_CTX` string or octet field, or a helper's `ec_group_todata`/`key_to_params`
+/// scratch block -- at the authority's exact size and `file`/`line`, because a Rust `String`/`Vec`
+/// would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook. Only its *ownership* is this type: [`Self::adopt`]/
+/// [`Self::adopt_cleansed`] take up a block the crate allocated inside a helper or reclaimed from
+/// an `EC_GEN_CTX` field, `Drop` is its single release, and [`Self::into_raw`] hands the block to
+/// the `#[repr(C)]` field whose address the exported ABI exposes. The `EC_GEN_CTX` block itself,
+/// whose release is a compound destructor body, stays on the raw seam.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+/// How the authority releases a key buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)` (every `EC_GEN_CTX` string/octet field
+    /// but `dhkem_ikm`, and the two `export`/`get_params` scratch blocks).
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)` (`dhkem_ikm`).
+    Cleansed {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+}
+
+impl OwnedBuf {
+    /// Take up a plain block the crate allocated inside a helper or reclaimed from an `EC_GEN_CTX`
+    /// field, for release by `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
+    /// is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// Take up a cleansing block reclaimed from the `dhkem_ikm` field, for release by `Drop` at the
+    /// authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns and that is readable
+    /// for `num` bytes; `file` is NULL or a NUL-terminated C string.
+    unsafe fn adopt_cleansed(
+        ptr: *mut c_uchar,
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::Cleansed { num, file, line },
+        })
+    }
+
+    /// Give up ownership of the block to the field it is stored in.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Cleansed { num, file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `CRYPTO_clear_free` cleanses then releases it and accepts NULL.
+                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+            }
+        }
+    }
+}
+
 /// `ossl_param_is_empty` — `include/internal/common.h`. The same three-line reader the other
 /// provider units carry.
 ///
@@ -698,6 +795,11 @@ unsafe extern "C" fn ec_export(
             ok &= otherparams_to_params(ec, tmpl, ptr::null_mut());
         }
 
+        // The two scratch blocks the to-params helpers wrote into; each handle releases its own
+        // block at the authority's own site on either the refusal or the success path below.
+        let pub_key = OwnedBuf::adopt(pub_key.cast::<c_uchar>(), FILE, 503);
+        let genbuf = OwnedBuf::adopt(genbuf.cast::<c_uchar>(), FILE, 504);
+
         let params = if ok == 0 {
             ptr::null_mut()
         } else {
@@ -706,8 +808,8 @@ unsafe extern "C" fn ec_export(
         if ok == 0 || params.is_null() {
             ok = 0;
             OSSL_PARAM_BLD_free(tmpl);
-            CRYPTO_free(pub_key.cast(), FILE, 503);
-            CRYPTO_free(genbuf.cast(), FILE, 504);
+            drop(pub_key);
+            drop(genbuf);
             BN_CTX_end(bnctx);
             BN_CTX_free(bnctx);
             return ok;
@@ -719,8 +821,8 @@ unsafe extern "C" fn ec_export(
         };
         OSSL_PARAM_free(params);
         OSSL_PARAM_BLD_free(tmpl);
-        CRYPTO_free(pub_key.cast(), FILE, 503);
-        CRYPTO_free(genbuf.cast(), FILE, 504);
+        drop(pub_key);
+        drop(genbuf);
         BN_CTX_end(bnctx);
         BN_CTX_free(bnctx);
     }
@@ -1145,8 +1247,10 @@ unsafe fn common_get_params(key: *mut c_void, params: *mut OsslParam, sm2: c_int
                 && otherparams_to_params(eck, ptr::null_mut(), params) != 0,
         );
 
-        CRYPTO_free(genbuf.cast(), FILE, 745);
-        CRYPTO_free(pub_key.cast(), FILE, 746);
+        // The two scratch blocks the to-params helpers wrote into; each handle releases its own
+        // block at the authority's own site.
+        drop(OwnedBuf::adopt(genbuf.cast::<c_uchar>(), FILE, 745));
+        drop(OwnedBuf::adopt(pub_key.cast::<c_uchar>(), FILE, 746));
         BN_CTX_end(bnctx);
         BN_CTX_free(bnctx);
     }
@@ -1503,7 +1607,14 @@ unsafe extern "C" fn sm2_gen_init(
             if !(*gctx).group_name.is_null() {
                 return gctx.cast();
             }
-            (*gctx).group_name = CRYPTO_strdup(c"sm2".as_ptr(), FILE, 1005);
+            // The helper's fresh block is handed to the field through a handle; a refusal leaves
+            // the field NULL, exactly as the authority's failed `OPENSSL_strdup` does.
+            (*gctx).group_name = OwnedBuf::adopt(
+                CRYPTO_strdup(c"sm2".as_ptr(), FILE, 1005).cast::<c_uchar>(),
+                FILE,
+                1005,
+            )
+            .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<c_char>());
             if !(*gctx).group_name.is_null() {
                 return gctx.cast();
             }
@@ -1588,11 +1699,19 @@ unsafe fn ec_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c_
                 if (*p).data_type != OSSL_PARAM_UTF8_STRING {
                     return 0;
                 }
-                CRYPTO_free((*field).cast(), FILE, 1090);
-                *field = CRYPTO_strdup((*p).data.cast(), FILE, 1090);
-                if (*field).is_null() {
+                // The old string releases through its handle at the authority's own plain free;
+                // the replacement is the helper's fresh block, handed to the field through a second
+                // handle, and a refusal leaves the field NULL.
+                drop(OwnedBuf::adopt((*field).cast::<c_uchar>(), FILE, 1090));
+                let Some(buf) = OwnedBuf::adopt(
+                    CRYPTO_strdup((*p).data.cast(), FILE, 1090).cast::<c_uchar>(),
+                    FILE,
+                    1090,
+                ) else {
+                    *field = ptr::null_mut();
                     return 0;
-                }
+                };
+                *field = buf.into_raw().cast::<c_char>();
             }
         }
 
@@ -1634,12 +1753,20 @@ unsafe fn ec_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c_
                 if (*p).data_type != OSSL_PARAM_OCTET_STRING {
                     return 0;
                 }
-                CRYPTO_free((*field).cast(), FILE, 1063);
+                // The old octet block releases through its handle at the authority's own plain
+                // free; the replacement is the helper's fresh block, handed to the field through a
+                // second handle, and a refusal leaves the field NULL.
+                drop(OwnedBuf::adopt((*field).cast::<c_uchar>(), FILE, 1063));
                 *len = (*p).data_size;
-                *field = CRYPTO_memdup((*p).data, (*p).data_size, FILE, 1065).cast::<u8>();
-                if (*field).is_null() {
+                let Some(buf) = OwnedBuf::adopt(
+                    CRYPTO_memdup((*p).data, (*p).data_size, FILE, 1065).cast::<c_uchar>(),
+                    FILE,
+                    1063,
+                ) else {
+                    *field = ptr::null_mut();
                     return 0;
-                }
+                };
+                *field = buf.into_raw().cast::<u8>();
             }
         }
     }
@@ -2017,19 +2144,44 @@ unsafe extern "C" fn ec_gen_cleanup(genctx: *mut c_void) {
 
     // SAFETY: `gctx` is the caller's context, allocated by `ec_gen_init`.
     unsafe {
-        CRYPTO_clear_free((*gctx).dhkem_ikm.cast(), (*gctx).dhkem_ikmlen, FILE, 1373);
+        // Each owned field's handle releases its own block at the authority's own site -- the
+        // `dhkem_ikm` cleanses, the rest are plain -- and the context block itself stays on the raw
+        // seam (its release is part of this destructor body). The authority's own cleanup omits the
+        // `group_check` field, so this transcription does too.
+        drop(OwnedBuf::adopt_cleansed(
+            (*gctx).dhkem_ikm.cast::<c_uchar>(),
+            (*gctx).dhkem_ikmlen,
+            FILE,
+            1373,
+        ));
         EC_GROUP_free((*gctx).gen_group);
         crate::bn::bignum::BN_free((*gctx).p);
         crate::bn::bignum::BN_free((*gctx).a);
         crate::bn::bignum::BN_free((*gctx).b);
         crate::bn::bignum::BN_free((*gctx).order);
         crate::bn::bignum::BN_free((*gctx).cofactor);
-        CRYPTO_free((*gctx).group_name.cast(), FILE, 1380);
-        CRYPTO_free((*gctx).field_type.cast(), FILE, 1381);
-        CRYPTO_free((*gctx).pt_format.cast(), FILE, 1382);
-        CRYPTO_free((*gctx).encoding.cast(), FILE, 1383);
-        CRYPTO_free((*gctx).seed.cast(), FILE, 1384);
-        CRYPTO_free((*gctx).gen.cast(), FILE, 1385);
+        drop(OwnedBuf::adopt(
+            (*gctx).group_name.cast::<c_uchar>(),
+            FILE,
+            1380,
+        ));
+        drop(OwnedBuf::adopt(
+            (*gctx).field_type.cast::<c_uchar>(),
+            FILE,
+            1381,
+        ));
+        drop(OwnedBuf::adopt(
+            (*gctx).pt_format.cast::<c_uchar>(),
+            FILE,
+            1382,
+        ));
+        drop(OwnedBuf::adopt(
+            (*gctx).encoding.cast::<c_uchar>(),
+            FILE,
+            1383,
+        ));
+        drop(OwnedBuf::adopt((*gctx).seed.cast::<c_uchar>(), FILE, 1384));
+        drop(OwnedBuf::adopt((*gctx).gen.cast::<c_uchar>(), FILE, 1385));
         CRYPTO_free(gctx.cast(), FILE, 1386);
     }
 }
