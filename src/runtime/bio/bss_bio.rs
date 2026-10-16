@@ -80,7 +80,11 @@ pub struct BioBioSt {
 /// ring buffer `buf`, when it has been allocated, is released exactly as `bio_free` releases it.
 /// `buf` stays a plain `#[repr(C)]` member the authority owns and resizes by hand in `bio_ctrl`;
 /// only the context block's own ownership moves to the handle.
-impl CtxDestroy for BioBioSt {
+// SAFETY: (a) `destroy_body` is the authority's `bio_free` member body, releasing exactly this
+// context's ring buffer once (the `OwnedBlock::take` accepts the unset NULL) and never the
+// enclosing block, which `OwnedCtx` releases; (b) `BioBioSt` is a `#[repr(C)]` record of a raw
+// pointer and integers, so an all-zero block is a valid `BioBioSt` the body is sound on.
+unsafe impl CtxDestroy for BioBioSt {
     unsafe fn destroy_body(ptr: *mut BioBioSt) {
         // SAFETY: `ptr` is a live context per the trait contract; `buf` is NULL or an owned seam
         // block whose single release is the block handle's `Drop`.

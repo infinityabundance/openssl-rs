@@ -232,7 +232,12 @@ unsafe fn connect_free(a: *mut BioConnect) {
     unsafe { drop(OwnedCtx::<BioConnect>::from_raw(a)) };
 }
 
-impl CtxDestroy for BioConnect {
+// SAFETY: (a) `destroy_body` is the authority's `conn_free` member body, releasing exactly this
+// context's own strings, address chain and datagram BIO once (each releaser accepts the unset
+// NULL) and never the enclosing block, which `OwnedCtx` releases; (b) `BioConnect` is a `#[repr(C)]`
+// record of raw pointers, integers and `Option<fn>`, so an all-zero block is a valid `BioConnect`
+// the body is sound on.
+unsafe impl CtxDestroy for BioConnect {
     unsafe fn destroy_body(ptr: *mut BioConnect) {
         // SAFETY: `ptr` is a live context per the trait contract; `param_hostname`/`param_service`
         // are NULL or owned seam blocks and `addr_first` is NULL or an owned address chain.

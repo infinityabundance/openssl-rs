@@ -160,7 +160,11 @@ pub struct CompCtx {
 /// The authority's `COMP_CTX_free` body *minus* the block release [`OwnedCtx`]'s `Drop` performs:
 /// the method's `finish` hook runs on the still-live context, exactly as `comp_lib.c` runs it
 /// before its own `OPENSSL_free(ctx)`. A method-less context has no hook to run.
-impl CtxDestroy for CompCtx {
+// SAFETY: (a) `destroy_body` is the authority's `COMP_CTX_free` member body, running the method's
+// `finish` hook on the still-live context once and never releasing the enclosing block, which
+// `OwnedCtx` releases; (b) `CompCtx` is a `#[repr(C)]` record of a raw pointer and integers, so an
+// all-zero block (NULL `meth`, no hook) is a valid `CompCtx` the body is sound on.
+unsafe impl CtxDestroy for CompCtx {
     unsafe fn destroy_body(ptr: *mut CompCtx) {
         // SAFETY: `ptr` is a live context per the trait contract.
         let meth = unsafe { (*ptr).meth };

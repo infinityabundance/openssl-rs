@@ -378,7 +378,11 @@ struct BssSockData {
 /// The authority's `sock_free` body for the context block. `bss_sock.c`'s `sock_free` only closes
 /// the descriptor and resets the BIO's own fields -- the context block has no destructor body of
 /// its own, so the whole of its ownership is [`OwnedCtx`]'s `Drop`.
-impl CtxDestroy for BssSockData {
+// SAFETY: (a) `sock_free` releases no member of the context block, so `destroy_body` is the empty
+// authority body and never the enclosing block, which `OwnedCtx` releases; (b) `BssSockData` is a
+// `#[repr(C)]` record of an integer and a byte array, so an all-zero block is a valid `BssSockData`
+// the empty body is trivially sound on.
+unsafe impl CtxDestroy for BssSockData {
     unsafe fn destroy_body(_ptr: *mut BssSockData) {}
 }
 

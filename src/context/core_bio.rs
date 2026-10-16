@@ -100,7 +100,11 @@ pub(crate) struct BioCoreGlobals {
     free: Option<OsslFuncBioFree>,
 }
 
-impl CtxDestroy for BioCoreGlobals {
+// SAFETY: (a) the globals block has no member releases, so `destroy_body` is the empty authority
+// body and never the enclosing block, which `OwnedCtx` releases; (b) `BioCoreGlobals` is a
+// `#[repr(C)]` record of `Option<fn>` slots, so an all-zero block (every slot `None`) is a valid
+// `BioCoreGlobals` the empty body is trivially sound on.
+unsafe impl CtxDestroy for BioCoreGlobals {
     const FILE: *const c_char = FILE;
     const LINE_ALLOC: c_int = LINE_ZALLOC;
     const LINE_FREE: c_int = LINE_FREE;

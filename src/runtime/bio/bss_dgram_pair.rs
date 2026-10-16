@@ -251,7 +251,12 @@ struct BioDgramPairSt {
 /// performs: the read/write lock the context owns. `CRYPTO_THREAD_lock_free` is NULL-tolerant, so
 /// the context's constructor failure path (a refused lock) releases the block alone through the
 /// handle, exactly as `dgram_pair_init` frees it by hand.
-impl CtxDestroy for BioDgramPairSt {
+// SAFETY: (a) `destroy_body` is the authority's `dgram_pair_free` member body, releasing exactly
+// this context's read/write lock once (the free tolerates the unset NULL) and never the enclosing
+// block, which `OwnedCtx` releases; (b) `BioDgramPairSt` is a `#[repr(C)]` record of raw pointers,
+// integers, a plain `RingBuf` (`*mut u8` + `usize`s) and `bool`s, so an all-zero block is a valid
+// `BioDgramPairSt` the body is sound on.
+unsafe impl CtxDestroy for BioDgramPairSt {
     unsafe fn destroy_body(ptr: *mut BioDgramPairSt) {
         // SAFETY: `ptr` is a live context per the trait contract; `lock` is NULL or owned.
         unsafe { CRYPTO_THREAD_lock_free((*ptr).lock) };

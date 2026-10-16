@@ -97,7 +97,11 @@ struct Epki2pkiCtx {
 /// `epki2pki_freectx` (`decode_epki2pki.c:54-58`) releases nothing but the block, and the authority
 /// allocates and releases that block at `NULL`/`0`, so the trait's own coordinates and an empty
 /// body are the authority's release.
-impl CtxDestroy for Epki2pkiCtx {
+// SAFETY: (a) `epki2pki_freectx` releases no member of the context block, so `destroy_body` is the
+// empty authority body and never the enclosing block, which `OwnedCtx` releases; (b)
+// `Epki2pkiCtx` is a `#[repr(C)]` record of a raw pointer and a `char` array, so an all-zero block
+// is a valid `Epki2pkiCtx` the empty body is trivially sound on.
+unsafe impl CtxDestroy for Epki2pkiCtx {
     unsafe fn destroy_body(_ptr: *mut Epki2pkiCtx) {}
 }
 
