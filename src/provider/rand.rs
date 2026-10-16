@@ -215,7 +215,28 @@ fn fail_at(site: &err_sites::ErrSite) -> c_int {
 /// allocation and `release` its single release. `FILE` is the `__FILE__` both record. Implementing
 /// the trait on each `#[repr(C)]` context lets [`OwnedCtx`] run the right destructor from `Drop`
 /// without a `CRYPTO_free` written at any call site.
-trait DrbgCtx: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on every half of the contract, because the safe [`OwnedCtx::new`] calls
+/// `zalloc` and its `Drop` runs `destroy_body` then `release` through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (the nonce global's
+///   lock, `PROV_DRBG`'s lock, CTR's cipher contexts and fetched ciphers, HASH's digest context and
+///   `PROV_DIGEST`, HMAC's MAC context and `PROV_DIGEST`), every releaser the authority's own and
+///   accepting the not-yet-set NULL/zero state, and it **never** releases the enclosing block, which
+///   `release` frees;
+/// * (b) **zero-validity** -- `zalloc` answers a fresh, zeroed block of `Self`'s size through the
+///   unit's own allocator seam, and an all-zero block of `Self` is a valid `Self` for which
+///   `destroy_body` and every operation the owner performs are sound. This is the obligation the
+///   safe [`OwnedCtx::new`] leans on: it validates the `zalloc` block with no caller assertion; and
+/// * `release(ptr)` releases **exactly** the block `zalloc` returned, at `size_of::<Self>()`, through
+///   the same allocator seam `zalloc` created it on.
+///
+/// Breaking these lets safe Rust double-release, release the enclosing block, or run `destroy_body`
+/// on a value that is not a valid `Self`.
+unsafe trait DrbgCtx: Sized {
     /// `__FILE__` for this unit's `CRYPTO_*` calls.
     const FILE: *const c_char;
 
@@ -481,7 +502,11 @@ pub(crate) struct ProvDrbg {
     pub cleanup_nonce_fn: *mut c_void,
 }
 
-impl DrbgCtx for ProvDrbg {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block (`release`
+// frees it). (b) holds: `zalloc` answers a fresh zeroed block, an all-zero context is valid, and
+// `release` is that block's single release through the seam `zalloc` used -- what `OwnedCtx::new` leans on.
+unsafe impl DrbgCtx for ProvDrbg {
     const FILE: *const c_char = FILE_DRBG;
 
     fn zalloc() -> *mut ProvDrbg {
@@ -512,7 +537,11 @@ pub(crate) struct ProvDrbgNonceGlobal {
     pub rand_nonce_count: c_int,
 }
 
-impl DrbgCtx for ProvDrbgNonceGlobal {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block (`release`
+// frees it). (b) holds: `zalloc` answers a fresh zeroed block, an all-zero context is valid, and
+// `release` is that block's single release through the seam `zalloc` used -- what `OwnedCtx::new` leans on.
+unsafe impl DrbgCtx for ProvDrbgNonceGlobal {
     const FILE: *const c_char = FILE_DRBG;
 
     fn zalloc() -> *mut ProvDrbgNonceGlobal {
@@ -1866,7 +1895,11 @@ pub(crate) struct ProvDrbgCtr {
     pub kx: [c_uchar; 48],
 }
 
-impl DrbgCtx for ProvDrbgCtr {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block (`release`
+// frees it). (b) holds: `zalloc` answers a fresh zeroed block, an all-zero context is valid, and
+// `release` is that block's single release through the seam `zalloc` used -- what `OwnedCtx::new` leans on.
+unsafe impl DrbgCtx for ProvDrbgCtr {
     const FILE: *const c_char = FILE_DRBG_CTR;
 
     fn zalloc() -> *mut ProvDrbgCtr {
@@ -3295,7 +3328,11 @@ pub(crate) struct ProvDrbgHash {
     pub vtmp: [c_uchar; HASH_PRNG_MAX_SEEDLEN],
 }
 
-impl DrbgCtx for ProvDrbgHash {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block (`release`
+// frees it). (b) holds: `zalloc` answers a fresh zeroed block, an all-zero context is valid, and
+// `release` is that block's single release through the seam `zalloc` used -- what `OwnedCtx::new` leans on.
+unsafe impl DrbgCtx for ProvDrbgHash {
     const FILE: *const c_char = FILE_DRBG_HASH;
 
     fn zalloc() -> *mut ProvDrbgHash {
@@ -4382,7 +4419,11 @@ pub(crate) struct ProvDrbgHmac {
     pub v: [c_uchar; EVP_MAX_MD_SIZE],
 }
 
-impl DrbgCtx for ProvDrbgHmac {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block (`release`
+// frees it). (b) holds: `zalloc` answers a fresh zeroed block, an all-zero context is valid, and
+// `release` is that block's single release through the seam `zalloc` used -- what `OwnedCtx::new` leans on.
+unsafe impl DrbgCtx for ProvDrbgHmac {
     const FILE: *const c_char = FILE_DRBG_HMAC;
 
     fn zalloc() -> *mut ProvDrbgHmac {

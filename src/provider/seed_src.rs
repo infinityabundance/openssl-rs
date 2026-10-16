@@ -204,7 +204,24 @@ pub(crate) struct ProvSeedSrc {
 /// release [`OwnedCtx`]'s `Drop` performs. `FILE`/`LINE_ALLOC`/`LINE_FREE` are the authority's own
 /// `CRYPTO_*` coordinates, kept distinct so a caller-installed `CRYPTO_set_mem_functions` hook
 /// observes the release at the site the authority releases it.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::zalloc`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (no member for
+///   `PROV_SEED_SRC`; the `entropy`/`nonce` buffers and the lock for `PROV_TEST_RNG`), every releaser
+///   the authority's own and accepting the not-yet-set NULL/zero state, and it **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::zalloc`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// `__FILE__` for this context's `CRYPTO_*` calls.
     const FILE: *const c_char;
     /// `__LINE__` for the context's allocation.
@@ -314,7 +331,10 @@ impl Drop for OwnedBuf {
 }
 
 /// `seed_src_free`'s body (`seed_src.c:70-73`): the block alone, no owned members.
-impl CtxDestroy for ProvSeedSrc {
+// SAFETY: (a) holds: `destroy_body` is `seed_src_free` minus the block -- the context owns no member
+// -- and never the enclosing block. (b) holds: an all-zero context is valid with no release to run --
+// what the safe `OwnedCtx::zalloc` leans on.
+unsafe impl CtxDestroy for ProvSeedSrc {
     const FILE: *const c_char = FILE_SEED_SRC;
     const LINE_ALLOC: c_int = LINE_SEED_SRC_ZALLOC;
     const LINE_FREE: c_int = LINE_SEED_SRC_FREE;
@@ -324,7 +344,11 @@ impl CtxDestroy for ProvSeedSrc {
 
 /// `test_rng_free`'s body (`test_rng.c:74-84`), without the block release [`OwnedCtx`]'s `Drop`
 /// performs: the two owned buffers and the lock, in the authority's own order.
-impl CtxDestroy for ProvTestRng {
+// SAFETY: (a) holds: `destroy_body` is `test_rng_free` minus the block -- it releases exactly the
+// context's own `entropy`/`nonce` buffers and lock (each NULL-tolerant) and never the enclosing
+// block. (b) holds: an all-zero context is valid with every release a no-op -- what the safe
+// `OwnedCtx::zalloc` leans on.
+unsafe impl CtxDestroy for ProvTestRng {
     const FILE: *const c_char = FILE_TEST_RNG;
     const LINE_ALLOC: c_int = LINE_TEST_RNG_ZALLOC;
     const LINE_FREE: c_int = LINE_TEST_RNG_FREE;

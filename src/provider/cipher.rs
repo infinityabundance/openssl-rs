@@ -437,7 +437,28 @@ fn fail() -> c_int {
 /// the `__FILE__` the block's own release records. Implementing the trait on each `#[repr(C)]`
 /// context lets [`OwnedCtx`] run the right destructor from `Drop` without a `CRYPTO_clear_free`
 /// written at any call site.
-trait CipherDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_freectx` member body
+///   **exactly once** for that object; it releases **exactly** the members the object owns (every
+///   releaser is the authority's own and accepts the not-yet-set NULL/zero state) and **never**
+///   releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// [`OwnedRaw`] is the partial-construction counterpart: its `Drop` runs only the block's plain
+/// `CRYPTO_free` and **never** `destroy_body`, because a duplicate that has not yet repaired every
+/// member may still alias its source; only a fully built object owned by [`OwnedCtx`] satisfies the
+/// (a) precondition.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CipherDestroy: Sized {
     /// `__FILE__` for this unit's `CRYPTO_*` calls.
     const FILE: *const c_char;
 
@@ -565,7 +586,10 @@ impl<T: CipherDestroy> Drop for OwnedRaw<T> {
 // block release `OwnedCtx`'s `Drop` now owns. The member releases stay the authority's own
 // calls, relocated to the context's `Drop`.
 
-impl CipherDestroy for ProvAesCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesCtx {
     const FILE: *const c_char = FILE_AES;
     unsafe fn destroy_body(ptr: *mut ProvAesCtx) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -573,7 +597,10 @@ impl CipherDestroy for ProvAesCtx {
     }
 }
 
-impl CipherDestroy for ProvCamelliaCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvCamelliaCtx {
     const FILE: *const c_char = FILE_CAMELLIA;
     unsafe fn destroy_body(ptr: *mut ProvCamelliaCtx) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -581,7 +608,10 @@ impl CipherDestroy for ProvCamelliaCtx {
     }
 }
 
-impl CipherDestroy for ProvTdesCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvTdesCtx {
     const FILE: *const c_char = FILE_TDES;
     unsafe fn destroy_body(ptr: *mut ProvTdesCtx) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -589,7 +619,10 @@ impl CipherDestroy for ProvTdesCtx {
     }
 }
 
-impl CipherDestroy for ProvAesWrapCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesWrapCtx {
     const FILE: *const c_char = FILE_AES_WRAP;
     unsafe fn destroy_body(ptr: *mut ProvAesWrapCtx) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -597,7 +630,10 @@ impl CipherDestroy for ProvAesWrapCtx {
     }
 }
 
-impl CipherDestroy for ProvAesXtsCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesXtsCtx {
     const FILE: *const c_char = FILE_AES_XTS;
     unsafe fn destroy_body(ptr: *mut ProvAesXtsCtx) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -605,7 +641,10 @@ impl CipherDestroy for ProvAesXtsCtx {
     }
 }
 
-impl CipherDestroy for ProvSm4XtsCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvSm4XtsCtx {
     const FILE: *const c_char = FILE_SM4_XTS;
     unsafe fn destroy_body(ptr: *mut ProvSm4XtsCtx) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -613,7 +652,10 @@ impl CipherDestroy for ProvSm4XtsCtx {
     }
 }
 
-impl CipherDestroy for ProvAesOcbCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesOcbCtx {
     const FILE: *const c_char = FILE_AES_OCB;
     unsafe fn destroy_body(ptr: *mut ProvAesOcbCtx) {
         // SAFETY: `ptr` is a live context per the trait contract; `aes_ocb_freectx` releases the
@@ -625,28 +667,40 @@ impl CipherDestroy for ProvAesOcbCtx {
     }
 }
 
-impl CipherDestroy for ProvAesCcmCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// this context owns no member released separately, and it never releases the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesCcmCtx {
     const FILE: *const c_char = FILE_CCM;
     unsafe fn destroy_body(_ptr: *mut ProvAesCcmCtx) {
         // `aes_ccm_freectx` releases the block alone; there is no member to release.
     }
 }
 
-impl CipherDestroy for ProvAriaCcmCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// this context owns no member released separately, and it never releases the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAriaCcmCtx {
     const FILE: *const c_char = FILE_ARIA_CCM;
     unsafe fn destroy_body(_ptr: *mut ProvAriaCcmCtx) {
         // `aria_ccm_freectx` releases the block alone; there is no member to release.
     }
 }
 
-impl CipherDestroy for ProvSm4CcmCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// this context owns no member released separately, and it never releases the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvSm4CcmCtx {
     const FILE: *const c_char = FILE_SM4_CCM;
     unsafe fn destroy_body(_ptr: *mut ProvSm4CcmCtx) {
         // `sm4_ccm_freectx` releases the block alone; there is no member to release.
     }
 }
 
-impl CipherDestroy for ProvAesSivCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesSivCtx {
     const FILE: *const c_char = FILE_SIV;
     unsafe fn destroy_body(ptr: *mut ProvAesSivCtx) {
         // SAFETY: `ptr` is a live context per the trait contract; `hw` is installed by `newctx`.
@@ -654,14 +708,20 @@ impl CipherDestroy for ProvAesSivCtx {
     }
 }
 
-impl CipherDestroy for ProvNullCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// this context owns no member released separately, and it never releases the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvNullCtx {
     const FILE: *const c_char = FILE_NULL;
     unsafe fn destroy_body(_ptr: *mut ProvNullCtx) {
         // `null_freectx` releases the block alone; there is no member to release.
     }
 }
 
-impl CipherDestroy for ProvAesHmacSha1Ctx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesHmacSha1Ctx {
     const FILE: *const c_char = FILE_CBC_HMAC;
     unsafe fn destroy_body(ptr: *mut ProvAesHmacSha1Ctx) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -669,7 +729,10 @@ impl CipherDestroy for ProvAesHmacSha1Ctx {
     }
 }
 
-impl CipherDestroy for ProvAesHmacSha256Ctx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesHmacSha256Ctx {
     const FILE: *const c_char = FILE_CBC_HMAC;
     unsafe fn destroy_body(ptr: *mut ProvAesHmacSha256Ctx) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -677,7 +740,10 @@ impl CipherDestroy for ProvAesHmacSha256Ctx {
     }
 }
 
-impl CipherDestroy for ProvAesGcmSivCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesGcmSivCtx {
     const FILE: *const c_char = FILE_GCM_SIV;
     unsafe fn destroy_body(ptr: *mut ProvAesGcmSivCtx) {
         // SAFETY: `ptr` is a live context per the trait contract; `ossl_aes_gcm_siv_freectx`
@@ -689,7 +755,10 @@ impl CipherDestroy for ProvAesGcmSivCtx {
     }
 }
 
-impl CipherDestroy for ProvChacha20Ctx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvChacha20Ctx {
     const FILE: *const c_char = FILE_CHACHA20;
     unsafe fn destroy_body(ptr: *mut ProvChacha20Ctx) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -697,7 +766,10 @@ impl CipherDestroy for ProvChacha20Ctx {
     }
 }
 
-impl CipherDestroy for ProvChacha20Poly1305Ctx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvChacha20Poly1305Ctx {
     const FILE: *const c_char = FILE_CHACHA20_POLY1305;
     unsafe fn destroy_body(ptr: *mut ProvChacha20Poly1305Ctx) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -705,7 +777,10 @@ impl CipherDestroy for ProvChacha20Poly1305Ctx {
     }
 }
 
-impl CipherDestroy for ProvSm4Ctx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvSm4Ctx {
     const FILE: *const c_char = FILE_SM4;
     unsafe fn destroy_body(ptr: *mut ProvSm4Ctx) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -713,7 +788,10 @@ impl CipherDestroy for ProvSm4Ctx {
     }
 }
 
-impl CipherDestroy for ProvAriaCtx {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAriaCtx {
     const FILE: *const c_char = FILE_ARIA;
     unsafe fn destroy_body(ptr: *mut ProvAriaCtx) {
         // SAFETY: `ptr` is a live context per the trait contract.
@@ -21851,7 +21929,10 @@ pub(crate) mod legacy {
     // The legacy rows' per-context destructors: each is exactly what its `*_freectx` performed by
     // hand, minus the block release `OwnedCtx`'s `Drop` now owns.
 
-    impl CipherDestroy for ProvCastCtx {
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvCastCtx {
         const FILE: *const c_char = FILE_CAST5;
         unsafe fn destroy_body(ptr: *mut ProvCastCtx) {
             // SAFETY: `ptr` is a live context per the trait contract.
@@ -21859,7 +21940,10 @@ pub(crate) mod legacy {
         }
     }
 
-    impl CipherDestroy for ProvBlowfishCtx {
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvBlowfishCtx {
         const FILE: *const c_char = FILE_BLOWFISH;
         unsafe fn destroy_body(ptr: *mut ProvBlowfishCtx) {
             // SAFETY: `ptr` is a live context per the trait contract.
@@ -21867,7 +21951,10 @@ pub(crate) mod legacy {
         }
     }
 
-    impl CipherDestroy for ProvIdeaCtx {
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvIdeaCtx {
         const FILE: *const c_char = FILE_IDEA;
         unsafe fn destroy_body(ptr: *mut ProvIdeaCtx) {
             // SAFETY: `ptr` is a live context per the trait contract.
@@ -21875,7 +21962,10 @@ pub(crate) mod legacy {
         }
     }
 
-    impl CipherDestroy for ProvSeedCtx {
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvSeedCtx {
         const FILE: *const c_char = FILE_SEED;
         unsafe fn destroy_body(ptr: *mut ProvSeedCtx) {
             // SAFETY: `ptr` is a live context per the trait contract.
@@ -21883,7 +21973,10 @@ pub(crate) mod legacy {
         }
     }
 
-    impl CipherDestroy for ProvRc2Ctx {
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvRc2Ctx {
         const FILE: *const c_char = FILE_RC2;
         unsafe fn destroy_body(ptr: *mut ProvRc2Ctx) {
             // SAFETY: `ptr` is a live context per the trait contract.
@@ -21891,7 +21984,10 @@ pub(crate) mod legacy {
         }
     }
 
-    impl CipherDestroy for ProvRc4Ctx {
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvRc4Ctx {
         const FILE: *const c_char = FILE_RC4;
         unsafe fn destroy_body(ptr: *mut ProvRc4Ctx) {
             // SAFETY: `ptr` is a live context per the trait contract.
@@ -21899,7 +21995,10 @@ pub(crate) mod legacy {
         }
     }
 
-    impl CipherDestroy for ProvDesCtx {
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvDesCtx {
         const FILE: *const c_char = FILE_DES;
         unsafe fn destroy_body(ptr: *mut ProvDesCtx) {
             // SAFETY: `ptr` is a live context per the trait contract.
@@ -21907,7 +22006,10 @@ pub(crate) mod legacy {
         }
     }
 
-    impl CipherDestroy for ProvRc4HmacMd5Ctx {
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvRc4HmacMd5Ctx {
         const FILE: *const c_char = FILE_RC4_HMAC_MD5;
         unsafe fn destroy_body(ptr: *mut ProvRc4HmacMd5Ctx) {
             // SAFETY: `ptr` is a live context per the trait contract.

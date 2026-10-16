@@ -206,7 +206,25 @@ fn fail_at(site: &err_sites::ErrSite) -> c_int {
 /// authorities write a bare free -- and `FILE` is the `__FILE__` the block's own release records.
 /// Implementing the trait on each `#[repr(C)]` context lets [`OwnedCtx`] run the right destructor
 /// from `Drop` without a `CRYPTO_free` written at any call site.
-trait MacDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (HMAC's digest
+///   reset and cleansed key, BLAKE2's cleansed key, CMAC's/GMAC's cipher reset, KMAC's digest reset
+///   and cleansed members, and nothing for SIPHASH/POLY1305 whose authorities write a bare free),
+///   every releaser the authority's own and accepting the not-yet-set NULL/zero state, and it
+///   **never** releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait MacDestroy: Sized {
     /// `__FILE__` for this unit's `CRYPTO_*` calls.
     const FILE: *const c_char;
 
@@ -372,7 +390,10 @@ pub(crate) struct CmacData {
     pub cipher: ProvCipher,
 }
 
-impl MacDestroy for CmacData {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl MacDestroy for CmacData {
     const FILE: *const c_char = self::FILE;
 
     unsafe fn destroy_body(ptr: *mut CmacData) {
@@ -878,7 +899,10 @@ pub(crate) struct GmacData {
     pub cipher: ProvCipher,
 }
 
-impl MacDestroy for GmacData {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl MacDestroy for GmacData {
     const FILE: *const c_char = FILE_GMAC;
 
     unsafe fn destroy_body(ptr: *mut GmacData) {
@@ -1343,7 +1367,10 @@ pub(crate) struct SiphashData {
     pub drounds: c_uint,
 }
 
-impl MacDestroy for SiphashData {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl MacDestroy for SiphashData {
     const FILE: *const c_char = FILE_SIPHASH;
 
     unsafe fn destroy_body(_ptr: *mut SiphashData) {}
@@ -1784,7 +1811,10 @@ pub(crate) struct HmacData {
     pub tls_mac_out_size: usize,
 }
 
-impl MacDestroy for HmacData {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl MacDestroy for HmacData {
     const FILE: *const c_char = FILE_HMAC;
 
     unsafe fn destroy_body(ptr: *mut HmacData) {
@@ -2416,7 +2446,11 @@ macro_rules! blake2_mac_row {
                 pub key: [c_uchar; b2::KEYBYTES],
             }
 
-            impl MacDestroy for MacData {
+            // SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block --
+            // exactly the context's own members (the cleansed key member), each releaser NULL/zero
+            // tolerant, never the enclosing block. (b) holds: an all-zero context is valid with every
+            // release a no-op -- what the safe `OwnedCtx::new` leans on.
+            unsafe impl MacDestroy for MacData {
                 const FILE: *const c_char = FILE_BLAKE2_MAC;
 
                 unsafe fn destroy_body(ptr: *mut MacData) {
@@ -2864,7 +2898,10 @@ pub(crate) struct Poly1305Data {
     pub poly1305: Poly1305,
 }
 
-impl MacDestroy for Poly1305Data {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl MacDestroy for Poly1305Data {
     const FILE: *const c_char = FILE_POLY1305;
 
     unsafe fn destroy_body(_ptr: *mut Poly1305Data) {}
@@ -3314,7 +3351,10 @@ pub(crate) struct KmacData {
     pub custom: [c_uchar; KMAC_MAX_CUSTOM_ENCODED],
 }
 
-impl MacDestroy for KmacData {
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl MacDestroy for KmacData {
     const FILE: *const c_char = FILE_KMAC;
 
     unsafe fn destroy_body(ptr: *mut KmacData) {
