@@ -157,7 +157,11 @@ are **references for technique only**.
 - One bounded task at a time; a subagent does not commit or push; the
   orchestrator commits, verifies and merges.
 - Everything runs in the court container (`docker/openssl-rs-court.sh`), never on
-  the host. `CARGO_BUILD_JOBS=6`, one heavy command at a time (OOM safety).
+  the host. **OOM protection is mandatory**: run one heavy command at a time;
+  build with `CARGO_BUILD_JOBS=4` and test with `cargo test --lib -- --test-threads=4`
+  (the editor and other host work already consume most of RAM and swap is full —
+  a build spike has crashed the session before); check `free -g` before a build
+  and abort if `available` is small. Never build into a RAM-backed tmpfs.
 - Local gate per batch: `cargo fmt --all -- --check`,
   `cargo clippy --all-targets -- -D warnings`,
   **all current library tests pass**. The established baseline is **1183** library
