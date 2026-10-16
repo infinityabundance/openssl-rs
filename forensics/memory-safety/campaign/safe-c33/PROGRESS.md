@@ -32,8 +32,23 @@ Local gate for every batch (court container, 8 GB cap):
 | 12 | stage/p25/x509-remainder | x509/x_pubkey.rs, v3_ncons.rs, x_name.rs | frees 6→5, 13→1, 9→6 (helpers adopted) |
 | 13 | stage/p25/runtime-remainder | runtime/conf/def.rs, confmod/mod.rs, async/async.rs | free 17→0, 24→0, 10→0 |
 | 14 | stage/p25/provider-ops | provider/rsa_enc.rs, sm2_sig.rs, ml_kem_kmgmt.rs | interior 18→9, 14→9, 18→8 |
+| 15 | stage/p25/cmp-crmf | cmp/cmp_protect.rs, crmf/crmf_pbm.rs, cmp/cmp_vfy.rs | free 16→1, 14→1, 13→1 |
+| 16 | stage/p25/prop-ts-ct | ct/ct_oct.rs, property/store.rs, ts/ts_rsp_sign.rs | free 4→1, 9→7, 7→4 |
+| 17 | stage/p25/evp-txtdb | txt_db/txt_db.rs, evp/mac.rs, evp/kdf.rs | txt_db free 11→1 |
+| 18 | stage/p25/x509-lku | x509/by_dir.rs, x509_vpm.rs, x509_lu.rs | OwnedCtx + partial-construction Raw* owners; free 6→3,10→6,6→3 |
+| 19 | stage/p25/ssl-rest2 | ssl/cert_comp, tls_srp, ssl_rsa, ssl_ciph | free 5→0,3→0,1→0; closes a dangling srp info pointer |
+| -- | stage/p25/adopt-soundness | 16 files + AGENTS.md | **soundness**: every safe adoption ctor (`take`/`adopt`) → `unsafe fn` + real `# Safety` (AGENTS.md §1); A/B/C |
 
-Converted files (union of stage/p25/* files): ~37 files across 14 batches this campaign.
+Converted files (union of stage/p25/* files): ~51 files across 19 conversion batches plus the adoption-soundness fix.
+
+## Standing conversion standard
+
+`AGENTS.md` (tracked, repo root) is the standing engineering standard for every
+conversion batch: adoption ctors are `unsafe fn` proof obligations; allocated
+storage vs valid Rust values are separate states (MaybeUninit / partial
+construction); checked arithmetic; panic safety; secrets as a distinct category;
+and `SAFE_COMPATIBLE` requires the consumer's whole conservatively-established
+dependency closure to be `SAFETY_DISCHARGED`.
 Interior allocation-site reduction is larger than the atlas delta because each
 converted module re-hosts several hand-written sites into one seam.
 
