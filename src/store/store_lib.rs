@@ -130,7 +130,23 @@ extern "C" {
 /// The authority's `*_free` body for one of the file's `#[repr(C)]` objects, without the block's
 /// own release, which [`OwnedCtx`]'s `Drop` performs. One impl per object, so the owner runs the
 /// right destructor without a `CRYPTO_free` written at a call site.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (every releaser is
+///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -239,19 +255,30 @@ impl Drop for OwnedBlock {
 // The three object destructors: each is exactly what its unit's `*_free` performed by hand, minus
 // the block release `OwnedCtx`'s `Drop` now owns.
 
-impl CtxDestroy for OsslStoreCtx {
+// SAFETY: (a) holds: `destroy_body` is empty -- `OSSL_STORE_CTX` has no destructor body beyond
+// `ossl_store_close_it`, which is run explicitly at close, so no member is released here and never
+// the enclosing block. (b) holds trivially: the body touches nothing, so an all-zero context is
+// valid -- what the safe `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for OsslStoreCtx {
     /// Empty: `OSSL_STORE_CTX` has no destructor body beyond `ossl_store_close_it`, which
     /// `OSSL_STORE_close` runs explicitly to return its answer, so the block release is the only
     /// work `Drop` has left here.
     unsafe fn destroy_body(_ptr: *mut OsslStoreCtx) {}
 }
 
-impl CtxDestroy for OsslStoreSearch {
+// SAFETY: (a) holds: `destroy_body` is empty -- `OSSL_STORE_SEARCH_free` is a bare block free, so no
+// member is released here and never the enclosing block. (b) holds trivially: the body touches
+// nothing, so an all-zero search is valid -- what the safe `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for OsslStoreSearch {
     /// Empty: `OSSL_STORE_SEARCH_free` is a bare block free.
     unsafe fn destroy_body(_ptr: *mut OsslStoreSearch) {}
 }
 
-impl CtxDestroy for OsslStoreInfo {
+// SAFETY: (a) holds: `destroy_body` is `OSSL_STORE_INFO_free` minus the block -- the member
+// selected by `type_`, each releaser NULL-tolerant, never the enclosing block. (b) holds: an
+// all-zero info has `type_` unset, so the `_ => {}` arm releases nothing -- what the safe
+// `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for OsslStoreInfo {
     unsafe fn destroy_body(ptr: *mut OsslStoreInfo) {
         // SAFETY: `ptr` is a live object per the trait contract.
         unsafe {

@@ -188,7 +188,24 @@ pub(crate) const DSO_FLAG_GLOBAL_SYMBOLS: c_int = 0x20;
 
 /// The authority's plain `DSO_free` body for the object, without the block's own release, which
 /// [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new_zeroed`]
+/// builds the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs `DSO_free`'s member body **exactly once** for
+///   that object; it releases **exactly** the members the object owns (every releaser is the
+///   authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new_zeroed`] leans on: it validates a `CRYPTO_zalloc` block with no caller
+///   assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// `DSO_free`'s body minus the block release: the method-data stack, then the two names.
     ///
     /// # Safety
@@ -270,7 +287,11 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
     }
 }
 
-impl CtxDestroy for Dso {
+// SAFETY: (a) holds: `destroy_body` is `DSO_free` minus the block -- the method-data stack and the
+// two names, each releaser NULL-tolerant, never the enclosing block. (b) holds: an all-zero `DSO`
+// has a NULL stack and two NULL names, so the body is the authority's own all-empty teardown (its
+// own doc) -- what the safe `OwnedCtx::new_zeroed` leans on.
+unsafe impl CtxDestroy for Dso {
     /// `DSO_free`'s body minus the block release: `OPENSSL_sk_free(meth_data)`, then the two
     /// names. A zeroed (partially built) object has a NULL stack and two NULL names, so this is
     /// the authority's own all-empty teardown there.

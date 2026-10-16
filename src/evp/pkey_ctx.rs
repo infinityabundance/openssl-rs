@@ -249,7 +249,23 @@ const LINE_FREE_HEXCTRL: c_int = 1605;
 
 /// The authority's `*_free` body for one of the file's `#[repr(C)]` objects, without the block's own
 /// release, which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (every releaser is
+///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -1101,7 +1117,12 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_free(ctx: *mut EvpPkeyCtx) {
 /// The authority's `EVP_PKEY_CTX_free` body, without the block release [`OwnedCtx`]'s `Drop`
 /// performs: the operation release, the cached data, the method reference, the property query, the
 /// two keys and the deprecated public exponent.
-impl CtxDestroy for EvpPkeyCtx {
+// SAFETY: (a) holds: `destroy_body` is `EVP_PKEY_CTX_free` minus the block -- the old ops, the
+// cached data, the method reference, the property query, the two keys and the public exponent, each
+// releaser NULL-tolerant, never the enclosing block. (b) holds: an all-zero context has every
+// member NULL, so the body is the authority's own all-empty teardown -- what the safe
+// `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for EvpPkeyCtx {
     unsafe fn destroy_body(ptr: *mut EvpPkeyCtx) {
         // SAFETY: `ptr` is live per the trait contract.
         unsafe { evp_pkey_ctx_free_old_ops(ptr) };
@@ -2200,7 +2221,11 @@ pub unsafe extern "C" fn EVP_PKEY_meth_new(id: c_int, flags: c_int) -> *mut EvpP
 
 /// `struct evp_pkey_method_st` has no owned members, so its destructor body is empty and
 /// [`OwnedCtx`]'s `Drop` is the whole of `EVP_PKEY_meth_free`'s release.
-impl CtxDestroy for EvpPkeyMethod {
+// SAFETY: (a) holds: `destroy_body` is empty -- the struct has no owned members and the block is
+// the whole of `EVP_PKEY_meth_free`'s release, which `Drop` performs. (b) holds trivially: whatever
+// the block holds, an all-zero method is valid because the body touches nothing -- what the safe
+// `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for EvpPkeyMethod {
     unsafe fn destroy_body(_ptr: *mut EvpPkeyMethod) {}
 }
 

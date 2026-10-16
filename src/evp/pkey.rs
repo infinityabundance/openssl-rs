@@ -385,7 +385,20 @@ const LINE_FREE_BN_BUFFER: c_int = 2248;
 
 /// The authority's destructor body for one of this file's heap records, without the block's own
 /// release, which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer must guarantee, for a live block this file allocated:
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `EVP_PKEY_free` member body
+///   **exactly once** for that object; it releases **exactly** the members the object owns (the key
+///   data, the ex-data block and the lock, each releaser the authority's own and accepting the
+///   not-yet-set NULL/zero state) and **never** releases the enclosing block, which [`OwnedCtx`]'s
+///   `Drop` releases.
+///
+/// This contract carries **no** zero-validity claim: the block is built through the staged
+/// [`RawPkey`] route ([`RawPkey::finish`] hands it to the C caller), so an all-zero block is
+/// **not** relied on as a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `EVP_PKEY_free` body, without the block release [`OwnedCtx`]'s `Drop`
     /// performs.
     ///
@@ -433,7 +446,10 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 
 /// The authority's `EVP_PKEY_free` body, without the block release [`OwnedCtx`]'s `Drop` performs:
 /// the key data, the ex-data block and the lock.
-impl CtxDestroy for EvpPkey {
+// SAFETY: (a) holds: `destroy_body` is `EVP_PKEY_free` minus the block -- the key data, the
+// ex-data block and the lock, each releaser NULL-tolerant, never the enclosing block. The trait
+// makes no zero-validity claim: the object is built through the staged `RawPkey` route.
+unsafe impl CtxDestroy for EvpPkey {
     unsafe fn destroy_body(ptr: *mut EvpPkey) {
         // SAFETY: `ptr` is a live record per the trait contract; every member is set because only a
         // completed `EVP_PKEY_new` reaches `EVP_PKEY_free`.

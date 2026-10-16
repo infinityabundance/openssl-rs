@@ -93,7 +93,21 @@ pub struct EcxKey {
 /// The authority's `ossl_ecx_key_free` destructor body, without the block's own release, which
 /// [`OwnedCtx`]'s `Drop` performs: the `propq` duplicate (`:77`) and the secure private scalar
 /// (`:81`).
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer must guarantee, for a live block this unit allocated:
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `ossl_ecx_key_free` member body
+///   **exactly once** for that object; it releases **exactly** the members the object owns (the
+///   `propq` duplicate and the secure private scalar, each releaser the authority's own and
+///   accepting the not-yet-set NULL/zero state) and **never** releases the enclosing block, which
+///   [`OwnedCtx`]'s `Drop` releases.
+///
+/// This contract carries **no** zero-validity claim: the block is built through the staged
+/// [`RawEcxKey`] route ([`RawEcxKey::assume_init`] makes the transition and requires every field
+/// `destroy_body` reads to have been written), so an all-zero block is **not** relied on as a valid
+/// `Self`.
+unsafe trait CtxDestroy: Sized {
     /// `__LINE__` for the block release [`OwnedCtx`]'s `Drop` performs — `ossl_ecx_key_free`'s
     /// `OPENSSL_free(key)` at `:83`.
     const LINE_FREE: c_int;
@@ -105,7 +119,11 @@ trait CtxDestroy: Sized {
     unsafe fn destroy_body(ptr: *mut Self);
 }
 
-impl CtxDestroy for EcxKey {
+// SAFETY: (a) holds: `destroy_body` is `ossl_ecx_key_free` minus the block -- the `propq`
+// duplicate and the secure private scalar (cleansed by `CRYPTO_secure_clear_free`), each
+// NULL-tolerant, never the enclosing block. The trait makes no zero-validity claim: the object is
+// built through the staged `RawEcxKey` route, so an all-zero block is not relied on as valid.
+unsafe impl CtxDestroy for EcxKey {
     const LINE_FREE: c_int = 83;
 
     unsafe fn destroy_body(ptr: *mut EcxKey) {
