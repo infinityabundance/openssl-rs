@@ -31,7 +31,7 @@
 
 #![allow(unreachable_pub)]
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 use core::sync::atomic::{fence, AtomicI32, Ordering};
 
@@ -113,6 +113,229 @@ pub struct MacKey {
     pub cmac: c_int,
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the key, generator and property blocks
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `*_free` body for one `#[repr(C)]` object, without the block release
+/// [`OwnedCtx`]'s `Drop` performs.
+trait CtxDestroy: Sized {
+    /// `__FILE__` for this unit's `CRYPTO_*` calls.
+    const FILE: *const c_char;
+    /// `__LINE__` for the block's allocation.
+    const LINE_ALLOC: c_int;
+    /// `__LINE__` for the block's release.
+    const LINE_FREE: c_int;
+
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live object this unit allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned `#[repr(C)]` object block.
+///
+/// The block keeps the authority's layout and its stable address (the exported ABI hands it out and
+/// takes it back), but its *ownership* is this type: it is allocated through the crate's allocator
+/// seam and `Drop` runs the authority's own destructor body before the block's single release. The
+/// block stays a `CRYPTO_zalloc` at `size_of::<T>()` rather than a Rust `Box`, so a
+/// caller-installed `CRYPTO_set_mem_functions` hook observes the allocation, its size and its
+/// release exactly as it observes the authority's.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
+    /// it answers NULL (the authority's refused `CRYPTO_zalloc`).
+    fn zalloc() -> Option<OwnedCtx<T>> {
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, T::LINE_ALLOC).cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// The stable address of the block, for the constructor's own field writes.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's pointer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`]) followed by the
+    /// block's single release, through the same allocator seam the block was allocated on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `zalloc` allocated (or `from_raw` reclaimed) and this is
+        // its single release; `Drop` runs once, and `destroy_body` is the authority's own body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, T::LINE_FREE);
+        }
+    }
+}
+
+/// An owned member buffer allocated through the crate's allocator seam.
+///
+/// The block stays the authority's own allocation -- a `CRYPTO_strdup` property copy or a
+/// `CRYPTO_secure_malloc` private key -- at the authority's exact size and `file`/`line`. Only its
+/// *ownership* is this type: a member field of a `#[repr(C)]` object is adopted from its own raw
+/// pointer, [`Self::into_raw`] hands it back to that field, and a replace site or the object's
+/// destructor releases it through the authority's own seam call.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+/// How the authority releases a member buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)` (the `properties` copy).
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's `CRYPTO_secure_clear_free(ptr, num, file, line)` (the `priv_key`).
+    Secure {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_strdup(str, file, line)`, or `None` when the allocator answers NULL.
+    ///
+    /// # Safety
+    /// `str_` is NULL or NUL-terminated.
+    unsafe fn new_strdup(
+        str_: *const c_char,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBuf> {
+        // SAFETY: `str_` is NULL or NUL-terminated per the contract.
+        let raw = unsafe { CRYPTO_strdup(str_, file, line) }.cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// `CRYPTO_secure_malloc(len, file, line)` for a block the authority frees through its
+    /// `CRYPTO_secure_clear_free(ptr, len, ...)`, or `None` when the allocator answers NULL.
+    fn new_secure(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        // SAFETY: `file` is NULL or this unit's NUL-terminated `FILE`.
+        let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Secure {
+                num: len,
+                file,
+                line,
+            },
+        })
+    }
+
+    /// Take up the plain block a member field still holds, for release by `Drop` at the authority's
+    /// own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// Take up the secure block a member field still holds, for release by `Drop` at the authority's
+    /// own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live secure block the crate allocated, readable for `num` bytes, that no
+    /// one else owns.
+    unsafe fn adopt_secure(
+        ptr: *mut c_uchar,
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::Secure { num, file, line },
+        })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the member field it is stored in.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Secure { num, file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `CRYPTO_secure_clear_free` cleanses then releases it and accepts
+                // NULL.
+                unsafe { CRYPTO_secure_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+            }
+        }
+    }
+}
+
+impl CtxDestroy for MacKey {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = 71;
+    const LINE_FREE: c_int = 100;
+
+    /// `ossl_mac_key_free`'s body, without the block release: the secure private key, the property
+    /// query and the cipher.
+    unsafe fn destroy_body(ptr: *mut MacKey) {
+        // SAFETY: `ptr` is a live key per the trait contract.
+        unsafe {
+            CRYPTO_secure_clear_free((*ptr).priv_key.cast(), (*ptr).priv_key_len, FILE, 96);
+            CRYPTO_free((*ptr).properties.cast(), FILE, 97);
+            ossl_prov_cipher_reset(&raw mut (*ptr).cipher);
+        }
+    }
+}
+
 /// `MAC_KEY *ossl_mac_key_new(OSSL_LIB_CTX *libctx, int cmac)` — `mac_legacy_kmgmt.c:64-83`.
 ///
 /// `prov/macsignature.h` declares it and `signature/mac_legacy.c` links to it across translation
@@ -126,22 +349,23 @@ pub unsafe extern "C" fn ossl_mac_key_new(libctx: *mut c_void, cmac: c_int) -> *
         return ptr::null_mut();
     }
 
-    let mackey = CRYPTO_zalloc(core::mem::size_of::<MacKey>(), FILE, 71).cast::<MacKey>();
-    if mackey.is_null() {
+    // SAFETY: a fresh zeroed allocation of this call's own context.
+    let Some(mackey) = OwnedCtx::<MacKey>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let mackey_ptr = mackey.as_ptr();
 
     // `CRYPTO_NEW_REF(&mackey->refcnt, 1)` — the header's fallback arm on this profile stores 1 and
     // answers 1, so its failure branch (and its `OPENSSL_free`) is unreachable rather than omitted.
     // SAFETY: `refcnt` is a field of this call's own allocation.
-    unsafe { (*mackey).refcnt.store(1, Ordering::Relaxed) };
+    unsafe { (*mackey_ptr).refcnt.store(1, Ordering::Relaxed) };
     // SAFETY: as above.
     unsafe {
-        (*mackey).libctx = libctx;
-        (*mackey).cmac = cmac;
+        (*mackey_ptr).libctx = libctx;
+        (*mackey_ptr).cmac = cmac;
     }
 
-    mackey
+    mackey.into_raw()
 }
 
 /// `void ossl_mac_key_free(MAC_KEY *mackey)` — `mac_legacy_kmgmt.c:85-101`.
@@ -163,14 +387,11 @@ pub unsafe extern "C" fn ossl_mac_key_free(mackey: *mut MacKey) {
         return;
     }
 
-    // SAFETY: this is the last reference.
-    unsafe {
-        CRYPTO_secure_clear_free((*mackey).priv_key.cast(), (*mackey).priv_key_len, FILE, 96);
-        CRYPTO_free((*mackey).properties.cast(), FILE, 97);
-        ossl_prov_cipher_reset(&raw mut (*mackey).cipher);
-        // `CRYPTO_FREE_REF(&mackey->refcnt)` is empty on this profile's arm of the header.
-        CRYPTO_free(mackey.cast(), FILE, 100);
-    }
+    // The last reference: hand the block to its owner so `Drop` runs the authority's own destructor
+    // body (the secure private key, the property query and the cipher) and the block's single
+    // release in one place. `CRYPTO_FREE_REF(&mackey->refcnt)` is empty on this profile's arm.
+    // SAFETY: `mackey` is a live block a previous `into_raw` gave up and `Drop` has not released.
+    drop(unsafe { OwnedCtx::<MacKey>::from_raw(mackey) });
 }
 
 /// `int ossl_mac_key_up_ref(MAC_KEY *mackey)` — `mac_legacy_kmgmt.c:103-119`.
@@ -307,23 +528,26 @@ unsafe fn mac_key_fromdata(key: *mut MacKey, params: *const OsslParam) -> c_int 
                 raise_site(&err_sites::PROV_MAC_LEGACY_KMGMT_187);
                 return 0;
             }
-            CRYPTO_secure_clear_free((*key).priv_key.cast(), (*key).priv_key_len, FILE, 190);
-            /* allocate at least one byte to distinguish empty key from no key set */
-            (*key).priv_key = CRYPTO_secure_malloc(
-                if (*p).data_size > 0 {
-                    (*p).data_size
-                } else {
-                    1
-                },
+            // Release the member's previous block through the seam, then hand it the replacement.
+            drop(OwnedBuf::adopt_secure(
+                (*key).priv_key.cast(),
+                (*key).priv_key_len,
                 FILE,
-                192,
-            )
-            .cast::<u8>();
-            if (*key).priv_key.is_null() {
+                190,
+            ));
+            (*key).priv_key = ptr::null_mut();
+            /* allocate at least one byte to distinguish empty key from no key set */
+            let priv_len = if (*p).data_size > 0 {
+                (*p).data_size
+            } else {
+                1
+            };
+            let Some(buf) = OwnedBuf::new_secure(priv_len, FILE, 192) else {
                 return 0;
-            }
-            ptr::copy_nonoverlapping((*p).data.cast::<u8>(), (*key).priv_key, (*p).data_size);
+            };
+            ptr::copy_nonoverlapping((*p).data.cast::<u8>(), buf.as_ptr(), (*p).data_size);
             (*key).priv_key_len = (*p).data_size;
+            (*key).priv_key = buf.into_raw();
         }
 
         p = OSSL_PARAM_locate_const(params, OSSL_PKEY_PARAM_PROPERTIES);
@@ -332,11 +556,14 @@ unsafe fn mac_key_fromdata(key: *mut MacKey, params: *const OsslParam) -> c_int 
                 raise_site(&err_sites::PROV_MAC_LEGACY_KMGMT_202);
                 return 0;
             }
-            CRYPTO_free((*key).properties.cast(), FILE, 205);
-            (*key).properties = CRYPTO_strdup((*p).data.cast(), FILE, 206);
-            if (*key).properties.is_null() {
+            // Release the member's previous copy, then hand it the replacement. `p`'s UTF8 value is
+            // NUL-terminated per the `OSSL_PARAM` contract.
+            drop(OwnedBuf::adopt((*key).properties.cast(), FILE, 205));
+            (*key).properties = ptr::null_mut();
+            let Some(props) = OwnedBuf::new_strdup((*p).data.cast(), FILE, 206) else {
                 return 0;
-            }
+            };
+            (*key).properties = props.into_raw().cast();
         }
 
         if (*key).cmac != 0
@@ -587,6 +814,21 @@ struct MacGenCtx {
     cipher: ProvCipher,
 }
 
+impl CtxDestroy for MacGenCtx {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = 380;
+    const LINE_FREE: c_int = 524;
+
+    /// `mac_gen_cleanup`'s body, without the block release: the secure private key and the cipher.
+    unsafe fn destroy_body(ptr: *mut MacGenCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe {
+            CRYPTO_secure_clear_free((*ptr).priv_key.cast(), (*ptr).priv_key_len, FILE, 522);
+            ossl_prov_cipher_reset(&raw mut (*ptr).cipher);
+        }
+    }
+}
+
 /// `static void *mac_gen_init_common(void *provctx, int selection)` —
 /// `mac_legacy_kmgmt.c:372-385`.
 ///
@@ -598,15 +840,16 @@ unsafe fn mac_gen_init_common(provctx: *mut c_void, selection: c_int) -> *mut Ma
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let gctx = CRYPTO_zalloc(core::mem::size_of::<MacGenCtx>(), FILE, 380).cast::<MacGenCtx>();
-    if !gctx.is_null() {
-        // SAFETY: `gctx` is this call's own allocation; `provctx` is the caller's.
-        unsafe {
-            (*gctx).libctx = prov_libctx_of(provctx);
-            (*gctx).selection = selection;
-        }
+    let Some(gctx) = OwnedCtx::<MacGenCtx>::zalloc() else {
+        return ptr::null_mut();
+    };
+    let gctx_ptr = gctx.as_ptr();
+    // SAFETY: `gctx_ptr` is this call's own allocation; `provctx` is the caller's.
+    unsafe {
+        (*gctx_ptr).libctx = prov_libctx_of(provctx);
+        (*gctx_ptr).selection = selection;
     }
-    gctx
+    gctx.into_raw()
 }
 
 /// `static void *mac_gen_init(void *provctx, int selection, const OSSL_PARAM params[])` —
@@ -673,12 +916,15 @@ unsafe fn mac_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c
                 raise_site(&err_sites::PROV_MAC_LEGACY_KMGMT_422);
                 return 0;
             }
-            (*gctx).priv_key = CRYPTO_secure_malloc((*p).data_size, FILE, 425).cast::<u8>();
-            if (*gctx).priv_key.is_null() {
+            // The fresh answer replaces the member (the authority overwrites the previous pointer
+            // without releasing it here); `OwnedBuf` owns it until it is handed over.
+            (*gctx).priv_key = ptr::null_mut();
+            let Some(buf) = OwnedBuf::new_secure((*p).data_size, FILE, 425) else {
                 return 0;
-            }
-            ptr::copy_nonoverlapping((*p).data.cast::<u8>(), (*gctx).priv_key, (*p).data_size);
+            };
+            ptr::copy_nonoverlapping((*p).data.cast::<u8>(), buf.as_ptr(), (*p).data_size);
             (*gctx).priv_key_len = (*p).data_size;
+            (*gctx).priv_key = buf.into_raw();
         }
     }
     1
@@ -798,18 +1044,11 @@ unsafe extern "C" fn mac_gen(
 /// # Safety
 /// The keymgmt `gen_cleanup` dispatch contract.
 unsafe extern "C" fn mac_gen_cleanup(genctx: *mut c_void) {
-    let gctx = genctx.cast::<MacGenCtx>();
-
-    if gctx.is_null() {
-        return;
-    }
-
-    // SAFETY: `gctx` is the caller's context, allocated by `mac_gen_init_common`.
-    unsafe {
-        CRYPTO_secure_clear_free((*gctx).priv_key.cast(), (*gctx).priv_key_len, FILE, 522);
-        ossl_prov_cipher_reset(&raw mut (*gctx).cipher);
-        CRYPTO_free(gctx.cast(), FILE, 524);
-    }
+    // `genctx` is NULL or the block `mac_gen_init_common` gave up through `into_raw`; `Drop` runs
+    // the authority's own destructor body and the block's single release.
+    // SAFETY: `genctx` is NULL or a live block a previous `into_raw` gave up and `Drop` has not
+    // released.
+    drop(unsafe { OwnedCtx::<MacGenCtx>::from_raw(genctx.cast::<MacGenCtx>()) });
 }
 
 /// `const OSSL_DISPATCH ossl_mac_legacy_keymgmt_functions[]` — `mac_legacy_kmgmt.c:527-547`.
