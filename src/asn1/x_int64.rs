@@ -37,11 +37,11 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 
 use crate::asn1::items::funcs_item;
 use crate::asn1::layout::*;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::prim::{ossl_c2i_uint64_int, ossl_i2c_uint64_int};
 use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 /// A zero value encodes as an absent field.
 const INTXX_FLAG_ZERO_DEFAULT: c_long = 1 << 0;
@@ -58,15 +58,17 @@ const ABS_INT32_MIN: u64 = i32::MAX as u64 + 1;
 ///
 /// `pval` must be a live slot.
 unsafe extern "C" fn uint64_new(pval: *mut *mut c_void, _it: *const Asn1Item) -> c_int {
-    // SAFETY: `pval` is the caller's slot; a zeroed eight-byte allocation is the value.
-    let v = CRYPTO_zalloc(8, FILE.as_ptr(), LINE);
+    // A zeroed eight-byte block is the value the framework stores in the slot; the allocation is
+    // the authority's own `CRYPTO_zalloc` at its exact size/`file`/`line`.
+    let Some(v) = OwnedBlock::<u64>::zalloc(1, FILE.as_ptr(), LINE) else {
+        // SAFETY: `pval` is a live slot.
+        unsafe { *pval = core::ptr::null_mut() };
+        return 0;
+    };
+    // The slot holds the block's raw pointer, which the framework and the other hooks read.
     // SAFETY: `pval` is a live slot.
-    unsafe { *pval = v };
-    if v.is_null() {
-        0
-    } else {
-        1
-    }
+    unsafe { *pval = v.into_raw().cast::<c_void>() };
+    1
 }
 
 /// `void uint64_free(ASN1_VALUE **pval, const ASN1_ITEM *it)`
@@ -77,8 +79,10 @@ unsafe extern "C" fn uint64_new(pval: *mut *mut c_void, _it: *const Asn1Item) ->
 unsafe extern "C" fn uint64_free(pval: *mut *mut c_void, _it: *const Asn1Item) {
     // SAFETY: `pval` is a live slot.
     let v = unsafe { *pval };
-    // SAFETY: `v` came from this allocator or is null, which `CRYPTO_free` accepts.
-    unsafe { CRYPTO_free(v, FILE.as_ptr(), LINE) };
+    // SAFETY: `v` is NULL or the eight-byte block `uint64_new` installed and no other owner has
+    // released; `from_raw` maps NULL to `None`, and its `Drop` is the block's single release at the
+    // authority's own `file`/`line`.
+    drop(unsafe { OwnedBlock::<u64>::from_raw(v.cast::<u64>(), FILE.as_ptr(), LINE) });
     // SAFETY: `pval` is a live slot.
     unsafe { *pval = core::ptr::null_mut() };
 }
@@ -214,15 +218,17 @@ unsafe extern "C" fn uint64_print(
 ///
 /// `pval` must be a live slot.
 unsafe extern "C" fn uint32_new(pval: *mut *mut c_void, _it: *const Asn1Item) -> c_int {
-    // SAFETY: `pval` is the caller's slot.
-    let v = CRYPTO_zalloc(4, FILE.as_ptr(), LINE);
+    // A zeroed four-byte block is the value the framework stores in the slot; the allocation is
+    // the authority's own `CRYPTO_zalloc` at its exact size/`file`/`line`.
+    let Some(v) = OwnedBlock::<u32>::zalloc(1, FILE.as_ptr(), LINE) else {
+        // SAFETY: `pval` is a live slot.
+        unsafe { *pval = core::ptr::null_mut() };
+        return 0;
+    };
+    // The slot holds the block's raw pointer, which the framework and the other hooks read.
     // SAFETY: `pval` is a live slot.
-    unsafe { *pval = v };
-    if v.is_null() {
-        0
-    } else {
-        1
-    }
+    unsafe { *pval = v.into_raw().cast::<c_void>() };
+    1
 }
 
 /// `void uint32_free(ASN1_VALUE **pval, const ASN1_ITEM *it)`
@@ -233,8 +239,10 @@ unsafe extern "C" fn uint32_new(pval: *mut *mut c_void, _it: *const Asn1Item) ->
 unsafe extern "C" fn uint32_free(pval: *mut *mut c_void, _it: *const Asn1Item) {
     // SAFETY: `pval` is a live slot.
     let v = unsafe { *pval };
-    // SAFETY: `v` came from this allocator or is null.
-    unsafe { CRYPTO_free(v, FILE.as_ptr(), LINE) };
+    // SAFETY: `v` is NULL or the four-byte block `uint32_new` installed and no other owner has
+    // released; `from_raw` maps NULL to `None`, and its `Drop` is the block's single release at the
+    // authority's own `file`/`line`.
+    drop(unsafe { OwnedBlock::<u32>::from_raw(v.cast::<u32>(), FILE.as_ptr(), LINE) });
     // SAFETY: `pval` is a live slot.
     unsafe { *pval = core::ptr::null_mut() };
 }
