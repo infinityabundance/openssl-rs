@@ -2969,7 +2969,7 @@ unsafe fn tls12_client_read_ccs(s: *mut Ssl) -> c_int {
 /// # Safety
 /// `s` is live; `msg` is the full NewSessionTicket message.
 unsafe fn tls12_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -> c_int {
-    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    use crate::runtime::mem::CRYPTO_malloc;
     if msg.len() < 4 || msg[0] != SSL3_MT_NEWSESSION_TICKET as u8 {
         return 0;
     }
@@ -3011,14 +3011,16 @@ unsafe fn tls12_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -> c_int {
         }
         (*sess).time = crate::ssl::ssl_sess::time_now_secs();
         crate::ssl::ssl_sess::ssl_session_calculate_timeout(sess);
-        CRYPTO_free((*sess).ext_tick.cast(), core::ptr::null(), 0);
+        // Release any incumbent at the authority's own site; a duplicated session's member is
+        // unset, so this is `CRYPTO_free`'s no-op (see `MemberBufSlot`).
+        (*sess).ext_tick_slot().clear(core::ptr::null(), 0);
         let tp = CRYPTO_malloc(ticklen, core::ptr::null(), 0).cast::<u8>();
         if tp.is_null() {
             return 0;
         }
         core::ptr::copy_nonoverlapping(ticket.as_ptr(), tp, ticklen);
-        (*sess).ext_tick = tp;
-        (*sess).ext_ticklen = ticklen;
+        // `tp` is this call's fresh block of `ticklen` bytes; the member is empty after `clear`.
+        (*sess).ext_tick_slot().store(tp, ticklen);
         (*sess).ext_tick_lifetime_hint = lifetime as core::ffi::c_ulong;
         (*sess).ext_tick_age_add = 0;
         let mut digest = [0u8; 32];
@@ -3041,7 +3043,7 @@ unsafe fn tls12_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -> c_int {
 /// # Safety
 /// `s` is live and the TLS1.3 handshake has completed; `msg` is the full NewSessionTicket message.
 pub(crate) unsafe fn tls13_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -> c_int {
-    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    use crate::runtime::mem::CRYPTO_malloc;
     if msg.len() < 4 || msg[0] != SSL3_MT_NEWSESSION_TICKET as u8 {
         return 0;
     }
@@ -3090,14 +3092,16 @@ pub(crate) unsafe fn tls13_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -
         let sess = dup;
         (*sess).time = crate::ssl::ssl_sess::time_now_secs();
         crate::ssl::ssl_sess::ssl_session_calculate_timeout(sess);
-        CRYPTO_free((*sess).ext_tick.cast(), core::ptr::null(), 0);
+        // Release any incumbent at the authority's own site; the TLS1.3 session is a fresh duplicate
+        // whose member is unset, so this is `CRYPTO_free`'s no-op (see `MemberBufSlot`).
+        (*sess).ext_tick_slot().clear(core::ptr::null(), 0);
         let tp = CRYPTO_malloc(ticklen, core::ptr::null(), 0).cast::<u8>();
         if tp.is_null() {
             return 0;
         }
         core::ptr::copy_nonoverlapping(ticket.as_ptr(), tp, ticklen);
-        (*sess).ext_tick = tp;
-        (*sess).ext_ticklen = ticklen;
+        // `tp` is this call's fresh block of `ticklen` bytes; the member is empty after `clear`.
+        (*sess).ext_tick_slot().store(tp, ticklen);
         // RFC 8446 §4.6.1: never cache for longer than 7 days (`statem_clnt.c:2837-2842`).
         let mut lh = lifetime;
         if lh > 604800 {

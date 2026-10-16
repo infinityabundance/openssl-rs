@@ -2928,7 +2928,7 @@ const TLS12_TICKET_LEN: usize = 64;
 /// # Safety
 /// `s` must be a live connection with its handshake session set.
 unsafe fn tls12_construct_new_session_ticket(s: *mut Ssl) -> c_int {
-    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    use crate::runtime::mem::CRYPTO_malloc;
     use crate::ssl::tls13_enc::write_handshake_message;
     // SAFETY: `s` is live.
     let sess = unsafe { (*s).session };
@@ -2961,14 +2961,15 @@ unsafe fn tls12_construct_new_session_ticket(s: *mut Ssl) -> c_int {
     // Record the ticket on the session and set the client-mirrored resume id (`SHA256(ticket)`).
     // SAFETY: `sess` is live.
     unsafe {
-        CRYPTO_free((*sess).ext_tick.cast(), core::ptr::null(), 0);
+        // Release any incumbent at the authority's own site (see `MemberBufSlot`).
+        (*sess).ext_tick_slot().clear(core::ptr::null(), 0);
         let tp = CRYPTO_malloc(TLS12_TICKET_LEN, core::ptr::null(), 0).cast::<u8>();
         if tp.is_null() {
             return 0;
         }
         core::ptr::copy_nonoverlapping(ticket.as_ptr(), tp, TLS12_TICKET_LEN);
-        (*sess).ext_tick = tp;
-        (*sess).ext_ticklen = TLS12_TICKET_LEN;
+        // `tp` is this call's fresh block of `TLS12_TICKET_LEN` bytes; the member is empty.
+        (*sess).ext_tick_slot().store(tp, TLS12_TICKET_LEN);
         (*sess).ext_tick_lifetime_hint = hint as core::ffi::c_ulong;
         (*sess).not_resumable = 0;
         let mut digest = [0u8; 32];
@@ -3228,7 +3229,7 @@ unsafe fn tls13_decrypt_ticket(s: *mut Ssl, etick: &[u8]) -> *mut crate::ssl::ss
 /// # Safety
 /// `s` must be a live server connection whose handshake session is set.
 unsafe fn tls13_construct_new_session_ticket(s: *mut Ssl) -> c_int {
-    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    use crate::runtime::mem::CRYPTO_malloc;
     use crate::ssl::tls13_enc::write_handshake_message;
     // SAFETY: `s` is live.
     unsafe {
@@ -3297,14 +3298,15 @@ unsafe fn tls13_construct_new_session_ticket(s: *mut Ssl) -> c_int {
         // Record the ticket on the session; the client uses `SHA256(ticket)` as its resume id
         // (`statem_clnt.c:2851`). The server session's id stays empty (the stateless ticket is
         // self-describing), matching the authority.
-        CRYPTO_free((*sess).ext_tick.cast(), core::ptr::null(), 0);
+        // Release any incumbent at the authority's own site (see `MemberBufSlot`).
+        (*sess).ext_tick_slot().clear(core::ptr::null(), 0);
         let tp = CRYPTO_malloc(ticket.len(), core::ptr::null(), 0).cast::<u8>();
         if tp.is_null() {
             return 0;
         }
         core::ptr::copy_nonoverlapping(ticket.as_ptr(), tp, ticket.len());
-        (*sess).ext_tick = tp;
-        (*sess).ext_ticklen = ticket.len();
+        // `tp` is this call's fresh block of `ticket.len()` bytes; the member is empty.
+        (*sess).ext_tick_slot().store(tp, ticket.len());
         (*sess).ext_tick_lifetime_hint = hint as core::ffi::c_ulong;
         (*sess).not_resumable = 0;
 
