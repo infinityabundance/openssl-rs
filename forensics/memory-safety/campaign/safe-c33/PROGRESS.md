@@ -163,11 +163,11 @@ store` / safe reader) funnels every write/read/release so the invariant lives
 in one place, and the field becomes **private** once all accessors convert
 (compile-time enforcement).
 
-Landed: PKCS7 `propq` (proven), CMS `propq` (private), PKCS12 nested release,
-X.509 `X509_CRL`/`X509_REQ`/`X509_PUBKEY` (private). Remaining: PKCS7's five
-enumerated readers (then its field too), `X509.propq` (needs the `src/ocsp`
-readers), `X509_STORE_CTX`/`by_store`, then the larger SSL context/session
-members buffers.
+Landed: PKCS7 `propq` (private), CMS `propq` (private), PKCS12 nested release,
+X.509 `X509`/`X509_CRL`/`X509_REQ`/`X509_PUBKEY` (all private),
+`X509_STORE_CTX` + cached-store `propq` (private). Remaining: the SSL
+context/session member buffers, then the other member-buffer families the
+dependency atlas names for the 33 consumers.
 
 ## Receipts
 
