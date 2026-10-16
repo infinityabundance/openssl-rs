@@ -104,6 +104,60 @@ impl OSSL_PARAM_BLD {
     }
 }
 
+/// An owned `ParamBldDef` block allocated through the crate's `CRYPTO_zalloc` seam.
+///
+/// The builder's `params` `Vec` holds the raw pointers the conversion reads, so this handle owns a
+/// definition only for the windows around a transition: between its allocation and the `Vec` push,
+/// and between reclaiming it from the `Vec` and the authority's plain `CRYPTO_free`. `Drop` is the
+/// block's single release. A zeroed block is a valid `ParamBldDef` — every member is a raw pointer,
+/// an integer or a `bool` — so `zalloc` hands one out directly.
+struct OwnedDef {
+    ptr: *mut ParamBldDef,
+}
+
+impl OwnedDef {
+    /// `CRYPTO_zalloc(sizeof(ParamBldDef), FILE, LINE)`, or `None` when the allocator answers NULL.
+    fn zalloc() -> Option<OwnedDef> {
+        let raw = CRYPTO_zalloc(core::mem::size_of::<ParamBldDef>(), FILE.as_ptr(), LINE)
+            .cast::<ParamBldDef>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedDef { ptr: raw })
+    }
+
+    /// Reclaim a definition the builder's `params` `Vec` holds, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live `ParamBldDef` this module allocated through the seam and no other owner
+    /// will release.
+    unsafe fn adopt(ptr: *mut ParamBldDef) -> OwnedDef {
+        OwnedDef { ptr }
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut ParamBldDef {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the `params` `Vec` entry that takes it over.
+    fn into_raw(self) -> *mut ParamBldDef {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedDef {
+    /// The block's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `zalloc`/`adopt` took and has not handed out; its single
+        // release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.cast(), FILE.as_ptr(), LINE) };
+    }
+}
+
 /// `static OSSL_PARAM_BLD_DEF *param_push(OSSL_PARAM_BLD *bld, const char *key,
 /// size_t size, size_t alloc, int type, int secure)`
 ///
@@ -122,11 +176,10 @@ unsafe fn param_push(
     type_: c_uint,
     secure: bool,
 ) -> *mut ParamBldDef {
-    let pd = CRYPTO_zalloc(core::mem::size_of::<ParamBldDef>(), FILE.as_ptr(), LINE)
-        .cast::<ParamBldDef>();
-    if pd.is_null() {
+    let Some(def) = OwnedDef::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let pd = def.as_ptr();
     // SAFETY: `pd` is a fresh zeroed block of exactly this type.
     unsafe {
         (*pd).key = key;
@@ -142,7 +195,7 @@ unsafe fn param_push(
     } else {
         bld.total_blocks += blocks;
     }
-    bld.params.push(pd);
+    bld.params.push(def.into_raw());
     pd
 }
 
@@ -209,8 +262,9 @@ pub extern "C" fn OSSL_PARAM_BLD_new() -> *mut OSSL_PARAM_BLD {
 /// of a `BIGNUM` it passed, which is why `to_param` can read it after the push.
 fn free_all_params(bld: &mut OSSL_PARAM_BLD) {
     for pd in bld.params.drain(..) {
-        // SAFETY: `pd` is a block from this allocator that nothing else holds.
-        unsafe { CRYPTO_free(pd.cast(), FILE.as_ptr(), LINE) };
+        // SAFETY: `pd` is a block from this allocator that nothing else holds; the handle's `Drop`
+        // performs the authority's own plain `CRYPTO_free`.
+        drop(unsafe { OwnedDef::adopt(pd) });
     }
 }
 
