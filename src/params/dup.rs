@@ -98,6 +98,78 @@ impl ParamBuf {
     }
 }
 
+/// An owned block of one of the two allocations [`ossl_param_buf_alloc`] reserves: the public
+/// `OSSL_PARAM` array, or the private secure block the terminator carries.
+///
+/// The block stays a `CRYPTO_zalloc`/`CRYPTO_secure_zalloc` at this unit's own `file`/`line`
+/// (`FILE`, `LINE`) and is released on the path the authority releases it on -- a plain
+/// `CRYPTO_free` for the public array, and the cleansing `CRYPTO_secure_clear_free` for the secure
+/// block -- so a caller-installed `CRYPTO_set_mem_functions` hook observes both ends. Only the
+/// *ownership* is this type: [`Self::zalloc`]/[`Self::take`] acquire it, [`Self::as_ptr`] exposes
+/// the base for the cursor arithmetic, [`Self::into_raw`] hands it to the caller's array, and
+/// `Drop` is its single release.
+struct OwnedParamBlock {
+    ptr: *mut u8,
+    sz: usize,
+    secure: bool,
+}
+
+impl OwnedParamBlock {
+    /// `CRYPTO_zalloc(len, FILE, LINE)`, or `None` when the allocator answers NULL.
+    fn zalloc(len: usize) -> Option<OwnedParamBlock> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `len` bytes.
+        let raw = CRYPTO_zalloc(len, FILE.as_ptr(), LINE).cast::<u8>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedParamBlock {
+                ptr: raw,
+                sz: len,
+                secure: false,
+            })
+        }
+    }
+
+    /// Adopt a block [`ossl_param_buf_alloc`] just reserved, or `None` for NULL. `secure` selects
+    /// the release: the cleansing `CRYPTO_secure_clear_free` for the private block, a plain
+    /// `CRYPTO_free` for the public array.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block this unit's allocator seam produced and this frame owns; no
+    /// other owner will release it, and this handle's `Drop` is its single release.
+    unsafe fn take(ptr: *mut u8, sz: usize, secure: bool) -> Option<OwnedParamBlock> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedParamBlock { ptr, sz, secure })
+        }
+    }
+
+    /// The base of the block, for the cursor arithmetic the copy pass performs inside it.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedParamBlock {
+    /// The block's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this unit's allocator seam produced and has not handed out;
+        // its single release is the authority's own call -- the cleansing
+        // `CRYPTO_secure_clear_free` for the private secure block and a plain `CRYPTO_free` for the
+        // public array -- at the same `file`/`line`.
+        unsafe {
+            if self.secure {
+                CRYPTO_secure_clear_free(self.ptr.cast::<c_void>(), self.sz, FILE.as_ptr(), LINE)
+            } else {
+                CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), LINE)
+            }
+        }
+    }
+}
+
 /// `ossl_report_alloc_err_ex(OPENSSL_FILE, OPENSSL_LINE, CRYPTO_R_INTEGER_OVERFLOW)`,
 /// as `ossl_size_add` and `ossl_size_mul` reach it.
 ///
@@ -314,11 +386,15 @@ pub unsafe extern "C" fn OSSL_PARAM_dup(src: *const OsslParam) -> *mut OsslParam
         if !unsafe { ossl_param_buf_alloc(&mut buf[0], param_blocks, false) } {
             return ptr::null_mut();
         }
+        // The public array now exists and this frame owns it until it is handed to the caller on
+        // the success path.
+        // SAFETY: `buf[0].alloc` is the block `ossl_param_buf_alloc` just reserved for this frame.
+        let public = unsafe { OwnedParamBlock::take(buf[0].alloc, buf[0].alloc_sz, false) };
         if buf[1].blocks > 0 {
             // SAFETY: as above.
             if !unsafe { ossl_param_buf_alloc(&mut buf[1], 0, true) } {
-                // SAFETY: the public block was just allocated and is not yet observable.
-                unsafe { CRYPTO_free(buf[0].alloc.cast(), FILE.as_ptr(), LINE) };
+                // `public` drops on this early return, releasing the array exactly as the
+                // authority's own `CRYPTO_free(buf[0].alloc, ...)` does.
                 return ptr::null_mut();
             }
         }
@@ -327,6 +403,9 @@ pub unsafe extern "C" fn OSSL_PARAM_dup(src: *const OsslParam) -> *mut OsslParam
         let last = unsafe { ossl_param_dup(src, dst, &mut buf, ptr::null_mut()) };
         // SAFETY: `last` is the terminator slot inside the public block.
         unsafe { ossl_param_set_secure_block(last, buf[1].alloc.cast(), buf[1].alloc_sz) };
+        // The caller's array owns both blocks now -- the public one as its base, the secure one
+        // through the terminator -- so ownership is given up without releasing either.
+        core::mem::forget(public);
         dst
     })
 }
@@ -406,15 +485,10 @@ pub unsafe extern "C" fn OSSL_PARAM_merge(
         // `OPENSSL_calloc(n1 + n2 + 1, sizeof(*p1))` — zeroed, so the terminator is
         // already in place if the loop ever leaves a slot unused.
         let count = list1.len() + list2.len() + 1;
-        let params = CRYPTO_zalloc(
-            count * core::mem::size_of::<OsslParam>(),
-            FILE.as_ptr(),
-            LINE,
-        )
-        .cast::<OsslParam>();
-        if params.is_null() {
+        let Some(block) = OwnedParamBlock::zalloc(count * core::mem::size_of::<OsslParam>()) else {
             return ptr::null_mut();
-        }
+        };
+        let params = block.as_ptr().cast::<OsslParam>();
         let mut dst = params;
         let (mut i, mut j) = (0usize, 0usize);
         loop {
@@ -465,6 +539,8 @@ pub unsafe extern "C" fn OSSL_PARAM_merge(
                 dst = dst.add(1);
             }
         }
+        // The caller owns the array now -- `OSSL_PARAM_free` releases it.
+        core::mem::forget(block);
         params
     })
 }
@@ -499,16 +575,23 @@ pub unsafe extern "C" fn OSSL_PARAM_free(params: *mut OsslParam) {
         }
         // SAFETY: `p` is the terminator, live per the caller's contract.
         let terminator = unsafe { &*p };
-        if terminator.data_type == OSSL_PARAM_ALLOCATED_END {
-            // `OPENSSL_secure_clear_free(p->data, p->data_size)` — the size recorded is
-            // the secure *block's*, not a value length.
-            // SAFETY: `data` is the secure block recorded by
-            // `ossl_param_set_secure_block`, and `data_size` is its size.
+        let secure = if terminator.data_type == OSSL_PARAM_ALLOCATED_END {
+            // `CRYPTO_secure_clear_free(p->data, p->data_size)` — the size recorded is the
+            // secure *block's*, not a value length.
+            // SAFETY: `data` is the secure block recorded by `ossl_param_set_secure_block`,
+            // `data_size` is its size, and this call owns it.
             unsafe {
-                CRYPTO_secure_clear_free(terminator.data, terminator.data_size, FILE.as_ptr(), LINE)
-            };
-        }
-        // SAFETY: `params` is the array allocated by `OSSL_PARAM_dup`.
-        unsafe { CRYPTO_free(params.cast(), FILE.as_ptr(), LINE) };
+                OwnedParamBlock::take(terminator.data.cast::<u8>(), terminator.data_size, true)
+            }
+        } else {
+            None
+        };
+        // SAFETY: `params` is the array returned by `OSSL_PARAM_dup`/`OSSL_PARAM_merge`, or one
+        // the caller allocated through the same seam; this call owns it.
+        let array = unsafe { OwnedParamBlock::take(params.cast::<u8>(), 0, false) };
+        // The secure block is released first, then the array, exactly as the authority orders the
+        // two releases.
+        drop(secure);
+        drop(array);
     })
 }
