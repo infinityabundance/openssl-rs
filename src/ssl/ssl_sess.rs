@@ -173,7 +173,24 @@ unsafe fn session_new_ex_data(ss: *mut SslSession) -> c_int {
 
 /// The authority's `SSL_SESSION_free` body for the session object, without the block's own release,
 /// which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `SSL_SESSION_free` member body
+///   **exactly once** for that object; it releases **exactly** the members the object owns (the
+///   ex-data, the peer/chain references and the object-owned member buffers, each releaser the
+///   authority's own and accepting the not-yet-set NULL/zero state) and **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
     ///
     /// # Safety
@@ -524,7 +541,12 @@ pub unsafe extern "C" fn SSL_SESSION_free(ss: *mut SslSession) {
 
 /// The authority's `SSL_SESSION_free` body, without the block release [`OwnedCtx`]'s `Drop`
 /// performs.
-impl CtxDestroy for SslSession {
+// SAFETY: (a) holds: `destroy_body` is `SSL_SESSION_free` minus the block -- the ex-data, the
+// master key/id cleanse, the peer, CRL, peer_rpk and peer_chain references and the object-owned
+// member buffers, each releaser NULL-tolerant, never the enclosing block. (b) holds: an all-zero
+// session has every member NULL/zero, so the body is the authority's own all-empty teardown -- what
+// the safe `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for SslSession {
     /// # Safety
     /// `ptr` is a live session whose reference count has reached zero and which this file owns.
     unsafe fn destroy_body(ptr: *mut SslSession) {

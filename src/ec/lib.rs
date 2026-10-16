@@ -103,7 +103,24 @@ const FILE: *const c_char = c"crypto/ec/ec_lib.c".as_ptr();
 
 /// The authority's plain and cleansing `*_free` bodies for one of this unit's `#[repr(C)]`
 /// objects, without the block's own release, which [`OwnedCtx`]'s `Drop` performs.
-trait CtxDestroy: Sized {
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body` and `clear_destroy_body` each run the authority's
+///   plain/cleansing `*_free` member body **exactly once** for that object; each releases
+///   **exactly** the members the object owns (every releaser is the authority's own and accepts the
+///   not-yet-set NULL/zero state) and **never** releases the enclosing block, which [`OwnedCtx`]'s
+///   `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which both bodies
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs a
+/// destructor body on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
     /// The authority's plain `*_free` body (`EC_GROUP_free`/`EC_POINT_free`).
     ///
     /// # Safety
@@ -235,7 +252,12 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 // The two destructor bodies are exactly what the authority's own `*_free`/`*_clear_free`
 // performed by hand, minus the block release `OwnedCtx`'s `Drop` now owns.
 
-impl CtxDestroy for EcGroup {
+// SAFETY: (a) holds: `destroy_body`/`clear_destroy_body` are `EC_GROUP_free`/`EC_GROUP_clear_free`
+// minus the block -- the method finish callback, pre-computation, montgomery data, generator,
+// order, cofactor and the two names, each releaser NULL-tolerant, never the enclosing block. (b)
+// holds: an all-zero group has every member NULL/zero, so both bodies are the authority's own
+// all-empty teardown -- what the safe `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for EcGroup {
     unsafe fn destroy_body(ptr: *mut EcGroup) {
         // SAFETY: `ptr` is a live group per the trait contract.
         unsafe {
@@ -272,7 +294,11 @@ impl CtxDestroy for EcGroup {
     }
 }
 
-impl CtxDestroy for EcPoint {
+// SAFETY: (a) holds: `destroy_body`/`clear_destroy_body` are `EC_POINT_free`/`EC_POINT_clear_free`
+// minus the block -- the point finish callback, never the enclosing block. (b) holds: an all-zero
+// point has a NULL method, so both bodies are the authority's own all-empty teardown -- what the
+// safe `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for EcPoint {
     unsafe fn destroy_body(ptr: *mut EcPoint) {
         // SAFETY: `ptr` is a live point per the trait contract.
         unsafe {
