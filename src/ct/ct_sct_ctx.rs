@@ -29,6 +29,7 @@ use core::ptr;
 
 use crate::evp::digest::{EVP_Digest, EVP_MD_fetch, EVP_MD_free, EvpMd};
 use crate::evp::pkey::{EVP_PKEY_free, EvpPkey};
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::obj::{
     NID_authority_key_identifier, NID_ct_precert_poison, NID_ct_precert_scts,
@@ -92,35 +93,6 @@ const _: () = {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the `SCT_CTX` record, its `propq` string and its `DER` scratch blocks
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's `SCT_CTX_free` body (`crypto/ct/ct_sct_ctx.c:42-53`), without the block release
-/// [`OwnedCtx`]'s `Drop` performs: the key reference, the two key hashes, the certificate and
-/// pre-certificate `DER` buffers and the duplicated `propq`.
-///
-/// # Safety
-///
-/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new_zeroed`]
-/// builds the owner and its `Drop` runs the implementer's body through a safe interface:
-///
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `SCT_CTX_free` member body
-///   **exactly once** for that object; it releases **exactly** the members the object owns (every
-///   releaser is the authority's own and accepts the not-yet-set NULL/zero state) and **never**
-///   releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
-/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
-///   and every operation the owner performs are sound. This is the obligation the safe
-///   [`OwnedCtx::new_zeroed`] leans on: it validates a `CRYPTO_zalloc` block with no caller
-///   assertion.
-///
-/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
-/// `destroy_body` on a value that is not a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `SCT_CTX_free` body, without the block release `Drop` performs.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live record this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned `SCT_CTX` record.
 ///
