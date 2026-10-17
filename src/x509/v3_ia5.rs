@@ -34,9 +34,9 @@ use core::ptr;
 
 use crate::asn1::items::ASN1_IA5STRING_it;
 use crate::asn1::layout::Asn1String;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::string::{ASN1_IA5STRING_free, ASN1_IA5STRING_new, ASN1_STRING_set};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::CRYPTO_malloc;
 use crate::runtime::obj::{
     NID_netscape_base_url, NID_netscape_ca_policy_url, NID_netscape_ca_revocation_url,
     NID_netscape_comment, NID_netscape_renewal_url, NID_netscape_revocation_url,
@@ -84,13 +84,21 @@ pub unsafe extern "C" fn i2s_ASN1_IA5STRING(
             return ptr::null_mut();
         }
         let len = (*ia5).length as usize;
-        let tmp = CRYPTO_malloc(len + 1, FILE.as_ptr(), LINE_MALLOC).cast::<c_char>();
-        if tmp.is_null() {
+        // The authority asks for `len + 1` bytes; a wrapped sum is treated as the allocator's
+        // refusal arm instead of reproducing the overflow (AGENTS.md §3/§17).
+        let Some(size) = len.checked_add(1) else {
             return ptr::null_mut();
-        }
-        ptr::copy_nonoverlapping((*ia5).data, tmp.cast(), len);
-        *tmp.add(len) = 0;
-        tmp
+        };
+        // The block is owned here until the return edge: `OwnedBlock` records the authority's
+        // exact `file`/`line` and would release it on any earlier exit.
+        let Some(tmp) = OwnedBlock::<c_char>::malloc(size, FILE.as_ptr(), LINE_MALLOC) else {
+            return ptr::null_mut();
+        };
+        let dst = tmp.as_ptr();
+        ptr::copy_nonoverlapping((*ia5).data, dst.cast(), len);
+        *dst.add(len) = 0;
+        // Ownership of the non-NULL block transfers to the caller here.
+        tmp.into_raw()
     }
 }
 

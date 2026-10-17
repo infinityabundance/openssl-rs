@@ -58,6 +58,7 @@ use crate::asn1::items::{
 };
 use crate::asn1::layout::*;
 use crate::asn1::new::ASN1_item_new;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::prim::ASN1_OBJECT_free;
 use crate::asn1::string::{
     ASN1_IA5STRING_new, ASN1_INTEGER_free, ASN1_STRING_set, ASN1_STRING_type_new,
@@ -75,7 +76,6 @@ use crate::runtime::err::err_reasons::{
     X509V3_R_NEED_ORGANIZATION_AND_NUMBERS, X509V3_R_NO_POLICY_IDENTIFIER,
 };
 use crate::runtime::err::{openssl_rs_err_add_data, raise_site, raise_site_data};
-use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::obj::{
     Asn1Object, NID_certificate_policies, NID_id_qt_cps, NID_id_qt_unotice, OBJ_nid2obj,
     OBJ_obj2nid, OBJ_txt2obj,
@@ -1497,13 +1497,18 @@ unsafe fn print_notice(out: *mut Bio, notice: *mut UserNotice, indent: c_int) {
             } else {
                 // SAFETY: `num_p` is a live integer.
                 let tmp = unsafe { i2s_ASN1_INTEGER(ptr::null_mut(), num_p) };
-                if tmp.is_null() {
+                // The helper hands this frame one owned NUL-terminated block; `OwnedBlock`
+                // records the authority's own release site (`v3_cpols.c:488`) and its `Drop`
+                // is the single release, in the same position as the authority's free.
+                // SAFETY: `tmp` is NULL or a fresh block the helper allocated through the
+                // crate's seam, owned exclusively here and not released elsewhere.
+                let Some(tmp) =
+                    (unsafe { OwnedBlock::<c_char>::from_raw(tmp, FILE.as_ptr(), 488) })
+                else {
                     return;
-                }
+                };
                 // SAFETY: `out` is live; `tmp` is NUL-terminated.
-                unsafe { BIO_puts(out, tmp) };
-                // SAFETY: `tmp` is this call's own.
-                unsafe { CRYPTO_free(tmp.cast::<c_void>(), FILE.as_ptr(), 488) };
+                unsafe { BIO_puts(out, tmp.as_ptr()) };
             }
             i += 1;
         }
