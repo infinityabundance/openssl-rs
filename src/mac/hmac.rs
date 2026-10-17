@@ -39,7 +39,8 @@ use crate::evp::digest::{
     EVP_MD_get_block_size, EVP_MD_get_size, EVP_MD_xof, EvpMd, EvpMdCtx,
 };
 use crate::evp::mac::EVP_Q_mac;
-use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
+use crate::runtime::mem::cleanse;
 
 /// `HMAC_MAX_MD_CBLOCK_SIZE` — `crypto/hmac/hmac_local.h:18`, "the current largest case is for
 /// SHA3-224". The two stack buffers `HMAC_Init_ex` keys into are exactly this long.
@@ -84,6 +85,36 @@ pub struct HmacCtx {
     pub(crate) o_ctx: *mut EvpMdCtx,
     /// `union { int dummy; ... } plat` — the s390x scratch, an `int` on this profile.
     pub(crate) plat: c_int,
+}
+
+/// A second name for [`FILE`] for the [`CtxDestroy`] implementation below, whose associated
+/// `FILE` would otherwise shadow the module constant inside its own definition.
+const CTX_FILE: *const c_char = FILE;
+
+// SAFETY: (a) `destroy_body` is the authority's `HMAC_CTX_free` body without the block release:
+// it runs `hmac_ctx_cleanup` and releases exactly the three `EVP_MD_CTX` members, each of which is
+// NULL or exclusively owned, and it never releases the enclosing block, which `OwnedCtx` owns.
+// `EVP_MD_CTX_reset`/`EVP_MD_CTX_free` accept NULL. (b) an all-zero block is a valid empty
+// context (`md` and all three contexts NULL, `plat` zero), which is exactly the state
+// `OPENSSL_zalloc` leaves, and both `destroy_body` and the operations on it are sound for it.
+unsafe impl CtxDestroy for HmacCtx {
+    const FILE: *const c_char = CTX_FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_CTX;
+    const LINE_FREE: c_int = LINE_FREE_CTX;
+
+    /// `HMAC_CTX_free`'s member body: reset the three contexts, forget the method, then release
+    /// the three contexts. The block itself is released by [`OwnedCtx`]'s `Drop` at `LINE_FREE_CTX`.
+    unsafe fn destroy_body(ptr: *mut HmacCtx) {
+        // SAFETY: `ptr` is a live context per the owner's contract.
+        unsafe { hmac_ctx_cleanup(ptr) };
+        // SAFETY: each pointer is NULL or a live context this object owns; this is their single
+        // release, and the enclosing block is released separately by `OwnedCtx`.
+        unsafe {
+            EVP_MD_CTX_free((*ptr).i_ctx);
+            EVP_MD_CTX_free((*ptr).o_ctx);
+            EVP_MD_CTX_free((*ptr).md_ctx);
+        }
+    }
 }
 
 /// `HMAC_Init_ex(ctx, key, len, md, impl)` — `crypto/hmac/hmac.c:25`.
@@ -350,17 +381,21 @@ pub unsafe extern "C" fn HMAC_size(ctx: *const HmacCtx) -> usize {
 /// `HMAC_CTX *HMAC_CTX_new(void)` — `crypto/hmac/hmac.c:164`.
 #[no_mangle]
 pub extern "C" fn HMAC_CTX_new() -> *mut HmacCtx {
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<HmacCtx>(), FILE, LINE_ZALLOC_CTX).cast::<HmacCtx>();
-    if !ctx.is_null() {
-        // SAFETY: `ctx` is a fresh zeroed block this call owns.
-        if unsafe { HMAC_CTX_reset(ctx) } == 0 {
-            // SAFETY: `ctx` is this call's own block.
-            unsafe { HMAC_CTX_free(ctx) };
-            return ptr::null_mut();
-        }
+    // `OwnedCtx::zalloc` is the authority's `OPENSSL_zalloc(sizeof(*ctx))` at `hmac.c:166`; a
+    // zeroed block is the authority's constructed empty context. Ownership stays with the handle
+    // until `into_raw` hands it to the C caller, whose release edge is `HMAC_CTX_free`.
+    let Some(ctx) = OwnedCtx::<HmacCtx>::zalloc() else {
+        return ptr::null_mut();
+    };
+    let raw = ctx.as_ptr();
+    // SAFETY: `raw` is a fresh zeroed block this call owns.
+    if unsafe { HMAC_CTX_reset(raw) } == 0 {
+        // The authority's failed `HMAC_CTX_reset` path is `HMAC_CTX_free(ctx)`: the handle's
+        // `Drop` is that same cleanup-and-release sequence at the authority's coordinates.
+        drop(ctx);
+        return ptr::null_mut();
     }
-    ctx
+    ctx.into_raw()
 }
 
 /// `static void hmac_ctx_cleanup(HMAC_CTX *ctx)` — `crypto/hmac/hmac.c:177`.
@@ -388,20 +423,11 @@ unsafe fn hmac_ctx_cleanup(ctx: *mut HmacCtx) {
 /// `ctx` must be NULL or a live context this crate allocated.
 #[no_mangle]
 pub unsafe extern "C" fn HMAC_CTX_free(ctx: *mut HmacCtx) {
-    if ctx.is_null() {
-        return;
-    }
-    // SAFETY: `ctx` is live per the contract.
-    unsafe { hmac_ctx_cleanup(ctx) };
-    // SAFETY: `ctx` is live and each pointer is NULL or a context this crate owns.
-    unsafe {
-        EVP_MD_CTX_free((*ctx).i_ctx);
-        EVP_MD_CTX_free((*ctx).o_ctx);
-        EVP_MD_CTX_free((*ctx).md_ctx);
-    }
-    // SAFETY: `ctx` came from this crate's allocator and has just been released of everything it
-    // held, so this is its last use.
-    unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE_CTX) };
+    // SAFETY: `ctx` is NULL or a block a previous `HMAC_CTX_new` handed out and `Drop` has not
+    // released; `from_raw` reclaims it (NULL yields `None`), and its `Drop` runs the authority's
+    // member releases (`hmac_ctx_cleanup` and the three `EVP_MD_CTX_free` calls) before releasing
+    // the block at `FILE`/`LINE_FREE_CTX`, exactly once.
+    drop(unsafe { OwnedCtx::<HmacCtx>::from_raw(ctx) });
 }
 
 /// `static int hmac_ctx_alloc_mds(HMAC_CTX *ctx)` — `crypto/hmac/hmac.c:200`.
