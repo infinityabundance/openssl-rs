@@ -79,7 +79,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1222** passed
+`cargo test --lib` (must pass; the established baseline is **1227** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -438,6 +438,25 @@ package.
 - Independent review: **PASS** (one comment correction applied). Gate: `fmt` 0,
   clippy 0, **1222 passed / 18 ignored**, adv-probe **18/18**.
 
+### Subphase 48 — B-R1a cleansing-buffer consolidation
+
+- The 13 identical `{ptr, release}` `OwnedBuf` copies now use one shared
+  `src/runtime/owned_buf.rs`. Release representation is **private**; safe
+  constructors derive the cleansing length from the allocation length, so no
+  safe path can pass a length beyond the block to `CRYPTO_clear_free`.
+  `adopt_plain`, `adopt_cleansed` and the distinct-length constructor are
+  `unsafe fn` with explicit provenance/extent/alignment/initialization/
+  exclusivity/`num <= extent` contracts.
+- Allocator selection, stored coordinates, release order and NULL policy are
+  unchanged (`num = zlen` in `dh/pmeth`, `num = ktmplen` in `ec/pmeth`).
+  `http_client`'s `len + 1` allocation is now checked.
+- Adversarial review **FAILED** the first version (safe `new_cleansed`/
+  `set_release` could manufacture an out-of-bounds cleansing length) and
+  **PASSED** after the redesign; the remaining `len + 1` §3 finding was fixed
+  and re-gated.
+- Gate: `fmt` 0, clippy 0, **1227 passed / 18 ignored**, adv-probe **18/18**.
+  Progress: **13 of 173** identical helpers consolidated.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -615,7 +634,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `147b4cb8a` (adoption contract + checked arithmetic merged)
+**Last observed HEAD:** `dc0d97c27` (B-R1a consolidation merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -662,14 +681,16 @@ and discharge explicitly.
 `atlas-refresh/UNSAFE-CENSUS.md`). The file-level conversion queue is empty and
 the unsafe-obligation denominator now exists.
 
-**Next in sequence:** (a) consolidate the **173 IDENTICAL** module-local owner
-helpers in disjoint staged groups (start with the `OwnedBuf` groups: B-P, B-L,
-B-Z, B-CA-FL, B-CA-0, B-CF-FL, B-R1a, B-R1b, B-R3), preserving each group's
-stored allocator coordinates and NULL policy; do not touch the 26 DIFFERENT or
-126 MUST-STAY-LOCAL copies. (b) Then the `CtxDestroy`/`CipherDestroy` shared-trait
-migration that unblocks the 61 local `OwnedCtx`/`RawCtx` copies. (c) Then
-member-buffer slots. Each group needs a caller inventory and a fresh independent
-review; then per-file audits by consumer reachability, and finally seal evidence
+**Next in sequence:** continue consolidating the IDENTICAL module-local owner
+helpers in disjoint staged groups. `B-R1b` (14) and `B-R3` (4) can join the new
+`runtime/owned_buf.rs` (constant file for the former, a secure release arm for
+the latter); then the `OwnedBuf` plain groups B-P (52), B-L (8), B-Z (13),
+B-CA-FL (5), B-CA-0 (5), B-CF-FL (3), B-R1b (14), B-R3 (4); then `OwnedStr`
+(33) and `OwnedBlock` (15). Do not touch the 26 DIFFERENT or 126
+MUST-STAY-LOCAL copies. Each group needs a caller inventory, adversarial review
+and a fresh gate. Afterwards, the `CtxDestroy`/`CipherDestroy` shared-trait
+migration that unblocks the 61 local `OwnedCtx`/`RawCtx` copies, then
+member-buffer slots, per-file audits by consumer reachability, and seal evidence
 before any `SAFETY_DISCHARGED` / `SAFE_COMPATIBLE` promotion.
 
 **Why:** the campaign can count allocation sites but cannot state how many
