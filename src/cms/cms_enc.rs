@@ -9,7 +9,7 @@
 #![allow(dead_code, non_snake_case)]
 #![allow(unused_assignments)]
 
-use core::ffi::{c_char, c_int, c_uchar, c_ulong, c_void};
+use core::ffi::{c_int, c_uchar, c_ulong};
 use core::ptr;
 
 use crate::asn1::a_type::{ASN1_TYPE_free, ASN1_TYPE_new};
@@ -29,10 +29,11 @@ use crate::evp::legacy_evp::EVP_get_cipherbyname;
 use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::bio::{BIO_ctrl, BIO_free, BIO_new, Bio, BIO_C_GET_CIPHER_CTX};
 use crate::runtime::err::{ERR_clear_error, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+
 use crate::runtime::obj::{
     NID_pkcs7_data, NID_pkcs7_encrypted, NID_undef, OBJ_nid2obj, OBJ_nid2sn, OBJ_obj2nid,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 
 use super::cms_asn1::*;
 use super::cms_lib::{
@@ -48,104 +49,6 @@ const EVP_MAX_IV_LENGTH: usize = 16;
 const EVP_CTRL_AEAD_SET_TAG: c_int = 0x11;
 /// `ERR_R_BIO_LIB` — `include/openssl/err.h`.
 const ERR_R_BIO_LIB: c_int = 524290;
-
-// ---------------------------------------------------------------------------------------------
-// Ownership of a scratch buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
-/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_cleansed`
-/// allocate it, `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that
-/// takes it over (`ec->key`). [`Self::adopt`] takes in a block the crate allocated inside a helper
-/// so the failure paths that follow release what they built. A NULL pointer is a valid, empty
-/// buffer whose release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a scratch buffer.
-enum BufRelease {
-    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`k` in
-    /// [`ossl_cms_EncryptedContent_init`]).
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `OPENSSL_clear_free(ptr, num)`, which zeroes `num` bytes first
-    /// (`tkey`).
-    Cleansed { num: usize },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// `CRYPTO_malloc(len, file, line)` for a block whose release is the cleansing
-    /// `OPENSSL_clear_free(ptr, len)`, or `None` when the allocator answers NULL.
-    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Cleansed { num: len },
-        })
-    }
-
-    /// Adopt a plain block this crate allocated inside a helper, for release by `Drop` at the
-    /// authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
-    /// is NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf {
-            ptr,
-            release: BufRelease::Plain { file, line },
-        }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `OPENSSL_clear_free` zeroes then releases it and accepts NULL.
-                unsafe { super::cms_asn1::OPENSSL_clear_free(self.ptr, num) };
-            }
-        }
-    }
-}
 
 /// `BIO_get_cipher_ctx(BIO *, EVP_CIPHER_CTX **)` — `BIO_ctrl(b, BIO_C_GET_CIPHER_CTX, 0, pctx)`.
 ///
@@ -418,7 +321,13 @@ pub(crate) unsafe extern "C" fn ossl_cms_EncryptedContent_init_bio(
             // at the authority's own size/`file`/`line`; its release is the authority's cleansing
             // `OPENSSL_clear_free`, run by `Drop` unless ownership moves into `ec->key`.
             // SAFETY: `tkeylen > 0`.
-            let Some(key) = OwnedBuf::new_cleansed(tkeylen, c"cms_enc.c".as_ptr(), 130) else {
+            let Some(key) = OwnedBuf::new_cleansed_released(
+                tkeylen,
+                c"cms_enc.c".as_ptr(),
+                130,
+                core::ptr::null(),
+                0,
+            ) else {
                 break 'body;
             };
             // SAFETY: `ctx` is live; `key` is `tkeylen` writable bytes.

@@ -66,142 +66,11 @@ use crate::provider::ecx_exch::{X25519_KEYEXCH_FUNCTIONS, X448_KEYEXCH_FUNCTIONS
 use crate::provider::keymgmt::{ossl_kdf_data_free, ossl_kdf_data_up_ref, KdfData};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc,
-};
-use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_malloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 
 // ---------------------------------------------------------------------------------------------
 // Ownership of a heap buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned buffer allocated through the crate's allocator seam.
-///
-/// The block stays the allocation the authority itself makes -- a `CRYPTO_secure_malloc`, an
-/// `OPENSSL_strdup`, or a helper's `CRYPTO_memdup`/`OSSL_PARAM_get_octet_string` -- and only its
-/// *ownership* is this type: [`Self::new_secure_cleansed`] allocates the derived temporary,
-/// [`Self::adopt`]/[`Self::adopt_cleansed`] take up a block a helper or a context field handed
-/// over, `Drop` is its single release at the authority's own `file`/`line`, and [`Self::into_raw`]
-/// gives the block back to the `#[repr(C)]` `PROV_DH_CTX` field that owns it. A NULL pointer is a
-/// valid, empty buffer whose release is the authority's own no-op `free(NULL)`.
-///
-/// The `#[repr(C)]` contexts themselves -- `PROV_KDF_CTX` and `PROV_DH_CTX` -- whose release is a
-/// compound destructor body, stay on the raw seam.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a buffer.
-enum BufRelease {
-    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`kdf_cekalg` on the reset paths).
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)` (`kdf_ukm`).
-    Cleansed {
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    },
-    /// The authority's cleansing `CRYPTO_secure_clear_free(ptr, num, file, line)` (`stmp`).
-    SecureCleansed {
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_secure_malloc(len, file, line)` for a block the authority frees through its cleansing
-    /// `CRYPTO_secure_clear_free(ptr, len, ...)`, or `None` when the allocator answers NULL.
-    fn new_secure_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        // SAFETY: `file` is NULL or a NUL-terminated C string, per this unit's `FILE_DH_EXCH`.
-        let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::SecureCleansed {
-                num: len,
-                file,
-                line,
-            },
-        })
-    }
-
-    /// Adopt a live plain block this file (or a helper) allocated and no one else owns, for
-    /// release by `Drop` at the authority's own `file`/`line`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file` is
-    /// NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// Adopt a live block this file (or a helper) allocated and no one else owns, for release by
-    /// `Drop` through the authority's cleansing `CRYPTO_clear_free`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns and that is readable
-    /// for `num` bytes, and `file` is NULL or a NUL-terminated C string.
-    unsafe fn adopt_cleansed(
-        ptr: *mut c_uchar,
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr,
-            release: BufRelease::Cleansed { num, file, line },
-        })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the `#[repr(C)]` field that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num, file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_clear_free` cleanses then releases it and accepts NULL.
-                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
-            }
-            BufRelease::SecureCleansed { num, file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_secure_clear_free` cleanses then releases it and accepts
-                // NULL.
-                unsafe { CRYPTO_secure_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
-            }
-        }
-    }
-}
 
 /// `struct { void *provctx; EVP_KDF_CTX *kdfctx; KDF_DATA *kdfdata; }` — `kdf_exch.c:39-43`.
 #[repr(C)]
@@ -1029,7 +898,7 @@ unsafe extern "C" fn dh_freectx(vpdhctx: *mut c_void) {
     // SAFETY: `pdhctx` is this provider's own context; each field buffer releases its own block
     // at the authority's own site, and the context block stays on the raw seam.
     unsafe {
-        drop(OwnedBuf::adopt(
+        drop(OwnedBuf::adopt_plain(
             (*pdhctx).kdf_cekalg.cast::<c_uchar>(),
             FILE_DH_EXCH,
             286,
@@ -1115,7 +984,7 @@ unsafe extern "C" fn dh_dupctx(vpdhctx: *mut c_void) -> *mut c_void {
         }
 
         if !(*srcctx).kdf_cekalg.is_null() {
-            let Some(cekalg) = OwnedBuf::adopt(
+            let Some(cekalg) = OwnedBuf::adopt_plain(
                 CRYPTO_strdup((*srcctx).kdf_cekalg, FILE_DH_EXCH, 338).cast::<c_uchar>(),
                 FILE_DH_EXCH,
                 338,
@@ -1310,7 +1179,7 @@ unsafe extern "C" fn dh_set_ctx_params(vpdhctx: *mut c_void, params: *const Ossl
             let mut tmp_ukm: *mut c_void = ptr::null_mut();
             let mut tmp_ukmlen: usize = 0;
 
-            drop(OwnedBuf::adopt(
+            drop(OwnedBuf::adopt_plain(
                 (*pdhctx).kdf_ukm.cast::<c_uchar>(),
                 FILE_DH_EXCH,
                 435,
@@ -1343,7 +1212,7 @@ unsafe extern "C" fn dh_set_ctx_params(vpdhctx: *mut c_void, params: *const Ossl
         }
 
         if !p.cekalg.is_null() {
-            drop(OwnedBuf::adopt(
+            drop(OwnedBuf::adopt_plain(
                 (*pdhctx).kdf_cekalg.cast::<c_uchar>(),
                 FILE_DH_EXCH,
                 456,
@@ -1354,7 +1223,7 @@ unsafe extern "C" fn dh_set_ctx_params(vpdhctx: *mut c_void, params: *const Ossl
                 if OSSL_PARAM_get_utf8_string(p.cekalg, &mut str_, DH_EXCH_NAME_SIZE) == 0 {
                     return 0;
                 }
-                let Some(cekalg) = OwnedBuf::adopt(
+                let Some(cekalg) = OwnedBuf::adopt_plain(
                     CRYPTO_strdup(name.as_ptr(), FILE_DH_EXCH, 461).cast::<c_uchar>(),
                     FILE_DH_EXCH,
                     461,

@@ -43,7 +43,7 @@ use crate::evp::signature::{
 };
 use crate::runtime::bio::bss_mem::BIO_s_mem;
 use crate::runtime::bio::{BIO_new, BIO_push, Bio};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+
 use crate::runtime::obj::{
     Asn1Object, NID_SMIMECapabilities, NID_aes_128_cbc, NID_aes_192_cbc, NID_aes_256_cbc,
     NID_des_cbc, NID_des_ede3_cbc, NID_id_Gost28147_89, NID_id_GostR3411_2012_256,
@@ -52,6 +52,7 @@ use crate::runtime::obj::{
     NID_pkcs9_signingTime, NID_rc2_cbc, NID_undef, OBJ_cmp, OBJ_find_sigid_by_algs, OBJ_nid2obj,
     OBJ_nid2sn, OBJ_obj2nid, OBJ_obj2txt, OBJ_txt2nid,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_value, OpenSslStack,
@@ -109,103 +110,6 @@ const EVP_MAX_MD_SIZE: usize = 64;
 const SN_SHA1: &core::ffi::CStr = c"SHA1";
 /// `X509_ADD_FLAG_DEFAULT` — `include/openssl/x509.h:996`.
 const X509_ADD_FLAG_DEFAULT: c_int = 0;
-
-// ---------------------------------------------------------------------------------------------
-// Ownership of a scratch buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
-/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_cleansed`
-/// allocate it, `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that
-/// takes it over (`ASN1_STRING_set0`). [`Self::adopt`] takes in a block the crate allocated inside
-/// a helper (`ASN1_item_i2d`, `i2d_X509_ALGORS`) so the failure paths that follow release what they
-/// built. A NULL pointer is a valid, empty buffer whose release is the authority's own no-op
-/// `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a scratch buffer.
-enum BufRelease {
-    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`pp`, `sig`, `abuf`, `smder`).
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `OPENSSL_clear_free(ptr, num)`, which zeroes `num` bytes first.
-    Cleansed { num: usize },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// `CRYPTO_malloc(len, file, line)` for a block whose release is the cleansing
-    /// `OPENSSL_clear_free(ptr, len)`, or `None` when the allocator answers NULL.
-    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Cleansed { num: len },
-        })
-    }
-
-    /// Adopt a plain block this crate allocated inside a helper, for release by `Drop` at the
-    /// authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
-    /// is NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf {
-            ptr,
-            release: BufRelease::Plain { file, line },
-        }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `OPENSSL_clear_free` zeroes then releases it and accepts NULL.
-                unsafe { super::cms_asn1::OPENSSL_clear_free(self.ptr, num) };
-            }
-        }
-    }
-}
 
 // The ESS surface `cms_sd.c` reaches for `CMS_CADES`. It is Phase 12.7's (`crypto/ess/`), landed
 // by that subphase; the shell scaffolds the exports, so this unit declares them exactly as the
@@ -1649,7 +1553,7 @@ pub(crate) unsafe extern "C" fn CMS_SignerInfo_sign(si: *mut CmsSignerInfo) -> c
     // The attributes encoding is the helper's own `CRYPTO_malloc` block; it is adopted so the
     // failure paths below release what it built at the authority's own site.
     // SAFETY: `abuf_raw` is NULL or a live block the helper allocated and no one else owns.
-    let mut abuf = unsafe { OwnedBuf::adopt(abuf_raw, c"cms_sd.c".as_ptr(), 920) };
+    let mut abuf = unsafe { OwnedBuf::adopt_plain_nullable(abuf_raw, c"cms_sd.c".as_ptr(), 920) };
     let mut siglen: usize = 0;
     'body: {
         if alen < 0 || abuf.as_ptr().is_null() {
@@ -1846,7 +1750,7 @@ pub(crate) unsafe extern "C" fn CMS_SignerInfo_verify(si: *mut CmsSignerInfo) ->
         // The attributes encoding is the helper's own `CRYPTO_malloc` block; it is adopted so the
         // failure paths below release what it built at the authority's own site.
         // SAFETY: `abuf_raw` is NULL or a live block the helper allocated and no one else owns.
-        let abuf = unsafe { OwnedBuf::adopt(abuf_raw, c"cms_sd.c".as_ptr(), 996) };
+        let abuf = unsafe { OwnedBuf::adopt_plain_nullable(abuf_raw, c"cms_sd.c".as_ptr(), 996) };
         if abuf.as_ptr().is_null() || alen < 0 {
             break 'body;
         }
@@ -2174,7 +2078,7 @@ pub(crate) unsafe extern "C" fn CMS_add_smimecap(
     // The encoded algorithms are the helper's own `CRYPTO_malloc` block; it is adopted so the
     // release below runs at the authority's own site.
     // SAFETY: `smder_raw` is NULL or a live block the helper allocated and no one else owns.
-    let smder = unsafe { OwnedBuf::adopt(smder_raw, c"cms_sd.c".as_ptr(), 1172) };
+    let smder = unsafe { OwnedBuf::adopt_plain_nullable(smder_raw, c"cms_sd.c".as_ptr(), 1172) };
     // SAFETY: `si`/`smder` are live.
     let r = unsafe {
         CMS_signed_add1_attr_by_NID(

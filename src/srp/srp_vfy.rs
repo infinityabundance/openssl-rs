@@ -55,7 +55,8 @@ use crate::runtime::bio::{
 };
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_insert, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free,
     OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
@@ -123,103 +124,6 @@ const SRP_VFY_414: ErrSite = ErrSite {
 const EVP_ENCODE_CTX_NO_NEWLINES: c_uint = 1;
 /// `EVP_ENCODE_CTX_USE_SRP_ALPHABET` — `include/crypto/evp.h:899`.
 const EVP_ENCODE_CTX_USE_SRP_ALPHABET: c_uint = 2;
-
-// ---------------------------------------------------------------------------------------------
-// Ownership of a scratch buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
-/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_cleansed`
-/// allocate it, `adopt` takes in a helper's block, `Drop` is its single release, and
-/// [`Self::into_raw`] hands it to a consumer that takes it over (`*salt`, `*verifier`, a struct
-/// field). A NULL pointer is a valid, empty buffer whose release is the authority's own no-op
-/// `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a scratch buffer.
-enum BufRelease {
-    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`tmp_salt`).
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, ...)`, which zeroes `num` bytes first
-    /// (`vf`).
-    Cleansed { num: usize },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// `CRYPTO_malloc(len, file, line)` for a block whose release is the cleansing
-    /// `CRYPTO_clear_free(ptr, len, ...)` (`vf`), or `None` when the allocator answers NULL.
-    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Cleansed { num: len },
-        })
-    }
-
-    /// Adopt a plain block this crate allocated inside a helper (`CRYPTO_strdup`), for release by
-    /// `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
-    /// is NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf {
-            ptr,
-            release: BufRelease::Plain { file, line },
-        }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
-                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, ptr::null(), 0) };
-            }
-        }
-    }
-}
 
 /// Convert an SRP-variant base64 string into raw bytes; the decoded length, or -1 —
 /// `crypto/srp/srp_vfy.c:44-127`.
@@ -423,9 +327,21 @@ pub unsafe extern "C" fn SRP_user_pwd_free(user_pwd: *mut SrpUserPwd) {
     unsafe {
         BN_free((*user_pwd).s);
         BN_clear_free((*user_pwd).v);
-        drop(OwnedBuf::adopt((*user_pwd).id.cast(), FILE.as_ptr(), 184));
-        drop(OwnedBuf::adopt((*user_pwd).info.cast(), FILE.as_ptr(), 185));
-        drop(OwnedBuf::adopt(user_pwd.cast(), FILE.as_ptr(), 186));
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*user_pwd).id.cast(),
+            FILE.as_ptr(),
+            184,
+        ));
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*user_pwd).info.cast(),
+            FILE.as_ptr(),
+            185,
+        ));
+        drop(OwnedBuf::adopt_plain_nullable(
+            user_pwd.cast(),
+            FILE.as_ptr(),
+            186,
+        ));
     }
 }
 
@@ -488,14 +404,22 @@ pub unsafe extern "C" fn SRP_user_pwd_set1_ids(
 ) -> c_int {
     // SAFETY: `vinfo` is live per the contract.
     unsafe {
-        drop(OwnedBuf::adopt((*vinfo).id.cast(), FILE.as_ptr(), 214));
-        drop(OwnedBuf::adopt((*vinfo).info.cast(), FILE.as_ptr(), 215));
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*vinfo).id.cast(),
+            FILE.as_ptr(),
+            214,
+        ));
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*vinfo).info.cast(),
+            FILE.as_ptr(),
+            215,
+        ));
         (*vinfo).id = ptr::null_mut();
         (*vinfo).info = ptr::null_mut();
         if !id.is_null() {
             // The duplicate is a helper allocation the seam adopts; it becomes the field's block
             // on success and is released by `SRP_user_pwd_free` at line 184.
-            let id_buf = OwnedBuf::adopt(
+            let id_buf = OwnedBuf::adopt_plain_nullable(
                 CRYPTO_strdup(id, FILE.as_ptr(), 218).cast::<c_uchar>(),
                 FILE.as_ptr(),
                 184,
@@ -508,7 +432,7 @@ pub unsafe extern "C" fn SRP_user_pwd_set1_ids(
         if info.is_null() {
             return 1;
         }
-        let info_buf = OwnedBuf::adopt(
+        let info_buf = OwnedBuf::adopt_plain_nullable(
             CRYPTO_strdup(info, FILE.as_ptr(), 220).cast::<c_uchar>(),
             FILE.as_ptr(),
             185,
@@ -649,7 +573,7 @@ pub unsafe extern "C" fn SRP_VBASE_new(seed_key: *mut c_char) -> *mut SrpVbase {
         if !seed_key.is_null() {
             // The duplicate is a helper allocation the seam adopts; it becomes the field's block
             // on success (released by `SRP_VBASE_free` at line 307).
-            let seed_buf = OwnedBuf::adopt(
+            let seed_buf = OwnedBuf::adopt_plain_nullable(
                 CRYPTO_strdup(seed_key, FILE.as_ptr(), 292).cast::<c_uchar>(),
                 FILE.as_ptr(),
                 307,
@@ -682,8 +606,16 @@ pub unsafe extern "C" fn SRP_VBASE_free(vb: *mut SrpVbase) {
     unsafe {
         OPENSSL_sk_pop_free((*vb).users_pwd, Some(srp_user_pwd_free_void));
         OPENSSL_sk_free((*vb).gN_cache);
-        drop(OwnedBuf::adopt((*vb).seed_key.cast(), FILE.as_ptr(), 307));
-        drop(OwnedBuf::adopt(vb.cast(), FILE.as_ptr(), 308));
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*vb).seed_key.cast(),
+            FILE.as_ptr(),
+            307,
+        ));
+        drop(OwnedBuf::adopt_plain_nullable(
+            vb.cast(),
+            FILE.as_ptr(),
+            308,
+        ));
     }
 }
 
@@ -773,7 +705,7 @@ pub unsafe extern "C" fn SRP_VBASE_init(vb: *mut SrpVbase, verifier_file: *mut c
                 // SAFETY: `gn` is live; `pp[DB_SRPID]` is NUL-terminated. The duplicate is a
                 // helper allocation the seam adopts; it is released with the object on failure.
                 let id_buf = unsafe {
-                    let buf = OwnedBuf::adopt(
+                    let buf = OwnedBuf::adopt_plain_nullable(
                         CRYPTO_strdup(*pp.add(DB_SRPID as usize), FILE.as_ptr(), 441)
                             .cast::<c_uchar>(),
                         FILE.as_ptr(),
@@ -916,7 +848,7 @@ unsafe fn SRP_gN_new_init(ch: *const c_char) -> *mut SrpGNCache {
     // SAFETY: `newgN` is live; `ch` is NUL-terminated. The duplicate is a helper allocation the
     // seam adopts; it is released with the object on failure (the authority's 330 site).
     let b64_buf = unsafe {
-        let buf = OwnedBuf::adopt(
+        let buf = OwnedBuf::adopt_plain_nullable(
             CRYPTO_strdup(ch, FILE.as_ptr(), 324).cast::<c_uchar>(),
             FILE.as_ptr(),
             330,
@@ -955,13 +887,17 @@ unsafe fn SRP_gN_free(gN_cache: *mut SrpGNCache) {
     // SAFETY: `gN_cache` is live per the contract and owns both fields (the two blocks released
     // through the seam at the authority's sites 340-342).
     unsafe {
-        drop(OwnedBuf::adopt(
+        drop(OwnedBuf::adopt_plain_nullable(
             (*gN_cache).b64_bn.cast(),
             FILE.as_ptr(),
             340,
         ));
         BN_free((*gN_cache).bn);
-        drop(OwnedBuf::adopt(gN_cache.cast(), FILE.as_ptr(), 342));
+        drop(OwnedBuf::adopt_plain_nullable(
+            gN_cache.cast(),
+            FILE.as_ptr(),
+            342,
+        ));
     }
 }
 
@@ -1322,7 +1258,13 @@ pub unsafe extern "C" fn SRP_create_verifier_ex(
         // authority's own size/`file`/`line` (`OPENSSL_malloc`); `Drop` is its single release
         // (the authority's cleansing `OPENSSL_clear_free`) unless ownership moves into
         // `*verifier` below.
-        let Some(vf) = OwnedBuf::new_cleansed(vfsize as usize, FILE.as_ptr(), 670) else {
+        let Some(vf) = OwnedBuf::new_cleansed_released(
+            vfsize as usize,
+            FILE.as_ptr(),
+            670,
+            core::ptr::null(),
+            0,
+        ) else {
             break 'done;
         };
         // SAFETY: `vf` is `vfsize` writable bytes; `tmp` holds `num_v` readable bytes; `num_v` is
