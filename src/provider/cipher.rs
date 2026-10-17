@@ -83,6 +83,7 @@ use crate::evp::cipher::{
     OSSL_FUNC_CIPHER_NEWCTX, OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS, OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
     OSSL_FUNC_CIPHER_UPDATE,
 };
+use crate::evp::mac::EVP_MAC_CTX_free;
 use crate::modes::ccm::{
     CRYPTO_ccm128_aad, CRYPTO_ccm128_decrypt, CRYPTO_ccm128_encrypt, CRYPTO_ccm128_init,
     CRYPTO_ccm128_setiv, CRYPTO_ccm128_tag, CcmCtx,
@@ -379,15 +380,25 @@ struct ProvSkey {
     length: usize,
 }
 
+/// The `bits` lane, read.
+///
+/// # Safety
+/// `ctx` is a live, aligned `ProvCipherCtx` that this call may read for the duration of the
+/// borrow. The token/context owner must keep it alive and must not mutate it concurrently.
 #[inline]
-fn bits(ctx: *const ProvCipherCtx) -> c_uint {
-    // SAFETY: the caller holds a live context.
+unsafe fn bits(ctx: *const ProvCipherCtx) -> c_uint {
+    // SAFETY: the caller's contract.
     unsafe { (*ctx).bits }
 }
 
+/// The `bits` lane, written.
+///
+/// # Safety
+/// `ctx` is a live, aligned `ProvCipherCtx` that this call may exclusively borrow for the
+/// duration of the call; no other reference may alias it while the write happens.
 #[inline]
-fn bits_set(ctx: *mut ProvCipherCtx, mask: c_uint, on: bool) {
-    // SAFETY: the caller holds a live context.
+unsafe fn bits_set(ctx: *mut ProvCipherCtx, mask: c_uint, on: bool) {
+    // SAFETY: the caller's contract.
     unsafe {
         if on {
             (*ctx).bits |= mask;
@@ -2704,9 +2715,10 @@ unsafe extern "C" fn cipher_hw_aes_initkey(
 /// # Safety
 /// The `PROV_CIPHER_HW::copyctx` contract.
 unsafe extern "C" fn cipher_hw_aes_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
-    // SAFETY: the caller's contract; both are `PROV_AES_CTX`.
+    // SAFETY: the caller's contract; both are `PROV_AES_CTX`. `ptr::copy` is the defined
+    // equivalent of the authority's `*dctx = *sctx`, including a self-copy.
     unsafe {
-        ptr::copy_nonoverlapping(src.cast::<ProvAesCtx>(), dst.cast::<ProvAesCtx>(), 1);
+        ptr::copy(src.cast::<ProvAesCtx>(), dst.cast::<ProvAesCtx>(), 1);
         (*dst.cast::<ProvAesCtx>()).base.ks =
             ptr::addr_of!((*dst.cast::<ProvAesCtx>()).ks.ks).cast();
     }
@@ -2752,9 +2764,10 @@ unsafe extern "C" fn cipher_hw_camellia_copyctx(
     dst: *mut ProvCipherCtx,
     src: *const ProvCipherCtx,
 ) {
-    // SAFETY: the caller's contract; both are `PROV_CAMELLIA_CTX`.
+    // SAFETY: the caller's contract; both are `PROV_CAMELLIA_CTX`. `ptr::copy` is the defined
+    // equivalent of the authority's `*dctx = *sctx`, including a self-copy.
     unsafe {
-        ptr::copy_nonoverlapping(
+        ptr::copy(
             src.cast::<ProvCamelliaCtx>(),
             dst.cast::<ProvCamelliaCtx>(),
             1,
@@ -2814,9 +2827,10 @@ pub(crate) unsafe extern "C" fn cipher_hw_tdes_copyctx(
     dst: *mut ProvCipherCtx,
     src: *const ProvCipherCtx,
 ) {
-    // SAFETY: the caller's contract; both are `PROV_TDES_CTX`.
+    // SAFETY: the caller's contract; both are `PROV_TDES_CTX`. `ptr::copy` is the defined
+    // equivalent of the authority's `*dctx = *sctx`, including a self-copy.
     unsafe {
-        ptr::copy_nonoverlapping(src.cast::<ProvTdesCtx>(), dst.cast::<ProvTdesCtx>(), 1);
+        ptr::copy(src.cast::<ProvTdesCtx>(), dst.cast::<ProvTdesCtx>(), 1);
         (*dst.cast::<ProvTdesCtx>()).base.ks =
             ptr::addr_of!((*dst.cast::<ProvTdesCtx>()).tks).cast();
     }
@@ -3815,7 +3829,10 @@ unsafe extern "C" fn aes_wrap_dinit(
 /// `aes_wrap_cipher_internal` — `cipher_aes_wrp.c:164-222`.
 ///
 /// # Safety
-/// `vctx` is live; `out`/`input` as the caller's contract.
+/// `vctx` is live; `input` is readable for `inlen`; and `out`, when non-NULL, is writable for the
+/// whole extent this call produces: `up8(inlen) + 8` on the encrypting arm (`inlen + 8` when
+/// padding is off) and `inlen - 8` on the decrypting arm. [`aes_wrap_cipher`] establishes that
+/// extent from `outsize` before calling this helper.
 unsafe fn aes_wrap_cipher_internal(
     vctx: *mut c_void,
     out: *mut c_uchar,
@@ -3908,6 +3925,16 @@ unsafe extern "C" fn aes_wrap_final(
 
 /// `aes_wrap_cipher` — `cipher_aes_wrp.c:234-260`.
 ///
+/// The authority checks only `outsize < inl` (`cipher_aes_wrp.c:249`). That is enough for the
+/// decrypting arm but not for encryption, which writes `up8(inl) + 8` with padding (or `inl + 8`
+/// without). The crate keeps the authority's check and adds the actual write-extent check, a
+/// deliberate memory-safety improvement recorded in `docs/DECISIONS.md` (D561).
+///
+/// The added check runs only where the authority's helper would write: `input == NULL` returns 0
+/// before any write (`:174`), `out == NULL` is the size-query arm (`:203`), and the input-length
+/// refusals (`:178-192`) precede the write. It therefore cannot preempt either a size query or an
+/// `INVALID_INPUT_LENGTH` result.
+///
 /// # Safety
 /// As the dispatch's `update`: `out` is writable for `outsize` bytes and `input` readable for
 /// `inl`.
@@ -3930,6 +3957,31 @@ unsafe extern "C" fn aes_wrap_cipher(
         }
         if outsize < inl {
             return fail_at(&err_sites::PROV_CIPHER_AES_WRP_250);
+        }
+        // The authority's check above covers decryption (`inl - 8`) but not the encrypting arm's
+        // `inl + 8` prefix or the padded arm's `up8(inl) + 8`. Enforce that extent only for a
+        // write the authority's helper would actually perform. Its order is: NULL `in` -> 0
+        // (`cipher_aes_wrp.c:174`), input-length refusals (`:178-192`), NULL `out` size query
+        // (`:203`), then the write. Skipping the added check in the first three cases keeps the
+        // authority's result and error precedence.
+        let ctx = vctx.cast::<ProvCipherCtx>();
+        let enc = bits(ctx) & CTX_ENC != 0;
+        let pad = bits(ctx) & CTX_PAD != 0;
+        let valid_input = inl <= c_int::MAX as usize
+            && (enc || (inl >= 16 && inl & 0x7 == 0))
+            && (pad || inl & 0x7 == 0);
+        if !input.is_null() && !out.is_null() && valid_input {
+            let required = if enc {
+                let n = if pad { inl.div_ceil(8) * 8 } else { inl };
+                n.checked_add(8)
+            } else {
+                inl.checked_sub(8)
+            };
+            if let Some(required) = required {
+                if outsize < required {
+                    return fail_at(&err_sites::PROV_CIPHER_AES_WRP_250);
+                }
+            }
         }
         // `size_t len` in the authority, assigned from an `int`-returning callee: a refusal
         // that returns `-1` becomes `SIZE_MAX`, `len <= 0` is then false, and the row answers
@@ -5015,9 +5067,10 @@ unsafe extern "C" fn cipher_hw_aes_xts_generic_initkey(
 /// # Safety
 /// The `PROV_CIPHER_HW::copyctx` contract; both are `PROV_AES_XTS_CTX`.
 unsafe extern "C" fn cipher_hw_aes_xts_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
-    // SAFETY: the caller's contract; both are `PROV_AES_XTS_CTX`.
+    // SAFETY: the caller's contract; both are `PROV_AES_XTS_CTX`. `ptr::copy` is the defined
+    // equivalent of the authority's `*dctx = *sctx`, including a self-copy.
     unsafe {
-        ptr::copy_nonoverlapping(src.cast::<ProvAesXtsCtx>(), dst.cast::<ProvAesXtsCtx>(), 1);
+        ptr::copy(src.cast::<ProvAesXtsCtx>(), dst.cast::<ProvAesXtsCtx>(), 1);
         let d = dst.cast::<ProvAesXtsCtx>();
         (*d).xts.key1 = ptr::addr_of_mut!((*d).ks1.ks).cast();
         (*d).xts.key2 = ptr::addr_of_mut!((*d).ks2.ks).cast();
@@ -5618,9 +5671,10 @@ unsafe extern "C" fn cipher_hw_sm4_xts_generic_initkey(
 /// # Safety
 /// The `PROV_CIPHER_HW::copyctx` contract; both are `ProvSm4XtsCtx`.
 unsafe extern "C" fn cipher_hw_sm4_xts_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
-    // SAFETY: the caller's contract; both are `PROV_SM4_XTS_CTX`.
+    // SAFETY: the caller's contract; both are `PROV_SM4_XTS_CTX`. `ptr::copy` is the defined
+    // equivalent of the authority's `*dctx = *sctx`, including a self-copy.
     unsafe {
-        ptr::copy_nonoverlapping(src.cast::<ProvSm4XtsCtx>(), dst.cast::<ProvSm4XtsCtx>(), 1);
+        ptr::copy(src.cast::<ProvSm4XtsCtx>(), dst.cast::<ProvSm4XtsCtx>(), 1);
         let d = dst.cast::<ProvSm4XtsCtx>();
         (*d).xts.key1 = ptr::addr_of_mut!((*d).ks1).cast();
         (*d).xts.key2 = ptr::addr_of_mut!((*d).ks2).cast();
@@ -6264,6 +6318,12 @@ static AES_OCB_HW: ProvCipherHw = ProvCipherHw {
 /// (`cipher_aes_ocb.c:332-349`), so the hw table has no `copyctx` to offer. The never-called stub
 /// stands in for the authority's `NULL` field.
 ///
+/// Reachability: `AES_OCB_FUNCTIONS` registers `aes_ocb_dupctx` for
+/// `OSSL_FUNC_CIPHER_DUPCTX` (`src/provider/cipher.rs`, the `aes_ocb_functions!` dispatch table),
+/// so the OCB row never enters `aes_dupctx`/`camellia_dupctx`/`tdes_dupctx` or the XTS/SM4/ARIA
+/// duplicate bodies, which are the only readers of `ProvCipherHw::copyctx`. The stub body is
+/// therefore empty and performs no copy at all (in particular, no `copy_nonoverlapping`).
+///
 /// # Safety
 /// Never called.
 unsafe extern "C" fn cipher_hw_aes_ocb_copyctx_unused(
@@ -6631,7 +6691,9 @@ unsafe extern "C" fn aes_ocb_dupctx(vctx: *mut c_void) -> *mut c_void {
         ) else {
             return ptr::null_mut();
         };
-        ptr::copy_nonoverlapping(in_, ret.as_ptr(), 1);
+        // `*ret = *in` is the authority's whole-context assignment; `ptr::copy` is the defined
+        // Rust equivalent, and the copy is a fresh `CRYPTO_malloc` block distinct from `in_`.
+        ptr::copy(in_, ret.as_ptr(), 1);
         if aes_generic_ocb_copy_ctx(ret.as_ptr(), in_) == 0 {
             return ptr::null_mut();
         }
@@ -10287,12 +10349,17 @@ unsafe fn aes_siv_initkey(vctx: *mut c_void, key: *const c_uchar, keylen: usize)
 ///
 /// # Safety
 /// The `PROV_CIPHER_HW_AES_SIV::dupctx` contract; `in_vctx` and `out_vctx` are live
-/// `PROV_AES_SIV_CTX`es.
+/// `PROV_AES_SIV_CTX`es. A self-duplicate returns 0 before acquiring anything, because the struct
+/// copy would clear the source's embedded pointers.
 unsafe fn aes_siv_dupctx(in_vctx: *mut c_void, out_vctx: *mut c_void) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
         let in_ = in_vctx.cast::<ProvAesSivCtx>();
         let out = out_vctx.cast::<ProvAesSivCtx>();
+
+        if core::ptr::eq(in_, out) {
+            return 0;
+        }
 
         if !(*in_).cbc.is_null() && EVP_CIPHER_up_ref((*in_).cbc) == 0 {
             return 0;
@@ -10302,12 +10369,22 @@ unsafe fn aes_siv_dupctx(in_vctx: *mut c_void, out_vctx: *mut c_void) -> c_int {
             return 0;
         }
 
-        // SAFETY: the bitwise copy C's `*out = *in` performs; both are live `PROV_AES_SIV_CTX`es.
-        ptr::copy_nonoverlapping(in_, out, 1);
+        // SAFETY: the bitwise copy C's `*out = *in` performs; both are live `PROV_AES_SIV_CTX`es
+        // and the identity case was refused above.
+        ptr::copy(in_, out, 1);
         (*out).siv.cipher_ctx = ptr::null_mut();
         (*out).siv.mac_ctx_init = ptr::null_mut();
         (*out).siv.mac = ptr::null_mut();
         if ossl_siv128_copy_ctx(ptr::addr_of_mut!((*out).siv), ptr::addr_of_mut!((*in_).siv)) == 0 {
+            // The caller releases the failed duplicate with a plain `CRYPTO_free` (`OwnedRaw`),
+            // which does not run `aes_siv_cleanup`. Release everything this attempt acquired:
+            // the two cipher references and the partially built embedded context. On every
+            // failure return of `ossl_siv128_copy_ctx`, `siv.mac` is either NULL or the source's
+            // unowned pointer, so it is deliberately not freed here.
+            EVP_MAC_CTX_free((*out).siv.mac_ctx_init);
+            EVP_CIPHER_CTX_free((*out).siv.cipher_ctx);
+            EVP_CIPHER_free((*out).cbc);
+            EVP_CIPHER_free((*out).ctr);
             return 0;
         }
 
@@ -11103,9 +11180,14 @@ unsafe fn aux_set_tls_ver(ctx: *mut ProvAesHmacShaCtx, v: c_uint) {
 }
 
 /// `ctx->base.enc` — the `enc` bitfield.
+///
+/// # Safety
+/// `ctx` is a live, aligned `ProvCipherCtx` that this call may read for the duration of the
+/// borrow.
 #[inline]
-fn ctx_enc(ctx: *const ProvCipherCtx) -> bool {
-    bits(ctx) & CTX_ENC != 0
+unsafe fn ctx_enc(ctx: *const ProvCipherCtx) -> bool {
+    // SAFETY: the caller's contract.
+    unsafe { bits(ctx) & CTX_ENC != 0 }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -11178,20 +11260,21 @@ pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_init_key(
     }
 }
 
-/// `aesni_cbc_hmac_sha1_set_mac_key` — `cipher_aes_cbc_hmac_sha1_hw.c:628-656`.
+/// The body of `aesni_cbc_hmac_sha1_set_mac_key` — `cipher_aes_cbc_hmac_sha1_hw.c:628-656` —
+/// with the 64-byte ipad/opad scratch supplied by the caller so a test can observe its final
+/// state. The authority's final `OPENSSL_cleanse(hmac_key, sizeof(hmac_key))` is the crate's
+/// volatile-write primitive, not a removable `write_bytes` dead store.
 ///
 /// # Safety
-/// `vctx` is a `PROV_AES_HMAC_SHA1_CTX`; `mac` is readable for `len` bytes.
-pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_set_mac_key(
-    vctx: *mut c_void,
+/// `ctx` is a live `PROV_AES_HMAC_SHA1_CTX`; `mac` is readable for `len` bytes.
+unsafe fn aesni_cbc_hmac_sha1_set_mac_key_body(
+    ctx: *mut ProvAesHmacSha1Ctx,
     mac: *const c_uchar,
     len: usize,
+    hmac_key: &mut [u8; 64],
 ) {
     // SAFETY: the caller's contract.
     unsafe {
-        let ctx = vctx.cast::<ProvAesHmacSha1Ctx>();
-        let mut hmac_key = [0u8; 64];
-
         if len > hmac_key.len() {
             SHA1_Init(ptr::addr_of_mut!((*ctx).head));
             sha1_update(ptr::addr_of_mut!((*ctx).head), mac.cast(), len);
@@ -11221,8 +11304,26 @@ pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_set_mac_key(
             hmac_key.len(),
         );
 
-        // `OPENSSL_cleanse(hmac_key, sizeof(hmac_key))`.
-        ptr::write_bytes(hmac_key.as_mut_ptr(), 0, hmac_key.len());
+        // `OPENSSL_cleanse(hmac_key, sizeof(hmac_key))` — the volatile-write primitive, so the
+        // compiler cannot turn the last use into a removable dead store.
+        OPENSSL_cleanse(hmac_key.as_mut_ptr().cast(), hmac_key.len());
+    }
+}
+
+/// `aesni_cbc_hmac_sha1_set_mac_key` — `cipher_aes_cbc_hmac_sha1_hw.c:628-656`.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA1_CTX`; `mac` is readable for `len` bytes.
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_set_mac_key(
+    vctx: *mut c_void,
+    mac: *const c_uchar,
+    len: usize,
+) {
+    // SAFETY: the caller's contract; `hmac_key` is this frame's scratch and is cleansed before it
+    // goes out of scope.
+    unsafe {
+        let mut hmac_key = [0u8; 64];
+        aesni_cbc_hmac_sha1_set_mac_key_body(vctx.cast(), mac, len, &mut hmac_key);
     }
 }
 
@@ -11818,20 +11919,20 @@ pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_init_key(
     }
 }
 
-/// `aesni_cbc_hmac_sha256_set_mac_key` — `cipher_aes_cbc_hmac_sha256_hw.c:679-708`.
+/// The body of `aesni_cbc_hmac_sha256_set_mac_key` — `cipher_aes_cbc_hmac_sha256_hw.c:679-708`.
+/// The authority's `OPENSSL_cleanse` is kept as the crate's volatile-write primitive; the scratch
+/// is caller-supplied so a test can observe that it is zeroed before return.
 ///
 /// # Safety
-/// `vctx` is a `PROV_AES_HMAC_SHA256_CTX`; `mackey` is readable for `len` bytes.
-pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_set_mac_key(
-    vctx: *mut c_void,
+/// `ctx` is a live `PROV_AES_HMAC_SHA256_CTX`; `mackey` is readable for `len` bytes.
+unsafe fn aesni_cbc_hmac_sha256_set_mac_key_body(
+    ctx: *mut ProvAesHmacSha256Ctx,
     mackey: *const c_uchar,
     len: usize,
+    hmac_key: &mut [u8; 64],
 ) {
     // SAFETY: the caller's contract.
     unsafe {
-        let ctx = vctx.cast::<ProvAesHmacSha256Ctx>();
-        let mut hmac_key = [0u8; 64];
-
         if len > hmac_key.len() {
             SHA256_Init(ptr::addr_of_mut!((*ctx).head));
             sha256_update(ptr::addr_of_mut!((*ctx).head), mackey.cast(), len);
@@ -11861,7 +11962,25 @@ pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_set_mac_key(
             hmac_key.len(),
         );
 
-        ptr::write_bytes(hmac_key.as_mut_ptr(), 0, hmac_key.len());
+        // `OPENSSL_cleanse(hmac_key, sizeof(hmac_key))`.
+        OPENSSL_cleanse(hmac_key.as_mut_ptr().cast(), hmac_key.len());
+    }
+}
+
+/// `aesni_cbc_hmac_sha256_set_mac_key` — `cipher_aes_cbc_hmac_sha256_hw.c:679-708`.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA256_CTX`; `mackey` is readable for `len` bytes.
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_set_mac_key(
+    vctx: *mut c_void,
+    mackey: *const c_uchar,
+    len: usize,
+) {
+    // SAFETY: the caller's contract; `hmac_key` is this frame's scratch and is cleansed before it
+    // goes out of scope.
+    unsafe {
+        let mut hmac_key = [0u8; 64];
+        aesni_cbc_hmac_sha256_set_mac_key_body(vctx.cast(), mackey, len, &mut hmac_key);
     }
 }
 
@@ -13232,15 +13351,23 @@ const _: () = {
 };
 
 /// The six bit accessors, so the bodies below read the way the authority's do.
+///
+/// # Safety
+/// `ctx` is a live, aligned `ProvAesGcmSivCtx` that this call may read for the duration of the
+/// borrow.
 #[inline]
-fn gsiv_flag(ctx: *const ProvAesGcmSivCtx, mask: c_uint) -> bool {
-    // SAFETY: the caller holds a live context.
+unsafe fn gsiv_flag(ctx: *const ProvAesGcmSivCtx, mask: c_uint) -> bool {
+    // SAFETY: the caller's contract.
     unsafe { (*ctx).flags & mask != 0 }
 }
 /// Set one bitfield.
+///
+/// # Safety
+/// `ctx` is a live, aligned `ProvAesGcmSivCtx` that this call may exclusively borrow for the
+/// duration of the call.
 #[inline]
-fn gsiv_set(ctx: *mut ProvAesGcmSivCtx, mask: c_uint, on: bool) {
-    // SAFETY: the caller holds a live context.
+unsafe fn gsiv_set(ctx: *mut ProvAesGcmSivCtx, mask: c_uint, on: bool) {
+    // SAFETY: the caller's contract.
     unsafe {
         if on {
             (*ctx).flags |= mask;
@@ -15734,18 +15861,26 @@ pub(crate) struct ProvChacha20Poly1305Ctx {
 }
 
 /// The two-bit lane, read.
+///
+/// # Safety
+/// `ctx` is a live, aligned `ProvChacha20Poly1305Ctx` that this call may read for the duration of
+/// the borrow.
 #[inline]
-fn cpp_flag(ctx: *const ProvChacha20Poly1305Ctx, mask: c_uint) -> bool {
-    // SAFETY: the caller holds a live context.
+unsafe fn cpp_flag(ctx: *const ProvChacha20Poly1305Ctx, mask: c_uint) -> bool {
+    // SAFETY: the caller's contract.
     unsafe { (*ctx).flags & mask != 0 }
 }
 
 /// The two-bit lane, written — **one bit at a time**, because the authority's `ctx->aad = 0` assigns
 /// the `aad` bitfield and leaves `mac_inited` alone. Clearing the whole lane would be a different
 /// program.
+///
+/// # Safety
+/// `ctx` is a live, aligned `ProvChacha20Poly1305Ctx` that this call may exclusively borrow for
+/// the duration of the call.
 #[inline]
-fn cpp_set(ctx: *mut ProvChacha20Poly1305Ctx, mask: c_uint, on: bool) {
-    // SAFETY: the caller holds a live context.
+unsafe fn cpp_set(ctx: *mut ProvChacha20Poly1305Ctx, mask: c_uint, on: bool) {
+    // SAFETY: the caller's contract.
     unsafe {
         if on {
             (*ctx).flags |= mask;
@@ -17235,9 +17370,10 @@ unsafe extern "C" fn cipher_hw_sm4_initkey(
 /// # Safety
 /// The hw contract; both contexts are live and `dst`'s row fields are uninitialised.
 unsafe extern "C" fn cipher_hw_sm4_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
-    // SAFETY: the caller's contract.
+    // SAFETY: the caller's contract. `ptr::copy` is the defined equivalent of the authority's
+    // `*dctx = *sctx`, including a self-copy.
     unsafe {
-        core::ptr::copy_nonoverlapping(src.cast::<ProvSm4Ctx>(), dst.cast::<ProvSm4Ctx>(), 1);
+        core::ptr::copy(src.cast::<ProvSm4Ctx>(), dst.cast::<ProvSm4Ctx>(), 1);
     }
 }
 
@@ -17562,9 +17698,10 @@ unsafe extern "C" fn cipher_hw_aria_initkey(
 /// # Safety
 /// The hw contract; both contexts are live and `dst`'s row fields are uninitialised.
 unsafe extern "C" fn cipher_hw_aria_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
-    // SAFETY: the caller's contract.
+    // SAFETY: the caller's contract. `ptr::copy` is the defined equivalent of the authority's
+    // `*dctx = *sctx`, including a self-copy.
     unsafe {
-        ptr::copy_nonoverlapping(src.cast::<ProvAriaCtx>(), dst.cast::<ProvAriaCtx>(), 1);
+        ptr::copy(src.cast::<ProvAriaCtx>(), dst.cast::<ProvAriaCtx>(), 1);
     }
 }
 
@@ -20734,9 +20871,10 @@ pub(crate) mod legacy {
     /// # Safety
     /// The `PROV_CIPHER_HW::copyctx` contract.
     unsafe extern "C" fn cipher_hw_des_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
-        // SAFETY: both are `PROV_DES_CTX`.
+        // SAFETY: both are `PROV_DES_CTX`; `ptr::copy` is the defined equivalent of the
+        // authority's `*dctx = *sctx`, including a self-copy.
         unsafe {
-            ptr::copy_nonoverlapping(src.cast::<ProvDesCtx>(), dst.cast::<ProvDesCtx>(), 1);
+            ptr::copy(src.cast::<ProvDesCtx>(), dst.cast::<ProvDesCtx>(), 1);
             (*dst.cast::<ProvDesCtx>()).base.ks =
                 ptr::addr_of!((*dst.cast::<ProvDesCtx>()).dks).cast();
         }
@@ -22693,5 +22831,285 @@ mod tests {
         // `Drop` runs the AAD release (NULL, length 0), skips `hw->clean_ctx`, and releases the
         // block exactly once through `OwnedCtx`.
         drop(gsiv);
+    }
+
+    /// C183/C187 regression: the authority's `outsize < inl` check accepts a buffer that cannot
+    /// hold the encrypting arm's padded output. With encryption and padding on, a nine-byte input
+    /// produces `up8(9) + 8 == 24` bytes, so a 16-byte destination must be refused before the wrap
+    /// function runs. The buffer is filled with a canary to prove nothing was written.
+    #[test]
+    fn aes_wrap_cipher_refuses_a_padded_output_extent() {
+        let Some(wrap) = OwnedCtx::<ProvAesWrapCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let ctx = wrap.as_ptr().cast::<ProvCipherCtx>();
+        // SAFETY: `wrap` owns a live, zero-initialised `ProvAesWrapCtx`; only the `bits` lane is
+        // touched, and this frame has exclusive access to it.
+        unsafe {
+            bits_set(ctx, CTX_ENC, true);
+            bits_set(ctx, CTX_PAD, true);
+        }
+
+        let input = [0x5au8; 9];
+        let mut out = [0xaau8; 16];
+        let mut outl = usize::MAX;
+        // SAFETY: the context is live and the buffers are this frame's; `out` is deliberately
+        // shorter than the padded output so the extent check must fire before any write.
+        let ret = unsafe {
+            aes_wrap_cipher(
+                wrap.as_ptr().cast(),
+                out.as_mut_ptr(),
+                &mut outl,
+                out.len(),
+                input.as_ptr(),
+                input.len(),
+            )
+        };
+        assert_eq!(ret, 0, "an under-sized destination must be refused");
+        assert_eq!(outl, usize::MAX, "the failure must not publish a length");
+        assert!(
+            out.iter().all(|&b| b == 0xaa),
+            "the refusal must not write through the caller's buffer"
+        );
+    }
+
+    /// The authority's size-query arm is `out == NULL` (`cipher_aes_wrp.c:203`), not a NULL
+    /// input. The added extent check must not preempt it: a query carries no writable buffer, so
+    /// `outsize` may be smaller than the would-be output. Both the no-padding (`inl + 8`) and the
+    /// padded (`up8(inl) + 8`) query results are observed.
+    #[test]
+    fn aes_wrap_cipher_length_query_is_not_preempted() {
+        let Some(wrap) = OwnedCtx::<ProvAesWrapCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let ctx = wrap.as_ptr().cast::<ProvCipherCtx>();
+        // SAFETY: `wrap` owns a live context and this frame has exclusive access to its `bits`.
+        unsafe { bits_set(ctx, CTX_ENC, true) };
+
+        let input = [0x5au8; 9];
+        let mut outl = 0usize;
+        // No padding, eight-byte input: the authority's query answer is `inl + 8`.
+        // SAFETY: `out` is NULL (the query arm) and `input` is readable for `inl`.
+        let ret = unsafe {
+            aes_wrap_cipher(
+                wrap.as_ptr().cast(),
+                ptr::null_mut(),
+                &mut outl,
+                8,
+                input.as_ptr(),
+                8,
+            )
+        };
+        assert_eq!(ret, 1, "the size query must succeed");
+        assert_eq!(outl, 16, "no-padding query answer is inl + 8");
+
+        // Padding on, nine-byte input: the query answer is `up8(9) + 8 == 24`.
+        // SAFETY: as above; this frame still owns the context exclusively.
+        unsafe { bits_set(ctx, CTX_PAD, true) };
+        let mut padded_outl = 0usize;
+        // SAFETY: `out` is NULL (the query arm) and `input` is readable for `inl`.
+        let ret = unsafe {
+            aes_wrap_cipher(
+                wrap.as_ptr().cast(),
+                ptr::null_mut(),
+                &mut padded_outl,
+                9,
+                input.as_ptr(),
+                9,
+            )
+        };
+        assert_eq!(ret, 1, "the padded size query must succeed");
+        assert_eq!(padded_outl, 24, "padded query answer is up8(inl) + 8");
+    }
+
+    /// A NULL input is not a size query: the authority's helper returns 0 before any write or
+    /// length check (`cipher_aes_wrp.c:174`). The added extent check must not turn that into an
+    /// `OUTPUT_BUFFER_TOO_SMALL` error.
+    #[test]
+    fn aes_wrap_cipher_null_input_returns_zero() {
+        let Some(wrap) = OwnedCtx::<ProvAesWrapCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let ctx = wrap.as_ptr().cast::<ProvCipherCtx>();
+        // SAFETY: `wrap` owns a live context and this frame has exclusive access to its `bits`.
+        unsafe { bits_set(ctx, CTX_ENC, true) };
+
+        let mut out = [0xaau8; 16];
+        let mut outl = usize::MAX;
+        crate::runtime::err::ERR_clear_error();
+        // SAFETY: `input` is NULL, which the contract permits; `out` is writable for `outsize`.
+        let ret = unsafe {
+            aes_wrap_cipher(
+                wrap.as_ptr().cast(),
+                out.as_mut_ptr(),
+                &mut outl,
+                8,
+                ptr::null(),
+                8,
+            )
+        };
+        assert_eq!(ret, 0, "a NULL input returns 0, not a length");
+        assert_eq!(
+            crate::runtime::err::peek_last_reason(),
+            0,
+            "a NULL input must not raise an output-extent error"
+        );
+        assert!(
+            out.iter().all(|&b| b == 0xaa),
+            "a NULL input must not write through the caller's buffer"
+        );
+    }
+
+    /// Error precedence: for an invalid no-padding input the authority reaches its own
+    /// `INVALID_INPUT_LENGTH` (`cipher_aes_wrp.c:190`) before any write. The added extent check
+    /// must not answer `OUTPUT_BUFFER_TOO_SMALL` first. The authority's `-1` becomes `SIZE_MAX` in
+    /// `aes_wrap_cipher`'s `size_t len`, so the row answers success with `*outl = SIZE_MAX` while
+    /// the error is queued -- the quirk the helper's own comment records.
+    #[test]
+    fn aes_wrap_cipher_keeps_invalid_input_error_precedence() {
+        let Some(wrap) = OwnedCtx::<ProvAesWrapCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let ctx = wrap.as_ptr().cast::<ProvCipherCtx>();
+        // SAFETY: `wrap` owns a live context; encryption without padding is the arm under test.
+        unsafe {
+            bits_set(ctx, CTX_ENC, true);
+            bits_set(ctx, CTX_PAD, false);
+        }
+
+        let input = [0x5au8; 9];
+        let mut out = [0xaau8; 16];
+        let mut outl = 0usize;
+        crate::runtime::err::ERR_clear_error();
+        // SAFETY: the context is live and both buffers are this frame's. `outsize` passes the
+        // authority's `outsize < inl` check, so the helper's validation arm is reached.
+        let ret = unsafe {
+            aes_wrap_cipher(
+                wrap.as_ptr().cast(),
+                out.as_mut_ptr(),
+                &mut outl,
+                9,
+                input.as_ptr(),
+                input.len(),
+            )
+        };
+        assert_eq!(ret, 1, "the authority's SIZE_MAX arm reports success");
+        assert_eq!(outl, usize::MAX, "the refused call publishes SIZE_MAX");
+        assert_eq!(
+            crate::runtime::err::peek_last_reason(),
+            err_sites::PROV_CIPHER_AES_WRP_190.reason as core::ffi::c_ulong,
+            "the helper's INVALID_INPUT_LENGTH must win over the extent check"
+        );
+        assert!(
+            out.iter().all(|&b| b == 0xaa),
+            "the refused call must not write through the caller's buffer"
+        );
+    }
+
+    /// C516/C517 regression: the authority ends both set-MAC-key bodies with
+    /// `OPENSSL_cleanse(hmac_key, sizeof(hmac_key))`. The scratch is supplied by this test so the
+    /// post-call bytes are observable; they must all be zero, not the pre-filled canary.
+    #[test]
+    fn set_mac_key_cleanses_its_scratch() {
+        let mac = [0x5au8; 48];
+
+        let Some(sha1) = OwnedCtx::<ProvAesHmacSha1Ctx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let mut sha1_scratch = [0xaau8; 64];
+        // SAFETY: `sha1` owns a live context and `mac`/`sha1_scratch` are this frame's buffers.
+        unsafe {
+            aesni_cbc_hmac_sha1_set_mac_key_body(
+                sha1.as_ptr(),
+                mac.as_ptr(),
+                mac.len(),
+                &mut sha1_scratch,
+            );
+        }
+        assert_eq!(
+            sha1_scratch, [0u8; 64],
+            "the SHA-1 ipad/opad scratch must be cleansed before return"
+        );
+
+        let Some(sha256) = OwnedCtx::<ProvAesHmacSha256Ctx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let mut sha256_scratch = [0xaau8; 64];
+        // SAFETY: `sha256` owns a live context and `mac`/`sha256_scratch` are this frame's buffers.
+        unsafe {
+            aesni_cbc_hmac_sha256_set_mac_key_body(
+                sha256.as_ptr(),
+                mac.as_ptr(),
+                mac.len(),
+                &mut sha256_scratch,
+            );
+        }
+        assert_eq!(
+            sha256_scratch, [0u8; 64],
+            "the SHA-256 ipad/opad scratch must be cleansed before return"
+        );
+    }
+
+    /// C122/C123/C126/C132 regression: `IMPLEMENT_CIPHER_HW_COPYCTX` is `*dctx = *sctx`, which is
+    /// defined for `dst == src`. The crate's `ptr::copy` must keep that property while still
+    /// repairing the destination's key-schedule pointer.
+    #[test]
+    fn copyctx_self_copy_is_defined() {
+        let Some(aes) = OwnedCtx::<ProvAesCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let aes_ctx = aes.as_ptr().cast::<ProvCipherCtx>();
+        // SAFETY: `aes` owns a live `ProvAesCtx`; a self-copy is the case under test.
+        unsafe {
+            cipher_hw_aes_copyctx(aes_ctx, aes_ctx);
+            assert_eq!(
+                (*aes_ctx.cast::<ProvAesCtx>()).base.ks,
+                ptr::addr_of!((*aes_ctx.cast::<ProvAesCtx>()).ks.ks).cast()
+            );
+        }
+
+        let Some(tdes) = OwnedCtx::<ProvTdesCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let tdes_ctx = tdes.as_ptr().cast::<ProvCipherCtx>();
+        // SAFETY: `tdes` owns a live `ProvTdesCtx`; a self-copy is the case under test.
+        unsafe {
+            cipher_hw_tdes_copyctx(tdes_ctx, tdes_ctx);
+            assert_eq!(
+                (*tdes_ctx.cast::<ProvTdesCtx>()).base.ks,
+                ptr::addr_of!((*tdes_ctx.cast::<ProvTdesCtx>()).tks).cast()
+            );
+        }
+    }
+
+    /// C463/C464: a duplicate onto its own block would clear the source's embedded SIV pointers
+    /// after the copy. A zeroed context would also fail later in `ossl_siv128_copy_ctx`, so this
+    /// test installs a real `cipher_ctx` sentinel: the guard must return before clearing it, which
+    /// distinguishes the guard from the incidental failure of the zero state.
+    #[test]
+    fn siv_dupctx_refuses_a_self_duplicate() {
+        let Some(siv) = OwnedCtx::<ProvAesSivCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let ctx = siv.as_ptr();
+        // SAFETY: `ctx` is a live, zero-initialised context owned by `siv`.
+        let sentinel = EVP_CIPHER_CTX_new();
+        assert!(!sentinel.is_null(), "the sentinel context must allocate");
+        // SAFETY: `ctx` is live and this frame has exclusive access; the sentinel is a real
+        // `EVP_CIPHER_CTX` the guard must leave untouched.
+        unsafe { (*ctx).siv.cipher_ctx = sentinel };
+
+        // SAFETY: `siv` owns a live context; the identity arm reads only addresses and must not
+        // touch the embedded state.
+        let ret = unsafe { aes_siv_dupctx(ctx.cast(), ctx.cast()) };
+        assert_eq!(ret, 0, "a self-duplicate must be refused");
+        // SAFETY: `ctx` is still live and owned by `siv`.
+        let observed = unsafe { (*ctx).siv.cipher_ctx };
+        assert_eq!(
+            observed, sentinel,
+            "the guard must return before clearing the source's embedded context"
+        );
+        // SAFETY: the sentinel is this frame's allocation and has not been handed out.
+        unsafe { EVP_CIPHER_CTX_free(sentinel) };
     }
 }
