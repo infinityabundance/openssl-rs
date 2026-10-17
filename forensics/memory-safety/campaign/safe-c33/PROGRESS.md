@@ -79,7 +79,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1235** passed
+`cargo test --lib` (must pass; the established baseline is **1236** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -555,6 +555,22 @@ package.
 - Adversarial review **PASS**. Gate: `fmt` 0, clippy 0, **1235 passed / 18
   ignored**, adv-probe **18/18**. Progress: **129 of 173**.
 
+### Subphase 56 — `OwnedBlock` groups
+
+- Eleven of fifteen copies migrated: `OB-P` 7 (evp e_aes/e_aria, ec/smpl,
+  property/parse, ssl ssl_lib + statem_clnt + statem_srvr), `OB-Z` 2
+  (provider/file_store, store/store_lib), `OB-Cond` 2 (evp/digest,
+  evp/pkey_ctx).
+- New `Release::Conditional` + `unsafe adopt_conditional(ptr,num,clear,file,line)`;
+  `clear` is fixed at construction, `num <= extent` is part of the contract, and
+  `Drop` selects `CRYPTO_clear_free`/`CRYPTO_free` exactly as the old guards did.
+  Every migrated `clear` value matches the old derivation.
+- Four stay local: `x509/v3_utl` (mutable release line), `asn1/string`
+  (`CRYPTO_realloc`), `evp/pkey` and `crmf/crmf_lib` (`set_clear` after
+  construction).
+- Adversarial review **PASS**. Gate: `fmt` 0, clippy 0, **1236 passed / 18
+  ignored**, adv-probe **18/18**. Progress: **140 of 173**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -732,7 +748,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `691023373` (S-L/S-Z consolidation merged)
+**Last observed HEAD:** `209449a8b` (OwnedBlock consolidation merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -784,10 +800,12 @@ helpers in disjoint staged groups. Done: `B-R1a` (13), `B-R1b` (14), `B-R3` (4),
 `B-P` (39 of 52; 13 need shared-API extensions), `B-Z` (13), `B-L` (4 of 8;
 4 excluded), `B-CA-FL` (5), `B-CA-0` (5), `B-CF-FL` (2 of 3; `bn/rand` needs an
 owner-derived slice accessor), `OwnedStr` (30 of 33; `http_lib`, `v3_akid`,
-`bio_sock2` excluded pending mutable-release/zalloc API). Remaining: `B-P`
-exclusions (13), `B-L` exclusions (4), `B-CF-FL` (`bn/rand`), `OwnedStr`
-exclusions (3); then `OwnedBlock` (15), plus the small OwnedIkm/OwnedUniPass/
-OwnedScratch/constant-char* groups (8). Do not
+`bio_sock2` excluded pending mutable-release/zalloc API), `OwnedBlock` (11 of 15;
+`v3_utl`, `asn1/string`, `evp/pkey`, `crmf/crmf_lib` excluded pending
+mutable-release/realloc/set_clear API). Remaining: `B-P` exclusions (13), `B-L`
+exclusions (4), `B-CF-FL` (`bn/rand`), `OwnedStr` exclusions (3), `OwnedBlock`
+exclusions (4), plus the small OwnedIkm/OwnedUniPass/OwnedScratch/
+constant-char* groups (8). Do not
 touch the 26 DIFFERENT or 126 MUST-STAY-LOCAL copies. Each group needs a caller
 inventory, adversarial review and a fresh gate. Afterwards, the
 `CtxDestroy`/`CipherDestroy` shared-trait migration that unblocks the 61 local
