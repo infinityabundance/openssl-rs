@@ -59,8 +59,9 @@ use crate::rsa::{
 };
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem::CRYPTO_malloc;
 use crate::runtime::obj::{NID_mgf1, NID_sha1};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The allocation-tracking `file` argument for this unit's allocations.
 ///
@@ -84,93 +85,6 @@ const EVP_MAX_MD_SIZE: usize = 64;
 /// with, in both the add and the verifier. One file-scope copy is what the authority has, so
 /// this is one `const` rather than a literal in each body.
 const ZEROES: [u8; 8] = [0; 8];
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
-/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::adopt`] takes
-/// up the verifier's `DB` block and [`Self::adopt_cleansed`] the signer's `salt` block (both still
-/// raw pointers in the two bodies, exactly as the authority holds them), and `Drop` is the block's
-/// single release through the authority's own plain or cleansing free.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a scratch buffer.
-enum BufRelease {
-    /// The verifier's plain `OPENSSL_free(DB)` (`rsa_pss.c:152`).
-    Plain { file: *const c_char, line: c_int },
-    /// The signer's cleansing `OPENSSL_clear_free(salt, sLen)` (`rsa_pss.c:287`), which zeroes the
-    /// `num` bytes before release.
-    Cleansed {
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    },
-}
-
-impl OwnedBuf {
-    /// Adopt the verifier's `DB` block, for release by the authority's plain `OPENSSL_free`; NULL
-    /// answers `None`, the authority's own no-op `free(NULL)`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate's allocator seam produced in full and this caller owns
-    /// exclusively -- this handle's `Drop` is its single release; `file` is NULL or a NUL-terminated C
-    /// string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf {
-                ptr,
-                release: BufRelease::Plain { file, line },
-            })
-        }
-    }
-
-    /// Adopt the signer's `salt` block, for release by the authority's cleansing
-    /// `OPENSSL_clear_free(ptr, num)`; NULL answers `None`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block of at least `num` bytes the crate's allocator seam produced in
-    /// full and this caller owns exclusively -- this handle's `Drop` is its single release; `file` is
-    /// NULL or a NUL-terminated C string.
-    unsafe fn adopt_cleansed(
-        ptr: *mut c_uchar,
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf {
-                ptr,
-                release: BufRelease::Cleansed { num, file, line },
-            })
-        }
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<core::ffi::c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num, file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable for
-                // `num` bytes; `OPENSSL_clear_free` zeroes then releases it and accepts NULL.
-                unsafe { CRYPTO_clear_free(self.ptr.cast::<core::ffi::c_void>(), num, file, line) };
-            }
-        }
-    }
-}
 
 // =============================================================================================
 // The exports, and the internals they wrap
@@ -413,7 +327,7 @@ pub(crate) unsafe fn ossl_rsa_verify_PKCS1_PSS_mgf1(
         // `DB` is NULL when the first one is taken, which `OPENSSL_free` tolerates; the handle's
         // `Drop` is that release at the authority's own site.
         // SAFETY: `db` is NULL or this call's own allocation.
-        drop(OwnedBuf::adopt(db, FILE, LINE));
+        drop(OwnedBuf::adopt_plain(db, FILE, LINE));
         // SAFETY: `ctx` is NULL or this call's own object.
         EVP_MD_CTX_free(ctx);
 

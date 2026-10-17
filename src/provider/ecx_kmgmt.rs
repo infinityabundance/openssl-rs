@@ -41,7 +41,7 @@
 
 #![allow(unreachable_pub)]
 
-use core::ffi::{c_char, c_int, c_uchar, c_void, CStr};
+use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
@@ -77,9 +77,8 @@ use crate::provider::ctx::prov_libctx_of;
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_memcmp, CRYPTO_strdup, CRYPTO_zalloc,
-};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_memcmp, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_strcasecmp;
 use crate::selftest::OsslCallback;
 
@@ -242,113 +241,6 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
         unsafe {
             T::destroy_body(self.ptr.as_ptr());
             CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, T::LINE_FREE);
-        }
-    }
-}
-
-/// An owned property/secret buffer allocated through the crate's allocator seam.
-///
-/// The block stays the authority's own allocation -- a `CRYPTO_strdup` property copy or a member
-/// buffer the crate allocated. Only its *ownership* is this type: a replace site adopts the member's
-/// own raw pointer and [`Self::into_raw`] hands the replacement back, so `Drop` is its single
-/// release at the authority's own `file`/`line` (plain or cleansing, matching the `CRYPTO_*` call
-/// the authority uses at that site).
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a property/secret buffer.
-enum BufRelease {
-    /// The authority's plain `CRYPTO_free(ptr, file, line)` (the property query).
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)` (the private key).
-    Cleansed {
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_strdup(str, file, line)`, or `None` when the allocator answers NULL.
-    ///
-    /// # Safety
-    /// `str_` is NULL or NUL-terminated.
-    unsafe fn new_strdup(
-        str_: *const c_char,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<OwnedBuf> {
-        // SAFETY: `str_` is NULL or NUL-terminated per the contract.
-        let raw = unsafe { CRYPTO_strdup(str_, file, line) }.cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// Take up the plain block a member field still holds, for release by `Drop` at the authority's
-    /// own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// Take up the cleansing block a member field still holds, for release by `Drop` at the
-    /// authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated, readable for `num` bytes, that no one
-    /// else owns.
-    unsafe fn adopt_cleansed(
-        ptr: *mut c_uchar,
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr,
-            release: BufRelease::Cleansed { num, file, line },
-        })
-    }
-
-    /// Give up ownership of the block to the member field it is stored in.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num, file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_clear_free` cleanses then releases it and accepts NULL.
-                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
-            }
         }
     }
 }
@@ -1115,7 +1007,11 @@ unsafe extern "C" fn ed448_gettable_params(_provctx: *mut c_void) -> *const Ossl
 unsafe fn set_property_query(ecxkey: *mut EcxKey, propq: *const c_char) -> c_int {
     // SAFETY: `ecxkey` is live and its own `propq` is released and replaced here.
     unsafe {
-        drop(OwnedBuf::adopt((*ecxkey).propq.cast(), FILE_ECX_KMGMT, 848));
+        drop(OwnedBuf::adopt_plain(
+            (*ecxkey).propq.cast(),
+            FILE_ECX_KMGMT,
+            848,
+        ));
         (*ecxkey).propq = ptr::null_mut();
         if !propq.is_null() {
             // SAFETY: `propq` is NUL-terminated per the contract.
@@ -1479,7 +1375,11 @@ unsafe extern "C" fn ecx_gen_set_params(genctx: *mut c_void, params: *const Ossl
             if (*p.kdfpropq).data_type != OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            drop(OwnedBuf::adopt((*gctx).propq.cast(), FILE_ECX_KMGMT, 1152));
+            drop(OwnedBuf::adopt_plain(
+                (*gctx).propq.cast(),
+                FILE_ECX_KMGMT,
+                1152,
+            ));
             (*gctx).propq = ptr::null_mut();
             // SAFETY: `p.kdfpropq`'s UTF8 value is NUL-terminated.
             let Some(buf) = OwnedBuf::new_strdup((*p.kdfpropq).data.cast(), FILE_ECX_KMGMT, 1153)
@@ -1491,7 +1391,7 @@ unsafe extern "C" fn ecx_gen_set_params(genctx: *mut c_void, params: *const Ossl
 
         if !p.ikm.is_null() && (*p.ikm).data_size != 0 && !(*p.ikm).data.is_null() {
             // Release the member's previous block, then let the helper write the replacement.
-            drop(OwnedBuf::adopt(
+            drop(OwnedBuf::adopt_plain(
                 (*gctx).dhkem_ikm.cast(),
                 FILE_ECX_KMGMT,
                 1160,

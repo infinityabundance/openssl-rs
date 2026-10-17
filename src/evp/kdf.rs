@@ -62,7 +62,8 @@ use crate::provider::{
     ossl_provider_ctx, ossl_provider_free, ossl_provider_libctx, ossl_provider_up_ref, OsslProvider,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `OSSL_OP_KDF` — `include/openssl/core_dispatch.h`. The fourth operation the walk visits.
 const OSSL_OP_KDF: c_int = 4;
@@ -100,104 +101,6 @@ const LINE_FREE_DERIVE_SKEY: c_int = 262;
 // ---------------------------------------------------------------------------------------------
 // Ownership of a scratch buffer
 // ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc`/`CRYPTO_zalloc` at the authority's exact size -- a Rust
-/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::new`] and
-/// [`Self::new_zeroed`] allocate it, `Drop` is its single release, [`Self::set_release`] re-points
-/// that release at the authority's other site on the path that reaches it (`EVP_KDF_CTX_dup`'s
-/// failed reference at `:70`; `EVP_KDF_derive_SKEY`'s failed derivation at `:250` and its cleansing
-/// success release at `:262`), and [`Self::into_raw`] hands it to a consumer that takes it over
-/// (the caller's `EVP_KDF_CTX`). A NULL pointer is a valid, empty buffer whose release is the
-/// authority's own no-op `free(NULL)`.
-///
-/// The method objects -- `evp_kdf_new`'s `EVP_KDF` and `EVP_KDF_CTX_new`'s context -- are released
-/// by a *structured* body (`EVP_KDF_free`, `EVP_KDF_CTX_free`: a provider unref, a method unref and
-/// the block release) rather than a single `CRYPTO_free`, so they keep their own release functions
-/// and are not owned here.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a scratch buffer.
-enum BufRelease {
-    /// The authority's plain `CRYPTO_free(ptr, file, line)`.
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)`, which zeroes `num`
-    /// bytes first.
-    Cleansed {
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)` for a block the authority releases plainly, or `None` when
-    /// the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// `CRYPTO_zalloc(len, file, line)` for a block whose release is re-pointed before `Drop`, or
-    /// `None` when the allocator answers NULL.
-    fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_zalloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Re-point the release at the authority's other site for this block, on the path that reaches
-    /// it.
-    fn set_release(&mut self, release: BufRelease) {
-        self.release = release;
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num, file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
-                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
-            }
-        }
-    }
-}
 
 /// `OSSL_KDF_PARAM_SIZE` — `include/openssl/core_names.h`.
 const OSSL_KDF_PARAM_SIZE: *const c_char = c"size".as_ptr();
@@ -989,9 +892,13 @@ pub unsafe extern "C" fn EVP_KDF_CTX_dup(src: *const EvpKdfCtx) -> *mut EvpKdfCt
     // The duplicate is this frame's block, allocated through the crate's allocator seam at the
     // authority's own size/`file`/`line`; `Drop` releases it on the failure tails and `into_raw`
     // hands it to the caller on success.
-    let Some(mut dst_buf) =
-        OwnedBuf::new(core::mem::size_of::<EvpKdfCtx>(), FILE, LINE_MALLOC_CTX_DUP)
-    else {
+    let Some(dst_buf) = OwnedBuf::new_plain_released(
+        core::mem::size_of::<EvpKdfCtx>(),
+        FILE,
+        LINE_MALLOC_CTX_DUP,
+        FILE,
+        LINE_FREE_CTX_ON_DUP,
+    ) else {
         return ptr::null_mut();
     };
     let dst = dst_buf.as_ptr().cast::<EvpKdfCtx>();
@@ -1003,10 +910,6 @@ pub unsafe extern "C" fn EVP_KDF_CTX_dup(src: *const EvpKdfCtx) -> *mut EvpKdfCt
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::KDF_LIB_69) };
         // The authority releases the duplicate at its own site, `:70`.
-        dst_buf.set_release(BufRelease::Plain {
-            file: FILE,
-            line: LINE_FREE_CTX_ON_DUP,
-        });
         drop(dst_buf);
         return ptr::null_mut();
     }
@@ -1378,7 +1281,12 @@ pub unsafe extern "C" fn EVP_KDF_derive_SKEY(
         // The derived key is this frame's block, allocated through the crate's allocator seam at
         // the authority's own size/`file`/`line`; `Drop` releases it on every path below, with the
         // release re-pointed to the authority's own site.
-        let Some(mut key) = OwnedBuf::new_zeroed(keylen, FILE, LINE_ZALLOC_DERIVE_SKEY) else {
+        let Some(key) = OwnedBuf::new_zeroed_cleansed_at(
+            keylen,
+            FILE,
+            LINE_ZALLOC_DERIVE_SKEY,
+            LINE_FREE_DERIVE_SKEY,
+        ) else {
             if mgmt != skeymgmt {
                 // SAFETY: `skeymgmt` is live and this is this call's own reference.
                 unsafe { EVP_SKEYMGMT_free(skeymgmt) };
@@ -1392,11 +1300,11 @@ pub unsafe extern "C" fn EVP_KDF_derive_SKEY(
         if unsafe { derive(algctx, kp, keylen, params) } == 0 {
             // The authority's failure release is the plain `CRYPTO_free` in its own order -- the
             // block first, then the destination method's reference.
-            key.set_release(BufRelease::Plain {
-                file: FILE,
-                line: LINE_FREE_DERIVE_SKEY_ON_FAIL,
-            });
-            drop(key);
+            let raw = key.into_raw();
+            // SAFETY: `raw` is the whole `keylen`-byte block this frame allocated through the
+            // seam and has not released; `into_raw` transferred it here, and this failure path
+            // is its single release at the authority's plain site.
+            drop(unsafe { OwnedBuf::adopt_plain(raw, FILE, LINE_FREE_DERIVE_SKEY_ON_FAIL) });
             if mgmt != skeymgmt {
                 // SAFETY: `skeymgmt` is live and this is this call's own reference.
                 unsafe { EVP_SKEYMGMT_free(skeymgmt) };
@@ -1431,12 +1339,8 @@ pub unsafe extern "C" fn EVP_KDF_derive_SKEY(
         }
 
         // The secret is cleared before it is released: this buffer is its only copy outside the
-        // caller's hands. The authority's cleansing release is at `:262`.
-        key.set_release(BufRelease::Cleansed {
-            num: keylen,
-            file: FILE,
-            line: LINE_FREE_DERIVE_SKEY,
-        });
+        // caller's hands. The authority's cleansing release is at `:262`; the constructor fixed
+        // the cleansing length to the allocation length.
         drop(key);
         return ret;
     }
