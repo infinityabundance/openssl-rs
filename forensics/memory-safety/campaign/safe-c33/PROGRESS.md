@@ -32,9 +32,10 @@ file-level atlas metric.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1207** passed
-(one concurrent-refcount test added in subphase 39 and eight
-reference-count/re-entrancy tests added in subphase 40) and the adversarial
+`cargo test --lib` (must pass; the established baseline is **1214** passed
+(one concurrent-refcount test added in subphase 39, eight
+reference-count/re-entrancy tests added in subphase 40, and seven
+alias/ownership tests added in subphase 41) and the adversarial
 probes are `#[ignore]`d and run separately via `scripts/adv-probe.sh`; as of
 sweep 35 there are **18** probes).
 
@@ -141,6 +142,7 @@ sweep 35 there are **18** probes).
 | 80 | stage/p25/sweep38 | DESTRUCTOR-CONTRACTS.md, PROGRESS.md | **subphase 38 adjudication (docs only)**: 19 `CONTRACTED` `CtxDestroy` rows independently re-read against every constructor/publication path; **16 promoted to `ESTABLISHED`**, **3 retained `CONTRACTED`** (`SslCtx`, `Ssl`, `X509Store`), **0 STOP defects**; no `DISCHARGED`; residual callback/non-atomic-refcount obligations recorded |
 | 81 | stage/p25/sweep39 | src/x509/x509_lu.rs, DESTRUCTOR-CONTRACTS.md, RUNTIME-ALIAS-EVIDENCE.md, PROGRESS.md | **runtime/alias adjudication**: `X509Store` last-ref gate moved from plain `c_int` to layout-compatible `AtomicI32` (size 160 / offset 144 / align 8 asserts; relaxed fetch-add, release fetch-sub + acquire fence); concurrent up-ref test added; `SslCtx`/`Ssl`/`X509Store` retained `CONTRACTED` for reachable callback re-entrancy (ex-data / lookup `free` hook / `BIO_free_all`); 0 STOP; 1199 passed, 18 ignored; 18/18 probes; hidden 0 |
 | 82 | stage/p25/sweep40 | src/runtime/refcount.rs, src/runtime/mod.rs, src/ssl/ssl_lib.rs, src/ssl/ssl_sess.rs, src/x509/x509_lu.rs, DESTRUCTOR-CONTRACTS.md, RUNTIME-ALIAS-EVIDENCE.md, PROGRESS.md | **callback-reentrancy repair**: shared `REF_DESTROYING` sentinel CAS in the existing `AtomicI32`; `*_free` claims the last reference `1 -> destroying` and a re-entrant/over-free is a defined no-op; `*_up_ref` refuses zero/destroying without resurrecting; applied to `Ssl`, `SslCtx`, `SslSession`, `X509Store`; 8 deterministic tests (4 protocol + 4 real ex-data re-entry); no layout/ABI/allocator/free-order change; 0 STOP; 1207 passed, 18 ignored; 18/18 probes; hidden 0 |
+| 83 | stage/p25/sweep41 | src/ssl/ssl_lib.rs, src/ssl/ssl_sess.rs, DESTRUCTOR-CONTRACTS.md, RUNTIME-ALIAS-EVIDENCE.md, PROGRESS.md | **`Ssl`/`SslCtx` alias/lifecycle closure**: field-by-field ownership audit; fixed S1 session-cache `owner` dangling (UAF), S2 missing `ENGINE_finish`, S3 missing `dane_final`, S4 missing `ssl_clear_bad_session`; 7 deterministic tests; both rows promoted to `ESTABLISHED` (not `DISCHARGED`); no layout/ABI/allocator coordinates; 1214 passed, 18 ignored; 18/18 probes; hidden 0 |
 
 ### Subphase 38 — destructor-contract adjudication (docs only)
 
@@ -193,6 +195,33 @@ sweep 35 there are **18** probes).
   `CONTRACTED` for the §7 independent-check package. 0 STOP defects.
 - Gate: `fmt` clean, clippy clean, **1207 passed / 18 ignored**, adv-probe
   **18/18**. Full evidence: `RUNTIME-ALIAS-EVIDENCE.md` §§1–3.
+
+### Subphase 41 — `Ssl`/`SslCtx` alias/lifecycle closure
+
+- Field-by-field ownership audit of both objects against the authority's
+  `SSL_free`/`ossl_ssl_connection_free` (`ssl_lib.c:1422-1547`) and
+  `SSL_CTX_free` (`:4350-4468`). Full tables are in `DESTRUCTOR-CONTRACTS.md`
+  → “Subphase 41”.
+- Fixed four real defects: (S1) `SslSession.owner` was not cleared on cache
+  removal/flush/context teardown, leaving a caller-held session pointing into a
+  freed `SSL_CTX` (`SSL_SESSION_set_timeout` then read `owner->lock`); (S2)
+  `SslCtx` never finished the structural `ENGINE_init` reference taken by
+  `SSL_CTX_set_client_cert_engine`; (S3) `Ssl` never ran the authority's
+  `dane_final`; (S4) `SSL_free` skipped the authority's `ssl_clear_bad_session`
+  before releasing the session.
+- Confirmed the alias rules: `SSL_new` takes two distinct `SSL_CTX` refs;
+  `SSL_set_SSL_CTX` moves only `ctx`; `SSL_set_session` up-refs; chain
+  accessors return borrowed owners; `SSL_dup`/`SSL_clear` create no shared
+  owners.
+- Seven deterministic tests added (no allocator hook, not ignored): four in
+  `ssl::ssl_lib::alias_ownership_tests`, three in
+  `ssl::ssl_sess::alias_ownership_tests`.
+- `Ssl` and `SslCtx` promoted to `ESTABLISHED`; `X509Store` remains
+  `CONTRACTED`; nothing is `SAFETY_DISCHARGED` (the §7 independent-check
+  package is outstanding, and the currently-unset `waitctx`/`bbio`/`scts`/
+  `shared_sigalgs`/`peer_sigalgs` members are an explicit future obligation).
+- Gate: `fmt` clean, clippy clean, **1214 passed / 18 ignored**, adv-probe
+  **18/18**. Full evidence: `RUNTIME-ALIAS-EVIDENCE.md` §4.
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
@@ -378,7 +407,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1198** tests. Do not accept unexplained test loss. Check available memory before builds.
+   The most recent reported library baseline is **1214** tests. Do not accept unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
 
 ### Outstanding targeted work

@@ -456,43 +456,17 @@ differential or independent §7 package was run.
 | `EcGroup` | plain body `src/ec/lib.rs:263-278` reads `meth` through `as_ref` `:267`; clear body guards `meth` `:284`; safe `OwnedCtx::new` path `:371-400`; clear selection is `unsafe from_raw_clear` only `:493-497`; deterministic zero-state control `:3107-3178` |
 | `EcPoint` | plain body `src/ec/lib.rs:310-318` uses `as_ref` `:314`; clear body guards `meth` `:324`; safe constructor `:1460-1479`; clear selection `:1504-1508`; same zero-state control |
 
-### Retained `CONTRACTED` (3)
+### Retained `CONTRACTED` (1)
 
-Subphase 39 re-checked these three rows as runtime/alias boundaries. The
+Subphase 39 re-checked these rows as runtime/alias boundaries. The
 refcount gates are atomic and layout-compatible. Subphase 40 applies the
 destroying-sentinel protocol to all four reference-counted types and adds a
-deterministic re-entrancy test per type; the rows remain `CONTRACTED` because
-no §7 independent-check package has been run, not because the edge is still
-open. See `RUNTIME-ALIAS-EVIDENCE.md` §§1–3.
+deterministic re-entrancy test per type. Subphase 41 promoted `SslCtx` and
+`Ssl` to `ESTABLISHED` (see below); `X509Store` remains `CONTRACTED`.
 
-- **`SslCtx`** (`src/ssl/ssl_lib.rs:3155-3186`). The last-reference gate is
-  established (`:3134-3147`) on `AtomicI32` (`:1302`, `src/ssl/ssl_lib.rs:2902-2909`),
-  the constructor validates the zero/partial block before fallible members
-  (`:2996-3100`), and the directly read helpers
-  (`ssl_ctx_session_cache_free` `src/ssl/ssl_sess.rs:890-903`,
-  `ssl_ctx_srp_ctx_free_intern` `src/ssl/tls_srp.rs:136-143`, slot clears) are
-  zero-safe. **Callback edge repaired in subphase 40:** after the count reaches
-  zero, `destroy_body` dispatches `CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL_CTX,
-  ctx, …)` (`src/ssl/ssl_lib.rs:3174`) and then `X509_STORE_free`/`CTLOG_STORE_free`
-  (`:3175`, `:3178`). Their application callbacks can call `SSL_CTX_free(ctx)`
-  again; the gate now installs `REF_DESTROYING` before the body, so the
-  re-entrant call is a defined no-op. Positive control:
-  `ssl::ssl_lib::refcount_reentrancy_tests::ctx_free_reentrancy_is_defined_noop`.
-  Retained: no independent §7 check; the `BIO`/store/CT-log callback families
-  are covered by the same gate but not driven separately.
-- **`Ssl`** (`src/ssl/ssl_lib.rs:3520-3583`). The two context references are
-  balanced (`SSL_new` `:3227`, `:3347`; destructor `:3574`, `:3580`), the
-  partial-construction `release_block` paths are the authority's block-only
-  frees (`:3230`, `:3282`), and `session_ticket` is the authority's raw release.
-  **Callback edge repaired in subphase 40:** after the count reaches zero,
-  `destroy_body` calls `SSL_SESSION_free` (`:3542`), `BIO_free_all`
-  (`:3546-3547`) and `CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL, s, …)` (`:3573`).
-  An ex-data `free_func` receives `s` itself; a BIO `destroy`/ex-data callback
-  can recover it through `argp`/`BIO_get_data`. Any of them can call
-  `SSL_free(s)` again; the sentinel makes that second call a no-op. Positive
-  control: `ssl::ssl_lib::refcount_reentrancy_tests::ssl_free_reentrancy_is_defined_noop`.
-  Retained: no independent §7 check; the 40+ member releases remain without a
-  per-field independent claim.
+- **`SslCtx`** and **`Ssl`** — **promoted to `ESTABLISHED` in subphase 41**
+  after the field-by-field ownership audit and the alias/lifecycle fixes (see
+  “Subphase 41” below).
 - **`X509Store`** (`src/x509/x509_lu.rs:770-794`). **Refcount fixed in subphase
   39:** `references` is `AtomicI32` (same size/alignment/offset as the
   authority's `int`; `:511`, `:535-541`), and `X509_STORE_new`/`_up_ref`/`_free`
@@ -504,22 +478,123 @@ open. See `RUNTIME-ALIAS-EVIDENCE.md` §§1–3.
   control: `x509::x509_lu::tests::store_free_reentrancy_is_defined_noop`.
   Retained: no independent §7 check.
 
+### Subphase 41 — `Ssl`/`SslCtx` field-by-field ownership and alias fixes
+
+The two rows were re-audited field by field against
+`ssl/ssl_lib.c:1422-1547` (`SSL_free` + `ossl_ssl_connection_free`) and
+`:4350-4468` (`SSL_CTX_free`). `ESTABLISHED` here retains the subphase-38
+meaning: source-witnessed construction/partial states, one release per owned
+member, and no release of the enclosing block or of a borrowed pointer. It is
+not `SAFETY_DISCHARGED`.
+
+**`Ssl` members.**
+
+| member(s) | owner | rule / exact release |
+|---|---|---|
+| `references`, `lock` | object | sentinel gate; `CRYPTO_THREAD_lock_free` once |
+| `ctx` | connection (strong) | one `SSL_CTX_up_ref` in `SSL_new` (authority `:705`); `SSL_CTX_free` once in the body (authority `:1438`) |
+| `session_ctx` | connection (strong, distinct) | second `SSL_CTX_up_ref` in `SSL_new` (authority `:828`); `SSL_set_SSL_CTX` moves only `ctx`; `SSL_CTX_free` once (authority `:1485`) |
+| `method`, `defltmeth` | borrowed static | never freed |
+| `session` | connection (strong) | `SSL_set_session`/lookup up-ref; body calls `ssl_clear_bad_session` then `SSL_SESSION_free` once; `SSL_get_session` borrows, `SSL_get1_session` returns a new ref |
+| `peer_cert` | connection | one `X509` ref; `X509_free` once |
+| `peer_chain` | connection | stack of one ref per cert; `OSSL_STACK_OF_X509_free` once; `SSL_get_peer_cert_chain` borrows |
+| `verified_chain` | connection | `X509_STORE_CTX_get1_chain` refs; `OSSL_STACK_OF_X509_free` once; `SSL_get0_verified_chain` borrows |
+| `cert`, `param`, `dane` | connection | `cert_free`, `X509_VERIFY_PARAM_free`, `dane_final` once each |
+| `cipher_list`, `cipher_list_by_id`, `tls13_ciphersuites`, `peer_ciphers` | connection | stacks of borrowed cipher pointers; `OPENSSL_sk_free` once |
+| `srtp_profiles` | connection | stack of borrowed profiles; `OPENSSL_sk_free` once |
+| `ca_names`, `client_ca_names`, `peer_ca_names` | connection | stacks of owned `X509_NAME` refs; `OPENSSL_sk_pop_free(X509_NAME_free)` once |
+| `rbio`, `wbio` | connection | owned BIO chains (`BIO_set_bio`/`SSL_set0_*` transfer); `BIO_free_all` once each |
+| `bbio` | connection | authority `ssl_free_wbio_buffer`; never allocated by this slice, so NULL |
+| `ex_data` | connection | `CRYPTO_new_ex_data`; `CRYPTO_free_ex_data` once (after members, before `ctx`) |
+| `ext_alpn`, `ext_npn`, `ext_hostname`, `s3_alpn_selected`, `s3_alpn_proposed`, `client_cert_type`, `server_cert_type`, `pha_context`, `supportedgroups` | connection | object-owned member buffers; cleared once through their slots/raw free |
+| `session_ticket` | connection | one `TLS_SESSION_TICKET_EXT` block with inline data; `CRYPTO_free` once (`tls1_free`) |
+| `hs_md_ctx`, `enc_ctx`, `dec_ctx`, `tls13_cipher`, `pkey`, `peer_tmp`, `pha_dgst` | connection | one `*_free` each; never aliased with each other |
+| `srp_ctx`, `d1` | connection | `ssl_srp_ctx_free_intern`, `dtls1_free` once |
+| `waitctx`, `job`, `scts`, `clienthello`, `shared_sigalgs`, `peer_sigalgs` | unset in this slice | no release path; `clienthello` is a transient stack pointer only during the callback and is cleared by the caller. Retained obligation if a future writer allocates them. |
+
+**`SslCtx` members.**
+
+| member(s) | owner | rule / exact release |
+|---|---|---|
+| `references`, `lock` | object | sentinel gate; lock freed once |
+| `method`, `libctx` | borrowed | never freed (authority `:4344` reads them only) |
+| `cert_store` | context (strong) | `X509_STORE_free` once; `set1` takes a ref, `set0` transfers |
+| `param`, `cert`, `ctlog_store`, `dane` | context | one free each (`X509_VERIFY_PARAM_free`, `cert_free`, `CTLOG_STORE_free`, `dane_ctx_final`) |
+| `srp_ctx` | context | `ssl_ctx_srp_ctx_free_intern` once |
+| `client_cert_engine` | context (structural engine ref) | `ENGINE_init` in the setter; `ENGINE_finish` once in the body (authority `tls_engine_finish`, `:4409`) |
+| `cipher_list`, `cipher_list_by_id`, `tls13_ciphersuites`, `srtp_profiles` | context | `OPENSSL_sk_free` once each |
+| `ca_names`, `client_ca_names` | context | `OPENSSL_sk_pop_free(X509_NAME_free)` once |
+| `sessions` | context cache | each entry owns one ref; `ssl_ctx_session_cache_free` clears the entry's `owner` back-pointer and releases the cache ref once |
+| `propq`, `client_cert_type`, `server_cert_type`, `ext_alpn`, `supportedgroups` | context | object-owned member buffers; cleared once through their slots/raw free |
+| `ex_data` | context | `CRYPTO_free_ex_data` once after the cache flush, before `cert_store`/`cert` (authority `:4388-4397`) |
+| callbacks/args, `stats` | borrowed/plain | never freed |
+
+**Defects found and fixed in subphase 41.**
+
+1. **S1 — dangling `SslSession.owner` (use-after-free).** `owner` is a weak
+   cache back-pointer, not a reference. `cache_delete_ptr`, the flush loop and
+   `ssl_ctx_session_cache_free` removed a session from the cache without
+   clearing it (the authority's `SSL_SESSION_list_remove` clears it,
+   `ssl_sess.c:1349`). A session held by an application across
+   `SSL_CTX_free` then retained a pointer into the freed context, and
+   `SSL_SESSION_set_timeout` (`src/ssl/ssl_sess.rs`) dereferenced
+   `owner->lock`. Fixed by clearing `owner` on removal, flush and cache
+   teardown.
+2. **S2 — leaked structural engine reference.** `SSL_CTX_set_client_cert_engine`
+   calls `ENGINE_init` but `SslCtx::destroy_body` did not call `ENGINE_finish`.
+   Added at the authority's position (`ssl_lib.c:4409`); NULL-safe.
+3. **S3 — unreleased per-connection DANE state.** `Ssl::destroy_body` omitted
+   `dane_final(&s->dane)` (authority `ssl_lib.c:1462`), leaking TLSA records,
+   candidate certs and the matched certificate. Added before `cert_free`.
+4. **S4 — missing authority session-cache teardown on `SSL_free`.** The body
+   released `s->session` without the authority's preceding
+   `ssl_clear_bad_session` (`ssl_lib.c:1473-1476`). Added, so a completed
+   session is removed from `session_ctx`'s cache (and its `owner` cleared)
+   before the connection's reference is dropped.
+
+**Tests added (7, deterministic, not ignored, no allocator hook).**
+
+| test | property |
+|---|---|
+| `ssl::ssl_lib::alias_ownership_tests::set_session_and_ssl_free_release_the_session_once` | `SSL_set_session` up-ref, caller ref release, `SSL_get1_session`, then `SSL_free` leave exactly one release per owner |
+| `ssl::ssl_lib::alias_ownership_tests::ssl_free_releases_the_two_context_references_once` | `SSL_new` count `1 -> 3`; `SSL_free` count `3 -> 1` |
+| `ssl::ssl_lib::alias_ownership_tests::ssl_set_ssl_ctx_keeps_the_two_context_references_distinct` | `ctx` moves, `session_ctx` does not; both freed once |
+| `ssl::ssl_lib::alias_ownership_tests::peer_and_verified_chain_accessors_return_borrowed_owners` | accessors return the owned pointers, prefer `session->peer_chain`, never free them |
+| `ssl::ssl_sess::alias_ownership_tests::removed_session_does_not_retain_a_context_back_pointer` | cache removal clears `owner` |
+| `ssl::ssl_sess::alias_ownership_tests::flushed_session_does_not_retain_a_context_back_pointer` | flush clears `owner` |
+| `ssl::ssl_sess::alias_ownership_tests::context_free_clears_the_back_pointer_of_a_surviving_session` | surviving session has `owner == NULL` and `SSL_SESSION_set_timeout` reads no freed context |
+
+**Status.** `Ssl` and `SslCtx` promoted to `ESTABLISHED`: every column above is
+source-witnessed and each release is traced once; the seven tests pass and the
+adversarial court is unchanged at 18/18. Retained: the §7 independent-check
+package is outstanding, and the unset-member writers (`waitctx`, `bbio`,
+`scts`, `shared_sigalgs`, `peer_sigalgs`) are an explicit future obligation, not
+a current release claim. Nothing is `SAFETY_DISCHARGED`.
+
 ### STOP defects
 
-**None found in the 19 rows.** Every body was checked for an uninitialised
-field read, a double release of a member, and a release of the enclosing block;
-no such path was found, and no safe caller can reach a body with an invalid
-state.
+**Subphase 38: none found in the 19 rows.** Every body was checked for an
+uninitialised field read, a double release of a member, and a release of the
+enclosing block; no such path was found in that scope.
+
+**Subphase 41: S1–S4 were found in the `Ssl`/`SslCtx` rows and fixed** (see the
+table above). S1 was a dangling weak back-pointer that allowed a use-after-free;
+S2 and S3 were owned references the body never released; S4 was a missing
+authority teardown step in `SSL_free`. The seven deterministic controls and the
+full library suite pass after the fixes.
 
 ### Residual / unknown obligations
 
-- The 16 promotions retain the external ABI obligation that a stored method or
+- The 16 subphase-38 promotions retain the external ABI obligation that a stored method or
   provider callback is a valid function and frees only its own data; callback
   re-entrancy was not tested.
+- `SslCtx`/`Ssl` were promoted in subphase 41 after the field-by-field audit
+  and S1–S4 fixes. Their retained obligation is independent §7 verification and
+  the future writers for currently-unset members; it is no longer a known
+  alias/double-release gap. `X509Store` retains the §7 independent-check
+  obligation only; its callback re-entrancy positive control passes (subphase 40).
 - `EcGroup`/`EcPoint` zero-state evidence is the deterministic negative control,
   not a model-checker or sanitizer result.
-- `SslCtx`/`Ssl`/`X509Store` retain the §7 independent-check obligation only;
-  their callback re-entrancy positive controls now pass (subphase 40).
 - Nothing is promoted to `DISCHARGED`; §7's full dependency-closure and
   independent-check package was not attempted.
 
@@ -528,10 +603,10 @@ state.
 | status | count |
 |---|---:|
 | implementations audited | 199 |
-| `CONTRACTED` | 5 (3 `CtxDestroy` + 2 `CipherDestroy`) |
-| `ESTABLISHED` | 194 |
+| `CONTRACTED` | 3 (1 `CtxDestroy` + 2 `CipherDestroy`) |
+| `ESTABLISHED` | 196 |
 | `DISCHARGED` | 0 |
-| defect sites (STOP) | 4, all fixed at source in sweep-37; none added in subphase 38 or 39 |
+| defect sites (STOP) | 8, all fixed at source (4 sweep-37, 4 subphase 41); none added in subphase 38–40 |
 
 **Retained obligations (global):**
 
