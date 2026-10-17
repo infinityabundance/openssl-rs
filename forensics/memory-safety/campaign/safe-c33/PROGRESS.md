@@ -11,18 +11,18 @@ Frozen atlas baseline (original inventory): **2420** allocation sites
 
 ## Current candidate-bound measurement
 
-Regenerated at HEAD `e9e21d42ecd1b90e2fbe246d0ffa647ae2bfcd35` by
+Regenerated at HEAD `f519d3da2aff0ea5c237eb807fbba19d42ce3b9c` by
 `python3 forensics/memory-safety/campaign/safe-c33/atlas_refresh.py` (see
 `atlas-refresh/REPORT.md`; the generator is measurement-only and claims no
 discharge):
 
-- Safe-33 closure: **628** files; **291** have a recognised ownership seam
-  (**46.3%**); **0** files have fully discharged obligations; **0/33**
+- Safe-33 closure: **628** files; **313** have a recognised ownership seam
+  (**49.8%**); **0** files have fully discharged obligations; **0/33**
   consumers are `SAFE_COMPATIBLE`.
-- Whole tree: **865** `src/**/*.rs`; **349** files have a seam; **367** still
-  contain raw allocator sites; **4,292** raw sites in total, which includes
+- Whole tree: **865** `src/**/*.rs`; **374** files have a seam; **359** still
+  contain raw allocator sites; **4,269** raw sites in total, which includes
   legitimate seam constructors and is therefore **not** a residual count.
-- Closure raw sites: **3,431** (upper bound; **193** in files with no seam).
+- Closure raw sites: **3,414** (upper bound; **138** in files with no seam).
   A seam is a file-level heuristic, not a per-site proof.
 
 The residual conversion queue is re-derived from the frozen census and Git by
@@ -183,15 +183,20 @@ classified explicitly so the residual is auditable rather than implied:
 
 ## Next queue
 
-The queue is **re-derived from Git + `artifacts/phase25/source-census.json`**
-with the snippet in the resume procedure; do not treat any list here as frozen.
-At the sweep-24 checkpoint, **46** baseline files still had interior sites,
-including `runtime/{sparse_array,thread,stack,lhash}.rs`, `bn/{ctx,recp,mont}.rs`,
-`rsa/asn1.rs`, `ct/ct_x509v3.rs`, `x509/{v3_single_use,v3_ia5,x509_acert}.rs`,
-`pem/{pem_pkey,pem_oth}.rs`, and the single-site tail (RSA/EC controls,
-provider codecs, PKCS#12/PBE, X509 extensions). Files already fully Rust-owned or
-structural (`bn/ctx`, `bn/mont`, `rsa/asn1`, `runtime/sparse_array`) stay out of
-the mechanical queue and are handled as representation work.
+**As of sweep 32 the residual census queue is fully classified: 0 unclassified
+files.** Sweeps 11–29 converted or boundary-documented the mechanical tail;
+sweeps 30–32 classified the structural/no-seam set. Four exported opaque objects
+(`CRYPTO_RWLOCK`, `OPENSSL_STACK`, `OPENSSL_LHASH`, `BN_RECP_CTX`) remain
+Rust-owned because converting them to a CRYPTO-seam allocation would allocate
+`size_of::<Rust representation>()`, not the authority's C size, and would make a
+caller's allocator hook observe the wrong byte count. That is the recorded **P1
+hook-size residual**, not a discharge claim.
+
+The queue is re-derived from Git + `artifacts/phase25/source-census.json` with
+the snippet in the resume procedure; do not treat any list here as frozen. The
+remaining work is **not** more mechanical conversion: it is per-site obligation
+evidence, the P1 representation decision, and the seal (`SAFETY_DISCHARGED`
+promotions and current-candidate consumer verification).
 
 ## Progress measurement (five dimensions — see AGENTS.md §19)
 
