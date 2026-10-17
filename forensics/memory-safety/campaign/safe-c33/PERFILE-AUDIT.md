@@ -1911,3 +1911,37 @@ The first three are `UNATTRIBUTED`. Ranks 4 and 5 are the highest-risk `CONTRACT
 
 For each group, an independent reviewer would need: the exact source and build identity; a contract witness for every precondition (a caller, a dispatch table row, an owner invariant, or an exported ABI declaration); a runtime/static check that fires on a deliberate violation (Miri/tree-borrows, ASan/guard pages, allocator witness, callback-reentrancy harness, refcount/double-free negative control); and a written disposition of every residual. For this file the minimum additional controls are: a NULL/dangling-pointer control for `bits`/`bits_set` and the flag helpers; a `dst == src` self-copy control for every `copyctx`; a failed-`CRYPTO_memdup`/failed-`dupctx` aliasing control for every duplicate; an `outsize == inl` wrap-pad guard-page control; a stack-residue/cleanse check for `set_mac_key`; and a concurrent-reader/writer control for `SyncCell`/`EXPORTED_CIPHERS`. Absent those, every group remains `CONTRACTED` or `ESTABLISHED`, and the file remains not `SAFETY_DISCHARGED`.
 
+## 8. Source-investigation delta (2026-10-18, `integrate/safe-c33`, base `b51f84977`)
+
+This section records changes made **after** the census snapshot. The table above keeps its original
+line numbers and statuses; the entries below supersede them by symbol and group ID. No group is
+promoted to `SAFETY_DISCHARGED`, and the section 4 register remains authoritative for retained
+obligations.
+
+| Group IDs | Change | Status after change | Evidence |
+|---|---|---|---|
+| `C001`; `C002`; `C583`; `C584`; `C676`; `C677` | `bits`, `bits_set`, `gsiv_flag`, `gsiv_set`, `cpp_flag`, `cpp_set` (and `ctx_enc`, which forwards to `bits`) are now `unsafe fn`s with a live/aligned/exclusive-access `# Safety` contract. Every call site already sits inside an unsafe block whose contract supplies the live context. | `CONTRACTED` | `cargo check --all-targets`, `cargo clippy --all-targets -- -D warnings`; no safe caller can now dereference the pointer. A Miri NULL/dangling control is still not run, so this is not `ESTABLISHED`. |
+| `C183`; `C184` | `aes_wrap_cipher_internal`'s `# Safety` now states the exact output extent (`up8(inlen)+8` encrypting, `inlen-8` decrypting), and its sole caller establishes it. The authority's `outsize < inl` check is retained first; a second check enforces the encrypting arm's actual extent (`docs/DECISIONS.md` D561), but only for a real write: NULL `input`, NULL `out` (the size-query arm) and input lengths the helper refuses before writing are skipped so the authority's result and error precedence are preserved. | `CONTRACTED` | `aes_wrap_cipher_refuses_a_padded_output_extent` (9-byte input, 16-byte destination, encryption + padding): returns 0 and leaves a `0xaa` canary untouched; `aes_wrap_cipher_length_query_is_not_preempted` (NULL `out`: 16/24-byte answers); `aes_wrap_cipher_null_input_returns_zero`; `aes_wrap_cipher_keeps_invalid_input_error_precedence` (reason 230, not 106). |
+| `C187`; `C188` | The key-wrap row refuses a destination the authority's check admits (`outsize == inl` for encryption), but only for a write the authority would actually perform. Error site `PROV_CIPHER_AES_WRP_250` is reused, so the authority's defined refusals keep their source coordinate. | `CONTRACTED` | The four wrap regressions above; full lib suite. |
+| `C516`; `C517` (and the SHA-256 twin) | `ptr::write_bytes` replaced by the crate's `OPENSSL_cleanse` (volatile writes + fence, `src/runtime/mem.rs`). The scratch buffer is now supplied to a body helper so the post-call bytes are observable. | `CONTRACTED` | New `set_mac_key_cleanses_its_scratch` observes a 64-byte scratch zeroed for both SHA-1 and SHA-256. No optimised stack-residue measurement, so not `ESTABLISHED`. |
+| `C122`; `C123`; `C126`; `C132` (and the AES-XTS, SM4, SM4-XTS, ARIA, DES, OCB twins) | Whole-context `copy_nonoverlapping` replaced by `ptr::copy`, the defined equivalent of the authority's `*dctx = *sctx` including `dst == src`. The OCB hw `copyctx` stub is empty and unreachable -- `AES_OCB_FUNCTIONS` registers `aes_ocb_dupctx` for `OSSL_FUNC_CIPHER_DUPCTX`, and `ProvCipherHw::copyctx` is read only by the generic/XTS/SM4/ARIA duplicate bodies -- so its documentation now records that path and `aes_ocb_dupctx`'s own whole-context copy uses `ptr::copy`. | `CONTRACTED` | `copyctx_self_copy_is_defined` exercises self-copy for AES and TDES and asserts the repaired key-schedule pointer; the OCB dispatch row is quoted in the stub comment. |
+| `C463`; `C464` | `aes_siv_dupctx` refuses a self-duplicate before acquiring references, and on `ossl_siv128_copy_ctx` failure releases the two cipher up-refs plus the partially built `cipher_ctx`/`mac_ctx_init`; `siv.mac` is never freed because `ossl_siv128_copy_ctx` never owns it on a failure return. | `CONTRACTED` | `siv_dupctx_refuses_a_self_duplicate` installs a real `EVP_CIPHER_CTX` sentinel and asserts it survives, so the test distinguishes the guard from the zero state's incidental failure; full lib suite. Failure-injection for `copy_ctx` is still absent. |
+
+**R1 and R7 remain deliberately unresolved.** `SyncCell`'s one-write-before-read invariant is still
+a provider-init discipline rather than a type invariant, `exported_ciphers()` still returns a raw
+pointer from a safe `fn`, and the `CipherDestroy` implementers are still self-asserted bodies called
+from a safe `Drop`. No invariant witness or negative control has been added for them in this delta,
+so they remain `UNATTRIBUTED` residuals (highest-risk ranks 1) and must not be reported as
+discharged.
+
+**New residual on the SIV failure arm.** The cleanup above depends on
+`ossl_siv128_copy_ctx`'s failure invariant that `dest->mac` is either NULL or the source's unowned
+pointer on every `0` return. If that function later acquires the MAC reference before a different
+failure point, `aes_siv_dupctx` must be revisited or the MAC reference is leaked/double-freed.
+
+**Gate evidence for this delta.** `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D
+warnings`, and `cargo test --lib -- --test-threads=4` (1260 passed, 18 ignored, 0 failed) ran in the
+court container; `rt_cipher_probe` (7291 observations) and `rt_cipher_mem_probe` (382 observations)
+produced zero authority/candidate diffs. The phase8 probe binaries are the committed staged
+instruments and were not rebuilt for this delta.
+
