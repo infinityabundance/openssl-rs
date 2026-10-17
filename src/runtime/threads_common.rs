@@ -90,6 +90,7 @@
 use core::cell::UnsafeCell;
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
+use core::ptr::NonNull;
 use core::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 
 use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_free};
@@ -110,6 +111,70 @@ const L_MKEY_ALLOC: c_int = 361;
 const L_MKEY_FREE_SET: c_int = 369;
 /// `clean_master_key`'s `OPENSSL_free(mkey)`.
 const L_MKEY_FREE_CLEAN: c_int = 202;
+
+/// The fixed `MasterKeyEntry` array a thread holds under the master key.
+///
+/// `OPENSSL_calloc(CRYPTO_THREAD_LOCAL_KEY_MAX, sizeof(MASTER_KEY_ENTRY))`
+/// (`threads_common.c:361`) is its only allocation. The authority releases it from two sites: the
+/// failed `CRYPTO_THREAD_set_local` arm (`:369`) and the key destructor (`:202`). This handle is the
+/// pre-publication owner, whose `Drop` is the first; [`Self::into_raw`] hands the block to the
+/// thread-local key, and [`Self::adopt`] reclaims it in the destructor for the second.
+struct MkeyBuf {
+    ptr: NonNull<MasterKeyEntry>,
+    free_line: c_int,
+}
+
+impl MkeyBuf {
+    /// The authority's `OPENSSL_calloc(...)` at `:361`, or `None` when it is refused.
+    fn calloc() -> Option<MkeyBuf> {
+        // `CRYPTO_calloc` checks `num * size` for overflow and is a safe function in this crate.
+        let raw = CRYPTO_calloc(
+            CRYPTO_THREAD_LOCAL_KEY_MAX,
+            core::mem::size_of::<MasterKeyEntry>(),
+            FILE,
+            L_MKEY_ALLOC,
+        )
+        .cast::<MasterKeyEntry>();
+        // A zeroed `MasterKeyEntry` is a valid value: its only field is a NULL raw pointer.
+        NonNull::new(raw).map(|ptr| MkeyBuf {
+            ptr,
+            free_line: L_MKEY_FREE_SET,
+        })
+    }
+
+    /// Reclaim, for release, the array handed to the key destructor.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or the fixed array this module allocated through [`Self::calloc`] and has
+    /// not released; this handle's `Drop` is its single release.
+    unsafe fn adopt(ptr: *mut MasterKeyEntry) -> Option<MkeyBuf> {
+        NonNull::new(ptr).map(|ptr| MkeyBuf {
+            ptr,
+            free_line: L_MKEY_FREE_CLEAN,
+        })
+    }
+
+    fn as_ptr(&self) -> *mut MasterKeyEntry {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership to the thread-local registry.
+    fn into_raw(self) -> *mut MasterKeyEntry {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for MkeyBuf {
+    /// The authority's own `OPENSSL_free(mkey)`, at the release site this handle was built for.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the array this handle owns and has not handed out, and
+        // `self.free_line` is the authority's own release coordinate for it; this is its single
+        // release.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, self.free_line) };
+    }
+}
 
 /// `#define CRYPTO_THREAD_NO_CONTEXT (void *)1` — `include/internal/threads_common.h`.
 ///
@@ -235,20 +300,23 @@ unsafe fn clean_master_key_id(entry: *mut MasterKeyEntry) {
 /// `CRYPTO_THREAD_init_local` takes for a key destructor and pthread's `void (*)(void *)` is
 /// not an `unsafe fn` type at the ABI. The unsafe work is in the block below.
 extern "C" fn clean_master_key(data: *mut c_void) {
-    if data.is_null() {
+    // SAFETY: `data` is NULL or the fixed array this module allocated through `MkeyBuf::calloc`,
+    // and this destructor is its only owner at this edge; reclaiming it here makes the handle's
+    // `Drop` its single release at the authority's `:202` coordinate.
+    let Some(mkey) = (unsafe { MkeyBuf::adopt(data.cast::<MasterKeyEntry>()) }) else {
         return;
-    }
-    let mkey = data.cast::<MasterKeyEntry>();
-    // SAFETY: `data` is the fixed array this module allocated, of `CRYPTO_THREAD_LOCAL_KEY_MAX`
-    // entries, so every index below is in bounds.
+    };
+    // SAFETY: `mkey` is the fixed array of `CRYPTO_THREAD_LOCAL_KEY_MAX` entries, so every index
+    // below is in bounds.
     unsafe {
         for i in 0..CRYPTO_THREAD_LOCAL_KEY_MAX {
-            if !(*mkey.add(i)).ctx_table.is_null() {
-                clean_master_key_id(mkey.add(i));
+            let entry = mkey.as_ptr().add(i);
+            if !(*entry).ctx_table.is_null() {
+                clean_master_key_id(entry);
             }
         }
-        CRYPTO_free(mkey.cast::<c_void>(), FILE, L_MKEY_FREE_CLEAN);
     }
+    // `mkey`'s `Drop` is the authority's `OPENSSL_free(mkey)` at `:202`, after every table.
 }
 
 /// `static void init_master_key(void)` — the run-once body.
@@ -355,23 +423,20 @@ pub(crate) unsafe fn CRYPTO_THREAD_set_local_ex(
     // SAFETY: the key is live per the run-once above.
     let mut mkey = unsafe { CRYPTO_THREAD_get_local(master_key_ptr()) }.cast::<MasterKeyEntry>();
     if mkey.is_null() {
-        // `CRYPTO_calloc` is a SAFE function in this crate (D113), so this is unguarded.
-        mkey = CRYPTO_calloc(
-            CRYPTO_THREAD_LOCAL_KEY_MAX,
-            core::mem::size_of::<MasterKeyEntry>(),
-            FILE,
-            L_MKEY_ALLOC,
-        )
-        .cast::<MasterKeyEntry>();
-        if mkey.is_null() {
+        // `MkeyBuf::calloc` is the authority's `OPENSSL_calloc(...)` at `:361`; its `Drop` is the
+        // failed-set release at `:369`.
+        let Some(mkey_buf) = MkeyBuf::calloc() else {
+            return 0;
+        };
+        // SAFETY: the key is live per the run-once above, and `mkey_buf` is this call's own
+        // block, which the registry adopts on success.
+        if unsafe { CRYPTO_THREAD_set_local(master_key_ptr(), mkey_buf.as_ptr().cast::<c_void>()) }
+            == 0
+        {
             return 0;
         }
-        // SAFETY: the key is live per the run-once above.
-        if unsafe { CRYPTO_THREAD_set_local(master_key_ptr(), mkey.cast::<c_void>()) } == 0 {
-            // SAFETY: `mkey` is this function's own allocation and nothing else holds it.
-            unsafe { CRYPTO_free(mkey.cast::<c_void>(), FILE, L_MKEY_FREE_SET) };
-            return 0;
-        }
+        // The registry now owns the block; the key destructor releases it at `:202`.
+        mkey = mkey_buf.into_raw();
     }
 
     // SAFETY: `mkey` is the fixed array this module allocated, so `id` is in bounds.
