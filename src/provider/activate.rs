@@ -92,6 +92,106 @@ pub(crate) use crate::selftest::OsslCallback;
 
 /// `OPENSSL_free(prov->operation_bits)` in `provider_remove_store_methods`.
 const L_REMOVE_METHODS_FREE_BITS: c_int = 1373;
+/// `OPENSSL_realloc(prov->operation_bits, ...)` in `ossl_provider_set_operation_bit`.
+const L_SET_OPERATION_BIT_REALLOC: c_int = 2034;
+
+/// A validated handle over `OsslProvider`'s `(operation_bits, operation_bits_sz)` member pair.
+///
+/// The member-buffer invariant, stated once: the pair is always `(NULL, 0)` or a single block the
+/// crate's allocator seam produced, of exactly `operation_bits_sz` bytes, owned solely by the
+/// provider. The provider is its only owner: it is regrown in place by
+/// [`OpBitsSlot::realloc`] and released exactly once by [`OpBitsSlot::clear`].
+///
+/// The fields must keep their `#[repr(C)]` type, offset and companion (`usize`) to reproduce the
+/// authority's layout, so this is a transient view over them, not a resident owner -- the
+/// resident-member counterpart of the `MemberBufSlot` model and of the campaign's
+/// attribute-only `OwnedBuf`. `realloc` is the in-place regrow: on refusal the old block is left
+/// in the member, exactly `realloc`'s semantics.
+struct OpBitsSlot {
+    /// `unsigned char *operation_bits`.
+    bits: *mut *mut u8,
+    /// `size_t operation_bits_sz` -- the live allocation's byte extent.
+    len: *mut usize,
+}
+
+impl OpBitsSlot {
+    /// Derive the handle from the provider's two member fields.
+    ///
+    /// # Safety
+    ///
+    /// `bits`/`len` are the `operation_bits`/`operation_bits_sz` fields of a live provider and
+    /// currently obey the member-buffer invariant. The caller holds the provider's `opbits_lock`
+    /// **for writing** whenever the handle is used, so no other thread reads or writes the pair
+    /// through any of its methods.
+    unsafe fn of(bits: *mut *mut u8, len: *mut usize) -> OpBitsSlot {
+        OpBitsSlot { bits, len }
+    }
+
+    /// Release the incumbent (if any) through the authority's own `CRYPTO_free` site, leaving
+    /// `(NULL, 0)`. This is the authority's `if (bits != NULL) { free(bits); bits = NULL; }
+    /// bits_sz = 0;` in the same order; `CRYPTO_free`'s NULL no-op makes the guard unnecessary.
+    fn clear(&mut self) {
+        // SAFETY: by the invariant the incumbent is NULL or the provider's own single block, so
+        // this is that block's one release; `CRYPTO_free` ignores NULL.
+        unsafe {
+            let old = *self.bits;
+            CRYPTO_free(old.cast::<c_void>(), FILE, L_REMOVE_METHODS_FREE_BITS);
+            *self.bits = ptr::null_mut();
+            *self.len = 0;
+        }
+    }
+
+    /// The live allocation's current byte extent.
+    fn len(&self) -> usize {
+        // SAFETY: the handle's contract makes `len` a live provider field.
+        unsafe { *self.len }
+    }
+
+    /// The `index`-th byte mutably, or `None` when it is not allocated.
+    fn byte_mut(&mut self, index: usize) -> Option<&mut u8> {
+        // SAFETY: the handle's contract makes the pair valid; the invariant makes the pointer a
+        // block of exactly `*len` bytes when it is non-NULL, and the exclusive (write-locked)
+        // contract makes the returned borrow the only live access to that byte.
+        unsafe {
+            if index < *self.len {
+                Some(&mut *(*self.bits).add(index))
+            } else {
+                None
+            }
+        }
+    }
+
+    /// Regrow the incumbent **in place** through the authority's own `CRYPTO_realloc` site,
+    /// reproducing `realloc`'s failure semantics exactly: on success the member becomes
+    /// `(new, new_len)` and the (possibly moved) block is returned for the caller to fill; on
+    /// failure (NULL) the old block is **kept** and the member is left unchanged, so the provider
+    /// still owns -- and will still release -- it.
+    ///
+    /// # Safety
+    ///
+    /// `new_len > 0` (a zero-byte request releases through this seam and cannot be the in-place
+    /// regrow). The caller must initialise bytes `[old_len, new_len)` before any of them are read.
+    unsafe fn realloc(&mut self, new_len: usize) -> *mut u8 {
+        debug_assert!(new_len > 0, "operation_bits realloc to zero is a release");
+        // SAFETY: by the invariant the old pointer is NULL or the provider's own block; a NULL
+        // answer from `CRYPTO_realloc` means the old block was not released and is still owned.
+        unsafe {
+            let old = *self.bits;
+            let new = CRYPTO_realloc(
+                old.cast::<c_void>(),
+                new_len,
+                FILE,
+                L_SET_OPERATION_BIT_REALLOC,
+            )
+            .cast::<u8>();
+            if !new.is_null() {
+                *self.bits = new;
+                *self.len = new_len;
+            }
+            new
+        }
+    }
+}
 
 /// `typedef int (*OSSL_CALLBACK)(const OSSL_PARAM params[], void *arg)` — `openssl/core.h`.
 ///
@@ -219,15 +319,13 @@ unsafe fn provider_remove_store_methods(prov: *mut OsslProvider) -> c_int {
         if CRYPTO_THREAD_write_lock((*prov).opbits_lock) == 0 {
             return 0;
         }
-        if !(*prov).operation_bits.is_null() {
-            CRYPTO_free(
-                (*prov).operation_bits.cast::<c_void>(),
-                FILE,
-                L_REMOVE_METHODS_FREE_BITS,
-            );
-            (*prov).operation_bits = ptr::null_mut();
-        }
-        (*prov).operation_bits_sz = 0;
+        // SAFETY: `prov` is live and the write lock is held, so the pair is exclusively ours and
+        // obeys the member-buffer invariant.
+        let mut bits = OpBitsSlot::of(
+            ptr::addr_of_mut!((*prov).operation_bits),
+            ptr::addr_of_mut!((*prov).operation_bits_sz),
+        );
+        bits.clear();
         CRYPTO_THREAD_unlock((*prov).opbits_lock);
         1
     } == 0
@@ -1357,31 +1455,33 @@ pub(crate) unsafe fn ossl_provider_set_operation_bit(
         if CRYPTO_THREAD_write_lock((*provider).opbits_lock) == 0 {
             return 0;
         }
-        if (*provider).operation_bits_sz <= byte {
-            // The authority's line number, so a failing reallocation records what a consumer
-            // would see from the authority.
-            let tmp = CRYPTO_realloc(
-                (*provider).operation_bits.cast::<c_void>(),
-                byte + 1,
-                FILE,
-                2034,
-            )
-            .cast::<u8>();
+        // SAFETY: `provider` is live and the write lock is held, so the pair is exclusively ours
+        // and obeys the member-buffer invariant.
+        let mut bits = OpBitsSlot::of(
+            ptr::addr_of_mut!((*provider).operation_bits),
+            ptr::addr_of_mut!((*provider).operation_bits_sz),
+        );
+        if bits.len() <= byte {
+            let Some(new_len) = byte.checked_add(1) else {
+                CRYPTO_THREAD_unlock((*provider).opbits_lock);
+                return 0;
+            };
+            let old_len = bits.len();
+            // SAFETY: `new_len > 0` and the caller fills the bytes this publishes below.
+            let tmp = bits.realloc(new_len);
             if tmp.is_null() {
                 CRYPTO_THREAD_unlock((*provider).opbits_lock);
                 return 0;
             }
-            (*provider).operation_bits = tmp;
-            // The gap: everything from the old size to `byte` inclusive is zeroed.
-            ptr::write_bytes(
-                tmp.add((*provider).operation_bits_sz),
-                0,
-                byte + 1 - (*provider).operation_bits_sz,
-            );
-            (*provider).operation_bits_sz = byte + 1;
+            // The gap: everything from the old size to `byte` inclusive is zeroed. `realloc`
+            // preserves the old bytes and says nothing about the new ones.
+            // SAFETY: `tmp` is the live block of `new_len` bytes and the range is in bounds.
+            ptr::write_bytes(tmp.add(old_len), 0, new_len - old_len);
         }
-        // SAFETY: `operation_bits_sz > byte`, so `byte` is in bounds.
-        *(*provider).operation_bits.add(byte) |= bit;
+        // SAFETY: the invariant and `bits` publication make `byte` in bounds.
+        if let Some(b) = bits.byte_mut(byte) {
+            *b |= bit;
+        }
         CRYPTO_THREAD_unlock((*provider).opbits_lock);
     }
     1
