@@ -662,6 +662,34 @@ package.
 - Gate: `fmt` 0, clippy 0, **1242 passed / 18 ignored**, adv-probe **18/18**.
   Trait status: **39 of 41 unified**, 2 deliberately local with reasons.
 
+### Subphase 63 — constant-coordinate OwnedCtx unification
+
+- Nine local `OwnedCtx`/`RawCtx` copies with trait-const coordinates were exact
+  matches for the canonical types: provider ec_kem/ecx_kmgmt/file_store/
+  mac_legacy_kmgmt/seed_src/skeymgmt/decode_der2key/encode_key2any and
+  store_lib. `new()`/`new_zeroed()` call sites map to the canonical `zalloc()`;
+  every const pair equals the old coordinates. Adversarial review **PASS**.
+- Gate: `fmt` 0, clippy 0, **1242 passed / 18 ignored**, adv-probe **18/18**.
+
+### Subphase 64 — per-call-coordinate OwnedCtx unification
+
+- The canonical `OwnedCtx`/`RawCtx` now carry private per-call release
+  coordinates (defaulting to the trait consts), with `zalloc_at`, `malloc_at`,
+  `from_raw_at` and a metadata-only release-line setter.
+- Twenty-four module-local copies migrated: async_wait, ct log/sct/sct_ctx,
+  dso, eng_dyn, evp asymcipher/digest/exchange/pkey/pkey_ctx, provider/keymgmt,
+  rand_lib, ssl_sess, and x509 by_dir/by_store/v3_lib/v3_purp/v3_utl/x509_lu/
+  x509_trust/x509_vfy/x509_vpm/x_crl.
+- Adversarial review **FAILED** an intermediate version on two soundness points:
+  a safe `release_block` that could skip `destroy_body`, and
+  `OwnedCtx::malloc_at` that could drop uninitialised storage on unwind. Both
+  APIs were removed; former malloc sites now use `RawCtx` + `assume_init`, and
+  dso keeps a `RawCtx` until initialization completes. Re-check **PASS**.
+- Gate: `fmt` 0, clippy 0, **1242 passed / 18 ignored**, adv-probe **18/18**.
+  Owner status: 24 of the 52 remaining local `OwnedCtx`/`RawCtx` copies were
+  unified in this subphase; **28 remain** (11 carry other per-instance state,
+  7 bind a different destroy trait, 8 have bespoke shapes, 2 are adoption-only).
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -839,7 +867,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `952c4ab80` (CtxDestroy adjudication merged)
+**Last observed HEAD:** `b14cb9322` (per-call OwnedCtx unification merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
