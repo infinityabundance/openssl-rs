@@ -488,6 +488,19 @@ package.
 - Adversarial review **PASS** on the inspected hunks. Gate: `fmt` 0, clippy 0,
   **1230 passed / 18 ignored**, adv-probe **18/18**. Progress: **51 of 173**.
 
+### Subphase 51 — B-P plain buffers, second half
+
+- Nineteen more copies migrated (provider ml_kem_codecs/mod/rsa_enc/seed_src/
+  sm2_sig, rsa/pmeth, runtime conf/def + confmod/mod + str, sm2/sign,
+  srp/srp_lib, ssl ssl_asn1/ssl_cert_comp/ssl_conf/t1_lib/tls_srp, x509
+  x509_req/x509_vpm/x_pubkey); 95 adoption sites, each with a SAFETY note.
+- `rsa_enc.oaep_label` and `sm2_sig.id` hand-offs keep the field as sole owner;
+  every new `let-else` replaced an Option-returning adopt, so no NULL became a
+  new error. Seven files needing dynamic release re-pointing, array allocation
+  or realloc stay local.
+- Adversarial review **PASS**. Gate: `fmt` 0, clippy 0, **1230 passed / 18
+  ignored**, adv-probe **18/18**. Progress: **70 of 173**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -665,7 +678,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `64dd7e241` (B-P first half merged)
+**Last observed HEAD:** `bd20902f0` (B-P second half merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -714,9 +727,10 @@ the unsafe-obligation denominator now exists.
 
 **Next in sequence:** continue consolidating the IDENTICAL module-local owner
 helpers in disjoint staged groups. Done: `B-R1a` (13), `B-R1b` (14), `B-R3` (4),
-`B-P` first half (20). Remaining: `B-P` second half (26 files listed in
-`OWNER-DUPLICATES.md`), `B-L` (8), `B-Z` (13), `B-CA-FL` (5), `B-CA-0` (5),
-`B-CF-FL` (3); then `OwnedStr` (33) and `OwnedBlock` (15). Do not
+`B-P` (39 of 52; 13 need shared-API extensions). Remaining: `B-P` exclusions
+(13), `B-Z` (13), `B-L` (8), `B-CA-FL` (5), `B-CA-0` (5), `B-CF-FL` (3); then
+`OwnedStr` (33) and `OwnedBlock` (15), plus the small OwnedIkm/OwnedUniPass/
+OwnedScratch/constant-char* groups (8). Do not
 touch the 26 DIFFERENT or 126 MUST-STAY-LOCAL copies. Each group needs a caller
 inventory, adversarial review and a fresh gate. Afterwards, the
 `CtxDestroy`/`CipherDestroy` shared-trait migration that unblocks the 61 local
