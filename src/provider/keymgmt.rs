@@ -161,6 +161,7 @@ use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc,
 };
 use crate::runtime::obj::NID_undef;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::selftest::OsslCallback;
 
 /// The generated unit's own `__FILE__`, for `OPENSSL_zalloc`'s allocation attribution.
@@ -617,53 +618,6 @@ impl Drop for OwnedStr {
         // SAFETY: `self.ptr` is the block the seam answered and has not handed out; its single
         // release is the authority's own plain `CRYPTO_free`.
         unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
-
-/// An owned, secret-bearing byte block from this unit's `CRYPTO_memdup`/`CRYPTO_clear_free` seam: a
-/// `DhGenCtx`'s FIPS186-4 `seed`.
-struct OwnedBuf {
-    ptr: *mut u8,
-    len: usize,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Adopt a block this unit allocated, or `None` for NULL; `len` is the block's length and
-    /// `file`/`line` is the authority's release site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block this unit allocated through the crate's `CRYPTO_*` seam in
-    /// full (not a sub-range) and no other owner will release; `len` is its length.
-    unsafe fn take(ptr: *mut u8, len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf {
-                ptr,
-                len,
-                file,
-                line,
-            })
-        }
-    }
-
-    /// Give up ownership of the block to the context that takes it over.
-    fn into_raw(self) -> *mut u8 {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release: the authority's own `OPENSSL_clear_free`, cleansing the seed over
-    /// its recorded length before the allocator frees it.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; `self.len` is its
-        // allocation length; the authority's own `CRYPTO_clear_free` accepts NULL.
-        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, self.file, self.line) };
     }
 }
 
@@ -1318,7 +1272,9 @@ unsafe fn dh_set_gen_seed(gctx: *mut DhGenCtx, seed: *mut u8, seedlen: usize) ->
     // SAFETY: `gctx` is live per the contract; its own `seed`/`seedlen` are the field this call
     // replaces, and `seed` is readable for `seedlen` bytes.
     unsafe {
-        drop(OwnedBuf::take(
+        // SAFETY: the field was allocated by `CRYPTO_memdup(seed, seedlen)` in this unit, so
+        // `seedlen` is both its allocation length and the cleansing length.
+        drop(OwnedBuf::adopt_cleansed(
             (*gctx).seed,
             (*gctx).seedlen,
             FILE_DH_KMGMT,
@@ -1327,7 +1283,9 @@ unsafe fn dh_set_gen_seed(gctx: *mut DhGenCtx, seed: *mut u8, seedlen: usize) ->
         (*gctx).seed = ptr::null_mut();
         (*gctx).seedlen = 0;
         if !seed.is_null() && seedlen > 0 {
-            let Some(dup) = OwnedBuf::take(
+            // SAFETY: `CRYPTO_memdup` answers NULL or a `seedlen`-byte block, so `seedlen` is both
+            // its allocation length and the cleansing length; no other owner will release it.
+            let Some(dup) = OwnedBuf::adopt_cleansed(
                 CRYPTO_memdup(seed.cast(), seedlen, FILE_DH_KMGMT, 521).cast::<u8>(),
                 seedlen,
                 FILE_DH_KMGMT,

@@ -123,7 +123,7 @@ use crate::mac::hmac::{
 use crate::runtime::constant_time::constant_time_msb_u32;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{err_clear_last_constant_time, raise_site};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::sparse_array::{
     ossl_sa_doall_arg, ossl_sa_free, ossl_sa_get, ossl_sa_new, ossl_sa_set, OpenSslSa, OsslUintMax,
 };
@@ -166,45 +166,6 @@ const FILE_RSA_CRPT: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_cr
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The four crypt entry points share the authority's shape: a `CRYPTO_malloc(num, FILE_RSA_OSSL,
-/// LINE)` block whose single release is the cleansing `CRYPTO_clear_free(buf, num, FILE_RSA_OSSL,
-/// LINE)`. The block stays that `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
-/// `Box`/`Vec` would hide it from a caller-installed `CRYPTO_set_mem_functions` hook -- and only its
-/// *ownership* is this type: [`Self::new_cleansed`] allocates it and `Drop` is its single release.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    num: usize,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(num, file, line)` for a block whose release is the cleansing
-    /// `CRYPTO_clear_free(ptr, num, file, line)`, or `None` when the allocator answers NULL.
-    fn new_cleansed(num: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(num, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf { ptr: raw, num })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release: the authority's own `CRYPTO_clear_free`, cleansing the block
-    /// over its recorded length before the allocator frees it.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released, readable for
-        // `self.num` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
-        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.num, FILE_RSA_OSSL, LINE) };
-    }
-}
 
 /// `RSA_FLAG_FIPS_METHOD` — `include/openssl/rsa.h:468`. The word `rsa_pkcs1_ossl_meth` carries as
 /// its `flags` member.

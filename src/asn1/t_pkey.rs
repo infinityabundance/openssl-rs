@@ -35,50 +35,12 @@ use crate::ffi::guard_ffi;
 use crate::runtime::bio::iolib::{BIO_puts, BIO_write};
 use crate::runtime::bio::print::{BIO_indent, BIO_printf};
 use crate::runtime::bio::Bio;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The authority translation unit for the two printers.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/asn1/t_pkey.c";
 /// The authority passes `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 pub(crate) const LINE: c_int = 0;
-
-/// An owned temporary from this unit's `CRYPTO_malloc`/`CRYPTO_clear_free` seam.
-///
-/// The block keeps the authority's size and its own `__FILE__`/`__LINE__` (observable to
-/// a caller-installed `CRYPTO_set_mem_functions` hook); its *ownership* is this type: the
-/// constructor allocates it and `Drop` is its single **cleansing** release, which is the
-/// authority's `OPENSSL_clear_free(buf, buflen)` on both of its exit paths.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    len: usize,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const core::ffi::c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr: raw, len })
-        }
-    }
-
-    /// The start of the block, for the raw calls that read or write it.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release: the authority's `OPENSSL_clear_free` over its length.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released, and
-        // `self.len` is its allocation length; `CRYPTO_clear_free` cleanses that many
-        // bytes first and accepts NULL.
-        unsafe { CRYPTO_clear_free(self.ptr.cast(), self.len, FILE.as_ptr(), LINE) };
-    }
-}
 
 /// `ASN1_BUF_PRINT_WIDTH` — octets per line.
 const ASN1_BUF_PRINT_WIDTH: usize = 15;
@@ -219,7 +181,7 @@ pub unsafe extern "C" fn ASN1_bn_print(
 
         let buflen = nbytes as usize + 1;
         // The local owner is the authority's single cleansing free on both exit paths.
-        let Some(buf) = OwnedBuf::new(buflen, FILE.as_ptr(), LINE) else {
+        let Some(buf) = OwnedBuf::new_cleansed(buflen, FILE.as_ptr(), LINE) else {
             return 0;
         };
         // SAFETY: `buf` owns `buflen` bytes and `buflen >= 2`.
