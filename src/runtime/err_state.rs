@@ -46,7 +46,7 @@
 //!   how a lazy clear is honoured across the boundary.
 
 use crate::runtime::err::{
-    with_state, ErrState, OwnedErrState, OwnedSlotBuf, ERR_FLAG_CLEAR_FLAG, ERR_STATE_SLOTS,
+    slot_buf_alloc, with_state, ErrState, OwnedErrState, ERR_FLAG_CLEAR_FLAG, ERR_STATE_SLOTS,
     ERR_TXT_MALLOCED_FLAG,
 };
 
@@ -232,7 +232,7 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_restore(es: *const ErrState) {
                 // The copy is a fresh seam allocation handed to the slot raw; its release is the
                 // slot's `Drop` path. A refused allocation skips the copy, as the authority's own
                 // NULL `CRYPTO_malloc` does.
-                if let Some(copy) = OwnedSlotBuf::alloc(size) {
+                if let Some(copy) = slot_buf_alloc(size) {
                     // SAFETY: `copy` is `size` fresh bytes and the source holds at least that
                     // many, per its own size field.
                     unsafe {
