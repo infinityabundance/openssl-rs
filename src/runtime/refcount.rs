@@ -17,16 +17,21 @@
 //!
 //! ## Divergence from the authority (§17)
 //!
-//! The authority's over-free is undefined behaviour (`REF_ASSERT_ISNT(i < 0)` is compiled
-//! out under `NDEBUG`) and its `CRYPTO_UP_REF` on a zero count increments to one and then
-//! reports failure. This protocol deliberately does not reproduce the UB: a `*_free` that
+//! An over-free in the authority drives the count negative (the atomic arithmetic itself is
+//! defined two's-complement, but the `REF_ASSERT_ISNT(i < 0)` diagnostic is compiled out
+//! under `NDEBUG`), and the resulting second teardown is undefined behaviour. Its
+//! `CRYPTO_UP_REF` on a zero count increments to one and then reports failure. This
+//! protocol deliberately does not reproduce either defect: a `*_free` that
 //! observes zero or [`REF_DESTROYING`] while the object's storage is still live is a
 //! defined no-op, and `*_up_ref` reports failure without changing the count. At
-//! `i32::MAX` the authority's `CRYPTO_UP_REF` computes `n + 1`, which is signed overflow
-//! (undefined behaviour in C); this implementation uses a checked add, reports failure
-//! (`0`) and leaves the count unchanged, consistent with its refusal of a zero or
-//! destroying count. On a live object with a positive count both operations preserve the
-//! authority's observable answer and ordering.
+//! `i32::MAX` the authority's atomic `CRYPTO_UP_REF` wraps the signed count to `i32::MIN`
+//! and leaves it there: C11 defines signed atomic fetch-add as two's-complement
+//! wraparound, so the atomic profile's result is defined rather than UB, and the public
+//! wrapper reports failure because the new value is not greater than one. This
+//! implementation uses a checked add: it reports the same public failure (`0`) but leaves
+//! the count unchanged instead of wrapping it into this module's destroying sentinel or a
+//! negative live count. On a live object with a positive count both operations preserve
+//! the authority's observable answer and ordering.
 
 use core::ffi::c_int;
 use core::sync::atomic::{AtomicI32, Ordering};
@@ -92,10 +97,12 @@ pub(crate) fn up_ref(refs: &AtomicI32) -> c_int {
         if n == REF_DESTROYING || n <= 0 {
             return 0;
         }
-        // A live count at `i32::MAX` cannot be incremented: the authority's `n + 1` is
-        // signed overflow (UB in C), and wrapping to `i32::MIN` would fabricate the
-        // destroying sentinel. Refuse without modifying the count, matching the zero and
-        // destroying answers.
+        // A live count at `i32::MAX` cannot be incremented by this crate: the authority's
+        // C11/GNU atomic path wraps it to `i32::MIN` (defined two's-complement behaviour,
+        // C11 7.17.7.5), and its non-atomic fallback's `n + 1` may overflow (undefined
+        // behaviour in C). Here a wrap would fabricate the destroying sentinel, so the
+        // checked add refuses without modifying the count, matching the zero and destroying
+        // answers.
         let Some(next) = n.checked_add(1) else {
             return 0;
         };
@@ -111,6 +118,9 @@ pub(crate) fn up_ref(refs: &AtomicI32) -> c_int {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::Barrier;
+    use std::thread;
 
     #[test]
     fn ref_destroying_never_matches_a_live_count() {
@@ -154,5 +164,199 @@ mod tests {
         assert_eq!(refs.load(Ordering::Relaxed), 2);
         assert_eq!(up_ref(&refs), 1);
         assert_eq!(refs.load(Ordering::Relaxed), 3);
+    }
+
+    /// Every holder that acquired a reference releases it exactly once. With `THREADS`
+    /// holders racing on the last release, exactly one observes `Last` and the rest observe
+    /// `Remaining`; a later release must observe `Retired`, never a second `Last`.
+    ///
+    /// This is protocol-level evidence: the object is live, and the count holds `THREADS`
+    /// references, but the test does not require a distinct per-thread token before each
+    /// `down_ref`. It is not evidence that an arbitrary caller conforms to the C contract.
+    #[test]
+    fn many_threads_last_release_is_unique() {
+        const THREADS: usize = 8;
+
+        let refs = AtomicI32::new(THREADS as i32);
+        let barrier = Barrier::new(THREADS);
+        let last = AtomicUsize::new(0);
+        let remaining = AtomicUsize::new(0);
+        let retired = AtomicUsize::new(0);
+
+        thread::scope(|scope| {
+            for _ in 0..THREADS {
+                scope.spawn(|| {
+                    barrier.wait();
+                    match down_ref(&refs) {
+                        DownRef::Last => {
+                            last.fetch_add(1, Ordering::Relaxed);
+                        }
+                        DownRef::Remaining => {
+                            remaining.fetch_add(1, Ordering::Relaxed);
+                        }
+                        DownRef::Retired => {
+                            retired.fetch_add(1, Ordering::Relaxed);
+                        }
+                    }
+                });
+            }
+        });
+
+        assert_eq!(
+            last.load(Ordering::Acquire),
+            1,
+            "exactly one caller may claim the last reference"
+        );
+        assert_eq!(
+            remaining.load(Ordering::Acquire),
+            THREADS - 1,
+            "every other holder releases a non-final reference"
+        );
+        assert_eq!(
+            retired.load(Ordering::Acquire),
+            0,
+            "no holder may observe a retired object"
+        );
+        assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
+        assert!(matches!(down_ref(&refs), DownRef::Retired));
+        assert_eq!(refs.load(Ordering::Relaxed), REF_DESTROYING);
+    }
+
+    /// One base reference is held for the whole test. Each worker repeatedly acquires and
+    /// releases its own reference; because the base reference is never released until every
+    /// worker has joined, no worker may observe `Retired` or a refused increment, and the
+    /// base release is the unique `Last`.
+    ///
+    /// This is protocol-level evidence: a worker calls `up_ref` without previously holding a
+    /// reference of its own (the authority permits incrementing any live, non-retiring
+    /// object). It is not conforming-caller evidence.
+    #[test]
+    fn concurrent_increments_and_decrements_conserve_ownership() {
+        const THREADS: usize = 8;
+        const ITERATIONS: usize = 1_000;
+
+        let refs = AtomicI32::new(1);
+        let barrier = Barrier::new(THREADS);
+
+        thread::scope(|scope| {
+            for _ in 0..THREADS {
+                scope.spawn(|| {
+                    barrier.wait();
+                    for _ in 0..ITERATIONS {
+                        assert_eq!(
+                            up_ref(&refs),
+                            1,
+                            "increment with a live base reference must succeed"
+                        );
+                        assert!(
+                            matches!(down_ref(&refs), DownRef::Remaining),
+                            "a worker holding the base reference must not retire the object"
+                        );
+                    }
+                });
+            }
+        });
+
+        assert!(matches!(down_ref(&refs), DownRef::Last));
+        assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
+        assert!(matches!(down_ref(&refs), DownRef::Retired));
+    }
+
+    /// A release racing an increment must end in one of two consistent states: either the
+    /// release claimed the object (and the increment is refused), or the increment won (and
+    /// the release is non-final). No interleaving may resurrect an object whose last
+    /// reference already claimed the sentinel.
+    ///
+    /// This is a protocol-level sampler, not conforming-caller evidence: it does not require
+    /// a thread to hold a reference before `up_ref`, and it does not require both branches to
+    /// occur in any run. It requires whichever outcome occurs to satisfy its invariant.
+    #[test]
+    fn up_ref_racing_last_release_never_resurrects() {
+        const ROUNDS: usize = 2_000;
+
+        let mut last_rounds = 0usize;
+        let mut increment_rounds = 0usize;
+
+        for _ in 0..ROUNDS {
+            let refs = AtomicI32::new(1);
+            let barrier = Barrier::new(2);
+            // `0` = `Remaining`, `1` = `Last`, `2` = `Retired`; `-1` is "not recorded".
+            let down_code = AtomicI32::new(-1);
+            let up_result = AtomicI32::new(-1);
+
+            thread::scope(|scope| {
+                scope.spawn(|| {
+                    barrier.wait();
+                    let code = match down_ref(&refs) {
+                        DownRef::Remaining => 0,
+                        DownRef::Last => 1,
+                        DownRef::Retired => 2,
+                    };
+                    down_code.store(code, Ordering::Release);
+                });
+                scope.spawn(|| {
+                    barrier.wait();
+                    up_result.store(up_ref(&refs), Ordering::Release);
+                });
+            });
+
+            let down_code = down_code.load(Ordering::Acquire);
+            let up_result = up_result.load(Ordering::Acquire);
+
+            assert!(
+                up_result == 0 || up_result == 1,
+                "up_ref must answer exactly 0 or 1"
+            );
+            assert_ne!(
+                down_code, 2,
+                "a release starting from one reference cannot observe a retired object"
+            );
+            if down_code == 1 {
+                // The release claimed the sentinel. The increment must be refused, and no
+                // later increment may resurrect the object.
+                assert_eq!(up_result, 0, "a winning release must refuse the increment");
+                assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
+                assert_eq!(
+                    up_ref(&refs),
+                    0,
+                    "a destroying object must not be resurrected"
+                );
+                assert!(matches!(down_ref(&refs), DownRef::Retired));
+                last_rounds += 1;
+            } else {
+                // The increment landed first, so the release was non-final and the
+                // increment's reference is the one that remains. Releasing it is then the
+                // unique `Last`.
+                assert_eq!(down_code, 0);
+                assert_eq!(up_result, 1, "a non-final release means the increment won");
+                assert!(matches!(down_ref(&refs), DownRef::Last));
+                assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
+                assert!(matches!(down_ref(&refs), DownRef::Retired));
+                increment_rounds += 1;
+            }
+        }
+
+        assert_eq!(
+            last_rounds + increment_rounds,
+            ROUNDS,
+            "every round must end in one of the two consistent outcomes"
+        );
+    }
+
+    /// Both outcome classes are reachable on a live object: a successful increment and a
+    /// non-final release, then the unique final release, the sentinel, a refused increment
+    /// and a no-op release. Deterministic, so it does not depend on scheduling.
+    #[test]
+    fn up_ref_down_ref_outcome_classes_are_reachable() {
+        let refs = AtomicI32::new(1);
+
+        assert_eq!(up_ref(&refs), 1);
+        assert_eq!(refs.load(Ordering::Relaxed), 2);
+        assert!(matches!(down_ref(&refs), DownRef::Remaining));
+        assert_eq!(refs.load(Ordering::Relaxed), 1);
+        assert!(matches!(down_ref(&refs), DownRef::Last));
+        assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
+        assert_eq!(up_ref(&refs), 0);
+        assert!(matches!(down_ref(&refs), DownRef::Retired));
     }
 }
