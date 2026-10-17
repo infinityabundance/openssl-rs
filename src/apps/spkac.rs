@@ -46,11 +46,12 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_int, c_long};
+use core::ffi::{c_char, c_int, c_long};
 
 use crate::apps::openssl::not_landed;
 use crate::apps::opt::{OptMatch, Opts};
 use crate::apps::tables::SPKAC_OPTIONS;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::t_spki::NETSCAPE_SPKI_print;
 use crate::asn1::x_spki::NETSCAPE_SPKI_free;
 use crate::pem::pem_all::PEM_write_bio_PUBKEY;
@@ -240,7 +241,10 @@ pub fn main(argv: &[String]) -> i32 {
     if passinarg.is_some() {
         return not_landed("spkac -passin");
     }
-    let passin: *mut core::ffi::c_char = core::ptr::null_mut();
+    // `app_passwd` hands the caller one `OPENSSL_malloc` block; that helper is unlanded, so the
+    // block is always NULL here. The empty owner is the authority's `OPENSSL_free(passin)` at
+    // `apps/spkac.c:241` -- a NULL no-op at the seam -- released once when this frame ends.
+    let _passin: Option<OwnedBlock<c_char>> = None;
 
     if keyfile.is_some() {
         // `if (keyfile != NULL) { ... }` — `apps/spkac.c:154-191`. The signing arm
@@ -371,7 +375,5 @@ pub fn main(argv: &[String]) -> i32 {
     unsafe { BIO_free_all(out) };
     // SAFETY: `pkey` is live and not freed again.
     unsafe { crate::evp::pkey::EVP_PKEY_free(pkey) };
-    // SAFETY: `passin` is NULL here (the named path is unlanded).
-    unsafe { crate::runtime::mem::CRYPTO_free(passin.cast(), core::ptr::null(), 0) };
     ret
 }

@@ -44,6 +44,7 @@ use crate::apps::opt::{OptMatch, Opts};
 use crate::apps::tables::ASN1PARSE_OPTIONS;
 use crate::asn1::der::ASN1_parse_dump;
 use crate::asn1::layout::Asn1Item;
+use crate::asn1::owned::OwnedBlock;
 use crate::evp::pem_bridge::PEM_read_bio;
 use crate::runtime::bio::iolib::BIO_read;
 use crate::runtime::buffer::{BUF_MEM_free, BUF_MEM_grow, BUF_MEM_new};
@@ -309,6 +310,16 @@ pub fn main(argv: &[String]) -> i32 {
             unsafe { BUF_MEM_free(buf) };
             return ret;
         }
+        // `name`/`header` are the generic PEM reader's own blocks (`pem_malloc`, which is a
+        // `CRYPTO_malloc` for this flag profile). The authority frees them at `end:` with
+        // `OPENSSL_free`, so each is adopted here and released exactly once by the owner's
+        // `Drop` at the authority's (NULL, 0) coordinate.
+        // SAFETY: the successful `PEM_read_bio` transferred exclusive ownership of each block to
+        // this frame; each is NULL or a whole NUL-terminated allocation from the crate's
+        // allocator seam, and neither is released anywhere else.
+        let _name = unsafe { OwnedBlock::<c_char>::from_raw(name, core::ptr::null(), 0) };
+        // SAFETY: as above for `header`; the reader's allocation is whole and exclusively owned.
+        let _header = unsafe { OwnedBlock::<c_char>::from_raw(header, core::ptr::null(), 0) };
         // `buf->data = (char *)str; buf->length = buf->max = num;` —
         // `apps/asn1parse.c:199-200`.
         // SAFETY: `buf` is live and uniquely owned here.
@@ -316,17 +327,6 @@ pub fn main(argv: &[String]) -> i32 {
             (*buf).data = strp.cast::<c_char>();
             (*buf).length = num as usize;
             (*buf).max = num as usize;
-        }
-        // The authority leaks `name`/`header` into locals it frees at `end`; mirror the
-        // free here (they are the reader's own allocations).
-        // SAFETY: `name`/`header` are NULL or the `PEM_read_bio` allocations.
-        unsafe {
-            if !name.is_null() {
-                libc_free(name.cast());
-            }
-            if !header.is_null() {
-                libc_free(header.cast());
-            }
         }
         // SAFETY: `buf` is live.
         strp = unsafe { (*buf).data.cast::<c_uchar>() };
@@ -346,9 +346,11 @@ pub fn main(argv: &[String]) -> i32 {
         // does not select it. `BIO_read` on the raw input follows.
         // SAFETY: `buf` is live.
         let mut n: c_long = 0;
-        loop {
+        // The authority's `(unsigned long)n + BUFSIZ`, checked so a wrapped request can never
+        // reach `BUF_MEM_grow` and leave the following `BIO_read` writing past `data`.
+        while let Some(grow_to) = (n as usize).checked_add(BUFSIZ) {
             // SAFETY: `buf` is live.
-            if unsafe { BUF_MEM_grow(buf, (n as usize) + BUFSIZ) } == 0 {
+            if unsafe { BUF_MEM_grow(buf, grow_to) } == 0 {
                 break;
             }
             // SAFETY: `inbio` is live; the destination is `buf->data` with room for BUFSIZ.
@@ -444,14 +446,4 @@ pub fn main(argv: &[String]) -> i32 {
     // SAFETY: all three are NULL or live and not freed again.
     unsafe { BUF_MEM_free(buf) };
     ret
-}
-
-/// `OPENSSL_free` for the generic PEM reader's allocations. `PEM_read_bio` allocates
-/// `name`/`header` with `OPENSSL_malloc`, which for this crate is the C allocator.
-///
-/// # Safety
-/// `p` must be NULL or an `OPENSSL_malloc` block not freed elsewhere.
-unsafe fn libc_free(p: *mut core::ffi::c_void) {
-    // SAFETY: the caller's contract.
-    unsafe { crate::runtime::mem::CRYPTO_free(p, core::ptr::null(), 0) };
 }

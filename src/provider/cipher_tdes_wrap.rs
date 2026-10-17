@@ -121,13 +121,13 @@ use crate::provider::cipher::{
     ossl_cipher_generic_initkey, ossl_cipher_generic_set_ctx_params,
     ossl_cipher_generic_settable_ctx_params, ossl_cipher_generic_stream_final,
     ossl_cipher_hw_tdes_cbc, ossl_tdes_get_ctx_params, ossl_tdes_gettable_ctx_params, tdes_freectx,
-    ProvCipherCtx, ProvCipherHw, ProvTdesCtx, CTX_ENC, EVP_CIPH_WRAP_MODE, FILE_TDES, LINE,
+    OwnedCtx, ProvCipherCtx, ProvCipherHw, ProvTdesCtx, CTX_ENC, EVP_CIPH_WRAP_MODE,
     PROV_CIPHER_FLAG_CUSTOM_IV, PROV_CIPHER_FLAG_RAND_KEY,
 };
 use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::buffer::BUF_reverse;
 use crate::runtime::err::{err_reasons, err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_memcmp, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::mem::{CRYPTO_memcmp, OPENSSL_cleanse};
 
 /// `ERR_LIB_PROV` — `include/openssl/proverr.h`.
 const ERR_LIB_PROV: c_int = 57;
@@ -288,7 +288,11 @@ unsafe fn des_ede3_wrap(
         let mut sha1tmp = [0u8; SHA_DIGEST_LENGTH];
         let ivlen = TDES_IVLEN;
         let icvlen = TDES_IVLEN;
-        let len = inl + ivlen + icvlen;
+        // The authority's `inl + ivlen + icvlen`, checked so the length guard below can never be
+        // bypassed by a wrapped sum.
+        let Some(len) = inl.checked_add(ivlen).and_then(|n| n.checked_add(icvlen)) else {
+            return 0;
+        };
 
         if len > INT_MAX {
             return 0;
@@ -450,20 +454,26 @@ unsafe extern "C" fn tdes_wrap_newctx(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let tctx = CRYPTO_zalloc(core::mem::size_of::<ProvTdesCtx>(), FILE_TDES, LINE);
-        if !tctx.is_null() {
-            ossl_cipher_generic_initkey(
-                tctx,
-                64 * 3,
-                64,
-                0,
-                EVP_CIPH_WRAP_MODE,
-                TDES_WRAP_FLAGS,
-                ptr::addr_of!(TDES_WRAP_CBC_HW),
-                provctx,
-            );
-        }
-        tctx
+        // The authority's `CRYPTO_zalloc(sizeof(*ctx))` at `cipher_tdes_common.c`'s
+        // `ossl_tdes_newctx`; `OwnedCtx::new` allocates through the same seam at the same
+        // `FILE_TDES`/line, and a zeroed `PROV_TDES_CTX` is its valid constructed state. The
+        // owner's `Drop` is `ossl_tdes_freectx`: the member reset followed by the cleansing
+        // `CRYPTO_clear_free` of the whole block, which is why this context stays owned until
+        // the dispatch takes it.
+        let Some(tctx) = OwnedCtx::<ProvTdesCtx>::new() else {
+            return ptr::null_mut();
+        };
+        ossl_cipher_generic_initkey(
+            tctx.as_ptr().cast(),
+            64 * 3,
+            64,
+            0,
+            EVP_CIPH_WRAP_MODE,
+            TDES_WRAP_FLAGS,
+            ptr::addr_of!(TDES_WRAP_CBC_HW),
+            provctx,
+        );
+        tctx.into_raw().cast()
     }
 }
 
