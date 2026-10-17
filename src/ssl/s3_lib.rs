@@ -42,7 +42,7 @@ use crate::runtime::err::err_reasons::{
     SSL_R_SSL3_EXT_INVALID_SERVERNAME, SSL_R_SSL3_EXT_INVALID_SERVERNAME_TYPE,
 };
 use crate::runtime::err::raise_with;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem::CRYPTO_strdup;
 use crate::ssl::record::rec_layer_s3::{record_layer_read_pending, record_layer_write_pending};
 use crate::ssl::ssl_lib::{Ssl, SslCtx, TicketKeyEvpCb};
 use crate::ssl::statem::statem::{ossl_statem_set_renegotiate, SSL_in_init};
@@ -83,10 +83,9 @@ pub(crate) unsafe fn ssl3_ctrl_set_tlsext_host_name(
         return 0;
     }
     // SAFETY: `s` is live per the caller's contract.
-    unsafe {
-        CRYPTO_free((*s).ext_hostname.cast(), FILE, 4029);
-        (*s).ext_hostname = ptr::null_mut();
-    }
+    // SAFETY: `s` is live per the caller's contract and its `ext_hostname` member obeys the
+    // member-buffer invariant, so the handle releases the object's own single block at this site.
+    unsafe { (*s).ext_hostname_slot().clear(FILE, 4029) };
     if parg.is_null() {
         return 1;
     }
@@ -102,8 +101,9 @@ pub(crate) unsafe fn ssl3_ctrl_set_tlsext_host_name(
         raise_ssl(ERR_R_INTERNAL_ERROR, 4044);
         return 0;
     }
-    // SAFETY: `s` is live.
-    unsafe { (*s).ext_hostname = host };
+    // SAFETY: `s` is live and its `ext_hostname` member is empty (cleared above); `host` is this
+    // call's fresh exclusive `CRYPTO_strdup` block.
+    unsafe { (*s).ext_hostname_slot().store(host) };
     1
 }
 

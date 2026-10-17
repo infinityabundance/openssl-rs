@@ -47,7 +47,7 @@ use crate::runtime::bio::bss_file::BIO_s_file;
 use crate::runtime::bio::iolib::BIO_ctrl;
 use crate::runtime::bio::{BIO_free, BIO_new, Bio, BIO_CLOSE, BIO_C_SET_FILENAME, BIO_FP_READ};
 use crate::runtime::err::{raise_with, ERR_clear_error, ERR_peek_error};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_realloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::ssl::ssl_cert::{ssl_cert_lookup_by_pkey, ssl_security_cert, SSL_CERT_INFO};
 use crate::ssl::ssl_lib::SSL_is_quic;
@@ -317,7 +317,7 @@ pub unsafe extern "C" fn SSL_use_certificate_file(
             if in_.is_null() {
                 return 0;
             }
-            let mut x = X509_new_ex((*(*ssl).ctx).libctx, (*(*ssl).ctx).propq);
+            let mut x = X509_new_ex((*(*ssl).ctx).libctx, (*(*ssl).ctx).propq());
             if x.is_null() {
                 raise_ssl(ERR_R_ASN1_LIB, 79);
                 BIO_free(in_);
@@ -373,7 +373,7 @@ pub unsafe extern "C" fn SSL_CTX_use_certificate_file(
             if in_.is_null() {
                 return 0;
             }
-            let mut x = X509_new_ex((*ctx).libctx, (*ctx).propq);
+            let mut x = X509_new_ex((*ctx).libctx, (*ctx).propq());
             if x.is_null() {
                 raise_ssl(ERR_R_ASN1_LIB, 336);
                 BIO_free(in_);
@@ -421,7 +421,7 @@ pub unsafe extern "C" fn SSL_use_certificate_ASN1(
     guard_ffi(0, || {
         // SAFETY: `ssl` is live per the caller's contract.
         unsafe {
-            let mut x = X509_new_ex((*(*ssl).ctx).libctx, (*(*ssl).ctx).propq);
+            let mut x = X509_new_ex((*(*ssl).ctx).libctx, (*(*ssl).ctx).propq());
             if x.is_null() {
                 raise_ssl(ERR_R_ASN1_LIB, 118);
                 return 0;
@@ -453,7 +453,7 @@ pub unsafe extern "C" fn SSL_CTX_use_certificate_ASN1(
     guard_ffi(0, || {
         // SAFETY: `ctx` is live per the caller's contract.
         unsafe {
-            let mut x = X509_new_ex((*ctx).libctx, (*ctx).propq);
+            let mut x = X509_new_ex((*ctx).libctx, (*ctx).propq());
             if x.is_null() {
                 raise_ssl(ERR_R_ASN1_LIB, 368);
                 return 0;
@@ -540,14 +540,14 @@ pub unsafe extern "C" fn SSL_use_PrivateKey_file(
                     (*ssl).default_passwd_callback,
                     (*ssl).default_passwd_callback_userdata,
                     sc.libctx,
-                    sc.propq,
+                    sc.propq(),
                 );
                 (ERR_R_PEM_LIB, p)
             } else if type_ == SSL_FILETYPE_ASN1 {
                 let sc = &*(*ssl).ctx;
                 (
                     ERR_R_ASN1_LIB,
-                    d2i_PrivateKey_ex_bio(in_, ptr::null_mut(), sc.libctx, sc.propq),
+                    d2i_PrivateKey_ex_bio(in_, ptr::null_mut(), sc.libctx, sc.propq()),
                 )
             } else {
                 raise_ssl(SSL_R_BAD_SSL_FILETYPE, 208);
@@ -596,13 +596,13 @@ pub unsafe extern "C" fn SSL_CTX_use_PrivateKey_file(
                     (*ctx).default_passwd_callback,
                     (*ctx).default_passwd_callback_userdata,
                     (*ctx).libctx,
-                    (*ctx).propq,
+                    (*ctx).propq(),
                 );
                 (ERR_R_PEM_LIB, p)
             } else if type_ == SSL_FILETYPE_ASN1 {
                 (
                     ERR_R_ASN1_LIB,
-                    d2i_PrivateKey_ex_bio(in_, ptr::null_mut(), (*ctx).libctx, (*ctx).propq),
+                    d2i_PrivateKey_ex_bio(in_, ptr::null_mut(), (*ctx).libctx, (*ctx).propq()),
                 )
             } else {
                 raise_ssl(SSL_R_BAD_SSL_FILETYPE, 424);
@@ -639,7 +639,8 @@ pub unsafe extern "C" fn SSL_use_PrivateKey_ASN1(
         unsafe {
             let mut p = d;
             let sc = &*(*ssl).ctx;
-            let pkey = d2i_PrivateKey_ex(type_, ptr::null_mut(), &mut p, len, sc.libctx, sc.propq);
+            let pkey =
+                d2i_PrivateKey_ex(type_, ptr::null_mut(), &mut p, len, sc.libctx, sc.propq());
             if pkey.is_null() {
                 raise_ssl(ERR_R_ASN1_LIB, 233);
                 return 0;
@@ -673,7 +674,7 @@ pub unsafe extern "C" fn SSL_CTX_use_PrivateKey_ASN1(
                 &mut p,
                 len,
                 (*ctx).libctx,
-                (*ctx).propq,
+                (*ctx).propq(),
             );
             if pkey.is_null() {
                 raise_ssl(ERR_R_ASN1_LIB, 449);
@@ -717,7 +718,7 @@ unsafe fn use_certificate_chain_file(
         return 0;
     }
     // SAFETY: `real_ctx` is live.
-    let mut x = unsafe { X509_new_ex((*real_ctx).libctx, (*real_ctx).propq) };
+    let mut x = unsafe { X509_new_ex((*real_ctx).libctx, (*real_ctx).propq()) };
     if x.is_null() {
         raise_ssl(ERR_R_ASN1_LIB, 509);
         // SAFETY: `in_` is this frame's own BIO.
@@ -769,7 +770,7 @@ unsafe fn use_certificate_chain_file(
         }
         loop {
             // SAFETY: `real_ctx` is live.
-            let mut ca = unsafe { X509_new_ex((*real_ctx).libctx, (*real_ctx).propq) };
+            let mut ca = unsafe { X509_new_ex((*real_ctx).libctx, (*real_ctx).propq()) };
             if ca.is_null() {
                 raise_ssl(ERR_R_ASN1_LIB, 549);
                 ret = 0;
@@ -1239,18 +1240,20 @@ pub unsafe extern "C" fn SSL_CTX_use_serverinfo_ex(
                 return 0;
             }
             let cpk = crate::ssl::ssl_lib::cert_active_key((*ctx).cert);
-            // The block stays `CertKey`'s: the authority regrows its `serverinfo` in place and,
-            // on a refused regrowth, leaves the old block (and its `cert_pkey_clear` release)
-            // intact.
-            // SAFETY: `(*cpk).serverinfo` is NULL or the live block `CertKey` owns.
-            let new_serverinfo =
-                CRYPTO_realloc((*cpk).serverinfo.cast(), serverinfo_length, FILE, 839).cast::<u8>();
+            // The block stays `CertKey`'s: the authority regrows its `serverinfo` in place through
+            // `CRYPTO_realloc`, and on a refused regrowth the handle leaves the old block (and its
+            // `cert_pkey_clear` release) intact.
+            // SAFETY: `cpk` is live and its `serverinfo` pair obeys the blob member-buffer invariant.
+            let new_serverinfo = (*cpk)
+                .serverinfo_slot()
+                .realloc(serverinfo_length, FILE, 839);
             if new_serverinfo.is_null() {
                 return 0;
             }
-            (*cpk).serverinfo = new_serverinfo;
+            // SAFETY: `new_serverinfo` is the (possibly moved) block `(*cpk).serverinfo` now owns,
+            // writable for `serverinfo_length` bytes; `serverinfo` is readable for that many per the
+            // caller's contract.
             ptr::copy_nonoverlapping(serverinfo, new_serverinfo, serverinfo_length);
-            (*cpk).serverinfo_length = serverinfo_length;
             if serverinfo_process_buffer(version, serverinfo, serverinfo_length, ctx) == 0 {
                 raise_ssl(SSL_R_INVALID_SERVERINFO_DATA, 853);
                 return 0;

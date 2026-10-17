@@ -2177,10 +2177,10 @@ unsafe fn ssl_print_certificate(
     }
     // SAFETY: `ctx` is live or NULL.
     let (libctx, propq) = if ctx.is_null() {
-        (ptr::null_mut(), ptr::null_mut())
+        (ptr::null_mut(), ptr::null())
     } else {
         // SAFETY: the enclosing function's contract makes every pointer in this block valid.
-        (unsafe { (*ctx).libctx }, unsafe { (*ctx).propq })
+        (unsafe { (*ctx).libctx }, unsafe { (*ctx).propq() })
     };
     // SAFETY: a fresh certificate object.
     let mut x = unsafe { X509_new_ex(libctx, propq) };
@@ -2283,10 +2283,10 @@ unsafe fn ssl_print_raw_public_key(
     }
     // SAFETY: `ctx` live or NULL.
     let (libctx, propq) = if ctx.is_null() {
-        (ptr::null_mut(), ptr::null_mut())
+        (ptr::null_mut(), ptr::null())
     } else {
         // SAFETY: the enclosing function's contract makes every pointer in this block valid.
-        (unsafe { (*ctx).libctx }, unsafe { (*ctx).propq })
+        (unsafe { (*ctx).libctx }, unsafe { (*ctx).propq() })
     };
     // SAFETY: `msg` readable for `clen`.
     let pkey = unsafe {
