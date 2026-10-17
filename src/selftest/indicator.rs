@@ -15,11 +15,11 @@
 //! and that is why the two live in one module with two callback types rather than
 //! one generic holder.
 
-use core::ffi::{c_char, c_void};
+use core::ffi::{c_char, c_int, c_void};
 
 use crate::context::{lib_ctx_get_data, OSSL_LIB_CTX_INDICATOR_CB_INDEX};
 use crate::ffi::guard_ffi;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::selftest::OsslIndicatorCallback;
 
 /// The authority's translation unit, so a failing allocation records the
@@ -27,8 +27,12 @@ use crate::selftest::OsslIndicatorCallback;
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/indicator_core.c".as_ptr();
 /// `OPENSSL_zalloc(sizeof(*cb))` is at `crypto/indicator_core.c:20` and
 /// `OPENSSL_free(cb)` at 25.
-const LINE_ZALLOC: core::ffi::c_int = 20;
-const LINE_FREE: core::ffi::c_int = 25;
+const LINE_ZALLOC: c_int = 20;
+const LINE_FREE: c_int = 25;
+
+/// A second name for [`FILE`] for the [`CtxDestroy`] implementation below, whose associated
+/// `FILE` would otherwise shadow the module constant inside its own definition.
+const CTX_FILE: *const c_char = FILE;
 
 /// `struct indicator_cb_st` — one function pointer.
 #[repr(C)]
@@ -37,11 +41,32 @@ pub(crate) struct IndicatorCb {
     cb: Option<OsslIndicatorCallback>,
 }
 
+// SAFETY: (a) the holder owns neither the callback nor any argument, so `destroy_body` releases
+// nothing and never the enclosing block, which `OwnedCtx` releases -- matching the authority's
+// bare `OPENSSL_free(cb)`; (b) an all-zero block is a valid `IndicatorCb` (a NULL callback is
+// `None`) and `destroy_body` is sound on it.
+unsafe impl CtxDestroy for IndicatorCb {
+    const FILE: *const c_char = CTX_FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC;
+    const LINE_FREE: c_int = LINE_FREE;
+
+    /// `ossl_indicator_set_callback_free`'s body without the block release: the holder owns no
+    /// separately allocated member.
+    ///
+    /// # Safety
+    /// `ptr` is a live context this crate allocated and has not released (the trait contract).
+    unsafe fn destroy_body(_ptr: *mut Self) {}
+}
+
 /// `void *ossl_indicator_set_callback_new(OSSL_LIB_CTX *ctx)`
 ///
 /// The `ctx` argument is accepted and unused, as in the authority.
 pub(crate) fn ossl_indicator_set_callback_new(_ctx: *mut c_void) -> *mut IndicatorCb {
-    CRYPTO_zalloc(core::mem::size_of::<IndicatorCb>(), FILE, LINE_ZALLOC).cast::<IndicatorCb>()
+    // `OwnedCtx::zalloc` is the authority's `OPENSSL_zalloc(sizeof(*cb))` at
+    // `crypto/indicator_core.c:20`; a zeroed holder is the authority's constructed state. The
+    // returned raw pointer transfers ownership to the context slot, whose release edge is
+    // `ossl_indicator_set_callback_free`.
+    OwnedCtx::<IndicatorCb>::zalloc().map_or(core::ptr::null_mut(), OwnedCtx::into_raw)
 }
 
 /// `void ossl_indicator_set_callback_free(void *cb)` — accepts NULL.
@@ -50,12 +75,10 @@ pub(crate) fn ossl_indicator_set_callback_new(_ctx: *mut c_void) -> *mut Indicat
 /// `cb` must be NULL or a pointer returned by
 /// [`ossl_indicator_set_callback_new`] and not already released.
 pub(crate) unsafe fn ossl_indicator_set_callback_free(cb: *mut IndicatorCb) {
-    if cb.is_null() {
-        return;
-    }
-    // SAFETY: the block came from `CRYPTO_zalloc` in the constructor and is
-    // released exactly once here.
-    unsafe { CRYPTO_free(cb.cast::<c_void>(), FILE, LINE_FREE) };
+    // SAFETY: `cb` is NULL or a block a previous `into_raw` handed out and `Drop` has not
+    // released; `from_raw` reclaims it (NULL yields `None`), and its `Drop` runs the authority's
+    // `OPENSSL_free(cb)` at `crypto/indicator_core.c:25`.
+    drop(unsafe { OwnedCtx::<IndicatorCb>::from_raw(cb) });
 }
 
 /// `get_indicator_callback(libctx)` — the slot lookup.
