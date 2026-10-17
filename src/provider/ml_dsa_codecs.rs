@@ -23,7 +23,7 @@
 // publishes. The allow covers the former until those two units land.
 #![allow(dead_code)]
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_void, CStr};
+use core::ffi::{c_char, c_int, c_long, c_uchar, CStr};
 use core::ptr;
 
 use crate::asn1::layout::V_ASN1_UNDEF;
@@ -46,8 +46,9 @@ use crate::provider::ml_dsa_kmgmt::ossl_prov_ml_dsa_new;
 use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp, CRYPTO_memdup};
+use crate::runtime::mem::CRYPTO_memcmp;
 use crate::runtime::obj::OBJ_obj2nid;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The unit's own `__FILE__`. `ml_dsa_codecs.c` is a plain `.c`, so the compiler records the
 /// source-tree path with the build's relative prefix (D235).
@@ -398,100 +399,6 @@ fn ml_dsa_get_codec(evp_type: c_int) -> *const MlCommonCodec {
     }
 }
 
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays the authority's own allocation -- a `CRYPTO_memdup` for the public encoding
-/// buffer, a `CRYPTO_malloc` for the private encoding buffer, and the slot list
-/// `ossl_ml_common_pkcs8_fmt_order` answers. Only its *ownership* is this type: [`Self::new`]
-/// allocates the encoder's buffer, [`Self::memdup`] duplicates the public key, [`Self::adopt`] takes
-/// up the helper's list, `Drop` is its single release at the authority's own `file`/`line`, and
-/// [`Self::into_raw`] hands the block to the caller's `out` at the C ABI edge. A Rust `Vec` would
-/// hide the allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook,
-/// which is why only ownership moves.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line_alloc)`, whose `Drop` releases the block at
-    /// `file`/`line_free` (`ossl_ml_dsa_i2d_prvkey` allocates at `:341` and frees at `:405`), or
-    /// `None` when the allocator answers NULL.
-    fn new(
-        len: usize,
-        file: *const c_char,
-        line_alloc: c_int,
-        line_free: c_int,
-    ) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line_alloc).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line: line_free,
-        })
-    }
-
-    /// `CRYPTO_memdup(src, len, file, line)`, whose `Drop` would release the block at
-    /// `file`/`line`, or `None` when the allocator answers NULL.
-    ///
-    /// # Safety
-    /// `src` is readable for `len` bytes.
-    unsafe fn memdup(
-        src: *const c_void,
-        len: usize,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<OwnedBuf> {
-        // SAFETY: `src` is readable for `len` bytes per the contract.
-        let raw = unsafe { CRYPTO_memdup(src, len, file, line) }.cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Take up a plain block a helper allocated (the slot list `ossl_ml_common_pkcs8_fmt_order`
-    /// answers), for release by `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf { ptr, file, line })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the caller's `out` pointer.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
-
 /// Raise `prefix || alg || suffix` through `site`.
 ///
 /// # Safety
@@ -762,7 +669,11 @@ pub(crate) unsafe fn ossl_ml_dsa_d2i_PKCS8(
 
     // SAFETY: `slots` is NULL or this frame's list; `p8inf` is live.
     unsafe {
-        drop(OwnedBuf::adopt(slots.cast(), FILE, LINE_FREE_IN_SLOTS));
+        drop(OwnedBuf::adopt_plain(
+            slots.cast(),
+            FILE,
+            LINE_FREE_IN_SLOTS,
+        ));
         PKCS8_PRIV_KEY_INFO_free(p8inf);
         if ret.is_null() {
             ossl_ml_dsa_key_free(key);
@@ -799,7 +710,7 @@ pub(crate) unsafe fn ossl_ml_dsa_i2d_pubkey(key: *const MlDsaKey, out: *mut *mut
     }
     // SAFETY: `pk` is readable for `pk_len` and the allocation is the authority's own.
     let Some(dup) =
-        (unsafe { OwnedBuf::memdup(pk.cast(), (*params).pk_len, FILE, LINE_MEMDUP_PUB) })
+        (unsafe { OwnedBuf::new_memdup(pk.cast(), (*params).pk_len, FILE, LINE_MEMDUP_PUB) })
     else {
         return 0;
     };
@@ -904,7 +815,13 @@ pub(crate) unsafe fn ossl_ml_dsa_i2d_prvkey(
                 break 'end;
             }
 
-            let Some(b) = OwnedBuf::new(len as usize, FILE, LINE_MALLOC, LINE_FREE_OUT_BUF) else {
+            let Some(b) = OwnedBuf::new_plain_released(
+                len as usize,
+                FILE,
+                LINE_MALLOC,
+                FILE,
+                LINE_FREE_OUT_BUF,
+            ) else {
                 break 'end;
             };
             let buf_ptr = b.as_ptr();
@@ -987,7 +904,7 @@ pub(crate) unsafe fn ossl_ml_dsa_i2d_prvkey(
     }
 
     // SAFETY: `fmt_slots` is NULL or this frame's list.
-    drop(unsafe { OwnedBuf::adopt(fmt_slots.cast(), FILE, LINE_FREE_OUT_SLOTS) });
+    drop(unsafe { OwnedBuf::adopt_plain(fmt_slots.cast(), FILE, LINE_FREE_OUT_SLOTS) });
     // `buf` still holds the block only when it was not handed to the caller's `out`; its `Drop`
     // releases it at the authority's own `:405`.
     drop(buf);

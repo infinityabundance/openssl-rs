@@ -65,6 +65,7 @@ use crate::runtime::ctype_table::mask::MASK_UPPER;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::obj::{Asn1Object, OBJ_dup};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_set, OPENSSL_sk_value, OpenSslStack,
@@ -103,57 +104,6 @@ const LINE_CANON_MALLOC: c_int = 369;
 const LINE_FREE_PRINT: c_int = 533;
 /// `X509_NAME_print`'s error-path `OPENSSL_free(b)` (`:537`).
 const LINE_FREE_PRINT_ERR: c_int = 537;
-
-// ---------------------------------------------------------------------------------------------
-// Ownership of a scratch buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `X509_NAME_oneline` printer allocation (`CRYPTO_malloc`) at the authority's
-/// exact size/`file`/`line` -- a Rust `Box`/`Vec` would hide both the allocation and its release
-/// from a caller-installed `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type:
-/// [`Self::adopt`] takes in the block the printer allocated, `Drop` is its single release at the
-/// authority's own `file`/`line`, and [`Self::set_release_line`] re-points the release at the
-/// authority's other site on the path that reaches it (the print's error tail frees at `:537`). A
-/// NULL pointer is a valid, empty buffer whose release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Adopt a block this crate allocated inside a helper, for release by `Drop` at the
-    /// authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
-    /// or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// The start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Re-point the release at the authority's other site for this block, on the path that
-    /// reaches it.
-    fn set_release_line(&mut self, line: c_int) {
-        self.line = line;
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `struct X509_name_entry_st` — `X509_NAME_ENTRY`, from `include/crypto/x509.h:31-36`.
 #[repr(C)]
@@ -1068,7 +1018,7 @@ pub unsafe extern "C" fn X509_NAME_print(
     // The string is the printer's own; the handle is its single release, at the authority's own
     // line for the path that reaches it.
     // SAFETY: `b` is a live string `X509_NAME_oneline` allocated and no one else owns.
-    let mut b = unsafe { OwnedBuf::adopt(b.cast(), FILE.as_ptr(), LINE_FREE_PRINT) };
+    let mut b = unsafe { OwnedBuf::adopt_plain_nullable(b.cast(), FILE.as_ptr(), LINE_FREE_PRINT) };
     // SAFETY: `b` is a NUL-terminated string the printer returned.
     if unsafe { *b.as_ptr().cast::<c_char>() } == 0 {
         return 1;
