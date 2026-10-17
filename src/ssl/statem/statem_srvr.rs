@@ -55,10 +55,11 @@
 // collapsing an arm into a match guard would obscure the correspondence.
 #![allow(clippy::collapsible_match)]
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
+use core::ffi::{c_int, c_uint};
 use core::ptr;
 
 use crate::packet::Wpacket;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::ssl::ssl_ciph_table as t;
 use crate::ssl::ssl_lib::Ssl;
 use crate::ssl::statem::statem::{ossl_statem_fatal, ossl_statem_in_error};
@@ -328,60 +329,9 @@ unsafe impl FreeOnDrop for crate::evp::pkey::EvpPkey {
     }
 }
 
-/// An owned frame byte buffer: a `CRYPTO_*` block this frame allocated (or a `get1` out-pointer it
-/// took back), whose single release is `Drop`'s `CRYPTO_free` at the authority's own `(file, line)`,
-/// so no call site writes a `CRYPTO_free` by hand. The block stays an allocation on the crate's
-/// allocator seam, so a caller-installed `CRYPTO_set_mem_functions` hook observes it and its release
-/// exactly as it observes the authority's.
-struct OwnedBlock {
-    ptr: *mut c_void,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBlock {
-    /// Own a block the frame's seam answered, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block this frame's own `CRYPTO_*` call allocated in full (not a
-    /// sub-range), aligned for the type the frame casts it to and initialized for every byte the
-    /// frame reads or writes; this frame exclusively owns it and has not released it, and
-    /// `file`/`line` is the authority's own release site. `Drop`'s `CRYPTO_free` is its only
-    /// release.
-    unsafe fn take(ptr: *mut c_void, file: *const c_char, line: c_int) -> Option<OwnedBlock> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBlock { ptr, file, line })
-        }
-    }
-
-    /// Reclaim a live block this frame already holds (a `get1` out-pointer) so its single release
-    /// is `Drop`'s `CRYPTO_free` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block this frame owns and has not released.
-    unsafe fn from_raw(ptr: *mut c_void, file: *const c_char, line: c_int) -> Option<OwnedBlock> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBlock { ptr, file, line })
-        }
-    }
-
-    /// The buffer's address, for the raw calls the frame makes over it.
-    fn as_ptr<T>(&self) -> *mut T {
-        self.ptr.cast::<T>()
-    }
-}
-
-impl Drop for OwnedBlock {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is a block this frame allocated (a NULL is a no-op) that `Drop` has not
-        // released before; `CRYPTO_free` accepts NULL and this is the authority's own release site.
-        unsafe { crate::runtime::mem::CRYPTO_free(self.ptr, self.file, self.line) }
-    }
-}
+// The shared [`OwnedBuf`] owns a `CRYPTO_*` block this frame allocated (or a `get1` out-pointer
+// it took back), so its single release is `Drop`'s `CRYPTO_free` at the authority's own
+// `(file, line)` and no call site writes a `CRYPTO_free` by hand.
 
 #[inline]
 fn is_tls13(s: *const Ssl) -> bool {
@@ -2895,7 +2845,8 @@ unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
     // The `get1` out-pointer is this frame's now: its single release is the handle's `Drop`, so the
     // frame no longer writes a `CRYPTO_free` by hand.
     // SAFETY: `pub_` is the block `get1` allocated above and has not been released.
-    let Some(pub_) = (unsafe { OwnedBlock::from_raw(pub_.cast(), core::ptr::null(), 0) }) else {
+    let Some(pub_) = (unsafe { OwnedBuf::adopt_plain(pub_.cast::<u8>(), core::ptr::null(), 0) })
+    else {
         return 0;
     };
     // Store the server ephemeral (`ssl_generate_pkey`).
@@ -2913,7 +2864,7 @@ unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
     params_buf[3] = publen as u8;
     // SAFETY: `pub_` is `publen` readable bytes; `params_buf` has room.
     unsafe {
-        core::ptr::copy_nonoverlapping(pub_.as_ptr::<u8>(), params_buf.as_mut_ptr().add(4), publen)
+        core::ptr::copy_nonoverlapping(pub_.as_ptr(), params_buf.as_mut_ptr().add(4), publen)
     };
     let params_len = 4 + publen;
     let mut tbs = [0u8; 32 + 32 + 128];
@@ -3088,12 +3039,12 @@ unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
         // own size and site; its single release is the handle's `Drop`, so every refusal below
         // releases it rather than freeing by hand.
         // SAFETY: `CRYPTO_malloc` is this crate's own allocator and answers a block or NULL.
-        let senc = OwnedBlock::take(
-            CRYPTO_malloc(slen, core::ptr::null(), 0),
+        let senc = OwnedBuf::adopt_plain(
+            CRYPTO_malloc(slen, core::ptr::null(), 0).cast(),
             core::ptr::null(),
             0,
         )?;
-        let mut p = senc.as_ptr::<u8>();
+        let mut p = senc.as_ptr();
         if i2d_SSL_SESSION(sess, &mut p) <= 0 {
             return None;
         }
@@ -3147,7 +3098,7 @@ unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
             ctx.as_ptr(),
             enc.as_mut_ptr(),
             &mut enc1,
-            senc.as_ptr::<u8>(),
+            senc.as_ptr(),
             slen as c_int,
         ) <= 0
             || EVP_EncryptFinal_ex(ctx.as_ptr(), enc.as_mut_ptr().add(enc1 as usize), &mut enc2)
@@ -3261,8 +3212,8 @@ unsafe fn tls13_decrypt_ticket(s: *mut Ssl, etick: &[u8]) -> *mut crate::ssl::ss
         let ct_at = TLSEXT_KEYNAME_LENGTH + ivlen;
         let ct_len = enc_end - ct_at;
         // SAFETY: `CRYPTO_malloc` is this crate's own allocator and answers a block or NULL.
-        let Some(sdec) = OwnedBlock::take(
-            CRYPTO_malloc(ct_len + 16, core::ptr::null(), 0),
+        let Some(sdec) = OwnedBuf::adopt_plain(
+            CRYPTO_malloc(ct_len + 16, core::ptr::null(), 0).cast(),
             core::ptr::null(),
             0,
         ) else {
@@ -3272,21 +3223,17 @@ unsafe fn tls13_decrypt_ticket(s: *mut Ssl, etick: &[u8]) -> *mut crate::ssl::ss
         let mut dec2: c_int = 0;
         if EVP_DecryptUpdate(
             ctx.as_ptr(),
-            sdec.as_ptr::<u8>(),
+            sdec.as_ptr(),
             &mut dec1,
             etick.as_ptr().add(ct_at),
             ct_len as c_int,
         ) <= 0
-            || EVP_DecryptFinal_ex(
-                ctx.as_ptr(),
-                sdec.as_ptr::<u8>().add(dec1 as usize),
-                &mut dec2,
-            ) <= 0
+            || EVP_DecryptFinal_ex(ctx.as_ptr(), sdec.as_ptr().add(dec1 as usize), &mut dec2) <= 0
         {
             return core::ptr::null_mut();
         }
         let slen = dec1 as usize + dec2 as usize;
-        let mut pp: *const u8 = sdec.as_ptr::<u8>();
+        let mut pp: *const u8 = sdec.as_ptr();
         d2i_SSL_SESSION(core::ptr::null_mut(), &mut pp, slen as core::ffi::c_long)
     }
 }

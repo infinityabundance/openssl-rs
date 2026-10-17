@@ -57,9 +57,9 @@
 //! before the block release. `OSSL_STORE_SEARCH`'s destructor body is empty; the other two are not.
 //!
 //! The name buffer `i2d_X509_NAME` fills in `OSSL_STORE_find` and the `CRYPTO_strdup` property
-//! copy `OSSL_STORE_open_ex` keeps are [`OwnedBlock`]s: `Drop` releases them at the authority's
+//! copy `OSSL_STORE_open_ex` keeps are [`OwnedBuf`]s: `Drop` releases them at the authority's
 //! own (NULL, 0) site, and the property copy is handed to the context with
-//! [`OwnedBlock::into_raw`] at the moment its `properties` member takes it over.
+//! [`OwnedBuf::into_raw`] at the moment its `properties` member takes it over.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -94,6 +94,7 @@ use crate::runtime::err::{
     err_sites, raise_site, raise_site_data, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_shift, OpenSslStack,
 };
@@ -211,46 +212,10 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
     }
 }
 
-/// An owned seam block that is not one of the file's objects.
-///
-/// It stays a `CRYPTO_*`-seam block (here the `CRYPTO_strdup` property copy and the
-/// `i2d_X509_NAME` name buffer), released by `Drop` at the authority's own (NULL, 0) site, so a
-/// caller-installed `CRYPTO_set_mem_functions` hook observes it. [`Self::into_raw`] hands the
-/// property copy to the context `properties` member that takes it over.
-struct OwnedBlock {
-    ptr: *mut c_void,
-}
-
-impl OwnedBlock {
-    /// Adopt a block the seam answered, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a block the crate's allocator seam produced, is owned by the caller, and
-    /// will not be freed or handed to any other owner -- this handle's `Drop` is its single
-    /// release.
-    unsafe fn take(ptr: *mut c_void) -> Option<OwnedBlock> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBlock { ptr })
-        }
-    }
-
-    /// Give up ownership of the block to the member that takes it over.
-    fn into_raw(self) -> *mut c_void {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBlock {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is a block this seam allocated and has not handed out; its single
-        // release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr, ptr::null(), 0) };
-    }
-}
+// The shared [`OwnedBuf`] owns a `CRYPTO_*`-seam block that is not one of the file's objects
+// (here the `CRYPTO_strdup` property copy and the `i2d_X509_NAME` name buffer), released at the
+// authority's own (NULL, 0) site, so a caller-installed `CRYPTO_set_mem_functions` hook observes
+// it. `into_raw` hands the property copy to the context `properties` member that takes it over.
 
 // The three object destructors: each is exactly what its unit's `*_free` performed by hand, minus
 // the block release `OwnedCtx`'s `Drop` now owns.
@@ -877,7 +842,7 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
     'err: {
         // The property-query copy this attempt keeps, owned until it is handed to the context's
         // `properties` member below or released by `Drop` on a refusal.
-        let mut propq_copy: Option<OwnedBlock> = None;
+        let mut propq_copy: Option<OwnedBuf> = None;
 
         if !ui_method.is_null()
             // SAFETY: `pwdata` is live; the two calls set and enable caching.
@@ -1001,7 +966,7 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
             // context's `properties` member takes it over, and no other owner holds it.
             propq_copy = unsafe {
                 let copy = CRYPTO_strdup(propq, ptr::null(), 0);
-                OwnedBlock::take(copy.cast::<c_void>())
+                OwnedBuf::adopt_plain(copy.cast::<u8>(), ptr::null(), 0)
             };
             if propq_copy.is_none() {
                 break 'err;
@@ -1017,8 +982,7 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
         unsafe {
             (*ctx.as_ptr()).properties = propq_copy
                 .take()
-                .map_or(ptr::null_mut(), OwnedBlock::into_raw)
-                .cast::<c_char>();
+                .map_or(ptr::null_mut(), |b| b.into_raw().cast::<c_char>());
             (*ctx.as_ptr()).fetched_loader = fetched_loader;
             (*ctx.as_ptr()).loader = loader;
             (*ctx.as_ptr()).loader_ctx = loader_ctx;
@@ -1306,7 +1270,7 @@ pub unsafe extern "C" fn OSSL_STORE_find(
         // `BN_free`.
         // SAFETY: `name_der` is NULL or the `i2d_X509_NAME` block this frame allocated on the
         // crate's allocator seam and owns; no other owner holds it.
-        let _name_der = unsafe { OwnedBlock::take(name_der) };
+        let _name_der = unsafe { OwnedBuf::adopt_plain(name_der.cast::<u8>(), ptr::null(), 0) };
         // SAFETY: `number` is NULL or the BIGNUM `ASN1_INTEGER_to_BN` allocated.
         unsafe { BN_free(number) };
     } else {

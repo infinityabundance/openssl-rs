@@ -51,7 +51,7 @@
 // collapsing an arm into a match guard would obscure the correspondence.
 #![allow(clippy::collapsible_match)]
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::c_int;
 
 use crate::packet::{
     WPACKET_close, WPACKET_get_length, WPACKET_put_bytes_u16, WPACKET_put_bytes_u8,
@@ -60,6 +60,7 @@ use crate::packet::{
 use crate::rand::rand_lib::RAND_bytes;
 use crate::runtime::err::err_reasons::SSL_R_CERTIFICATE_VERIFY_FAILED;
 use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value,
 };
@@ -286,44 +287,9 @@ unsafe impl FreeOnDrop for crate::evp::pkey::EvpPkey {
     }
 }
 
-/// An owned frame byte buffer: a `CRYPTO_*` block this frame allocated (or a `get1` out-pointer it
-/// took back), whose single release is `Drop`'s `CRYPTO_free` at the authority's own `(file, line)`,
-/// so no call site writes a `CRYPTO_free` by hand. The block stays an allocation on the crate's
-/// allocator seam, so a caller-installed `CRYPTO_set_mem_functions` hook observes it and its release
-/// exactly as it observes the authority's.
-struct OwnedBlock {
-    ptr: *mut c_void,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBlock {
-    /// Reclaim a live block this frame already holds (a `get1` out-pointer) so its single release
-    /// is `Drop`'s `CRYPTO_free` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block this frame owns and has not released.
-    unsafe fn from_raw(ptr: *mut c_void, file: *const c_char, line: c_int) -> Option<OwnedBlock> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBlock { ptr, file, line })
-        }
-    }
-
-    /// The buffer's address, for the raw calls the frame makes over it.
-    fn as_ptr<T>(&self) -> *mut T {
-        self.ptr.cast::<T>()
-    }
-}
-
-impl Drop for OwnedBlock {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is a block this frame took back (a NULL is a no-op) that `Drop` has not
-        // released before; `CRYPTO_free` accepts NULL and this is the authority's own release site.
-        unsafe { crate::runtime::mem::CRYPTO_free(self.ptr, self.file, self.line) }
-    }
-}
+// The shared [`OwnedBuf`] owns a `CRYPTO_*` block this frame allocated (or a `get1` out-pointer
+// it took back), so its single release is `Drop`'s `CRYPTO_free` at the authority's own
+// `(file, line)` and no call site writes a `CRYPTO_free` by hand.
 
 #[inline]
 fn is_tls13(s: *const Ssl) -> bool {
@@ -2652,7 +2618,8 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
     // The `get1` out-pointer is this frame's now: its single release is the handle's `Drop`, so the
     // frame no longer writes a `CRYPTO_free` by hand.
     // SAFETY: `pub_` is the block `get1` allocated above and has not been released.
-    let Some(pub_) = (unsafe { OwnedBlock::from_raw(pub_.cast(), core::ptr::null(), 0) }) else {
+    let Some(pub_) = (unsafe { OwnedBuf::adopt_plain(pub_.cast::<u8>(), core::ptr::null(), 0) })
+    else {
         return 0;
     };
     // SAFETY: `s` is live; the old `pkey` slot is NULL or owned by the field.
@@ -2690,9 +2657,7 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
     let mut body = [0u8; 256];
     body[0] = publen as u8;
     // SAFETY: `pub_` is `publen` readable bytes; `body` has room.
-    unsafe {
-        core::ptr::copy_nonoverlapping(pub_.as_ptr::<u8>(), body.as_mut_ptr().add(1), publen)
-    };
+    unsafe { core::ptr::copy_nonoverlapping(pub_.as_ptr(), body.as_mut_ptr().add(1), publen) };
     // The `get1` block's single release is this drop, at the authority's own release point.
     drop(pub_);
     // SAFETY: `s` is live; `body` is `1 + publen` initialised bytes.

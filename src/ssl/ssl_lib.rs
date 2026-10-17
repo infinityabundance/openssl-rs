@@ -22,7 +22,7 @@
 //! release by hand, and the block's stable address is still what the ABI hands out and what the
 //! enclosing object stores. The two frame byte buffers that are not members of a `#[repr(C)]`
 //! object -- `SSL_add1_host`'s `get1_ip_asc` string and `SSL_add_expected_rpk`'s `i2d_PUBKEY` copy
-//! -- are [`OwnedBlock`]s.
+//! -- are [`OwnedBuf`]s.
 //!
 //! **The `#[repr(C)]` member buffers and the ABI out-pointers stay raw and are the documented
 //! boundary.** The `Cert`/`SSL_CTX`/`SSL`/`DaneCtx`/`danetls_record` fields that hold a
@@ -83,6 +83,7 @@ use crate::runtime::mem::{
     CRYPTO_strdup, CRYPTO_zalloc,
 };
 use crate::runtime::obj::{NID_sha256, NID_sha512, NID_undef, OBJ_nid2sn};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::refcount::{down_ref, up_ref, DownRef};
 use crate::runtime::stack::{
     OPENSSL_sk_dup, OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_insert, OPENSSL_sk_new_null,
@@ -693,60 +694,12 @@ impl<T: CtxDestroy> Drop for RawCtx<T> {
     }
 }
 
-/// An owned frame byte buffer: the authority's own `CRYPTO_*` block whose release is this type, so
-/// its single release is `Drop` and no call site writes a `CRYPTO_free` by hand.
-///
-/// The block stays at the authority's own size and file, so a caller-installed
-/// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
-/// the authority's.
-struct OwnedBlock {
-    ptr: *mut c_void,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBlock {
-    /// Adopt a block the seam answered, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the seam's own `CRYPTO_*` call allocated in full (not a
-    /// sub-range), aligned for the type the frame casts it to and initialized for every byte the
-    /// frame reads or writes; this frame exclusively owns it and has not released it, and
-    /// `file`/`line` is the authority's own release site. `Drop`'s `CRYPTO_free` is its only
-    /// release.
-    unsafe fn take(ptr: *mut c_void, file: *const c_char, line: c_int) -> Option<OwnedBlock> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBlock { ptr, file, line })
-        }
-    }
-
-    /// Adopt a block a helper allocated, or NULL as an empty block whose release is a no-op. Used
-    /// where the authority keeps and later frees the block unconditionally.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a helper allocated in full through the crate's `CRYPTO_*` seam
-    /// (not a sub-range), aligned and initialized for every byte the frame reads or writes; this
-    /// frame exclusively owns it and has not released it, and `file`/`line` is the authority's own
-    /// release site. `Drop`'s `CRYPTO_free` is its only release.
-    unsafe fn adopt(ptr: *mut c_void, file: *const c_char, line: c_int) -> OwnedBlock {
-        OwnedBlock { ptr, file, line }
-    }
-
-    /// The buffer's address, typed for the calls that read it.
-    fn as_ptr<T>(&self) -> *mut T {
-        self.ptr.cast::<T>()
-    }
-}
-
-impl Drop for OwnedBlock {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
-        // released before; its single release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr, self.file, self.line) };
-    }
-}
+// An owned frame byte buffer: the authority's own `CRYPTO_*` block whose release is the shared
+// [`OwnedBuf`], so its single release is `Drop` and no call site writes a `CRYPTO_free` by hand.
+//
+// The block stays at the authority's own size and file, so a caller-installed
+// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
+// the authority's.
 
 // -------------------------------------------------------------------------------------------
 // Method table (pulled forward from 14.2 for the one constructor the court needs)
@@ -7941,7 +7894,7 @@ pub unsafe extern "C" fn SSL_add1_host(s: *mut Ssl, host: *const c_char) -> c_in
                 // refusal line.
                 // SAFETY: `old_ip` is the live string `X509_VERIFY_PARAM_get1_ip_asc` just handed
                 // over (or NULL), which this frame owns and has not released.
-                let old_ip = unsafe { OwnedBlock::take(old_ip.cast::<c_void>(), FILE, 1175) };
+                let old_ip = unsafe { OwnedBuf::adopt_plain(old_ip.cast::<u8>(), FILE, 1175) };
                 if old_ip.is_some() {
                     // SAFETY: a constant site.
                     unsafe { raise_ssl(ERR_R_PASSED_INVALID_ARGUMENT, 1177) };
@@ -12115,13 +12068,13 @@ pub unsafe extern "C" fn SSL_add_expected_rpk(s: *mut Ssl, rpk: *mut EvpPkey) ->
             }
             // The DER copy `i2d_PUBKEY` hands over is owned here on the crate's allocator seam
             // (authority size and file); `Drop` is its single release.
-            let data = OwnedBlock::adopt(data.cast::<c_void>(), FILE, 8206);
+            let data = OwnedBuf::adopt_plain_nullable(data.cast::<u8>(), FILE, 8206);
             let ok = SSL_dane_tlsa_add(
                 s,
                 DANETLS_USAGE_DANE_EE,
                 DANETLS_SELECTOR_SPKI,
                 DANETLS_MATCHING_FULL,
-                data.as_ptr::<u8>(),
+                data.as_ptr(),
                 ret as usize,
             ) > 0;
             c_int::from(ok)
