@@ -101,7 +101,7 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, CStr};
 use core::mem::{offset_of, size_of, MaybeUninit};
 use core::ptr;
-use core::sync::atomic::{fence, AtomicI32, Ordering};
+use core::sync::atomic::{AtomicI32, Ordering};
 
 use crate::asn1::layout::Asn1String;
 use crate::evp::pkey::EvpPkey;
@@ -112,6 +112,7 @@ use crate::runtime::ex_data::{
     CRYPTO_EX_INDEX_X509_STORE,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::refcount::{down_ref, up_ref, DownRef};
 use crate::runtime::stack::{
     OPENSSL_sk_deep_copy, OPENSSL_sk_find, OPENSSL_sk_find_all, OPENSSL_sk_free,
     OPENSSL_sk_is_sorted, OPENSSL_sk_new, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free,
@@ -1873,9 +1874,10 @@ pub unsafe extern "C" fn X509_STORE_new() -> *mut X509Store {
 
 /// `void X509_STORE_free(X509_STORE *xs)` — `crypto/x509/x509_lu.c:226-254`.
 ///
-/// Decrements the store's reference count; when it reaches zero, shuts down and releases every
-/// lookup method, frees the object cache, the extension block, the verify parameters and the lock,
-/// and releases the block. NULL is a no-op.
+/// Decrements the store's reference count; the caller that claims the last reference installs
+/// the destroying sentinel and then shuts down and releases every lookup method, frees the object
+/// cache, the extension block, the verify parameters and the lock. A zero, negative or destroying
+/// count is a defined no-op. NULL is a no-op.
 ///
 /// # Safety
 ///
@@ -1886,22 +1888,19 @@ pub unsafe extern "C" fn X509_STORE_free(xs: *mut X509Store) {
         return;
     }
 
-    // `CRYPTO_DOWN_REF(&xs->references, &i)` — the header's `HAVE_ATOMICS` arm is a release
-    // fetch-sub answering the new count, with an acquire fence when it reaches zero.
-    // `REF_PRINT_COUNT` is a trace hook that expands to nothing without `REF_COUNT_DEBUG`, and
-    // `REF_ASSERT_ISNT(i < 0)` is empty under `NDEBUG`.
+    // `CRYPTO_DOWN_REF(&xs->references, &i)` — the shared gate moves a multi-reference
+    // release with the authority's release ordering and claims the last reference with the
+    // destroying sentinel. A zero/negative/destroying count is a defined no-op; see
+    // `runtime::refcount` for the §17 divergence from the authority's over-free UB.
     // SAFETY: `xs` is live per the contract.
-    let i = unsafe { (*xs).references.fetch_sub(1, Ordering::Release) }.wrapping_sub(1);
-    if i == 0 {
-        fence(Ordering::Acquire);
-    }
-    if i > 0 {
-        return;
+    match down_ref(unsafe { &(*xs).references }) {
+        DownRef::Last => {}
+        DownRef::Remaining | DownRef::Retired => return,
     }
 
-    // SAFETY: `xs` is live and this is the last reference; reclaiming it runs `X509_STORE_free`'s
-    // own body (each lookup, the object cache, the extension block, the verify parameters and the
-    // lock) and releases the block at the authority's own site.
+    // SAFETY: this call claimed the last reference (`1 -> REF_DESTROYING`); reclaiming `xs` runs
+    // `X509_STORE_free`'s own body (each lookup, the object cache, the extension block, the verify
+    // parameters and the lock) and releases the block at the authority's own site.
     drop(unsafe { OwnedCtx::<X509Store>::from_raw(xs, FILE.as_ptr(), LINE_FREE_STORE) });
 }
 
@@ -1946,17 +1945,18 @@ pub unsafe extern "C" fn X509_STORE_unlock(xs: *mut X509Store) -> c_int {
 
 /// `int X509_STORE_up_ref(X509_STORE *xs)` — `crypto/x509/x509_lu.c:256-266`.
 ///
-/// Increments the store's reference count, answering 1 unless the count was zero.
+/// Increments the store's reference count, answering 1 unless the count is zero or the store is
+/// being destroyed (in which case it answers 0 without changing the count).
 ///
 /// # Safety
 ///
 /// `xs` must be a live `X509_STORE`.
 #[no_mangle]
 pub unsafe extern "C" fn X509_STORE_up_ref(xs: *mut X509Store) -> c_int {
-    // `CRYPTO_UP_REF` is a *relaxed* fetch-add answering the new count.
+    // The shared gate uses the authority's relaxed increment for a positive count and
+    // refuses to resurrect a zero or destroying store.
     // SAFETY: `xs` is live per the contract.
-    let i = unsafe { (*xs).references.fetch_add(1, Ordering::Relaxed) }.wrapping_add(1);
-    c_int::from(i > 1)
+    up_ref(unsafe { &(*xs).references })
 }
 
 /// `X509_LOOKUP *X509_STORE_add_lookup(X509_STORE *xs, X509_LOOKUP_METHOD *m)` —
@@ -3008,6 +3008,70 @@ pub unsafe extern "C" fn X509_STORE_CTX_get0_store(ctx: *const X509StoreCtx) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runtime::ex_data::CRYPTO_get_ex_new_index;
+    use core::sync::atomic::AtomicUsize;
+
+    /// Target store for [`store_reenter_free`]. `AtomicUsize` avoids threading a context
+    /// pointer through the process-global ex-data registry.
+    static REENTER_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static REENTER_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// An application `CRYPTO_EX_free` callback that re-enters `X509_STORE_free` with the
+    /// same object. It is ignored for every other store, so the process-global index cannot
+    /// disturb unrelated tests.
+    unsafe extern "C" fn store_reenter_free(
+        obj: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut CryptoExData,
+        _idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        if obj as usize == REENTER_TARGET.load(Ordering::Relaxed) {
+            REENTER_CALLS.fetch_add(1, Ordering::Relaxed);
+            // SAFETY: `obj` is the live store this callback was invoked for, and the outer
+            // `X509_STORE_free` is still inside its destructor body, so its block is live.
+            unsafe { X509_STORE_free(obj.cast::<X509Store>()) };
+        }
+    }
+
+    struct ResetTarget;
+    impl Drop for ResetTarget {
+        fn drop(&mut self) {
+            REENTER_TARGET.store(0, Ordering::Relaxed);
+        }
+    }
+
+    /// A re-entrant `X509_STORE_free` from the store's own ex-data free callback must be a
+    /// defined no-op: the last releaser has already installed `REF_DESTROYING`, so the
+    /// callback cannot start a second teardown of the same block.
+    #[test]
+    fn store_free_reentrancy_is_defined_noop() {
+        REENTER_CALLS.store(0, Ordering::Relaxed);
+        let idx = CRYPTO_get_ex_new_index(
+            CRYPTO_EX_INDEX_X509_STORE,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            Some(store_reenter_free),
+        );
+        assert!(idx > 0);
+
+        // SAFETY: `X509_STORE_new` takes no arguments and returns a fresh store or NULL.
+        let store = unsafe { X509_STORE_new() };
+        assert!(!store.is_null());
+        let _reset = ResetTarget;
+        REENTER_TARGET.store(store as usize, Ordering::Relaxed);
+
+        // SAFETY: `store` is live and `idx` is the index registered above.
+        let set = unsafe { X509_STORE_set_ex_data(store, idx, store.cast()) };
+        assert_eq!(set, 1);
+        // SAFETY: this call retires the store's only reference; the callback re-enters it.
+        unsafe { X509_STORE_free(store) };
+
+        assert_eq!(REENTER_CALLS.load(Ordering::Relaxed), 1);
+    }
 
     /// The authority gates `CRYPTO_REF_COUNT` with its atomic `CRYPTO_UP_REF`; a plain
     /// read-modify-write is a data race and loses concurrent increments, which can release a

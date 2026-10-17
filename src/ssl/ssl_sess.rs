@@ -80,6 +80,7 @@ use crate::runtime::ex_data::{
     CRYPTO_set_ex_data, CRYPTO_EX_INDEX_SSL_SESSION,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::refcount::{down_ref, up_ref, DownRef};
 use crate::runtime::stack::{
     OPENSSL_sk_delete, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push,
     OPENSSL_sk_value,
@@ -141,16 +142,6 @@ const SSL_MAX_MASTER_KEY_LENGTH: usize = 48;
 const SSL_SENT_SHUTDOWN: c_int = 1;
 /// `PEM_STRING_SSL_SESSION` — `pem.h:53`.
 const PEM_STRING_SSL_SESSION: *const c_char = c"SSL SESSION PARAMETERS".as_ptr();
-
-/// `CRYPTO_UP_REF` — the relaxed fetch-add the authority's header defines.
-fn up_ref(refs: &AtomicI32) -> c_int {
-    refs.fetch_add(1, Ordering::Relaxed) + 1
-}
-
-/// `CRYPTO_DOWN_REF` — the release fetch-sub the authority's header defines.
-fn down_ref(refs: &AtomicI32) -> c_int {
-    refs.fetch_sub(1, Ordering::Release) - 1
-}
 
 /// `ERR_raise(ERR_LIB_SSL, reason)` at `ssl/ssl_sess.c:line`.
 fn raise_ssl(reason: c_int, line: c_int) {
@@ -538,13 +529,13 @@ pub unsafe extern "C" fn SSL_SESSION_free(ss: *mut SslSession) {
             return;
         }
         // SAFETY: `ss` is live per the caller's contract.
-        let i = down_ref(unsafe { &(*ss).references });
-        if i > 0 {
-            return;
+        match down_ref(unsafe { &(*ss).references }) {
+            DownRef::Last => {}
+            DownRef::Remaining | DownRef::Retired => return,
         }
-        // SAFETY: the count reached zero, so `ss` is owned here; `from_raw` reclaims it (NULL is a
-        // no-op) and `Drop` runs the authority's own `SSL_SESSION_free` body followed by the block
-        // release, so the body below no longer walks a release by hand.
+        // SAFETY: this call claimed the last reference (`1 -> REF_DESTROYING`), so `ss` is owned
+        // here; `from_raw` reclaims it (NULL is a no-op) and `Drop` runs the authority's own
+        // `SSL_SESSION_free` body followed by the block release.
         unsafe { drop(OwnedCtx::<SslSession>::from_raw(ss, FILE, 930)) };
     })
 }
@@ -600,15 +591,7 @@ unsafe impl CtxDestroy for SslSession {
 pub unsafe extern "C" fn SSL_SESSION_up_ref(ss: *mut SslSession) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `ss` is live per the caller's contract.
-        let i = unsafe { up_ref(&(*ss).references) };
-        if i <= 0 {
-            return 0;
-        }
-        if i > 1 {
-            1
-        } else {
-            0
-        }
+        up_ref(unsafe { &(*ss).references })
     })
 }
 
@@ -2350,3 +2333,70 @@ pub unsafe extern "C" fn PEM_write_SSL_SESSION(fp: *mut c_void, x: *const SslSes
 const _: () = {
     assert!(SSL_MAX_MASTER_KEY_LENGTH <= TLS13_MAX_RESUMPTION_PSK_LENGTH);
 };
+
+#[cfg(test)]
+mod refcount_reentrancy_tests {
+    #![allow(clippy::panic)]
+
+    use super::*;
+    use crate::runtime::ex_data::{CRYPTO_get_ex_new_index, CryptoExData};
+    use core::sync::atomic::AtomicUsize;
+
+    static REENTER_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static REENTER_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// An application `CRYPTO_EX_free` callback that re-enters `SSL_SESSION_free` with the
+    /// same session. It is ignored for every other session.
+    unsafe extern "C" fn session_reenter_free(
+        obj: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut CryptoExData,
+        _idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        if obj as usize == REENTER_TARGET.load(Ordering::Relaxed) {
+            REENTER_CALLS.fetch_add(1, Ordering::Relaxed);
+            // SAFETY: `obj` is the live session this callback was invoked for, and the outer
+            // `SSL_SESSION_free` is still inside its destructor body.
+            unsafe { SSL_SESSION_free(obj.cast::<SslSession>()) };
+        }
+    }
+
+    struct ResetTarget;
+    impl Drop for ResetTarget {
+        fn drop(&mut self) {
+            REENTER_TARGET.store(0, Ordering::Relaxed);
+        }
+    }
+
+    /// A re-entrant `SSL_SESSION_free` from the session's own ex-data free callback must be a
+    /// defined no-op: the last releaser has already installed `REF_DESTROYING`.
+    #[test]
+    fn session_free_reentrancy_is_defined_noop() {
+        REENTER_CALLS.store(0, Ordering::Relaxed);
+        let idx = CRYPTO_get_ex_new_index(
+            CRYPTO_EX_INDEX_SSL_SESSION,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            Some(session_reenter_free),
+        );
+        assert!(idx > 0);
+
+        // SAFETY: `SSL_SESSION_new` takes no arguments and returns a fresh session or NULL.
+        let session = unsafe { SSL_SESSION_new() };
+        assert!(!session.is_null());
+        let _reset = ResetTarget;
+        REENTER_TARGET.store(session as usize, Ordering::Relaxed);
+
+        // SAFETY: `session` is live and `idx` is the index registered above.
+        let set = unsafe { SSL_SESSION_set_ex_data(session, idx, session.cast()) };
+        assert_eq!(set, 1);
+        // SAFETY: this call retires the session's only reference; the callback re-enters it.
+        unsafe { SSL_SESSION_free(session) };
+
+        assert_eq!(REENTER_CALLS.load(Ordering::Relaxed), 1);
+    }
+}
