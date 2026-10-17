@@ -38,6 +38,7 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::ptr;
 
 use crate::asn1::layout::Asn1String;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::p8_pkey::{PKCS8_pkey_get0, Pkcs8PrivKeyInfo};
 use crate::asn1::x_algor::{X509Algor, X509_ALGOR_get0};
 use crate::bn::bignum::{
@@ -80,7 +81,6 @@ use crate::params::{
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::{CRYPTO_dup_ex_data, CRYPTO_EX_INDEX_EC_KEY};
-use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::obj::{
     Asn1Object, NID_X9_62_characteristic_two_field, NID_X9_62_prime_field, NID_sm2, NID_undef,
     OBJ_obj2nid,
@@ -631,7 +631,7 @@ pub unsafe extern "C" fn ossl_ec_key_fromdata(
 
         let mut ok = false;
         let mut priv_key: *mut BigNum = ptr::null_mut();
-        let mut pub_key: *mut core::ffi::c_uchar = ptr::null_mut();
+        let mut pub_key_raw: *mut core::ffi::c_uchar = ptr::null_mut();
         let mut pub_key_len: usize = 0;
         let mut pub_point: *mut EcPoint = ptr::null_mut();
 
@@ -652,18 +652,28 @@ pub unsafe extern "C" fn ossl_ec_key_fromdata(
             return ok as c_int;
         }
 
+        // The getter's block stays this frame's until the authority's own free position below.
+        let mut pub_key: Option<OwnedBlock<core::ffi::c_uchar>> = None;
+
         'build: {
             if !param_pub_key.is_null() {
                 let got = OSSL_PARAM_get_octet_string(
                     param_pub_key,
-                    (&raw mut pub_key).cast::<*mut c_void>(),
+                    (&raw mut pub_key_raw).cast::<*mut c_void>(),
                     0,
                     &mut pub_key_len,
                 ) != 0;
+                // The getter allocated `pub_key_raw` through the crate's allocator seam;
+                // `OPENSSL_free(pub_key)` at `ec_backend.c:492` is its single release on every
+                // tail. The owner's `Drop` is that release, at that exact coordinate.
+                // SAFETY: `pub_key_raw` is NULL or the fresh, exclusively-owned block the getter
+                // produced (the getter never aliases or hands it to another owner).
+                pub_key = OwnedBlock::<core::ffi::c_uchar>::from_raw(pub_key_raw, FILE, 492);
+                let pub_key_ptr = pub_key.as_ref().map_or(ptr::null_mut(), |b| b.as_ptr());
                 pub_point = EC_POINT_new(ecg);
                 if !got
                     || pub_point.is_null()
-                    || EC_POINT_oct2point(ecg, pub_point, pub_key, pub_key_len, ctx) == 0
+                    || EC_POINT_oct2point(ecg, pub_point, pub_key_ptr, pub_key_len, ctx) == 0
                 {
                     break 'build;
                 }
@@ -704,7 +714,8 @@ pub unsafe extern "C" fn ossl_ec_key_fromdata(
 
         BN_CTX_free(ctx);
         BN_clear_free(priv_key);
-        CRYPTO_free(pub_key.cast(), FILE, 492);
+        // `OPENSSL_free(pub_key)` at `ec_backend.c:492`, in the authority's own order.
+        drop(pub_key);
         EC_POINT_free(pub_point);
         ok as c_int
     }

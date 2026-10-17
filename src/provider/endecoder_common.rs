@@ -28,6 +28,7 @@ use core::ffi::{c_int, c_long, c_uchar, c_void};
 use core::ptr;
 
 use crate::asn1::a_d2i_fp::asn1_d2i_read_bio;
+use crate::asn1::owned::OwnedBlock;
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::keymgmt::{
     KeymgmtExportFn, KeymgmtFreeFn, KeymgmtImportFn, KeymgmtNewFn, OSSL_FUNC_KEYMGMT_EXPORT,
@@ -35,7 +36,6 @@ use crate::evp::keymgmt::{
 };
 use crate::params::OsslParam;
 use crate::runtime::buffer::BufMem;
-use crate::runtime::mem::CRYPTO_free;
 
 /// `OSSL_FUNC_keymgmt_new_fn *ossl_prov_get_keymgmt_new(const OSSL_DISPATCH *fns)` —
 /// `endecoder_common.c:16-25`.
@@ -192,7 +192,12 @@ pub(crate) unsafe fn ossl_read_der(
         unsafe {
             *data = (*mem).data.cast::<c_uchar>();
             *len = (*mem).length as c_long;
-            CRYPTO_free(mem.cast::<c_void>(), ptr::null(), 0);
+        }
+        // The header is this frame's to release; its `data` was handed to the caller above and
+        // is not part of this owner. `Drop` is the authority's `OPENSSL_free(mem)` at `(NULL, 0)`.
+        // SAFETY: `mem` is the live header the read allocated and no one else owns.
+        if let Some(header) = unsafe { OwnedBlock::<BufMem>::from_raw(mem, ptr::null(), 0) } {
+            drop(header);
         }
     }
     // SAFETY: `in_` is live and this call owns the reference the bridge took.
