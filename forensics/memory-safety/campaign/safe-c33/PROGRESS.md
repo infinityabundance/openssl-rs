@@ -11,7 +11,7 @@ Frozen atlas baseline (original inventory): **2420** allocation sites
 
 ## Current candidate-bound measurement
 
-Regenerated at HEAD `f519d3da2aff0ea5c237eb807fbba19d42ce3b9c` by
+Regenerated at HEAD `c5879d76f5ed59aa2edee17c773c8651b3a7475c` by
 `python3 forensics/memory-safety/campaign/safe-c33/atlas_refresh.py` (see
 `atlas-refresh/REPORT.md`; the generator is measurement-only and claims no
 discharge):
@@ -20,9 +20,10 @@ discharge):
   (**49.8%**); **0** files have fully discharged obligations; **0/33**
   consumers are `SAFE_COMPATIBLE`.
 - Whole tree: **865** `src/**/*.rs`; **374** files have a seam; **359** still
-  contain raw allocator sites; **4,269** raw sites in total, which includes
-  legitimate seam constructors and is therefore **not** a residual count.
-- Closure raw sites: **3,414** (upper bound; **138** in files with no seam).
+  contain raw allocator sites; **4,284** raw sites in total, which includes
+  legitimate seam constructors and test-only probe helpers and is therefore
+  **not** a residual count.
+- Closure raw sites: **3,429** (upper bound; **143** in files with no seam).
   A seam is a file-level heuristic, not a per-site proof.
 
 The residual conversion queue is re-derived from the frozen census and Git by
@@ -292,7 +293,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `21267e4a816eb9b0648e6d764c2ec7d8f47fe945`
+**Last observed HEAD:** `c5879d76f5ed59aa2edee17c773c8651b3a7475c`
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
