@@ -23,6 +23,7 @@
 #![allow(non_upper_case_globals)]
 
 use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::owned_str::OwnedStr;
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
 
@@ -198,46 +199,6 @@ unsafe impl CtxDestroy for SctCtx {
     }
 }
 
-/// An owned `char *` allocated through the crate's `CRYPTO_strdup` seam (the `propq` copy).
-struct OwnedStr {
-    ptr: *mut c_char,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL; `file`/`line` are the authority's release
-    /// site for the string.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
-    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it.
-    unsafe fn take(ptr: *mut c_char, file: *const c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, file, line })
-        }
-    }
-
-    /// Give up ownership of the string to the record that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
-        // single release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
-
 /// `SCT_CTX *SCT_CTX_new(OSSL_LIB_CTX *libctx, const char *propq)` —
 /// `crypto/ct/ct_sct_ctx.c:23-40`.
 ///
@@ -253,7 +214,7 @@ pub(crate) unsafe fn SCT_CTX_new(libctx: *mut c_void, propq: *const c_char) -> *
     if !propq.is_null() {
         // SAFETY: `propq` is NUL-terminated per the contract.
         let propq_copy =
-            unsafe { OwnedStr::take(CRYPTO_strdup(propq, ptr::null(), 0), ptr::null(), 0) };
+            unsafe { OwnedStr::adopt(CRYPTO_strdup(propq, ptr::null(), 0), ptr::null(), 0) };
         // The authority frees the block alone when the duplicate fails; the handle's `Drop` is that
         // same release over the still-NULL members (its free body's own all-empty free).
         let Some(propq_copy) = propq_copy else {

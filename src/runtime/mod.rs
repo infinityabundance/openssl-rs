@@ -51,6 +51,9 @@ pub mod obj;
 // The shared owner for the `B-R1a` `{ptr, release}` byte-buffer group. Internal:
 // the callers are module-local transcription paths, not the exported ABI.
 pub(crate) mod owned_buf;
+// The shared owner for the `S-P` `{ptr, file, line}` C-string group. Internal:
+// the callers are module-local transcription paths, not the exported ABI.
+pub(crate) mod owned_str;
 pub mod rcu;
 pub mod rdtsc;
 // The shared `CRYPTO_REF_COUNT` gate protocol. The destroying sentinel and its

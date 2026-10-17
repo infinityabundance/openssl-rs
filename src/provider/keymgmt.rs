@@ -162,6 +162,7 @@ use crate::runtime::mem::{
 };
 use crate::runtime::obj::NID_undef;
 use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::owned_str::OwnedStr;
 use crate::selftest::OsslCallback;
 
 /// The generated unit's own `__FILE__`, for `OPENSSL_zalloc`'s allocation attribution.
@@ -578,46 +579,6 @@ impl Drop for RawDhGenCtx {
         // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; its single
         // release is the authority's own plain `CRYPTO_free` at the `err:` tail.
         unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE_DH_KMGMT, 485) };
-    }
-}
-
-/// An owned `char *` allocated through the crate's `CRYPTO_strdup` seam: a `DhGenCtx`'s `mdname`
-/// and `mdprops`.
-struct OwnedStr {
-    ptr: *mut c_char,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL; `file`/`line` is the authority's release
-    /// site for the string.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
-    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it.
-    unsafe fn take(ptr: *mut c_char, file: *const c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, file, line })
-        }
-    }
-
-    /// Give up ownership of the string to the context that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block the seam answered and has not handed out; its single
-        // release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
     }
 }
 
@@ -1454,8 +1415,8 @@ unsafe fn dhx_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c
             // The field's previous name is released through its owner at the authority's own site,
             // then the new duplicate is installed (NULL, as the authority leaves it, on a strdup
             // refusal).
-            drop(OwnedStr::take((*gctx).mdname, FILE_DH_KMGMT, 635));
-            (*gctx).mdname = OwnedStr::take(
+            drop(OwnedStr::adopt((*gctx).mdname, FILE_DH_KMGMT, 635));
+            (*gctx).mdname = OwnedStr::adopt(
                 CRYPTO_strdup((*p).data.cast::<c_char>(), FILE_DH_KMGMT, 636),
                 FILE_DH_KMGMT,
                 636,
@@ -1470,8 +1431,8 @@ unsafe fn dhx_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c
             if (*p).data_type != crate::params::OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            drop(OwnedStr::take((*gctx).mdprops, FILE_DH_KMGMT, 644));
-            (*gctx).mdprops = OwnedStr::take(
+            drop(OwnedStr::adopt((*gctx).mdprops, FILE_DH_KMGMT, 644));
+            (*gctx).mdprops = OwnedStr::adopt(
                 CRYPTO_strdup((*p).data.cast::<c_char>(), FILE_DH_KMGMT, 645),
                 FILE_DH_KMGMT,
                 645,

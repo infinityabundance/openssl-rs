@@ -69,7 +69,8 @@ use crate::dso::dlfcn::DSO_METHOD_openssl;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::ex_data::CryptoExData;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop, OPENSSL_sk_push,
     OPENSSL_sk_value, OpenSslStack,
@@ -315,74 +316,6 @@ unsafe impl CtxDestroy for Dso {
                 );
             }
         }
-    }
-}
-
-/// An owned NUL-terminated C string allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc`/`CRYPTO_strdup` at the authority's exact size/`file`/`line` --
-/// a Rust `String` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type. [`Self::new`]
-/// allocates a scratch path buffer, [`Self::adopt`] takes in a `CRYPTO_strdup` duplicate (or the
-/// object's current name), `Drop` is the block's single release at the authority's own site, and
-/// [`Self::into_raw`] hands the block to `dso->filename`. A NULL pointer is a valid, empty buffer
-/// whose release is the authority's own no-op `free(NULL)`.
-struct OwnedStr {
-    ptr: *mut c_char,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// `CRYPTO_malloc(len, alloc_file, alloc_line)`, whose `Drop` releases it at
-    /// `release_file`/`release_line`.
-    fn new(
-        len: usize,
-        alloc_file: *const c_char,
-        alloc_line: c_int,
-        release_file: *const c_char,
-        release_line: c_int,
-    ) -> Option<OwnedStr> {
-        let raw = CRYPTO_malloc(len, alloc_file, alloc_line).cast::<c_char>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedStr {
-            ptr: raw,
-            file: release_file,
-            line: release_line,
-        })
-    }
-
-    /// Adopt a block this crate allocated -- a `CRYPTO_strdup` duplicate, or the object's current
-    /// name -- for release by `Drop` at `file`/`line`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
-    /// or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_char, file: *const c_char, line: c_int) -> OwnedStr {
-        OwnedStr { ptr, file, line }
-    }
-
-    /// The writable start of the string.
-    fn as_ptr(&self) -> *mut c_char {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to `dso->filename`.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
     }
 }
 
@@ -765,11 +698,11 @@ pub unsafe extern "C" fn DSO_set_filename(dso: *mut Dso, filename: *const c_char
                 return 0;
             }
             // SAFETY: `copied` is a live duplicate no one else owns.
-            let dup = OwnedStr::adopt(copied, FILE_LIB, LINE_FREE_FILENAME);
+            let dup = OwnedStr::adopt_nullable(copied, FILE_LIB, LINE_FREE_FILENAME);
             if !(*dso).filename.is_null() {
                 // SAFETY: the object's current name is a live block this unit owns; release it at
                 // the authority's own site.
-                drop(OwnedStr::adopt(
+                drop(OwnedStr::adopt_nullable(
                     (*dso).filename,
                     FILE_LIB,
                     LINE_FREE_FILENAME,
