@@ -63,8 +63,8 @@ use crate::evp::pkey_ctx::{EVP_PKEY_CTX_free, EVP_PKEY_CTX_get0_pkey, EVP_PKEY_R
 use crate::ffi::guard_ffi;
 use crate::rsa::ameth::ossl_rsa_pss_to_ctx;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc};
 use crate::runtime::obj::{NID_undef, OBJ_find_sigid_algs, OBJ_nid2sn, OBJ_obj2nid};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The authority translation unit for this file's `OPENSSL_malloc`/`OPENSSL_clear_free`
 /// expansions.
@@ -77,84 +77,6 @@ const LINE_CLEAR_IN: c_int = 65;
 // ---------------------------------------------------------------------------------------------
 // Ownership of the verification scratch buffer
 // ---------------------------------------------------------------------------------------------
-
-/// An owned heap buffer from this unit's `OPENSSL_malloc`/`OPENSSL_clear_free` seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size and through its own
-/// `__FILE__`/`__LINE__` (observable to a caller-installed `CRYPTO_set_mem_functions` hook), but its
-/// *ownership* is this type: [`Self::new`] allocates it, [`Self::adopt`] takes in the DER block
-/// `ASN1_item_i2d` allocated, and `Drop` is its single *cleansing* release (`CRYPTO_clear_free` over
-/// the recorded length -- the authority's `OPENSSL_clear_free`). A NULL pointer is not a block
-/// here: the constructors answer `None` for it, which the callers treat exactly as the authority's
-/// NULL.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    len: usize,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, alloc_line)`, whose `Drop` cleanses and releases it at
-    /// `file`/`release_line` (`OPENSSL_clear_free`), or `None` when the allocator answers NULL.
-    fn new(
-        len: usize,
-        file: *const c_char,
-        alloc_line: c_int,
-        release_line: c_int,
-    ) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, alloc_line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            len,
-            file,
-            line: release_line,
-        })
-    }
-
-    /// Adopt a block a helper allocated in full through the crate's `CRYPTO_*` seam, for cleansing
-    /// release by `Drop` at `file`/`release_line`; NULL answers `None`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate's allocator seam allocated in full (not a
-    /// sub-range) and no other owner will release; `file` is NULL or a NUL-terminated C string;
-    /// `len` is that block's length, the extent the cleansing release covers.
-    unsafe fn adopt(
-        ptr: *mut c_uchar,
-        len: usize,
-        file: *const c_char,
-        release_line: c_int,
-    ) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf {
-                ptr,
-                len,
-                file,
-                line: release_line,
-            })
-        }
-    }
-
-    /// The start of the block, for the raw calls that read it.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release: the authority's own `OPENSSL_clear_free`, cleansing the block
-    /// over its recorded length before the allocator frees it.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; `self.len` is its
-        // allocation length; the authority's own `CRYPTO_clear_free` accepts NULL.
-        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, self.file, self.line) };
-    }
-}
 
 /// `int ASN1_verify(i2d_of_void *i2d, X509_ALGOR *a, ASN1_BIT_STRING *signature, char *data,
 /// EVP_PKEY *pkey)` — `crypto/asn1/a_verify.c:27-84`.
@@ -223,7 +145,7 @@ pub unsafe extern "C" fn ASN1_verify(
         // SAFETY: the allocator's contract; `FILE`/`LINE_MALLOC_IN` are the authority's, and the
         // handle's `Drop` is the authority's own `OPENSSL_clear_free` at `LINE_CLEAR_IN`.
         let Some(buf_in) =
-            OwnedBuf::new(inl as usize, FILE.as_ptr(), LINE_MALLOC_IN, LINE_CLEAR_IN)
+            OwnedBuf::new_cleansed_at(inl as usize, FILE.as_ptr(), LINE_MALLOC_IN, LINE_CLEAR_IN)
         else {
             // SAFETY: `ctx` is this call's own.
             unsafe { EVP_MD_CTX_free(ctx) };
@@ -509,7 +431,8 @@ pub unsafe extern "C" fn ASN1_item_verify_ctx(
         // is the authority's own `OPENSSL_clear_free(buf_in, inll)` on every exit path below.
         // SAFETY: `buf_in` is the non-NULL block the helper above allocated in full and no other
         // owner releases; `inll` is its extent; `FILE` is a NUL-terminated literal.
-        let Some(buf_in) = (unsafe { OwnedBuf::adopt(buf_in, inll, FILE.as_ptr(), LINE_CLEAR_IN) })
+        let Some(buf_in) =
+            (unsafe { OwnedBuf::adopt_cleansed(buf_in, inll, FILE.as_ptr(), LINE_CLEAR_IN) })
         else {
             return -1;
         };

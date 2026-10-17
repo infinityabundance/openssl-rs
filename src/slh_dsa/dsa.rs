@@ -45,7 +45,8 @@ use crate::packet::{
 };
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::mem::OPENSSL_cleanse;
+use crate::runtime::owned_buf::OwnedBuf;
 
 use super::adrs::SLH_ADRS_TYPE_FORS_TREE;
 use super::fors::{ossl_slh_fors_pk_from_sig, ossl_slh_fors_sign};
@@ -482,7 +483,12 @@ unsafe fn msg_encode(
     let heap = if encoded_len <= tmp_len {
         None
     } else {
-        Some(OwnedBuf::new_zeroed(encoded_len)?)
+        Some(OwnedBuf::new_zeroed_cleansed_at(
+            encoded_len,
+            FILE,
+            LINE_MSG_ENCODE,
+            LINE_CLEAR_FREE,
+        )?)
     };
     let encoded = match &heap {
         Some(buf) => buf.as_ptr(),
@@ -527,46 +533,6 @@ const LINE_CLEAR_FREE: c_int = 309;
 // ---------------------------------------------------------------------------------------------
 // Ownership seams
 // ---------------------------------------------------------------------------------------------
-
-/// A heap block [`msg_encode`] allocates, owned so its single release is the authority's own
-/// cleansing `OPENSSL_clear_free(m, m_len)` at the caller's site.
-///
-/// The block stays the `CRYPTO_zalloc(encoded_len, FILE, LINE_MSG_ENCODE)` the authority makes, at
-/// the authority's exact size and site, because a Rust `Box`/`Vec` would hide the allocation and
-/// its release from a caller-installed `CRYPTO_set_mem_functions` hook.
-struct OwnedBuf {
-    ptr: *mut u8,
-    len: usize,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_zalloc(len, FILE, LINE_MSG_ENCODE)`, or `None` when the allocator answers NULL.
-    fn new_zeroed(len: usize) -> Option<OwnedBuf> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, exclusively owned,
-        // zeroed block of `len` bytes.
-        let raw = CRYPTO_zalloc(len, FILE, LINE_MSG_ENCODE).cast::<u8>();
-        if raw.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr: raw, len })
-        }
-    }
-
-    /// The block's writable start.
-    fn as_ptr(&self) -> *mut u8 {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the authority's own cleansing
-    /// `OPENSSL_clear_free(m, m_len)` at its own file/line.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own cleansing free is the whole release.
-        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, FILE, LINE_CLEAR_FREE) };
-    }
-}
 
 /// The block [`msg_encode`] answers with, and its release obligation.
 ///

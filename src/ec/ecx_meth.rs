@@ -90,64 +90,13 @@ use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_memcmp, CRYPTO_memdup};
+use crate::runtime::mem::{CRYPTO_memcmp, CRYPTO_memdup};
 use crate::runtime::obj::{Asn1Object, NID_undef, OBJ_nid2ln, OBJ_nid2obj, NID_ED25519, NID_ED448};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::x509::x509_set::{X509SigInfo, X509_SIG_INFO_set};
 use crate::x509::x_pubkey::{X509Pubkey, X509_PUBKEY_get0_param, X509_PUBKEY_set0_param};
 
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c".as_ptr();
-
-/// An owned seam block for this unit's two encoded-key buffers: the `ecx_pub_encode` copy
-/// (`OPENSSL_memdup`) and the `ecx_priv_encode` encoding (`i2d_ASN1_OCTET_STRING`), both released on
-/// their failure path with the authority's cleansing `OPENSSL_clear_free`.
-///
-/// The block stays the authority's own allocation at its exact size/`file`/`line`; only its
-/// *ownership* is this type: [`Self::adopt`] takes the block up and `Drop` is its single release
-/// (the authority's `OPENSSL_clear_free(ptr, num)`). On success the raw pointer is handed straight to
-/// the consumer (`X509_PUBKEY_set0_param` / `PKCS8_pkey_set0`) that takes it over. A NULL pointer is
-/// the authority's own no-op `free(NULL)` and answers `None`.
-struct OwnedBuf {
-    ptr: *mut u8,
-    num: usize,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Adopt a block the crate allocated, for release by `Drop` with the authority's cleansing
-    /// `OPENSSL_clear_free(ptr, num)`; NULL answers `None`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block of at least `num` bytes the crate's allocator seam produced in
-    /// full and this caller owns exclusively -- this handle's `Drop` is its single release; `file` is
-    /// NULL or a NUL-terminated C string.
-    unsafe fn adopt(
-        ptr: *mut u8,
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf {
-                ptr,
-                num,
-                file,
-                line,
-            })
-        }
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released, readable for `num`
-        // bytes; the authority's own `OPENSSL_clear_free` zeroes then releases it and accepts NULL.
-        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.num, self.file, self.line) };
-    }
-}
 
 /// `X25519_BITS` — `include/crypto/ecx.h:32`.
 const X25519_BITS: c_int = 253;
@@ -212,8 +161,9 @@ unsafe extern "C" fn ecx_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) -
     if ok == 0 {
         // `penc` is the fresh copy this call still owns; the handle's `Drop` is the authority's own
         // cleansing `OPENSSL_clear_free(penc, keylen)` at (FILE, 46).
-        // SAFETY: `penc` is live and still owned here.
-        drop(unsafe { OwnedBuf::adopt(penc, keylen(pkey), FILE, 46) });
+        // SAFETY: `penc` is live and still owned here; `keylen(pkey)` is both the
+        // `CRYPTO_memdup` allocation length and the cleansing length.
+        drop(unsafe { OwnedBuf::adopt_cleansed(penc, keylen(pkey), FILE, 46) });
         // SAFETY: a compile-time-constant site (`ecx_meth.c:48`).
         unsafe { raise_site(&err_sites::ECX_METH_48) };
         return 0;
@@ -362,8 +312,9 @@ unsafe extern "C" fn ecx_priv_encode(p8: *mut Pkcs8PrivKeyInfo, pkey: *const Evp
     if ok == 0 {
         // `penc` is the fresh encoding this call still owns; the handle's `Drop` is the authority's
         // own cleansing `OPENSSL_clear_free(penc, penclen)` at (FILE, 121).
-        // SAFETY: `penc` is NULL or this call's own block, readable for `penclen` bytes.
-        drop(unsafe { OwnedBuf::adopt(penc, penclen as usize, FILE, 121) });
+        // SAFETY: `penc` is NULL or this call's own block; `penclen` is both the
+        // `i2d_ASN1_OCTET_STRING` allocation length and the cleansing length.
+        drop(unsafe { OwnedBuf::adopt_cleansed(penc, penclen as usize, FILE, 121) });
         // SAFETY: a compile-time-constant site (`ecx_meth.c:123`).
         unsafe { raise_site(&err_sites::ECX_METH_123) };
         return 0;
