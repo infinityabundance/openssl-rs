@@ -79,7 +79,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1218** passed
+`cargo test --lib` (must pass; the established baseline is **1222** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -381,6 +381,39 @@ package.
 - Gate: `fmt` clean, clippy clean, **1217 passed / 18 ignored**, adv-probe
   **18/18**.
 
+### Subphase 45 — unsafe-operation census (measurement)
+
+- `unsafe_census.py` (imports the atlas comment/literal stripper) emits a
+  deterministic per-file census with disjoint production / test-only / seam
+  classes and an independent `--check` reconciliation (117,584 counted sites).
+- At source `af25dd2f0`: **65,207** production site operations — 42,729 unsafe
+  blocks, 13,431 unsafe fn definitions, 331 unsafe impls, 49 unsafe traits, 10
+  unsafe-extern blocks, 274 high-risk calls, 836 safe-ABI extern definitions,
+  7,547 non-allocator FFI calls; 4,227 test-only, 185 seam. Raw-pointer type
+  contexts (47,965) are a separate context metric, not operations.
+- **38 of 628 closure files have zero production operations** (36 zero
+  unsafe-language/high-risk constructs); listed in `UNSAFE-CENSUS.md`.
+
+### Subphase 46 — RC-1 reference-count boundary evidence
+
+- `REFCOUNT-BOUNDARY.md` (RC-1) records the contract for the shared protocol:
+  liveness/non-retiring precondition, `up_ref` may act on behalf of an existing
+  owner (as `SSL_dup` does), exactly one release per acquired reference, and the
+  four converted callers (`Ssl`, `SslCtx`, `SslSession`, `X509Store`). Other
+  refcount implementations (EVP, ENGINE, DSO, ASN.1, `store_meth`, `ml_dsa`) are
+  explicitly out of scope.
+- Four tests added: unique last release across N threads, concurrent up/down
+  conservation, an `up_ref`/last-release race sampler (`up_ref` ∈ {0,1} plus the
+  terminal invariant), and a deterministic outcome-class witness. 9 tests in the
+  module.
+- Independent adversarial review initially **FAILED** on four documentation/test
+  defects (stale UB claim, overbroad inventory sentence, wrong precondition
+  wording, one-branch race test); all four were fixed and the re-check is
+  **PASS**. Status remains `ESTABLISHED`, not `SAFETY_DISCHARGED` (ownership is
+  caller-enforced; no Loom/Miri/TSan).
+- Gate: `fmt` clean, clippy clean, **1222 passed / 18 ignored**, adv-probe
+  **18/18**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -558,7 +591,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `15157bc32` (unsafe-operation census)
+**Last observed HEAD:** `8ae098c63` (RC-1 boundary evidence merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -605,13 +638,15 @@ and discharge explicitly.
 `atlas-refresh/UNSAFE-CENSUS.md`). The file-level conversion queue is empty and
 the unsafe-obligation denominator now exists.
 
-**Next in sequence:** boundary records and independent checks for the reusable
-ownership abstractions — `OwnedBlock`/`OwnedBuf`/`OwnedStr`/`OwnedRaw` adoption
-and release, member-buffer slots, and the `CtxDestroy`/`CipherDestroy`
-constructor contracts — starting with the reference-count protocol (now that
-STOP-1 is closed). Then per-file audits in consumer-reachability order using the
-unsafe census as the worklist, and finally the seal evidence before any
-`SAFETY_DISCHARGED` / `SAFE_COMPATIBLE` promotion.
+**Next in sequence:** the remaining reusable-abstraction boundaries, in order —
+(a) `OwnedBlock`/`OwnedBuf`/`OwnedStr`/`OwnedRaw` adoption and release;
+(b) member-buffer slots (`PropqSlot`, `MemberBufSlot`, `MemberCStrSlot`);
+(c) the `CtxDestroy`/`CipherDestroy` constructor contracts, starting with the
+highest-reuse `CtxDestroy` implementations. Each gets a boundary ID, an explicit
+contract, a caller inventory, adversarial tests, and a fresh independent review
+before the next one starts. Then per-file audits in consumer-reachability order
+using the unsafe census as the worklist, and finally the seal evidence before
+any `SAFETY_DISCHARGED` / `SAFE_COMPATIBLE` promotion.
 
 **Why:** the campaign can count allocation sites but cannot state how many
 unsafe obligations exist, nor which of the 628 closure files contain none. Until
