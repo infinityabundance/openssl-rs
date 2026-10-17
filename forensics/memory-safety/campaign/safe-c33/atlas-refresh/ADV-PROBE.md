@@ -124,17 +124,21 @@ existing site-specific `arm(size)` is unchanged and still backs the SSL ticket p
 The recorded `site` bit is the request's real coordinate, so a size-only match stays
 auditable. A one-shot `arm_cleansed_free(len)` inspects the first `len` bytes of the next
 forwarded release before freeing it. With the nine original SSL probes, the targeted
-court now totals **16** probes.
+court now totals **18** probes.
 
 | Probe | Establishes | Does **not** establish |
 |-------|-------------|------------------------|
 | `dsa::object::adv_probe::dsa_new_refused_alloc_returns_null_without_free` | A refused `Dsa`-sized `CRYPTO_zalloc` makes `ossl_dsa_new(NULL)` answer NULL; exactly one refused request, none forwarded, no release of a block that never existed; the unarmed success path still allocates and releases once. | Other constructor failure arms (lock/ex-data/method `init`), arbitrary reentrancy, or any cryptographic property. |
+| `dsa::object::adv_probe::dsa_method_init_failure_runs_partial_cleanup` | After a **successful** `Dsa` context allocation, a method whose `init` answers 0 makes `ossl_dsa_new(NULL)` answer NULL; the same block reaches `finish` once, exactly one `Dsa`-sized allocation is forwarded, and the sole release is that block's address; the saved default method is restored before every assertion and `DSA_new`/`DSA_free` still work. | Lock-null and ex-data-failure arms (unreachable/non-injectable, see scope note), method tables the constructor does not own, reentrancy, or crypto correctness. |
 | `dh::object::adv_probe::dh_new_refused_alloc_returns_null_without_free` | The same refusal/cleanup contract for `ossl_dh_new_ex(NULL)` and the staged `Dh` block. | As above. |
+| `dh::object::adv_probe::dh_method_init_failure_runs_partial_cleanup` | The same later-initialisation partial-cleanup contract for `ossl_dh_new_ex(NULL)`: `finish` once on the object `init` refused, one forwarded `Dh` allocation, one release of that block, restored default method, and a working `DH_new`/`DH_free` path. | As above. |
 | `ec::ecx_backend::adv_probe::ecx_key_dup_refused_alloc_returns_null_without_free` | `ossl_ecx_key_dup(k, 0)` answers NULL when its `ECX_KEY` zalloc is refused, with no release; the inert source key (`keylen`/`type_` set, `propq`/`privkey` NULL) releases once. | Duplication of a fully populated key, the `propq`/private-scalar failure arms, `realloc`/callback reentrancy, or crypto correctness. |
 | `ssl::adv_alloc::adv_probe::cleansed_free_instrument_detects_residue` | The cleansed-free detector accepts a zeroed block, flags residue, and `assert_not_cleansed()` panics with the precise reason; a dead check is not a pass. | That any specific release path cleanses its secret storage. |
 | `ssl::d1_lib::adv_probe::dtls_state_refusal_and_lifecycle` | A refused `Dtls1State`-sized `CRYPTO_zalloc` makes `dtls1_new_state(true)` answer NULL with exactly one refused request and no release; on the success path `dtls1_free` releases the state once, clears the `Ssl.d1` field, and the enclosing zeroed `Ssl` block is released once. | `DTLSv1_listen` cookie-stage behaviour, the unmodelled queue/sequence fields, or reentrant access to `d1`. |
 | `pkcs12::p12_key::adv_probe::unipass_drop_cleanses_before_release` | `OwnedUniPass::drop` zeros the `len` password bytes through `CRYPTO_clear_free` **before** the hooked release forwards them; the seized block is released exactly once. | That every PKCS#12 password conversion path is cleansed (only the owner's `Drop` is exercised), or KDF correctness. |
 | `provider::activate::adv_probe::opbits_realloc_publishes_after_old_pair` | `ossl_provider_set_operation_bit(&mut p, 3)` regrows `(NULL, 0)` to one byte; during the intercepted realloc the member pair is still the old `(NULL, 0)`, and only after return are the new block, size 1 and bit `1 << 3` visible. | A reentrant call that takes the same `opbits_lock`: the lock is non-reentrant, so that call would deadlock. Also does not cover concurrent readers/writers or other realloc sizes. |
+
+**Constructor-failure scope (recorded, not hidden).** Allocation refusal was already covered by the `*_new_refused_alloc_*` probes. The two `*_method_init_failure_*` probes cover the **later** arm: the context allocation succeeds, and `meth->init` then answers 0, so the constructor's `err:` path must run the partial cleanup. The lock-null arm is not reachable in this crate (`CRYPTO_THREAD_lock_new` is `Box`-based, so it cannot be made to answer NULL by the allocator hook), and `CRYPTO_new_ex_data` failure is not injectable through the CRYPTO hook; neither arm is claimed here.
 
 **Provider publication-ordering scope (recorded, not hidden).** The provider probe
 establishes **publication ordering only**. A genuine reentrant call into
@@ -145,10 +149,11 @@ The probe therefore exercises the allocator-boundary observation, not an applica
 callback that reenters the provider.
 
 **Scope of the claim.** These probes exercise the allocator-refusal path of the
-boundary only. They do not model an application callback that reenters and
-mutates the object, do not cover every constructor failure point, and do not
-substitute for the functional/differential courts. `arm_any` is a test-only
-negative-control instrument and never links into a release build.
+boundary, plus the later method-`init` failure after a successful context
+allocation for DSA and DH. They do not model an application callback that
+reenters and mutates the object, do not cover every constructor failure point,
+and do not substitute for the functional/differential courts. `arm_any` is a
+test-only negative-control instrument and never links into a release build.
 
 ## Hard-fail and self-verification semantics
 
