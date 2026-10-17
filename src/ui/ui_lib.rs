@@ -69,6 +69,7 @@ use crate::runtime::ex_data::{
     CRYPTO_EX_INDEX_UI, CRYPTO_EX_INDEX_UI_METHOD,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
     OpenSslStack,
@@ -414,53 +415,6 @@ impl<T> Drop for OwnedRaw<T> {
         // SAFETY: `self.ptr` is the block `new` allocated and has not handed out; its single
         // release is the authority's own plain `CRYPTO_free`.
         unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, self.line) };
-    }
-}
-
-/// An owned `CRYPTO_strdup` copy: a NUL-terminated string whose `Drop` is its single release.
-///
-/// Used for the four `UI_dup_*` prompt/text copies and for a created method's name. `Drop` frees at
-/// the authority's own `err:` site (`line`), and [`Self::into_raw`] hands the string to the object
-/// that takes it over (`UI_STRING`'s `out_string`/`boolean_data`, or `UI_METHOD`'s `name`), whose
-/// destructor then owns it.
-struct OwnedStr {
-    ptr: *mut c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL. `line` is the authority's `err:` free.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
-    /// `CRYPTO_strdup` seam, so it has that provenance; the caller owns it and no other owner will
-    /// release it. `Drop` performs its single `CRYPTO_free`.
-    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, line })
-        }
-    }
-
-    /// The string's address, for the object that may take it over.
-    fn as_ptr(&self) -> *const c_char {
-        self.ptr
-    }
-
-    /// Give up ownership of the string to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
-        // single release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, self.line) };
     }
 }
 
@@ -923,7 +877,7 @@ pub unsafe extern "C" fn UI_dup_input_string(
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(prompt, FILE, LINE_DUP_INPUT_PROMPT);
-            OwnedStr::take(copy, LINE_DUP_INPUT_FREE)
+            OwnedStr::adopt(copy, FILE, LINE_DUP_INPUT_FREE)
         } {
             Some(copy) => Some(copy),
             None => return 0,
@@ -934,7 +888,9 @@ pub unsafe extern "C" fn UI_dup_input_string(
     let ret = unsafe {
         general_allocate_string(
             ui,
-            prompt_copy.as_ref().map_or(ptr::null(), OwnedStr::as_ptr),
+            prompt_copy
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
             1,
             UIT_PROMPT,
             flags,
@@ -1004,7 +960,7 @@ pub unsafe extern "C" fn UI_dup_verify_string(
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(prompt, FILE, LINE_DUP_VERIFY_PROMPT);
-            OwnedStr::take(copy, LINE_DUP_VERIFY_FREE)
+            OwnedStr::adopt(copy, FILE, LINE_DUP_VERIFY_FREE)
         } {
             Some(copy) => Some(copy),
             None => return -1,
@@ -1015,7 +971,9 @@ pub unsafe extern "C" fn UI_dup_verify_string(
     let ret = unsafe {
         general_allocate_string(
             ui,
-            prompt_copy.as_ref().map_or(ptr::null(), OwnedStr::as_ptr),
+            prompt_copy
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
             1,
             UIT_VERIFY,
             flags,
@@ -1096,7 +1054,7 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(prompt, FILE, LINE_DUP_BOOL_PROMPT);
-            OwnedStr::take(copy, LINE_DUP_BOOL_ERR)
+            OwnedStr::adopt(copy, FILE, LINE_DUP_BOOL_ERR)
         } {
             Some(copy) => Some(copy),
             None => return -1,
@@ -1110,7 +1068,7 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(action_desc, FILE, LINE_DUP_BOOL_ACTION);
-            OwnedStr::take(copy, LINE_DUP_BOOL_ERR)
+            OwnedStr::adopt(copy, FILE, LINE_DUP_BOOL_ERR)
         } {
             Some(copy) => Some(copy),
             None => return -1,
@@ -1124,7 +1082,7 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(ok_chars, FILE, LINE_DUP_BOOL_OK);
-            OwnedStr::take(copy, LINE_DUP_BOOL_ERR)
+            OwnedStr::adopt(copy, FILE, LINE_DUP_BOOL_ERR)
         } {
             Some(copy) => Some(copy),
             None => return -1,
@@ -1138,7 +1096,7 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(cancel_chars, FILE, LINE_DUP_BOOL_CANCEL);
-            OwnedStr::take(copy, LINE_DUP_BOOL_ERR)
+            OwnedStr::adopt(copy, FILE, LINE_DUP_BOOL_ERR)
         } {
             Some(copy) => Some(copy),
             None => return -1,
@@ -1149,14 +1107,18 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
     let ret = unsafe {
         general_allocate_boolean(
             ui,
-            prompt_copy.as_ref().map_or(ptr::null(), OwnedStr::as_ptr),
+            prompt_copy
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
             action_desc_copy
                 .as_ref()
-                .map_or(ptr::null(), OwnedStr::as_ptr),
-            ok_chars_copy.as_ref().map_or(ptr::null(), OwnedStr::as_ptr),
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
+            ok_chars_copy
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
             cancel_chars_copy
                 .as_ref()
-                .map_or(ptr::null(), OwnedStr::as_ptr),
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
             1,
             UIT_BOOLEAN,
             flags,
@@ -1211,7 +1173,7 @@ pub unsafe extern "C" fn UI_dup_info_string(ui: *mut Ui, text: *const c_char) ->
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(text, FILE, LINE_DUP_INFO_PROMPT);
-            OwnedStr::take(copy, LINE_DUP_INFO_FREE)
+            OwnedStr::adopt(copy, FILE, LINE_DUP_INFO_FREE)
         } {
             Some(copy) => Some(copy),
             None => return -1,
@@ -1222,7 +1184,9 @@ pub unsafe extern "C" fn UI_dup_info_string(ui: *mut Ui, text: *const c_char) ->
     let ret = unsafe {
         general_allocate_string(
             ui,
-            text_copy.as_ref().map_or(ptr::null(), OwnedStr::as_ptr),
+            text_copy
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
             1,
             UIT_INFO,
             0,
@@ -1282,7 +1246,7 @@ pub unsafe extern "C" fn UI_dup_error_string(ui: *mut Ui, text: *const c_char) -
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(text, FILE, LINE_DUP_ERROR_PROMPT);
-            OwnedStr::take(copy, LINE_DUP_ERROR_FREE)
+            OwnedStr::adopt(copy, FILE, LINE_DUP_ERROR_FREE)
         } {
             Some(copy) => Some(copy),
             None => return -1,
@@ -1293,7 +1257,9 @@ pub unsafe extern "C" fn UI_dup_error_string(ui: *mut Ui, text: *const c_char) -
     let ret = unsafe {
         general_allocate_string(
             ui,
-            text_copy.as_ref().map_or(ptr::null(), OwnedStr::as_ptr),
+            text_copy
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
             1,
             UIT_ERROR,
             0,
@@ -1809,14 +1775,14 @@ pub unsafe extern "C" fn UI_create_method(name: *const c_char) -> *mut UiMethod 
     // `OwnedStr`'s `Drop`.
     let name_copy = unsafe {
         let copy = CRYPTO_strdup(name, FILE, LINE_CREATE_METHOD_DUP);
-        OwnedStr::take(copy, LINE_CREATE_METHOD_FREE_NAME)
+        OwnedStr::adopt(copy, FILE, LINE_CREATE_METHOD_FREE_NAME)
     };
 
     let ex_ok = if let Some(copy) = name_copy.as_ref() {
         // SAFETY: `ui_method` is ours and `copy` is the dup just made; the field assignment is ours
         // to make.
         unsafe {
-            (*ui_method.as_ptr()).name = copy.as_ptr().cast_mut();
+            (*ui_method.as_ptr()).name = copy.as_ptr();
             CRYPTO_new_ex_data(
                 CRYPTO_EX_INDEX_UI_METHOD,
                 ui_method.as_ptr().cast::<c_void>(),

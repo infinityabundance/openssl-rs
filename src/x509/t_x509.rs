@@ -86,6 +86,7 @@ use crate::runtime::err::{
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::obj::{Asn1Object, NID_undef, OBJ_find_sigid_algs, OBJ_obj2nid, OBJ_obj2txt};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack};
 use crate::x509::v3_prn::X509V3_extensions_print;
 use crate::x509::v3_purp::X509_check_issued;
@@ -264,45 +265,6 @@ impl Drop for OwnedDerBuf {
         // SAFETY: `self.ptr` is the block `malloc` produced and has not handed out; its single
         // release is the authority's own plain `CRYPTO_free` at the path's own site.
         unsafe { CRYPTO_free(self.ptr, FILE.as_ptr(), self.line) };
-    }
-}
-
-/// An owned string block a helper allocated.
-///
-/// `X509_STORE_CTX_print_verify_cb` takes a fresh block from `X509_VERIFY_PARAM_get1_ip_asc` and
-/// releases it at `:485`. Only the *ownership* is this type: [`Self::adopt`] takes the helper's
-/// block and `Drop` is its single release at the authority's own site.
-struct OwnedStr {
-    ptr: *mut c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a helper-produced string, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block this unit's helper allocated that no other owner will release;
-    /// `Drop` performs its single `CRYPTO_free`.
-    unsafe fn adopt(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, line })
-        }
-    }
-
-    /// The string's address, for the `BIO_printf` that reads it.
-    fn as_ptr(&self) -> *const c_char {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `adopt` took and has not handed out; its single release
-        // is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), self.line) };
     }
 }
 
@@ -1292,8 +1254,11 @@ pub unsafe extern "C" fn X509_STORE_CTX_print_verify_cb(
                     X509_V_ERR_IP_ADDRESS_MISMATCH => {
                         // SAFETY: `ip_asc` is NULL or this call's own
                         // `X509_VERIFY_PARAM_get1_ip_asc` block.
-                        let ip_asc =
-                            OwnedStr::adopt(X509_VERIFY_PARAM_get1_ip_asc(vpm), LINE_FREE_IP_ASC);
+                        let ip_asc = OwnedStr::adopt(
+                            X509_VERIFY_PARAM_get1_ip_asc(vpm),
+                            FILE.as_ptr(),
+                            LINE_FREE_IP_ASC,
+                        );
                         if let Some(s) = ip_asc.as_ref() {
                             BIO_printf(bio, c"Expected IP address = %s\n".as_ptr(), s.as_ptr());
                         }

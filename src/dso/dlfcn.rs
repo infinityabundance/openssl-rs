@@ -65,7 +65,8 @@ use crate::dso::{
 use crate::runtime::bio::sys::{errno, set_errno};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem::{CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::owned_str::OwnedStr;
 
 extern "C" {
     /// `void *dlopen(const char *filename, int flags)`.
@@ -117,47 +118,6 @@ const RTLD_LAZY: c_int = 1;
 // Ownership of a converted filename
 // ---------------------------------------------------------------------------------------------
 
-/// An owned `char *` allocated through the crate's allocator seam.
-///
-/// `DSO_convert_filename` answers a fresh `CRYPTO_strdup` block; only its *ownership* is this type.
-/// [`Self::adopt`] takes that block, `Drop` is its single release at the authority's own
-/// `dlfcn_load` error-path site, and [`Self::into_raw`] hands it to `dso->loaded_filename`. A NULL
-/// pointer is a valid, empty buffer whose release is the authority's own no-op `free(NULL)`.
-struct OwnedStr {
-    ptr: *mut c_char,
-}
-
-impl OwnedStr {
-    /// Adopt the block `DSO_convert_filename` left for this frame.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns.
-    unsafe fn adopt(ptr: *mut c_char) -> OwnedStr {
-        OwnedStr { ptr }
-    }
-
-    /// The string's address.
-    fn as_ptr(&self) -> *mut c_char {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to `dso->loaded_filename`.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The block's single release, through the same seam and at the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, LINE_FREE_TRANSLATED) };
-    }
-}
-
 /// `static int dlfcn_load(DSO *dso)`
 ///
 /// # Safety
@@ -179,7 +139,7 @@ unsafe extern "C" fn dlfcn_load(dso: *mut Dso) -> c_int {
     // authority's own error-path site.
     // SAFETY: `filename` is NULL or the live `CRYPTO_strdup` block the converter allocated and no
     // one else owns.
-    let filename = unsafe { OwnedStr::adopt(filename) };
+    let filename = unsafe { OwnedStr::adopt_nullable(filename, FILE, LINE_FREE_TRANSLATED) };
     // SAFETY: `dso` is live.
     if unsafe { (*dso).flags } & DSO_FLAG_GLOBAL_SYMBOLS != 0 {
         flags |= RTLD_GLOBAL;
@@ -512,6 +472,7 @@ mod tests {
         DSO_convert_filename, DSO_free, DSO_load, DSO_merge, DSO_new, DSO_set_filename,
         DSO_FLAG_NAME_TRANSLATION_EXT_ONLY, DSO_FLAG_NO_NAME_TRANSLATION,
     };
+    use crate::runtime::mem::CRYPTO_free;
     use core::ffi::c_long;
 
     #[test]

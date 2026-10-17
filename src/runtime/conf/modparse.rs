@@ -58,6 +58,7 @@ use crate::runtime::err::err_sites::CONF_MOD_734;
 use crate::runtime::err::raise_site;
 use crate::runtime::getenv::ossl_safe_getenv;
 use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::owned_str::OwnedStr;
 
 // Open obligations, recorded here because only this module may be edited for the
 // `CONF_get1_default_config_file` work item:
@@ -78,51 +79,6 @@ pub(crate) const OPENSSL_CONF_INCLUDE: &core::ffi::CStr = c"OPENSSL_CONF_INCLUDE
 /// `#define DEFAULT_SEPARATOR`-adjacent: the name of the environment variable that
 /// names the configuration file outright.
 const OPENSSL_CONF_ENV: &core::ffi::CStr = c"OPENSSL_CONF";
-
-/// An owned `char *` allocated through the crate's `CRYPTO_strdup` seam, released by
-/// `Drop` at the authority's own (NULL, 0) site.
-///
-/// [`CONF_get1_default_config_file`] duplicates the environment value (or the empty
-/// string) and hands the block to the C caller; between the allocation and that hand-out
-/// this handle owns the string, so the ownership is expressed at the seam rather than left
-/// as a raw pointer a call site must remember to release. The module's tests take one back
-/// with [`Self::take`] rather than spelling out `CRYPTO_free` by hand.
-struct OwnedStr {
-    ptr: *mut c_char,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
-    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it. `Drop`
-    /// performs its single `CRYPTO_free`.
-    unsafe fn take(ptr: *mut c_char) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr })
-        }
-    }
-
-    /// Give up ownership of the string to the C caller that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out;
-        // its single release is the authority's own plain `CRYPTO_free`.
-        unsafe { crate::runtime::mem::CRYPTO_free(self.ptr.cast::<c_void>(), ptr::null(), 0) };
-    }
-}
 
 /// `int CONF_parse_list(const char *list, int sep, int nospc, int (*list_cb)(const char *elem, int len, void *usr), void *arg)`
 ///
@@ -247,7 +203,8 @@ pub extern "C" fn CONF_get1_default_config_file() -> *mut c_char {
         if !from_env.is_null() {
             // SAFETY: `from_env` is NUL-terminated, and the block `CRYPTO_strdup` answers is
             // this frame's until it is handed to the caller below.
-            let dup = unsafe { OwnedStr::take(CRYPTO_strdup(from_env, ptr::null(), 0)) };
+            let dup =
+                unsafe { OwnedStr::adopt(CRYPTO_strdup(from_env, ptr::null(), 0), ptr::null(), 0) };
             return dup.map_or(ptr::null_mut(), OwnedStr::into_raw);
         }
 
@@ -262,7 +219,8 @@ pub extern "C" fn CONF_get1_default_config_file() -> *mut c_char {
         // SAFETY: `c""` is a static NUL-terminated string, `ptr::null()` is the
         // documented "no file/line" argument, flag 0 is the default, and the block
         // `CRYPTO_strdup` answers is this frame's until it is handed to the caller below.
-        let dup = unsafe { OwnedStr::take(CRYPTO_strdup(c"".as_ptr(), ptr::null(), 0)) };
+        let dup =
+            unsafe { OwnedStr::adopt(CRYPTO_strdup(c"".as_ptr(), ptr::null(), 0), ptr::null(), 0) };
         dup.map_or(ptr::null_mut(), OwnedStr::into_raw)
     })
 }
@@ -385,7 +343,7 @@ mod tests {
         );
         // SAFETY: `p` is the string `CONF_get1_default_config_file` returned this frame and
         // has not been released; `OwnedStr`'s `Drop` performs its single `CRYPTO_free`.
-        drop(unsafe { OwnedStr::take(p) });
+        drop(unsafe { OwnedStr::adopt(p, ptr::null(), 0) });
     }
 
     #[test]
@@ -398,7 +356,7 @@ mod tests {
         let got = unsafe { core::ffi::CStr::from_ptr(p) };
         assert_eq!(got.to_str(), Ok("/tmp/openssl-rs-probe.cnf"));
         // SAFETY: `p` is the string the function returned this frame; `Drop` releases it.
-        drop(unsafe { OwnedStr::take(p) });
+        drop(unsafe { OwnedStr::adopt(p, ptr::null(), 0) });
 
         std::env::remove_var("OPENSSL_CONF");
         let p = CONF_get1_default_config_file();
@@ -406,6 +364,6 @@ mod tests {
         // SAFETY: as above.
         assert_eq!(unsafe { core::ffi::CStr::from_ptr(p) }.to_str(), Ok(""));
         // SAFETY: as above.
-        drop(unsafe { OwnedStr::take(p) });
+        drop(unsafe { OwnedStr::adopt(p, ptr::null(), 0) });
     }
 }
