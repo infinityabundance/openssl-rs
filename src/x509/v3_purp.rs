@@ -75,7 +75,7 @@ use crate::asn1::prim::{ASN1_INTEGER_cmp, ASN1_INTEGER_get, ASN1_OBJECT_free};
 use crate::asn1::string::{ASN1_BIT_STRING_free, ASN1_OCTET_STRING_cmp};
 use crate::evp::legacy_sha::EVP_sha1;
 use crate::evp::pkey::{EVP_PKEY_is_a, EvpPkey};
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::sys::strcmp;
 use crate::runtime::err::err_reasons::{
     X509V3_R_EMPTY_KEY_USAGE, X509V3_R_INVALID_CERTIFICATE, X509V3_R_INVALID_PURPOSE,
@@ -404,48 +404,10 @@ const LINE_XPFREE_P: c_int = 271;
 // Ownership of the file's heap records and the dynamic rows' names
 // ---------------------------------------------------------------------------------------------
 
-/// An owned one of the file's heap records.
-///
-/// The block keeps the authority's layout and its exact `CRYPTO_malloc` size/`file`/`line`, but its
-/// *ownership* is this type: [`Self::from_raw`] takes back a row the dynamic table hands over and
-/// `Drop` runs the authority's own destructor body ([`CtxDestroy::destroy_body`]) followed by its
-/// single block release at the authority's own site. A Rust `Box` would hide both the release and
-/// the caller-installed `CRYPTO_set_mem_functions` hook.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Reclaim a row the dynamic table holds, for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live dynamic row this file allocated that `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The record's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
-    /// followed by its single block release, through the same allocator seam and the authority's own
-    /// site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `from_raw` reclaimed and this is its single release;
-        // `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 /// The authority's `xptable_free` body, without the block release [`OwnedCtx`]'s `Drop` performs:
 /// the dynamic row's two owned names.
 ///
-/// [`OwnedCtx::from_raw`] is only ever reached for the rows the dynamic `xptable` holds, and every
+/// [`OwnedCtx::from_raw_at`] is only ever reached for the rows the dynamic `xptable` holds, and every
 /// one of those is pushed only after `X509_PURPOSE_add` set `X509_PURPOSE_DYNAMIC`, so the
 /// authority's leading `(*p).flags & X509_PURPOSE_DYNAMIC` early return is unobservable here.
 // SAFETY: (a) holds: `destroy_body` is the authority's `x509_purpose_free` body -- it releases
@@ -704,7 +666,9 @@ unsafe extern "C" fn xp_cmp(a: *const c_void, b: *const c_void) -> c_int {
 unsafe extern "C" fn xptable_free_thunk(elem: *mut c_void) {
     // SAFETY: `elem` is NULL or a dynamic row this module allocated; `from_raw` reclaims it and
     // `Drop` runs the authority's own free body and block release.
-    drop(unsafe { OwnedCtx::<X509Purpose>::from_raw(elem.cast(), FILE.as_ptr(), LINE_XPFREE_P) });
+    drop(unsafe {
+        OwnedCtx::<X509Purpose>::from_raw_at(elem.cast(), FILE.as_ptr(), LINE_XPFREE_P)
+    });
 }
 
 /// The `ASN1_OBJECT` destructor the extended-key-usage `pop_free` passes.

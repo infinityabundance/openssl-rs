@@ -60,7 +60,7 @@ use core::ffi::{c_char, c_int, c_long, c_ulong, c_void, CStr};
 use core::mem::{size_of, MaybeUninit};
 use core::ptr;
 
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::sys;
 use crate::runtime::buffer::{BUF_MEM_free, BUF_MEM_grow, BUF_MEM_new, BufMem};
@@ -218,73 +218,6 @@ struct ByDir {
 // Ownership of the file's heap records
 // ---------------------------------------------------------------------------------------------
 
-/// An owned one of the file's heap records.
-///
-/// The block keeps the authority's layout, its exact `CRYPTO_malloc` size/`file`/`line` and its
-/// stable address (the lookup stores it in `method_data`, its stacks hold the entries and hashes),
-/// but its *ownership* is this type: [`Self::new`] allocates it, `Drop` runs the authority's own
-/// destructor body ([`CtxDestroy::destroy_body`]) followed by its single block release at the
-/// authority's own site, and [`Self::into_raw`] hands the block to a stack that takes it over. A
-/// Rust `Box` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// `CRYPTO_malloc(sizeof(*T), file, alloc_line)`, or `None` when the allocator answers NULL.
-    /// `alloc_line` is the authority's allocation site and `line` its release site.
-    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
-        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
-        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_malloc(size_of::<T>(), file, alloc_line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// The stable address the lookup and its stacks hold.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Re-point the release at the authority's other site for this block, on the path that reaches
-    /// it (a failed `sk_BY_DIR_HASH_push` releases at `:399`, the stored hash record at `:136`).
-    fn set_release_line(&mut self, line: c_int) {
-        self.line = line;
-    }
-
-    /// Reclaim a block a previous [`Self::into_raw`] handed to a consumer, for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block this file allocated that `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The record's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
-    /// followed by its single block release, through the same allocator seam and the authority's
-    /// own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `adopt` took (or `from_raw` reclaimed) and this is its
-        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 /// An owned `BY_DIR` block still under construction.
 ///
 /// `new_dir` allocates the record and fills its members one at a time; until the last is set the
@@ -392,7 +325,7 @@ unsafe impl CtxDestroy for ByDir {
 unsafe extern "C" fn by_dir_hash_free_thunk(elem: *mut c_void) {
     // SAFETY: `elem` is NULL or a `BY_DIR_HASH` this module allocated; `from_raw` reclaims it and
     // `Drop` runs the authority's own release.
-    drop(unsafe { OwnedCtx::<ByDirHash>::from_raw(elem.cast(), FILE.as_ptr(), LINE_FREE_HASH) });
+    drop(unsafe { OwnedCtx::<ByDirHash>::from_raw_at(elem.cast(), FILE.as_ptr(), LINE_FREE_HASH) });
 }
 
 /// `static int by_dir_hash_cmp(const BY_DIR_HASH *const *a, const BY_DIR_HASH *const *b)` —
@@ -431,7 +364,9 @@ unsafe extern "C" fn by_dir_hash_cmp(a: *const c_void, b: *const c_void) -> c_in
 unsafe extern "C" fn by_dir_entry_free_thunk(elem: *mut c_void) {
     // SAFETY: `elem` is NULL or a `BY_DIR_ENTRY` this module allocated; `from_raw` reclaims it and
     // `Drop` runs the authority's own free body.
-    drop(unsafe { OwnedCtx::<ByDirEntry>::from_raw(elem.cast(), FILE.as_ptr(), LINE_FREE_ENTRY) });
+    drop(unsafe {
+        OwnedCtx::<ByDirEntry>::from_raw_at(elem.cast(), FILE.as_ptr(), LINE_FREE_ENTRY)
+    });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -487,7 +422,7 @@ unsafe extern "C" fn free_dir(lu: *mut X509Lookup) {
     // SAFETY: `a` is this method's own record; reclaiming it runs `free_dir`'s destructor (the
     // directory list, the scratch buffer and the lock) and releases the block at the authority's own
     // `by_dir.c:163` site.
-    drop(unsafe { OwnedCtx::<ByDir>::from_raw(a, FILE.as_ptr(), LINE_FREE_DIR) });
+    drop(unsafe { OwnedCtx::<ByDir>::from_raw_at(a, FILE.as_ptr(), LINE_FREE_DIR) });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -555,22 +490,33 @@ unsafe fn add_cert_dir(ctx: *mut ByDir, dir: *const c_char, type_: c_int) -> c_i
                         return 0;
                     }
                 }
-                // `ent` owns the fresh block (`OwnedCtx::new` is the authority's own
-                // `OPENSSL_malloc(sizeof(*ent))`): every early exit below releases the path, the
-                // hash stack and the block itself at the authority's own sites, and only a
-                // successful push gives the block up to `ctx->dirs`.
-                let Some(ent) =
-                    OwnedCtx::<ByDirEntry>::new(FILE.as_ptr(), LINE_MALLOC_ENTRY, LINE_FREE_ENTRY)
-                else {
+                // The block is a `RawCtx` (`RawCtx::malloc_at` is the authority's own
+                // `OPENSSL_malloc(sizeof(*ent))`): every field is written before `assume_init`
+                // makes it a valid record whose `Drop` releases the path, the hash stack and the
+                // block itself at the authority's own sites. Only a successful push gives the
+                // block up to `ctx->dirs`.
+                // SAFETY: the allocator answers NULL or a fresh block; every field is written
+                // before the validated transition below.
+                let Some(raw) = RawCtx::<ByDirEntry>::malloc_at(
+                    FILE.as_ptr(),
+                    LINE_MALLOC_ENTRY,
+                    FILE.as_ptr(),
+                    LINE_FREE_ENTRY,
+                ) else {
                     return 0;
                 };
+                let p = raw.as_ptr();
+                // SAFETY: `p` is this call's own fresh record.
+                unsafe {
+                    (*p).dir_type = type_;
+                    (*p).hashes = OPENSSL_sk_new(Some(by_dir_hash_cmp));
+                    // SAFETY: `ss` is the start of a `len`-byte path inside `dir`.
+                    (*p).dir = CRYPTO_strndup(ss, len, FILE.as_ptr(), LINE_STRNDUP_ENTRY_DIR);
+                }
+                // SAFETY: every field of the record has been written above.
+                let ent = unsafe { raw.assume_init() };
                 // SAFETY: `ent` is this call's own fresh record.
                 unsafe {
-                    (*ent.as_ptr()).dir_type = type_;
-                    (*ent.as_ptr()).hashes = OPENSSL_sk_new(Some(by_dir_hash_cmp));
-                    // SAFETY: `ss` is the start of a `len`-byte path inside `dir`.
-                    (*ent.as_ptr()).dir =
-                        CRYPTO_strndup(ss, len, FILE.as_ptr(), LINE_STRNDUP_ENTRY_DIR);
                     if (*ent.as_ptr()).dir.is_null() || (*ent.as_ptr()).hashes.is_null() {
                         return 0;
                     }
@@ -785,22 +731,33 @@ unsafe extern "C" fn get_cert_by_subject_ex(
                     hent = unsafe { OPENSSL_sk_value((*ent).hashes, idx) }.cast::<ByDirHash>();
                 }
                 if hent.is_null() {
-                    // The record owns the fresh block (`OwnedCtx::new` is the authority's own
-                    // `OPENSSL_malloc(sizeof(*hent))`); a failed push re-points its release at the
-                    // authority's `:399` site, and only a successful push gives it up to
-                    // `ent->hashes`.
-                    let Some(mut rec) =
-                        OwnedCtx::<ByDirHash>::new(FILE.as_ptr(), LINE_MALLOC_HASH, LINE_FREE_HASH)
-                    else {
+                    // The block is a `RawCtx` (`RawCtx::malloc_at` is the authority's own
+                    // `OPENSSL_malloc(sizeof(*hent))`): both fields are written before
+                    // `assume_init`. A failed push re-points its release at the authority's
+                    // `:399` site, and only a successful push gives it up to `ent->hashes`.
+                    // SAFETY: the allocator answers NULL or a fresh block; both fields are
+                    // written before the validated transition below.
+                    let Some(raw) = RawCtx::<ByDirHash>::malloc_at(
+                        FILE.as_ptr(),
+                        LINE_MALLOC_HASH,
+                        FILE.as_ptr(),
+                        LINE_FREE_HASH,
+                    ) else {
                         // SAFETY: `ctx->lock` is write-locked.
                         unsafe { CRYPTO_THREAD_unlock((*ctx).lock) };
                         ok = 0;
                         break 'finish;
                     };
+                    let p = raw.as_ptr();
+                    // SAFETY: `p` is this call's own fresh record.
+                    unsafe {
+                        (*p).hash = h;
+                        (*p).suffix = k;
+                    }
+                    // SAFETY: both fields of the record have been written above.
+                    let mut rec = unsafe { raw.assume_init() };
                     // SAFETY: `rec` is this call's own fresh record; `ent->hashes` is live.
                     unsafe {
-                        (*rec.as_ptr()).hash = h;
-                        (*rec.as_ptr()).suffix = k;
                         // SAFETY: `ent->hashes` is live; the record is the element to push.
                         if OPENSSL_sk_push((*ent).hashes, rec.as_ptr().cast::<c_void>()) == 0 {
                             CRYPTO_THREAD_unlock((*ctx).lock);

@@ -155,7 +155,7 @@ use crate::provider::slh_dsa_kmgmt::{
     SLH_DSA_SHAKE_192F_KEYMGMT_FUNCTIONS, SLH_DSA_SHAKE_192S_KEYMGMT_FUNCTIONS,
     SLH_DSA_SHAKE_256F_KEYMGMT_FUNCTIONS, SLH_DSA_SHAKE_256S_KEYMGMT_FUNCTIONS,
 };
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{
@@ -204,7 +204,9 @@ pub unsafe extern "C" fn ossl_kdf_data_new(provctx: *mut c_void) -> *mut KdfData
             return ptr::null_mut();
         }
 
-        let Some(kdfdata) = OwnedCtx::<KdfData>::new_zeroed(FILE_KDF_LEGACY_KMGMT, 0, 61) else {
+        let Some(kdfdata) =
+            OwnedCtx::<KdfData>::zalloc_at(FILE_KDF_LEGACY_KMGMT, 0, FILE_KDF_LEGACY_KMGMT, 61)
+        else {
             return ptr::null_mut();
         };
         let kdfdata_ptr = kdfdata.as_ptr();
@@ -244,7 +246,7 @@ pub unsafe extern "C" fn ossl_kdf_data_free(kdfdata: *mut KdfData) {
     // `CRYPTO_FREE_REF(&kdfdata->refcnt)` is empty on this profile's arm of the header.
     // SAFETY: this is the last reference to the handle; `from_raw` reclaims the block for its
     // single release by `Drop`.
-    drop(unsafe { OwnedCtx::<KdfData>::from_raw(kdfdata, FILE_KDF_LEGACY_KMGMT, 61) });
+    drop(unsafe { OwnedCtx::<KdfData>::from_raw_at(kdfdata, FILE_KDF_LEGACY_KMGMT, 61) });
 }
 
 /// `int ossl_kdf_data_up_ref(KDF_DATA *kdfdata)` — `kdf_legacy_kmgmt.c:64-80`. The one guard the
@@ -422,75 +424,11 @@ struct DhGenCtx {
 // Ownership of the key-manager handles and the parameter-generation context
 // ---------------------------------------------------------------------------------------------
 
-/// An owned one of the file's heap records.
-///
-/// The block keeps the authority's `#[repr(C)]` layout and its exact `CRYPTO_zalloc` size/`file`/
-/// `line` -- a Rust `Box` would hide both the release and the caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::new_zeroed`]
-/// allocates it, [`Self::from_raw`] takes back the block a dispatch `free`/`gen_cleanup` hands over,
-/// `Drop` runs the authority's own free body ([`CtxDestroy::destroy_body`]) followed by its single
-/// block release, and [`Self::into_raw`] hands it to the dispatch contract that takes it over.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// `CRYPTO_zalloc(size_of::<T>(), file, alloc_line)`, whose `Drop` releases it at
-    /// `file`/`release_line`, or `None` when the allocator answers NULL.
-    fn new_zeroed(
-        file: *const c_char,
-        alloc_line: c_int,
-        release_line: c_int,
-    ) -> Option<OwnedCtx<T>> {
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx {
-            ptr,
-            file,
-            line: release_line,
-        })
-    }
-
-    /// The record's address, for the calls that read or write it.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Reclaim the record a dispatch `free`/`gen_cleanup` hands over, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live record this file allocated that `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// Give up ownership of the record to the dispatch contract that takes it over.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The record's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
-    /// followed by its single block release, through the same allocator seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; `destroy_body` is
-        // the authority's own free body and this is the block's single release.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 /// The authority's `ossl_kdf_data_free` body (`kdf_legacy_kmgmt.c:49-62`), without the block
 /// release [`OwnedCtx`]'s `Drop` performs: a `KDF_DATA` owns no member -- its `libctx` is borrowed.
 // SAFETY: (a) holds: `destroy_body` is `ossl_kdf_data_free` minus the block -- a `KDF_DATA` owns no
 // member (its `libctx` is borrowed) -- and never the enclosing block. (b) holds: an all-zero record
-// is valid with every release a no-op -- what the safe `OwnedCtx::new_zeroed` leans on.
+// is valid with every release a no-op -- what the safe `OwnedCtx::zalloc_at` leans on.
 unsafe impl CtxDestroy for KdfData {
     unsafe fn destroy_body(_ptr: *mut KdfData) {}
 }
@@ -500,7 +438,7 @@ unsafe impl CtxDestroy for KdfData {
 // SAFETY: (a) holds: `destroy_body` is `dh_gen_cleanup` minus the block -- it releases exactly the
 // context's two owned names and its cleansed seed (each NULL/zero tolerant) and never the enclosing
 // block. (b) holds: an all-zero context is valid with every release a no-op -- what the safe
-// `OwnedCtx::new_zeroed` leans on.
+// `OwnedCtx::zalloc_at` leans on.
 unsafe impl CtxDestroy for DhGenCtx {
     unsafe fn destroy_body(ptr: *mut DhGenCtx) {
         // SAFETY: `ptr` is a live context per the trait contract; `mdname`/`mdprops` are NULL or
@@ -1679,7 +1617,7 @@ unsafe extern "C" fn dh_gen_cleanup(genctx: *mut c_void) {
     // `dh_gen_cleanup` body (the two names and the cleansed seed) and its block release; a NULL
     // answers `None` (no release).
     // SAFETY: `gctx` is the caller's context, allocated by `dh_gen_init_base` and not released.
-    drop(unsafe { OwnedCtx::<DhGenCtx>::from_raw(gctx, FILE_DH_KMGMT, 828) });
+    drop(unsafe { OwnedCtx::<DhGenCtx>::from_raw_at(gctx, FILE_DH_KMGMT, 828) });
 }
 
 /// `static void *dh_load(const void *reference, size_t reference_sz)` — `dh_kmgmt.c:831-843`.

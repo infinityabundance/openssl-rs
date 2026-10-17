@@ -105,7 +105,7 @@ use core::sync::atomic::{AtomicI32, Ordering};
 
 use crate::asn1::layout::Asn1String;
 use crate::evp::pkey::EvpPkey;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::{
@@ -547,74 +547,6 @@ const _: () = {
 // Ownership of the file's three heap records
 // ---------------------------------------------------------------------------------------------
 
-/// An owned one of the file's `#[repr(C)]` records.
-///
-/// The block keeps the authority's layout and its stable address (the exported ABI hands it out and
-/// takes it back), but its *ownership* is this type: [`Self::new`] allocates it through the crate's
-/// allocator seam at the authority's own `(file, alloc_line)`, `Drop` runs the authority's own free
-/// body ([`CtxDestroy::destroy_body`]) followed by its single block release at the authority's own
-/// `(file, line)`, [`Self::into_raw`] hands the block to the C caller and [`Self::from_raw`] takes
-/// it back. It stays a `CRYPTO_zalloc` rather than a Rust `Box` on purpose -- a caller-installed
-/// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
-/// the authority's.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
-    /// it answers NULL. `alloc_line` is the authority's allocation site and `line` its release site.
-    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(size_of::<T>(), file, alloc_line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// The stable address the exported ABI hands out and takes back.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C caller's out-pointer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Re-point the release at the authority's other site for this block, on the path that reaches
-    /// it (`x509_object_dup`'s error arm releases at `:595`, the free at `:530`).
-    fn set_release_line(&mut self, line: c_int) {
-        self.line = line;
-    }
-
-    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller, for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The record's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
-    /// followed by its single block release, through the same allocator seam and the authority's own
-    /// site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
-        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 /// An owned `X509_LOOKUP` block still under construction.
 ///
 /// `X509_LOOKUP_new` allocates the record and runs the method's `new_item` hook; a hook that answers
@@ -742,7 +674,7 @@ unsafe impl CtxDestroy for X509Lookup {
 // SAFETY: (a) holds: `destroy_body` is `x509_object_free_internal` -- it releases the object the
 // union names, by tag, and never the enclosing block. (b) holds: a zeroed object is tagged
 // `X509_LU_NONE` (0), for which the body frees nothing -- the obligation the safe
-// `OwnedCtx::<X509Object>::new` in `X509_OBJECT_new` leans on.
+// `OwnedCtx::<X509Object>::zalloc_at` in `X509_OBJECT_new` leans on.
 unsafe impl CtxDestroy for X509Object {
     /// Releases the object the union names, by type (the authority's `x509_object_free_internal`).
     unsafe fn destroy_body(ptr: *mut X509Object) {
@@ -754,7 +686,7 @@ unsafe impl CtxDestroy for X509Object {
 // SAFETY: (a) holds: `destroy_body` is `X509_STORE_free` minus the block -- it shuts down and
 // frees exactly the store's own lookups, cache, extension block, verify parameters and lock, and
 // never the enclosing block. (b) holds: a zeroed store has every member NULL/0, so every release is
-// a NULL-tolerant no-op -- the obligation the safe `OwnedCtx::new` leans on.
+// a NULL-tolerant no-op -- the obligation the safe `OwnedCtx::zalloc_at` leans on.
 unsafe impl CtxDestroy for X509Store {
     /// The authority's `X509_STORE_free` body, without the block release [`OwnedCtx`]'s `Drop`
     /// performs: shuts down and releases each lookup, the object cache, the extension block, the
@@ -1037,7 +969,7 @@ pub unsafe extern "C" fn X509_LOOKUP_new(method: *mut X509LookupMethod) -> *mut 
 pub unsafe extern "C" fn X509_LOOKUP_free(ctx: *mut X509Lookup) {
     // SAFETY: `ctx` is NULL or a live lookup; reclaiming it runs the method's `free` hook and
     // releases the block at the authority's own site.
-    drop(unsafe { OwnedCtx::<X509Lookup>::from_raw(ctx, FILE.as_ptr(), LINE_FREE_LOOKUP) });
+    drop(unsafe { OwnedCtx::<X509Lookup>::from_raw_at(ctx, FILE.as_ptr(), LINE_FREE_LOOKUP) });
 }
 
 /// `int X509_LOOKUP_init(X509_LOOKUP *ctx)` — `crypto/x509/x509_lu.c:57-65`.
@@ -1372,11 +1304,14 @@ unsafe extern "C" fn x509_object_cmp(a: *const c_void, b: *const c_void) -> c_in
 /// [`X509_OBJECT_free`].
 #[no_mangle]
 pub unsafe extern "C" fn X509_OBJECT_new() -> *mut X509Object {
-    // `OwnedCtx::new` is the authority's own `OPENSSL_zalloc(sizeof(*ret))`; it answers NULL when
+    // `OwnedCtx::zalloc_at` is the authority's own `OPENSSL_zalloc(sizeof(*ret))`; it answers NULL when
     // the allocator does, else a fresh zeroed object.
-    let Some(ret) =
-        OwnedCtx::<X509Object>::new(FILE.as_ptr(), LINE_ZALLOC_OBJECT, LINE_FREE_OBJECT)
-    else {
+    let Some(ret) = OwnedCtx::<X509Object>::zalloc_at(
+        FILE.as_ptr(),
+        LINE_ZALLOC_OBJECT,
+        FILE.as_ptr(),
+        LINE_FREE_OBJECT,
+    ) else {
         return ptr::null_mut();
     };
     // SAFETY: `ret` is a fresh zeroed object.
@@ -1416,7 +1351,7 @@ unsafe fn x509_object_free_internal(a: *mut X509Object) {
 pub unsafe extern "C" fn X509_OBJECT_free(a: *mut X509Object) {
     // SAFETY: `a` is NULL or a live object; reclaiming it releases the object the union names (via
     // `x509_object_free_internal`) and the block at the authority's own site.
-    drop(unsafe { OwnedCtx::<X509Object>::from_raw(a, FILE.as_ptr(), LINE_FREE_OBJECT) });
+    drop(unsafe { OwnedCtx::<X509Object>::from_raw_at(a, FILE.as_ptr(), LINE_FREE_OBJECT) });
 }
 
 /// `int X509_OBJECT_up_ref_count(X509_OBJECT *a)` — `crypto/x509/x509_lu.c:447-458`.
@@ -1689,7 +1624,7 @@ unsafe fn x509_object_dup(obj: *const X509Object) -> *mut X509Object {
     // SAFETY: `ret_raw` is NULL or the fresh object `X509_OBJECT_new` allocated and no one else
     // owns.
     let Some(mut ret) =
-        (unsafe { OwnedCtx::<X509Object>::from_raw(ret_raw, FILE.as_ptr(), LINE_FREE_OBJECT) })
+        (unsafe { OwnedCtx::<X509Object>::from_raw_at(ret_raw, FILE.as_ptr(), LINE_FREE_OBJECT) })
     else {
         return ptr::null_mut();
     };
@@ -1877,7 +1812,7 @@ pub unsafe extern "C" fn X509_STORE_free(xs: *mut X509Store) {
     // SAFETY: this call claimed the last reference (`1 -> REF_DESTROYING`); reclaiming `xs` runs
     // `X509_STORE_free`'s own body (each lookup, the object cache, the extension block, the verify
     // parameters and the lock) and releases the block at the authority's own site.
-    drop(unsafe { OwnedCtx::<X509Store>::from_raw(xs, FILE.as_ptr(), LINE_FREE_STORE) });
+    drop(unsafe { OwnedCtx::<X509Store>::from_raw_at(xs, FILE.as_ptr(), LINE_FREE_STORE) });
 }
 
 /// `int X509_STORE_lock(X509_STORE *xs)` — `crypto/x509/x509_lu.c:42-45`.
