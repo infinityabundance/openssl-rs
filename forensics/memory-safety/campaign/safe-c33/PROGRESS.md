@@ -64,7 +64,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1217** passed
+`cargo test --lib` (must pass; the established baseline is **1218** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -76,34 +76,24 @@ sweep 35 there are **18** probes).
 
 ## Open STOP blockers
 
-**STOP-1 — `up_ref` can wrap a live count into the destroying sentinel.**
+**None open.**
 
-`src/runtime/refcount.rs:92` increments with `n + 1`. At `n == i32::MAX` the
-addition panics in an overflow-checked build and, with overflow checks disabled,
-wraps to `i32::MIN`, which is `REF_DESTROYING`. A live object would then be
-treated as already being destroyed: the next `*_free` becomes a no-op and the
-destructor never runs (leak), and `*_up_ref` stops working.
+**Resolved: STOP-1 — `up_ref` could wrap a live count into the destroying
+sentinel.** `src/runtime/refcount.rs` computed `n + 1`; at `n == i32::MAX` that
+panicked under overflow checks and wrapped to `i32::MIN` (`REF_DESTROYING`) with
+them disabled, which would silently retire a live object.
 
-Required remediation (one bounded source subphase):
-
-1. In `up_ref`, use `let Some(next) = n.checked_add(1) else { return 0; };`
-   before the compare-exchange, so a refused increment leaves the count
-   unchanged and reports the same failure answer as a zero/destroying count.
-2. Add a deterministic test with `AtomicI32::new(i32::MAX)` asserting
-   `up_ref` returns `0` and the value is still `i32::MAX` (after the fix, run it
-   as the first test of that module and in the ordinary suite).
-3. Record the divergence in the module's `§17` note: the authority's
-   `CRYPTO_UP_REF` would overflow (UB) at the same value; this crate refuses
-   without changing state, consistent with its existing zero-refusal policy.
-4. Re-run the full gate in the court container (`fmt`, `clippy -D warnings`,
-   `cargo test --lib -- --test-threads=4`, `scripts/adv-probe.sh`), commit on a
-   `stage/p25/refcount-overflow` branch, merge, and clear this blocker.
-
-`down_ref` is **not** affected: `n == 1` is claimed explicitly and the
-`n > 1` path subtracts from a value greater than one, so no underflow exists.
-
-Until this lands, no reference-count boundary may be promoted to
-`SAFETY_DISCHARGED`.
+Fixed on `stage/p25/refcount-overflow` (merge `d722f3238`): `up_ref` now uses
+`checked_add(1)` and returns `0` **before** any compare-exchange when the count
+would overflow, so the count is unchanged. Counts below `i32::MAX` are
+bit-for-bit unchanged. At `i32::MAX` the authority's signed addition is UB; the
+defined refusal is recorded as a §17 divergence in the module contract.
+Regression: `runtime::refcount::tests::up_ref_refuses_overflow_without_changing_count`.
+Independent verification: fmt clean, clippy `-D warnings` clean, **1218 passed /
+0 failed / 18 ignored**, **18/18** probes; `down_ref` verified free of the
+analogous underflow (it special-cases `n == 1`). The reference-count boundaries
+are now eligible for discharge work, subject to the §7 independent-check
+package.
 
 ## Landed batches
 
@@ -553,7 +543,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `8bea24d49` (measurement revision 2; file-level conversion queue empty)
+**Last observed HEAD:** `d722f3238` (STOP-1 refcount overflow fixed)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -567,7 +557,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1217** tests (18 ignored; 18/18 adversarial probes via `scripts/adv-probe.sh`). Do not accept unexplained test loss. Check available memory before builds.
+   The most recent reported library baseline is **1218** tests (18 ignored; 18/18 adversarial probes via `scripts/adv-probe.sh`). Do not accept unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
 
 ### Outstanding targeted work
@@ -599,7 +589,7 @@ and discharge explicitly.
 **Before this:** clear **STOP-1** (`up_ref` overflow) in a bounded
 `stage/p25/refcount-overflow` source subphase, gated and merged. It is a
 confirmed soundness defect in a shared protocol and blocks any reference-count
-discharge claim.
+discharge claim. **Status: done** (merge `d722f3238`; see “Open STOP blockers”).
 
 **Why:** the campaign can count allocation sites but cannot state how many
 unsafe obligations exist, nor which of the 628 closure files contain none. Until
