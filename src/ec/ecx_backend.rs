@@ -687,3 +687,82 @@ mod tests {
         }
     }
 }
+
+/// Allocator-refusal boundary court for [`ossl_ecx_key_dup`] (§16 negative controls).
+///
+/// The duplicate's first action is the `ECX_KEY` `CRYPTO_zalloc` at `(FILE, 106)`; `arm_any` is
+/// used because the authority coordinate is not the `(NULL, 0)` one the SSL probes arm by site.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::ssl::adv_alloc::{self, Ev};
+
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn ecx_key_dup_refused_alloc_returns_null_without_free() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let size = core::mem::size_of::<EcxKey>();
+
+        // An inert but valid-enough source key: zeroed, with the identity fields `_dup` reads
+        // before it allocates. `propq`/`privkey` stay NULL and `haspubkey` stays 0, so selection 0
+        // reaches the duplicate's allocation and nothing else.
+        // `CRYPTO_zalloc` is a safe function: it answers a fresh zeroed block of exactly `size`
+        // bytes; the field writes below are plain data into this frame's block.
+        let key = CRYPTO_zalloc(size, ptr::null(), 0).cast::<EcxKey>();
+        assert!(!key.is_null(), "the inert key must allocate");
+        // SAFETY: `key` is this probe's fresh block.
+        unsafe {
+            (*key).keylen = 32; // X25519_KEYLEN
+            (*key).type_ = ECX_KEY_TYPE_X25519;
+            (*key).references = core::sync::atomic::AtomicI32::new(1);
+        }
+
+        adv_alloc::reset();
+        adv_alloc::arm_any(size);
+        // SAFETY: `key` is live and selection 0 reads only the identity fields set above.
+        let dup = unsafe { ossl_ecx_key_dup(key, 0) };
+        adv_alloc::disarm_any();
+
+        assert!(
+            dup.is_null(),
+            "a refused duplicate block must make ossl_ecx_key_dup answer NULL"
+        );
+        let ev = adv_alloc::events();
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { n, refused: true, .. } if *n == size))
+                .count(),
+            1,
+            "exactly the EcxKey-sized request is refused"
+        );
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { n, refused: false, .. } if *n == size))
+                .count(),
+            0,
+            "the refused request must never be forwarded"
+        );
+        assert!(
+            !ev.iter().any(|e| matches!(e, Ev::Free { .. })),
+            "a refusal before the key block exists must not release anything"
+        );
+        adv_alloc::assert_no_double_free();
+
+        // Releasing the inert source key exercises the success/release path under the same hook
+        // and proves the probe's own setup does not leave a double release behind.
+        // SAFETY: `key` is this probe's own live object and holds one reference.
+        unsafe { ossl_ecx_key_free(key) };
+        adv_alloc::assert_no_double_free();
+        assert!(
+            adv_alloc::events()
+                .iter()
+                .any(|e| matches!(e, Ev::Free { .. })),
+            "the inert key's release must be recorded"
+        );
+    }
+}
