@@ -81,9 +81,9 @@ use crate::rand::pool::{
     ossl_rand_pool_length, ossl_rand_pool_new, RandPool,
 };
 use crate::rand::unix::ossl_pool_acquire_entropy;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::secure::CRYPTO_secure_clear_free;
 use crate::runtime::thread::{
@@ -201,63 +201,6 @@ pub(crate) struct ProvSeedSrc {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the two RAND contexts and the `entropy`/`nonce` buffers they hold
 // ---------------------------------------------------------------------------------------------
-
-/// An owned `#[repr(C)]` context block.
-///
-/// The block keeps the authority's layout and its exact `CRYPTO_zalloc` size/`file`/`line`, but its
-/// *ownership* is this type: [`Self::zalloc`] allocates it, [`Self::from_raw`] takes back the block
-/// the C ABI hands to a `*_free`, and `Drop` runs the authority's own free body
-/// ([`CtxDestroy::destroy_body`]) followed by its single block release. A Rust `Box` would hide both
-/// the release and a caller-installed `CRYPTO_set_mem_functions` hook.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// `CRYPTO_zalloc(size_of::<T>(), T::FILE, T::LINE_ALLOC)`, or `None` when it answers NULL. The
-    /// zeroed image is the authority's own starting state -- every owned pointer is NULL -- so
-    /// [`CtxDestroy::destroy_body`] on it is the authority's own all-empty free.
-    fn zalloc() -> Option<OwnedCtx<T>> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, T::LINE_ALLOC).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
-    }
-
-    /// The writable start of the block.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the context to the C ABI's answer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim the block the C ABI hands to a `*_free`, for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live context this file allocated that `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The context's destructor: the authority's own free body followed by its single block release,
-    /// through the same allocator seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; `destroy_body` is
-        // the authority's own free body and this is the block's single release.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, T::LINE_FREE);
-        }
-    }
-}
 
 /// `seed_src_free`'s body (`seed_src.c:70-73`): the block alone, no owned members.
 // SAFETY: (a) holds: `destroy_body` is `seed_src_free` minus the block -- the context owns no member
