@@ -41,6 +41,7 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 use crate::asn1::a_dup::ASN1_item_dup;
 use crate::asn1::items::{ASN1_GENERALIZEDTIME_it, ASN1_TIME_it, ASN1_UTCTIME_it};
 use crate::asn1::layout::*;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::string::ASN1_STRING_set;
 use crate::asn1::string::{as_str, ASN1_STRING_copy, ASN1_STRING_free, ASN1_STRING_new};
 use crate::ffi::guard_ffi;
@@ -51,7 +52,6 @@ use crate::runtime::bio::Bio;
 use crate::runtime::ctype::ossl_isdigit;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::str::OPENSSL_strnlen;
 use crate::runtime::time::{OPENSSL_gmtime, OPENSSL_gmtime_adj, OPENSSL_gmtime_diff, TimeT, Tm};
 
@@ -952,6 +952,9 @@ pub unsafe extern "C" fn ASN1_TIME_set_string_X509(
             len as c_int,
             ASN1_STRING_FLAG_X509_TIME,
         );
+        // The one fresh block this function may own. It is `Some` only on the shortened-time path,
+        // and its `Drop` is the authority's `CRYPTO_free(t.data)` at this unit's coordinates.
+        let mut shortened: Option<OwnedBlock<c_uchar>> = None;
         let mut tm = zeroed_tm();
 
         // SAFETY: `t` is a live local.
@@ -970,12 +973,20 @@ pub unsafe extern "C" fn ASN1_TIME_set_string_X509(
             }
             if is_utc(tm.tm_year) {
                 t.length -= 2;
-                // SAFETY: `CRYPTO_zalloc` answers null or that many zeroed bytes.
-                t.data =
-                    CRYPTO_zalloc((t.length + 1) as usize, FILE.as_ptr(), LINE).cast::<c_uchar>();
-                if t.data.is_null() {
+                // The authority's `CRYPTO_zalloc(t.length + 1)`. The sum is `checked_add`-guarded
+                // so a wrapped request never reaches the allocator; overflow is the same refusal
+                // as the allocator's NULL. `OwnedBlock` owns the block and its `Drop` frees it at
+                // the authority's own `FILE`/`LINE`.
+                let Some(count) = usize::try_from(t.length)
+                    .ok()
+                    .and_then(|n| n.checked_add(1))
+                else {
                     return 0;
-                }
+                };
+                let Some(data) = OwnedBlock::<c_uchar>::zalloc(count, FILE.as_ptr(), LINE) else {
+                    return 0;
+                };
+                t.data = data.as_ptr();
                 // SAFETY: `t.data` owns `t.length + 1` bytes and the source is
                 // the caller's string, which is at least `t.length + 2` bytes
                 // long because it was just parsed as a GeneralizedTime.
@@ -986,6 +997,7 @@ pub unsafe extern "C" fn ASN1_TIME_set_string_X509(
                         t.length as usize,
                     );
                 }
+                shortened = Some(data);
                 t.type_ = V_ASN1_UTCTIME;
             }
         }
@@ -1000,12 +1012,10 @@ pub unsafe extern "C" fn ASN1_TIME_set_string_X509(
             }
         }
 
-        if t.data != str_.cast_mut().cast::<c_uchar>() {
-            // SAFETY: `t.data` came from this allocator on the only path that
-            // reassigns it, and that path is also the only one on which it can
-            // differ from `str`.
-            unsafe { CRYPTO_free(t.data.cast(), FILE.as_ptr(), LINE) };
-        }
+        // The authority frees the shortened buffer here, after the copy attempt and regardless of
+        // its outcome. The owner is `Some` on exactly the path that replaced `t.data`, so this is
+        // the single release and it keeps the authority's order and coordinates.
+        drop(shortened);
         rv
     })
 }

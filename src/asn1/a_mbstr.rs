@@ -43,13 +43,13 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 
 use crate::asn1::a_utf8::{UTF8_getc, UTF8_putc};
 use crate::asn1::layout::*;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::string::string_type_new;
 use crate::asn1::string::{ASN1_STRING_free, ASN1_STRING_set, ASN1_STRING_set0};
 use crate::ffi::guard_ffi;
 use crate::runtime::ctype::{ossl_isascii, ossl_isasn1print, ossl_isdigit};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::CRYPTO_malloc;
 use crate::runtime::str::OPENSSL_strnlen;
 
 /// The authority translation unit for the multibyte conversions.
@@ -615,9 +615,11 @@ pub unsafe extern "C" fn ASN1_mbstring_ncopy(
             }
         }
 
-        // SAFETY: `CRYPTO_malloc` answers null or `outlen + 1` bytes.
-        let p = CRYPTO_malloc(outlen as usize + 1, FILE.as_ptr(), LINE).cast::<c_uchar>();
-        if p.is_null() {
+        // The authority's `CRYPTO_malloc(outlen + 1)`. Both the conversion from the signed
+        // length and the `+ 1` are checked, so a negative or overflowing request never reaches
+        // the allocator; either is the same refusal as a refused allocation. `OwnedBlock` owns
+        // the block until it is transferred to `dest` below.
+        let Some(count) = usize::try_from(outlen).ok().and_then(|n| n.checked_add(1)) else {
             if free_out {
                 // SAFETY: `dest` was allocated above and is not shared.
                 unsafe { ASN1_STRING_free(dest) };
@@ -625,16 +627,30 @@ pub unsafe extern "C" fn ASN1_mbstring_ncopy(
                 unsafe { *out = core::ptr::null_mut() };
             }
             return -1;
-        }
-        // SAFETY: `dest` is live and uniquely owned, and `p` is not owned by
+        };
+        let Some(p) = OwnedBlock::<c_uchar>::malloc(count, FILE.as_ptr(), LINE) else {
+            if free_out {
+                // SAFETY: `dest` was allocated above and is not shared.
+                unsafe { ASN1_STRING_free(dest) };
+                // SAFETY: the caller's contract makes `out` writable.
+                unsafe { *out = core::ptr::null_mut() };
+            }
+            return -1;
+        };
+        let outlen_usize = count - 1;
+        let dst = p.as_ptr();
+        // SAFETY: `dest` is live and uniquely owned, and `dst` is not owned by
         // anything else, which is what `ASN1_STRING_set0` requires.
         unsafe {
             (*dest).length = outlen;
-            (*dest).data = p;
-            *p.add(outlen as usize) = 0;
+            (*dest).data = dst;
+            *dst.add(outlen_usize) = 0;
         }
-        let mut cursor = p;
-        // SAFETY: the output was sized for exactly this traversal, and the
+        // The block is now `dest`'s: give up the local owner so it is not released here. The
+        // authority transfers it by the field store above, and `dest` releases it through
+        // `ASN1_STRING_free` later.
+        let mut cursor = p.into_raw();
+        // SAFETY: The output was sized for exactly this traversal, and the
         // traversal cannot fail: `cpy_*` always answers 1.
         unsafe {
             traverse_string(

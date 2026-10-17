@@ -649,8 +649,13 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_dh_kdf_outlen(
 /// second rather than first.
 ///
 /// # Safety
-/// `ctx` NULL or live; `ukm` NULL (with `len == 0`) or an `OPENSSL_malloc`ed buffer of `len` bytes
-/// whose ownership transfers on success.
+///
+/// `ctx` is NULL or live. `ukm` is NULL (the authority accepts it with `len == 0`) or a buffer of
+/// exactly `len` bytes produced by the crate's `CRYPTO_malloc`/`OPENSSL_malloc` seam, suitably
+/// aligned for `unsigned char`, exclusively owned by the caller, and not aliased by another owner.
+/// On a `1` return this call takes custody and releases it exactly once with `OPENSSL_free` at
+/// `dh_ctrl.c:315`; on every other return ownership stays with the caller and this call does not
+/// release it.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_CTX_set0_dh_kdf_ukm(
     ctx: *mut EvpPkeyCtx,
@@ -687,7 +692,10 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set0_dh_kdf_ukm(
         unsafe { raise_site(&err_sites::DH_CTRL_313) };
     }
     if ret == 1 {
-        // SAFETY: `ukm` is the caller's allocation, which this call owns on this path.
+        // SAFETY: on this one success edge the authority takes custody of `ukm`: it is the
+        // caller's fresh, exclusively owned seam allocation of `len` bytes (or NULL, which
+        // `CRYPTO_free` accepts), and this is its single release at the authority's own
+        // coordinate. Every other return path leaves ownership with the caller.
         unsafe { CRYPTO_free(ukm.cast::<c_void>(), FILE_CTRL, LINE_FREE_LABEL) };
     }
     ret
