@@ -82,6 +82,7 @@ use crate::runtime::err::err_sites::{
 use crate::runtime::err::{raise_site, ERR_clear_error, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::ex_data::{CRYPTO_get_ex_new_index, CryptoExData, CRYPTO_EX_INDEX_ENGINE};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_get_mem_functions, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_value, OpenSslStack,
@@ -300,56 +301,6 @@ static DYNAMIC_EX_DATA_IDX: AtomicI32 = AtomicI32::new(-1);
 // Ownership of the per-engine context and the strings it holds
 // ---------------------------------------------------------------------------------------------
 
-/// An owned `char *` allocated through the crate's `CRYPTO_strdup` seam.
-///
-/// The context's `DYNAMIC_LIBNAME`/`engine_id` and the `dirs` stack elements are blocks separate
-/// from their owners: a strdup installs one and either the context's own free hook or a
-/// replacement releases it. A handle's `Drop` is one block's single release at the authority's
-/// own site.
-struct OwnedStr {
-    ptr: *mut c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL. `line` is the authority's release
-    /// site for the string.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
-    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it. `Drop`
-    /// performs its single `CRYPTO_free`.
-    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, line })
-        }
-    }
-
-    /// The string's address, for the owner that takes it over.
-    fn as_ptr(&self) -> *const c_char {
-        self.ptr
-    }
-
-    /// Give up ownership of the string to the field or stack that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
-        // single release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, self.line) };
-    }
-}
-
 /// The authority's destructor body for a [`DynamicDataCtx`], without the block's own release,
 /// which [`OwnedCtx`]'s `Drop` performs.
 ///
@@ -424,8 +375,12 @@ unsafe impl CtxDestroy for DynamicDataCtx {
         // file's own `CRYPTO_strdup` blocks and `dirs` is the stack `dynamic_set_data_ctx` built.
         unsafe {
             DSO_free((*ptr).dynamic_dso);
-            drop(OwnedStr::take((*ptr).DYNAMIC_LIBNAME, LINE_FREE_LIBNAME));
-            drop(OwnedStr::take((*ptr).engine_id, LINE_FREE_ENGINE_ID));
+            drop(OwnedStr::adopt(
+                (*ptr).DYNAMIC_LIBNAME,
+                FILE,
+                LINE_FREE_LIBNAME,
+            ));
+            drop(OwnedStr::adopt((*ptr).engine_id, FILE, LINE_FREE_ENGINE_ID));
             OPENSSL_sk_pop_free((*ptr).dirs, Some(int_free_str));
         }
     }
@@ -487,7 +442,7 @@ impl Drop for RawDataCtx {
 unsafe extern "C" fn int_free_str(s: *mut c_void) {
     // SAFETY: `s` is NULL or one of this module's `CRYPTO_strdup` answers, per the caller's
     // contract; the seam's `Drop` performs its single plain release at the authority's own site.
-    drop(unsafe { OwnedStr::take(s.cast::<c_char>(), LINE_INT_FREE_STR) });
+    drop(unsafe { OwnedStr::adopt(s.cast::<c_char>(), FILE, LINE_INT_FREE_STR) });
 }
 
 /// `static void dynamic_data_ctx_free_func(...)` — `crypto/engine/eng_dyn.c:137-149`.
@@ -704,7 +659,7 @@ unsafe extern "C" fn dynamic_ctrl(
                 }
                 // SAFETY: `ctx` is live and `DYNAMIC_LIBNAME` is NULL or its own `CRYPTO_strdup`
                 // block; the seam performs the authority's own plain release.
-                drop(unsafe { OwnedStr::take((*ctx).DYNAMIC_LIBNAME, LINE_FREE_SO_PATH) });
+                drop(unsafe { OwnedStr::adopt((*ctx).DYNAMIC_LIBNAME, FILE, LINE_FREE_SO_PATH) });
                 // The new value is this call's own fresh block or NULL.
                 let fresh: Option<OwnedStr> = if p.is_null() {
                     None
@@ -712,8 +667,9 @@ unsafe extern "C" fn dynamic_ctrl(
                     // SAFETY: `p` is NUL-terminated (the test above); `CRYPTO_strdup` answers a
                     // fresh block or NULL.
                     unsafe {
-                        OwnedStr::take(
+                        OwnedStr::adopt(
                             CRYPTO_strdup(p.cast::<c_char>(), FILE, LINE_STRDUP_SO_PATH),
+                            FILE,
                             LINE_FREE_SO_PATH,
                         )
                     }
@@ -737,7 +693,7 @@ unsafe extern "C" fn dynamic_ctrl(
                 }
                 // SAFETY: `ctx` is live and `engine_id` is NULL or its own `CRYPTO_strdup`
                 // block; the seam performs the authority's own plain release.
-                drop(unsafe { OwnedStr::take((*ctx).engine_id, LINE_FREE_ID) });
+                drop(unsafe { OwnedStr::adopt((*ctx).engine_id, FILE, LINE_FREE_ID) });
                 // The new value is this call's own fresh block or NULL.
                 let fresh: Option<OwnedStr> = if p.is_null() {
                     None
@@ -745,8 +701,9 @@ unsafe extern "C" fn dynamic_ctrl(
                     // SAFETY: `p` is NUL-terminated (the test above); `CRYPTO_strdup` answers a
                     // fresh block or NULL.
                     unsafe {
-                        OwnedStr::take(
+                        OwnedStr::adopt(
                             CRYPTO_strdup(p.cast::<c_char>(), FILE, LINE_STRDUP_ID),
+                            FILE,
                             LINE_FREE_ID,
                         )
                     }
@@ -790,17 +747,16 @@ unsafe extern "C" fn dynamic_ctrl(
                 }
                 // SAFETY: `p` is NUL-terminated per the branch above.
                 let Some(tmp) = (unsafe {
-                    OwnedStr::take(
+                    OwnedStr::adopt(
                         CRYPTO_strdup(p.cast::<c_char>(), FILE, LINE_STRDUP_DIR),
+                        FILE,
                         LINE_STRDUP_DIR,
                     )
                 }) else {
                     return 0;
                 };
                 // SAFETY: `ctx` is live, so `dirs` is the stack `dynamic_set_data_ctx` built.
-                if unsafe { OPENSSL_sk_push((*ctx).dirs, tmp.as_ptr().cast_mut().cast::<c_void>()) }
-                    == 0
-                {
+                if unsafe { OPENSSL_sk_push((*ctx).dirs, tmp.as_ptr().cast::<c_void>()) } == 0 {
                     // The authority frees the string at `:351` and then raises; the handle's
                     // release is that same site.
                     drop(tmp);
@@ -862,11 +818,11 @@ unsafe fn int_load(ctx: *mut DynamicDataCtx) -> c_int {
         let loaded = unsafe { DSO_load(dso, merge, ptr::null_mut(), 0) };
         if !loaded.is_null() {
             // SAFETY: `merge` is this iteration's allocation, released here exactly once.
-            drop(unsafe { OwnedStr::take(merge, LINE_FREE_MERGE_FOUND) });
+            drop(unsafe { OwnedStr::adopt(merge, FILE, LINE_FREE_MERGE_FOUND) });
             return 1;
         }
         // SAFETY: as above, on the not-found path.
-        drop(unsafe { OwnedStr::take(merge, LINE_FREE_MERGE_MISS) });
+        drop(unsafe { OwnedStr::adopt(merge, FILE, LINE_FREE_MERGE_MISS) });
     }
     0
 }

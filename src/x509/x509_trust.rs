@@ -59,6 +59,7 @@ use crate::runtime::obj::{
     Asn1Object, NID_OCSP_sign, NID_ad_OCSP, NID_anyExtendedKeyUsage, NID_client_auth,
     NID_code_sign, NID_email_protect, NID_server_auth, NID_time_stamp, OBJ_obj2nid,
 };
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
@@ -273,54 +274,6 @@ impl Drop for RawTrust {
                 LINE_FREE_ERR_TRTMP,
             )
         };
-    }
-}
-
-/// An owned `char *` name allocated through the crate's `CRYPTO_strdup` seam.
-///
-/// A dynamic row's name is a block separate from the row: [`X509_TRUST_add`] strdups it, installs
-/// it into the row and hands it over on success; a failed install releases it at the authority's
-/// own `err:` site (`:179`), and replacing an existing row's name releases the old one at `:150`.
-struct OwnedStr {
-    ptr: *mut c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL. `line` is the authority's `err:` free.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
-    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it. `Drop` performs
-    /// its single `CRYPTO_free`.
-    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, line })
-        }
-    }
-
-    /// The string's address, for the row that takes it over.
-    fn as_ptr(&self) -> *const c_char {
-        self.ptr
-    }
-
-    /// Give up ownership of the string to the row that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
-        // single release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), self.line) };
     }
 }
 
@@ -730,21 +683,18 @@ pub unsafe extern "C" fn X509_TRUST_add(
         // The row owned a name; handing it to an owner makes its `Drop` the authority's own
         // `OPENSSL_free` at `:150`.
         // SAFETY: `name` is the row's own dynamic string; no other owner will release it.
-        drop(unsafe { OwnedStr::take((*trtmp).name, LINE_FREE_STD_NAME) });
+        drop(unsafe { OwnedStr::adopt((*trtmp).name, FILE.as_ptr(), LINE_FREE_STD_NAME) });
     }
     // SAFETY: `name` is NUL-terminated per the contract; the allocator takes file/line only.
     let dup = unsafe {
-        OwnedStr::take(
+        OwnedStr::adopt(
             CRYPTO_strdup(name, FILE.as_ptr(), LINE_STRDUP_TRTMP_NAME),
+            FILE.as_ptr(),
             LINE_FREE_ERR_NAME,
         )
     };
     // SAFETY: `trtmp` is live and writable.
-    unsafe {
-        (*trtmp).name = dup
-            .as_ref()
-            .map_or(ptr::null_mut(), |s| s.as_ptr().cast_mut())
-    };
+    unsafe { (*trtmp).name = dup.as_ref().map_or(ptr::null_mut(), |s| s.as_ptr()) };
     let Some(dup) = dup else {
         // The strdup failed. For a fresh row this is the authority's `err:` tail and releases the
         // block alone; for an existing row that tail's `idx < 0` test leaves it, so `raw` is `None`.

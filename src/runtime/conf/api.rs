@@ -37,6 +37,7 @@ use crate::runtime::lhash::{
     OPENSSL_LH_retrieve, OPENSSL_LH_set_down_load, OPENSSL_LH_strhash, OpenSslLhash,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_delete_ptr, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push,
     OPENSSL_sk_value, OpenSslStack,
@@ -261,58 +262,6 @@ impl Drop for OwnedValue {
     }
 }
 
-/// An owned `char *` allocated through the crate's allocator seam (a section's name string).
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size; only its *ownership* is this
-/// type: [`Self::new`] allocates it, [`Self::take`] reclaims one the configuration hands back,
-/// `Drop` is its single release, and [`Self::into_raw`] installs it in the record that takes it
-/// over. A NULL pointer is a valid, empty string whose release is the authority's own no-op
-/// `free(NULL)`.
-struct OwnedStr {
-    ptr: *mut c_char,
-}
-
-impl OwnedStr {
-    /// `CRYPTO_malloc(len, NULL, 0)`, or `None` when the allocator answers NULL.
-    fn new(len: usize) -> Option<OwnedStr> {
-        let raw = CRYPTO_malloc(len, ptr::null(), 0).cast::<c_char>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedStr { ptr: ptr.as_ptr() })
-    }
-
-    /// Adopt a string this file allocated, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block this file allocated that no one else owns.
-    unsafe fn take(ptr: *mut c_char) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr })
-        }
-    }
-
-    /// The writable start of the string.
-    fn as_ptr(&self) -> *mut c_char {
-        self.ptr
-    }
-
-    /// Give up ownership of the string to the record that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), ptr::null(), 0) };
-    }
-}
-
 /// `int _CONF_add_string(CONF *conf, CONF_VALUE *section, CONF_VALUE *value)`
 ///
 /// Pushes the entry onto the section's stack and inserts it into the hash. When
@@ -526,7 +475,7 @@ pub(crate) unsafe fn _CONF_free_data(conf: *mut Conf) {
         return;
     }
     // SAFETY: `conf` is live; `includedir` is NULL or a `CRYPTO_malloc` buffer.
-    drop(unsafe { OwnedStr::take((*conf).includedir) });
+    drop(unsafe { OwnedStr::adopt((*conf).includedir, ptr::null(), 0) });
     // SAFETY: `conf` is live.
     let data = unsafe { (*conf).data };
     if data.is_null() {
@@ -571,7 +520,7 @@ pub(crate) unsafe fn _CONF_new_section(conf: *mut Conf, section: *const c_char) 
     };
     // SAFETY: `section` is NUL-terminated per the caller's contract.
     let len = unsafe { sys::strlen(section) } + 1;
-    let Some(name) = OwnedStr::new(len) else {
+    let Some(name) = OwnedStr::new(len, ptr::null(), 0, ptr::null(), 0) else {
         // SAFETY: `sk` is a live empty stack. The authority's path would free the
         // *uninitialised* `v->section` here; not doing so is the recorded safer divergence.
         // `v`'s `Drop` is the authority's own `err:`-label release of the block alone.

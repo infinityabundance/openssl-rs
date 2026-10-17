@@ -121,6 +121,7 @@ use crate::evp::pkey_asn1::Engine;
 use crate::ffc::FfcParams;
 use crate::runtime::ex_data::CryptoExData;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::thread::CryptoRwlock;
 
 /// `OPENSSL_DSA_MAX_MODULUS_BITS` — `include/openssl/dsa.h:61`.
@@ -463,48 +464,6 @@ impl Drop for OwnedMethod {
     }
 }
 
-/// An owned `char *` allocated through the crate's `CRYPTO_strdup` seam.
-///
-/// The table's `name` is a block separate from the table: a duplicate installs one and the table's
-/// release reclaims it. [`DSA_meth_set1_name`] replaces the field, so the old block is released and
-/// the new one handed to the field with [`Self::into_raw`].
-struct OwnedStr {
-    ptr: *mut c_char,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
-    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it. `Drop` performs
-    /// its single plain `CRYPTO_free`.
-    unsafe fn take(ptr: *mut c_char) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr })
-        }
-    }
-
-    /// Give up ownership of the string to the field that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
-        // single release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE_DSA_METH, LINE) };
-    }
-}
-
 /// `DSA_METHOD *DSA_meth_new(const char *name, int flags)` — `crypto/dsa/dsa_meth.c:24-39`.
 ///
 /// A zero-allocated table with `flags` stored and `name` duplicated. **A failed `OPENSSL_strdup`
@@ -522,7 +481,13 @@ pub unsafe extern "C" fn DSA_meth_new(name: *const c_char, flags: c_int) -> *mut
     // SAFETY: `dsam` is this call's own fresh zeroed table, live and writable.
     unsafe { (*dsam.as_ptr()).flags = flags };
     // SAFETY: `name` is NULL or a NUL-terminated string per the contract.
-    let Some(name) = (unsafe { OwnedStr::take(CRYPTO_strdup(name, FILE_DSA_METH, LINE)) }) else {
+    let Some(name) = (unsafe {
+        OwnedStr::adopt(
+            CRYPTO_strdup(name, FILE_DSA_METH, LINE),
+            FILE_DSA_METH,
+            LINE,
+        )
+    }) else {
         // `dsam`'s `Drop` performs the authority's error-path release: the table alone.
         return core::ptr::null_mut();
     };
@@ -564,8 +529,13 @@ pub unsafe extern "C" fn DSA_meth_dup(dsam: *const DsaMethod) -> *mut DsaMethod 
     // `size_of::<DsaMethod>()`-byte block, so the copy writes exactly its extent.
     unsafe { core::ptr::copy_nonoverlapping(dsam, ret.as_ptr(), 1) };
     // SAFETY: `dsam` is live; its `name` is NULL or a NUL-terminated string.
-    let Some(name) = (unsafe { OwnedStr::take(CRYPTO_strdup((*dsam).name, FILE_DSA_METH, LINE)) })
-    else {
+    let Some(name) = (unsafe {
+        OwnedStr::adopt(
+            CRYPTO_strdup((*dsam).name, FILE_DSA_METH, LINE),
+            FILE_DSA_METH,
+            LINE,
+        )
+    }) else {
         // `ret`'s `Drop` performs the authority's error-path release: the block alone. Its `name`
         // is the NULL the failed `strdup` stored, so the copied alias is not released.
         return core::ptr::null_mut();
@@ -597,15 +567,20 @@ pub unsafe extern "C" fn DSA_meth_get0_name(dsam: *const DsaMethod) -> *const c_
 #[no_mangle]
 pub unsafe extern "C" fn DSA_meth_set1_name(dsam: *mut DsaMethod, name: *const c_char) -> c_int {
     // SAFETY: `name` is NULL or a NUL-terminated string per the contract.
-    let Some(new_name) = (unsafe { OwnedStr::take(CRYPTO_strdup(name, FILE_DSA_METH, LINE)) })
-    else {
+    let Some(new_name) = (unsafe {
+        OwnedStr::adopt(
+            CRYPTO_strdup(name, FILE_DSA_METH, LINE),
+            FILE_DSA_METH,
+            LINE,
+        )
+    }) else {
         // A NULL argument answers 0 and leaves the old name in place.
         return 0;
     };
     // SAFETY: `dsam` is a live table per the contract; its `name` is NULL or this file's own block.
     // The duplicate is made first and the old name released second, the authority's order.
     unsafe {
-        drop(OwnedStr::take((*dsam).name));
+        drop(OwnedStr::adopt((*dsam).name, FILE_DSA_METH, LINE));
         (*dsam).name = new_name.into_raw();
     }
     1

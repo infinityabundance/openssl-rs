@@ -48,6 +48,7 @@ use crate::runtime::err::err_sites::{
 };
 use crate::runtime::err::{raise_site, raise_site_data, raise_site_dynamic_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strndup};
+use crate::runtime::owned_str::OwnedStr;
 
 use super::addr::{make_from_sockaddr, BIO_ADDR_new, BIO_ADDR_rawmake, BioAddr};
 use super::bss_sock::BIO_sock_init;
@@ -160,45 +161,6 @@ impl Drop for OwnedNode {
             }
             CRYPTO_free(p.cast::<c_void>(), ALLOC_FILE.as_ptr(), ALLOC_LINE);
         }
-    }
-}
-
-/// An owned `char *` produced by the crate's `CRYPTO_strndup` seam.
-///
-/// The host/service half exists as this handle only between the duplication and the transfer to
-/// the caller's out-parameter; the failure path adopts it back and lets `Drop` release it.
-struct OwnedStr {
-    ptr: *mut c_char,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_strndup` result, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
-    /// `CRYPTO_strndup` seam; the caller owns it and no other owner will release it. `Drop`
-    /// performs its single `CRYPTO_free`.
-    unsafe fn take(ptr: *mut c_char) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr })
-        }
-    }
-
-    /// Give up ownership of the string to the caller's out-parameter.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `take` adopted and has not handed out; its single
-        // release is the authority's own `CRYPTO_free` at the allocation's coordinates.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), ALLOC_FILE.as_ptr(), ALLOC_LINE) };
     }
 }
 
@@ -717,7 +679,11 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
                 // SAFETY: `h` is readable for `hl` bytes and the duplicate is this call's
                 // own seam block until it is handed to the out-parameter.
                 let Some(copied) = (unsafe {
-                    OwnedStr::take(CRYPTO_strndup(h, hl, ALLOC_FILE.as_ptr(), ALLOC_LINE))
+                    OwnedStr::adopt(
+                        CRYPTO_strndup(h, hl, ALLOC_FILE.as_ptr(), ALLOC_LINE),
+                        ALLOC_FILE.as_ptr(),
+                        ALLOC_LINE,
+                    )
                 }) else {
                     return 0;
                 };
@@ -737,7 +703,11 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
                 // SAFETY: `p` is readable for `pl` bytes and the duplicate is this call's
                 // own seam block until it is handed to the out-parameter.
                 let Some(copied) = (unsafe {
-                    OwnedStr::take(CRYPTO_strndup(p, pl, ALLOC_FILE.as_ptr(), ALLOC_LINE))
+                    OwnedStr::adopt(
+                        CRYPTO_strndup(p, pl, ALLOC_FILE.as_ptr(), ALLOC_LINE),
+                        ALLOC_FILE.as_ptr(),
+                        ALLOC_LINE,
+                    )
                 }) else {
                     // The host half, if this call wrote it, is released again; the
                     // out-parameter is left NULL so the caller cannot double-free.
@@ -752,7 +722,9 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
                         let existing = unsafe { *host };
                         // SAFETY: `existing` is NULL or the block `CRYPTO_strndup` produced
                         // above, which this call owns and no one else will release.
-                        if let Some(owner) = unsafe { OwnedStr::take(existing) } {
+                        let owner =
+                            unsafe { OwnedStr::adopt(existing, ALLOC_FILE.as_ptr(), ALLOC_LINE) };
+                        if let Some(owner) = owner {
                             drop(owner);
                             // SAFETY: `host` is writable per the caller's contract;
                             // clearing it prevents the caller double-freeing.
