@@ -60,6 +60,7 @@ use core::ffi::{c_char, c_int, c_long, c_ulong, c_void, CStr};
 use core::mem::{size_of, MaybeUninit};
 use core::ptr;
 
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::sys;
 use crate::runtime::buffer::{BUF_MEM_free, BUF_MEM_grow, BUF_MEM_new, BufMem};
@@ -217,29 +218,6 @@ struct ByDir {
 // Ownership of the file's heap records
 // ---------------------------------------------------------------------------------------------
 
-/// The authority's destructor body for one of the file's heap records, without the block's own
-/// release, which [`OwnedCtx`]'s `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live block this file allocated:
-/// * `destroy_body(ptr)` runs the authority's `*_free` member body **exactly once** for that object;
-/// * it frees **exactly** the members the object owns -- every releaser is the authority's own and
-///   accepts the not-yet-set (NULL/zero) state -- and **never** releases the enclosing block, which
-///   [`OwnedCtx`]'s `Drop` releases.
-///
-/// This contract carries **no** zero-validity claim: the trait does not assert that an all-zero
-/// block is a valid `Self`; this file's `OwnedCtx::new` is `CRYPTO_malloc`, and its caller fills the
-/// record before the owner can destroy it.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live record this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
-
 /// An owned one of the file's heap records.
 ///
 /// The block keeps the authority's layout, its exact `CRYPTO_malloc` size/`file`/`line` and its
@@ -359,7 +337,8 @@ impl Drop for RawDir {
 /// block release [`OwnedCtx`]'s `Drop` performs is left.
 // SAFETY: (a) holds: `destroy_body` is the authority's no-op `by_dir_hash_free` body -- the record
 // owns no releasable members -- and it never releases the enclosing block, which `OwnedCtx`'s
-// `Drop` owns. The trait makes no zero-validity claim.
+// `Drop` owns. (b) holds: `ByDirHash` is a `#[repr(C)]` record of two integers, so an all-zero block
+// is a valid value and the empty body is sound on it.
 unsafe impl CtxDestroy for ByDirHash {
     unsafe fn destroy_body(_ptr: *mut ByDirHash) {}
 }
@@ -367,7 +346,9 @@ unsafe impl CtxDestroy for ByDirHash {
 /// The authority's `by_dir_entry_free` body, without the block release [`OwnedCtx`]'s `Drop`
 /// performs: the owned directory path and the stack of hash records.
 // SAFETY: (a) holds: `destroy_body` is `by_dir_entry_free` -- it releases exactly the record's own
-// `dir` string and `hashes` stack (each NULL-tolerant) and never the enclosing block.
+// `dir` string and `hashes` stack (each NULL-tolerant) and never the enclosing block. (b) holds:
+// `ByDirEntry` is a `#[repr(C)]` record of a pointer, an integer and a stack pointer, so an
+// all-zero block is a valid value and both releases accept NULL.
 unsafe impl CtxDestroy for ByDirEntry {
     unsafe fn destroy_body(ptr: *mut ByDirEntry) {
         // SAFETY: `ptr` is a live record per the trait contract; `dir` is NULL or this file's
@@ -382,7 +363,9 @@ unsafe impl CtxDestroy for ByDirEntry {
 /// The authority's `free_dir` body, without the block release [`OwnedCtx`]'s `Drop` performs: the
 /// directory list, the scratch buffer and the lock.
 // SAFETY: (a) holds: `destroy_body` is `by_dir_free` -- it releases exactly the record's own
-// `dirs` stack, `buffer` and `lock` (each NULL-tolerant) and never the enclosing block.
+// `dirs` stack, `buffer` and `lock` (each NULL-tolerant) and never the enclosing block. (b) holds:
+// `ByDir` is a `#[repr(C)]` record of three raw pointers, so an all-zero block is a valid value and
+// `OPENSSL_sk_pop_free(NULL)`/`BUF_MEM_free(NULL)`/`CRYPTO_THREAD_lock_free(NULL)` are no-ops.
 unsafe impl CtxDestroy for ByDir {
     unsafe fn destroy_body(ptr: *mut ByDir) {
         // SAFETY: `ptr` is a live record per the trait contract; each member is NULL or owned by it.
