@@ -79,7 +79,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1240** passed
+`cargo test --lib` (must pass; the established baseline is **1242** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -599,6 +599,24 @@ package.
   Gate: `fmt` 0, clippy 0, **1240 passed / 18 ignored**, adv-probe **18/18**.
   Progress: **160 of 173**.
 
+### Subphase 59 — final exclusions and owner-ledger reconciliation
+
+- Last ten exclusions migrated: a_digest, ec/depr, dane, v3_pci (OwnedBuf +
+  release-line setter), v3_utl (asn1 OwnedBlock + setter), evp/pkey and
+  crmf/crmf_lib (Conditional + `set_clear`, same initial `false` and per-path
+  transitions), http_lib and v3_akid (OwnedStr + setter), bio_sock2
+  (`OwnedStr::new_zeroed`).
+- `OwnedStr` gained a metadata-only `set_release_line` and a `CRYPTO_zalloc`
+  constructor. Allocator, coordinates, release mode/order and NULL policy
+  unchanged.
+- `OWNER-DUPLICATES.md` now labels its original counts as the `194021c97`
+  baseline and records the current state: **170 consolidated**, **3 reclassified
+  MUST-STAY-LOCAL** (`bn/rand`, `asn1/string`, `asn1/text` are growable or
+  slice-bearing abstractions), **157 local owner definitions remaining**.
+- Adversarial review **FAILED** only on the stale ledger arithmetic and
+  **PASSED** after reconciliation. Gate: `fmt` 0, clippy 0, **1242 passed / 18
+  ignored**, adv-probe **18/18**. Progress: **170 of 173**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -776,7 +794,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `9d645c7b3` (B-P exclusion semantics merged)
+**Last observed HEAD:** `65a59c05e` (owner consolidation complete)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
